@@ -425,7 +425,7 @@ private fun RelayGroupPinTile(
  * zap, or a reply) and reveals everything else on demand.
  */
 @Composable
-private fun MoreActionsToggle(
+internal fun MoreActionsToggle(
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
@@ -487,7 +487,7 @@ private fun ChatOnlyRow(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TileRow(content: @Composable () -> Unit) {
+internal fun TileRow(content: @Composable () -> Unit) {
     FlowRow(
         modifier =
             Modifier
@@ -501,7 +501,7 @@ private fun TileRow(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun ActionTile(
+internal fun ActionTile(
     symbol: MaterialSymbol,
     label: String,
     isDestructive: Boolean = false,
@@ -540,7 +540,7 @@ private fun ActionTile(
 private const val SECTION_DIVIDER_ALPHA = 0.5f
 
 @Composable
-private fun SectionDivider() {
+internal fun SectionDivider() {
     HorizontalDivider(
         thickness = DividerThickness,
         color = MaterialTheme.colorScheme.placeholderText.copy(alpha = SECTION_DIVIDER_ALPHA),

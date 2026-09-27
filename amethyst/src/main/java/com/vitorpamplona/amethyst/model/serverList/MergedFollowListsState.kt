@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.model.serverList
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetsState
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.StarterPacksState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
-import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
+import com.vitorpamplona.amethyst.model.nip51Lists.interestLists.InterestListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
@@ -44,9 +44,9 @@ import kotlinx.coroutines.flow.stateIn
 @Suppress("UNCHECKED_CAST")
 class MergedFollowListsState(
     val kind3List: Kind3FollowListState,
-    val peopleList: PeopleListsState,
-    val followList: FollowListsState,
-    val hashtagList: HashtagListState,
+    val followSets: FollowSetsState,
+    val starterPacks: StarterPacksState,
+    val interestList: InterestListState,
     val geohashList: GeohashListState,
     val communityList: CommunityListState,
     val scope: CoroutineScope,
@@ -85,9 +85,9 @@ class MergedFollowListsState(
         combine(
             listOf(
                 kind3List.flow,
-                peopleList.allGoodPeopleListProfiles,
-                followList.allPeopleListProfiles,
-                hashtagList.flow,
+                followSets.allGoodPeopleListProfiles,
+                starterPacks.allPeopleListProfiles,
+                interestList.flow,
                 geohashList.flow,
                 communityList.flow,
             ),
@@ -104,9 +104,9 @@ class MergedFollowListsState(
             emit(
                 mergeLists(
                     kind3List.flow.value,
-                    peopleList.allGoodPeopleListProfiles.value,
-                    followList.allPeopleListProfiles.value,
-                    hashtagList.flow.value,
+                    followSets.allGoodPeopleListProfiles.value,
+                    starterPacks.allPeopleListProfiles.value,
+                    interestList.flow.value,
                     geohashList.flow.value,
                     communityList.flow.value,
                 ),
@@ -118,9 +118,9 @@ class MergedFollowListsState(
                 SharingStarted.Eagerly,
                 mergeLists(
                     kind3List.flow.value,
-                    peopleList.allGoodPeopleListProfiles.value,
-                    followList.allPeopleListProfiles.value,
-                    hashtagList.flow.value,
+                    followSets.allGoodPeopleListProfiles.value,
+                    starterPacks.allPeopleListProfiles.value,
+                    interestList.flow.value,
                     geohashList.flow.value,
                     communityList.flow.value,
                 ),

@@ -206,11 +206,8 @@ fun ChatFeedLoaded(
     // reorders no longer re-fire paging. The per-gap markers below are pure UI.
     sentinels?.invoke(items.list, listState)
 
-    LaunchedEffect(items.list.firstOrNull()) {
-        if (listState.firstVisibleItemIndex <= 1) {
-            listState.animateScrollToItem(0)
-        }
-    }
+    val newest = items.list.firstOrNull()
+    AutoScrollToNewest(listState, newest, mine = accountViewModel.isLoggedUser(newest?.author?.pubkeyHex))
 
     val scope = rememberCoroutineScope()
     val highlightedNoteId = remember { mutableStateOf<String?>(null) }

@@ -160,6 +160,13 @@ private fun PreloadFor(
         // to warm up, and adding one would duplicate those.
         NavBarItem.MARMOT_GROUPS -> Unit
 
+        // Same as Marmot, for a different reason: a cordn group's messages never
+        // arrive over a relay REQ at all. They are coordinator calls made by
+        // CordnRuntime's sync loop, which is already running for every
+        // coordinator this account holds -- there is no relay subscription a
+        // list could warm up.
+        NavBarItem.CORDN_GROUPS -> Unit
+
         NavBarItem.FOLLOW_PACKS -> FollowPacksFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.LIVE_STREAMS -> LiveStreamsFilterAssemblerSubscription(accountViewModel)

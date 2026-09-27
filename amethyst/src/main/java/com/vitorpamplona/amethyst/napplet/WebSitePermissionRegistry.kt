@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +38,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private val Context.webSitePermissionDataStore by preferencesDataStore(name = "web_site_permissions")
+/**
+ * The per-site permission file, on the app-wide holder rather than a `Context` delegate (the same
+ * `filesDir/datastore/web_site_permissions.preferences_pb` path the delegate used).
+ *
+ * Main process only: [Amethyst.instance] is deliberately unset in the `:napplet` sandbox, which reaches
+ * these answers through the broker.
+ */
+private val webSitePermissionDataStore: DataStore<Preferences>
+    get() = Amethyst.instance.appStores.getDataStore("web_site_permissions")
 
 /**
  * The user's answers to web sites' camera / microphone / location requests, per **origin**
@@ -66,7 +76,7 @@ object WebSitePermissionRegistry {
         appContext = ctx
         scope.launch {
             val loaded = mutableMapOf<String, MutableMap<BrowserSitePermission, Decision>>()
-            ctx.webSitePermissionDataStore.data.first().asMap().forEach { (key, value) ->
+            webSitePermissionDataStore.data.first().asMap().forEach { (key, value) ->
                 val origin = key.name.substringBeforeLast('|')
                 val permission = BrowserSitePermission.fromKey(key.name.substringAfterLast('|')) ?: return@forEach
                 val decision = runCatching { Decision.valueOf(value.toString()) }.getOrNull() ?: return@forEach
@@ -94,9 +104,9 @@ object WebSitePermissionRegistry {
             if (decision == Decision.ASK) forOrigin.remove(permission) else forOrigin[permission] = decision
             if (forOrigin.isEmpty()) current - origin else current + (origin to forOrigin)
         }
-        val ctx = appContext ?: return
+        if (appContext == null) return
         scope.launch {
-            ctx.webSitePermissionDataStore.edit { prefs ->
+            webSitePermissionDataStore.edit { prefs ->
                 val key = stringPreferencesKey("$origin|${permission.key}")
                 if (decision == Decision.ASK) prefs.remove(key) else prefs[key] = decision.name
             }

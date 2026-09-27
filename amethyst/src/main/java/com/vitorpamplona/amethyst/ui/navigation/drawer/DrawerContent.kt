@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -146,7 +147,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.layouts.PermanentDrawerWidth
@@ -587,7 +588,7 @@ fun DisplayFollowerCount(
     baseAccountUser: Account,
     accountViewModel: AccountViewModel,
 ) {
-    val followerCount by observeUserContactCardsFollowerCount(baseAccountUser.userProfile(), accountViewModel)
+    val followerCount by observeUserAssertionsFollowerCount(baseAccountUser.userProfile(), accountViewModel)
 
     Text(
         text = followerCount,

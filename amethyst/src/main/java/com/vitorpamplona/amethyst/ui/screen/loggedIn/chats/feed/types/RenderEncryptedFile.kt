@@ -39,8 +39,10 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -63,6 +65,25 @@ fun RenderEncryptedFile(
 
     if (algo == AESGCM.NAME && key != null && nonce != null) {
         Amethyst.instance.keyCache.add(noteEvent.content, AESGCM(key, nonce), mimeType)
+
+        // Audio is neither an image nor a video, and the image-or-video split
+        // below would hand it to the video player: a picture-less surface where
+        // the voice UI belongs. Checked before that split rather than inside it,
+        // since the whole ZoomableContentView pipeline is about visual media.
+        if (RichTextParser.isAudioContent(mimeType, noteEvent.content)) {
+            val waveform = remember(noteEvent) { noteEvent.waveform()?.let { WaveformData(it) } }
+
+            RenderAudioWithWaveform(
+                mediaUrl = noteEvent.content,
+                title = noteEvent.alt(),
+                mimeType = mimeType,
+                waveform = waveform,
+                note = note,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+            return
+        }
 
         val content by remember(noteEvent) {
             val isImage = mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(noteEvent.content)

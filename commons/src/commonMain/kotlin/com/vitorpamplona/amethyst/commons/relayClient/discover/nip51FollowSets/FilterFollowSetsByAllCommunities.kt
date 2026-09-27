@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
 fun filterFollowSetsAllCommunities(
@@ -48,7 +48,7 @@ fun filterFollowSetsAllCommunities(
                     tags =
                         mapOf(
                             "a" to communityList,
-                            "k" to listOf(FollowListEvent.KIND.toString()),
+                            "k" to listOf(StarterPackEvent.KIND.toString()),
                         ),
                     limit = 300,
                     since = since,
@@ -61,7 +61,7 @@ fun filterFollowSetsAllCommunities(
                 ExplainedFilter(
                     purpose = SubPurpose.FOLLOW_LISTS,
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
-                    kinds = listOf(FollowListEvent.KIND),
+                    kinds = listOf(StarterPackEvent.KIND),
                     limit = 300,
                     since = since,
                 ),

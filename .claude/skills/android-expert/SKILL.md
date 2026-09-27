@@ -875,18 +875,33 @@ fun ProfileScreen(
 
 ### 3. Resource Access
 
+**Strings do not go in `amethyst/src/main/res`.** New user-visible strings live in
+`commonsUI/src/commonMain/composeResources/values/strings.xml` and are read as
+`Res.string.x`, even on an Android-only screen. See "Strings" in `.claude/CLAUDE.md`
+for the rule and the small platform tier that is the only exception.
+
 ```kotlin
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.button_clicked
+import com.vitorpamplona.amethyst.commons.resources.button_label
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.ui.stringRes
+
 @Composable
 fun LocalizedButton() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Button(
         onClick = {
-            val message = context.getString(R.string.button_clicked)
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            // No blocking accessor outside composition: read it from a coroutine,
+            // or resolve it in composition and capture the String.
+            scope.launch {
+                Toast.makeText(context, loadStringRes(Res.string.button_clicked), Toast.LENGTH_SHORT).show()
+            }
         }
     ) {
-        Text(stringResource(R.string.button_label))
+        Text(stringRes(Res.string.button_label))
     }
 }
 ```

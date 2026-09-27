@@ -26,7 +26,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -37,14 +36,12 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta
 import com.vitorpamplona.amethyst.ui.note.types.appendMissingImetaUrls
+import com.vitorpamplona.amethyst.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
-
-// Jumbo sizes step down as the emoji count grows so up to three still fit a line.
-private val JumboEmojiSingle = 50.sp
-private val JumboEmojiPair = 40.sp
-private val JumboEmojiTriple = 32.sp
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiFontSize
 
 @Composable
 fun RenderRegularTextNote(
@@ -63,17 +60,23 @@ fun RenderRegularTextNote(
             ) {
                 val jumboCount = remember(eventContent) { jumboEmojiCount(eventContent) }
 
-                if (jumboCount > 0) {
+                // A voice message is an audio URL whose imeta carries the waveform.
+                // The main feed's note renderer short-circuits those to the waveform
+                // player; without the same check here the generic media pipeline
+                // takes them and a recorded message arrives as a player surface
+                // instead of the waveform it was previewed as. Matched against the
+                // DECRYPTED content rather than `isAudioOnlyContent()`, because in a
+                // chat the note's own `content` may still be the sealed payload.
+                val audioMeta = remember(note.event) { note.event?.getAudioMetaWithWaveform() }
+
+                if (audioMeta != null && eventContent.trim() == audioMeta.url) {
+                    RenderAudioFromIMeta(note, accountViewModel, nav)
+                } else if (jumboCount > 0) {
                     // Emoji-only messages render as jumbo emoji (the bubble behind
                     // them is transparent — see NormalChatNote).
                     Text(
                         text = eventContent.trim(),
-                        fontSize =
-                            when (jumboCount) {
-                                1 -> JumboEmojiSingle
-                                2 -> JumboEmojiPair
-                                else -> JumboEmojiTriple
-                            },
+                        fontSize = jumboEmojiFontSize(jumboCount),
                     )
                 } else {
                     val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }

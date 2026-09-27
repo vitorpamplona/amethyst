@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
-import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsByAuthorInTheRelay
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterUserAssertionsByAuthorInTheRelay
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
@@ -32,18 +32,18 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
@@ -60,9 +60,9 @@ val AccountInfoAndListsFromKeyKinds =
     listOf(
         MetadataEvent.KIND,
         ContactListEvent.KIND,
-        StatusEvent.KIND,
+        UserStatusEvent.KIND,
         AdvertisedRelayListEvent.KIND,
-        ChatMessageRelayListEvent.KIND,
+        DmRelayListEvent.KIND,
         KeyPackageRelayListEvent.KIND,
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
@@ -78,12 +78,12 @@ val AccountInfoAndListsFromKeyKinds2 =
         BroadcastRelayListEvent.KIND,
         IndexerRelayListEvent.KIND,
         ProxyRelayListEvent.KIND,
-        HashtagListEvent.KIND,
+        InterestListEvent.KIND,
         GeohashListEvent.KIND,
         TrustProviderListEvent.KIND,
         PaymentTargetsEvent.KIND,
         Bolt12OfferListEvent.KIND,
-        RelayFeedsListEvent.KIND,
+        FavoriteRelayListEvent.KIND,
         InterestSetEvent.KIND,
         // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups + servers.
         // Loaded up-front so "My Groups" and group memberships resolve immediately at login,
@@ -141,7 +141,7 @@ fun filterAccountInfoAndListsFromKey(
         ),
         // The account's own kind:30382 contact cards (nicknames, NIP-44 encrypted).
         // Addressable — one card per target user — hence its own larger-limit filter.
-        filterContactCardsByAuthorInTheRelay(
+        filterUserAssertionsByAuthorInTheRelay(
             relay = relay,
             authors = pubkeys,
             since = since,

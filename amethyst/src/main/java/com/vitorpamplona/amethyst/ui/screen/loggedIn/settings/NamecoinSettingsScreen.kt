@@ -34,12 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.namecoin_settings
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClient
 import kotlinx.coroutines.launch
@@ -58,7 +58,7 @@ fun NamecoinSettingsScreen(nav: INav) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NamecoinSettingsScreen(
-    namecoinPrefs: NamecoinSharedPreferences,
+    namecoinPrefs: NamecoinSettingsStore,
     electrumXClient: () -> ElectrumXClient,
     namecoinCoreRpcClient: () -> NamecoinCoreRpcClient,
     nav: INav,

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.navigation
 
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
+import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.DrawerSettingsState

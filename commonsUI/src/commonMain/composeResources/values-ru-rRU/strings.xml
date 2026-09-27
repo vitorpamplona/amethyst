@@ -226,7 +226,7 @@
     <string name="copy_user_id">Копировать ID пользователя</string>
     <string name="unblock_user">Разблокировать</string>
     <string name="user_is_blocked_hidden">Этот пользователь заблокирован/заглушён. Его посты скрыты.</string>
-    <string name="npub_hex_username">npub, hex, никнейм </string>
+    <string name="npub_hex_username">npub, hex, никнейм</string>
     <string name="clear">Очистить</string>
     <string name="app_logo">Логотип приложения</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / приватный ключ в hex</string>
@@ -274,15 +274,8 @@
     <string name="mark_all_known_as_read">Отметить все известные прочитанными</string>
     <string name="mark_all_new_as_read">Отметить все новые прочитанными</string>
     <string name="mark_all_as_read">Отметить всё прочитанным</string>
-    <string name="account_backup_tips2_md">        ## Советы по резервному копированию и безопасности ключей
-        \n\nВаш аккаунт защищён секретным ключом. Ключ — это длинная последовательность символов, начинающаяся с **nsec1**. Любой, кто получит доступ к этому секретному ключу, сможет публиковать записи и менять вашу личность.
-        \n\n- **Не** вводите свой секретный ключ на сайтах или в приложениях, которым не доверяете.
-        \n- Разработчики Amethyst **никогда** не будут запрашивать ваш секретный ключ.
-        \n- **Обязательно** сохраните надёжную резервную копию секретного ключа для восстановления аккаунта. Рекомендуем использовать менеджер паролей.
-    </string>
-    <string name="account_backup_tips3_md">        Для дополнительной безопасности вы можете зашифровать ваш ключ с помощью пароля. Этот ключ начинается с **ncryptsec1** и не может быть использован без пароля.
-        \n\nЕсли вы потеряете свой пароль, вы не сможете восстановить ваш ключ.
-    </string>
+    <string name="account_backup_tips2_md">## Советы по резервному копированию и безопасности ключей \n\nВаш аккаунт защищён секретным ключом. Ключ — это длинная последовательность символов, начинающаяся с **nsec1**. Любой, кто получит доступ к этому секретному ключу, сможет публиковать записи и менять вашу личность. \n\n- **Не** вводите свой секретный ключ на сайтах или в приложениях, которым не доверяете. \n- Разработчики Amethyst **никогда** не будут запрашивать ваш секретный ключ. \n- **Обязательно** сохраните надёжную резервную копию секретного ключа для восстановления аккаунта. Рекомендуем использовать менеджер паролей.</string>
+    <string name="account_backup_tips3_md">Для дополнительной безопасности вы можете зашифровать ваш ключ с помощью пароля. Этот ключ начинается с **ncryptsec1** и не может быть использован без пароля. \n\nЕсли вы потеряете свой пароль, вы не сможете восстановить ваш ключ.</string>
     <string name="encrypt_and_copy_my_secret_key">Зашифровать и копировать мой секретный ключ</string>
     <string name="badge_award_image_for">Картинка значка-награды %1$s</string>
     <string name="badge_award_image">Изображение награды за значок</string>
@@ -970,9 +963,7 @@
     <string name="push_server_none_explainer">Отключает push-уведомления</string>
     <string name="push_server_uses_app_explainer">Использует приложение %1$s</string>
     <string name="push_server_install_app">Настройки push-уведомлений</string>
-    <string name="push_server_install_app_description">        Для получения push-уведомлений, установите приложение, которое поддерживает [Unified Push](https://unifiedpush.org/), например [Ntfy](https://ntfy.sh/).
-        После установки выберите приложение, которое хотите использовать, в настройках.
-    </string>
+    <string name="push_server_install_app_description">Для получения push-уведомлений, установите приложение, которое поддерживает [Unified Push](https://unifiedpush.org/), например [Ntfy](https://ntfy.sh/). После установки выберите приложение, которое хотите использовать, в настройках.</string>
     <string name="thread_title">Ветка</string>
     <string name="send_the_seller_a_message">Написать продавцу</string>
     <string name="hi_there_is_this_still_available">Привет, это ещё в наличии?</string>
@@ -2046,15 +2037,7 @@
     <string name="could_not_fetch_invoice_from_details">Не удалось получить счёт от %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Не удалось открыть сжатый файл</string>
     <string name="couldnt_find_nwc_wallets">Кошелёк не найден</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst не нашёл ни одного приложения кошелька с поддержкой Nostr Wallet Connect (NWC).
-\n\nЧто можно сделать:
-\n\t1. Проверьте поддержку NWC: убедитесь, что ваш кошелёк совместим с Nostr Wallet Connect.
-\n\t2. Создайте подключение: откройте приложение кошелька и создайте новое NWC-подключение.
-\n\t3. Привяжите к Amethyst: обычно кошелёк предлагает три варианта:
-\n\t\t3.1 Автоматическая привязка: кнопка для автоматического открытия и подключения к Amethyst. Нажмите её, откройте Amethyst и сохраните новый экран.
-\n\t\t3.2 Ручная привязка: URI подключения, который можно скопировать и вставить с помощью значка вставки на этом экране.
-\n\t\t3.3 QR-код: кошелёк создаёт QR-код, который можно считать кнопкой QR-кода на этом экране.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst не нашёл ни одного приложения кошелька с поддержкой Nostr Wallet Connect (NWC). \n\nЧто можно сделать: \n\t1. Проверьте поддержку NWC: убедитесь, что ваш кошелёк совместим с Nostr Wallet Connect. \n\t2. Создайте подключение: откройте приложение кошелька и создайте новое NWC-подключение. \n\t3. Привяжите к Amethyst: обычно кошелёк предлагает три варианта: \n\t\t3.1 Автоматическая привязка: кнопка для автоматического открытия и подключения к Amethyst. Нажмите её, откройте Amethyst и сохраните новый экран. \n\t\t3.2 Ручная привязка: URI подключения, который можно скопировать и вставить с помощью значка вставки на этом экране. \n\t\t3.3 QR-код: кошелёк создаёт QR-код, который можно считать кнопкой QR-кода на этом экране.</string>
     <string name="create">Создать</string>
     <string name="d">д</string>
     <string name="danger_zone">Опасная зона</string>
@@ -2737,11 +2720,8 @@
     <string name="propose_an_edit">Предложить изменение</string>
     <string name="proxy_section_explainer">Агрегирующие relay-серверы, которые приложение использует для загрузки ваших лент, например filter.nostr.wine. Это заменяет модель outbox и позволит приложению подключаться только к relay-серверам из ваших списков.</string>
     <string name="public_chat">Публичный чат</string>
-    <string name="public_chat_explainer">Публичные чаты видны всем в Nostr и открыты
-        для участия любого желающего. Они отлично подходят для открытых сообществ по определённым темам.
-        Модерация осуществляется путём удаления постов на relay</string>
-    <string name="public_chat_relays_explainer">Укажите от 1 до 3 relay, на которых размещена эта группа.
-        Клиенты Nostr используют эту настройку, чтобы знать, откуда загружать сообщения и куда их отправлять.</string>
+    <string name="public_chat_explainer">Публичные чаты видны всем в Nostr и открыты для участия любого желающего. Они отлично подходят для открытых сообществ по определённым темам. Модерация осуществляется путём удаления постов на relay</string>
+    <string name="public_chat_relays_explainer">Укажите от 1 до 3 relay, на которых размещена эта группа. Клиенты Nostr используют эту настройку, чтобы знать, откуда загружать сообщения и куда их отправлять.</string>
     <string name="public_chat_relays_title">Relay</string>
     <string name="public_chat_title">Метаданные публичного чата</string>
     <string name="public_chats">Публичные чаты</string>
@@ -2766,10 +2746,7 @@
     <string name="read_only_user">Пользователь только для чтения</string>
     <string name="record_a_message_description">Нажмите и удерживайте, чтобы записать сообщение</string>
     <string name="relay_chat">Чат relay</string>
-    <string name="relay_chat_explainer">Чаты relay — это групповые чаты, управляемые их домашним relay.
-        Они видны всем в Nostr, и любой может в них участвовать.
-        Они отлично подходят для открытых сообществ по определённым темам. Некоторые группы эфемерны,
-        поэтому сообщения исчезают со временем</string>
+    <string name="relay_chat_explainer">Чаты relay — это групповые чаты, управляемые их домашним relay. Они видны всем в Nostr, и любой может в них участвовать. Они отлично подходят для открытых сообществ по определённым темам. Некоторые группы эфемерны, поэтому сообщения исчезают со временем</string>
     <string name="relay_chat_title">Чаты relay</string>
     <string name="relay_management_tab_events">События</string>
     <string name="relay_management_tab_ips">IP-адреса</string>
@@ -3019,4 +2996,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервис получателя по адресу %1$s недоступен. Он был вычислен из Lightning-адреса "%2$s". Ошибка: %3$s. Проверьте, работает ли сервер и правильно ли указан Lightning-адрес</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Не удалось создать Lightning-счёт от %1$s: элемент pr не найден в полученном JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Не удалось создать Lightning-счёт. Сообщение от %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

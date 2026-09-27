@@ -180,6 +180,9 @@
     <string name="post">পেশ করুন</string>
     <string name="voice_post">ভয়েস পোস্ট</string>
     <string name="voice_reply">ভয়েস রিপ্লাই</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">ব্যক্তিগত বার্তা</string>
     <string name="nest_notification_broadcasting">Nest — লাইভ</string>
     <string name="nest_notification_channel_description">একটি রুম খোলা থাকলে অডিও চালু রাখে।</string>

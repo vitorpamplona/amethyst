@@ -125,4 +125,9 @@ private fun ResponseBody.readPrefix(max: Long): ByteArray =
         src.buffer.readByteArray(minOf(src.buffer.size, max))
     }
 
-private const val MAX_PREVIEW_BYTES = 512L * 1024L
+// Large enough for real `<head>`s, not just typical ones. YouTube's watch page front-loads its
+// head with inline script: youtu.be/fwcKTYvupJw (2026-09) is 1.29 MB, and its og: block starts
+// 708,776 bytes in, before `</head>` at 716,956. The earlier 512 KB cut it off, so every YouTube
+// link lost its card. 2 MB leaves headroom for that head to grow while still bounding a body
+// that never ends.
+private const val MAX_PREVIEW_BYTES = 2L * 1024L * 1024L

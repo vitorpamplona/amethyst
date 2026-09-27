@@ -26,9 +26,9 @@ import com.davotoula.lightcompressor.hls.HlsUploaded
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip71Video.duration
 import com.vitorpamplona.quartz.nip71Video.title
 import com.vitorpamplona.quartz.nip71Video.videoIMetas
@@ -61,11 +61,11 @@ data class HlsVideoPublishInput(
 
 sealed class HlsVideoEventTemplate {
     data class Horizontal(
-        val template: EventTemplate<VideoHorizontalEvent>,
+        val template: EventTemplate<AddressableNormalVideoEvent>,
     ) : HlsVideoEventTemplate()
 
     data class Vertical(
-        val template: EventTemplate<VideoVerticalEvent>,
+        val template: EventTemplate<AddressableShortVideoEvent>,
     ) : HlsVideoEventTemplate()
 }
 
@@ -80,7 +80,7 @@ data class HlsBuiltTemplate(
 )
 
 /**
- * Assembles a NIP-71 VideoHorizontalEvent / VideoVerticalEvent template from an HLS upload
+ * Assembles a NIP-71 AddressableNormalVideoEvent / AddressableShortVideoEvent template from an HLS upload
  * result. Orientation is decided from the first rendition's width/height: portrait
  * (height > width) selects kind 34236, otherwise 34235.
  *
@@ -142,7 +142,7 @@ object HlsVideoEventBuilder {
         val template =
             if (isVertical) {
                 HlsVideoEventTemplate.Vertical(
-                    VideoVerticalEvent.build(input.description, dTag, createdAt) {
+                    AddressableShortVideoEvent.build(input.description, dTag, createdAt) {
                         videoIMetas(videoMetas)
                         title(input.title)
                         input.durationSeconds?.let { duration(it) }
@@ -151,7 +151,7 @@ object HlsVideoEventBuilder {
                 )
             } else {
                 HlsVideoEventTemplate.Horizontal(
-                    VideoHorizontalEvent.build(input.description, dTag, createdAt) {
+                    AddressableNormalVideoEvent.build(input.description, dTag, createdAt) {
                         videoIMetas(videoMetas)
                         title(input.title)
                         input.durationSeconds?.let { duration(it) }

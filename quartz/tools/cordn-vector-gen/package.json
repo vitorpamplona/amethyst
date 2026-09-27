@@ -1,0 +1,9 @@
+{
+  "name": "cordn-vector-gen",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@cordn/core": "0.5.5"
+  }
+}

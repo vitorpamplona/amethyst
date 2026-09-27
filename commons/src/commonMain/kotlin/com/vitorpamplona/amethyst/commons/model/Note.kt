@@ -51,16 +51,16 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -1038,7 +1038,7 @@ open class Note(
         }
 
         return anyAsync(zapPayments) { next ->
-            val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
+            val zapResponseEvent = next.second?.event as? NwcResponseEvent
 
             if (zapResponseEvent != null) {
                 val response = account.nip47SignerState.decryptResponse(zapResponseEvent)
@@ -1066,11 +1066,11 @@ open class Note(
             return false
         }
 
-        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent>>()
+        val parallelDecrypt = mutableListOf<Pair<ZapRequestEvent, ZapReceiptEvent>>()
 
         zapEvents.forEach { next ->
-            val zapRequest = next.key.event as LnZapRequestEvent
-            val zapEvent = next.value?.event as? LnZapEvent
+            val zapRequest = next.key.event as ZapRequestEvent
+            val zapEvent = next.value?.event as? ZapReceiptEvent
 
             if (zapEvent != null) {
                 if (!zapRequest.isPrivateZap()) {
@@ -1227,7 +1227,7 @@ open class Note(
         // Regular Zap Receipts
         zaps.forEach {
             val noteEvent = it.value?.event
-            if (noteEvent is LnZapEvent) {
+            if (noteEvent is ZapReceiptEvent) {
                 sumOfAmounts += noteEvent.amount ?: BigDecimal(0)
             }
         }
@@ -1299,8 +1299,8 @@ open class Note(
         paymentResponse: Note?,
         signerState: INwcSignerState,
     ): InvoiceAmount? {
-        val nwcRequest = paymentRequest.event as? LnZapPaymentRequestEvent
-        val nwcResponse = paymentResponse?.event as? LnZapPaymentResponseEvent
+        val nwcRequest = paymentRequest.event as? NwcRequestEvent
+        val nwcResponse = paymentResponse?.event as? NwcResponseEvent
 
         return if (nwcRequest != null && nwcResponse != null) {
             processZapAmountFromResponse(
@@ -1319,8 +1319,8 @@ open class Note(
     )
 
     private suspend fun processZapAmountFromResponse(
-        nwcRequest: LnZapPaymentRequestEvent,
-        nwcResponse: LnZapPaymentResponseEvent,
+        nwcRequest: NwcRequestEvent,
+        nwcResponse: NwcResponseEvent,
         signerState: INwcSignerState,
     ): InvoiceAmount? {
         // if we can decrypt the reply
@@ -1361,7 +1361,7 @@ open class Note(
         }
 
         val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
-        zaps.forEach { (it.value?.event as? LnZapEvent)?.lnInvoice()?.let { invoiceSet.add(it) } }
+        zaps.forEach { (it.value?.event as? ZapReceiptEvent)?.lnInvoice()?.let { invoiceSet.add(it) } }
 
         return zappedAmountCalculation(
             zapsAmount,

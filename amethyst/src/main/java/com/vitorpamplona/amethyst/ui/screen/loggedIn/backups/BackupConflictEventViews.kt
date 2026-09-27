@@ -62,7 +62,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
@@ -70,6 +69,67 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_hashtag
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_mint
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_nutzap_key
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_person
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_profile_field
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_thread
+import com.vitorpamplona.amethyst.commons.resources.backup_entry_word
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_about
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_banner
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_birthday
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_bot
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_clink_offer
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_display_name
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_lud06
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_lud16
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_name
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_nip05
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_picture
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_pronouns
+import com.vitorpamplona.amethyst.commons.resources.backup_profile_field_website
+import com.vitorpamplona.amethyst.commons.resources.backup_review_demoted_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_dropped_count
+import com.vitorpamplona.amethyst.commons.resources.backup_review_dropped_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_gone
+import com.vitorpamplona.amethyst.commons.resources.backup_review_inbox
+import com.vitorpamplona.amethyst.commons.resources.backup_review_inbox_explainer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_joined
+import com.vitorpamplona.amethyst.commons.resources.backup_review_kept_count
+import com.vitorpamplona.amethyst.commons.resources.backup_review_key_removed
+import com.vitorpamplona.amethyst.commons.resources.backup_review_key_replaced
+import com.vitorpamplona.amethyst.commons.resources.backup_review_key_warning
+import com.vitorpamplona.amethyst.commons.resources.backup_review_left
+import com.vitorpamplona.amethyst.commons.resources.backup_review_left_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_names_and_more
+import com.vitorpamplona.amethyst.commons.resources.backup_review_new
+import com.vitorpamplona.amethyst.commons.resources.backup_review_new_count
+import com.vitorpamplona.amethyst.commons.resources.backup_review_new_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_newly_muted
+import com.vitorpamplona.amethyst.commons.resources.backup_review_not_set
+import com.vitorpamplona.amethyst.commons.resources.backup_review_nothing_here
+import com.vitorpamplona.amethyst.commons.resources.backup_review_outbox
+import com.vitorpamplona.amethyst.commons.resources.backup_review_outbox_explainer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_private_added_body
+import com.vitorpamplona.amethyst.commons.resources.backup_review_private_added_title
+import com.vitorpamplona.amethyst.commons.resources.backup_review_private_changed_body
+import com.vitorpamplona.amethyst.commons.resources.backup_review_private_changed_title
+import com.vitorpamplona.amethyst.commons.resources.backup_review_private_wiped_body
+import com.vitorpamplona.amethyst.commons.resources.backup_review_private_wiped_title
+import com.vitorpamplona.amethyst.commons.resources.backup_review_renamed
+import com.vitorpamplona.amethyst.commons.resources.backup_review_renamed_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_saved
+import com.vitorpamplona.amethyst.commons.resources.backup_review_search_people
+import com.vitorpamplona.amethyst.commons.resources.backup_review_tab_dropped
+import com.vitorpamplona.amethyst.commons.resources.backup_review_tab_edited
+import com.vitorpamplona.amethyst.commons.resources.backup_review_tab_new
+import com.vitorpamplona.amethyst.commons.resources.backup_review_units_tag
+import com.vitorpamplona.amethyst.commons.resources.backup_review_unmuted
+import com.vitorpamplona.amethyst.commons.resources.backup_review_unmuted_explainer
+import com.vitorpamplona.amethyst.commons.resources.backup_review_was_named
+import com.vitorpamplona.amethyst.commons.resources.backup_review_words_and_hashtags
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -111,6 +171,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
+import org.jetbrains.compose.resources.StringResource
 
 private const val GRID_COLUMNS = 4
 private const val PEOPLE_PREVIEW = 6
@@ -168,7 +229,7 @@ private fun LazyListScope.followListItems(
     item(key = "follow-hero", contentType = "hero") {
         val tones = conflictTones()
         Column(Pad.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HeroCounts(stringRes(R.string.backup_review_saved), saved, stringRes(R.string.backup_review_new), new)
+            HeroCounts(stringRes(Res.string.backup_review_saved), saved, stringRes(Res.string.backup_review_new), new)
             SplitBar(
                 listOf(
                     BarSegment(saved - dropped, tones.kept),
@@ -177,9 +238,9 @@ private fun LazyListScope.followListItems(
                 ),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                LegendItem(tones.kept, stringRes(R.string.backup_review_kept_count, (saved - dropped).toString()))
-                LegendItem(tones.removed, stringRes(R.string.backup_review_dropped_count, dropped.toString()))
-                LegendItem(tones.added, stringRes(R.string.backup_review_new_count, gained.toString()))
+                LegendItem(tones.kept, stringRes(Res.string.backup_review_kept_count, (saved - dropped).toString()))
+                LegendItem(tones.removed, stringRes(Res.string.backup_review_dropped_count, dropped.toString()))
+                LegendItem(tones.added, stringRes(Res.string.backup_review_new_count, gained.toString()))
             }
         }
     }
@@ -188,9 +249,9 @@ private fun LazyListScope.followListItems(
         ReviewTabs(
             labels =
                 listOf(
-                    stringRes(R.string.backup_review_tab_dropped, dropped.toString()),
-                    stringRes(R.string.backup_review_tab_new, gained.toString()),
-                    stringRes(R.string.backup_review_tab_edited, edited.toString()),
+                    stringRes(Res.string.backup_review_tab_dropped, dropped.toString()),
+                    stringRes(Res.string.backup_review_tab_new, gained.toString()),
+                    stringRes(Res.string.backup_review_tab_edited, edited.toString()),
                 ),
             selected = ui.tab,
             onSelect = {
@@ -223,7 +284,7 @@ private fun LazyListScope.followListItems(
 
     if (filtered.isEmpty()) {
         item(key = "follow-empty", contentType = "note") {
-            DetailText(stringRes(R.string.backup_review_nothing_here), Pad.padding(vertical = 24.dp))
+            DetailText(stringRes(Res.string.backup_review_nothing_here), Pad.padding(vertical = 24.dp))
         }
     }
 }
@@ -359,7 +420,7 @@ private fun PeopleSearch(
         singleLine = true,
         shape = RoundedCornerShape(14.dp),
         leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null) },
-        placeholder = { Text(stringRes(R.string.backup_review_search_people, count.toString())) },
+        placeholder = { Text(stringRes(Res.string.backup_review_search_people, count.toString())) },
     )
 }
 
@@ -388,15 +449,15 @@ private fun LazyListScope.muteListItems(
                 Icon(symbol = MaterialSymbols.Shield, contentDescription = null, tint = tones.removed, modifier = Modifier.size(44.dp))
                 Column {
                     Text(
-                        stringRes(R.string.backup_review_unmuted, removed.size.toString()),
+                        stringRes(Res.string.backup_review_unmuted, removed.size.toString()),
                         fontSize = 30.sp,
                         lineHeight = 32.sp,
                         fontWeight = FontWeight.Bold,
                         color = tones.removed,
                     )
-                    Text(stringRes(R.string.backup_review_unmuted_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+                    Text(stringRes(Res.string.backup_review_unmuted_explainer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
                     if (added.isNotEmpty()) {
-                        Text(stringRes(R.string.backup_review_newly_muted, added.size.toString()), style = MaterialTheme.typography.bodySmall, color = tones.added)
+                        Text(stringRes(Res.string.backup_review_newly_muted, added.size.toString()), style = MaterialTheme.typography.bodySmall, color = tones.added)
                     }
                 }
             }
@@ -406,17 +467,17 @@ private fun LazyListScope.muteListItems(
     item(key = "mute-tiles", contentType = "tiles") {
         val tones = conflictTones()
         Row(Pad.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatTile("−${people.size}", stringRes(R.string.backup_entry_person), tones.removed, Modifier.weight(1f))
-            StatTile("−${words.size}", stringRes(R.string.backup_entry_word), tones.removed, Modifier.weight(1f))
-            StatTile("−${hashtags.size}", stringRes(R.string.backup_entry_hashtag), tones.removed, Modifier.weight(1f))
-            StatTile("−${threads.size}", stringRes(R.string.backup_entry_thread), tones.removed, Modifier.weight(1f))
+            StatTile("−${people.size}", stringRes(Res.string.backup_entry_person), tones.removed, Modifier.weight(1f))
+            StatTile("−${words.size}", stringRes(Res.string.backup_entry_word), tones.removed, Modifier.weight(1f))
+            StatTile("−${hashtags.size}", stringRes(Res.string.backup_entry_hashtag), tones.removed, Modifier.weight(1f))
+            StatTile("−${threads.size}", stringRes(Res.string.backup_entry_thread), tones.removed, Modifier.weight(1f))
         }
     }
 
     if (people.isNotEmpty()) {
         item(key = "mute-people", contentType = "facepile") {
             Column(Pad.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionCaption(stringRes(R.string.backup_entry_person))
+                SectionCaption(stringRes(Res.string.backup_entry_person))
                 FacePile(people, accountViewModel) { ui.showAllPeople = !ui.showAllPeople }
             }
         }
@@ -427,7 +488,7 @@ private fun LazyListScope.muteListItems(
         item(key = "mute-words", contentType = "pills") {
             val tones = conflictTones()
             Column(Pad.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionCaption(stringRes(R.string.backup_review_words_and_hashtags))
+                SectionCaption(stringRes(Res.string.backup_review_words_and_hashtags))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     (words.map { "\"$it\"" } + hashtags).forEach { StruckPill(it, tones.removed) }
                 }
@@ -436,7 +497,7 @@ private fun LazyListScope.muteListItems(
     }
 
     if (threads.isNotEmpty()) {
-        item(key = "mute-threads-caption", contentType = "caption") { SectionCaption(stringRes(R.string.backup_entry_thread), Pad.padding(top = 18.dp)) }
+        item(key = "mute-threads-caption", contentType = "caption") { SectionCaption(stringRes(Res.string.backup_entry_thread), Pad.padding(top = 18.dp)) }
         items(threads, key = { "mute-thread-$it" }, contentType = { "note" }) { id ->
             LoadNote(id) { note ->
                 if (note != null) {
@@ -463,7 +524,7 @@ private fun FacePile(
     val names = people.take(2).map { observedName(it, accountViewModel) }
     val summary =
         if (people.size > 2) {
-            stringRes(R.string.backup_review_names_and_more, names.joinToString(", "), (people.size - 2).toString())
+            stringRes(Res.string.backup_review_names_and_more, names.joinToString(", "), (people.size - 2).toString())
         } else {
             names.joinToString(", ")
         }
@@ -564,9 +625,9 @@ internal fun PrivateItemsCard(
     val tones = conflictTones()
     val (title, body) =
         when (change) {
-            ContentChange.CLEARED -> R.string.backup_review_private_wiped_title to R.string.backup_review_private_wiped_body
-            ContentChange.ADDED -> R.string.backup_review_private_added_title to R.string.backup_review_private_added_body
-            else -> R.string.backup_review_private_changed_title to R.string.backup_review_private_changed_body
+            ContentChange.CLEARED -> Res.string.backup_review_private_wiped_title to Res.string.backup_review_private_wiped_body
+            ContentChange.ADDED -> Res.string.backup_review_private_added_title to Res.string.backup_review_private_added_body
+            else -> Res.string.backup_review_private_changed_title to Res.string.backup_review_private_changed_body
         }
     Row(
         modifier
@@ -592,28 +653,28 @@ internal fun PrivateItemsCard(
 // ---------------------------------------------------------------------------------------
 
 private class ProfileField(
-    val labelRes: Int,
+    val labelRes: StringResource,
     val change: ValueChange<String>,
     val isImage: Boolean = false,
 )
 
 private fun profileFields(diff: MetadataDiff): List<ProfileField> =
     listOfNotNull(
-        diff.picture?.let { ProfileField(R.string.backup_profile_field_picture, it, isImage = true) },
-        diff.banner?.let { ProfileField(R.string.backup_profile_field_banner, it, isImage = true) },
-        diff.name?.let { ProfileField(R.string.backup_profile_field_name, it) },
-        diff.displayName?.let { ProfileField(R.string.backup_profile_field_display_name, it) },
-        diff.about?.let { ProfileField(R.string.backup_profile_field_about, it) },
-        diff.nip05?.let { ProfileField(R.string.backup_profile_field_nip05, it) },
-        diff.website?.let { ProfileField(R.string.backup_profile_field_website, it) },
-        diff.lud16?.let { ProfileField(R.string.backup_profile_field_lud16, it) },
-        diff.lud06?.let { ProfileField(R.string.backup_profile_field_lud06, it) },
-        diff.clinkOffer?.let { ProfileField(R.string.backup_profile_field_clink_offer, it) },
-        diff.pronouns?.let { ProfileField(R.string.backup_profile_field_pronouns, it) },
-        diff.bot?.let { ProfileField(R.string.backup_profile_field_bot, ValueChange(it.before?.toString(), it.after?.toString())) },
+        diff.picture?.let { ProfileField(Res.string.backup_profile_field_picture, it, isImage = true) },
+        diff.banner?.let { ProfileField(Res.string.backup_profile_field_banner, it, isImage = true) },
+        diff.name?.let { ProfileField(Res.string.backup_profile_field_name, it) },
+        diff.displayName?.let { ProfileField(Res.string.backup_profile_field_display_name, it) },
+        diff.about?.let { ProfileField(Res.string.backup_profile_field_about, it) },
+        diff.nip05?.let { ProfileField(Res.string.backup_profile_field_nip05, it) },
+        diff.website?.let { ProfileField(Res.string.backup_profile_field_website, it) },
+        diff.lud16?.let { ProfileField(Res.string.backup_profile_field_lud16, it) },
+        diff.lud06?.let { ProfileField(Res.string.backup_profile_field_lud06, it) },
+        diff.clinkOffer?.let { ProfileField(Res.string.backup_profile_field_clink_offer, it) },
+        diff.pronouns?.let { ProfileField(Res.string.backup_profile_field_pronouns, it) },
+        diff.bot?.let { ProfileField(Res.string.backup_profile_field_bot, ValueChange(it.before?.toString(), it.after?.toString())) },
         diff.birthday?.let {
             ProfileField(
-                R.string.backup_profile_field_birthday,
+                Res.string.backup_profile_field_birthday,
                 ValueChange(
                     it.before?.let { b -> listOfNotNull(b.year, b.month, b.day).joinToString("-") },
                     it.after?.let { a -> listOfNotNull(a.year, a.month, a.day).joinToString("-") },
@@ -636,8 +697,8 @@ private fun LazyListScope.profileItems(
     item(key = "profile-cards", contentType = "profile-cards") {
         val tones = conflictTones()
         Row(Pad.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniProfileCard(saved, pubKey, stringRes(R.string.backup_review_saved), MaterialTheme.colorScheme.outlineVariant, accountViewModel, Modifier.weight(1f))
-            MiniProfileCard(incoming, pubKey, stringRes(R.string.backup_review_new), tones.removed.copy(alpha = 0.5f), accountViewModel, Modifier.weight(1f))
+            MiniProfileCard(saved, pubKey, stringRes(Res.string.backup_review_saved), MaterialTheme.colorScheme.outlineVariant, accountViewModel, Modifier.weight(1f))
+            MiniProfileCard(incoming, pubKey, stringRes(Res.string.backup_review_new), tones.removed.copy(alpha = 0.5f), accountViewModel, Modifier.weight(1f))
         }
     }
 
@@ -656,7 +717,7 @@ private fun LazyListScope.profileItems(
         }
     }
     // Linked identities and fields this app doesn't model use the generic sections.
-    genericDiffItems(buildRows(presentation, skipGroups = setOf(R.string.backup_entry_profile_field)), accountViewModel, nav)
+    genericDiffItems(buildRows(presentation, skipGroups = setOf(Res.string.backup_entry_profile_field)), accountViewModel, nav)
 }
 
 @Composable
@@ -735,10 +796,10 @@ private fun FlowRowDiff(
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
         if (before != null) DiffChip(clip(before), tones.removed, struck = true)
         when {
-            after == null -> StatusTag(stringRes(R.string.backup_review_gone), tones.removed)
+            after == null -> StatusTag(stringRes(Res.string.backup_review_gone), tones.removed)
             before == null -> {
                 DiffChip(clip(after), tones.added, struck = false)
-                StatusTag(stringRes(R.string.backup_review_new_tag), tones.added)
+                StatusTag(stringRes(Res.string.backup_review_new_tag), tones.added)
             }
             else -> {
                 Text("→", color = MaterialTheme.colorScheme.placeholderText)
@@ -779,7 +840,7 @@ private fun ImageThumb(
         contentAlignment = Alignment.Center,
     ) {
         if (url == null) {
-            Text(stringRes(R.string.backup_review_not_set), style = MaterialTheme.typography.labelSmall, color = color)
+            Text(stringRes(Res.string.backup_review_not_set), style = MaterialTheme.typography.labelSmall, color = color)
         } else {
             MyAsyncImage(
                 imageUrl = url,
@@ -843,14 +904,14 @@ private fun LazyListScope.nip65Items(
     val outbox = lane(saved, new, writes)
     val inbox = lane(saved, new, reads)
 
-    laneItems("outbox", stringRes = R.string.backup_review_outbox, subRes = R.string.backup_review_outbox_explainer, rows = outbox, nav = nav)
-    laneItems("inbox", stringRes = R.string.backup_review_inbox, subRes = R.string.backup_review_inbox_explainer, rows = inbox, nav = nav)
+    laneItems("outbox", stringRes = Res.string.backup_review_outbox, subRes = Res.string.backup_review_outbox_explainer, rows = outbox, nav = nav)
+    laneItems("inbox", stringRes = Res.string.backup_review_inbox, subRes = Res.string.backup_review_inbox_explainer, rows = inbox, nav = nav)
 }
 
 private fun LazyListScope.laneItems(
     key: String,
-    stringRes: Int,
-    subRes: Int,
+    stringRes: StringResource,
+    subRes: StringResource,
     rows: List<LaneRow>,
     nav: INav,
 ) {
@@ -873,9 +934,9 @@ private fun LaneRelayRow(
     val (color, tag) =
         when (row.state) {
             LaneState.KEPT -> tones.kept to null
-            LaneState.DROPPED -> tones.removed to R.string.backup_review_dropped_tag
-            LaneState.ADDED -> tones.added to R.string.backup_review_new_tag
-            LaneState.DEMOTED -> tones.changed to R.string.backup_review_demoted_tag
+            LaneState.DROPPED -> tones.removed to Res.string.backup_review_dropped_tag
+            LaneState.ADDED -> tones.added to Res.string.backup_review_new_tag
+            LaneState.DEMOTED -> tones.changed to Res.string.backup_review_demoted_tag
         }
     Row(
         Pad
@@ -933,12 +994,12 @@ private fun LazyListScope.nutzapItems(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(symbol = MaterialSymbols.Key, contentDescription = null, tint = tones.changed)
-                    Text(stringRes(if (key.after == null) R.string.backup_review_key_removed else R.string.backup_review_key_replaced), style = MaterialTheme.typography.titleSmall)
+                    Text(stringRes(if (key.after == null) Res.string.backup_review_key_removed else Res.string.backup_review_key_replaced), style = MaterialTheme.typography.titleSmall)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    KeyColumn(key.before, stringRes(R.string.backup_review_saved), tones.kept)
+                    KeyColumn(key.before, stringRes(Res.string.backup_review_saved), tones.kept)
                     Text("→", fontSize = 24.sp, color = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.padding(horizontal = 18.dp))
-                    KeyColumn(key.after, stringRes(R.string.backup_review_new), tones.changed)
+                    KeyColumn(key.after, stringRes(Res.string.backup_review_new), tones.changed)
                 }
                 if (key.after != null) {
                     Row(
@@ -950,7 +1011,7 @@ private fun LazyListScope.nutzapItems(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(symbol = MaterialSymbols.Warning, contentDescription = null, tint = tones.changed, modifier = Modifier.size(18.dp))
-                        Text(stringRes(R.string.backup_review_key_warning), style = MaterialTheme.typography.bodySmall, color = tones.changed)
+                        Text(stringRes(Res.string.backup_review_key_warning), style = MaterialTheme.typography.bodySmall, color = tones.changed)
                     }
                 }
             }
@@ -976,10 +1037,10 @@ private fun LazyListScope.nutzapItems(
         } + diff.mints.added.map { Triple(it.mintUrl, it.units.joinToString(), LaneState.ADDED) }
 
     if (mintRows.isNotEmpty()) {
-        item(key = "nutzap-mints", contentType = "caption") { SectionCaption(stringRes(R.string.backup_entry_mint), Pad.padding(top = 18.dp, bottom = 6.dp)) }
+        item(key = "nutzap-mints", contentType = "caption") { SectionCaption(stringRes(Res.string.backup_entry_mint), Pad.padding(top = 18.dp, bottom = 6.dp)) }
         items(mintRows, key = { "mint-" + it.first }, contentType = { "mint" }) { (url, units, state) -> MintRow(url, units, state) }
     }
-    genericDiffItems(buildRows(presentation, skipGroups = setOf(R.string.backup_entry_mint, R.string.backup_entry_nutzap_key)), accountViewModel, nav)
+    genericDiffItems(buildRows(presentation, skipGroups = setOf(Res.string.backup_entry_mint, Res.string.backup_entry_nutzap_key)), accountViewModel, nav)
 }
 
 @Composable
@@ -993,7 +1054,7 @@ private fun KeyColumn(
             KeyFingerprint(hex, color)
         } else {
             Box(Modifier.size(96.dp).clip(RoundedCornerShape(18.dp)).border(2.dp, color, RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
-                Text(stringRes(R.string.backup_review_not_set), style = MaterialTheme.typography.labelSmall, color = color)
+                Text(stringRes(Res.string.backup_review_not_set), style = MaterialTheme.typography.labelSmall, color = color)
             }
         }
         StatusTag(label, color)
@@ -1010,9 +1071,9 @@ private fun MintRow(
     val (color, tag) =
         when (state) {
             LaneState.KEPT -> MaterialTheme.colorScheme.onSurface to null
-            LaneState.DROPPED -> tones.removed to R.string.backup_review_dropped_tag
-            LaneState.ADDED -> tones.added to R.string.backup_review_new_tag
-            LaneState.DEMOTED -> tones.changed to R.string.backup_review_units_tag
+            LaneState.DROPPED -> tones.removed to Res.string.backup_review_dropped_tag
+            LaneState.ADDED -> tones.added to Res.string.backup_review_new_tag
+            LaneState.DEMOTED -> tones.changed to Res.string.backup_review_units_tag
         }
     Row(
         Pad
@@ -1083,21 +1144,21 @@ private fun LazyListScope.groupItems(
             StatTile(
                 diff.groups.removed.size
                     .toString(),
-                stringRes(R.string.backup_review_left),
+                stringRes(Res.string.backup_review_left),
                 tones.removed,
                 Modifier.weight(1f),
             )
             StatTile(
                 diff.groups.added.size
                     .toString(),
-                stringRes(R.string.backup_review_joined),
+                stringRes(Res.string.backup_review_joined),
                 tones.added,
                 Modifier.weight(1f),
             )
             StatTile(
                 diff.groups.changed.size
                     .toString(),
-                stringRes(R.string.backup_review_renamed),
+                stringRes(Res.string.backup_review_renamed),
                 tones.changed,
                 Modifier.weight(1f),
             )
@@ -1165,7 +1226,7 @@ private fun GroupTileContent(
             Column {
                 Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    tile.oldName?.let { stringRes(R.string.backup_review_was_named, it) } ?: tile.group.relayUrl
+                    tile.oldName?.let { stringRes(Res.string.backup_review_was_named, it) } ?: tile.group.relayUrl
                         .removePrefix("wss://")
                         .removeSuffix("/"),
                     style = MaterialTheme.typography.labelSmall,
@@ -1176,9 +1237,9 @@ private fun GroupTileContent(
             }
         }
         when (tile.state) {
-            LaneState.DROPPED -> StatusTag(stringRes(R.string.backup_review_left_tag), tones.removed, Modifier.align(Alignment.TopEnd))
-            LaneState.ADDED -> StatusTag(stringRes(R.string.backup_review_new_tag), tones.added, Modifier.align(Alignment.TopEnd))
-            LaneState.DEMOTED -> StatusTag(stringRes(R.string.backup_review_renamed_tag), tones.changed, Modifier.align(Alignment.TopEnd))
+            LaneState.DROPPED -> StatusTag(stringRes(Res.string.backup_review_left_tag), tones.removed, Modifier.align(Alignment.TopEnd))
+            LaneState.ADDED -> StatusTag(stringRes(Res.string.backup_review_new_tag), tones.added, Modifier.align(Alignment.TopEnd))
+            LaneState.DEMOTED -> StatusTag(stringRes(Res.string.backup_review_renamed_tag), tones.changed, Modifier.align(Alignment.TopEnd))
             LaneState.KEPT -> {}
         }
     }

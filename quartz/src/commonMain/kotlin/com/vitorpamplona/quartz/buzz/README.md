@@ -121,7 +121,7 @@ root as a pinned message. Covered by `nip29RelayGroups/PinEventsTest`.
 
 | Kind | Buzz class | Incumbent (registered) |
 |---|---|---|
-| 9041 | `moderation.ModerationUnbanEvent` | `nip75ZapGoals.GoalEvent` |
+| 9041 | `moderation.ModerationUnbanEvent` | `nip75ZapGoals.ZapGoalEvent` |
 | 49001 | `media.MediaUploadEvent` | — (Buzz's own `kind.rs` marks 49001 "Not a relay event kind") |
 | 30078 | `rsReadState` (helpers) | `nip78AppData.AppSpecificDataEvent` (NIP-RS reuses 30078) |
 

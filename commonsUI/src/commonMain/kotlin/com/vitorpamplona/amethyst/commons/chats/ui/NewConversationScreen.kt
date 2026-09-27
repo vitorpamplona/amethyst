@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.chats.ui
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_entry
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_entry_action
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_best_for
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_best
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_chip
@@ -73,6 +76,14 @@ import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_pro
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_tagline
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_title
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_cons
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_best
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_chip
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_con_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_cta
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_pro_1
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_pro_2
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_tagline
+import com.vitorpamplona.amethyst.commons.resources.new_conversation_cordn_title
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_best
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_chip
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_dm_con_1
@@ -143,6 +154,7 @@ import org.jetbrains.compose.resources.StringResource
 private val ColorPrivate = Color(0xFF7C3AED)
 private val ColorMarmot = Color(0xFF4F46E5)
 private val ColorConcord = Color(0xFF0F766E)
+private val ColorCordn = Color(0xFF14B8A6)
 private val ColorPublic = Color(0xFFB45309)
 private val ColorRelay = Color(0xFF2563EB)
 private val ColorEphemeral = Color(0xFFC2410C)
@@ -223,6 +235,24 @@ private val conversationSections =
                         pros = listOf(Res.string.new_conversation_concord_pro_1, Res.string.new_conversation_concord_pro_2),
                         cons = listOf(Res.string.new_conversation_concord_con_1),
                         route = Route.ConcordCreate,
+                    ),
+                    ConversationType(
+                        icon = MaterialSymbols.Dns,
+                        color = ColorCordn,
+                        title = Res.string.new_conversation_cordn_title,
+                        tagline = Res.string.new_conversation_cordn_tagline,
+                        chip = Res.string.new_conversation_cordn_chip,
+                        bestFor = Res.string.new_conversation_cordn_best,
+                        cta = Res.string.new_conversation_cordn_cta,
+                        pros = listOf(Res.string.new_conversation_cordn_pro_1, Res.string.new_conversation_cordn_pro_2),
+                        // The §8 exposure, stated where the choice is made
+                        // rather than discovered later: a coordinator learns
+                        // who is in which group and when they talk, even though
+                        // it can never read a word. The whole point of the
+                        // exposure work was to say this before someone commits
+                        // to it, and this is the first place it can be said.
+                        cons = listOf(Res.string.new_conversation_cordn_con_1),
+                        route = Route.CordnCreateGroup,
                     ),
                 ),
         ),
@@ -325,6 +355,46 @@ fun NewConversationScreen(nav: INav) {
                     }
                 }
             }
+
+            // Being invited is the other half of "start a conversation", so it
+            // belongs on the screen people reach for when they want one --
+            // not buried in settings. The count is deliberately absent: it
+            // would take a call to every coordinator, and every call to a
+            // coordinator is metadata (spec/00.md §8).
+            item(key = "cordn-invitations") {
+                CordnInvitationsEntry(onClick = { nav.nav(Route.CordnInvitations) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun CordnInvitationsEntry(onClick: () -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Dns,
+            contentDescription = null,
+            tint = ColorCordn,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringRes(Res.string.cordn_invitations_entry),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = stringRes(Res.string.cordn_invitations_entry_action),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
         }
     }
 }

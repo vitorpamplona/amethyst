@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
-import com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
-import com.vitorpamplona.quartz.marmot.mls.framing.WireFormat
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.framing.MlsMessage
+import com.vitorpamplona.quartz.mls.framing.WireFormat
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

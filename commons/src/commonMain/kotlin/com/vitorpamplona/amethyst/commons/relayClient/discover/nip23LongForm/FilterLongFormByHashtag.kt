@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
 fun filterLongFormByHashtag(
     relay: NormalizedRelayUrl,
@@ -44,7 +44,7 @@ fun filterLongFormByHashtag(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.DISCOVER_FEED,
-                    kinds = listOf(LongTextNoteEvent.KIND),
+                    kinds = listOf(LongFormContentEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 200,
                     since = since,

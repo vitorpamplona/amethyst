@@ -315,6 +315,9 @@
     <string name="voice_post">Spraakbericht</string>
     <string name="voice_reply">Spraakreactie</string>
     <string name="pow_kind_report">Melding</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Privébericht</string>
     <string name="pow_kind_chat_message">Chatbericht</string>
     <string name="nest_notification_broadcasting">Nest — Live</string>

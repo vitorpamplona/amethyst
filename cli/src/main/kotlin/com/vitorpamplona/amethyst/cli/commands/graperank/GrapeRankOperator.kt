@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -45,7 +45,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -90,8 +90,8 @@ object GrapeRankOperator {
                     linkedMapOf<String, Any?>(
                         "observer" to observer,
                         "provider_pubkey" to rec.providerPubKey,
-                        "cards" to ctx.store.count(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(rec.providerPubKey))),
-                        "retractions" to ctx.store.count(Filter(kinds = listOf(DeletionEvent.KIND), authors = listOf(rec.providerPubKey))),
+                        "cards" to ctx.store.count(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(rec.providerPubKey))),
+                        "retractions" to ctx.store.count(Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(rec.providerPubKey))),
                     )
                 }
 

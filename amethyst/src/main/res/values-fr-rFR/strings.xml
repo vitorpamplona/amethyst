@@ -204,6 +204,9 @@
     <string name="voice_post">Message vocal</string>
     <string name="voice_reply">Réponse vocale</string>
     <string name="pow_kind_report">Signaler</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Message privé</string>
     <string name="nest_notification_broadcasting">Nest — En direct</string>
     <string name="nest_notification_channel_description">Maintient l\'audio actif pendant qu\'une salle est ouverte.</string>

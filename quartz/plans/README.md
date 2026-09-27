@@ -1,6 +1,6 @@
 # quartz plans
 
-_Audited 2026-09-08. 12 plans: 7 shipped (archived), 0 in-progress, 4 queued, 1 closed (negative result)._
+_Audited 2026-09-17. 13 plans: 7 shipped (archived), 0 in-progress, 5 queued, 1 closed (negative result)._
 
 ## Queued
 | Plan | Summary |
@@ -10,6 +10,7 @@ _Audited 2026-09-08. 12 plans: 7 shipped (archived), 0 in-progress, 4 queued, 1 
 | [2026-07-03-incremental-negentropy-storage.md](2026-07-03-incremental-negentropy-storage.md) | Always-current (created_at, id) index so cold NEG-OPENs stop paying a full scan + seal (~340 ms at 50k vs strfry's ~21 ms). |
 | [2026-07-04-small-req-floor.md](2026-07-04-small-req-floor.md) | Small-REQ dispatch floor: decomposed, inline fast path tried and reverted (no wire-level win); floor is transport-side. |
 | [2026-08-13-gpu-pow-mining.md](2026-08-13-gpu-pow-mining.md) | GPU NIP-13 mining declined (ARMv8 has SHA-256 in silicon, mobile GPUs do not). Midstate is ~3x on JVM targets; Android hinges on Conscrypt per-digest JNI cost, still unmeasured. created_at refresh while mining shipped. |
+| [2026-09-17-cordn-interop.md](2026-09-17-cordn-interop.md) | Cordn (cordn.net) is an alternative binding of MLS onto Nostr, not an alternative to MLS: same ciphersuite `0x0001`, byte-identical ChaCha20-Poly1305 seal and NIP-01 envelope, but the delivery service is an MCP server over ContextVM with no key-package event kind. Only the RFC 9420 engine is shareable, and it is not yet Marmot-clean (3 files, 10 imports, 3 hardcoded policies). ContextVM must be written from scratch: full review of the spec + all 12 CEPs, with a per-CEP compliance matrix, `CVM-*` rule ids and a 5-tier test method (including a fixture server that misbehaves on demand, and RFC 8785 JCS which Quartz lacks). Blocked on the credential-identity encoding (raw 32 bytes vs 64-byte hex ASCII). Includes a coordinator metadata-exposure analysis. |
 | [2026-09-08-marmot-spec-resync.md](2026-09-08-marmot-spec-resync.md) | Marmot moved off the MIP-era spec (2026-07-02): group state split into `app_data_dictionary` components, account identity proof v2, and a convergence engine. Current MDK rejects our groups outright. Gap analysis + 8-stage plan; Stages 0-4 done (mdk interop reference, app_data_dictionary, identity proof v2, the six group components, transport corrections); lifecycle + branch selection landed. |
 | [2026-09-22-cyberspace-region-bags.md](2026-09-22-cyberspace-region-bags.md) | Open `kind 33330` region bags: §2 coordinates, §4 Cantor roots, §7.2 region keys, §7.7 hint sweeps, §7.6 item verification. Reverses SNO's D2 — §7.7 says a seeker's position never enters the cost, and a key is 1.2 ms at h8 against the spec's own 1.3 ms. Three layers: quartz, `amy`, and a tap-to-search card. |
 

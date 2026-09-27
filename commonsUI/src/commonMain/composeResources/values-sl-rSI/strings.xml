@@ -472,16 +472,8 @@
     <string name="mark_all_known_as_read">Označi vse znane kot prebrane</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
-    <string name="account_backup_tips2_md">
-        ## Varnostna kopija ključev in varnostni nasveti
-        \n\nVaš račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo vašo digitalno identiteto.
-        \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš.
-        \n- Amethyst ustvarjalci vas ne bojo **nikoli** vprašali po vašem privatnem ključu.
-        \n- Ustvari **varnostno kopijo** svojega privatnega ključa, za obnovitev računa. Priporoča se uporaba upravljalnika gesel.
-    </string>
-    <string name="account_backup_tips3_md">        Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla.
-        \n\nČe izgubiš geslo, obnova ključa ni več mogoča.
-    </string>
+    <string name="account_backup_tips2_md">## Varnostna kopija ključev in varnostni nasveti \n\nVaš račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo vašo digitalno identiteto. \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš. \n- Amethyst ustvarjalci vas ne bojo **nikoli** vprašali po vašem privatnem ključu. \n- Ustvari **varnostno kopijo** svojega privatnega ključa, za obnovitev računa. Priporoča se uporaba upravljalnika gesel.</string>
+    <string name="account_backup_tips3_md">Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla. \n\nČe izgubiš geslo, obnova ključa ni več mogoča.</string>
     <string name="backup_keys_nudge_title">Varno shrani ključe</string>
     <string name="backup_keys_nudge_body">Vaš zasebni ključ je edini način za dostop do tega računa. Če ga izgubite, ga ne boste mogli več obnoviti. Shranite ga na varno mesto.</string>
     <string name="backup_keys_nudge_backup_now">Varno shrani zdaj</string>
@@ -1593,9 +1585,7 @@
     <string name="push_server_none_explainer">Onemogoči potisna obvestila</string>
     <string name="push_server_uses_app_explainer">Uporablja aplikacijo %1$s</string>
     <string name="push_server_install_app">Nastavitev potisnih obvestil</string>
-    <string name="push_server_install_app_description">        Za prejemanje potisnih obvestil namestite aplikacijo, ki podpira [Unified Push](https://unifiedpush.org/), na primer [Ntfy](https://ntfy.sh/).
-        Po namestitvi izberite aplikacijo, ki jo želite uporabljati, v nastavitvah.
-    </string>
+    <string name="push_server_install_app_description">Za prejemanje potisnih obvestil namestite aplikacijo, ki podpira [Unified Push](https://unifiedpush.org/), na primer [Ntfy](https://ntfy.sh/). Po namestitvi izberite aplikacijo, ki jo želite uporabljati, v nastavitvah.</string>
     <string name="thread_title">Niz objav</string>
     <string name="send_the_seller_a_message">Pošlji prodajalcu sporočilo</string>
     <string name="hi_there_is_this_still_available">Živjo, je to še na voljo?</string>
@@ -1856,7 +1846,7 @@
     <string name="calendar_day_a11y_today_suffix">danes</string>
     <string name="calendar_day_a11y_selected_suffix">izbrano</string>
     <string name="calendar_fab_new_event">Ustvari nov koledarski dogodek</string>
-    <string name="calendar_fab_new_collection">Ustvari novo zbirko koledarjev </string>
+    <string name="calendar_fab_new_collection">Ustvari novo zbirko koledarjev</string>
     <string name="calendar_fab_toggle">Ustvari novo zbirko koledarjev</string>
     <string name="calendar_untitled">(neimenovano)</string>
     <string name="calendar_all_day">Ves dan</string>
@@ -2042,7 +2032,7 @@
     <string name="buzz_dm_more">Več</string>
     <string name="buzz_dm_add_member">Dodaj člana</string>
     <string name="buzz_dm_add_member_title">Dodaj nekoga v to ZS</string>
-    <string name="buzz_dm_add_member_invalid">Neveljaven npub ali hex ključ </string>
+    <string name="buzz_dm_add_member_invalid">Neveljaven npub ali hex ključ</string>
     <string name="buzz_dm_just_you">Samo vi</string>
     <string name="buzz_dm_workspace">Delovni prostor</string>
     <string name="buzz_dm_recipients">Za</string>
@@ -2091,8 +2081,7 @@
     <string name="dm_relays_not_found">Nastavite releje za predal zasebnih sporočil</string>
     <string name="dm_relays_not_found_description">Ta nastavitev omogoča vsem, da vedo, katere releje uporabiti, ko vam pošiljajo sporočila. Brez njih bi lahko zgrešili nekatera sporočila.</string>
     <string name="dm_relays_not_found_examples2">Dobre možnosti so:\n - auth.nostr1.com (brezplačen)\n - inbox.nostr.wine (plačljiv)\n - relay.0xchat.com (brezplačen)</string>
-    <string name="dm_relays_not_found_editing">Vnesite 1–3 releje, ki bodo služili kot vaš predal
- za zasebna sporočila. Releji za zasebna sporočila bi morali sprejeti katero koli sporočilo od kogar koli, vendar samo vam dovoliti njihov prenos.</string>
+    <string name="dm_relays_not_found_editing">Vnesite 1–3 releje, ki bodo služili kot vaš predal za zasebna sporočila. Releji za zasebna sporočila bi morali sprejeti katero koli sporočilo od kogar koli, vendar samo vam dovoliti njihov prenos.</string>
     <string name="dm_relays_not_found_create_now">Nastavi zdaj</string>
     <string name="recipient_missing_dm_relays">Releji za prejeto pošto (ZS) niso bili najdeni. Sporočil ni mogoče dostaviti, dokler uporabnik ne nastavi seznama svojih relejev.</string>
     <string name="search_relays_not_found">Nastavi iskalne releje</string>
@@ -2339,7 +2328,7 @@
     <string name="new_chess_game">Nova partija šaha</string>
     <string name="chess_loading_game">Nalagam partijo\u2026</string>
     <string name="chess_game_not_found">Partija ni najdena</string>
-    <string name="chess_game_waiting">Ta partija je zaključena ali pa, čaka na nasprotnika </string>
+    <string name="chess_game_waiting">Ta partija je zaključena ali pa, čaka na nasprotnika</string>
     <string name="chess_game_id">ID Partije: %1$s\u2026</string>
     <string name="badge_and_n_others"> in %1$d ostalih</string>
     <string name="remove_language">Odstrani %1$s</string>
@@ -2664,9 +2653,7 @@
          committed the change, %2$s the member it concerns, %3$s the new name. -->
     <string name="marmot_remove_photo">Odstrani fotografijo</string>
     <string name="marmot_keypackage_relays_not_set_title">KeyPackage releji niso nastavljeni</string>
-    <string name="marmot_keypackage_relays_not_set_message">Še nimate seznama relejev za KeyPackage (MIP-00). Ta seznam drugim sporoča, kje je objavljen vaš KeyPackage, da vas lahko povabijo v skupinske klepete.
-
-Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
+    <string name="marmot_keypackage_relays_not_set_message">Še nimate seznama relejev za KeyPackage (MIP-00). Ta seznam drugim sporoča, kje je objavljen vaš KeyPackage, da vas lahko povabijo v skupinske klepete. Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="marmot_use_outbox_relays">Uporabi odhodne releje</string>
     <string name="marmot_skip_for_now">Zaenkrat preskoči</string>
     <string name="marmot_group_info_title">Podatki o skupini</string>
@@ -3337,15 +3324,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="could_not_fetch_invoice_from_details">Ni bilo mogoče pridobiti fakture od %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Stisnjene datoteke ni bilo mogoče odpreti</string>
     <string name="couldnt_find_nwc_wallets">Ne najdem denarnice</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst ni našel nobene denarnice, ki podpira Nostr Wallet Connect (NWC).
-\n\nKaj lahko storiš:
-\n\t1. Preverite podporo za NWC: Ponovno\t preverite, ali vaša priljubljena denarnica podpira Nostr Wallet Connect.
-\n\t2. Ustvari povezavo: Odprite svojo denarnico in ustvarite novo NWC povezavo.
-\n\t3. Povežite z Amethyst: Vaša denarnica vam bo ponavadi ponudila tri možnosti:
-\n\t\t3.1 Samodejna povezava: Gumb za samodejno odprtje in povezavo z Amethyst. Če je na voljo, kliknite ta gumb, odprite Amethyst in na novem zaslonu pritisnite shrani.
-\n\t\tRočna povezava: Povezovalni URI, ki ga lahko kopirate, nato pa na tem zaslonu kliknite ikono za lepljenje, da ga neposredno vnesete.
-\n\t\tQR koda: Denarnica ustvari QR-kodo, ki jo skenirajte z gumbom za QR na tem zaslonu.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst ni našel nobene denarnice, ki podpira Nostr Wallet Connect (NWC). \n\nKaj lahko storiš: \n\t1. Preverite podporo za NWC: Ponovno\t preverite, ali vaša priljubljena denarnica podpira Nostr Wallet Connect. \n\t2. Ustvari povezavo: Odprite svojo denarnico in ustvarite novo NWC povezavo. \n\t3. Povežite z Amethyst: Vaša denarnica vam bo ponavadi ponudila tri možnosti: \n\t\t3.1 Samodejna povezava: Gumb za samodejno odprtje in povezavo z Amethyst. Če je na voljo, kliknite ta gumb, odprite Amethyst in na novem zaslonu pritisnite shrani. \n\t\tRočna povezava: Povezovalni URI, ki ga lahko kopirate, nato pa na tem zaslonu kliknite ikono za lepljenje, da ga neposredno vnesete. \n\t\tQR koda: Denarnica ustvari QR-kodo, ki jo skenirajte z gumbom za QR na tem zaslonu.</string>
     <string name="create">Ustvari</string>
     <string name="d">d</string>
     <string name="danger_zone">Nevarno območje</string>
@@ -3804,26 +3783,16 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="location_change_place">Spremeni lokacijo na karti</string>
     <string name="location_channels">Lokacijski kanali</string>
     <string name="location_pick_on_map">Izberi lokacijo na karti</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem za posredovanje sporočila</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem, za sledenje uporabnika</string>
-    <string name="login_with_a_private_key_to_be_able_to_hide_word">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem, za cenzuro besed ali stavkov</string>
-    <string name="login_with_a_private_key_to_be_able_to_reply">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem, da omogočiš tudi pisanje</string>
-    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavite se s privatnim ključem, da boste lahko pošiljali Zape</string>
-    <string name="login_with_a_private_key_to_be_able_to_show_word">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem, za odstranitev iz seznama sledljivih</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Za nalaganje se je potrebno prijaviti s privatnim ključem</string>
-    <string name="login_with_a_private_key_to_like_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem za všečkanje sporočila</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem za posredovanje sporočila</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem, za sledenje uporabnika</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem, za cenzuro besed ali stavkov</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem, da omogočiš tudi pisanje</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavite se s privatnim ključem, da boste lahko pošiljali Zape</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Uporabljaš javni ključ in javni ključi omogočajo le branje. Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem, za odstranitev iz seznama sledljivih</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Uporabljaš javni ključ in javni ključi omogočajo le branje. Za nalaganje se je potrebno prijaviti s privatnim ključem</string>
+    <string name="login_with_a_private_key_to_like_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="longs">Videoposnetki</string>
     <string name="m">m</string>
     <string name="manage_emoji_packs">Moji emoji paketi</string>
@@ -4122,7 +4091,7 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="new_conversation_public_chat_con_2">Brez moderacije</string>
     <string name="new_conversation_public_chat_cta">Ustvari nov javen klepet</string>
     <string name="new_conversation_public_chat_pro_1">Pridruži se lahko kdorkoli</string>
-    <string name="new_conversation_public_chat_pro_2">Preprosto in zlahka dosegljivo </string>
+    <string name="new_conversation_public_chat_pro_2">Preprosto in zlahka dosegljivo</string>
     <string name="new_conversation_public_chat_tagline">Javna sporočila na releju</string>
     <string name="new_conversation_public_chat_title">Javni klepet</string>
     <string name="new_conversation_relay_group_best">Skupine, ki jih moderira njihov gostiteljski rele</string>
@@ -4531,11 +4500,8 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="proxy_section">Proxy releji</string>
     <string name="proxy_section_explainer">Agregatorji, ki jih mora aplikacija uporabljati za prenos vaših vsebin, na primer filter.nostr.wine. To nadomesti model odhodne pošte (outbox model) in bo prisililo aplikacijo k povezovanju prek relejev iz vašega seznama.</string>
     <string name="public_chat">Javni pogovor</string>
-    <string name="public_chat_explainer">Javni klepeti so vidni vsem na Nostru in vsakdo
-        se lahko pridruži. So odlični za odprte skupnosti o specifičnih temah.
-        Moderiranje je možno z brisanjem objav na njihovih relejih</string>
-    <string name="public_chat_relays_explainer">Vnesi 1–3 releje, ki gostijo to skupino.
-        Nostr odjemalci uporabljajo to nastavitev, da vedo, od kod prenesti vaša sporočila in kam jih poslati.</string>
+    <string name="public_chat_explainer">Javni klepeti so vidni vsem na Nostru in vsakdo se lahko pridruži. So odlični za odprte skupnosti o specifičnih temah. Moderiranje je možno z brisanjem objav na njihovih relejih</string>
+    <string name="public_chat_relays_explainer">Vnesi 1–3 releje, ki gostijo to skupino. Nostr odjemalci uporabljajo to nastavitev, da vedo, od kod prenesti vaša sporočila in kam jih poslati.</string>
     <string name="public_chat_relays_title">Releji</string>
     <string name="public_chat_title">Metapodatki Javnega Klepeta</string>
     <string name="public_chats">Javni klepeti</string>
@@ -4595,10 +4561,7 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="relay_auth_search_keywords">Preverjanje pristnosti (Auth), rele (Relay), podpis (Sign), preverjanje (Verify), NIP-42, identiteta</string>
     <string name="relay_auth_settings_title">Avtentikacija releja</string>
     <string name="relay_chat">Rele klepet</string>
-    <string name="relay_chat_explainer">Pogovori prek relejev so pogovorne skupine, ki jih nadzoruje njihov domači rele.
-        Vidne so vsem na Nostru in v njih lahko sodeluje kdorkoli.
-        So odlične za odprte skupnosti, povezane s specifičnimi temami. Nekatere od teh skupin so kratkotrajne
-    zato sporočila v klepetu sčasoma izginejo</string>
+    <string name="relay_chat_explainer">Pogovori prek relejev so pogovorne skupine, ki jih nadzoruje njihov domači rele. Vidne so vsem na Nostru in v njih lahko sodeluje kdorkoli. So odlične za odprte skupnosti, povezane s specifičnimi temami. Nekatere od teh skupin so kratkotrajne zato sporočila v klepetu sčasoma izginejo</string>
     <string name="relay_chat_title">Rele klepeti</string>
     <string name="relay_explain_account_data">Vaš profil, nastavitve in osnutki na vaših domačih relejih.</string>
     <string name="relay_explain_community_chats">Releji, kamor vsaka skupnost objavlja svoje načrte.</string>
@@ -4732,7 +4695,7 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="resource_usage_memory_native">Lokalni pomnilnik</string>
     <string name="resource_usage_memory_notes">Zapiski v pomnilniku</string>
     <string name="resource_usage_memory_section">Trenutni pomnilnik</string>
-    <string name="resource_usage_memory_users">Profili v pomnilniku </string>
+    <string name="resource_usage_memory_users">Profili v pomnilniku</string>
     <string name="resource_usage_nests">Čas v zvočnih sobah</string>
     <string name="resource_usage_pow">Rudarjenje PoW</string>
     <string name="resource_usage_radio_bursts">Obuditve radijskega modula za prenose (ocena)</string>
@@ -5033,4 +4996,15 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Prejemnikova "lightning" storitev na %1$s ni na voljo. Izračunana je bila iz "lightning" naslova '%2$s'. Napaka: %3$s. Preverite, ali strežnik deluje in ali je "lightning" naslov pravilen</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Ni mogoče ustvariti lightning fakture od %1$s: Element 'pr' ni bil najden v JSON-u.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Ni mogoče ustvariti lightning fakture. Sporočilo od %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

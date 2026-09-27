@@ -32,15 +32,16 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.apkCertificateHash
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.platform
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.versionCode
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.Platform
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -107,7 +108,7 @@ class SoftwareApplicationEventTest {
                 id = "0".repeat(64),
                 pubKey = "1".repeat(64),
                 createdAt = 0,
-                kind = SoftwareReleaseEvent.KIND,
+                kind = ReleaseArtifactSetEvent.KIND,
                 tags =
                     arrayOf(
                         arrayOf("d", "com.example.app@1.0.0"),
@@ -126,7 +127,7 @@ class SoftwareApplicationEventTest {
                 id = "0".repeat(64),
                 pubKey = "1".repeat(64),
                 createdAt = 0,
-                kind = SoftwareReleaseEvent.KIND,
+                kind = ReleaseArtifactSetEvent.KIND,
                 tags = arrayOf(arrayOf("d", "some-uuid"), arrayOf("title", "My Release")),
                 content = "",
                 sig = "",
@@ -135,13 +136,12 @@ class SoftwareApplicationEventTest {
     }
 
     @Test
-    fun asSoftwareRelease_exposesParsedFields() {
-        val event =
-            Event(
+    fun releaseArtifactSet_exposesParsedNip82Fields() {
+        val release =
+            ReleaseArtifactSetEvent(
                 id = "0".repeat(64),
                 pubKey = "1".repeat(64),
                 createdAt = 0,
-                kind = SoftwareReleaseEvent.KIND,
                 tags =
                     arrayOf(
                         arrayOf("d", "com.example.app@1.0.0"),
@@ -152,10 +152,82 @@ class SoftwareApplicationEventTest {
                 content = "Initial release",
                 sig = "",
             )
-        val release = event.asSoftwareRelease()
         assertEquals("com.example.app", release.appId())
         assertEquals("1.0.0", release.version())
         assertEquals("main", release.channel())
+    }
+
+    @Test
+    fun eventFactory_parsesNip82ReleaseAsReleaseArtifactSet() {
+        val event =
+            EventFactory.create<Event>(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                kind = ReleaseArtifactSetEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "com.example.app@1.0.0"),
+                        arrayOf("i", "com.example.app"),
+                        arrayOf("version", "1.0.0"),
+                        arrayOf("c", "main"),
+                        arrayOf("e", "2".repeat(64)),
+                    ),
+                content = "Initial release",
+                sig = "",
+            )
+        val release = assertIs<ReleaseArtifactSetEvent>(event)
+        assertTrue(release.isNip82SoftwareRelease())
+        assertEquals("com.example.app", release.appId())
+        assertEquals("1.0.0", release.version())
+        assertEquals("main", release.channel())
+        assertEquals(1, release.assets().size)
+        assertEquals("Initial release", release.releaseNotes())
+    }
+
+    @Test
+    fun buildSoftwareRelease_roundTripsNip82Fields() {
+        val template =
+            ReleaseArtifactSetEvent.buildSoftwareRelease(
+                appId = "com.example.app",
+                version = "2.0.0",
+                channel = "beta",
+                assets = emptyList(),
+                releaseNotes = "notes",
+            )
+        assertEquals(ReleaseArtifactSetEvent.KIND, template.kind)
+        val tagsByName = template.tags.associate { it[0] to it.getOrNull(1) }
+        assertEquals("com.example.app@2.0.0", tagsByName["d"])
+        assertEquals("com.example.app", tagsByName["i"])
+        assertEquals("2.0.0", tagsByName["version"])
+        assertEquals("beta", tagsByName["c"])
+        assertEquals("notes", template.content)
+    }
+
+    @Test
+    fun searchIndex_includesReleaseNotesOnlyForNip82() {
+        val nip82 =
+            ReleaseArtifactSetEvent(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                tags = arrayOf(arrayOf("d", "com.example.app@1.0.0"), arrayOf("i", "com.example.app"), arrayOf("version", "1.0.0")),
+                content = "Fixed the crash on startup",
+                sig = "",
+            )
+        assertEquals("Fixed the crash on startup", nip82.indexableContent())
+
+        // A NIP-51 set can carry encrypted private items in content: never index it.
+        val nip51 =
+            ReleaseArtifactSetEvent(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                tags = arrayOf(arrayOf("d", "some-uuid"), arrayOf("title", "My Release")),
+                content = "ciphertext?iv=abc",
+                sig = "",
+            )
+        assertEquals("My Release", nip51.indexableContent())
     }
 
     @Test

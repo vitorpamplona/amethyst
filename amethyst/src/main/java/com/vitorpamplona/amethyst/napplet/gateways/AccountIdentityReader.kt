@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.napplet.gateways
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import kotlinx.serialization.json.add
@@ -137,7 +137,7 @@ class AccountIdentityReader(
         val receipts =
             cache
                 .filter(Filter(kinds = listOf(9735), tags = mapOf("p" to listOf(pubkey))))
-                .mapNotNull { it.event as? LnZapEvent }
+                .mapNotNull { it.event as? ZapReceiptEvent }
         return buildJsonArray {
             receipts.forEach { zap ->
                 addJsonObject {

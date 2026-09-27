@@ -174,6 +174,147 @@
     <string name="road_event_traffic_jam">Korek</string>
     <string name="road_event_unknown">Wydarzenie drogowe</string>
     <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
+    <string name="geocache_unnamed">Geocache</string>
+    <string name="geocache_type_traditional">Tradycyjny</string>
+    <string name="geocache_type_multi">Multi-cache</string>
+    <string name="geocache_type_mystery">Tajemniczy</string>
+    <string name="geocache_size_micro">Mikro</string>
+    <string name="geocache_size_small">Mały</string>
+    <string name="geocache_size_regular">Regularny</string>
+    <string name="geocache_size_large">Duży</string>
+    <string name="geocache_size_other">Inny rozmiar</string>
+    <string name="geocache_difficulty_short">D%1$d</string>
+    <string name="geocache_terrain_short">T%1$d</string>
+    <string name="geocache_first_to_find">Kto pierwszy znajdzie</string>
+    <string name="geocache_is_art">Grafika</string>
+    <string name="geocache_mission">Kluczowe zadanie</string>
+    <string name="geocache_needs_verification">Weryfikowanie znaleziska</string>
+    <string name="geocache_claimed">Zarezerwowane</string>
+    <string name="geocache_archived">Zarchiwizowane</string>
+    <string name="geocache_hint_tap_to_reveal">Utknąłeś? Kliknij, aby wyświetlić podpowiedź</string>
+    <string name="geocache_hint_other_reading">Nie da się odczytać? Kliknij, aby wyświetlić inną wersję</string>
+    <string name="geocache_nearby">W pobliżu</string>
+    <string name="geocache_found_it">Znaleziono!</string>
+    <string name="geocache_verified_find">Zweryfikowane znalezisko</string>
+    <string name="geocache_invalid_proof">Sprawdzenie nie powiodło się</string>
+    <string name="geocache_loading">Ładowanie bufora…</string>
+    <string name="geocache_hidden_by">Ukryty przez %1$s</string>
+    <string name="geocache_navigate">Nawigacja</string>
+    <string name="geocache_copy_coordinates">Kopiuj współrzędne</string>
+    <string name="geocache_coordinates_copied">Współrzędne skopiowane</string>
+    <string name="geocache_photos_section">Zdjęcia</string>
+    <string name="geocache_mission_section">Misja „Key Quest”</string>
+    <string name="geocache_logs_section">Logi</string>
+    <string name="geocache_no_logs">Nikt jeszcze nie odznaczył tej skrzynki. Bądź pierwszy.</string>
+    <string name="geocache_i_found_it">Znalazłem to</string>
+    <string name="geocache_didnt_find_it">Nie znaleziono</string>
+    <string name="geocache_add_note">Dodaj notatkę</string>
+    <string name="geocache_needs_maintenance">Raport wymaga sprawdzenia</string>
+    <string name="geocache_add_to_hunt">Dodaj do polowania</string>
+    <string name="geocache_hunt_new">Nowe polowanie…</string>
+    <string name="geocache_hunt_none_yet">Nie dokonałeś jeszcze polowania.</string>
+    <string name="geocache_hunt_already_on">Już podczas tego polowania</string>
+    <string name="geocache_caches_here">%1$d skrzynek tutaj</string>
+    <string name="geocache_photo_remove">Usuń to zdjęcie</string>
+    <string name="geocache_archived_notice">Ta skrzynka została zarchiwizowana. Nie jest już w grze.</string>
+    <string name="geocache_ftf_won_by">Pierwszy, który znalazł – zgłoszone przez %1$s</string>
+    <string name="geocache_ftf_available">Zwycięstwo w kategorii „Pierwszy, który znajdzie” wciąż pozostaje do rozstrzygnięcia</string>
+    <string name="geocache_owner_actions">Właściciel</string>
+    <string name="geocache_owner_edit">Edytuj tę skrzynkę</string>
+    <string name="geocache_owner_archive">Archiwizuj tę skrzynkę</string>
+    <string name="geocache_owner_archive_confirm">Archiwizuj to. Znajomi zobaczą, że jest poza grą, a lista pozostaje czytelna.</string>
+    <string name="geocache_owner_lock_ftf">Zaznacz pierwszego zgłaszającego</string>
+    <string name="geocache_owner_lock_ftf_explain">Publikuje tag F o nazwie %1$s. Jest to zmiana trwała.</string>
+    <string name="geocache_owner_no_finders">Nie ma jeszcze żadnych potwierdzonych znalezisk, więc nie ma nikogo, kogo można by wybrać.</string>
+    <string name="geocache_owner_show_qr">Pokaż kod weryfikacyjny</string>
+    <string name="geocache_owner_qr_warning">Wydrukuj to i schowaj w kryjówce. Ametyst tego nie przechowuje — jeśli to zgubisz, osoby, które to znajdą, nie będą już mogły udowodnić, że tam były.</string>
+    <string name="geocache_log_type_dnf">Nie znaleziono</string>
+    <string name="geocache_log_type_note">Uwaga</string>
+    <string name="geocache_log_type_maintenance">Wymaga przeglądu</string>
+    <string name="geocache_log_title">Zgłoś znalezisko</string>
+    <string name="geocache_log_cache_label">Skrzynka</string>
+    <string name="geocache_log_your_log">Twój dziennik</string>
+    <string name="geocache_log_placeholder">Jak poszło?</string>
+    <string name="geocache_log_add_photo">Dodaj zdjęcie</string>
+    <string name="geocache_log_mission_answer">Twoja odpowiedź w „Key Quest”</string>
+    <string name="geocache_log_proof_section">Dowód obecności</string>
+    <string name="geocache_log_scan_code">Zeskanuj kod w skrzynce</string>
+    <string name="geocache_log_scan_again">Zeskanuj inny kod</string>
+    <string name="geocache_log_proof_verified">Zweryfikowano — byłeś przy skrzynce</string>
+    <string name="geocache_log_proof_explain">Wprowadzono jednorazowo z kodu podanego w polu. Klucz nie jest zapisywany i nie opuszcza tego ekranu.</string>
+    <string name="geocache_log_proof_bad_code">To nie jest kod weryfikacyjny.</string>
+    <string name="geocache_log_proof_wrong_cache">Ten kod należy do innej skrzynki.</string>
+    <string name="geocache_log_proof_optional">W przypadku tej skrzynki nie jest wymagane przedstawienie dowodu, więc wystarczy ją po prostu wpisać do dziennika.</string>
+    <string name="geocache_log_no_location_attached">Twoja lokalizacja nie jest dołączona do tego logu.</string>
+    <string name="geocache_log_post">Wyślij</string>
+    <string name="geocache_log_comment_title">Dodaj log</string>
+    <string name="geocache_tab_nearby">W pobliżu</string>
+    <string name="geocache_tab_map">Mapa</string>
+    <string name="geocache_tab_hunts">Polowania</string>
+    <string name="geocache_tab_finds">Znaleziska</string>
+    <string name="geocache_tab_mine">Moje</string>
+    <string name="geocache_filter_unfound">Nieznalezione</string>
+    <string name="geocache_filter_difficulty">D ≤ %1$d</string>
+    <string name="geocache_filter_terrain">T ≤ %1$d</string>
+    <string name="geocache_filter_has_prize">Ma nagrodę</string>
+    <string name="geocache_filter_verified_only">Wymagany dowód</string>
+    <string name="geocache_use_my_location">Użyj mojej lokalizacji</string>
+    <string name="geocache_sorted_by_distance">Sortuj według odległości</string>
+    <string name="geocache_sorted_by_recent">Od najnowszych</string>
+    <string name="geocache_hide_a_cache">Ukryj skrzynkę</string>
+    <string name="geocache_empty_nearby">Na razie nie ma tu żadnych wpisów. Spróbuj poszerzyć listę obserwowanych albo ukryj pierwszy wpis.</string>
+    <string name="geocache_empty_finds">Nie zarejestrowałeś jeszcze żadnego znaleziska.</string>
+    <string name="geocache_empty_mine">Nie ukryłeś jeszcze żadnej skrzynki.</string>
+    <string name="geocache_empty_hunts">Brak polowań.</string>
+    <string name="geocache_stat_finds">Znaleziska</string>
+    <string name="geocache_stat_ftf">Pierwsze znalezienia</string>
+    <string name="geocache_stat_verified">Zweryfikowano</string>
+    <string name="geocache_stat_hidden">Ukryte</string>
+    <string name="geocache_map_recenter">Wyśrodkuj na mnie</string>
+    <string name="geocache_map_long_press">Naciśnij i przytrzymaj mapę, aby ukryć skrzynkę</string>
+    <string name="geocache_map_open">Otwórz</string>
+    <string name="geocache_map_pin_count">%1$d skrzynek</string>
+    <string name="geocache_new_section_where">Gdzie</string>
+    <string name="geocache_new_section_what">Co</string>
+    <string name="geocache_new_section_extras">Dodatki</string>
+    <string name="geocache_new_section_proof">Dowód</string>
+    <string name="geocache_new_section_relays">Transmitery</string>
+    <string name="geocache_new_location_warning">Spowoduje to opublikowanie lokalizacji publicznej z dokładnością do około 5 metrów. Każdy użytkownik serwisu Nostr może ją zobaczyć, a opublikowanego zdarzenia nie da się cofnąć.</string>
+    <string name="geocache_new_pick_location">Wybierz miejsce</string>
+    <string name="geocache_new_ladder">Publikuje %1$s oraz komórki o większej rozdzielczości, aż do 3 znaków, na potrzeby wyszukiwania w pobliżu.</string>
+    <string name="geocache_new_name">Nazwa</string>
+    <string name="geocache_new_description">Opis</string>
+    <string name="geocache_new_type">Typ</string>
+    <string name="geocache_new_size">Rozmiar</string>
+    <string name="geocache_new_difficulty">Stopień trudności</string>
+    <string name="geocache_new_terrain">Teren</string>
+    <string name="geocache_new_hint">Podpowiedź</string>
+    <string name="geocache_new_hint_preview">Znajdujący zobaczą</string>
+    <string name="geocache_new_hint_scramble">Zaszyfruj wskazówkę (ROT13)</string>
+    <string name="geocache_new_mission">Misja „Key Quest”</string>
+    <string name="geocache_new_modifiers">Modyfikatory</string>
+    <string name="geocache_new_require_proof">Wymagane potwierdzenie obecności</string>
+    <string name="geocache_new_proof_ready">Klucz weryfikacyjny został wygenerowany dla tej skrzynki.</string>
+    <string name="geocache_new_log_relays">Gdzie powinni się zgłaszać znalazcy</string>
+    <string name="geocache_new_publish">Publikuj</string>
+    <string name="geocache_new_needs_name">Podaj nazwę skrzynki.</string>
+    <string name="geocache_new_needs_location">Wybierz gdzie skrzynka jest ukryta.</string>
+    <string name="geocache_hunt_progress">Znaleziono %1$d z %2$d</string>
+    <string name="geocache_hunt_start">Rozpocznij polowanie</string>
+    <string name="geocache_hunt_caches">%1$d skrzynek</string>
+    <string name="geocache_hunt_title">Tytuł</string>
+    <string name="geocache_hunt_description">Opis</string>
+    <string name="geocache_hunt_banner">Obraz banera</string>
+    <string name="geocache_hunt_pick_caches">Skrzynki w kolejności</string>
+    <string name="geocache_hunt_add_cache">Dodaj skrzynkę</string>
+    <string name="geocache_hunt_move_up">Przenieś wyżej</string>
+    <string name="geocache_hunt_move_down">Przenieś niżej</string>
+    <string name="geocache_hunt_remove">Usuń</string>
+    <string name="geocache_hunt_theme">Motyw strony</string>
+    <string name="geocache_hunt_map_style">Styl mapy</string>
+    <string name="geocache_hunt_needs_title">Podaj tytuł polowania.</string>
+    <string name="geocache_hunt_needs_caches">Dodaj co najmniej jedną skrzynkę.</string>
+    <string name="geocache_publish_failed">Nie można opublikować. Sprawdź połączenie z transmiterem i spróbuj ponownie.</string>
     <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Wartość-za-wartość</string>
@@ -224,6 +365,18 @@
     <string name="qr_scanner_kind_web">To jest link do strony internetowej.</string>
     <string name="qr_scanner_kind_text">To jest zwykły tekst, a nie kod Nostra.</string>
     <string name="qr_scanner_kind_nostr_unsupported">To jest kod Nostr, ale nie może on zostać otwarty.</string>
+    <string name="qr_scanner_label_profile">Profil</string>
+    <string name="qr_scanner_label_note">Uwaga</string>
+    <string name="qr_scanner_label_nostr">Nostr code</string>
+    <string name="qr_scanner_label_relay">Transmiter</string>
+    <string name="qr_scanner_label_nsec">Klucz prywatny</string>
+    <string name="qr_scanner_label_wallet">Połączenie z portfelem</string>
+    <string name="qr_scanner_label_bunker">Adres zdalnego sygnatariusza</string>
+    <string name="qr_scanner_label_signer">Prośba o nawiązanie połączenia z sygnatariuszem</string>
+    <string name="qr_scanner_label_lightning">Faktura Lightning</string>
+    <string name="qr_scanner_label_cashu">Token Cashu</string>
+    <string name="qr_scanner_label_web">Link do strony internetowej</string>
+    <string name="qr_scanner_label_text">Zwykły tekst</string>
     <string name="qr_scanner_open_link">Otwórz link</string>
     <string name="qr_scanner_copy">Kopiuj</string>
     <string name="qr_scanner_copied">Skopiowano</string>
@@ -355,8 +508,7 @@
     <string name="about_us">Informacja o grupie…</string>
     <string name="search_and_add_a_user">Szukaj i dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
-    <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład
-[201:d0e:9ba5:8bbc::1]:8080).</string>
+    <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Moje imię @tag</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
@@ -504,15 +656,8 @@
     <string name="mark_all_known_as_read">Zaznacz wszystkie popularne jako przeczytane</string>
     <string name="mark_all_new_as_read">Zaznacz wszystkie nowe jako przeczytane</string>
     <string name="mark_all_as_read">Zaznacz wszystkie jako przeczytane</string>
-    <string name="account_backup_tips2_md">        ## Porady dotyczące kopii zapasowej i bezpieczeństwa
-        \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość.
-        \n\n- **nie** umiejszczaj swojego tajnego klucza na żadnej stronie internetowej lub oprogramowaniu, któremu nie ufasz.
-        \n- Deweloperzy Ametyst **nigdy** nie będą prosić o Twój tajny klucz.
-        \n- **Zrób **  bezpieczną kopię zapasową swojego tajnego klucza do ewentualnego odzyskania konta. Zalecamy użycie menedżera haseł.
-    </string>
-    <string name="account_backup_tips3_md">        Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła.
-        \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.
-    </string>
+    <string name="account_backup_tips2_md">## Porady dotyczące kopii zapasowej i bezpieczeństwa \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość. \n\n- **nie** umiejszczaj swojego tajnego klucza na żadnej stronie internetowej lub oprogramowaniu, któremu nie ufasz. \n- Deweloperzy Ametyst **nigdy** nie będą prosić o Twój tajny klucz. \n- **Zrób **  bezpieczną kopię zapasową swojego tajnego klucza do ewentualnego odzyskania konta. Zalecamy użycie menedżera haseł.</string>
+    <string name="account_backup_tips3_md">Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła. \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.</string>
     <string name="backup_keys_nudge_title">Kopia zapasowa kluczy</string>
     <string name="backup_keys_nudge_body">Twój tajny klucz jest jedynym sposobem na dostęp do tego konta. Jeśli go zgubisz, nigdy nie będzie można go odzyskać. Zapisz go w bezpiecznym miejscu.</string>
     <string name="backup_keys_nudge_backup_now">Utwórz kopię zapasową</string>
@@ -686,14 +831,27 @@
     <string name="workout_hours">Godziny</string>
     <string name="workout_minutes">Minuty</string>
     <string name="workout_seconds">Sekundy</string>
+    <string name="workout_suggestion_connect_title">Skorzystaj z treningów, które już zapisałeś</string>
+    <string name="workout_suggestion_connect_message">Połącz aplikację Connect Health (Samsung Health, Google Fit, Fitbit, Garmin…) z sekcją „Moja kondycja”, aby stworzyć własne podsumowanie treningowe i wprowadzić dane z treningu zarejestrowanego już przez zegarek, zamiast ręcznie wpisywać każdą wartość.</string>
     <string name="workout_suggestion_connect_button">Połącz</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Z Health Connect</string>
     <string name="workout_suggestion_connect_details">Co czyta Amethyst</string>
     <string name="health_connect_rationale_title">Health Connect i Amethyst</string>
+    <string name="health_connect_rationale_headline">Amethyst wykorzystuje Health Connect do tworzenia aplikacji „My Fitness” — Twojego osobistego podsumowania treningów, dostępnego na telefonie.</string>
+    <string name="health_connect_rationale_intro">Sekcja „Moja kondycja” (menu → Ty → Mój fitness) pokazuje, jak wyglądał Twój trening: ile ćwiczyłeś w tym tygodniu w porównaniu z poprzednim, jak rozkłada się czas poświęcony na bieganie, jazdę na rowerze, spacery, pływanie i trening na siłowni, Twoje najlepsze wyniki, ile dni trenowałeś oraz aktualną passę. Amethyst tworzy ten obraz na podstawie treningów, które zegarek lub aplikacja fitnessowa zapisały już w Health Connect, wraz z treningami zarejestrowanymi bezpośrednio w aplikacji Amethyst. Dane są przetwarzane na telefonie i wyświetlane użytkownikowi.</string>
     <string name="health_connect_rationale_what_title">Co czyta Amethyst i dlaczego</string>
+    <string name="health_connect_rationale_exercise">Ćwiczenia – jakie aktywności wykonywałeś, kiedy je rozpocząłeś i jak długo trwały. To właśnie sam trening: decyduje o liczbie treningów, czasie treningu, podziale na poszczególne aktywności, liczbie aktywnych dni oraz serii.</string>
+    <string name="health_connect_rationale_distance">Dystans · jak daleko przebiegłeś – przedstawiony jako dystans w tym tygodniu w porównaniu z poprzednim tygodniem, średni dystans tygodniowy, dystans na jedną sesję treningową oraz najdłuższy dystans.</string>
+    <string name="health_connect_rationale_calories">Kalorie aktywne i całkowite · energia spalona podczas treningu, przedstawiona jako energia w bieżącym tygodniu oraz porównanie z poprzednim tygodniem. Kalorie aktywne są uwzględniane, gdy źródło je rejestruje; kalorie całkowite stanowią wartość zastępczą w przypadku źródeł, które rejestrują jedynie całkowitą energię.</string>
+    <string name="health_connect_rationale_heart_rate">Tętno · średnia i maksymalna wartość z każdego treningu, połączone w średnie i najwyższe tętno dla danego okresu. Dzięki temu można odróżnić tydzień o łagodnym obciążeniu od tygodnia o intensywnym obciążeniu przy tej samej odległości.</string>
+    <string name="health_connect_rationale_steps">Liczba kroków · liczba kroków wykonanych podczas biegu, spaceru lub wędrówki, przedstawiona jako średnia tygodniowa liczba kroków oraz najwyższa liczba kroków.</string>
+    <string name="health_connect_rationale_elevation">Przezwyciężona różnica wysokości · o ile się wspiąłeś, przedstawiona jako średnia tygodniowa różnica wysokości oraz największa pokonana różnica wysokości. To właśnie odróżnia tydzień na płaskim terenie od tygodnia w pagórkowatym terenie.</string>
     <string name="health_connect_rationale_limits_title">Czego Amethyst nie robi</string>
+    <string name="health_connect_rationale_limit_window">Aplikacja odczytuje wyłącznie treningi z ostatnich 4 tygodni i tylko wtedy, gdy otwarta jest aplikacja Mój Fitness lub edytor treningów. Nigdy nie odczytuje danych w tle.</string>
     <string name="health_connect_rationale_limit_write">Nigdy nie przesyła żadnych danych do serwisu Health Connect i nigdy nie prosi o podanie trasy ćwiczeń, lokalizacji ani żadnych innych danych dotyczących zdrowia.</string>
+    <string name="health_connect_rationale_limit_publish">Twoje dane dotyczące zdrowia nigdy nie są nigdzie przesyłane. Dane z aplikacji „Mój Fitness” są przetwarzane na Twoim telefonie i pozostają tam. Jeśli później zechcesz opublikować jeden trening, wystarczy, że klikniesz opcję „Udostępnij” przy tym treningu, przeczytasz treść wpisu wypełnioną przez Amethyst i samodzielnie go opublikujesz — jeden trening na raz, nigdy automatycznie.</string>
+    <string name="health_connect_rationale_limit_optional">Cała ta funkcja jest opcjonalna. W dowolnym momencie możesz cofnąć uprawnienia w Health Connect — aplikacja Mój Fitness powróci do poprzedniego ekranu — lub wyłączyć sugestie dotyczące tworzenia treści w sekcji Ustawienia → Opcje tworzenia treści. Pozostałe funkcje aplikacji Amethyst będą nadal działać.</string>
     <string name="health_connect_rationale_privacy_policy">Przeczytaj pełną politykę prywatności</string>
     <string name="my_fitness_title">Moja kondycja</string>
     <string name="my_fitness_window">Ostatnie 4 tygodnie</string>
@@ -1172,6 +1330,8 @@
     <string name="poll_closing_date_time">Data &amp; godzina zakończenia ankiety</string>
     <string name="poll_closing_in">Ankieta zostanie zamknięta za %1$s</string>
     <string name="looking_for_event">Szukam wydarzenia %1$s</string>
+    <string name="looking_for_event_title">Wczytywanie</string>
+    <string name="looking_for_private_event">Czekam na wczytanie Twoich prywatnych wiadomości…</string>
     <string name="send_zap">Wyślij Zapa</string>
     <string name="custom_zaps_add_a_message">Dodaj wiadomość publiczną</string>
     <string name="custom_zaps_add_a_message_private">Dodaj prywatną wiadomość</string>
@@ -1447,6 +1607,14 @@
     <string name="user_preferences">Preferencje użytkownika</string>
     <string name="settings_search_placeholder">Ustawienia wyszukiwania</string>
     <string name="settings_search_no_results">Nie znaleziono ustawień dla "%1$s"</string>
+    <string name="marmot_preview_group_updated">Grupa zaktualizowana</string>
+    <string name="marmot_preview_media">Załącznik</string>
+    <string name="marmot_preview_no_text">Wiadomość</string>
+    <string name="marmot_preview_with_sender">%1$s: %2$s</string>
+    <string name="marmot_empty_create_action">Utwórz grupę</string>
+    <string name="marmot_invite_device_banner">Zaproszenia z serwisu Marmot są wysyłane na inne urządzenie i nie można ich tutaj otworzyć.</string>
+    <string name="marmot_invite_device_banner_dismiss">Zignoruj</string>
+    <string name="marmot_invite_device_publish">Opublikuj z tego urządzenia</string>
     <string name="reset_marmot_confirm_title">Zresetować stan Marmota?</string>
     <string name="reset_marmot_confirm_body">Spowoduje to trwałe usunięcie każdego czatu grupowego Marmot, historii wiadomości i klucza MLS na tym urządzeniu dla bieżącego konta. Uczestnicy nie będą powiadamiani i mogą widzieć Cię w grupach do czasu następnej aktualizacji. Tej operacji nie można cofnąć. Nowy pakiet kluczowy zostanie opublikowany przy następnej synchronizacji aplikacji.</string>
     <string name="reset_marmot_confirm_action">Zresetuj</string>
@@ -1673,9 +1841,7 @@
     <string name="push_server_none_explainer">Wyłącz powiadomienia</string>
     <string name="push_server_uses_app_explainer">Używa aplikacji %1$s</string>
     <string name="push_server_install_app">Ustawienia powiadomień</string>
-    <string name="push_server_install_app_description">        Aby otrzymywać powiadomienia, zainstaluj dowolną aplikację, która obsługuje [Unified Push](https://unifiedpush. rg/), np. [Ntfy](https://ntfy.sh/).
-        Po zainstalowaniu, wybierz w ustawieniach aplikację, którą chcesz użyć.
-    </string>
+    <string name="push_server_install_app_description">Aby otrzymywać powiadomienia, zainstaluj dowolną aplikację, która obsługuje [Unified Push](https://unifiedpush. rg/), np. [Ntfy](https://ntfy.sh/). Po zainstalowaniu, wybierz w ustawieniach aplikację, którą chcesz użyć.</string>
     <string name="thread_title">Wątek</string>
     <string name="send_the_seller_a_message">Wyślij sprzedawcy wiadomość</string>
     <string name="hi_there_is_this_still_available">Cześć, czy to jest nadal dostępne?</string>
@@ -2040,6 +2206,8 @@
     <string name="video_player_settings_action_pip_description">Odtwórz wideo w pływającym oknie (opcja ukryta, jeśli nie jest obsługiwana)</string>
     <string name="video_player_settings_action_cast">Przenieś na urządzenie</string>
     <string name="video_player_settings_action_cast_description">Prześlij film do urządzenia Chromecast podłączonego do sieci Wi-Fi (opcja ukryta w przypadku plików lokalnych)</string>
+    <string name="video_player_settings_action_captions">Napisy</string>
+    <string name="video_player_settings_action_captions_description">Włącz lub wyłącz napisy (opcja ukryta, jeśli film nie zawiera napisów)</string>
     <string name="audio_visualizer_settings_description">Wybierz animację wyświetlaną podczas odtwarzania plików audio.</string>
     <string name="audio_visualizer_off">Wyłączone</string>
     <string name="audio_visualizer_bars">Spektrogram</string>
@@ -3026,13 +3194,18 @@
     <string name="app_notification_replies_channel_description">Powiadamia Cię, gdy ktoś zareaguje na twój post</string>
     <string name="app_notification_replies_channel_name">Odpowiedzi</string>
     <string name="app_notification_replies_summary">Nowe odpowiedzi</string>
+    <string name="app_notification_reply_failed">Nie wysłano</string>
     <string name="app_notification_reply_label">Odpowiedz</string>
+    <string name="app_notification_reply_retry">Ponów</string>
+    <string name="app_notification_reply_sending">Wysyłanie…</string>
+    <string name="app_notification_reply_unconfirmed">Wciąż wysyłam…</string>
     <string name="app_notification_reposts_channel_description">Powiadamia Cię, gdy ktoś prześle twój post</string>
     <string name="app_notification_reposts_channel_message">%1$s ponownie opublikował twój post</string>
     <string name="app_notification_reposts_channel_name">Reposty</string>
     <string name="app_notification_reposts_summary">Nowe reposty</string>
     <string name="app_notification_scheduled_posts_channel_description">Powiadomienia o opublikowaniu lub braku publikacji zaplanowanego posta.</string>
     <string name="app_notification_scheduled_posts_channel_name">Zaplanowane posty</string>
+    <string name="app_notification_shortcut_account_removed">To konto zostało usunięte z serwisu Amethyst.</string>
     <string name="app_notification_zaps_channel_description">Powiadamia Cię, gdy ktoś prześle ci zapy</string>
     <string name="app_notification_zaps_channel_message">%1$s Satoszy</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
@@ -3263,6 +3436,10 @@
     <string name="call_unmute">Włącz dźwięk</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Nie znaleziono zwrotnego adresu URL z odpowiedzi %1$s</string>
     <string name="cancel">Anuluj</string>
+    <string name="captions_off">Wył.</string>
+    <string name="captions_turn_off">Wyłącz napisy</string>
+    <string name="captions_turn_on">Włącz napisy</string>
+    <string name="captions_unnamed_track">Napisy</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_checking_mint">Sprawdzanie minta…</string>
     <string name="cashu_failed_redemption">Nie można wykupić Cashu</string>
@@ -3469,15 +3646,7 @@
     <string name="could_not_fetch_invoice_from_details">Nie można pobrać faktury od %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Nie można otworzyć skompresowanego pliku</string>
     <string name="couldnt_find_nwc_wallets">Nie znaleziono portfela</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst nie znalazł żadnej aplikacji portfela obsługującej Nostr Wallet Connect (NWC).
-\n\nCo możesz zrobić:
-\n\t1. Zweryfikuj wsparcie NWC: Sprawdź, czy preferowana aplikacja portfela jest kompatybilna z Nostr Wallet Connect.
-\n\t2. Utwórz połączenie: Przejdź do aplikacji portfela i utwórz nowe połączenie NWC.
-\n\t3. Połącz z Amethyst: Twój portfel zazwyczaj oferuje trzy opcje:
-\n\t\t3. Automatyczne połączenie: przycisk, który automatycznie otwiera i łączy się z Amethyst. Jeśli tak, kliknij ten przycisk, otwórz Ametyst i naciśnij przycisk "Zapisz" na nowym ekranie.
-\n\t\t3. Połączenie ręczne: adres URI połączenia, który można skopiować i wkleić, klikając ikonę wklejania na tym ekranie, aby wprowadzić go bezpośrednio.
-\n\t\t3. Kod QR: Portfel tworzy kod QR, który można odczytać z przycisku QR na tym ekranie.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nie znalazł żadnej aplikacji portfela obsługującej Nostr Wallet Connect (NWC). \n\nCo możesz zrobić: \n\t1. Zweryfikuj wsparcie NWC: Sprawdź, czy preferowana aplikacja portfela jest kompatybilna z Nostr Wallet Connect. \n\t2. Utwórz połączenie: Przejdź do aplikacji portfela i utwórz nowe połączenie NWC. \n\t3. Połącz z Amethyst: Twój portfel zazwyczaj oferuje trzy opcje: \n\t\t3. Automatyczne połączenie: przycisk, który automatycznie otwiera i łączy się z Amethyst. Jeśli tak, kliknij ten przycisk, otwórz Ametyst i naciśnij przycisk "Zapisz" na nowym ekranie. \n\t\t3. Połączenie ręczne: adres URI połączenia, który można skopiować i wkleić, klikając ikonę wklejania na tym ekranie, aby wprowadzić go bezpośrednio. \n\t\t3. Kod QR: Portfel tworzy kod QR, który można odczytać z przycisku QR na tym ekranie.</string>
     <string name="create">Utwórz</string>
     <string name="d">d</string>
     <string name="danger_zone">Niebezpieczna strefa</string>
@@ -3784,10 +3953,12 @@
     <string name="kind_adventure_prologue">Wstęp do przygody</string>
     <string name="kind_adventure_reading">Lektura przygody</string>
     <string name="kind_adventure_scene">Scena Przygody</string>
+    <string name="kind_app_curation_set">Lista aplikacji</string>
     <string name="kind_app_recommendations">Rekomendacje</string>
     <string name="kind_appointment">Spotkanie</string>
     <string name="kind_apps">Aplikacje</string>
     <string name="kind_appt_rsvp">RSVP Spotkania</string>
+    <string name="kind_article_curation_set">Lista artykułów</string>
     <string name="kind_audio_header">Nagłówek audio</string>
     <string name="kind_audio_track">Ścieżka audio</string>
     <string name="kind_authored_podcasts">Podcasty autorskie</string>
@@ -3800,6 +3971,7 @@
     <string name="kind_blossom_auth">Autentykacja Blossom</string>
     <string name="kind_blossom_servers">Serwery Blossom</string>
     <string name="kind_bookmark_list">Lista zakładek</string>
+    <string name="kind_bookmark_set">Zestaw zakładek</string>
     <string name="kind_broadcast_relays">Transmitery Nadawcze</string>
     <string name="kind_calendar">Kalendarz</string>
     <string name="kind_channel_definition">Określenie kanału</string>
@@ -3837,6 +4009,7 @@
     <string name="kind_emoji_packs">Pakiety emotikonów</string>
     <string name="kind_ephemeral_chat">Czat efemeryczny</string>
     <string name="kind_ephemeral_chatrooms">Efemeryczne pokoje czatowe</string>
+    <string name="kind_favorite_algo_feeds">Ulubione kanały</string>
     <string name="kind_favorite_podcasts">Ulubione Podcasty</string>
     <string name="kind_favorite_relays">Ulubione Transmitery</string>
     <string name="kind_file_headers">Nagłówek pliku</string>
@@ -3845,28 +4018,36 @@
     <string name="kind_follow_packs">Pakiety subskrybentów</string>
     <string name="kind_geohash_follows">Obserwacja geohashów</string>
     <string name="kind_gift_wraps">GiftWraps</string>
+    <string name="kind_git_authors">Autorzy Git</string>
     <string name="kind_git_issue">Problem z Git</string>
     <string name="kind_git_patch">Łatka Git</string>
     <string name="kind_git_pr">Wniosek o zmianę</string>
     <string name="kind_git_pr_update">Aktualizacja PR</string>
     <string name="kind_git_reply">Odpowiedź Git</string>
     <string name="kind_git_repo">Repozytorium Git</string>
+    <string name="kind_git_repositories">Repozytoria Git</string>
     <string name="kind_git_status_applied">Status Git: Zastosowano</string>
     <string name="kind_git_status_closed">Status Git: Zamknięty</string>
     <string name="kind_git_status_draft">Status Git: Szkic</string>
     <string name="kind_git_status_open">Status Git: Otwarty</string>
+    <string name="kind_good_wiki_authors">Zaufani autorzy wiki</string>
+    <string name="kind_good_wiki_relays">Zaufane transmitery Wiki</string>
     <string name="kind_hashtag_follows">Obserwowane hashtagi</string>
     <string name="kind_highlights">Wyróżnienia</string>
     <string name="kind_http_auth">Autoryzacja http</string>
     <string name="kind_index_relay_list">Indeks listy transmiterów</string>
+    <string name="kind_interest_set">Zainteresowania</string>
     <string name="kind_live_chats">Czaty na żywo</string>
     <string name="kind_live_streams">Na żywo</string>
+    <string name="kind_media_follows">Obserwowane Multimedia</string>
+    <string name="kind_media_starter_pack">Pakiet startowy multimediów</string>
     <string name="kind_medical_data">Dane medyczne</string>
     <string name="kind_meeting_room">Pokój spotkań</string>
     <string name="kind_meeting_space">Strefa spotkań</string>
     <string name="kind_music_playlist">Playlista muzyczna</string>
     <string name="kind_music_track">Utwór muzyczny</string>
     <string name="kind_mute_list">Lista zablokowanych</string>
+    <string name="kind_mute_set_for_kind">Wyciszono z uwagi na treści typu %1$s</string>
     <string name="kind_named_bookmarks">Opisane zakładki</string>
     <string name="kind_nests_servers">Serwery Nest</string>
     <string name="kind_nip">NIP</string>
@@ -3881,6 +4062,7 @@
     <string name="kind_outbox_relays">Transmitery wysyłające</string>
     <string name="kind_pay_to">Płatność dla</string>
     <string name="kind_people_lists">Listy osób</string>
+    <string name="kind_picture_curation_set">Lista zdjęć</string>
     <string name="kind_pictures">Zdjęcia</string>
     <string name="kind_pins">Pineski</string>
     <string name="kind_podcast_episode">Odcinek podcastu</string>
@@ -3907,6 +4089,7 @@
     <string name="kind_search_relays">Szukaj Transmiterów</string>
     <string name="kind_shorts">Filmiki</string>
     <string name="kind_shorts_repl">Filmiki (odpowiedź)</string>
+    <string name="kind_simple_groups">Grupy</string>
     <string name="kind_torrent_comments">Komentarze torrentów</string>
     <string name="kind_torrents">Torrenty</string>
     <string name="kind_trusted_providers">Zaufani dostawcy</string>
@@ -3915,7 +4098,10 @@
     <string name="kind_user_settings">Ustawienia użytkownika</string>
     <string name="kind_user_status">Status użytkownika</string>
     <string name="kind_video">Wideo</string>
+    <string name="kind_video_collaboration">Współpraca wideo</string>
+    <string name="kind_video_list">Lista filmów</string>
     <string name="kind_video_repl">Wideo (odpowiedź)</string>
+    <string name="kind_video_subtitles">Napisy wideo</string>
     <string name="kind_voice_msg">Wiadomość głosowa</string>
     <string name="kind_voice_reply">Odpowiedź głosowa</string>
     <string name="kind_wake">Wybudź</string>
@@ -3956,6 +4142,8 @@
     <string name="location_change_place">Zmień miejsce na mapie</string>
     <string name="location_channels">Kanały lokalizacji</string>
     <string name="location_pick_on_map">Wybierz miejsce na mapie</string>
+    <string name="login_bunker_not_supported">Aplikacja Amethyst na Androida nie może zalogować się przy użyciu adresu typu bunker://. Udostępnia ona takie adresy, aby inne aplikacje mogły poprosić ją o podpisanie, ale sama nie może się za ich pomocą zalogować. Należy skorzystać z zewnętrznej aplikacji do podpisywania lub z Amethyst Desktop.</string>
+    <string name="login_nostrconnect_not_supported">To aplikacja, która prosi o nawiązanie połączenia z Twoim podpisywaczem, a nie sposób na zalogowanie się. Najpierw się zaloguj, a potem otwórz ją z poziomu ekranu podpisywacza NIP-46.</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby zwiększyć liczbę postów</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc obserwować</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc ukryć słowo lub zdanie</string>
@@ -4179,6 +4367,12 @@
     <string name="nest_hush_local_restore">Przywróć mówcę</string>
     <string name="nest_leave">Wyjdź</string>
     <string name="nest_leave_host_close_failed">Nie udało się oznaczyć pokoju jako zamkniętego. Wychodzę mimo to — pokój zostanie automatycznie zamknięty.</string>
+    <plurals name="nest_listener_count">
+        <item quantity="one">%1$d słuchacz</item>
+        <item quantity="few">%1$d słuchaczy</item>
+        <item quantity="many">%1$d słuchaczy</item>
+        <item quantity="other">%1$d słuchacze</item>
+    </plurals>
     <string name="nest_lower_hand">Opuść rękę</string>
     <string name="nest_mic_mute">Wycisz mikrofon</string>
     <string name="nest_mic_unmute">Włącz mikrofon</string>
@@ -4344,6 +4538,7 @@
     </plurals>
     <string name="nip46_signer_remote_app">Aplikacja zdalnego logowania</string>
     <string name="nip46_signer_title">Zdalne logowanie</string>
+    <string name="nip51_list_has_private_members">Ta lista jest prywatna – widzi ją wyłącznie jej autor</string>
     <plurals name="nip82_assets_count">
         <item quantity="one">%1$d zestaw aktywów</item>
         <item quantity="few">%1$d zestawów aktywów</item>
@@ -4753,10 +4948,7 @@
     <string name="relay_auth_search_keywords">auth uwierzytelnianie transmiter podpis weryfikacja nip-42 tożsamość</string>
     <string name="relay_auth_settings_title">Uwierzytelnianie transmitera</string>
     <string name="relay_chat">Czat Transmitera</string>
-    <string name="relay_chat_explainer">Czaty transmiterów to grupy czatów kontrolowane przez ich macierzyste transmitery.
-        Są one widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć.
-        Świetnie nadają się do tworzenia otwartych społeczności wokół określonych tematów. Niektóre z tych grup są efemeryczne
-   i dlatego wiadomości czatu znikają z czasem</string>
+    <string name="relay_chat_explainer">Czaty transmiterów to grupy czatów kontrolowane przez ich macierzyste transmitery. Są one widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć. Świetnie nadają się do tworzenia otwartych społeczności wokół określonych tematów. Niektóre z tych grup są efemeryczne i dlatego wiadomości czatu znikają z czasem</string>
     <string name="relay_chat_title">Czaty Transmitera</string>
     <string name="relay_explain_account_data">Twój profil, ustawienia i wersje robocze na Twoich domowych transmiterach.</string>
     <string name="relay_explain_community_chats">Transmitery, na których każda społeczność publikuje swoje plany.</string>
@@ -4945,19 +5137,27 @@
     <string name="route_calendars">Kalendarze</string>
     <string name="route_chess">Szachy</string>
     <string name="route_discover">Eksploracja</string>
+    <string name="route_edit_geocache">Edytuj skrzynkę</string>
+    <string name="route_edit_geocache_hunt">Edytuj polowanie</string>
+    <string name="route_geocache_detail">Skrzynka</string>
+    <string name="route_geocache_hunt_detail">Polowanie</string>
+    <string name="route_geocache_hunts">Poszukiwanie skrytki</string>
+    <string name="route_geocaches">Geocache</string>
     <string name="route_home">Start</string>
     <string name="route_import_follows">Import Obserwowanych</string>
+    <string name="route_log_geocache_find">Zgłoś znalezisko</string>
     <string name="route_media">Multimedia</string>
     <string name="route_messages">Wiadomości</string>
     <string name="route_music_playlists">Playlisty</string>
     <string name="route_music_tracks">Muzyka</string>
+    <string name="route_new_geocache">Ukryj skrzynkę</string>
+    <string name="route_new_geocache_hunt">Nowe polowanie</string>
     <string name="route_notifications">Powiadomienia</string>
     <string name="route_podcast_episodes">Odcinki</string>
     <string name="route_podcasts">Podcasty</string>
     <string name="schedule_post_button_add">Zaplanuj post</string>
     <string name="schedule_post_button_remove">Anuluj planowanie</string>
-    <string name="schedule_post_warning_multi">Wpisy zaplanowane mogą nie zostać opublikowane, dopóki nie uruchomisz ponownie aplikacji.
-Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest aktywne. Włącz opcję „Zawsze włączone” w menu Ustawienia → Preferencje interfejsu użytkownika, aby zapewnić niezawodne planowanie zadań w tle.</string>
+    <string name="schedule_post_warning_multi">Wpisy zaplanowane mogą nie zostać opublikowane, dopóki nie uruchomisz ponownie aplikacji. Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest aktywne. Włącz opcję „Zawsze włączone” w menu Ustawienia → Preferencje interfejsu użytkownika, aby zapewnić niezawodne planowanie zadań w tle.</string>
     <string name="schedule_post_warning_single">Zaplanowane posty mogą nie zostać opublikowane, dopóki nie uruchomisz ponownie aplikacji. Aby zapewnić niezawodne planowanie zadań w tle, włącz opcję „Zawsze włączone” w Ustawieniach → Preferencje dotyczące niezawodnego planowania zadań w tle.</string>
     <string name="scheduled_posts">Zaplanowane posty</string>
     <string name="scheduled_posts_action_send_now">Wyślij teraz</string>
@@ -5153,6 +5353,20 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="vanish_request_sent">Wysłano prośbę o usunięcie</string>
     <string name="video_codec_h265_description">Lepsza jakość przy mniejszych rozmiarach plików, lecz nie wszystkie urządzenia obsługują odtwarzanie H.265.</string>
     <string name="video_codec_h265_label">Użyj kodeka H.265/HEVC</string>
+    <string name="video_collaboration_accepted_on">Zaakceptowano kredyt współpracy</string>
+    <string name="video_collaboration_declined_on">Odrzucono kredyt współpracy</string>
+    <string name="video_credit_accepted">Kredyt zaakceptowany</string>
+    <string name="video_credit_audio_from">Dźwięk z</string>
+    <string name="video_credit_featuring">Zawiera</string>
+    <string name="video_credit_inspired_by">Zainspirowany przez</string>
+    <string name="video_credit_references">Referencje</string>
+    <string name="video_curation_set_private_items">Prywatna lista</string>
+    <plurals name="video_curation_set_video_count">
+        <item quantity="one">%1$d wideo</item>
+        <item quantity="few">%1$d wideo</item>
+        <item quantity="many">%1$d wideo</item>
+        <item quantity="other">%1$d wideo</item>
+    </plurals>
     <string name="video_download_has_started_toast">Rozpoczęto pobieranie wideo…</string>
     <string name="video_player_settings">Przyciski odtwarzacza wideo</string>
     <string name="video_saved_to_the_gallery">Film zapisany w galerii filmów</string>
@@ -5218,4 +5432,435 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Usługa lightning odbiorcy w %1$s jest niedostępna. Została obliczona na podstawie adresu lightning "%2$s". Błąd: %3$s. Sprawdź, czy serwer jest gotowy i czy adres lightning jest poprawny</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
+    <string name="marmot_invite_device_success">To urządzenie odbiera teraz Twoje zaproszenia z serwisu Marmot.</string>
+    <string name="marmot_invite_device_failure">Nie udało się opublikować KeyPackage: %1$s</string>
+    <string name="marmot_invite_device_rejected">Żaden transmiter nie przyjął KeyPackage. Sprawdź ustawienia transmitera i spróbuj ponownie.</string>
+    <string name="chat_delivery_sending">Wysyłanie\u2026</string>
+    <string name="chat_delivery_failed">Nie udało się wysłać. Kliknij, aby spróbować ponownie.</string>
+    <plurals name="marmot_unread_messages">
+        <item quantity="one">%1$d nowa wiadomość</item>
+        <item quantity="few">%1$d nowych wiadomości</item>
+        <item quantity="many">%1$d nowych wiadomości</item>
+        <item quantity="other">%1$d nowe wiadomości</item>
+    </plurals>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
+    <string name="sno_object_title">Obiekt 3D</string>
+    <string name="sno_object_details">%1$d wierzchołków · %2$d ścian</string>
+    <string name="sno_object_unreadable">Nie udało się odczytać tego obiektu 3D (reguła %1$s)</string>
+    <string name="sno_avatar_title">Awatar cyberprzestrzeni</string>
+    <string name="sno_avatar_unpaid">Ten awatar nie został opłacony w odniesieniu do swojego rozmiaru, więc nie został narysowany</string>
+    <string name="sno_light_on">Włączone; kliknij, aby narysować obiekt na płasko</string>
+    <string name="sno_light_off">Płaski; kliknij, aby podświetlić obiekt</string>
+    <string name="sno_object_scale">1 jednostka = %1$s</string>
+    <string name="sno_shard_dataspace">Ukryte w przestrzeni danych · %1$s</string>
+    <string name="sno_shard_ideaspace">Ukryte w przestrzeni pomysłów · %1$s</string>
+    <string name="sno_avatar_default">Domyślny awatar</string>
+    <string name="sno_avatar_default_details">Nie opublikowano kształtu, więc wszyscy widzą ten kształt</string>
+    <string name="cyberspace_bag_title">Ukryte w pewnym miejscu</string>
+    <string name="cyberspace_bag_box">Ukryte w pudełku zawierającym %1$s regionów</string>
+    <string name="cyberspace_bag_destination">Ukryte w jednym regionie, który wskazówka wymienia z nazwy</string>
+    <string name="cyberspace_bag_no_hint">Nie ma żadnej wskazówki, więc może to być gdziekolwiek w cyberprzestrzeni</string>
+    <string name="cyberspace_bag_out_of_reach">Poza zasięgiem: wskazówka określa 2^%1$d obszarów do przeszukania</string>
+    <string name="cyberspace_bag_search">Szukaj tego</string>
+    <string name="cyberspace_bag_cancel">Stop</string>
+    <string name="cyberspace_bag_measuring">Wycena wyszukiwania na tym urządzeniu…</string>
+    <string name="cyberspace_bag_progress">Przeszukano %1$s z %2$s regionów</string>
+    <string name="cyberspace_bag_too_slow_minutes">Poza zasięgiem: około %1$d minut wyszukiwania na tym urządzeniu</string>
+    <string name="cyberspace_bag_too_slow_hours">Poza zasięgiem: około %1$d godzin wyszukiwania na tym urządzeniu</string>
+    <string name="cyberspace_bag_not_found">W pudełku nie ma podpowiedzi o nazwie</string>
+    <string name="cyberspace_bag_damaged">Znaleziono region, ale nie udało się odczytać jego zawartości</string>
+    <string name="cyberspace_bag_dropped">%1$d element ukryty w tym miejscu nie pasował do swojej sygnatury podpisu i został usunięty</string>
+    <string name="cyberspace_bag_dropped_many">%1$d ukrytych tutaj elementów nie pasowało do swoich sygnatur i zostało usuniętych</string>
+    <string name="cyberspace_bag_empty">Otworzyłem, a w środku nic nie było</string>
+    <string name="cyberspace_bag_unsigned">Brak podpisu, więc autor to tylko domysł</string>
+    <string name="cyberspace_bag_unknown_kind">Element typu %1$d, którego ten klient nie wyświetla</string>
+    <string name="cyberspace_bag_opaque">%1$d bajtów danych, których ten klient nie odczytuje</string>
+    <string name="backup_action_block_again">Zablokuj %1$s ponownie</string>
+    <string name="backup_action_keep_count">Zachowaj %1$s</string>
+    <string name="backup_action_rejoin">Ponów %1$s</string>
+    <string name="backup_action_remute">Ponownie wycisz %1$s</string>
+    <string name="backup_action_restore_count">Przywróć %1$s</string>
+    <string name="backup_action_restore_feeds">Przywróć kanały</string>
+    <string name="backup_action_restore_places">Przywróć miejsca</string>
+    <string name="backup_action_restore_profile">Przywróć profil</string>
+    <string name="backup_action_restore_providers">Przywróć dostawców</string>
+    <string name="backup_action_restore_relays">Przywróć transmitery</string>
+    <string name="backup_action_restore_topics">Przywróć tematy</string>
+    <string name="backup_action_restore_wallet">Przywróć portfel</string>
+    <string name="backup_card_accept">Zaakceptuj</string>
+    <plurals name="backup_card_and_added">
+        <item quantity="one">%1$s i dodano %2$d</item>
+        <item quantity="few">%1$s i dodano %2$d</item>
+        <item quantity="many">%1$s i dodano %2$d</item>
+        <item quantity="other">%1$s i dodano %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_blocked">
+        <item quantity="one">%1$s i zablokowano %2$d</item>
+        <item quantity="few">%1$s i zablokowano %2$d</item>
+        <item quantity="many">%1$s i zablokowano %2$d</item>
+        <item quantity="other">%1$s i zablokowano %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_followed">
+        <item quantity="one">%1$s i obserwowany %2$d</item>
+        <item quantity="few">%1$s i obserwowanych %2$d</item>
+        <item quantity="many">%1$s i obserwowanych %2$d</item>
+        <item quantity="other">%1$s i obserwowane %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_joined">
+        <item quantity="one">%1$s i dołączono do %2$d</item>
+        <item quantity="few">%1$s i dołączono do %2$d</item>
+        <item quantity="many">%1$s i dołączono do %2$d</item>
+        <item quantity="other">%1$s i dołączono do %2$d</item>
+    </plurals>
+    <plurals name="backup_card_and_muted">
+        <item quantity="one">%1$s i wyciszony %2$d</item>
+        <item quantity="few">%1$s i wyciszono %2$d</item>
+        <item quantity="many">%1$s i wyciszono %2$d</item>
+        <item quantity="other">%1$s i wyciszone %2$d</item>
+    </plurals>
+    <string name="backup_card_app_settings">Twoje zsynchronizowane ustawienia aplikacji Amethyst zostały zmienione w innej aplikacji, która nie jest Amethystem. To może powodować problemy.</string>
+    <string name="backup_card_concord_emptied">Opróżniłeś swoją listę Concorda</string>
+    <string name="backup_card_concord_rewritten">Zmieniłeś swoją listę Concorda</string>
+    <plurals name="backup_card_dm_relays_lost">
+        <item quantity="one">Usunąłeś %1$d transmiter DM</item>
+        <item quantity="few">Usunąłeś %1$d transmiterów DM</item>
+        <item quantity="many">Usunąłeś %1$d transmiterów DM</item>
+        <item quantity="other">Usunąłeś %1$d transmitery DM</item>
+    </plurals>
+    <plurals name="backup_card_feeds_removed">
+        <item quantity="one">Usunąłeś %1$d ulubiony kanał</item>
+        <item quantity="few">Usunąłeś %1$d ulubionych kanałów</item>
+        <item quantity="many">Usunąłeś %1$d ulubionych kanałów</item>
+        <item quantity="other">Usunięto %1$d ulubione kanały</item>
+    </plurals>
+    <plurals name="backup_card_follows_dropped">
+        <item quantity="one">Przestałeś obserwować %1$d osobę</item>
+        <item quantity="few">Przestałeś obserwować %1$d osób</item>
+        <item quantity="many">Przestałeś obserwować %1$d osób</item>
+        <item quantity="other">Przestałeś obserwować %1$d osoby</item>
+    </plurals>
+    <plurals name="backup_card_hashtags_unfollowed">
+        <item quantity="one">Przestałeś obserwować %1$d hashtag</item>
+        <item quantity="few">Przestałeś obserwować %1$d hashtagów</item>
+        <item quantity="many">Przestałeś obserwować %1$d hashtagów</item>
+        <item quantity="other">Przestałeś obserwować %1$d hashtagi</item>
+    </plurals>
+    <plurals name="backup_card_indexer_relays_lost">
+        <item quantity="one">Usunięto %1$d transmiter indeksujący</item>
+        <item quantity="few">Usunięto %1$d transmiterów indeksujących</item>
+        <item quantity="many">Usunięto %1$d transmiterów indeksujących</item>
+        <item quantity="other">Usunięto %1$d transmitery indeksujące</item>
+    </plurals>
+    <plurals name="backup_card_key_package_relays_lost">
+        <item quantity="one">Usunięto %1$d transmiter klucza grupowego czatu</item>
+        <item quantity="few">Usunięto %1$d transmiterów klucza grupowego czatu</item>
+        <item quantity="many">Usunięto %1$d transmiterów klucza grupowego czatu</item>
+        <item quantity="other">Usunięto %1$d transmitery klucza grupowego czatu</item>
+    </plurals>
+    <plurals name="backup_card_leave_chats">
+        <item quantity="one">Opuściłeś %1$d czat publiczny</item>
+        <item quantity="few">Opuściłeś %1$d czatów publicznych</item>
+        <item quantity="many">Opuściłeś %1$d czatów publicznych</item>
+        <item quantity="other">Opuściłeś %1$d czaty publiczne</item>
+    </plurals>
+    <plurals name="backup_card_leave_communities">
+        <item quantity="one">Opuściłeś %1$d społeczność</item>
+        <item quantity="few">Opuściłeś %1$d społeczności</item>
+        <item quantity="many">Opuściłeś %1$d społeczności</item>
+        <item quantity="other">Opuściłeś %1$d społeczności</item>
+    </plurals>
+    <plurals name="backup_card_leave_groups">
+        <item quantity="one">Opuściłeś %1$d grupę</item>
+        <item quantity="few">Opuściłeś %1$d grup</item>
+        <item quantity="many">Opuściłeś %1$d grup</item>
+        <item quantity="other">Opuszczono %1$d grupy</item>
+    </plurals>
+    <plurals name="backup_card_leave_rooms">
+        <item quantity="one">Opuściłeś %1$d pokój czatu</item>
+        <item quantity="few">Opuściłeś %1$d pokoi czatu</item>
+        <item quantity="many">Opuściłeś %1$d pokoi czatu</item>
+        <item quantity="other">Opuściłeś %1$d pokoje czatu</item>
+    </plurals>
+    <plurals name="backup_card_mutes_visible">
+        <item quantity="one">Włączyłeś dźwięk dla %1$d elementu</item>
+        <item quantity="few">Włączyłeś dźwięk dla %1$d elementów</item>
+        <item quantity="many">Włączyłeś dźwięk dla %1$d elementów</item>
+        <item quantity="other">%1$d elementy mają włączony dźwięk</item>
+    </plurals>
+    <plurals name="backup_card_nip65_lost">
+        <item quantity="one">Usunąłeś %1$d publiczny transmiter</item>
+        <item quantity="few">Usunąłeś %1$d publicznych transmiterów</item>
+        <item quantity="many">Usunąłeś %1$d publicznych transmiterów</item>
+        <item quantity="other">Usunąłeś %1$d publiczne transmitery</item>
+    </plurals>
+    <string name="backup_card_nutzap_key_removed">Usunąłeś swój klucz nutzap</string>
+    <string name="backup_card_nutzap_key_replaced">Wymieniłeś swój klucz Nutzap</string>
+    <plurals name="backup_card_nutzap_mints_removed">
+        <item quantity="one">Usunięto %1$d nutzap mint</item>
+        <item quantity="few">Usunięto %1$d nutzap mintów</item>
+        <item quantity="many">Usunięto %1$d nutzap mintów</item>
+        <item quantity="other">Usunięto %1$d nutzap minty</item>
+    </plurals>
+    <plurals name="backup_card_offers_removed">
+        <item quantity="one">Usunięto %1$d ofertę BOLT12</item>
+        <item quantity="few">Usunięto %1$d ofert BOLT12</item>
+        <item quantity="many">Usunięto %1$d ofert BOLT12</item>
+        <item quantity="other">Usunięto %1$d oferty BOLT12</item>
+    </plurals>
+    <plurals name="backup_card_payment_targets_removed">
+        <item quantity="one">Usunięto %1$d sposób na otrzymanie zapłaty</item>
+        <item quantity="few">Usunięto %1$d sposobów otrzymywania zapłaty</item>
+        <item quantity="many">Usunięto %1$d sposobów otrzymywania zapłaty</item>
+        <item quantity="other">Usunięto %1$d sposoby otrzymywania zapłaty</item>
+    </plurals>
+    <plurals name="backup_card_places_unfollowed">
+        <item quantity="one">Przestałeś obserwować %1$d miejsce</item>
+        <item quantity="few">Przestałeś obserwować %1$d miejsc</item>
+        <item quantity="many">Przestałeś obserwować %1$d miejsc</item>
+        <item quantity="other">Przestałeś obserwować %1$d miejsca</item>
+    </plurals>
+    <plurals name="backup_card_private_outbox_lost">
+        <item quantity="one">Usunięto %1$d prywatny transmiter</item>
+        <item quantity="few">Usunięto %1$d prywatnych transmiterów</item>
+        <item quantity="many">Usunięto %1$d prywatnych transmiterów</item>
+        <item quantity="other">Usunięto %1$d prywatne transmitery</item>
+    </plurals>
+    <plurals name="backup_card_profile_lost_fields">
+        <item quantity="one">Usunąłeś %1$d pole profilu</item>
+        <item quantity="few">Usunąłeś %1$d pól profilowych</item>
+        <item quantity="many">Usunąłeś %1$d pól profilowych</item>
+        <item quantity="other">Usunąłeś %1$d pola profilowe</item>
+    </plurals>
+    <plurals name="backup_card_relay_feeds_lost">
+        <item quantity="one">Usunięto %1$d kanał transmitera</item>
+        <item quantity="few">Usunięto %1$d kanałów transmitera</item>
+        <item quantity="many">Usunięto %1$d kanałów transmitera</item>
+        <item quantity="other">Usunięto %1$d kanały transmitera</item>
+    </plurals>
+    <plurals name="backup_card_search_relays_lost">
+        <item quantity="one">Usunięto %1$d transmiter wyszukiwania</item>
+        <item quantity="few">Usunięto %1$d transmiterów wyszukiwania</item>
+        <item quantity="many">Usunięto %1$d transmiterów wyszukiwania</item>
+        <item quantity="other">Usunięto %1$d transmitery wyszukiwania</item>
+    </plurals>
+    <plurals name="backup_card_trust_services_changed">
+        <item quantity="one">Zmieniłeś dostawcę %1$d zaufanego serwisu</item>
+        <item quantity="few">Zmieniłeś dostawcę %1$d zaufanych serwisów</item>
+        <item quantity="many">Zmieniłeś dostawcę %1$d zaufanych serwisów</item>
+        <item quantity="other">Zmieniłeś dostawcę %1$d zaufanych serwisów</item>
+    </plurals>
+    <plurals name="backup_card_trusted_lost">
+        <item quantity="one">Przestałeś ufać %1$d transmiterowi</item>
+        <item quantity="few">Przestałeś ufać %1$d transmiterom</item>
+        <item quantity="many">Przestałeś ufać %1$d transmiterom</item>
+        <item quantity="other">Przestałeś ufać %1$d transmiterom</item>
+    </plurals>
+    <plurals name="backup_card_unblocked">
+        <item quantity="one">Odblokowałeś %1$d transmiter</item>
+        <item quantity="few">Odblokowałeś %1$d transmiterów</item>
+        <item quantity="many">Odblokowałeś %1$d transmiterów</item>
+        <item quantity="other">Odblokowałeś %1$d transmitery</item>
+    </plurals>
+    <string name="backup_card_wallet_emptied">Opróżniłeś swój portfel Cashu</string>
+    <string name="backup_card_wallet_rewritten">Zmieniłeś swój portfel Cashu</string>
+    <string name="backup_conflict_added">Dodano (%1$s)</string>
+    <string name="backup_conflict_changed">Zmieniono (%1$s)</string>
+    <string name="backup_conflict_count_added">Dodano %1$s</string>
+    <string name="backup_conflict_count_changed">%1$s zmieniono</string>
+    <string name="backup_conflict_count_removed">Usunięto %1$s</string>
+    <string name="backup_conflict_keep_new">Użyj nowej wersji</string>
+    <string name="backup_conflict_private_added">Dodano prywatne (zaszyfrowane) pozycje.</string>
+    <string name="backup_conflict_private_changed">Zmieniłeś również elementy prywatne (zaszyfrowane). Nie można ich tutaj porównać.</string>
+    <string name="backup_conflict_private_cleared">Usunąłeś wszystkie prywatne (zaszyfrowane) elementy.</string>
+    <string name="backup_conflict_relay_read_only">tylko do odczytu</string>
+    <string name="backup_conflict_relay_read_write">odczyt i zapis</string>
+    <string name="backup_conflict_relay_write_only">tylko do zapisu</string>
+    <string name="backup_conflict_removed">Usunięto (%1$s)</string>
+    <string name="backup_conflict_restore_mine">Przywróć zapisaną wersję</string>
+    <string name="backup_conflict_title">Zmieniłeś %1$s w innej aplikacji</string>
+    <string name="backup_entry_algo_feed">Kanały</string>
+    <string name="backup_entry_chat_room">Czat pokoje</string>
+    <string name="backup_entry_community">Społeczności</string>
+    <string name="backup_entry_hashtag">Hashtagi</string>
+    <string name="backup_entry_identity_claim">Powiązane tożsamości</string>
+    <string name="backup_entry_location">Lokalizacje</string>
+    <string name="backup_entry_mint">Minty</string>
+    <string name="backup_entry_nutzap_key">Klucze Nutzap</string>
+    <string name="backup_entry_offer">Oferty</string>
+    <string name="backup_entry_other">Inne wpisy</string>
+    <string name="backup_entry_payment_target">Adresy płatności</string>
+    <string name="backup_entry_person">Osoby</string>
+    <string name="backup_entry_profile_field">Pola profilu</string>
+    <string name="backup_entry_public_chat">Czaty publiczne</string>
+    <string name="backup_entry_relay">Transmitery</string>
+    <string name="backup_entry_relay_group">Grupy</string>
+    <string name="backup_entry_thread">Wątki</string>
+    <string name="backup_entry_trust_provider">Zaufani dostawcy</string>
+    <string name="backup_entry_word">Słowa</string>
+    <string name="backup_profile_field_about">O profilu</string>
+    <string name="backup_profile_field_banner">Baner</string>
+    <string name="backup_profile_field_birthday">Data urodzin</string>
+    <string name="backup_profile_field_bot">Flaga bota</string>
+    <string name="backup_profile_field_clink_offer">Oferta CLINK</string>
+    <string name="backup_profile_field_display_name">Nazwa wyświetlana</string>
+    <string name="backup_profile_field_lud06">LNURL</string>
+    <string name="backup_profile_field_lud16">Lightning Adres</string>
+    <string name="backup_profile_field_name">Nazwa użytkownika</string>
+    <string name="backup_profile_field_nip05">Adres Nostr</string>
+    <string name="backup_profile_field_picture">Zdjęcie</string>
+    <string name="backup_profile_field_pronouns">Zaimki</string>
+    <string name="backup_profile_field_website">Strona www</string>
+    <string name="backup_review_allowed_tag">Dozwolona</string>
+    <string name="backup_review_changed_by_other_app">Zmieniono w innej aplikacji · %1$s</string>
+    <string name="backup_review_concord_body">Twoje społeczności w Concord są dla Ciebie zaszyfrowane, więc nie można ich tutaj porównać. Przywrócenie danych powoduje przywrócenie dokładnie tego, co zostało zapisane na tym urządzeniu.</string>
+    <string name="backup_review_demoted_tag">Przeniesiona</string>
+    <string name="backup_review_dropped_count">%1$s odrzuconych</string>
+    <string name="backup_review_dropped_tag">Usunięta</string>
+    <string name="backup_review_encrypted_added">Utworzyłeś to</string>
+    <string name="backup_review_encrypted_changed">Zmieniłeś to</string>
+    <string name="backup_review_encrypted_cleared">Opróżniłeś to</string>
+    <string name="backup_review_feed">Kanał</string>
+    <string name="backup_review_gone">Zniknęła</string>
+    <string name="backup_review_hashtags_you_follow">Hashtagi, które obserwujesz</string>
+    <string name="backup_review_inbox">Skrzynka odbiorcza</string>
+    <string name="backup_review_inbox_explainer">gdzie inni docierają do Ciebie</string>
+    <string name="backup_review_joined">dołączył(a)</string>
+    <string name="backup_review_kept">zachowane</string>
+    <string name="backup_review_kept_count">Zachowano %1$s</string>
+    <string name="backup_review_key_removed">Usunięto klucz odbierający</string>
+    <string name="backup_review_key_replaced">Wymieniono klucz odbierający</string>
+    <string name="backup_review_key_warning">Nutzapy zostaną przypisane do tego nowego klucza. Jeśli urządzenie nie posiada tego klucza, może się okazać, że nie będzie można ich tutaj zrealizować.</string>
+    <string name="backup_review_left">zostało</string>
+    <string name="backup_review_left_tag">Zostało</string>
+    <string name="backup_review_listed_tag">Na Liście</string>
+    <string name="backup_review_moved_tag">Przeniesiona</string>
+    <string name="backup_review_names_and_more">%1$s i %2$s więcej</string>
+    <string name="backup_review_new">Nowa wersja</string>
+    <string name="backup_review_new_count">%1$s nowych</string>
+    <string name="backup_review_new_count_caption">nowe</string>
+    <string name="backup_review_new_tag">Nowa</string>
+    <string name="backup_review_newly_blocked">Nowo zablokowana</string>
+    <string name="backup_review_newly_muted">%1$s nowo wyciszonych</string>
+    <string name="backup_review_no_longer_blocked">Nie jest już zablokowana</string>
+    <string name="backup_review_not_set">Nie ustawiono</string>
+    <string name="backup_review_nothing_here">Nic tu nie ma!</string>
+    <string name="backup_review_offer">Oferta BOLT12</string>
+    <plurals name="backup_review_offers_gone">
+        <item quantity="one">%1$d oferta usunięta</item>
+        <item quantity="few">%1$d ofert usunięto</item>
+        <item quantity="many">%1$d ofert usunięto</item>
+        <item quantity="other">%1$d oferty usunięte</item>
+    </plurals>
+    <string name="backup_review_outbox">Skrzynka nadawcza</string>
+    <string name="backup_review_outbox_explainer">gdzie publikujesz</string>
+    <plurals name="backup_review_payment_targets_gone">
+        <item quantity="one">%1$d sposób płatności został usunięty</item>
+        <item quantity="few">%1$d sposobów płatności zostało usuniętych</item>
+        <item quantity="many">%1$d sposobów płatności zostało usuniętych</item>
+        <item quantity="other">%1$d sposoby płatności zostały usunięte</item>
+    </plurals>
+    <string name="backup_review_payments_explainer">Osoby, które Ci płacą, widzą tylko to, co znajduje się na tej liście.</string>
+    <string name="backup_review_places_gone">miejsca zniknęły</string>
+    <string name="backup_review_places_you_follow">Miejsca które obserwujesz</string>
+    <string name="backup_review_private_added_body">Są teraz zaszyfrowane, co prawdopodobnie wyjaśnia, gdzie podziały się powyższe elementy publiczne.</string>
+    <string name="backup_review_private_added_title">Ustawiłeś te pozycje jako prywatne</string>
+    <string name="backup_review_private_changed_body">Są zaszyfrowane, więc nie można ich tu porównać.</string>
+    <string name="backup_review_private_changed_title">Zmieniłeś prywatne elementy</string>
+    <string name="backup_review_private_wiped_body">Są zaszyfrowane, więc tylko Ty możesz zobaczyć, co to było. Odtworzenie przywróci je wszystkie.</string>
+    <string name="backup_review_private_wiped_title">Usunąłeś wszystkie prywatne elementy</string>
+    <string name="backup_review_receiving_tag">Pobieranie</string>
+    <string name="backup_review_renamed">zmieniono nazwę</string>
+    <string name="backup_review_renamed_tag">Zmieniono nazwę</string>
+    <string name="backup_review_saved">Na tym urządzeniu</string>
+    <string name="backup_review_search_people">Szukaj %1$s osób</string>
+    <string name="backup_review_searching_tag">Szukam</string>
+    <string name="backup_review_service">Serwis</string>
+    <string name="backup_review_service_followers">Obserwujący</string>
+    <string name="backup_review_service_rank">Ranking</string>
+    <string name="backup_review_service_topics">Tematy</string>
+    <string name="backup_review_services_changed">Zmieniono %1$s z %2$s serwisów</string>
+    <string name="backup_review_services_changed_explainer">Teraz pochodzą od kogoś innego albo od nikogo</string>
+    <string name="backup_review_still_blocked">Nadal zablokowana</string>
+    <string name="backup_review_storing_tag">Przechowywanie</string>
+    <string name="backup_review_tab_dropped">Usunięte · %1$s</string>
+    <string name="backup_review_tab_edited">Edytowane · %1$s</string>
+    <string name="backup_review_tab_new">Nowe · %1$s</string>
+    <string name="backup_review_title_cleared">%1$s wyczyszczono</string>
+    <string name="backup_review_title_updated">%1$s zaktualizowano</string>
+    <string name="backup_review_topics_gone">tematy zniknęły</string>
+    <string name="backup_review_trust_warning">Rankingi, liczba obserwujących i filtrowanie spamu, które widzisz, pochodzą od tych dostawców.</string>
+    <string name="backup_review_trusted_tag">Zaufane</string>
+    <string name="backup_review_unblocked">%1$s odblokowane</string>
+    <string name="backup_review_unblocked_explainer">Ametyst ponownie połączy się z nimi</string>
+    <string name="backup_review_units_tag">Jednostek</string>
+    <string name="backup_review_unmuted">%1$s odblokowanych</string>
+    <string name="backup_review_unmuted_explainer">Mogą one ponownie pojawić się w Twoich informacjach</string>
+    <string name="backup_review_untrusted_tag">Niezaufane</string>
+    <string name="backup_review_wallet_body">Minty i klucze w Twoim portfelu są zaszyfrowane dla Ciebie, więc nie można ich tutaj porównać pozycja po pozycji. Przywrócenie danych powoduje przywrócenie dokładnie tego, co zostało zapisane na tym urządzeniu.</string>
+    <string name="backup_review_was_named">było „%1$s”</string>
+    <string name="backup_review_words_and_hashtags">Wyrazy &amp; hasztagi</string>
+    <string name="backup_type_app_settings">zsynchronizowane ustawienia aplikacji</string>
+    <string name="backup_type_app_settings_explainer">Ustawienia Amethyst są synchronizowane na wszystkich Twoich urządzeniach. Są one zaszyfrowane, więc można porównać jedynie sam fakt ich obecności.</string>
+    <string name="backup_type_blocked_relays">lista zablokowanych przekaźników</string>
+    <string name="backup_type_blocked_relays_explainer">Transmitery, z którymi ta aplikacja nigdy się nie łączy.</string>
+    <string name="backup_type_bolt12_offers">Oferta BOLT12</string>
+    <string name="backup_type_bolt12_offers_explainer">Ta możliwość pozwala innym płacić Ci za pomocą Lightning.</string>
+    <string name="backup_type_cashu_wallet">Portfel Cashu</string>
+    <string name="backup_type_cashu_wallet_explainer">Ustawienia portfela ecash oraz minty. Są one zaszyfrowane, więc można porównać jedynie sam fakt ich istnienia.</string>
+    <string name="backup_type_communities">lista społeczności</string>
+    <string name="backup_type_communities_explainer">Społeczności, do których dołączyłeś.</string>
+    <string name="backup_type_concord_communities">Lista społeczności Concord</string>
+    <string name="backup_type_concord_communities_explainer">Społeczności Concord, do których dołączyłeś. Są one zaszyfrowane, więc można porównać jedynie fakt ich istnienia.</string>
+    <string name="backup_type_dm_relays">Lista transmiterów DM</string>
+    <string name="backup_type_dm_relays_explainer">Gdzie inni dostarczają Twoje prywatne wiadomości.</string>
+    <string name="backup_type_ephemeral_chats">lista czatów efemerycznych</string>
+    <string name="backup_type_ephemeral_chats_explainer">Tymczasowe czaty, do których dołączyłeś.</string>
+    <string name="backup_type_favorite_algo_feeds">lista ulubionych kanałów</string>
+    <string name="backup_type_favorite_algo_feeds_explainer">Zapisane przez Ciebie kanały algorytmiczne.</string>
+    <string name="backup_type_follow_list">lista obserwowanych</string>
+    <string name="backup_type_follow_list_explainer">Określa, czyje posty pojawiają się w Twoim kanale głównym.</string>
+    <string name="backup_type_geohashes">obserwowane lokalizacje</string>
+    <string name="backup_type_geohashes_explainer">Miejsca, z których posty pojawiają się na Twoich kanałach.</string>
+    <string name="backup_type_hashtags">obserwowane hashtagi</string>
+    <string name="backup_type_hashtags_explainer">Hashtagi, z których pochodzą posty wyświetlane w Twoich kanałach.</string>
+    <string name="backup_type_indexer_relays">lista transmiterów indeksujących</string>
+    <string name="backup_type_indexer_relays_explainer">Transmitery służące do wyszukiwania profili innych osób oraz list transmiterów.</string>
+    <string name="backup_type_key_package_relays">transmitery kluczy czatu grupowego</string>
+    <string name="backup_type_key_package_relays_explainer">Gdzie inni znajdą klucze do dodawania cię do zaszyfrowanych czatów grupowych.</string>
+    <string name="backup_type_mute_list">lista zablokowanych</string>
+    <string name="backup_type_mute_list_explainer">Ukrywa osoby, słowa, hashtagi i wątki we wszystkich wyświetlanych treściach.</string>
+    <string name="backup_type_nutzap_info">ustawienia odbioru nutzap</string>
+    <string name="backup_type_nutzap_info_explainer">Minty i klucz, które inni używają do wysyłania ci „nutzapów”.</string>
+    <string name="backup_type_other">lista</string>
+    <string name="backup_type_other_explainer">Lista zapisana na tym urządzeniu.</string>
+    <string name="backup_type_outbox_inbox_relays">lista publicznych transmiterów</string>
+    <string name="backup_type_outbox_inbox_relays_explainer">Informuje wszystkich, gdzie mogą znaleźć Twoje posty oraz gdzie mają wysyłać Ci odpowiedzi i wzmianki.</string>
+    <string name="backup_type_payment_targets">adresy płatności</string>
+    <string name="backup_type_payment_targets_explainer">Sposoby, w jakie inni mogą Ci zapłacić.</string>
+    <string name="backup_type_private_outbox_relays">lista prywatnych transmiterów</string>
+    <string name="backup_type_private_outbox_relays_explainer">Gdzie przechowywane są Twoje projekty i prywatne dane.</string>
+    <string name="backup_type_profile">profil</string>
+    <string name="backup_type_profile_explainer">Twoje imię i nazwisko, zdjęcie, biografia oraz adresy do płatności – tak, jak widzą je wszyscy.</string>
+    <string name="backup_type_public_chats">lista czatów publicznych</string>
+    <string name="backup_type_public_chats_explainer">Publiczne czaty, do których dołączyłeś.</string>
+    <string name="backup_type_relay_feeds">ulubione kanały transmitera</string>
+    <string name="backup_type_relay_feeds_explainer">Transmitery, które przeglądasz jako kanały informacyjne.</string>
+    <string name="backup_type_relay_groups">lista grup</string>
+    <string name="backup_type_relay_groups_explainer">Grupy oparte na transmiterach, do których dołączyłeś.</string>
+    <string name="backup_type_search_relays">lista transmiterów wyszukiwania</string>
+    <string name="backup_type_search_relays_explainer">Transmitery używane podczas wyszukiwania.</string>
+    <string name="backup_type_trust_providers">lista zaufanych dostawców</string>
+    <string name="backup_type_trust_providers_explainer">Serwisy, którym ufasz, a które zajmują się klasyfikowaniem i weryfikacją osób w Twoim imieniu.</string>
+    <string name="backup_type_trusted_relays">lista zaufanych transmiterów</string>
+    <string name="backup_type_trusted_relays_explainer">Zaufane transmitery, z którymi bez wahania nawiązujesz połączenie.</string>
 </resources>

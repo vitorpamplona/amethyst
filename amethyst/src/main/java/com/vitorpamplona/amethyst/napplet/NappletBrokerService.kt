@@ -43,9 +43,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
@@ -92,7 +89,7 @@ class NappletBrokerService : Service() {
     private val signerLedger by lazy { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
     // Per-applet sandboxed key-value store (namespaced by account + coordinate inside the impl).
-    private val storage by lazy { DataStoreNappletStorage(applicationContext, Amethyst.instance.nappletAccountScope) }
+    private val storage by lazy { DataStoreNappletStorage(Amethyst.instance.appStores.getDataStore("napplet_storage"), Amethyst.instance.nappletAccountScope) }
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
@@ -205,8 +202,9 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_RECORD_HISTORY) {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_HISTORY_URL)?.takeIf { it.isNotBlank() } ?: return true
-            BrowserHistoryRegistry.init(applicationContext)
-            BrowserHistoryRegistry.record(url, data.getString(NappletIpc.KEY_HISTORY_TITLE).orEmpty())
+            val history = Amethyst.instance.browserHistory
+            history.init()
+            history.record(url, data.getString(NappletIpc.KEY_HISTORY_TITLE).orEmpty())
             return true
         }
 
@@ -215,8 +213,9 @@ class NappletBrokerService : Service() {
             val data = msg.data ?: return true
             val host = data.getString(NappletIpc.KEY_ICON_HOST)?.takeIf { it.isNotBlank() } ?: return true
             val bytes = data.getByteArray(NappletIpc.KEY_ICON_BYTES) ?: return true
-            BrowserIconRegistry.init(applicationContext)
-            BrowserIconRegistry.record(host, bytes)
+            val icons = Amethyst.instance.browserIcons
+            icons.init()
+            icons.record(host, bytes)
             return true
         }
 
@@ -225,18 +224,20 @@ class NappletBrokerService : Service() {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
             val label = data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty().ifBlank { url }
-            FavoriteAppsRegistry.init(applicationContext)
+            val favorites = Amethyst.instance.favoriteApps
+            favorites.init()
             val id = "url:$url"
+            // The star sends the state it wants (it flips what it shows); an older client sends none: toggle.
             val target =
                 if (data.containsKey(NappletIpc.KEY_FAVORITE_IS_FAVORITE)) {
                     data.getBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE)
                 } else {
-                    !FavoriteAppsRegistry.isFavorite(id)
+                    !favorites.isFavorite(id)
                 }
             if (target) {
-                FavoriteAppsRegistry.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
+                favorites.add(FavoriteApp.WebApp(url, label, System.currentTimeMillis()))
             } else {
-                FavoriteAppsRegistry.remove(id)
+                favorites.remove(id)
             }
             msg.replyTo?.let { replyWebFavoriteState(it, url) }
             return true
@@ -246,7 +247,7 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_QUERY_WEB_FAVORITE) {
             val replyTo = msg.replyTo ?: return true
             val url = msg.data?.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.isNotBlank() } ?: return true
-            FavoriteAppsRegistry.init(applicationContext)
+            Amethyst.instance.favoriteApps.init()
             replyWebFavoriteState(replyTo, url)
             return true
         }
@@ -287,7 +288,7 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_ADD_TO_HOME_SCREEN) {
             val data = msg.data ?: return true
             val url = data.getString(NappletIpc.KEY_FAVORITE_URL)?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return true
-            BrowserIconRegistry.init(applicationContext)
+            Amethyst.instance.browserIcons.init()
             WebShortcuts.requestPin(applicationContext, url, data.getString(NappletIpc.KEY_FAVORITE_LABEL).orEmpty())
             return true
         }
@@ -529,7 +530,7 @@ class NappletBrokerService : Service() {
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_FAVORITE_URL, url)
-                        putBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, FavoriteAppsRegistry.isFavorite("url:$url"))
+                        putBoolean(NappletIpc.KEY_FAVORITE_IS_FAVORITE, Amethyst.instance.favoriteApps.isFavorite("url:$url"))
                     }
             }
         try {

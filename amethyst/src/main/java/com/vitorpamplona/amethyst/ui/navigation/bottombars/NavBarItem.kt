@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.resources.bottom_bar_category_you
 import com.vitorpamplona.amethyst.commons.resources.browser
 import com.vitorpamplona.amethyst.commons.resources.communities
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
 import com.vitorpamplona.amethyst.commons.resources.discover_marketplace
 import com.vitorpamplona.amethyst.commons.resources.discover_reads
 import com.vitorpamplona.amethyst.commons.resources.drafts
@@ -391,6 +392,16 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Lock,
                 resolveRoute = { Route.MarmotGroupList },
             ),
+        NavBarItem.CORDN_GROUPS to
+            NavBarItemDef(
+                id = NavBarItem.CORDN_GROUPS,
+                labelRes = Res.string.cordn_groups_title,
+                // Dns, the symbol every other cordn surface uses: a coordinator
+                // is a server, and that is the one thing that distinguishes
+                // these from the Marmot rooms directly above.
+                icon = MaterialSymbols.Dns,
+                resolveRoute = { Route.CordnGroupList },
+            ),
         NavBarItem.GEOHASH_CHATS to
             NavBarItemDef(
                 id = NavBarItem.GEOHASH_CHATS,
@@ -527,6 +538,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.RELAY_GROUPS,
                 NavBarItem.CONCORD,
                 NavBarItem.MARMOT_GROUPS,
+                NavBarItem.CORDN_GROUPS,
                 NavBarItem.GEOHASH_CHATS,
             ),
         ),

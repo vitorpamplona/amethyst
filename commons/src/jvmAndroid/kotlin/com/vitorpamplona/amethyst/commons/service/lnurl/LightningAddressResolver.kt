@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.lnurl
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +94,7 @@ class LightningAddressResolver(
         lnAddress: String,
         milliSats: Long,
         message: String = "",
-        zapRequest: LnZapRequestEvent? = null,
+        zapRequest: ZapRequestEvent? = null,
         onProgress: (Float) -> Unit = {},
     ): Result =
         withContext(Dispatchers.IO) {
@@ -209,7 +209,7 @@ class LightningAddressResolver(
         callbackUrl: String,
         milliSats: Long,
         message: String,
-        zapRequest: LnZapRequestEvent?,
+        zapRequest: ZapRequestEvent?,
     ): String? =
         withContext(Dispatchers.IO) {
             try {

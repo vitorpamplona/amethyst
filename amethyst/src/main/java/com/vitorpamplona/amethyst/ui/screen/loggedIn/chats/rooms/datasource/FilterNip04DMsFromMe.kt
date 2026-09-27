@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 
 fun filterNip04DMsFromMe(
     user: User,
@@ -39,7 +39,7 @@ fun filterNip04DMsFromMe(
         filter =
             ExplainedFilter(
                 purpose = SubPurpose.DIRECT_MESSAGES,
-                kinds = listOf(PrivateDmEvent.KIND),
+                kinds = listOf(EncryptedDmEvent.KIND),
                 authors = listOf(user.pubkeyHex),
                 since = since,
                 until = until,

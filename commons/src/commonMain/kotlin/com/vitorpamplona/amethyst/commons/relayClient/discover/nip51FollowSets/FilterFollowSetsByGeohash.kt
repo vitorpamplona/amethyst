@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 fun filterFollowSetsByGeohash(
     relay: NormalizedRelayUrl,
@@ -43,7 +43,7 @@ fun filterFollowSetsByGeohash(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.FOLLOW_LISTS,
-                    kinds = listOf(FollowListEvent.KIND),
+                    kinds = listOf(StarterPackEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 300,
                     since = since,

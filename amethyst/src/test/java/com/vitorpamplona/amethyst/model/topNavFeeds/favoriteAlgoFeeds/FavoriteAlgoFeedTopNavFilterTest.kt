@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,7 +34,7 @@ class FavoriteAlgoFeedTopNavFilterTest {
     private fun longFormNote(
         pubkey: String,
         dTag: String,
-    ) = LongTextNoteEvent(
+    ) = LongFormContentEvent(
         id = "0".repeat(64),
         pubKey = pubkey,
         createdAt = 1,

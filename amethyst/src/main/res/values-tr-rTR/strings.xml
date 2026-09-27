@@ -179,6 +179,9 @@
     <string name="post">Gönder</string>
     <string name="voice_post">Sesli Gönderi</string>
     <string name="voice_reply">Sesli Yanıt</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Özel Mesaj</string>
     <string name="nest_notification_broadcasting">Nest — Canlı</string>
     <string name="nest_notification_channel_description">Oda açıkken ses çalmayı sürdürür.</string>

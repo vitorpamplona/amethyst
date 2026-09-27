@@ -187,6 +187,9 @@
     <string name="post">نشر</string>
     <string name="voice_post">منشور صوتي</string>
     <string name="voice_reply">رد صوتي</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">رسالة خاصة</string>
     <string name="nest_notification_broadcasting">Nest — مباشر</string>
     <string name="nest_notification_channel_description">يبقي الصوت قيد التشغيل أثناء فتح الغرفة.</string>

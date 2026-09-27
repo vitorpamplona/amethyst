@@ -27,11 +27,11 @@ import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
@@ -177,7 +177,7 @@ object NotificationContent {
     }
 
     suspend fun decryptZapContentAuthor(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         signer: NostrSigner,
     ): Event? =
         if (event.isPrivateZap() && event.zappedAuthor().contains(event.pubKey)) {
@@ -191,8 +191,8 @@ object NotificationContent {
         signer: NostrSigner,
     ): String? =
         when (val event = note.event) {
-            is PrivateDmEvent -> event.decryptContent(signer)
-            is LnZapRequestEvent -> decryptZapContentAuthor(event, signer)?.content
+            is EncryptedDmEvent -> event.decryptContent(signer)
+            is ZapRequestEvent -> decryptZapContentAuthor(event, signer)?.content
             else -> event?.content
         }
 

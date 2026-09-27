@@ -286,7 +286,7 @@ Track mouse via `Modifier.pointerInput` + `awaitPointerEventScope` (pattern from
 object HighlightPublishAction {
     suspend fun publish(
         highlightText: String,
-        articleEvent: LongTextNoteEvent,
+        articleEvent: LongFormContentEvent,
         note: String?,
         signer: NostrSigner,
     ): HighlightEvent {
@@ -323,8 +323,8 @@ object HighlightPublishAction {
 ##### NIP-09 Deletion for Published Highlights
 
 ```kotlin
-suspend fun deleteHighlight(eventId: String, signer: NostrSigner): DeletionEvent {
-    return DeletionEvent.create(
+suspend fun deleteHighlight(eventId: String, signer: NostrSigner): DeletionRequestEvent {
+    return DeletionRequestEvent.create(
         deleteEvents = listOf(eventId),
         deleteKinds = listOf(9802),
         reason = "User deleted highlight",

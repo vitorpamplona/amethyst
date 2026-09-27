@@ -76,9 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
@@ -144,7 +142,8 @@ private fun EmbeddedWebAppTab(
     // can opt one out and it must stick). Only meaningful when Tor is actually available.
     var torOn by remember { mutableStateOf(proxyAvailable && WebAppNetworkRegistry.useTor(url)) }
 
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
@@ -171,10 +170,11 @@ private fun EmbeddedWebAppTab(
 
     fun toggleFavorite() {
         val favId = "url:$currentUrl"
-        if (FavoriteAppsRegistry.isFavorite(favId)) {
-            FavoriteAppsRegistry.remove(favId)
+        val favorites = Amethyst.instance.favoriteApps
+        if (favorites.isFavorite(favId)) {
+            favorites.remove(favId)
         } else {
-            FavoriteAppsRegistry.add(FavoriteApp.WebApp(currentUrl, pageTitle ?: hostLabel(currentUrl), System.currentTimeMillis()))
+            favorites.add(FavoriteApp.WebApp(currentUrl, pageTitle ?: hostLabel(currentUrl), System.currentTimeMillis()))
         }
     }
 
@@ -223,7 +223,8 @@ private fun EmbeddedWebAppTab(
     }
 
     // Favorites first, then history: what the address editor offers for what the user has typed.
-    val history by BrowserHistoryRegistry.history.collectAsStateWithLifecycle()
+    val history by Amethyst.instance.browserHistory.history
+        .collectAsStateWithLifecycle()
     val candidates =
         remember(apps, history) {
             buildList {

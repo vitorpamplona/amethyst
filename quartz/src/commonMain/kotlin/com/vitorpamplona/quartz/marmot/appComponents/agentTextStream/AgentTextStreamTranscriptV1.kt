@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents.agentTextStream
 
-import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 
 /**
  * The rolling hash a stream's final kind-9 chat publishes as `stream-hash`,

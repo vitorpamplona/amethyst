@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.foundation.authorizationProofs
 
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher

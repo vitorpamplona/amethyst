@@ -177,6 +177,9 @@
     <string name="post">發佈</string>
     <string name="voice_post">語音貼文</string>
     <string name="voice_reply">語音回覆</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">私人訊息</string>
     <string name="nest_notification_broadcasting">Nest — 直播中</string>
     <string name="nest_notification_channel_description">在房間開啟期間保持音訊播放。</string>

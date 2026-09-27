@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestLists.InterestListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 
 class FeedDecryptionCaches(
-    val peopleListCache: PeopleListDecryptionCache,
+    val peopleListCache: FollowSetDecryptionCache,
     val muteListCache: MuteListDecryptionCache,
     val communityListCache: CommunityListDecryptionCache,
-    val hashtagCache: HashtagListDecryptionCache,
+    val hashtagCache: InterestListDecryptionCache,
     val geohashCache: GeohashListDecryptionCache,
 )

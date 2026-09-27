@@ -87,7 +87,7 @@ import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -97,7 +97,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 
@@ -156,7 +156,7 @@ fun ChatroomMessageCompose(
             }
 
             val event = baseNote.event
-            if (event is LnZapEvent) {
+            if (event is ZapReceiptEvent) {
                 RenderChatZap(baseNote, accountViewModel, nav)
             } else if (event is LiveActivitiesRaidEvent) {
                 RenderChatRaid(baseNote, accountViewModel, nav)
@@ -248,10 +248,10 @@ fun NormalChatNote(
                 when {
                     // Own messages: normally no name; in a multi-identity chat, show it (unless a DM,
                     // which never draws the user's own author info).
-                    isLoggedInUser -> showSelfAuthorName && noteEvent !is PrivateDmEvent
+                    isLoggedInUser -> showSelfAuthorName && noteEvent !is EncryptedDmEvent
 
                     // never shows the user's pictures
-                    noteEvent is PrivateDmEvent -> false
+                    noteEvent is EncryptedDmEvent -> false
 
                     // one-on-one, never shows it.
                     // only shows in a group chat.
@@ -588,7 +588,7 @@ private fun RenderReply(
                     is ChatMessageEvent, is ChatMessageEncryptedFileHeaderEvent -> {
                         { LoadingReplyNote(DmReplyProtocol.NIP17, accountViewModel) }
                     }
-                    is PrivateDmEvent -> {
+                    is EncryptedDmEvent -> {
                         { LoadingReplyNote(DmReplyProtocol.NIP04, accountViewModel) }
                     }
                     else -> null

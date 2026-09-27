@@ -99,6 +99,14 @@ fun ChatFileUploadDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
     isNip17: Boolean = false,
+    /**
+     * Whether the sensitive-content switch is offered.
+     *
+     * False for a surface with nowhere to put the answer: cordn's blob host is told a
+     * fixed set of constants on purpose (see CordnBlobUpload), and its `imeta` tag has
+     * no field for a warning, so the switch would be a control that does nothing.
+     */
+    showContentWarning: Boolean = true,
 ) {
     val scrollState = rememberScrollState()
 
@@ -150,7 +158,7 @@ fun ChatFileUploadDialog(
             ) {
                 Column(Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, bottom = 10.dp)) {
                     Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                        ImageVideoPostChat(state, accountViewModel, isNip17)
+                        ImageVideoPostChat(state, accountViewModel, isNip17, showContentWarning)
                     }
                 }
             }
@@ -163,6 +171,7 @@ private fun ImageVideoPostChat(
     fileUploadState: ChatFileUploadState,
     accountViewModel: AccountViewModel,
     isNip17: Boolean = false,
+    showContentWarning: Boolean = true,
 ) {
     val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
@@ -201,13 +210,15 @@ private fun ImageVideoPostChat(
             ),
     )
 
-    SettingSwitchItem(
-        title = Res.string.add_sensitive_content_label,
-        description = Res.string.add_sensitive_content_description,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        checked = fileUploadState.contentWarning,
-        onCheckedChange = fileUploadState::updateContentWarning,
-    )
+    if (showContentWarning) {
+        SettingSwitchItem(
+            title = Res.string.add_sensitive_content_label,
+            description = Res.string.add_sensitive_content_description,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            checked = fileUploadState.contentWarning,
+            onCheckedChange = fileUploadState::updateContentWarning,
+        )
+    }
 
     if (isNip17) {
         SettingSwitchItem(

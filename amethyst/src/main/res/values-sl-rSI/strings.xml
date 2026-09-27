@@ -343,6 +343,9 @@
     <string name="voice_post">Glasovna objava</string>
     <string name="voice_reply">Zvočni odgovor</string>
     <string name="pow_kind_report">Prijavi</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Zasebno sporočilo</string>
     <string name="pow_kind_chat_message">Sporočilo klepeta</string>
     <string name="nest_notification_broadcasting">Gnezdo — V živo</string>

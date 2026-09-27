@@ -35,19 +35,19 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -207,7 +207,7 @@ class CachePruner(
                 val roomNip04Pruned = HashMap<NormalizedRelayUrl, Long>()
                 // chatroom.nip04History is lazy — only touch (allocate) it when this room actually drops a
                 // kind:4 message, so rooms that never paged conversation history pay nothing.
-                val roomNip04Floor = if (toBeRemoved.any { it.event is PrivateDmEvent }) chatroom.nip04History.floor else null
+                val roomNip04Floor = if (toBeRemoved.any { it.event is EncryptedDmEvent }) chatroom.nip04History.floor else null
 
                 toBeRemoved.forEach { note ->
                     when (val ev = note.event) {
@@ -216,7 +216,7 @@ class CachePruner(
                                 val outerUntil = note.rumorHost?.createdAt ?: ev.createdAt
                                 if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.mergeMax(it, outerUntil) }
                             }
-                        is PrivateDmEvent -> {
+                        is EncryptedDmEvent -> {
                             val until = ev.createdAt
                             if (accountNip04Floor != null && until < accountNip04Floor) note.relays.forEach { accountNip04Pruned.mergeMax(it, until) }
                             if (roomNip04Floor != null && until < roomNip04Floor) note.relays.forEach { roomNip04Pruned.mergeMax(it, until) }
@@ -317,8 +317,8 @@ class CachePruner(
                 (
                     (note.event is TextNoteEvent && !note.isNewThread()) ||
                         note.event is ReactionEvent ||
-                        note.event is LnZapEvent ||
-                        note.event is LnZapRequestEvent ||
+                        note.event is ZapReceiptEvent ||
+                        note.event is ZapRequestEvent ||
                         note.event is ReportEvent ||
                         note.event is GenericRepostEvent
                 ) &&
@@ -413,11 +413,11 @@ class CachePruner(
             }
         }
 
-        if (note is AddressableNote && noteEvent is ContactCardEvent) {
+        if (note is AddressableNote && noteEvent is UserAssertionEvent) {
             cache.getUserIfExists(noteEvent.aboutUser())?.cardsOrNull()?.removeCard(note)
         }
 
-        if (note is AddressableNote && noteEvent is StatusEvent) {
+        if (note is AddressableNote && noteEvent is UserStatusEvent) {
             note.author?.statusStateOrNull()?.removeStatus(note)
         }
 

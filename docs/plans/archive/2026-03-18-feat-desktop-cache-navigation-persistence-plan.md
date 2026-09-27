@@ -124,8 +124,8 @@ Start with 4 new event kinds (kind 9734 required for zap processing). Add remain
 | 0 | `MetadataEvent` | Done | Already exists (`consumeMetadata`) |
 | 1 | `TextNoteEvent` | 1 | Core feed content |
 | 7 | `ReactionEvent` | 1 | Reaction counts on Note |
-| 9734 | `LnZapRequestEvent` | 1 | Required before kind 9735 can process |
-| 9735 | `LnZapEvent` | 1 | Zap counts on Note |
+| 9734 | `ZapRequestEvent` | 1 | Required before kind 9735 can process |
+| 9735 | `ZapReceiptEvent` | 1 | Zap counts on Note |
 
 Each consume method follows Android's pattern. Use `event.tagsWithoutCitations()` for reply parsing (handles both NIP-10 marked and legacy positional tags, excluding inline nostr: citations):
 
@@ -410,7 +410,7 @@ rememberSubscription(configuredRelays, feedMode, followedUsers, relayManager = r
 | UserProfileScreen | Parameterized (pubkey) | — | Uses existing kinds |
 | SearchResultsList | Parameterized (query) | — | Uses DesktopSearchFeedFilter |
 | BookmarksScreen | Singleton | 30078 (BookmarkList) | Bookmark state from events |
-| ReadsScreen | Singleton | 30023 (LongTextNote) | Articles feed |
+| ReadsScreen | Singleton | 30023 (LongFormContent) | Articles feed |
 | NotificationsScreen | Singleton | — | Uses DesktopNotificationFeedFilter |
 
 **FeedNoteCard rewrite** — done alongside FeedScreen migration (first screen). All subsequent screen migrations benefit.

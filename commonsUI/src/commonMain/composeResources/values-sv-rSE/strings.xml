@@ -361,7 +361,7 @@
     <string name="copy_user_id">Kopiera Användarens ID</string>
     <string name="unblock_user">Sluta blockera Användare</string>
     <string name="user_is_blocked_hidden">Den här användaren är blockerad/tystad. Deras inlägg är dolda.</string>
-    <string name="npub_hex_username">npub, hex, användarnamn </string>
+    <string name="npub_hex_username">npub, hex, användarnamn</string>
     <string name="clear">Rensa</string>
     <string name="app_logo">Appens logo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privat nyckel</string>
@@ -463,13 +463,8 @@
     <string name="mark_all_known_as_read">Markera alla kända som lästa</string>
     <string name="mark_all_new_as_read">Markera alla nya som lästa</string>
     <string name="mark_all_as_read">Markera allt som läst</string>
-    <string name="account_backup_tips2_md">    ## Nyckelsäkerhetsråd
-    \n\nDitt konto är säkrat med en hemlig nyckel. Nyckeln är en lång följd av tecken som börjar med **nsec1**. Den som har tillgång till denna hemliga nyckel kan posta och ändra din identitet.
-    \n\n- **Lägg inte** din hemliga nyckel på någon webbplats eller i någon mjukvara som du inte litar på.
-    \n- Utvecklarna av Amethyst kommer **aldrig** att be om din hemliga nyckel.
-    \n- **Spara** en säkerhetskopia av din hemliga nyckel för återställning av kontot. Vi rekommenderar att du använder en lösenordshanterare.</string>
-    <string name="account_backup_tips3_md">    För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord.
-    \n\nOm du tappar bort ditt lösenord kommer du inte att kunna återställa din nyckel.</string>
+    <string name="account_backup_tips2_md">## Nyckelsäkerhetsråd \n\nDitt konto är säkrat med en hemlig nyckel. Nyckeln är en lång följd av tecken som börjar med **nsec1**. Den som har tillgång till denna hemliga nyckel kan posta och ändra din identitet. \n\n- **Lägg inte** din hemliga nyckel på någon webbplats eller i någon mjukvara som du inte litar på. \n- Utvecklarna av Amethyst kommer **aldrig** att be om din hemliga nyckel. \n- **Spara** en säkerhetskopia av din hemliga nyckel för återställning av kontot. Vi rekommenderar att du använder en lösenordshanterare.</string>
+    <string name="account_backup_tips3_md">För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord. \n\nOm du tappar bort ditt lösenord kommer du inte att kunna återställa din nyckel.</string>
     <string name="backup_keys_nudge_title">Säkerhetskopiera dina nycklar</string>
     <string name="backup_keys_nudge_body">Din hemliga nyckel är enda sättet att komma åt det här kontot. Om du förlorar den kan den aldrig återskapas. Spara den på ett säkert ställe nu.</string>
     <string name="backup_keys_nudge_backup_now">Säkerhetskopiera nu</string>
@@ -478,7 +473,7 @@
     <string name="encrypt_and_copy_my_secret_key">Kryptera och kopiera min hemliga nyckel</string>
     <string name="badge_award_image_for">Tilldelad Badge för %1$s</string>
     <string name="badge_award_image">Bild på utmärkelse</string>
-    <string name="new_badge_award_notif">Du har blivit tilldelad en ny Badge </string>
+    <string name="new_badge_award_notif">Du har blivit tilldelad en ny Badge</string>
     <string name="award_granted_to">Badge utmärkelse tilldelas</string>
     <string name="account_switch_add_account_dialog_title">Lägg till nytt konto</string>
     <string name="account_switch_select_account">Välj konto</string>
@@ -1584,9 +1579,7 @@
     <string name="push_server_none_explainer">Inaktivera Push-meddelande</string>
     <string name="push_server_uses_app_explainer">Använder appen %1$s</string>
     <string name="push_server_install_app">Inställning av Push-aviseringar</string>
-    <string name="push_server_install_app_description">        För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Ntfy](https://ntfy.sh/).
-        Efter installationen väljer du den app du vill använda i inställningarna.
-    </string>
+    <string name="push_server_install_app_description">För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Ntfy](https://ntfy.sh/). Efter installationen väljer du den app du vill använda i inställningarna.</string>
     <string name="thread_title">Tråd</string>
     <string name="send_the_seller_a_message">Skicka ett meddelande till säljaren</string>
     <string name="hi_there_is_this_still_available">Hallå där, är detta fortfarande tillgängligt?</string>
@@ -3323,14 +3316,7 @@
     <string name="could_not_fetch_invoice_from_details">Kunde inte hämta faktura från %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Kunde inte öppna den komprimerade filen</string>
     <string name="couldnt_find_nwc_wallets">Plånbok hittades inte</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst kunde inte hitta några plånboksappar som stöder Nostr Wallet Connect (NWC).
-\n\nVad du kan göra:
-\n\t1. Verifiera NWC-stöd: Kontrollera att din föredragna plånbok stöder Nostr Wallet Connect.
-\n\t2. Skapa anslutning: Gå till din plånbok och skapa en ny NWC-anslutning.
-\n\t3. Länka till Amethyst: Din plånbok erbjuder vanligtvis tre alternativ:
-\n\t\t3.1 Automatisk länk: En knapp för att automatiskt öppna och ansluta till Amethyst. Klicka på den, öppna Amethyst och spara på den nya skärmen.
-\n\t\t3.2 Manuell länk: En anslutnings-URI som du kan kopiera och klistra in via klistra-ikonen på den här skärmen.
-\n\t\t3.3 QR-kod: Plånboken skapar en QR-kod som du kan skanna med QR-knappens funktion på den här skärmen.</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst kunde inte hitta några plånboksappar som stöder Nostr Wallet Connect (NWC). \n\nVad du kan göra: \n\t1. Verifiera NWC-stöd: Kontrollera att din föredragna plånbok stöder Nostr Wallet Connect. \n\t2. Skapa anslutning: Gå till din plånbok och skapa en ny NWC-anslutning. \n\t3. Länka till Amethyst: Din plånbok erbjuder vanligtvis tre alternativ: \n\t\t3.1 Automatisk länk: En knapp för att automatiskt öppna och ansluta till Amethyst. Klicka på den, öppna Amethyst och spara på den nya skärmen. \n\t\t3.2 Manuell länk: En anslutnings-URI som du kan kopiera och klistra in via klistra-ikonen på den här skärmen. \n\t\t3.3 QR-kod: Plånboken skapar en QR-kod som du kan skanna med QR-knappens funktion på den här skärmen.</string>
     <string name="create">Skapa</string>
     <string name="d">d</string>
     <string name="danger_zone">Riskzon</string>
@@ -4427,11 +4413,8 @@
     <string name="proxy_section">Proxyreläer</string>
     <string name="proxy_section_explainer">Aggregeringsreläer som används för att hämta flöden, t.ex. filter.nostr.wine</string>
     <string name="public_chat">Publik Chat</string>
-    <string name="public_chat_explainer">Offentliga chattar är synliga för alla på Nostr och alla
-        kan delta på dem. De är bra för öppna samhällen kring specifika ämnen.
-        Moderation kan kontrolleras genom att ta bort inlägg på reläerna</string>
-    <string name="public_chat_relays_explainer">Infoga mellan 1–3 reläer som är värd för denna grupp.
-        Nostr klienter använder denna inställning för att veta var du kan ladda ner meddelanden från och skicka dina meddelanden till.</string>
+    <string name="public_chat_explainer">Offentliga chattar är synliga för alla på Nostr och alla kan delta på dem. De är bra för öppna samhällen kring specifika ämnen. Moderation kan kontrolleras genom att ta bort inlägg på reläerna</string>
+    <string name="public_chat_relays_explainer">Infoga mellan 1–3 reläer som är värd för denna grupp. Nostr klienter använder denna inställning för att veta var du kan ladda ner meddelanden från och skicka dina meddelanden till.</string>
     <string name="public_chat_relays_title">Reläer</string>
     <string name="public_chat_title">Metadata för offentlig chatt</string>
     <string name="public_chats">Offentliga chattar</string>
@@ -4496,10 +4479,7 @@
     <string name="relay_auth_search_keywords">auth autentisering relä signera verifiera nip-42 identitet</string>
     <string name="relay_auth_settings_title">Reläautentisering</string>
     <string name="relay_chat">Relä Chatt</string>
-    <string name="relay_chat_explainer">Relä chattar är chattgrupper som kontrolleras av deras hem relä.
-        De är synliga för alla på Nostr och vem som helst kan delta på dem.
-        De är bra för öppna gemenskaper kring specifika ämnen. Några av dessa grupper är kortlivade
-    och därmed försvinner chattmeddelanden över tiden</string>
+    <string name="relay_chat_explainer">Relä chattar är chattgrupper som kontrolleras av deras hem relä. De är synliga för alla på Nostr och vem som helst kan delta på dem. De är bra för öppna gemenskaper kring specifika ämnen. Några av dessa grupper är kortlivade och därmed försvinner chattmeddelanden över tiden</string>
     <string name="relay_chat_title">Relä Chattar</string>
     <string name="relay_explain_account_data">Din egen profil, dina inställningar och utkast, på dina hemreläer.</string>
     <string name="relay_explain_community_chats">Reläerna som varje gemenskap publicerar sina plan till.</string>
@@ -4930,4 +4910,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Mottagarens Lightning-tjänst på %1$s är inte tillgänglig. Den beräknades från Lightning Address "%2$s". Fel: %3$s. Kontrollera om servern är uppe och om Lightning Addressen är korrekt</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Det gick inte att skapa en blixtfaktura från %1$s: Elementet pr hittades inte i den resulterande JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Det gick inte att skapa en blixt faktura. Meddelande från %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

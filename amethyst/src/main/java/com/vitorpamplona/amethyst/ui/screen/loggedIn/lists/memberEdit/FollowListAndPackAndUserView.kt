@@ -63,9 +63,9 @@ fun FollowListAndPackAndUserView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsState by accountViewModel.account.peopleLists.uiListFlow
+    val followSetsState by accountViewModel.account.followSets.uiListFlow
         .collectAsStateWithLifecycle()
-    val followPackFeedState by accountViewModel.account.followLists.uiListFlow
+    val followPackFeedState by accountViewModel.account.starterPacks.uiListFlow
         .collectAsStateWithLifecycle()
 
     val userName by observeUserName(userToAddOrRemove, accountViewModel)
@@ -114,7 +114,7 @@ fun FollowListAndPackAndUserView(
                     userIsPublicMember = list.publicMembers.contains(userToAddOrRemove),
                     onRemoveUser = {
                         accountViewModel.launchSigner {
-                            accountViewModel.account.peopleLists.removeUserFromSet(
+                            accountViewModel.account.followSets.removeUserFromSet(
                                 userToAddOrRemove,
                                 isPrivate = list.privateMembers.contains(userToAddOrRemove),
                                 list.identifierTag,
@@ -129,7 +129,7 @@ fun FollowListAndPackAndUserView(
                     },
                     onAddUserToList = { userShouldBePrivate ->
                         accountViewModel.launchSigner {
-                            accountViewModel.account.peopleLists.addUserToSet(
+                            accountViewModel.account.followSets.addUserToSet(
                                 userToAddOrRemove,
                                 list.identifierTag,
                                 userShouldBePrivate,
@@ -189,7 +189,7 @@ fun FollowListAndPackAndUserView(
                     },
                     onRemoveUser = {
                         accountViewModel.launchSigner {
-                            accountViewModel.account.followLists.removeUserFromSet(
+                            accountViewModel.account.starterPacks.removeUserFromSet(
                                 userToAddOrRemove,
                                 list.identifierTag,
                                 accountViewModel.account,
@@ -199,7 +199,7 @@ fun FollowListAndPackAndUserView(
                     memberSize = list.publicMembers.size,
                     onAddUserToList = {
                         accountViewModel.launchSigner {
-                            accountViewModel.account.followLists.addUserToSet(
+                            accountViewModel.account.starterPacks.addUserToSet(
                                 userToAddOrRemove,
                                 list.identifierTag,
                                 accountViewModel.account,

@@ -271,15 +271,8 @@
     <string name="mark_all_known_as_read">Σήμανση όλων των γνωστοποιήσεων ως αναγνωσμένων</string>
     <string name="mark_all_new_as_read">Σήμανση όλων ως αναγνωσμένων</string>
     <string name="mark_all_as_read">Σήμανση όλων ως αναγνωσμένα</string>
-    <string name="account_backup_tips2_md">        ## Συμβουλές ασφαλείας και δημιουργίας αντιγράφων ασφαλείας κλειδιού
-        \n\nΟ λογαριασμός σου ασφαλίζεται με ένα μυστικό κλειδί. Το κλειδί είναι μια μακρά ακολουθία χαρακτήρων που ξεκινά με **nsec1**. Όποιος έχει πρόσβαση σε αυτό το μυστικό κλειδί μπορεί να δημοσιεύει και να αλλάζει την ταυτότητά σου.
-        \n\n- **Μην** βάζεις το μυστικό σου κλειδί σε κανέναν ιστότοπο ή λογισμικό που δεν εμπιστεύεσαι.
-        \n- Οι προγραμματιστές του Amethyst **δεν** θα ζητήσουν ποτέ το μυστικό σου κλειδί.
-        \n- **Διατήρησε** ένα ασφαλές αντίγραφο ασφαλείας του μυστικού σου κλειδιού για ανάκτηση λογαριασμού. Συνιστούμε τη χρήση διαχειριστή κωδικών πρόσβασης.
-    </string>
-    <string name="account_backup_tips3_md">        Για πρόσθετη ασφάλεια, μπορείς να κρυπτογραφήσεις το κλειδί σου με κωδικό πρόσβασης. Αυτό το κλειδί ξεκινά με **ncryptsec1** και δεν μπορεί να χρησιμοποιηθεί χωρίς τον κωδικό σου.
-        \n\nΑν χάσεις τον κωδικό σου, δεν θα μπορείς να ανακτήσεις το κλειδί σου.
-    </string>
+    <string name="account_backup_tips2_md">## Συμβουλές ασφαλείας και δημιουργίας αντιγράφων ασφαλείας κλειδιού \n\nΟ λογαριασμός σου ασφαλίζεται με ένα μυστικό κλειδί. Το κλειδί είναι μια μακρά ακολουθία χαρακτήρων που ξεκινά με **nsec1**. Όποιος έχει πρόσβαση σε αυτό το μυστικό κλειδί μπορεί να δημοσιεύει και να αλλάζει την ταυτότητά σου. \n\n- **Μην** βάζεις το μυστικό σου κλειδί σε κανέναν ιστότοπο ή λογισμικό που δεν εμπιστεύεσαι. \n- Οι προγραμματιστές του Amethyst **δεν** θα ζητήσουν ποτέ το μυστικό σου κλειδί. \n- **Διατήρησε** ένα ασφαλές αντίγραφο ασφαλείας του μυστικού σου κλειδιού για ανάκτηση λογαριασμού. Συνιστούμε τη χρήση διαχειριστή κωδικών πρόσβασης.</string>
+    <string name="account_backup_tips3_md">Για πρόσθετη ασφάλεια, μπορείς να κρυπτογραφήσεις το κλειδί σου με κωδικό πρόσβασης. Αυτό το κλειδί ξεκινά με **ncryptsec1** και δεν μπορεί να χρησιμοποιηθεί χωρίς τον κωδικό σου. \n\nΑν χάσεις τον κωδικό σου, δεν θα μπορείς να ανακτήσεις το κλειδί σου.</string>
     <string name="encrypt_and_copy_my_secret_key">Κρυπτογράφηση και αντιγραφή του μυστικού μου κλειδιού</string>
     <string name="badge_award_image_for">Σήμα βράβευσης για %1$s</string>
     <string name="badge_award_image">"Εικόνα βραβείου παρασήμου</string>
@@ -934,8 +927,7 @@
     <string name="moderators">Συντονιστές</string>
     <string name="login_with_external_signer">Σύνδεση με Amber</string>
     <string name="status_update">Ενημέρωση κατάστασης</string>
-    <string name="poll_zap_value_min_max_explainer">Η ψηφοφορία σε μια δημοσίευση Δημοσκόπησης γίνεται με zaps. Τα zaps είναι μικροπληρωμές σε satoshi (sats). Τα sats είναι υποδιαίρεση του Bitcoin. Κάθε Bitcoin έχει 100.000.000 sats.
-Η επιλογή με τα περισσότερα zaps (δηλαδή τα περισσότερα sats) είναι η επικρατέστερη. Μπορείτε να ορίσετε ένα ελάχιστο ποσό zap για να αποφύγετε την ψήφο spammers αλλά και ένα μέγιστο ποσό ώστε να αποφύγετε μεγάλους zappers (χρήστες που στέλνουν zaps) που επιθυμούν να χειραγωγήσουν την ψηφοφορία. Χρησιμοποιήστε το ίδιο ποσό και στα δύο πεδία για να βεβαιωθείτε ότι κάθε ψήφος αποτιμάται το ίδιο. Ή αφήστε τα πεδία κενά για να αποδεχτείτε οποιοδήποτε ποσό.</string>
+    <string name="poll_zap_value_min_max_explainer">Η ψηφοφορία σε μια δημοσίευση Δημοσκόπησης γίνεται με zaps. Τα zaps είναι μικροπληρωμές σε satoshi (sats). Τα sats είναι υποδιαίρεση του Bitcoin. Κάθε Bitcoin έχει 100.000.000 sats. Η επιλογή με τα περισσότερα zaps (δηλαδή τα περισσότερα sats) είναι η επικρατέστερη. Μπορείτε να ορίσετε ένα ελάχιστο ποσό zap για να αποφύγετε την ψήφο spammers αλλά και ένα μέγιστο ποσό ώστε να αποφύγετε μεγάλους zappers (χρήστες που στέλνουν zaps) που επιθυμούν να χειραγωγήσουν την ψηφοφορία. Χρησιμοποιήστε το ίδιο ποσό και στα δύο πεδία για να βεβαιωθείτε ότι κάθε ψήφος αποτιμάται το ίδιο. Ή αφήστε τα πεδία κενά για να αποδεχτείτε οποιοδήποτε ποσό.</string>
     <string name="error_dialog_talk_to_user">Μήνυμα στον Χρήστη</string>
     <string name="error_dialog_talk_to_user_name">Μήνυμα σε %1$s</string>
     <string name="error_dialog_button_ok">ΟΚ</string>
@@ -963,9 +955,7 @@
     <string name="push_server_none_explainer">Απενεργοποίηση Ειδοποιήσεων Push</string>
     <string name="push_server_uses_app_explainer">Χρήση εφαρμογής %1$s</string>
     <string name="push_server_install_app">Ρυθμίσεις Ειδοποιήσεων Push</string>
-    <string name="push_server_install_app_description">        Για να λαμβάνετε ειδοποιήσεις Push, εγκαταστήστε οποιαδήποτε εφαρμογή τις υποστηρίζει [Unified Push](https://unifiedpush.org/), όπως πχ το [Ntfy](https://ntfy.sh/).
-        Μετά την εγκατάσταση, επιλέξτε την εφαρμογή που θέλετε να χρησιμοποιήσετε από τις Ρυθμίσεις.
-    </string>
+    <string name="push_server_install_app_description">Για να λαμβάνετε ειδοποιήσεις Push, εγκαταστήστε οποιαδήποτε εφαρμογή τις υποστηρίζει [Unified Push](https://unifiedpush.org/), όπως πχ το [Ntfy](https://ntfy.sh/). Μετά την εγκατάσταση, επιλέξτε την εφαρμογή που θέλετε να χρησιμοποιήσετε από τις Ρυθμίσεις.</string>
     <string name="thread_title">Νήμα</string>
     <string name="send_the_seller_a_message">Στείλτε μήνυμα στον πωλητή</string>
     <string name="hi_there_is_this_still_available">Γεια σου, είναι ακόμα διαθέσιμο;</string>
@@ -2008,15 +1998,7 @@
     <string name="could_not_fetch_invoice_from_details">Δεν ήταν δυνατή η λήψη τιμολογίου από %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Δεν ήταν δυνατό το άνοιγμα του συμπιεσμένου αρχείου</string>
     <string name="couldnt_find_nwc_wallets">Το πορτοφόλι δεν βρέθηκε</string>
-    <string name="couldnt_find_nwc_wallets_description">Το Amethyst δεν βρήκε εφαρμογές πορτοφολιού που υποστηρίζουν Nostr Wallet Connect (NWC).
-\n\nΤι μπορείτε να κάνετε:
-\n\t1. Επαλήθευση υποστήριξης NWC: Βεβαιωθείτε ότι η προτιμώμενη εφαρμογή πορτοφολιού σας είναι συμβατή με Nostr Wallet Connect.
-\n\t2. Δημιουργία σύνδεσης: Μεταβείτε στην εφαρμογή πορτοφολιού σας και δημιουργήστε μια νέα σύνδεση NWC.
-\n\t3. Σύνδεση με το Amethyst: Το πορτοφόλι σας συνήθως θα σας δώσει τρεις επιλογές:
-\n\t\t3.1 Αυτόματη σύνδεση: Ένα κουμπί για αυτόματο άνοιγμα και σύνδεση με το Amethyst. Αν ναι, κάντε κλικ σε αυτό το κουμπί, ανοίξτε το Amethyst και πατήστε αποθήκευση στη νέα οθόνη.
-\n\t\t3.2 Χειροκίνητη σύνδεση: Ένα URI σύνδεσης που μπορείτε να αντιγράψετε και να κάνετε κλικ στο εικονίδιο επικόλλησης σε αυτή την οθόνη για απευθείας εισαγωγή.
-\n\t\t3.3 Κωδικός QR: Το πορτοφόλι δημιουργεί κωδικό QR τον οποίο μπορείτε να σαρώσετε από το κουμπί κωδικού QR σε αυτή την οθόνη.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Το Amethyst δεν βρήκε εφαρμογές πορτοφολιού που υποστηρίζουν Nostr Wallet Connect (NWC). \n\nΤι μπορείτε να κάνετε: \n\t1. Επαλήθευση υποστήριξης NWC: Βεβαιωθείτε ότι η προτιμώμενη εφαρμογή πορτοφολιού σας είναι συμβατή με Nostr Wallet Connect. \n\t2. Δημιουργία σύνδεσης: Μεταβείτε στην εφαρμογή πορτοφολιού σας και δημιουργήστε μια νέα σύνδεση NWC. \n\t3. Σύνδεση με το Amethyst: Το πορτοφόλι σας συνήθως θα σας δώσει τρεις επιλογές: \n\t\t3.1 Αυτόματη σύνδεση: Ένα κουμπί για αυτόματο άνοιγμα και σύνδεση με το Amethyst. Αν ναι, κάντε κλικ σε αυτό το κουμπί, ανοίξτε το Amethyst και πατήστε αποθήκευση στη νέα οθόνη. \n\t\t3.2 Χειροκίνητη σύνδεση: Ένα URI σύνδεσης που μπορείτε να αντιγράψετε και να κάνετε κλικ στο εικονίδιο επικόλλησης σε αυτή την οθόνη για απευθείας εισαγωγή. \n\t\t3.3 Κωδικός QR: Το πορτοφόλι δημιουργεί κωδικό QR τον οποίο μπορείτε να σαρώσετε από το κουμπί κωδικού QR σε αυτή την οθόνη.</string>
     <string name="create">Δημιουργία</string>
     <string name="d">η</string>
     <string name="danger_zone">Επικίνδυνη ζώνη</string>
@@ -2653,11 +2635,8 @@
     <string name="proxy_section">Relay Διαμεσολαβητή</string>
     <string name="proxy_section_explainer">Relay συγκεντρωτές που η εφαρμογή πρέπει να χρησιμοποιεί για να κατεβάσει τις τροφοδοσίες σας, όπως filter.nostr.wine. Αυτό αντικαθιστά το μοντέλο outbox και θα κάνει την εφαρμογή να συνδέεται μόνο στα relay στις λίστες σας.</string>
     <string name="public_chat">Δημόσια Συζήτηση</string>
-    <string name="public_chat_explainer">Οι δημόσιες συνομιλίες είναι ορατές σε όλους στο Nostr και οποιοσδήποτε
-        μπορεί να συμμετάσχει σε αυτές. Είναι ιδανικές για ανοιχτές κοινότητες γύρω από συγκεκριμένα θέματα.
-        Η εποπτεία μπορεί να ελεγχθεί με διαγραφή αναρτήσεων στα relay της</string>
-    <string name="public_chat_relays_explainer">Εισάγετε 1–3 relay που φιλοξενούν αυτή την ομάδα.
-        Οι πελάτες Nostr χρησιμοποιούν αυτή τη ρύθμιση για να γνωρίζουν πού να κατεβάσουν μηνύματα και πού να στέλνουν τα μηνύματά σου.</string>
+    <string name="public_chat_explainer">Οι δημόσιες συνομιλίες είναι ορατές σε όλους στο Nostr και οποιοσδήποτε μπορεί να συμμετάσχει σε αυτές. Είναι ιδανικές για ανοιχτές κοινότητες γύρω από συγκεκριμένα θέματα. Η εποπτεία μπορεί να ελεγχθεί με διαγραφή αναρτήσεων στα relay της</string>
+    <string name="public_chat_relays_explainer">Εισάγετε 1–3 relay που φιλοξενούν αυτή την ομάδα. Οι πελάτες Nostr χρησιμοποιούν αυτή τη ρύθμιση για να γνωρίζουν πού να κατεβάσουν μηνύματα και πού να στέλνουν τα μηνύματά σου.</string>
     <string name="public_chat_title">Μεταδεδομένα δημόσιας συνομιλίας</string>
     <string name="public_chats">Δημόσιες Συνομιλίες</string>
     <string name="public_home_section">Δημόσια Relay Εξερχόμενων/Αρχικής</string>
@@ -2681,10 +2660,7 @@
     <string name="read_only_user">Χρήστης μόνο για ανάγνωση</string>
     <string name="record_a_message_description">Πάτα παρατεταμένα για να καταγράψεις ένα μήνυμα</string>
     <string name="relay_chat">Συνομιλία relay</string>
-    <string name="relay_chat_explainer">Οι συνομιλίες relay είναι ομάδες συνομιλίας που ελέγχονται από το αρχικό τους relay.
-        Είναι ορατές σε όλους στο Nostr και οποιοσδήποτε μπορεί να συμμετάσχει σε αυτές.
-        Είναι ιδανικές για ανοιχτές κοινότητες γύρω από συγκεκριμένα θέματα. Ορισμένες από αυτές τις ομάδες είναι εφήμερες
-    και έτσι τα μηνύματα συνομιλίας εξαφανίζονται με την πάροδο του χρόνου</string>
+    <string name="relay_chat_explainer">Οι συνομιλίες relay είναι ομάδες συνομιλίας που ελέγχονται από το αρχικό τους relay. Είναι ορατές σε όλους στο Nostr και οποιοσδήποτε μπορεί να συμμετάσχει σε αυτές. Είναι ιδανικές για ανοιχτές κοινότητες γύρω από συγκεκριμένα θέματα. Ορισμένες από αυτές τις ομάδες είναι εφήμερες και έτσι τα μηνύματα συνομιλίας εξαφανίζονται με την πάροδο του χρόνου</string>
     <string name="relay_chat_title">Συνομιλίες relay</string>
     <string name="relay_management_tab_events">Συμβάντα</string>
     <string name="relay_management_tab_pubkeys">Χρήστες</string>
@@ -2917,4 +2893,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Η υπηρεσία Lightning του αποδέκτη στο %1$s δεν είναι διαθέσιμη. Υπολογίστηκε από τη διεύθυνση Lightning "%2$s". Σφάλμα: %3$s. Ελέγξτε αν ο διακομιστής λειτουργεί και αν η διεύθυνση Lightning είναι σωστή</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Δεν είναι δυνατή η δημιουργία τιμολογίου Lightning από τον/την %1$s: Το στοιχείο pr δεν βρέθηκε στο αποτέλεσμα JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Δεν είναι δυνατή η δημιουργία τιμολογίου Lightning. Μήνυμα από τον/την %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

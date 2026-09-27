@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroup
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupState
+import com.vitorpamplona.quartz.mls.group.MlsGroup
+import com.vitorpamplona.quartz.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.test.Test

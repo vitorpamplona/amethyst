@@ -109,7 +109,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedR
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.RelayFeedsListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.FavoriteRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.renderRelayFeedsItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
@@ -148,7 +148,7 @@ fun AllRelayListScreen(
     val broadcastViewModel: BroadcastRelayListViewModel = viewModel()
     val indexerViewModel: IndexerRelayListViewModel = viewModel()
     val proxyViewModel: ProxyRelayListViewModel = viewModel()
-    val relayFeedsViewModel: RelayFeedsListViewModel = viewModel()
+    val relayFeedsViewModel: FavoriteRelayListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
     keyPackageViewModel.init(accountViewModel)
@@ -214,7 +214,7 @@ fun MappedAllRelayListView(
     broadcastViewModel: BroadcastRelayListViewModel,
     indexerViewModel: IndexerRelayListViewModel,
     proxyViewModel: ProxyRelayListViewModel,
-    relayFeedsViewModel: RelayFeedsListViewModel,
+    relayFeedsViewModel: FavoriteRelayListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

@@ -26,16 +26,16 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 
-val ContactCardKindList = listOf(ContactCardEvent.KIND)
+val UserAssertionKindList = listOf(UserAssertionEvent.KIND)
 
 /**
  * Kind:30382 cards *about* [targets], written by [trustedAccounts] (the account
  * itself plus its WoT trust providers). Fetches nicknames and scores for the
  * users currently on screen.
  */
-fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+fun filterUserAssertionsToTargetKeysFromTrustedAccountsInTheRelay(
     targets: Set<HexKey>,
     trustedAccounts: List<HexKey>,
     relay: NormalizedRelayUrl,
@@ -49,7 +49,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
             ExplainedFilter(
                 purpose = SubPurpose.PROFILE_METADATA,
                 accountPubKeys = listOfNotNull(accountPubKey),
-                kinds = ContactCardKindList,
+                kinds = UserAssertionKindList,
                 authors = trustedAccounts,
                 // kind:30382 addresses the target user in the d-tag
                 tags = mapOf(DTag.TAG_NAME to targets.sorted()),
@@ -68,7 +68,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
  * "Observing Profiles" — explained as *"profiles of the people currently on screen"* — made every
  * logged-in account look like it was watching somebody.
  */
-fun filterContactCardsByAuthorInTheRelay(
+fun filterUserAssertionsByAuthorInTheRelay(
     relay: NormalizedRelayUrl,
     authors: List<HexKey>,
     since: Long?,
@@ -81,7 +81,7 @@ fun filterContactCardsByAuthorInTheRelay(
                 purpose = SubPurpose.ACCOUNT_DATA,
                 // This variant fetches the accounts' OWN contact cards, so the authors are the owners.
                 accountPubKeys = authors,
-                kinds = ContactCardKindList,
+                kinds = UserAssertionKindList,
                 authors = authors,
                 limit = limit,
                 since = since,

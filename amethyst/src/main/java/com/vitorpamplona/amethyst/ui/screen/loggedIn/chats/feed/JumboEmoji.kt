@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.util.codePointAtKmp
 import com.vitorpamplona.amethyst.commons.util.codePointCharCount
 
@@ -137,3 +139,19 @@ private fun isEmojiBase(cp: Int): Boolean =
         cp in 0x3297..0x3299 || // circled ideographs
         cp == 0x3030 || // wavy dash
         cp == 0x303D // part alternation mark
+
+// Jumbo sizes step down as the emoji count grows so up to three still fit a line.
+private val JumboEmojiSingle = 50.sp
+private val JumboEmojiPair = 40.sp
+private val JumboEmojiTriple = 32.sp
+
+/**
+ * How large to draw an emoji-only message of [jumboCount] emoji. Shared by every chat
+ * surface that renders one, so a jumbo message is the same size wherever it appears.
+ */
+fun jumboEmojiFontSize(jumboCount: Int): TextUnit =
+    when (jumboCount) {
+        1 -> JumboEmojiSingle
+        2 -> JumboEmojiPair
+        else -> JumboEmojiTriple
+    }

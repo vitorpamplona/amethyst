@@ -21,21 +21,21 @@
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
+import com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager.Companion.SNAPSHOT_VERSION
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
-import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
-import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
-import com.vitorpamplona.quartz.marmot.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.marmot.mls.messages.MlsKeyPackage
-import com.vitorpamplona.quartz.marmot.mls.tree.Capabilities
-import com.vitorpamplona.quartz.marmot.mls.tree.Credential
-import com.vitorpamplona.quartz.marmot.mls.tree.Extension
-import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
-import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
-import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
+import com.vitorpamplona.quartz.mls.codec.TlsReader
+import com.vitorpamplona.quartz.mls.codec.TlsWriter
+import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.mls.crypto.X25519
+import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
+import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
+import com.vitorpamplona.quartz.mls.tree.Credential
+import com.vitorpamplona.quartz.mls.tree.Extension
+import com.vitorpamplona.quartz.mls.tree.LeafNode
+import com.vitorpamplona.quartz.mls.tree.LeafNodeSource
+import com.vitorpamplona.quartz.mls.tree.Lifetime
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
@@ -700,18 +700,7 @@ class KeyPackageRotationManager(
                 encryptionKey = encryptionKey,
                 signatureKey = signatureKey,
                 credential = Credential.Basic(identity),
-                capabilities =
-                    Capabilities(
-                        extensions =
-                            listOf(
-                                0x000A, // LastResort (required by OpenMLS validation)
-                                0xF2EE, // NostrGroupData (required by group's RequiredCapabilities)
-                            ),
-                        proposals =
-                            listOf(
-                                0x000A, // SelfRemove (required by group's RequiredCapabilities)
-                            ),
-                    ),
+                capabilities = MarmotCapabilities.mipKeyPackageLeaf(),
                 leafNodeSource = LeafNodeSource.KEY_PACKAGE,
                 lifetime = Lifetime(notBefore = now, notAfter = now + KEY_PACKAGE_LIFETIME_SECONDS),
                 extensions = emptyList(),

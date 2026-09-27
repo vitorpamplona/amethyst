@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.PinListState
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmark_list_icon_label
 import com.vitorpamplona.amethyst.commons.resources.bookmarks_explainer
@@ -73,17 +73,17 @@ fun ListOfBookmarkGroupsFeedView(
     oldBookmarks: OldBookmarkListState,
     pinnedNotes: PinListState,
     repositories: GitRepositoryListState,
-    groupListFeedSource: StateFlow<List<LabeledBookmarkList>>,
+    groupListFeedSource: StateFlow<List<BookmarkSet>>,
     openDefaultBookmarks: () -> Unit,
     openOldBookmarks: () -> Unit,
     openPinnedNotes: () -> Unit,
     openRepositories: () -> Unit,
     openPodcasts: () -> Unit,
     onOpenItem: (String, BookmarkType) -> Unit,
-    onRenameItem: (targetBookmarkGroup: LabeledBookmarkList) -> Unit,
-    onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
-    onItemClone: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
-    onDeleteItem: (bookmarkGroup: LabeledBookmarkList) -> Unit,
+    onRenameItem: (targetBookmarkGroup: BookmarkSet) -> Unit,
+    onItemDescriptionChange: (bookmarkGroup: BookmarkSet) -> Unit,
+    onItemClone: (bookmarkGroup: BookmarkSet, customName: String?, customDesc: String?) -> Unit,
+    onDeleteItem: (bookmarkGroup: BookmarkSet) -> Unit,
     listState: LazyListState = rememberLazyListState(),
 ) {
     val bookmarkGroupFeedState by groupListFeedSource.collectAsStateWithLifecycle()
@@ -119,7 +119,7 @@ fun ListOfBookmarkGroupsFeedView(
 
         itemsIndexed(
             bookmarkGroupFeedState,
-            key = { _: Int, item: LabeledBookmarkList -> item.identifier },
+            key = { _: Int, item: BookmarkSet -> item.identifier },
         ) { _, groupItem ->
             BookmarkGroupItem(
                 modifier = Modifier.fillMaxSize().animateItem(),

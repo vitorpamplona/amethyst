@@ -224,7 +224,7 @@
     <string name="copy_user_id">பயனர் IDயை நகலெடுக்கவும்</string>
     <string name="unblock_user">பயனரைத் தடைநீக்கு</string>
     <string name="user_is_blocked_hidden">இந்த பயனர் தடுக்கப்பட்டு/முடக்கப்பட்டுள்ளார். அவர்களின் இடுகைகள் மறைக்கப்பட்டுள்ளன.</string>
-    <string name="npub_hex_username">npub, hex, பயனர்பெயர் </string>
+    <string name="npub_hex_username">npub, hex, பயனர்பெயர்</string>
     <string name="clear">அழி</string>
     <string name="app_logo">பயன்பாட்டு இலச்சினை</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex தனிப்பட்ட சாவி</string>
@@ -272,17 +272,10 @@
     <string name="mark_all_known_as_read">தெரிந்தவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_new_as_read">புதியனவற்றைப் படித்ததாகக் குறி</string>
     <string name="mark_all_as_read">அனைத்தையும் படித்ததாகக் குறி</string>
-    <string name="account_backup_tips2_md">        ## திறவுகோல் காப்புப்பிரதி மற்றும் பாதுகாப்பு குறிப்புகள்
-        \n\nஉங்கள் கணக்கு ஒரு இரகசிய திறவுகோலால் பாதுகாக்கப்படுகிறது. இந்த திறவுகோல் **nsec1** என்று தொடங்கும் நீண்ட எழுத்துத் தொடராகும். இந்த இரகசிய திறவுகோலை யாராவது பெற்றால் அவர்கள் உங்கள் அடையாளத்தை பயன்படுத்தி இடுகையிடலாம் மற்றும் மாற்றலாம்.
-        \n\n- உங்கள் இரகசிய திறவுகோலை நீங்கள் நம்பாத எந்த வலைத்தளத்திலும் அல்லது மென்பொருளிலும் வைக்க **வேண்டாம்**.
-        \n- Amethyst டெவலப்பர்கள் உங்கள் இரகசிய திறவுகோலை **ஒருபோதும்** கேட்கமாட்டார்கள்.
-        \n- கணக்கு மீட்டெடுப்புக்காக உங்கள் இரகசிய திறவுகோலை பாதுகாப்பாக காப்புப்பிரதி எடுங்கள். கடவுச்சொல் மேலாளரை பயன்படுத்த பரிந்துரைக்கிறோம்.
-    </string>
-    <string name="account_backup_tips3_md">        கூடுதல் பாதுகாப்புக்காக, உங்கள் திறவுகோலை கடவுச்சொல்லால் குறியாக்கலாம். இந்த திறவுகோல் **ncryptsec1** என்று தொடங்கும் மற்றும் உங்கள் கடவுச்சொல்லின்றி பயன்படுத்த முடியாது.
-        \n\nகடவுச்சொல்லை மறந்தால், உங்கள் திறவுகோலை மீட்டெடுக்க முடியாது.
-    </string>
+    <string name="account_backup_tips2_md">## திறவுகோல் காப்புப்பிரதி மற்றும் பாதுகாப்பு குறிப்புகள் \n\nஉங்கள் கணக்கு ஒரு இரகசிய திறவுகோலால் பாதுகாக்கப்படுகிறது. இந்த திறவுகோல் **nsec1** என்று தொடங்கும் நீண்ட எழுத்துத் தொடராகும். இந்த இரகசிய திறவுகோலை யாராவது பெற்றால் அவர்கள் உங்கள் அடையாளத்தை பயன்படுத்தி இடுகையிடலாம் மற்றும் மாற்றலாம். \n\n- உங்கள் இரகசிய திறவுகோலை நீங்கள் நம்பாத எந்த வலைத்தளத்திலும் அல்லது மென்பொருளிலும் வைக்க **வேண்டாம்**. \n- Amethyst டெவலப்பர்கள் உங்கள் இரகசிய திறவுகோலை **ஒருபோதும்** கேட்கமாட்டார்கள். \n- கணக்கு மீட்டெடுப்புக்காக உங்கள் இரகசிய திறவுகோலை பாதுகாப்பாக காப்புப்பிரதி எடுங்கள். கடவுச்சொல் மேலாளரை பயன்படுத்த பரிந்துரைக்கிறோம்.</string>
+    <string name="account_backup_tips3_md">கூடுதல் பாதுகாப்புக்காக, உங்கள் திறவுகோலை கடவுச்சொல்லால் குறியாக்கலாம். இந்த திறவுகோல் **ncryptsec1** என்று தொடங்கும் மற்றும் உங்கள் கடவுச்சொல்லின்றி பயன்படுத்த முடியாது. \n\nகடவுச்சொல்லை மறந்தால், உங்கள் திறவுகோலை மீட்டெடுக்க முடியாது.</string>
     <string name="encrypt_and_copy_my_secret_key">என் இரகசிய விசையை மறைகுறியாக்கி நகல் எடுக்கவும்</string>
-    <string name="badge_award_image_for"> %1$s க்கான பேட்ஜ் விருது படம்</string>
+    <string name="badge_award_image_for">%1$s க்கான பேட்ஜ் விருது படம்</string>
     <string name="badge_award_image">"பேட்ஜ் விருது படம்</string>
     <string name="new_badge_award_notif">நீங்கள் ஒரு புதிய பேட்ஜ் விருதைப் பெற்றீர்கள்</string>
     <string name="award_granted_to">பேட்ஜ் விருது வழங்கப்பட்டது. பெறுநர்:</string>
@@ -304,7 +297,7 @@
     <string name="quick_action_block_dialog_btn">தடைசெய்</string>
     <string name="quick_action_delete_dialog_btn">அழி</string>
     <string name="quick_action_block">தடைசெய்</string>
-    <string name="quick_action_report">புகார் </string>
+    <string name="quick_action_report">புகார்</string>
     <string name="quick_action_dont_show_again_button">மீண்டும் காட்டாதே</string>
     <string name="report_dialog_spam">எரிதம் அல்லது மோசடிகள்</string>
     <string name="report_dialog_profanity">அவதூறு அல்லது வெறுக்கத்தக்க நடத்தை</string>
@@ -871,7 +864,7 @@
     <string name="followed_tags">பின்பற்றப்படும் சிட்டைகள்</string>
     <string name="discover_follows_explainer">இவை நீங்கள் மற்றவர்களுக்கு பரிந்துரைக்கும் பயனர்களின் பட்டியல்கள். பொது பயனர்கள் மட்டுமே அனுமதிக்கப்படுவர்.</string>
     <string name="community_approved_posts">அங்கீகரிக்கப்பட்ட குறிப்பு</string>
-    <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும் </string>
+    <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
     <string name="community_no_descriptor">இந்த சமூகத்தின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
     <string name="user_preferences">பயனர் விருப்பங்கள்</string>
     <string name="settings_search_placeholder">அமைப்புகளை தேடு</string>
@@ -965,9 +958,7 @@
     <string name="push_server_none_explainer">புஷ் அறிவிப்புகளை முடக்கும்</string>
     <string name="push_server_uses_app_explainer">%1$s ஆப்பை பயன்படுத்துகிறது</string>
     <string name="push_server_install_app">புஷ் அறிவிப்பு அமைவு</string>
-    <string name="push_server_install_app_description">        Push அறிவிப்புகளை பெற, [Unified Push](https://unifiedpush.org/) ஆதரிக்கும் எந்த பயன்பாட்டையும் நிறுவுங்கள், எடுத்துக்காட்டாக [Ntfy](https://ntfy.sh/).
-        நிறுவிய பின், அமைப்புகளில் நீங்கள் பயன்படுத்த விரும்பும் பயன்பாட்டை தேர்ந்தெடுங்கள்.
-    </string>
+    <string name="push_server_install_app_description">Push அறிவிப்புகளை பெற, [Unified Push](https://unifiedpush.org/) ஆதரிக்கும் எந்த பயன்பாட்டையும் நிறுவுங்கள், எடுத்துக்காட்டாக [Ntfy](https://ntfy.sh/). நிறுவிய பின், அமைப்புகளில் நீங்கள் பயன்படுத்த விரும்பும் பயன்பாட்டை தேர்ந்தெடுங்கள்.</string>
     <string name="thread_title">நூல்</string>
     <string name="send_the_seller_a_message">விற்பனையாளருக்கு ஒரு செய்தி அனுப்பவும்</string>
     <string name="hi_there_is_this_still_available">வணக்கம், இது இன்னும் கிடைக்கிறதா?</string>
@@ -2016,15 +2007,7 @@
     <string name="could_not_fetch_invoice_from_details">%1$s இலிருந்து இன்வாய்ஸை பெற முடியவில்லை: %2$s</string>
     <string name="could_not_open_the_compressed_file">சுருக்கப்பட்ட கோப்பை திறக்க முடியவில்லை</string>
     <string name="couldnt_find_nwc_wallets">வாலட் கிடைக்கவில்லை</string>
-    <string name="couldnt_find_nwc_wallets_description">Nostr Wallet Connect (NWC)-ஐ ஆதரிக்கும் எந்த பணப்பை பயன்பாடுகளையும் Amethyst கண்டுபிடிக்கவில்லை.
-\n\nநீங்கள் செய்யக்கூடியவை:
-\n\t1. NWC ஆதரவை சரிபாருங்கள்: உங்கள் விருப்பமான பணப்பை பயன்பாடு Nostr Wallet Connect-உடன் இணக்கமானதா என இரட்டிப்பு சரிபாருங்கள்.
-\n\t2. இணைப்பை உருவாக்குங்கள்: உங்கள் பணப்பை பயன்பாட்டிற்கு சென்று புதிய NWC இணைப்பை உருவாக்குங்கள்.
-\n\t3. Amethyst-உடன் இணைக்குங்கள்: உங்கள் பணப்பை பொதுவாக மூன்று விருப்பங்களை வழங்கும்:
-\n\t\t3.1 தானியங்கி இணைப்பு: Amethyst-ஐ தானாக திறந்து இணைக்க ஒரு பொத்தான். அவ்வாறிருந்தால், அந்த பொத்தானை அழுத்தி Amethyst-ஐ திறந்து புதிய திரையில் சேமி அழுத்துங்கள்.
-\n\t\t3.2 கைமுறை இணைப்பு: நீங்கள் நகலெடுக்கக்கூடிய Connection URI, இந்த திரையில் ஒட்டு ஐகானை அழுத்தி நேரடியாக உள்ளிடலாம்.
-\n\t\t3.3 QR குறியீடு: பணப்பை ஒரு QR குறியீட்டை உருவாக்கும், இந்த திரையில் QR குறியீடு பொத்தானிலிருந்து படிக்கலாம்.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Nostr Wallet Connect (NWC)-ஐ ஆதரிக்கும் எந்த பணப்பை பயன்பாடுகளையும் Amethyst கண்டுபிடிக்கவில்லை. \n\nநீங்கள் செய்யக்கூடியவை: \n\t1. NWC ஆதரவை சரிபாருங்கள்: உங்கள் விருப்பமான பணப்பை பயன்பாடு Nostr Wallet Connect-உடன் இணக்கமானதா என இரட்டிப்பு சரிபாருங்கள். \n\t2. இணைப்பை உருவாக்குங்கள்: உங்கள் பணப்பை பயன்பாட்டிற்கு சென்று புதிய NWC இணைப்பை உருவாக்குங்கள். \n\t3. Amethyst-உடன் இணைக்குங்கள்: உங்கள் பணப்பை பொதுவாக மூன்று விருப்பங்களை வழங்கும்: \n\t\t3.1 தானியங்கி இணைப்பு: Amethyst-ஐ தானாக திறந்து இணைக்க ஒரு பொத்தான். அவ்வாறிருந்தால், அந்த பொத்தானை அழுத்தி Amethyst-ஐ திறந்து புதிய திரையில் சேமி அழுத்துங்கள். \n\t\t3.2 கைமுறை இணைப்பு: நீங்கள் நகலெடுக்கக்கூடிய Connection URI, இந்த திரையில் ஒட்டு ஐகானை அழுத்தி நேரடியாக உள்ளிடலாம். \n\t\t3.3 QR குறியீடு: பணப்பை ஒரு QR குறியீட்டை உருவாக்கும், இந்த திரையில் QR குறியீடு பொத்தானிலிருந்து படிக்கலாம்.</string>
     <string name="create">உருவாக்கு</string>
     <string name="d">நா</string>
     <string name="danger_zone">ஆபத்து மண்டலம்</string>
@@ -2416,7 +2399,7 @@
     <string name="metadata_strip_failed_upload_cancelled">மீடியாவிலிருந்து தனிப்பட்ட மெட்டாடேட்டாவை நீக்கத் தோல்வியடைந்தது. பதிவேற்றம் ரத்துசெய்யப்பட்டது.</string>
     <string name="migrate_bookmarks_success">புக்மார்க்குகள் வெற்றிகரமாக இடம்பெயர்க்கப்பட்டன</string>
     <string name="missing_lud16">Lightning அமைப்பு இல்லை</string>
-    <string name="more_options">மேலும் </string>
+    <string name="more_options">மேலும்</string>
     <string name="move_bookmark_to_private_label">தனிப்பட்டதிற்கு நகர்த்து</string>
     <string name="move_bookmark_to_public_label">பொதுவிற்கு நகர்த்து</string>
     <string name="music_playlist_cover_upload_cta">அட்டை படத்தை பதிவேற்று</string>
@@ -2648,7 +2631,7 @@
         <item quantity="one">இந்த இடுகையில் %1$d hashtag-ஐ விட அதிகம் உள்ளது</item>
         <item quantity="other">இந்த இடுகையில் %1$d hashtags-ஐ விட அதிகம் உள்ளது</item>
     </plurals>
-    <string name="preview_card_image_for"> %1$s க்கான முன்னோட்ட அட்டைப் படம்</string>
+    <string name="preview_card_image_for">%1$s க்கான முன்னோட்ட அட்டைப் படம்</string>
     <string name="privacy_options">தனியுரிமை விருப்பங்கள்</string>
     <string name="privacy_policy">தனியுரிமைக் கொள்கை</string>
     <string name="private_conversation_notification">தனிப்பட்ட செய்தியை மறைக்குறியாக்க இயலவில்லை \n \n %1$s மற்றும் %2$s க்கு இடையே தனிப்பட்ட/ குறியாக்கப்பட்ட உரையாடலில் நீங்கள் மேற்கோள் காட்டப்பட்டீர்கள்.</string>
@@ -2673,11 +2656,8 @@
     <string name="propose_an_edit">திருத்தத்தை முன்மொழிக</string>
     <string name="proxy_section_explainer">filter.nostr.wine போன்ற ஒருங்கிணைப்பு relays, பயன்பாடு உங்கள் ஊட்டங்களை பதிவிறக்க பயன்படுத்த வேண்டும். இது அவுட்பாக்ஸ் மாதிரியை மாற்றுகிறது, பயன்பாட்டை உங்கள் பட்டியல்களில் உள்ள relays மட்டுமே இணைக்கும்.</string>
     <string name="public_chat">பொது அரட்டை</string>
-    <string name="public_chat_explainer">பொது அரட்டைகள் Nostr-ல் அனைவருக்கும் தெரியும் மற்றும் யாரும்
-        அவற்றில் பங்கேற்கலாம். அவை குறிப்பிட்ட தலைப்புகளை சுற்றிய திறந்த சமூகங்களுக்கு மிகவும் ஏற்றவை.
-        அதன் relays-ல் இடுகைகளை நீக்குவதன் மூலம் மிதவாண்மையை கட்டுப்படுத்தலாம்</string>
-    <string name="public_chat_relays_explainer">இந்த குழுவை ஹோஸ்ட் செய்யும் 1–3 relays-ஐ உள்ளிடவும்.
-        Nostr கிளையன்கள் செய்திகளை எங்கிருந்து பதிவிறக்கம் செய்வது மற்றும் உங்கள் செய்திகளை எங்கே அனுப்புவது என்பதை அறிய இந்த அமைப்பை பயன்படுத்துகின்றன.</string>
+    <string name="public_chat_explainer">பொது அரட்டைகள் Nostr-ல் அனைவருக்கும் தெரியும் மற்றும் யாரும் அவற்றில் பங்கேற்கலாம். அவை குறிப்பிட்ட தலைப்புகளை சுற்றிய திறந்த சமூகங்களுக்கு மிகவும் ஏற்றவை. அதன் relays-ல் இடுகைகளை நீக்குவதன் மூலம் மிதவாண்மையை கட்டுப்படுத்தலாம்</string>
+    <string name="public_chat_relays_explainer">இந்த குழுவை ஹோஸ்ட் செய்யும் 1–3 relays-ஐ உள்ளிடவும். Nostr கிளையன்கள் செய்திகளை எங்கிருந்து பதிவிறக்கம் செய்வது மற்றும் உங்கள் செய்திகளை எங்கே அனுப்புவது என்பதை அறிய இந்த அமைப்பை பயன்படுத்துகின்றன.</string>
     <string name="public_chat_relays_title">Relay கள்</string>
     <string name="public_chat_title">பொது அரட்டை மெட்டாடேட்டா</string>
     <string name="public_chats">பொது அரட்டைகள்</string>
@@ -2702,10 +2682,7 @@
     <string name="read_only_user">படிக்க மட்டும் பயனர்</string>
     <string name="record_a_message_description">செய்தி பதிவு செய்ய கிளிக் செய்து பிடிக்கவும்</string>
     <string name="relay_chat">Relay அரட்டை</string>
-    <string name="relay_chat_explainer">Relay அரட்டைகள் என்பவை அவற்றின் முகப்பு relay-ஆல் கட்டுப்படுத்தப்படும் அரட்டை குழுக்கள்.
-        அவை Nostr-ல் அனைவருக்கும் தெரியும் மற்றும் யாரும் அவற்றில் பங்கேற்கலாம்.
-        அவை குறிப்பிட்ட தலைப்புகளை சுற்றிய திறந்த சமூகங்களுக்கு மிகவும் ஏற்றவை. இந்த குழுக்களில் சில தற்காலிகமானவை
-    எனவே அரட்டை செய்திகள் காலப்போக்கில் மறைந்துவிடும்</string>
+    <string name="relay_chat_explainer">Relay அரட்டைகள் என்பவை அவற்றின் முகப்பு relay-ஆல் கட்டுப்படுத்தப்படும் அரட்டை குழுக்கள். அவை Nostr-ல் அனைவருக்கும் தெரியும் மற்றும் யாரும் அவற்றில் பங்கேற்கலாம். அவை குறிப்பிட்ட தலைப்புகளை சுற்றிய திறந்த சமூகங்களுக்கு மிகவும் ஏற்றவை. இந்த குழுக்களில் சில தற்காலிகமானவை எனவே அரட்டை செய்திகள் காலப்போக்கில் மறைந்துவிடும்</string>
     <string name="relay_chat_title">Relay அரட்டைகள்</string>
     <string name="relay_management_tab_events">நிகழ்வுகள்</string>
     <string name="relay_management_tab_kinds">வகைகள்</string>
@@ -2941,4 +2918,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s-ல் பெறுநரின் lightning சேவை கிடைக்கவில்லை. இது lightning முகவரி "%2$s" இலிருந்து கணக்கிடப்பட்டது. பிழை: %3$s. சர்வர் இயங்குகிறதா மற்றும் lightning முகவரி சரியானதா என சரிபாருங்கள்</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s-இலிருந்து lightning invoice உருவாக்க முடியவில்லை: முடிவு JSON-ல் pr உறுப்பு கிடைக்கவில்லை.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning invoice உருவாக்க முடியவில்லை. %1$s-இலிருந்து செய்தி: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

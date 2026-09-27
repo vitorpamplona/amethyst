@@ -121,7 +121,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
@@ -153,22 +153,22 @@ fun UpdateZapAmountContent(
     val zapTypes =
         listOf(
             Triple(
-                LnZapEvent.ZapType.PUBLIC,
+                ZapReceiptEvent.ZapType.PUBLIC,
                 stringRes(id = Res.string.zap_type_public),
                 stringRes(id = Res.string.zap_type_public_explainer),
             ),
             Triple(
-                LnZapEvent.ZapType.PRIVATE,
+                ZapReceiptEvent.ZapType.PRIVATE,
                 stringRes(id = Res.string.zap_type_private),
                 stringRes(id = Res.string.zap_type_private_explainer),
             ),
             Triple(
-                LnZapEvent.ZapType.ANONYMOUS,
+                ZapReceiptEvent.ZapType.ANONYMOUS,
                 stringRes(id = Res.string.zap_type_anonymous),
                 stringRes(id = Res.string.zap_type_anonymous_explainer),
             ),
             Triple(
-                LnZapEvent.ZapType.NONZAP,
+                ZapReceiptEvent.ZapType.NONZAP,
                 stringRes(id = Res.string.zap_type_nonzap),
                 stringRes(id = Res.string.zap_type_nonzap_explainer),
             ),

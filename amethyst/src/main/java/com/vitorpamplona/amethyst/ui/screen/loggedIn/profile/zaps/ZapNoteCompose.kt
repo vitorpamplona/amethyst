@@ -35,12 +35,12 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.UserActionOptions
 import com.vitorpamplona.amethyst.ui.note.UserPicture

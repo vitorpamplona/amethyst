@@ -38,32 +38,32 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 
-fun TagArrayBuilder<FileHeaderEvent>.url(url: String) = add(UrlTag.assemble(url))
+fun TagArrayBuilder<FileMetadataEvent>.url(url: String) = add(UrlTag.assemble(url))
 
-fun TagArrayBuilder<FileHeaderEvent>.mimeType(mimeType: String) = add(MimeTypeTag.assemble(mimeType))
+fun TagArrayBuilder<FileMetadataEvent>.mimeType(mimeType: String) = add(MimeTypeTag.assemble(mimeType))
 
-fun TagArrayBuilder<FileHeaderEvent>.hash(hash: HexKey) = add(HashSha256Tag.assemble(hash))
+fun TagArrayBuilder<FileMetadataEvent>.hash(hash: HexKey) = add(HashSha256Tag.assemble(hash))
 
-fun TagArrayBuilder<FileHeaderEvent>.fileSize(size: Int) = add(SizeTag.assemble(size))
+fun TagArrayBuilder<FileMetadataEvent>.fileSize(size: Int) = add(SizeTag.assemble(size))
 
-fun TagArrayBuilder<FileHeaderEvent>.dimension(dim: DimensionTag) = add(DimensionTag.assemble(dim))
+fun TagArrayBuilder<FileMetadataEvent>.dimension(dim: DimensionTag) = add(DimensionTag.assemble(dim))
 
-fun TagArrayBuilder<FileHeaderEvent>.blurhash(blurhash: String) = add(BlurhashTag.assemble(blurhash))
+fun TagArrayBuilder<FileMetadataEvent>.blurhash(blurhash: String) = add(BlurhashTag.assemble(blurhash))
 
-fun TagArrayBuilder<FileHeaderEvent>.thumbhash(thumbhash: String) = add(ThumbhashTag.assemble(thumbhash))
+fun TagArrayBuilder<FileMetadataEvent>.thumbhash(thumbhash: String) = add(ThumbhashTag.assemble(thumbhash))
 
-fun TagArrayBuilder<FileHeaderEvent>.originalHash(hash: HexKey) = add(OriginalHashTag.assemble(hash))
+fun TagArrayBuilder<FileMetadataEvent>.originalHash(hash: HexKey) = add(OriginalHashTag.assemble(hash))
 
-fun TagArrayBuilder<FileHeaderEvent>.torrentInfohash(hash: String) = add(TorrentInfoHash.assemble(hash))
+fun TagArrayBuilder<FileMetadataEvent>.torrentInfohash(hash: String) = add(TorrentInfoHash.assemble(hash))
 
-fun TagArrayBuilder<FileHeaderEvent>.magnet(magnetUri: String) = add(MagnetTag.assemble(magnetUri))
+fun TagArrayBuilder<FileMetadataEvent>.magnet(magnetUri: String) = add(MagnetTag.assemble(magnetUri))
 
-fun TagArrayBuilder<FileHeaderEvent>.image(imageUrl: HexKey) = add(ImageTag.assemble(imageUrl))
+fun TagArrayBuilder<FileMetadataEvent>.image(imageUrl: HexKey) = add(ImageTag.assemble(imageUrl))
 
-fun TagArrayBuilder<FileHeaderEvent>.thumb(trumbUrl: HexKey) = add(ThumbTag.assemble(trumbUrl))
+fun TagArrayBuilder<FileMetadataEvent>.thumb(trumbUrl: HexKey) = add(ThumbTag.assemble(trumbUrl))
 
-fun TagArrayBuilder<FileHeaderEvent>.summary(summary: HexKey) = add(SummaryTag.assemble(summary))
+fun TagArrayBuilder<FileMetadataEvent>.summary(summary: HexKey) = add(SummaryTag.assemble(summary))
 
-fun TagArrayBuilder<FileHeaderEvent>.fallback(fallbackUrl: HexKey) = add(FallbackTag.assemble(fallbackUrl))
+fun TagArrayBuilder<FileMetadataEvent>.fallback(fallbackUrl: HexKey) = add(FallbackTag.assemble(fallbackUrl))
 
-fun TagArrayBuilder<FileHeaderEvent>.service(service: HexKey) = add(ServiceTag.assemble(service))
+fun TagArrayBuilder<FileMetadataEvent>.service(service: HexKey) = add(ServiceTag.assemble(service))

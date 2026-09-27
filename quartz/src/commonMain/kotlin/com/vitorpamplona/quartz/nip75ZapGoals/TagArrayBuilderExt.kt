@@ -30,16 +30,16 @@ import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.RelayListTag
 
-fun TagArrayBuilder<GoalEvent>.amount(amountInMillisats: Long) = addUnique(AmountTag.assemble(amountInMillisats))
+fun TagArrayBuilder<ZapGoalEvent>.amount(amountInMillisats: Long) = addUnique(AmountTag.assemble(amountInMillisats))
 
-fun TagArrayBuilder<GoalEvent>.relays(urls: List<NormalizedRelayUrl>) = add(RelayListTag.assemble(urls))
+fun TagArrayBuilder<ZapGoalEvent>.relays(urls: List<NormalizedRelayUrl>) = add(RelayListTag.assemble(urls))
 
-fun TagArrayBuilder<GoalEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
+fun TagArrayBuilder<ZapGoalEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
 
-fun TagArrayBuilder<GoalEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
+fun TagArrayBuilder<ZapGoalEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
 
-fun TagArrayBuilder<GoalEvent>.closedAt(closedAt: Long) = addUnique(ClosedAtTag.assemble(closedAt))
+fun TagArrayBuilder<ZapGoalEvent>.closedAt(closedAt: Long) = addUnique(ClosedAtTag.assemble(closedAt))
 
-fun TagArrayBuilder<GoalEvent>.linked(tag: ETag) = addUnique(tag.toTagArray())
+fun TagArrayBuilder<ZapGoalEvent>.linked(tag: ETag) = addUnique(tag.toTagArray())
 
-fun TagArrayBuilder<GoalEvent>.linked(tag: ATag) = addUnique(tag.toATagArray())
+fun TagArrayBuilder<ZapGoalEvent>.linked(tag: ATag) = addUnique(tag.toATagArray())

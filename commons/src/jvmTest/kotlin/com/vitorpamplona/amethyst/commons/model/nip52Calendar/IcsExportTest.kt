@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -181,7 +181,7 @@ class IcsExportTest {
                 sig = "sig",
             )
         val calendar =
-            CalendarEvent(
+            CalendarCollectionEvent(
                 id = "cal",
                 pubKey = "pub",
                 createdAt = 0L,

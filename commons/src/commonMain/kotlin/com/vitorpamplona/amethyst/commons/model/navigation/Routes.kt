@@ -634,6 +634,44 @@ sealed class Route {
 
     @Serializable object EditNestsServers : Route()
 
+    @Serializable object CordnLink : Route()
+
+    /**
+     * One cordn room.
+     *
+     * Both halves are the address: a `gid` is unique only within one
+     * coordinator (`spec/00.md` §4), so a route carrying the gid alone would
+     * open whichever of two same-named groups happened to be found first.
+     */
+    @Serializable data class CordnGroupChat(
+        val coordinatorPubKey: HexKey,
+        val gid: String,
+    ) : Route()
+
+    @Serializable data class CordnGroupInfo(
+        val coordinatorPubKey: HexKey,
+        val gid: String,
+    ) : Route()
+
+    @Serializable object CordnGroupList : Route()
+
+    @Serializable object CordnCreateGroup : Route()
+
+    @Serializable object CordnCreateGroupMembers : Route()
+
+    @Serializable object CordnInvitations : Route()
+
+    @Serializable object CordnCoordinators : Route()
+
+    @Serializable object CordnKeyPackages : Route()
+
+    @Serializable object CordnBackup : Route()
+
+    /** The one cordn entry in settings; everything else hangs off it. */
+    @Serializable object CordnHub : Route()
+
+    @Serializable object CordnMigrate : Route()
+
     @Serializable
     data class AgentConsole(
         val relayUrl: String,

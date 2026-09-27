@@ -23,14 +23,14 @@ package com.vitorpamplona.quartz.nip04Dm
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.caches.DecryptCache
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 
 class PrivateDMCache(
     signer: NostrSigner,
 ) {
     private val decryptionCache =
-        object : LruCache<PrivateDmEvent, PrivateDMDecryptCache>(10000) {
-            override fun create(key: PrivateDmEvent): PrivateDMDecryptCache? {
+        object : LruCache<EncryptedDmEvent, PrivateDMDecryptCache>(10000) {
+            override fun create(key: EncryptedDmEvent): PrivateDMDecryptCache? {
                 val canDecrypt = key.isIncluded(signer.pubKey)
                 return if (key.content.isNotBlank() && canDecrypt) {
                     PrivateDMDecryptCache(signer)
@@ -40,16 +40,16 @@ class PrivateDMCache(
             }
         }
 
-    fun cachedDM(event: PrivateDmEvent): String? = decryptionCache[event]?.cached()
+    fun cachedDM(event: EncryptedDmEvent): String? = decryptionCache[event]?.cached()
 
-    suspend fun decryptDM(event: PrivateDmEvent) = decryptionCache[event]?.decrypt(event)
+    suspend fun decryptDM(event: EncryptedDmEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class PrivateDMDecryptCache(
     signer: NostrSigner,
-) : DecryptCache<PrivateDmEvent, String>(signer) {
+) : DecryptCache<EncryptedDmEvent, String>(signer) {
     override suspend fun decryptAndParse(
-        event: PrivateDmEvent,
+        event: EncryptedDmEvent,
         signer: NostrSigner,
     ) = event.decryptContent(signer)
 }

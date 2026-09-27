@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot
 
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap
-import com.vitorpamplona.quartz.marmot.mls.messages.CommitResult
+import com.vitorpamplona.quartz.mls.messages.CommitResult
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -50,7 +50,7 @@ data class WelcomeDelivery(
  *
  * Delivery pipeline:
  *   Welcome bytes → base64 → WelcomeEvent (kind:444, unsigned rumor)
- *     → SealedRumorEvent (kind:13, encrypted with sender's key)
+ *     → SealEvent (kind:13, encrypted with sender's key)
  *       → GiftWrapEvent (kind:1059, encrypted with ephemeral key)
  */
 class MarmotWelcomeSender(

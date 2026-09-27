@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
 /**
  * In-memory fallback implementation of [MlsGroupStateStore].
  *
- * Used only when [AndroidMlsGroupStateStore] cannot be initialized (e.g., when the
+ * Used only when [EncryptedMlsGroupStateStore] cannot be initialized (e.g., when the
  * Android KeyStore is unavailable). State is lost on app restart, but this lets
  * Marmot group operations at least work within a single session instead of failing
  * with "Marmot not initialized".

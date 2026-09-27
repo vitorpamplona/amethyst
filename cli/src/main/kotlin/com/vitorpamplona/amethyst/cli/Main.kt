@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.commands.Bolt12Commands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
 import com.vitorpamplona.amethyst.cli.commands.BuzzCommands
 import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
+import com.vitorpamplona.amethyst.cli.commands.CordnCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
 import com.vitorpamplona.amethyst.cli.commands.CyberspaceCommands
@@ -337,6 +338,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             FofCommand.dispatch(dataDir, tail)
         }
         "concord" -> ConcordCommands.dispatch(dataDir, tail)
+        "cordn" -> CordnCommands.dispatch(dataDir, tail)
         else -> {
             Output.error("bad_args", "unknown subcommand: $head")
             printVerbList()
@@ -359,7 +361,7 @@ private fun printVerbList() {
         |  primitives:  decode encode verify key filter nip kind pow namecoin
         |  events:      event publish fetch subscribe count sync encrypt decrypt gift
         |  social:      notes profile follow unfollow search zap dm outbox
-        |  groups:      marmot relaygroup concord geochat
+        |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
         |  trust:       graperank fof
         |  media/sites: blossom nsite napplet podcast podcast20 git
@@ -884,6 +886,27 @@ private fun printUsage() {
         |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
         |  concord revoke COMMUNITY TOKEN|URL         retire a link you minted (vsk=9 tombstone)
         |  concord join URL                           redeem an invite link and save the community
+        |
+        |  cordn coordinator add --coordinator PK --relay URL[,URL]
+        |                                             remember one (it has no other address)
+        |  cordn coordinator list|info|forget         what we know; MCP initialize; drop it
+        |  cordn keypackage publish [--last-resort] [--count N]
+        |                                             attributable: names this npub (§8.4)
+        |  cordn keypackage list|withdraw             ours on the coordinator
+        |  cordn group create --name N [--gid GID] [--admin PK[,PK]]
+        |  cordn group list|info [--gid GID]          metadata, members, exposure
+        |  cordn invite --pubkey PK [--gid GID]       take their KeyPackage, commit, leave a Welcome
+        |  cordn request --gid GID | --ref cordn1…    ask to join (§8.1)
+        |  cordn requests list|accept|decline         answer askers (any member may, §5.3)
+        |  cordn welcomes                             open invitations without joining
+        |  cordn join|decline --gid GID | --all       accept or refuse one
+        |  cordn send --text "…" [--gid GID]          a kind-9 chat message
+        |  cordn fetch                                drain the stream and print it
+        |  cordn ref encode --gid GID [--coordinator PK] [--relay URL[,URL]]
+        |                                             build a cordn1… group reference
+        |  cordn ref decode REF                       read one back
+        |  cordn exposure --coordinator PK [--groups N] [--published]
+        |                                             what that coordinator would learn (spec/00.md §8)
         |
         |Local event store (shared, under `<data-dir>/shared/`):
         |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)

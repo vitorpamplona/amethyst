@@ -276,15 +276,8 @@
     <string name="mark_all_known_as_read">将所有已知内容标记为已读</string>
     <string name="mark_all_new_as_read">将所有新内容标记为已读</string>
     <string name="mark_all_as_read">将所有内容标记为已读</string>
-    <string name="account_backup_tips2_md">## 备份与安全提示
-        \n\n你的帐户由一个私钥保护。私钥是以**nsec1**开头的随机字符串。任何拥有你的私钥的人都可以使用你的身份发布内容。
-        \n\n- **不要**将你的私钥添加到任何你不信任的网站或软件，亦不要在网上公开。
-        \n- Amethyst 开发人员**永远不会**要求你提供私钥。
-        \n- **请**保留你的私钥的安全备份，以备帐户恢复。我们建议使用密码管理器。
-    </string>
-    <string name="account_backup_tips3_md">        为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。
-        \n\n如果你丢失密码， 你将无法恢复你的密钥。
-    </string>
+    <string name="account_backup_tips2_md">## 备份与安全提示 \n\n你的帐户由一个私钥保护。私钥是以**nsec1**开头的随机字符串。任何拥有你的私钥的人都可以使用你的身份发布内容。 \n\n- **不要**将你的私钥添加到任何你不信任的网站或软件，亦不要在网上公开。 \n- Amethyst 开发人员**永远不会**要求你提供私钥。 \n- **请**保留你的私钥的安全备份，以备帐户恢复。我们建议使用密码管理器。</string>
+    <string name="account_backup_tips3_md">为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。 \n\n如果你丢失密码， 你将无法恢复你的密钥。</string>
     <string name="encrypt_and_copy_my_secret_key">加密并复制我的密钥。</string>
     <string name="badge_award_image_for">颁发给 %1$s 的徽章图片</string>
     <string name="badge_award_image">"徽章图片</string>
@@ -365,7 +358,7 @@
     <string name="new_community_rules_kinds_hint">轻触以允许一种类型。长按一种类型来设置每个事件的大小或每日帖子的限制。</string>
     <string name="new_community_rules_kind_custom_label">自定义类型</string>
     <string name="new_community_rules_kind_add">添加类型</string>
-    <string name="new_community_rules_limits_title"> %1$d 类型的限制</string>
+    <string name="new_community_rules_limits_title">%1$d 类型的限制</string>
     <string name="new_community_rules_limits_max_bytes">最大事件大小(字节)</string>
     <string name="new_community_rules_limits_max_per_day">每位作者每天最多发帖数</string>
     <string name="new_community_rules_limits_unlimited">留空为无限制</string>
@@ -976,9 +969,7 @@
     <string name="push_server_none_explainer">关闭推送通知</string>
     <string name="push_server_uses_app_explainer">使用应用 %1$s</string>
     <string name="push_server_install_app">推送通知设置</string>
-    <string name="push_server_install_app_description">        若要接收推送通知，请安装任何支持 [Unified Push](https://unifiedpus)的应用, 例如 [Ntfy](https://ntfy.sh/)。
-        安装后，请在设置中选择你想要使用的应用程序。
-    </string>
+    <string name="push_server_install_app_description">若要接收推送通知，请安装任何支持 [Unified Push](https://unifiedpus)的应用, 例如 [Ntfy](https://ntfy.sh/)。 安装后，请在设置中选择你想要使用的应用程序。</string>
     <string name="thread_title">主题帖</string>
     <string name="send_the_seller_a_message">向卖方发送消息</string>
     <string name="hi_there_is_this_still_available">你好，这个还能买到吗？</string>
@@ -2037,15 +2028,7 @@
     <string name="could_not_fetch_invoice_from_details">无法从 %1$s 获取发票：%2$s</string>
     <string name="could_not_open_the_compressed_file">无法打开压缩文件</string>
     <string name="couldnt_find_nwc_wallets">未找到钱包</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst 找不到任何支持 Nostr Wallet Connect (NWC) 的钱包应用.
-\n\n你可以做的事情：
-\n\t1. 验证 NWC 支持：仔细确认偏好的钱包应用和 Nostr Wallet Connect 兼容。
-\n\t2. 创建连接：前往钱包应用并创建新的 NWC 连接。
-\n\t3.链接到 Amethyst: 你的钱包通常会给你三个选项：
-\n\t\t3.1 自动链接：自动打开并连接到 Amethyst 的按钮。如果是这样， 单击那个按钮，打开 Amethyst 并在新屏上按保存。
-\n\t\t3.2 手动链接: 你可以复制的连接 URI，单击这个屏幕上的粘贴图标直接输入它。
-\n\t\t3.3 二维码: 钱包会创建一个你可以从这个屏幕中的二维码按钮那里读取的二维码。
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst 找不到任何支持 Nostr Wallet Connect (NWC) 的钱包应用. \n\n你可以做的事情： \n\t1. 验证 NWC 支持：仔细确认偏好的钱包应用和 Nostr Wallet Connect 兼容。 \n\t2. 创建连接：前往钱包应用并创建新的 NWC 连接。 \n\t3.链接到 Amethyst: 你的钱包通常会给你三个选项： \n\t\t3.1 自动链接：自动打开并连接到 Amethyst 的按钮。如果是这样， 单击那个按钮，打开 Amethyst 并在新屏上按保存。 \n\t\t3.2 手动链接: 你可以复制的连接 URI，单击这个屏幕上的粘贴图标直接输入它。 \n\t\t3.3 二维码: 钱包会创建一个你可以从这个屏幕中的二维码按钮那里读取的二维码。</string>
     <string name="create">创建</string>
     <string name="d">天</string>
     <string name="danger_zone">危险区</string>
@@ -2700,11 +2683,8 @@
     <string name="proxy_section">代理中继</string>
     <string name="proxy_section_explainer">聚合器中继是应用获取资讯源时使用的中继（例如：filter.nostr.wine），设置这个列表将覆盖信箱模型的行为，使得应用只会连接到这个列表中的中继以获取内容。</string>
     <string name="public_chat">公共聊天</string>
-    <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以：
-        参与这些聊天。这对特定话题建立的开放式社区来说很重要
-        通过删除中继上的帖子实现内容审核控制</string>
-    <string name="public_chat_relays_explainer">使用 1~3 个中继托管这个群组。
-        让 Nostr 客户端知道应该使用这些中继配置来发送和下载消息。</string>
+    <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以： 参与这些聊天。这对特定话题建立的开放式社区来说很重要 通过删除中继上的帖子实现内容审核控制</string>
+    <string name="public_chat_relays_explainer">使用 1~3 个中继托管这个群组。 让 Nostr 客户端知道应该使用这些中继配置来发送和下载消息。</string>
     <string name="public_chat_relays_title">中继器</string>
     <string name="public_chat_title">公开聊天元数据</string>
     <string name="public_chats">公共聊天</string>
@@ -2729,10 +2709,7 @@
     <string name="read_only_user">仅读用户</string>
     <string name="record_a_message_description">点按以录制消息</string>
     <string name="relay_chat">中继聊天</string>
-    <string name="relay_chat_explainer">中继聊天是由聊天所属中继控制的聊天群组。
-        Nostr 上的每个人都可以看到这些群组，任何人都可以加入群组。
-        这非常适合围绕特定主题而建立的开放社区。其中一些群组是临时的，
-    因此聊天信息会随着时间的推移而消失。</string>
+    <string name="relay_chat_explainer">中继聊天是由聊天所属中继控制的聊天群组。 Nostr 上的每个人都可以看到这些群组，任何人都可以加入群组。 这非常适合围绕特定主题而建立的开放社区。其中一些群组是临时的， 因此聊天信息会随着时间的推移而消失。</string>
     <string name="relay_chat_title">中继聊天</string>
     <string name="relay_management_tab_events">事件</string>
     <string name="relay_management_tab_ips">IP地址</string>
@@ -2967,4 +2944,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收者闪电服务不可用。它是根据雷电地址"%2$s"计算的。 错误: %3$s。请检查服务器是否已经上线，闪电地址是否正确</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">无法从 %1$s 创建闪电发票：在生成的 JSON 中找不到付款要求元素。</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">无法创建闪电发票。来自 %1$s 的消息：%2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

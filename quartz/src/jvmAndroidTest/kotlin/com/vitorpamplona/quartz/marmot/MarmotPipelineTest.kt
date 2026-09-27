@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEventEncryption
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.protocolCore.ConvergenceStatus
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -380,28 +380,28 @@ class MarmotPipelineTest {
             // The framedCommitBytes must decode as an MlsMessage(PublicMessage(commit))
             val framed = commitResult.framedCommitBytes
             val mlsMessage =
-                com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
+                com.vitorpamplona.quartz.mls.framing.MlsMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
+                        com.vitorpamplona.quartz.mls.codec
                             .TlsReader(framed),
                     )
             assertEquals(
-                com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
+                com.vitorpamplona.quartz.mls.framing.WireFormat.PUBLIC_MESSAGE,
                 mlsMessage.wireFormat,
             )
 
             val publicMessage =
-                com.vitorpamplona.quartz.marmot.mls.framing.PublicMessage
+                com.vitorpamplona.quartz.mls.framing.PublicMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
+                        com.vitorpamplona.quartz.mls.codec
                             .TlsReader(mlsMessage.payload),
                     )
             assertEquals(
-                com.vitorpamplona.quartz.marmot.mls.framing.ContentType.COMMIT,
+                com.vitorpamplona.quartz.mls.framing.ContentType.COMMIT,
                 publicMessage.contentType,
             )
             assertEquals(
-                com.vitorpamplona.quartz.marmot.mls.framing.SenderType.MEMBER,
+                com.vitorpamplona.quartz.mls.framing.SenderType.MEMBER,
                 publicMessage.sender.senderType,
             )
             assertNotNull(publicMessage.confirmationTag, "confirmation_tag must be present on a commit")
@@ -431,13 +431,13 @@ class MarmotPipelineTest {
             val exporterKey = manager.exporterSecret(groupId)
             val mlsBytes = GroupEventEncryption.decrypt(event.content, exporterKey)
             val mlsMessage =
-                com.vitorpamplona.quartz.marmot.mls.framing.MlsMessage
+                com.vitorpamplona.quartz.mls.framing.MlsMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.marmot.mls.codec
+                        com.vitorpamplona.quartz.mls.codec
                             .TlsReader(mlsBytes),
                     )
             assertEquals(
-                com.vitorpamplona.quartz.marmot.mls.framing.WireFormat.PUBLIC_MESSAGE,
+                com.vitorpamplona.quartz.mls.framing.WireFormat.PUBLIC_MESSAGE,
                 mlsMessage.wireFormat,
             )
         }

@@ -178,6 +178,9 @@
     <string name="post">帖子</string>
     <string name="voice_post">语音帖子</string>
     <string name="voice_reply">语音回复</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">私信</string>
     <string name="nest_notification_broadcasting">语音聊天室 — 在线</string>
     <string name="nest_notification_channel">语音聊天房</string>

@@ -71,7 +71,7 @@ object SearchableKinds {
             54, // PodcastEpisodeEvent
             818, // WikiMergeRequestEvent
             1010, // TextNoteModificationEvent
-            1063, // FileHeaderEvent
+            1063, // FileMetadataEvent
             1065, // FileStorageHeaderEvent
             1068, // PollEvent
             1111, // CommentEvent
@@ -96,20 +96,20 @@ object SearchableKinds {
             2004, // TorrentCommentEvent
             2473, // BirdDetectionEvent
             3302, // ConcordChatEditEvent
-            5050, // NIP90TextGenerationRequestEvent
-            5100, // NIP90ImageGenerationRequestEvent
+            5050, // DvmTextGenerationRequestEvent
+            5100, // DvmImageGenerationRequestEvent
             5129, // NappletSnapshotEvent
-            5250, // NIP90TextToSpeechRequestEvent
-            5302, // NIP90ContentSearchRequestEvent
-            5303, // NIP90PeopleSearchRequestEvent
+            5250, // DvmTextToSpeechRequestEvent
+            5302, // DvmContentSearchRequestEvent
+            5303, // DvmPeopleSearchRequestEvent
             6969, // ZapPollEvent
             7516, // GeocacheFoundLogEvent
             8333, // OnchainZapEvent
-            9002, // EditMetadataEvent
-            9041, // GoalEvent
+            9002, // GroupEditMetadataEvent
+            9041, // ZapGoalEvent
             9321, // NutzapEvent
-            9734, // LnZapRequestEvent
-            9735, // LnZapEvent
+            9734, // ZapRequestEvent
+            9735, // ZapReceiptEvent
             9736, // Bolt12ZapEvent
             9737, // Bolt12ZapIntentEvent
             9802, // HighlightEvent
@@ -122,10 +122,10 @@ object SearchableKinds {
             12473, // BirdexEvent
             15128, // RootSiteEvent
             15129, // RootNappletEvent
-            30000, // PeopleListEvent
+            30000, // FollowSetEvent
             30001, // OldBookmarkListEvent
             30002, // RelaySetEvent
-            30003, // LabeledBookmarkListEvent
+            30003, // BookmarkSetEvent
             30004, // ArticleCurationSetEvent
             30005, // VideoCurationSetEvent
             30006, // PictureCurationSetEvent
@@ -135,7 +135,7 @@ object SearchableKinds {
             30018, // ProductEvent
             30019, // MarketplaceEvent
             30020, // AuctionEvent
-            30023, // LongTextNoteEvent
+            30023, // LongFormContentEvent
             30030, // EmojiPackEvent
             30040, // PublicationIndexEvent
             30041, // PublicationContentEvent
@@ -153,8 +153,8 @@ object SearchableKinds {
             30311, // LiveActivitiesEvent
             30312, // MeetingSpaceEvent
             30313, // MeetingRoomEvent
-            30315, // StatusEvent
-            30382, // ContactCardEvent
+            30315, // UserStatusEvent
+            30382, // UserAssertionEvent
             30392, // UserTrustedListEvent
             30393, // EventTrustedListEvent
             30394, // AddressableTrustedListEvent
@@ -163,14 +163,14 @@ object SearchableKinds {
             30617, // GitRepositoryEvent
             30620, // WorkflowDefEvent
             30817, // NipTextEvent
-            30818, // WikiNoteEvent
+            30818, // WikiArticleEvent
             31337, // AudioTrackEvent
             31871, // AttestationEvent
             31872, // AttestationRequestEvent
             31873, // AttestorRecommendationEvent
             31922, // CalendarDateSlotEvent
             31923, // CalendarTimeSlotEvent
-            31924, // CalendarEvent
+            31924, // CalendarCollectionEvent
             31925, // CalendarRSVPEvent
             31987, // RelayReviewEvent
             31990, // AppDefinitionEvent
@@ -179,8 +179,8 @@ object SearchableKinds {
             33401, // ExerciseTemplateEvent
             33863, // FundraiserEvent
             34139, // MusicPlaylistEvent
-            34235, // VideoHorizontalEvent
-            34236, // VideoVerticalEvent
+            34235, // AddressableNormalVideoEvent
+            34236, // AddressableShortVideoEvent
             34259, // EntityRatingEvent
             34550, // CommunityDefinitionEvent
             35128, // NamedSiteEvent
@@ -192,7 +192,7 @@ object SearchableKinds {
             38192, // Ps1SaveEvent
             38383, // P2POrderEvent
             39000, // GroupMetadataEvent
-            39089, // FollowListEvent
+            39089, // StarterPackEvent
             39092, // MediaStarterPackEvent
             39307, // TextTrackEvent
             39701, // WebBookmarkEvent

@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
@@ -52,17 +52,17 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuotes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -310,11 +310,11 @@ class DesktopLocalCache : ICacheProvider {
                 consumeReaction(event, relay)
             }
 
-            is LnZapRequestEvent -> {
+            is ZapRequestEvent -> {
                 consumeZapRequest(event, relay)
             }
 
-            is LnZapEvent -> {
+            is ZapReceiptEvent -> {
                 consumeZap(event, relay)
             }
 
@@ -330,8 +330,8 @@ class DesktopLocalCache : ICacheProvider {
                 consumeContactList(event)
             }
 
-            is LongTextNoteEvent -> {
-                consumeLongTextNote(event, relay)
+            is LongFormContentEvent -> {
+                consumeLongFormContent(event, relay)
             }
 
             is BookmarkListEvent -> {
@@ -342,8 +342,8 @@ class DesktopLocalCache : ICacheProvider {
                 consumeOldBookmarkList(event)
             }
 
-            is FollowListEvent -> {
-                consumeFollowList(event)
+            is StarterPackEvent -> {
+                consumeStarterPack(event)
             }
 
             is CommentEvent -> {
@@ -354,8 +354,8 @@ class DesktopLocalCache : ICacheProvider {
                 consumeAdvertisedRelayList(event, relay)
             }
 
-            is ChatMessageRelayListEvent -> {
-                consumeChatMessageRelayList(event, relay)
+            is DmRelayListEvent -> {
+                consumeDmRelayList(event, relay)
             }
 
             is BlossomServersEvent -> {
@@ -435,8 +435,8 @@ class DesktopLocalCache : ICacheProvider {
      * indexer fan-out. Mirrors [consumeAdvertisedRelayList]; emits nothing to
      * the event stream because the UI doesn't render kind 10050s directly.
      */
-    private fun consumeChatMessageRelayList(
-        event: ChatMessageRelayListEvent,
+    private fun consumeDmRelayList(
+        event: DmRelayListEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val addressableNote = getOrCreateAddressableNote(event.address())
@@ -586,10 +586,10 @@ class DesktopLocalCache : ICacheProvider {
 
     /**
      * Consumes a kind 9734 zap request event.
-     * Must be consumed before the corresponding LnZapEvent (kind 9735).
+     * Must be consumed before the corresponding ZapReceiptEvent (kind 9735).
      */
     private fun consumeZapRequest(
-        event: LnZapRequestEvent,
+        event: ZapRequestEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -605,7 +605,7 @@ class DesktopLocalCache : ICacheProvider {
      * Links zap to target notes via the embedded zap request.
      */
     private fun consumeZap(
-        event: LnZapEvent,
+        event: ZapReceiptEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -738,8 +738,8 @@ class DesktopLocalCache : ICacheProvider {
      * Consumes a kind 30023 long-form text note event.
      * Creates Note in cache like TextNoteEvent.
      */
-    private fun consumeLongTextNote(
-        event: LongTextNoteEvent,
+    private fun consumeLongFormContent(
+        event: LongFormContentEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -788,7 +788,7 @@ class DesktopLocalCache : ICacheProvider {
     private val _followPackVersion = MutableStateFlow(0L)
     val followPackVersion: StateFlow<Long> = _followPackVersion.asStateFlow()
 
-    private fun consumeFollowList(event: FollowListEvent): Boolean {
+    private fun consumeStarterPack(event: StarterPackEvent): Boolean {
         val address = event.address()
         val addressableNote = getOrCreateAddressableNote(address)
         val author = getOrCreateUser(event.pubKey)
@@ -883,14 +883,14 @@ class DesktopLocalCache : ICacheProvider {
     }
 
     /**
-     * Snapshot all 39089 (FollowListEvent) addressable notes currently in cache.
+     * Snapshot all 39089 (StarterPackEvent) addressable notes currently in cache.
      * Use [followPackVersion] to drive reactive recomputation.
      */
-    fun snapshotFollowPacks(): List<FollowListEvent> {
-        val out = mutableListOf<FollowListEvent>()
+    fun snapshotFollowPacks(): List<StarterPackEvent> {
+        val out = mutableListOf<StarterPackEvent>()
         addressableNotes.forEach { _, note ->
             val ev = note.event
-            if (ev is FollowListEvent) out.add(ev)
+            if (ev is StarterPackEvent) out.add(ev)
         }
         return out
     }
@@ -908,10 +908,10 @@ class DesktopLocalCache : ICacheProvider {
      * @return true if event was processed, false if already seen
      */
     fun consume(
-        event: LnZapPaymentRequestEvent,
+        event: NwcRequestEvent,
         zappedNote: Note?,
         relay: NormalizedRelayUrl?,
-        onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
+        onResponse: suspend (NwcResponseEvent) -> Unit,
         wasVerified: Boolean = false,
     ): Boolean {
         if (!wasVerified && !justVerify(event)) return false
@@ -945,7 +945,7 @@ class DesktopLocalCache : ICacheProvider {
      */
     @OptIn(DelicateCoroutinesApi::class)
     fun consume(
-        event: LnZapPaymentResponseEvent,
+        event: NwcResponseEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean = false,
     ): Boolean {

@@ -43,10 +43,10 @@ Relay frame ──► LocalCache.insertOrUpdateNote() ──► LocalCacheFlow e
   - `kind3FollowList = Kind3FollowListState(...)` ← NIP-02 ContactList (kind 3)
   - `nip65RelayList = Nip65RelayListState(...)` ← NIP-65 RelayList (kind 10002), plus siblings `dmRelayList`, `searchRelayList`, `blockedRelayList`, `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, …
   - `muteList = MuteListState(...)` ← NIP-51 MuteList (kind 10000)
-  - `bookmarkState = BookmarkListState(...)` ← NIP-51 Bookmarks (kind 10003), plus `labeledBookmarkLists`, `pinState`, `interestSets`, `peopleLists`, `followLists`, `hashtagList`, `geohashList`, `communityList`, `emoji`, `blossomServers`, …
+  - `bookmarkState = BookmarkListState(...)` ← NIP-51 Bookmarks (kind 10003), plus `bookmarkSets`, `pinState`, `interestSets`, `peopleLists`, `followLists`, `hashtagList`, `geohashList`, `communityList`, `emoji`, `blossomServers`, …
   - Derived/merged views: `hiddenUsers`, `allFollows`, `homeRelays`, `outboxRelays`, `dmRelays`, `notificationRelays`, `trustedRelays`, and the `live*FollowListsPerRelay` outbox loaders.
 - **The pattern:** each `XState` class pins its addressable note via `cache.getOrCreateAddressableNote(address)` (a long-term reference so GC/eviction can't drop it), exposes `val flow: StateFlow<…>` derived from the note's metadata flow (decrypted through a per-feature `DecryptionCache`, with backup fallback from `AccountSettings`, `stateIn(scope, Eagerly, …)`), and offers suspend mutation helpers (e.g. `MuteListState.hideUser(pubkey)`) that build the updated signed event. Consumers read `account.muteList.flow`, never a raw `MutableStateFlow` on `Account`.
-- Encrypted lists pair the state object with a `DecryptionCache` sibling (`muteListDecryptionCache`, `peopleListDecryptionCache`, …) so NIP-44 decryption results are cached per event.
+- Encrypted lists pair the state object with a `DecryptionCache` sibling (`muteListDecryptionCache`, `followSetDecryptionCache`, …) so NIP-44 decryption results are cached per event.
 - UI reads via `collectAsStateWithLifecycle` on Android and `collectAsState` on Desktop.
 - Sibling files per feature live alongside: `AccountSettings.kt`, `AccountSyncedSettings.kt`, plus per-NIP state classes under `model/nip02FollowLists/`, `model/nip51Lists/`, `model/nip65RelayList/`, etc.
 

@@ -128,6 +128,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreateMembersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupInfoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnInvitationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.GeohashChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.GeohashChatsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.GeohashTeleportScreen
@@ -297,6 +303,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SpammingUsersScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnCoordinatorsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnHubScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnKeyPackagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnLinkScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46SignerScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
@@ -662,6 +674,12 @@ fun BuildNavigation(
             com.vitorpamplona.amethyst.ui.actions.nestsServers
                 .NestsServersScreen(accountViewModel, nav)
         }
+        composableFromEnd<Route.CordnLink> { CordnLinkScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnCoordinators> { CordnCoordinatorsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnKeyPackages> { CordnKeyPackagesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnHub> { CordnHubScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnMigrate> { CordnMigrateScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditBolt12Offers> { Bolt12OffersScreen(accountViewModel, nav) }
@@ -706,6 +724,17 @@ fun BuildNavigation(
             )
         }
         composableFromEndArgs<Route.MarmotGroupInfo> { MarmotGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
+
+        composableFromEndArgs<Route.CordnGroupChat> {
+            CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
+        }
+        composableFromEndArgs<Route.CordnGroupInfo> {
+            CordnGroupInfoScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
+        }
+        composableFromEnd<Route.CordnGroupList> { CordnGroupListScreen(accountViewModel, nav) }
+        composableFromBottom<Route.CordnCreateGroup> { CordnCreateGroupScreen(accountViewModel, nav) }
+        composableFromBottom<Route.CordnCreateGroupMembers> { CordnCreateMembersScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CordnInvitations> { CordnInvitationsScreen(accountViewModel, nav) }
 
         composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.MarmotGroupEditInfo> { EditGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }

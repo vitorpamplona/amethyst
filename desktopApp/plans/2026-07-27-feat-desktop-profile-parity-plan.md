@@ -20,11 +20,11 @@ Android (`amethyst/`), for both viewing and editing.
 Six parallel research/review agents (codebase-grounding, architecture, security, simplicity,
 flow-gaps, past-learnings) verified this plan against source. Key changes folded in:
 
-1. **CORRECTION — Block list kind was wrong.** Block is **`PeopleListEvent` kind 30000,
-   d-tag `"mute"`** — *not* 30382. Kind 30382 is already **NIP-85 `ContactCardEvent`
+1. **CORRECTION — Block list kind was wrong.** Block is **`FollowSetEvent` kind 30000,
+   d-tag `"mute"`** — *not* 30382. Kind 30382 is already **NIP-85 `UserAssertionEvent`
    (WoT/GrapeRank)** in this codebase; using it would collide with the WoT feature.
-2. **Don't hand-roll Block.** `PeopleListEvent.addUser(earlierVersion, isPrivate=true)` +
-   `BlockPeopleListState` + `PeopleListDecryptionCache` already exist and do a correct,
+2. **Don't hand-roll Block.** `FollowSetEvent.addUser(earlierVersion, isPrivate=true)` +
+   `BlockPeopleListState` + `FollowSetDecryptionCache` already exist and do a correct,
    fail-closed decrypt→merge→encrypt round-trip. The new commons builder is a **thin adapter**;
    **never call `create()` on an already-existing (replaceable) list** — that silently
    un-blocks everyone.
@@ -54,7 +54,7 @@ Phases 2 and 3 are unpacked in dedicated grounded sub-plans (Phase 1/4 need no f
    enforcement code, no commons extraction** (retires Open Q #3 & #6, and the "unify enforcement now" task).
 2. **Block is inline, not a commons builder.** moderation-safety keeps *mute* inline on
    `DesktopIAccount.updateMuteList`; Block mirrors it (`blockUser/unblockUser/updateBlockList`) using
-   quartz `PeopleListEvent.addUser/removeUser`. This overrides the "extract Block to `commons/actions/`"
+   quartz `FollowSetEvent.addUser/removeUser`. This overrides the "extract Block to `commons/actions/`"
    line below and resolves the architecture reviewer's two-parallel-patterns smell.
    (`FollowPackActions` may still be a thin commons builder.)
 3. **`observeEvents` is a fallback, not a requirement.** Existing Desktop tabs use a cache-scan
@@ -69,7 +69,7 @@ Phases 2 and 3 are unpacked in dedicated grounded sub-plans (Phase 1/4 need no f
 | mute/block/report missing on Desktop | mute + report built on **unmerged** `feat/desktop-moderation-safety` (`DesktopIAccount.hideUser/showUser/report`, desktop `ReportNoteDialog`, header overflow menu, `DesktopHiddenUsersState`, feed enforcement, NIP-36 blur). **Not in this worktree** (currently on `main`). | Build on top; do NOT re-implement mute/report. **Resolve the base first** (see Base Strategy). |
 | Extract mute/block/report to `commons` | moderation-safety put mute/report **desktop-local** on `DesktopIAccount` | New builders (Block, Add-to-pack) → `commons/actions/` (matches `FollowActions`/`ReportAction`). Route Block's **write** through `DesktopIAccount` symmetric with `updateMuteList`. Unify **enforcement** now; extract shared `HiddenUsersState` as follow-up. |
 | Rich-text bio needs extraction (open Q) | `DesktopRichTextViewer` + commons `RichTextParser` already render feed cards | **Reuse as-is** (~5-line wrap). Resolved. |
-| Block = NIP-51 kind **30382** | 30382 = NIP-85 `ContactCardEvent` (WoT). Block = `PeopleListEvent` **30000**, d=`mute` | **Corrected throughout.** |
+| Block = NIP-51 kind **30382** | 30382 = NIP-85 `UserAssertionEvent` (WoT). Block = `FollowSetEvent` **30000**, d=`mute` | **Corrected throughout.** |
 
 ## Base & Branch Strategy
 
@@ -107,7 +107,7 @@ Phases 1–2 (banner, bio, CLINK, tabs) **don't depend on moderation-safety** an
 - **DM** → open Desktop Messages for this pubkey.
 - **Share** (copy `npub` / `nostr:` link).
 - **Add to list / follow-pack** (reuse Desktop Follow Packs).
-- **Block** — `PeopleListEvent` **kind 30000, d=`mute`** (encrypted), distinct from the mute list;
+- **Block** — `FollowSetEvent` **kind 30000, d=`mute`** (encrypted), distinct from the mute list;
   + Unblock. (Reuses existing quartz builder — see Technical Approach.)
 - **Edit Profile:** add the missing **CLINK offer** field (`noffer1…`).
 
@@ -159,7 +159,7 @@ Write-path template must guard `pubKeyHex == account.signer.pubKey` (self) and `
 | Edit dialog (add CLINK) | `desktopApp/.../desktop/ui/profile/EditProfileScreen.kt` + commons `profile/EditProfileFields.kt` |
 | Follow Packs (add-to-list target) | `desktopApp/.../desktop/followpacks/` |
 | Desktop Messages (DM target) | `desktopApp/.../desktop/ui/chats/` (`ChatroomListState.selectRoom(build1on1(pubkey))`) |
-| **Block — reuse, don't rebuild** | quartz `nip51Lists/peopleList/PeopleListEvent.kt` (`KIND=30000`, `BLOCK_LIST_D_TAG="mute"`, `addUser(earlierVersion, isPrivate=true)`); Android `blockPeopleList/BlockPeopleListState.kt`; commons `PeopleListDecryptionCache.kt` |
+| **Block — reuse, don't rebuild** | quartz `nip51Lists/followSet/FollowSetEvent.kt` (`KIND=30000`, `BLOCK_LIST_D_TAG="mute"`, `addUser(earlierVersion, isPrivate=true)`); Android `blockPeopleList/BlockPeopleListState.kt`; commons `FollowSetDecryptionCache.kt` |
 | Zap decryption | quartz `PrivateZapCache(signer)` / `PrivateZapRequestBuilder.decryptZapEvent`; Android `UserProfileZapsViewModel` |
 | Commons actions (pattern) | `commons/.../actions/FollowActions.kt`, `commons/.../model/nip56Reports/ReportAction.kt` |
 
@@ -193,7 +193,7 @@ if (!account.isWriteable()) return             // read-only/watch-only: no-op, U
 
 // 2. NIP-51 lists (Block): reuse existing decrypt→merge→encrypt; NEVER create() an existing list
 val current = blockListState.getBlockList()    // must be LOADED from relays first (see guard)
-val event = PeopleListEvent.addUser(earlierVersion = current, pubKeyHex, relayHint, isPrivate = true, signer)
+val event = FollowSetEvent.addUser(earlierVersion = current, pubKeyHex, relayHint, isPrivate = true, signer)
 // fail-closed: addUser throws UnauthorizedDecryptionException rather than dropping private entries
 
 // 3. publish. Block = security-relevant → confirm, don't fire-and-forget
@@ -247,7 +247,7 @@ account.justConsumeMyOwnEvent(event)    // optimistic local apply, symmetric wit
 - **Add to list:** `commons/actions/FollowPackActions.kt` (build/publish kind 39089) + pack-picker
   modal; **zero-packs → offer "Create new pack"** (no dead-end).
 - **Block:** thin `commons/actions/BlockActions.kt` adapter over
-  `PeopleListEvent.addUser(earlierVersion, isPrivate=true)`; route write through `DesktopIAccount`
+  `FollowSetEvent.addUser(earlierVersion, isPrivate=true)`; route write through `DesktopIAccount`
   symmetric with `updateMuteList`; add to header overflow menu; enforce via unified hidden-set.
 
 ### Phase 4 — Tests & manual sheet
@@ -334,9 +334,9 @@ Every tab defines **loading / empty / populated**; Followers + Zaps add a fourth
 - `amethyst/.../profile/mutual/dal/UserProfileMutualFeedFilter.kt`
 
 ### Verified shared / quartz
-- `quartz/.../nip51Lists/peopleList/PeopleListEvent.kt` (KIND 30000, d=`mute`, `addUser`)
+- `quartz/.../nip51Lists/followSet/FollowSetEvent.kt` (KIND 30000, d=`mute`, `addUser`)
 - `amethyst/.../model/nip51Lists/blockPeopleList/BlockPeopleListState.kt`
-- `commons/.../model/nip51Lists/peopleList/PeopleListDecryptionCache.kt`
+- `commons/.../model/nip51Lists/followSets/FollowSetDecryptionCache.kt`
 - quartz `PrivateZapCache` / `PrivateZapRequestBuilder.decryptZapEvent`
 - `commons/.../actions/FollowActions.kt`, `commons/.../model/nip56Reports/ReportAction.kt`
 - `commons/.../richtext/RichTextParser.kt`, `desktopApp/.../ui/note/DesktopRichTextViewer.kt`

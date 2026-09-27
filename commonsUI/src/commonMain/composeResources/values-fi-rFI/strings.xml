@@ -268,15 +268,8 @@
     <string name="mark_all_known_as_read">Merkitse kaikki Tunnetut luetuiksi</string>
     <string name="mark_all_new_as_read">Merkitse kaikki Uudet luetuiksi</string>
     <string name="mark_all_as_read">Merkitse kaikki luetuiksi</string>
-    <string name="account_backup_tips2_md">        ## Avainten varmuuskopiointi ja turvallisuusvinkit
-        \n\nTilisi on suojattu salaisella avaimella. Avain on pitkä merkkijono, joka alkaa **nsec1**:llä. Kuka tahansa, jolla on pääsy tähän salaiseen avaimeen, voi julkaista ja muuttaa henkilöllisyyttäsi.
-        \n\n- **Älä** anna salaista avaintasi mihinkään verkkosivustoon tai ohjelmistoon, johon et luota.
-        \n- Amethystin kehittäjät eivät **koskaan** pyydä salaista avaintasi.
-        \n- **Tee** turvallinen varmuuskopio salaisesta avaimestasi tilin palauttamista varten. Suosittelemme salasananhallintaohjelman käyttöä.
-    </string>
-    <string name="account_backup_tips3_md">        Lisäturvallisuuden vuoksi voit salata avaimesi salasanalla. Tämä avain alkaa **ncryptsec1**:llä eikä sitä voi käyttää ilman salasanaasi.
-        \n\nJos kadotat salasanasi, et pysty palauttamaan avaintasi.
-    </string>
+    <string name="account_backup_tips2_md">## Avainten varmuuskopiointi ja turvallisuusvinkit \n\nTilisi on suojattu salaisella avaimella. Avain on pitkä merkkijono, joka alkaa **nsec1**:llä. Kuka tahansa, jolla on pääsy tähän salaiseen avaimeen, voi julkaista ja muuttaa henkilöllisyyttäsi. \n\n- **Älä** anna salaista avaintasi mihinkään verkkosivustoon tai ohjelmistoon, johon et luota. \n- Amethystin kehittäjät eivät **koskaan** pyydä salaista avaintasi. \n- **Tee** turvallinen varmuuskopio salaisesta avaimestasi tilin palauttamista varten. Suosittelemme salasananhallintaohjelman käyttöä.</string>
+    <string name="account_backup_tips3_md">Lisäturvallisuuden vuoksi voit salata avaimesi salasanalla. Tämä avain alkaa **ncryptsec1**:llä eikä sitä voi käyttää ilman salasanaasi. \n\nJos kadotat salasanasi, et pysty palauttamaan avaintasi.</string>
     <string name="encrypt_and_copy_my_secret_key">Salaa ja kopioi salainen avaimeni</string>
     <string name="badge_award_image_for">Merkki kohteelle %1$s</string>
     <string name="badge_award_image">"Merkkipalkinnon kuva</string>
@@ -959,8 +952,7 @@
     <string name="push_server_none_explainer">Poistaa Push-ilmoitukset käytöstä</string>
     <string name="push_server_uses_app_explainer">Käyttää sovellusta %1$s</string>
     <string name="push_server_install_app">Push-ilmoituksen asennus</string>
-    <string name="push_server_install_app_description">        Saadaksesi push-ilmoituksia, asenna mikä tahansa sovellus, joka tukee Unified Push:ia, kuten Ntfy.
-			Asennuksen jälkeen valitse Asetuksista sovellus, jota haluat käyttää.</string>
+    <string name="push_server_install_app_description">Saadaksesi push-ilmoituksia, asenna mikä tahansa sovellus, joka tukee Unified Push:ia, kuten Ntfy. Asennuksen jälkeen valitse Asetuksista sovellus, jota haluat käyttää.</string>
     <string name="thread_title">Keskusteluketju</string>
     <string name="send_the_seller_a_message">Lähetä myyjälle viesti</string>
     <string name="hi_there_is_this_still_available">Hei, onko tämä vielä saatavilla?</string>
@@ -2011,15 +2003,7 @@
     <string name="could_not_fetch_invoice_from_details">Laskun hakeminen epäonnistui kohteesta %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Pakattua tiedostoa ei voitu avata</string>
     <string name="couldnt_find_nwc_wallets">Lompakkoa ei löydy</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst ei löytänyt yhtään lompakkosovellusta, joka tukee Nostr Wallet Connect (NWC) -toimintoa.
-\n\nMitä voit tehdä:
-\n\t1. Tarkista NWC-tuki: Varmista, että haluamasi lompakkosovellus on yhteensopiva Nostr Wallet Connectin kanssa.
-\n\t2. Luo yhteys: Siirry lompakkosovellukseesi ja luo uusi NWC-yhteys.
-\n\t3. Linkitä Amethystiin: Lompakkosi tarjoaa yleensä kolme vaihtoehtoa:
-\n\t\t3.1 Automaattinen linkitys: Painike, joka avaa Amethystin ja yhdistää automaattisesti. Jos näet sen, paina painiketta, avaa Amethyst ja tallenna uudella näytöllä.
-\n\t\t3.2 Manuaalinen linkitys: YhteysURI, jonka voit kopioida ja liittää tämän näytön liitä-kuvakkeella.
-\n\t\t3.3 QR-koodi: Lompakko luo QR-koodin, jonka voit lukea tämän näytön QR-koodipainikkeella.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst ei löytänyt yhtään lompakkosovellusta, joka tukee Nostr Wallet Connect (NWC) -toimintoa. \n\nMitä voit tehdä: \n\t1. Tarkista NWC-tuki: Varmista, että haluamasi lompakkosovellus on yhteensopiva Nostr Wallet Connectin kanssa. \n\t2. Luo yhteys: Siirry lompakkosovellukseesi ja luo uusi NWC-yhteys. \n\t3. Linkitä Amethystiin: Lompakkosi tarjoaa yleensä kolme vaihtoehtoa: \n\t\t3.1 Automaattinen linkitys: Painike, joka avaa Amethystin ja yhdistää automaattisesti. Jos näet sen, paina painiketta, avaa Amethyst ja tallenna uudella näytöllä. \n\t\t3.2 Manuaalinen linkitys: YhteysURI, jonka voit kopioida ja liittää tämän näytön liitä-kuvakkeella. \n\t\t3.3 QR-koodi: Lompakko luo QR-koodin, jonka voit lukea tämän näytön QR-koodipainikkeella.</string>
     <string name="create">Luo</string>
     <string name="d">pv</string>
     <string name="danger_zone">Vaara-alue</string>
@@ -2677,11 +2661,8 @@
     <string name="proxy_section">Proxy-relait</string>
     <string name="proxy_section_explainer">Aggregaattorirelait, joita sovelluksen täytyy käyttää feedien lataamiseen, kuten filter.nostr.wine. Tämä korvaa outbox-mallin ja saa sovelluksen yhdistämään vain listoissasi oleviin relaihin.</string>
     <string name="public_chat">Julkinen keskustelu</string>
-    <string name="public_chat_explainer">Julkiset chatit ovat näkyvissä kaikille Nostrissa ja kuka tahansa
-        voi osallistua niihin. Ne sopivat hyvin avoimiin yhteisöihin tiettyjen aiheiden ympärille.
-        Moderointia voidaan hallita poistamalla julkaisuja sen relay-palvelimilta</string>
-    <string name="public_chat_relays_explainer">Syötä 1–3 relay-palvelinta, jotka isännöivät tätä ryhmää.
-        Nostr-asiakkaat käyttävät tätä asetusta tietääkseen, mistä ladata viestejä ja mihin lähettää viestisi.</string>
+    <string name="public_chat_explainer">Julkiset chatit ovat näkyvissä kaikille Nostrissa ja kuka tahansa voi osallistua niihin. Ne sopivat hyvin avoimiin yhteisöihin tiettyjen aiheiden ympärille. Moderointia voidaan hallita poistamalla julkaisuja sen relay-palvelimilta</string>
+    <string name="public_chat_relays_explainer">Syötä 1–3 relay-palvelinta, jotka isännöivät tätä ryhmää. Nostr-asiakkaat käyttävät tätä asetusta tietääkseen, mistä ladata viestejä ja mihin lähettää viestisi.</string>
     <string name="public_chat_relays_title">relay-palvelimet</string>
     <string name="public_chat_title">Julkisen chatin metatiedot</string>
     <string name="public_chats">Julkiset keskustelut</string>
@@ -2706,10 +2687,7 @@
     <string name="read_only_user">Vain luku -käyttäjä</string>
     <string name="record_a_message_description">Paina ja pidä pohjassa tallentaaksesi ääniviesti</string>
     <string name="relay_chat">relay-chat</string>
-    <string name="relay_chat_explainer">relay-chatit ovat chat-ryhmiä, joita hallinnoi niiden kotipalvelin.
-        Ne ovat näkyvissä kaikille Nostrissa ja kuka tahansa voi osallistua niihin.
-        Ne sopivat hyvin avoimiin yhteisöihin tiettyjen aiheiden ympärille. Osa näistä ryhmistä on katoavia,
-    joten chat-viestit häviävät ajan myötä</string>
+    <string name="relay_chat_explainer">relay-chatit ovat chat-ryhmiä, joita hallinnoi niiden kotipalvelin. Ne ovat näkyvissä kaikille Nostrissa ja kuka tahansa voi osallistua niihin. Ne sopivat hyvin avoimiin yhteisöihin tiettyjen aiheiden ympärille. Osa näistä ryhmistä on katoavia, joten chat-viestit häviävät ajan myötä</string>
     <string name="relay_chat_title">relay-chatit</string>
     <string name="relay_management_tab_events">Tapahtumat</string>
     <string name="relay_management_tab_ips">IP-osoitteet</string>
@@ -2947,4 +2925,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Vastaanottajan Lightning-palvelu osoitteessa %1$s ei ole käytettävissä. Se laskettiin Lightning-osoitteesta "%2$s". Virhe: %3$s. Tarkista, onko palvelin ylhäällä ja onko Lightning-osoite oikein</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Lightning-laskua ei voitu luoda kohteesta %1$s: Elementtiä pr ei löydy palautetusta JSON-vastauksesta.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning-laskua ei voitu luoda. Viesti kohteelta %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

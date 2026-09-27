@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.commons.chats.ui
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
@@ -33,21 +36,32 @@ import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 
 @Composable
-fun ChatDivisor(info: String) {
+fun ChatDivisor(
+    info: String,
+    /**
+     * Tints both rules and the label. Unspecified keeps the default, which is every
+     * date divisor; an unread marker passes the accent so the line it draws reads as a
+     * status rather than another date.
+     */
+    color: Color = Color.Unspecified,
+) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = StdPadding) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
             thickness = DividerThickness,
+            color = if (color.isSpecified) color else DividerDefaults.color,
         )
         Text(
             text = info,
             fontWeight = FontWeight.Bold,
             fontSize = Font14SP,
+            color = color,
             modifier = HalfPadding,
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),
             thickness = DividerThickness,
+            color = if (color.isSpecified) color else DividerDefaults.color,
         )
     }
 }

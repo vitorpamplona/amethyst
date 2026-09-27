@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
+import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
-import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
-import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal

@@ -138,6 +138,17 @@ kotlin {
             }
         }
 
+        jvmTest {
+            dependencies {
+                // Compose Desktop on the test classpath so composables can be
+                // rendered headlessly to a Skia surface (ImageComposeScene) and
+                // asserted on. No new third-party dependency: this is the same
+                // artifact jvmMain already uses, and it rasterises in software,
+                // so it needs no display.
+                implementation(compose.desktop.currentOs)
+            }
+        }
+
         // Shared JVM code for both Android and Desktop
         val jvmAndroid =
             create("jvmAndroid") {

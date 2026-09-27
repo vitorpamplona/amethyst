@@ -116,8 +116,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
@@ -149,8 +149,8 @@ val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
         when {
             note.event?.bountyBaseReward() != null -> "https://nostrbounties.com/b/${note.toNAddr()}"
-            note.event is PeopleListEvent -> "https://listr.lol/a/${note.toNAddr()}"
-            note.event is FollowListEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
+            note.event is FollowSetEvent -> "https://listr.lol/a/${note.toNAddr()}"
+            note.event is StarterPackEvent -> "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
             else -> njumpLink(note.toNAddr())
         }
     } else {

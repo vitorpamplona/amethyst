@@ -49,6 +49,17 @@ enum class ChatFeedType(
     /** Concord encrypted communities (gift-wrapped plane streams). */
     CONCORD("concord"),
 
+    /**
+     * cordn — MLS group chat coordinated by an MCP server rather than a relay.
+     *
+     * Listed beside Marmot and sharing nothing with it: the two are separate
+     * protocols that happen to both be MLS, and the inbox is one of the few
+     * places they meet at all (see §3.1 of
+     * `amethyst/plans/2026-09-19-cordn-ui.md`). Toggling this off hides cordn
+     * rows and stops its sync loops; it does not touch Marmot.
+     */
+    CORDN("cordn"),
+
     /** Geohash location channels (kind 20000). */
     GEOHASH("geohash"),
 

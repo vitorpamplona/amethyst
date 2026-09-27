@@ -27,6 +27,7 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.scale
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
@@ -107,7 +108,7 @@ object WebShortcuts {
         url: String,
     ): IconCompat {
         val bitmap =
-            BrowserIconRegistry
+            Amethyst.instance.browserIcons
                 .iconModelFor(BrowserChrome.displayHost(url))
                 ?.removePrefix("file://")
                 ?.let { path -> runCatching { BitmapFactory.decodeFile(File(path).absolutePath) }.getOrNull() }

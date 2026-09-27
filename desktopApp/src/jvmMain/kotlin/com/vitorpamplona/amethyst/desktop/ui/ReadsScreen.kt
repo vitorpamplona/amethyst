@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingLongFormF
 import com.vitorpamplona.amethyst.desktop.subscriptions.createLongFormFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import java.text.DateFormat
 import java.util.Date
@@ -83,7 +83,7 @@ private fun formatDate(timestamp: Long): String = dateFormat.format(Date(timesta
  */
 @Composable
 fun LongFormCard(
-    event: LongTextNoteEvent,
+    event: LongFormContentEvent,
     localCache: DesktopLocalCache,
     onAuthorClick: (String) -> Unit = {},
     onClick: () -> Unit = {},
@@ -185,9 +185,9 @@ fun ReadsScreen(
 
     val eventState =
         remember {
-            EventCollectionState<LongTextNoteEvent>(
+            EventCollectionState<LongFormContentEvent>(
                 getId = { it.id },
-                sortComparator = compareByDescending<LongTextNoteEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id },
+                sortComparator = compareByDescending<LongFormContentEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id },
                 maxSize = 100,
                 scope = scope,
             )
@@ -204,10 +204,10 @@ fun ReadsScreen(
     LaunchedEffect(Unit) {
         val cached =
             localCache.notes.filterIntoSet { _, note ->
-                note.event is LongTextNoteEvent
+                note.event is LongFormContentEvent
             }
         cached.forEach { note ->
-            (note.event as? LongTextNoteEvent)?.let { eventState.addItem(it) }
+            (note.event as? LongFormContentEvent)?.let { eventState.addItem(it) }
         }
         if (cached.isNotEmpty()) eoseReceivedCount++
     }
@@ -249,7 +249,7 @@ fun ReadsScreen(
                     relays = connectedRelays,
                     onEvent = { event, _, relay, _ ->
                         subscriptionsCoordinator?.consumeEvent(event, relay)
-                        if (event is LongTextNoteEvent) {
+                        if (event is LongFormContentEvent) {
                             eventState.addItem(event)
                         }
                     },
@@ -266,7 +266,7 @@ fun ReadsScreen(
                         followedUsers = followedUsers.toList(),
                         onEvent = { event, _, relay, _ ->
                             subscriptionsCoordinator?.consumeEvent(event, relay)
-                            if (event is LongTextNoteEvent) {
+                            if (event is LongFormContentEvent) {
                                 eventState.addItem(event)
                             }
                         },

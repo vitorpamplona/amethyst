@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import io.mockk.every
 import io.mockk.mockk
@@ -225,7 +225,7 @@ class BuzzWorkspaceChannelTest {
 
             // The author deletes their own edit (NIP-09). It must stop overlaying the message and
             // be unlinked from Note.edits, not linger as a stale overlay.
-            val deletion = signer.sign(DeletionEvent.build(listOf(edit)))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(edit)))
             LocalCache.checkDeletionAndConsume(deletion, buzzRelay, false)
 
             assertNull("a deleted edit must no longer overlay its message", target.latestBuzzEdit())

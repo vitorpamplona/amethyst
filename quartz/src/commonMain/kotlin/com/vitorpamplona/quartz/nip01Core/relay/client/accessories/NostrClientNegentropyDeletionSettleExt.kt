@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.deletionsCovering
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 
 /**
  * Outcome of a [negentropySettleDeletions] run.
@@ -129,7 +129,7 @@ suspend fun INostrClient.negentropySettleDeletions(
             for (chunk in diff.haveIds.chunked(batchSize)) {
                 val ours = store.query<Event>(Filter(ids = chunk))
                 val relayDeletions = deletionsCovering(ours, relay) { f -> fetchAll(relay, f, idleTimeoutMs) }
-                for (del in relayDeletions.filterIsInstance<DeletionEvent>()) {
+                for (del in relayDeletions.filterIsInstance<DeletionRequestEvent>()) {
                     if (del.verify() && appliedDown.add(del.id)) {
                         store.insert(del)
                         resolved++

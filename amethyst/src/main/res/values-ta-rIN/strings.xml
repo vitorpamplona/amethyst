@@ -179,6 +179,9 @@
     <string name="post">பதிவு</string>
     <string name="voice_post">குரல் இடுகை</string>
     <string name="voice_reply">குரல் பதில்</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">தனிப்பட்ட செய்தி</string>
     <string name="nest_notification_broadcasting">Nest — நேரலை</string>
     <string name="nest_notification_channel_description">அறை திறந்திருக்கும்போது ஆடியோவை இயக்கிக் கொண்டே இருக்கும்.</string>

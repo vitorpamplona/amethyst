@@ -432,7 +432,7 @@ class UploadOrchestrator {
      * Deletes a temporary file created during the upload pipeline if its URI
      * differs from the original (meaning it's an intermediate temp file, not the user's content).
      */
-    private fun deleteTempUri(
+    internal fun deleteTempUri(
         tempUri: Uri,
         originalUri: Uri,
     ) {

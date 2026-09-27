@@ -36,10 +36,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectRequestCache
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
@@ -199,12 +199,12 @@ class NwcSignerState(
 
     override fun isNIP47Author(pubKey: HexKey?): Boolean = nip47Signer.value.pubKey == pubKey
 
-    override suspend fun decryptRequest(event: LnZapPaymentRequestEvent): Request? {
+    override suspend fun decryptRequest(event: NwcRequestEvent): Request? {
         if (!hasWalletConnectSetup()) return null
         return zapPaymentRequestDecryptionCache.value.decryptRequest(event)
     }
 
-    override suspend fun decryptResponse(event: LnZapPaymentResponseEvent): Response? {
+    override suspend fun decryptResponse(event: NwcResponseEvent): Response? {
         if (!hasWalletConnectSetup()) return null
         return zapPaymentResponseDecryptionCache.value.decryptResponse(event)
     }
@@ -252,7 +252,7 @@ class NwcSignerState(
         request: Request,
         onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
-    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> = sendNwcRequestToWallet(defaultWalletUri.value, request, onTimeout, onResponse)
+    ): Pair<NwcRequestEvent, NormalizedRelayUrl> = sendNwcRequestToWallet(defaultWalletUri.value, request, onTimeout, onResponse)
 
     /**
      * Sends a generic NIP-47 request to a specific wallet.
@@ -266,14 +266,14 @@ class NwcSignerState(
         request: Request,
         onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
-    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
+    ): Pair<NwcRequestEvent, NormalizedRelayUrl> {
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
         val walletSigner = buildSigner(walletService) ?: signer
 
         val info = walletInfo(walletService)
         request.dropMetadataIfUnsupported(info)
 
-        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(info))
+        val event = NwcRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(info))
 
         val filter =
             NWCPaymentQueryState(
@@ -314,7 +314,7 @@ class NwcSignerState(
         onTimeout: () -> Unit = {},
         metadata: Map<String, Any?>? = null,
         onResponse: (Response?) -> Unit,
-    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
+    ): Pair<NwcRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
         val info = walletInfo(walletService)
@@ -322,7 +322,7 @@ class NwcSignerState(
         request.dropMetadataIfUnsupported(info)
 
         val event =
-            LnZapPaymentRequestEvent.createRequest(
+            NwcRequestEvent.createRequest(
                 request,
                 walletService.pubKeyHex,
                 nip47Signer.value,

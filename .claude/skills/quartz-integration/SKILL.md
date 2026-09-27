@@ -650,15 +650,15 @@ val custom = ReactionEvent.build("🤙", targetEvent)
 ### NIP-57 — Zap request (kind 9734)
 
 ```kotlin
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
-val template = LnZapRequestEvent.build(
+val template = ZapRequestEvent.build(
     message = "Great post!",
     relays = listOf("wss://relay.damus.io"),
     target = targetEvent,
-    zapType = LnZapRequestEvent.ZapType.PUBLIC
+    zapType = ZapRequestEvent.ZapType.PUBLIC
 )
-val zapRequest: LnZapRequestEvent = signer.sign(template)
+val zapRequest: ZapRequestEvent = signer.sign(template)
 ```
 
 ### NIP-59 — Gift wrap / sealed DM (kind 1059 + 14)
@@ -678,9 +678,9 @@ val (dmEvent, giftWrap) = NIP17Factory.create(
 ### NIP-23 — Long-form article (kind 30023)
 
 ```kotlin
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
-val template = LongTextNoteEvent.build(
+val template = LongFormContentEvent.build(
     body = markdownContent,
     title = "My Article",
     image = "https://example.com/cover.jpg",
@@ -882,16 +882,16 @@ use `Nip11RelayInformation.fromJson(json)`.
 | 0 | User metadata | 01 | `MetadataEvent` |
 | 1 | Text note | 10 | `TextNoteEvent` |
 | 3 | Follow list | 02 | `ContactListEvent` |
-| 4 | Legacy DM | 04 | `PrivateDmEvent` |
-| 5 | Deletion | 09 | `DeletionEvent` |
+| 4 | Legacy DM | 04 | `EncryptedDmEvent` |
+| 5 | Deletion | 09 | `DeletionRequestEvent` |
 | 6 | Repost | 18 | `RepostEvent` |
 | 7 | Reaction | 25 | `ReactionEvent` |
 | 14 | Chat message (sealed) | 17 | `NIP17GroupMessage` |
 | 1059 | Gift wrap | 59 | `GiftWrapEvent` |
-| 9734 | Zap request | 57 | `LnZapRequestEvent` |
-| 9735 | Zap receipt | 57 | `LnZapEvent` |
+| 9734 | Zap request | 57 | `ZapRequestEvent` |
+| 9735 | Zap receipt | 57 | `ZapReceiptEvent` |
 | 10002 | Relay list | 65 | `AdvertisedRelayListEvent` |
-| 30023 | Long-form content | 23 | `LongTextNoteEvent` |
+| 30023 | Long-form content | 23 | `LongFormContentEvent` |
 
 ## Related Skills
 

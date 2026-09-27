@@ -33,15 +33,15 @@ import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
 import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
@@ -72,7 +72,7 @@ class SearchFieldExtractorTest {
     @Test
     fun longFormDecomposesIntoTitleSummaryHashtagsContent() {
         val tags = arrayOf(arrayOf("d", "post"), arrayOf("title", "My Post"), arrayOf("summary", "tl;dr"), arrayOf("t", "nostr"), arrayOf("t", "search"))
-        val fields = SearchFieldExtractor.extract(LongTextNoteEvent("2".repeat(64), alice, 1L, tags, "the whole article", ""))
+        val fields = SearchFieldExtractor.extract(LongFormContentEvent("2".repeat(64), alice, 1L, tags, "the whole article", ""))
         assertEquals(IndexableFields.Tiered(primary = listOf("My Post"), secondary = listOf("tl;dr"), text = "the whole article", hashtags = listOf("nostr", "search")), fields)
     }
 
@@ -153,7 +153,7 @@ class SearchFieldExtractorTest {
     }
 
     @Test
-    fun contactCardsDecomposeIntoPetnameSummaryAndTopics() {
+    fun userAssertionsDecomposeIntoPetnameSummaryAndTopics() {
         // A provider's petname for a person is that provider's NAME for them,
         // so it lands where kind 0's name does. topics() reads `t` tags, so
         // the tiers() funnel carries them once, as hashtags.
@@ -165,7 +165,7 @@ class SearchFieldExtractorTest {
                 arrayOf("t", "bitcoin"),
                 arrayOf("rank", "87"),
             )
-        val fields = SearchFieldExtractor.extract(ContactCardEvent("f".repeat(64), alice, 1L, tags, "", ""))
+        val fields = SearchFieldExtractor.extract(UserAssertionEvent("f".repeat(64), alice, 1L, tags, "", ""))
         assertEquals(
             IndexableFields.Tiered(
                 primary = listOf("Verified Human"),
@@ -177,24 +177,24 @@ class SearchFieldExtractorTest {
     }
 
     @Test
-    fun contactCardsCarryTopicsEvenWithNoPublicPetname() {
+    fun userAssertionsCarryTopicsEvenWithNoPublicPetname() {
         // THE SHAPE THIS LIBRARY ITSELF PUBLISHES: build() puts petname and
         // summary in the NIP-44 content, so a card's only public text is its
         // topics. They must still reach the backend -- through the hashtag
         // role, once -- and a hashtags-only extraction must not normalize to
         // None (Tiered.isEmpty() compares against a fully-empty Tiered).
         val tags = arrayOf(arrayOf("d", alice), arrayOf("t", "bitcoin"), arrayOf("t", "nostr"), arrayOf("rank", "87"))
-        val fields = SearchFieldExtractor.extract(ContactCardEvent("2a".repeat(32), alice, 1L, tags, "encrypted", ""))
+        val fields = SearchFieldExtractor.extract(UserAssertionEvent("2a".repeat(32), alice, 1L, tags, "encrypted", ""))
         assertEquals(IndexableFields.Tiered(hashtags = listOf("bitcoin", "nostr")), fields)
     }
 
     @Test
-    fun contactCardsWithNoPublicTextExtractNothing() {
+    fun userAssertionsWithNoPublicTextExtractNothing() {
         // The petname and summary of a private card live in the NIP-44
         // encrypted content, which is never indexed -- so a card carrying only
         // scores has nothing to search.
         val tags = arrayOf(arrayOf("d", alice), arrayOf("rank", "87"), arrayOf("followers", "1200"))
-        assertEquals(IndexableFields.None, SearchFieldExtractor.extract(ContactCardEvent("1a".repeat(32), alice, 1L, tags, "encrypted", "")))
+        assertEquals(IndexableFields.None, SearchFieldExtractor.extract(UserAssertionEvent("1a".repeat(32), alice, 1L, tags, "encrypted", "")))
     }
 
     @Test
@@ -270,7 +270,7 @@ class SearchFieldExtractorTest {
         // kind 9002 edits what kind 39000 publishes; it was the only half of
         // the pair without a branch. Its hashtags() is `t`: carried once.
         val tags = arrayOf(arrayOf("h", "grp"), arrayOf("name", "Nostr Devs"), arrayOf("about", "we build"), arrayOf("t", "nostr"))
-        val fields = SearchFieldExtractor.extract(EditMetadataEvent("23".repeat(32), alice, 1L, tags, "", ""))
+        val fields = SearchFieldExtractor.extract(GroupEditMetadataEvent("23".repeat(32), alice, 1L, tags, "", ""))
         assertEquals(
             IndexableFields.Tiered(primary = listOf("Nostr Devs"), secondary = listOf("we build"), hashtags = listOf("nostr")),
             fields,

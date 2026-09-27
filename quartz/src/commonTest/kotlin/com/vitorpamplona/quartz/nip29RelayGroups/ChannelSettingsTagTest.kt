@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip29RelayGroups
 
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,22 +48,22 @@ class ChannelSettingsTagTest {
 
     @Test
     fun editEmitsVisibilityTagOnlyWhenSet() {
-        val priv = EditMetadataEvent.build(gid, visibility = "private")
+        val priv = GroupEditMetadataEvent.build(gid, visibility = "private")
         assertEquals("private", tagValue(priv.tags, "visibility"))
 
-        val open = EditMetadataEvent.build(gid, visibility = "open")
+        val open = GroupEditMetadataEvent.build(gid, visibility = "open")
         assertEquals("open", tagValue(open.tags, "visibility"))
 
         // Absent by default so an ordinary metadata edit doesn't reclassify visibility.
-        assertNull(tagValue(EditMetadataEvent.build(gid, name = "x").tags, "visibility"))
+        assertNull(tagValue(GroupEditMetadataEvent.build(gid, name = "x").tags, "visibility"))
     }
 
     @Test
     fun editEmitsArchivedTagAsTrueFalse() {
-        assertEquals("true", tagValue(EditMetadataEvent.build(gid, archived = true).tags, "archived"))
-        assertEquals("false", tagValue(EditMetadataEvent.build(gid, archived = false).tags, "archived"))
+        assertEquals("true", tagValue(GroupEditMetadataEvent.build(gid, archived = true).tags, "archived"))
+        assertEquals("false", tagValue(GroupEditMetadataEvent.build(gid, archived = false).tags, "archived"))
         // Null archived means "don't touch it" — no tag emitted.
-        assertNull(tagValue(EditMetadataEvent.build(gid, name = "x").tags, "archived"))
+        assertNull(tagValue(GroupEditMetadataEvent.build(gid, name = "x").tags, "archived"))
     }
 
     @Test

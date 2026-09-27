@@ -26,10 +26,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
 fun filterSoftwareAppsByAuthors(
     relay: NormalizedRelayUrl,
@@ -44,7 +44,7 @@ fun filterSoftwareAppsByAuthors(
                 ExplainedFilter(
                     purpose = SubPurpose.ADD_ONS,
                     authors = authorList,
-                    kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
+                    kinds = listOf(SoftwareApplicationEvent.KIND, ReleaseArtifactSetEvent.KIND),
                     limit = 200,
                     since = since,
                 ),

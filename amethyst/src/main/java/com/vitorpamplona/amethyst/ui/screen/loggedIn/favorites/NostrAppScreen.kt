@@ -57,6 +57,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AccessInfoSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
@@ -157,7 +157,8 @@ private fun EmbeddedNostrAppTab(
     var showAccess by remember { mutableStateOf(false) }
     var textZoom by remember(coordinate) { mutableIntStateOf(BrowserChrome.DEFAULT_TEXT_ZOOM) }
 
-    val apps by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
     val isFavorite = remember(apps, coordinate) { apps.any { it.id == "nostr:$coordinate" } }
 
     val controller =
@@ -217,10 +218,11 @@ private fun EmbeddedNostrAppTab(
                         BrowserChrome.Action.SITE_SETTINGS -> nav.nav(Route.ConnectedAppDetail(permissionCoordinate))
                         BrowserChrome.Action.FAVORITE -> {
                             val favId = "nostr:$coordinate"
-                            if (FavoriteAppsRegistry.isFavorite(favId)) {
-                                FavoriteAppsRegistry.remove(favId)
+                            val favorites = Amethyst.instance.favoriteApps
+                            if (favorites.isFavorite(favId)) {
+                                favorites.remove(favId)
                             } else {
-                                FavoriteAppsRegistry.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
+                                favorites.add(FavoriteApp.NostrApp(coordinate, title, System.currentTimeMillis()))
                             }
                         }
                         else -> Unit

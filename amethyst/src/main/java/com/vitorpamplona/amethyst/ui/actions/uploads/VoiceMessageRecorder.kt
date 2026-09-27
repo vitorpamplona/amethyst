@@ -102,6 +102,13 @@ class VoiceMessageRecorder {
         amplitudeSamplingJob =
             recorderScope?.launch {
                 while (isActive) {
+                    // Delay FIRST. `maxAmplitude` reports the peak since the
+                    // previous call, and the call that happens immediately
+                    // after start() covers a window in which the encoder has
+                    // captured nothing — it answers 0 and puts a bar of silence
+                    // at the head of every recording that is not in the audio.
+                    delay(SAMPLE_INTERVAL_MS)
+
                     val recorderRef = recorder ?: break
                     try {
                         val amplitude = recorderRef.maxAmplitude.toFloat()
@@ -113,7 +120,6 @@ class VoiceMessageRecorder {
                         Log.w("VoiceMessageRecorder", "MediaRecorder in invalid state during amplitude sampling", e)
                         break
                     }
-                    delay(1000)
                 }
             }
     }
@@ -131,7 +137,7 @@ class VoiceMessageRecorder {
         val amplitudesCopy =
             synchronized(amplitudes) {
                 amplitudes.toList()
-            }
+            }.downsampled(MAX_WAVEFORM_POINTS)
         val duration = (currentTime - startTime).toInt()
 
         // Clean up recorder and scope
@@ -196,5 +202,44 @@ class VoiceMessageRecorder {
         synchronized(amplitudes) {
             amplitudes.clear()
         }
+    }
+
+    companion object {
+        /**
+         * How often the peak is read while recording.
+         *
+         * Was one second, which is not a waveform: a five-second note produced
+         * five numbers, stretched across fifty-odd bars, and the result could
+         * not track speech at any resolution a person would recognise. Ten a
+         * second is fine to sample — `maxAmplitude` is a cheap read — and the
+         * count is bounded on the way out rather than here.
+         */
+        const val SAMPLE_INTERVAL_MS = 100L
+
+        /**
+         * The most amplitudes a recording reports.
+         *
+         * Sampling finely and reducing at the end keeps the shape faithful
+         * without letting a long recording turn into a long list: these travel
+         * inside events and `imeta` tags, so the size has to depend on the
+         * detail wanted rather than on how long somebody spoke.
+         */
+        const val MAX_WAVEFORM_POINTS = 100
+    }
+}
+
+/**
+ * Averages [this] down to at most [max] buckets, keeping the ends in place.
+ *
+ * Averaging rather than dropping samples: taking every Nth would let a single
+ * loud frame stand for a whole bucket and make the bars flicker with the
+ * sampling phase rather than with the sound.
+ */
+internal fun List<Float>.downsampled(max: Int): List<Float> {
+    if (max <= 0 || size <= max) return this
+    return List(max) { bucket ->
+        val from = bucket * size / max
+        val to = ((bucket + 1) * size / max).coerceAtLeast(from + 1)
+        subList(from, to.coerceAtMost(size)).average().toFloat()
     }
 }

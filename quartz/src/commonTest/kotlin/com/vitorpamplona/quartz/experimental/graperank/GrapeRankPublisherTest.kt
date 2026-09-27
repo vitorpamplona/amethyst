@@ -27,8 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,8 +48,8 @@ class GrapeRankPublisherTest {
         provider: String,
     ): Map<String, Int?> =
         store
-            .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(provider)))
-            .filterIsInstance<ContactCardEvent>()
+            .query<Event>(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(provider)))
+            .filterIsInstance<UserAssertionEvent>()
             .associate { it.aboutUser() to it.rank() }
 
     @Test
@@ -72,7 +72,7 @@ class GrapeRankPublisherTest {
             assertEquals(mapOf(a to 50, b to 10), cardsByTarget(store, provider))
             val firstIds =
                 store
-                    .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(provider)))
+                    .query<Event>(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(provider)))
                     .map { it.id }
                     .toSet()
 
@@ -83,7 +83,7 @@ class GrapeRankPublisherTest {
             assertEquals(0, r2.retracted)
             val secondIds =
                 store
-                    .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(provider)))
+                    .query<Event>(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(provider)))
                     .map { it.id }
                     .toSet()
             assertEquals(firstIds, secondIds)
@@ -98,7 +98,7 @@ class GrapeRankPublisherTest {
             assertEquals(mapOf(a to 60, c to 5), cardsByTarget(store, provider))
 
             // …but its kind:5 tombstone remains, ready to sync to relays.
-            val deletions = store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND), authors = listOf(provider)))
+            val deletions = store.query<Event>(Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(provider)))
             assertEquals(1, deletions.size)
 
             store.close()
@@ -137,10 +137,10 @@ class GrapeRankPublisherTest {
 
             val a = hexKey(0xA)
 
-            suspend fun cardFor(target: String): ContactCardEvent =
+            suspend fun cardFor(target: String): UserAssertionEvent =
                 store
-                    .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(provider)))
-                    .filterIsInstance<ContactCardEvent>()
+                    .query<Event>(Filter(kinds = listOf(UserAssertionEvent.KIND), authors = listOf(provider)))
+                    .filterIsInstance<UserAssertionEvent>()
                     .first { it.aboutUser() == target }
 
             // A card carrying rank + followers + hops persists all three tags.

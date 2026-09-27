@@ -83,7 +83,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 @Immutable
-private data class ReactionChip(
+internal data class ReactionChip(
     val type: String,
     val count: Int,
     val includesMe: Boolean,
@@ -212,7 +212,25 @@ fun ChatReactionChips(
     }
 }
 
+/**
+ * The strip of engagement chips that rides a chat bubble's bottom border. Shared so
+ * every chat surface lays its chips out identically — [ChatReactionChips] fills it from
+ * a [Note]'s reactions and zaps, cordn fills it from its own annotation fold.
+ */
 @OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun ChatChipFlowRow(content: @Composable () -> Unit) {
+    FlowRow(
+        // Inset from the bubble's edge so overlapping chips ride the border without
+        // poking past the bubble's rounded corners.
+        modifier = Modifier.padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun RenderChatReactionChips(
     chips: ImmutableList<ReactionChip>,
@@ -225,13 +243,7 @@ private fun RenderChatReactionChips(
 ) {
     if (chips.isEmpty() && zapAmount.isBlank() && minichatCount <= 0 && !isZapping) return
 
-    FlowRow(
-        // Inset from the bubble's edge so overlapping chips ride the border without
-        // poking past the bubble's rounded corners.
-        modifier = Modifier.padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    ChatChipFlowRow {
         if (zapAmount.isNotBlank()) {
             ZapChip(zapAmount, onClick = onOpenDetails)
         } else if (isZapping) {
@@ -290,7 +302,7 @@ private fun MinichatChip(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ReactionChipView(
+internal fun ReactionChipView(
     chip: ReactionChip,
     onClick: () -> Unit,
     onLongClick: () -> Unit,

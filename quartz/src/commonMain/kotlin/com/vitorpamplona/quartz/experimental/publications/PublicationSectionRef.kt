@@ -28,8 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 
 /**
  * One entry in a kind-30040 publication's table of contents.
@@ -72,8 +72,8 @@ data class PublicationSectionRef(
             setOf(
                 PublicationContentEvent.KIND,
                 PublicationIndexEvent.KIND,
-                LongTextNoteEvent.KIND,
-                WikiNoteEvent.KIND,
+                LongFormContentEvent.KIND,
+                WikiArticleEvent.KIND,
                 NipTextEvent.KIND,
             )
 

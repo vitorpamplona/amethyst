@@ -361,7 +361,7 @@
     <string name="copy_user_id">Copiar ID do usuário</string>
     <string name="unblock_user">Desbloquear Usuário</string>
     <string name="user_is_blocked_hidden">Este usuário está bloqueado/silenciado. Suas publicações estão ocultas.</string>
-    <string name="npub_hex_username">npub, hex, usuário </string>
+    <string name="npub_hex_username">npub, hex, usuário</string>
     <string name="clear">Limpar</string>
     <string name="app_logo">Logo do aplicativo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex chave privada</string>
@@ -449,8 +449,8 @@
     <string name="paid_relay">Retransmissor pago</string>
     <string name="tor_relay">Forçar uso do Tor ao conectar</string>
     <string name="posts_received">postagens recebidas</string>
-    <string name="translations_auto">Autotraduzido </string>
-    <string name="translations_translated_from"> de </string>
+    <string name="translations_auto">Autotraduzido</string>
+    <string name="translations_translated_from">de</string>
     <string name="translations_to">para</string>
     <string name="translations_show_in_lang_first">Mostrar em %1$s primeiro</string>
     <string name="chat_about_topic">Chat público sobre %1$s</string>
@@ -463,13 +463,8 @@
     <string name="mark_all_known_as_read">Marcar todos conhecidos como lidos</string>
     <string name="mark_all_new_as_read">Marcar todas novas solicitações como lidas</string>
     <string name="mark_all_as_read">Marcar todas como lidas</string>
-    <string name="account_backup_tips2_md">    ## Dicas de Backup de Chave e Segurança
-    \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade.
-    \n\n- **Não** coloque sua chave secreta em nenhum site ou software que você não confie.
-    \n- Os desenvolvedores da Amethyst **nunca** pedirão sua chave secreta.
-    \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.</string>
-    <string name="account_backup_tips3_md">    Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha.
-    \n\nSe você perder sua senha, não será possível recuperar sua chave.</string>
+    <string name="account_backup_tips2_md">## Dicas de Backup de Chave e Segurança \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade. \n\n- **Não** coloque sua chave secreta em nenhum site ou software que você não confie. \n- Os desenvolvedores da Amethyst **nunca** pedirão sua chave secreta. \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.</string>
+    <string name="account_backup_tips3_md">Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha. \n\nSe você perder sua senha, não será possível recuperar sua chave.</string>
     <string name="backup_keys_nudge_title">Faça backup das suas chaves</string>
     <string name="backup_keys_nudge_body">Sua chave secreta é a única forma de acessar esta conta. Se você perdê-la, ela nunca poderá ser recuperada. Guarde-a em um lugar seguro agora.</string>
     <string name="backup_keys_nudge_backup_now">Fazer backup agora</string>
@@ -1584,9 +1579,7 @@
     <string name="push_server_none_explainer">Desativa as Notificações Push</string>
     <string name="push_server_uses_app_explainer">Usa o aplicativo %1$s</string>
     <string name="push_server_install_app">Configuração de Notificações Push</string>
-    <string name="push_server_install_app_description">        Para receber notificações push, instale qualquer aplicativo que suporte [Unified Push](https://unifiedpush.org/), como [Ntfy](https://ntfy.sh/).
-        Após a instalação, selecione o aplicativo que deseja usar nas configurações.
-    </string>
+    <string name="push_server_install_app_description">Para receber notificações push, instale qualquer aplicativo que suporte [Unified Push](https://unifiedpush.org/), como [Ntfy](https://ntfy.sh/). Após a instalação, selecione o aplicativo que deseja usar nas configurações.</string>
     <string name="thread_title">Linha</string>
     <string name="send_the_seller_a_message">Envie uma mensagem para o vendedor</string>
     <string name="hi_there_is_this_still_available">Olá, ainda está disponível?</string>
@@ -3323,14 +3316,7 @@
     <string name="could_not_fetch_invoice_from_details">Não foi possível obter a fatura de %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Não foi possível abrir o arquivo compactado</string>
     <string name="couldnt_find_nwc_wallets">Carteira não encontrada</string>
-    <string name="couldnt_find_nwc_wallets_description">O Amethyst não conseguiu encontrar nenhum aplicativo de carteira que suporte Nostr Wallet Connect (NWC).
-\n\nO que você pode fazer:
-\n\t1. Verifique o suporte NWC: Confirme se o aplicativo da sua carteira é compatível com o Nostr Wallet Connect.
-\n\t2. Criar conexão: Vá até o aplicativo da sua carteira e crie uma nova conexão NWC.
-\n\t3. Vincular ao Amethyst: Sua carteira geralmente oferece três opções:
-\n\t\t3.1 Link Automático: Um botão para abrir e conectar automaticamente ao Amethyst. Clique nele, abra o Amethyst e salve na nova tela.
-\n\t\t3.2 Link Manual: Um URI de conexão que você pode copiar e colar usando o ícone de colar nesta tela.
-\n\t\t3.3 Código QR: A carteira gera um código QR que você pode ler usando o botão de código QR nesta tela.</string>
+    <string name="couldnt_find_nwc_wallets_description">O Amethyst não conseguiu encontrar nenhum aplicativo de carteira que suporte Nostr Wallet Connect (NWC). \n\nO que você pode fazer: \n\t1. Verifique o suporte NWC: Confirme se o aplicativo da sua carteira é compatível com o Nostr Wallet Connect. \n\t2. Criar conexão: Vá até o aplicativo da sua carteira e crie uma nova conexão NWC. \n\t3. Vincular ao Amethyst: Sua carteira geralmente oferece três opções: \n\t\t3.1 Link Automático: Um botão para abrir e conectar automaticamente ao Amethyst. Clique nele, abra o Amethyst e salve na nova tela. \n\t\t3.2 Link Manual: Um URI de conexão que você pode copiar e colar usando o ícone de colar nesta tela. \n\t\t3.3 Código QR: A carteira gera um código QR que você pode ler usando o botão de código QR nesta tela.</string>
     <string name="create">Criar</string>
     <string name="d">d</string>
     <string name="danger_zone">Zona de Perigo</string>
@@ -4427,11 +4413,8 @@
     <string name="proxy_section">Relays proxy</string>
     <string name="proxy_section_explainer">Relays agregadores que o app usa para baixar seus feeds, como filter.nostr.wine. Isso substitui o modelo outbox e faz o app se conectar apenas aos relays das suas listas.</string>
     <string name="public_chat">Chat público</string>
-    <string name="public_chat_explainer">Os chats públicos são visíveis para todos no Nostr, e qualquer pessoa
-        pode participar deles. Eles são ótimos para comunidades abertas em torno de tópicos específicos.
-        A moderação pode ser controlada excluindo postagens em seus relays</string>
-    <string name="public_chat_relays_explainer">Inserir entre 1–3 relés que hospedam esse grupo.
-        os clientes Nostr usam essa configuração para saber de onde fazer o download de mensagens e enviar suas mensagens.</string>
+    <string name="public_chat_explainer">Os chats públicos são visíveis para todos no Nostr, e qualquer pessoa pode participar deles. Eles são ótimos para comunidades abertas em torno de tópicos específicos. A moderação pode ser controlada excluindo postagens em seus relays</string>
+    <string name="public_chat_relays_explainer">Inserir entre 1–3 relés que hospedam esse grupo. os clientes Nostr usam essa configuração para saber de onde fazer o download de mensagens e enviar suas mensagens.</string>
     <string name="public_chat_relays_title">Relés</string>
     <string name="public_chat_title">Metadados do Chat Público</string>
     <string name="public_chats">Chats públicos</string>
@@ -4496,10 +4479,7 @@
     <string name="relay_auth_search_keywords">auth autenticação relay assinar verificar nip-42 identidade</string>
     <string name="relay_auth_settings_title">Autenticação de relay</string>
     <string name="relay_chat">Chat Relé</string>
-    <string name="relay_chat_explainer">Chat Relés são grupos de chat controlados por seu relé de origem.
-         Eles são visíveis para todos no Nostr e qualquer pessoa pode participar.
-         São ótimos para comunidades abertas em torno de tópicos específicos. Alguns desses grupos são efêmeros,
-    portanto, as mensagens desaparecem com o tempo</string>
+    <string name="relay_chat_explainer">Chat Relés são grupos de chat controlados por seu relé de origem. Eles são visíveis para todos no Nostr e qualquer pessoa pode participar. São ótimos para comunidades abertas em torno de tópicos específicos. Alguns desses grupos são efêmeros, portanto, as mensagens desaparecem com o tempo</string>
     <string name="relay_chat_title">Chat Relés</string>
     <string name="relay_explain_account_data">Seu próprio perfil, configurações e rascunhos, nos seus relays de origem.</string>
     <string name="relay_explain_community_chats">Os relays em que cada comunidade publica seus planos.</string>
@@ -4930,4 +4910,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">O serviço Lightning do destinatário em %1$s não está disponível. Foi calculado a partir do endereço Lightning "%2$s". Erro: %3$s. Verifique se o servidor está funcionando e se o endereço Lightning está correto</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Não foi possível criar uma fatura lightning a partir de %1$s: Elemento pr não encontrado no JSON resultante.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Não foi possível criar uma fatura com raios. Mensagem do %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.deletionsCovering
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import kotlinx.coroutines.runBlocking
@@ -69,7 +69,7 @@ class DeletionSyncTest : RelayClientTest() {
     fun idBasedDeletionCoversByETag() =
         runBlocking {
             val target = note("delete me")
-            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(target), createdAt = target.createdAt + 1))
             store.insert(deletion)
 
             assertEquals(listOf(deletion.id), store.deletionsCovering(listOf(target), here).map { it.id })
@@ -82,7 +82,7 @@ class DeletionSyncTest : RelayClientTest() {
         runBlocking {
             val contacts = ContactListEvent.createFromScratch(emptyList(), null, signer)
             // Address-only deletion (no `e` tag) → only the `a`-tag path can match it.
-            val delAddr = signer.sign(DeletionEvent.buildAddressOnly(listOf(contacts), createdAt = contacts.createdAt + 1))
+            val delAddr = signer.sign(DeletionRequestEvent.buildAddressOnly(listOf(contacts), createdAt = contacts.createdAt + 1))
             store.insert(delAddr)
 
             assertEquals(
@@ -93,7 +93,7 @@ class DeletionSyncTest : RelayClientTest() {
 
             // NIP-09 cutoff: a deletion OLDER than the event does not delete it.
             val stale = EventStore(null)
-            stale.insert(signer.sign(DeletionEvent.buildAddressOnly(listOf(contacts), createdAt = contacts.createdAt - 1)))
+            stale.insert(signer.sign(DeletionRequestEvent.buildAddressOnly(listOf(contacts), createdAt = contacts.createdAt - 1)))
             assertTrue(stale.deletionsCovering(listOf(contacts), here).isEmpty(), "an older address deletion does not cover")
             stale.close()
         }
@@ -129,7 +129,7 @@ class DeletionSyncTest : RelayClientTest() {
     fun sendsCoveringDeletionSoRelayRemovesTheNote() =
         runBlocking {
             val target = note("delete me e2e")
-            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(target), createdAt = target.createdAt + 1))
 
             // Relay holds the note; we already deleted it locally (hold only the kind-5).
             defaultRelay.preload(listOf(target))
@@ -163,7 +163,7 @@ class DeletionSyncTest : RelayClientTest() {
     fun appliesRelaysDeletionSoLocalRemovesTheNote() =
         runBlocking {
             val target = note("delete me down")
-            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(target), createdAt = target.createdAt + 1))
 
             // Relay already applied the deletion → holds only the kind-5.
             defaultRelay.preload(listOf(target, deletion))
@@ -190,7 +190,7 @@ class DeletionSyncTest : RelayClientTest() {
             val ourEvents = local.store.query<Event>(Filter(ids = diff.haveIds))
             val relayDeletions = deletionsCovering(ourEvents, defaultRelayUrl) { f -> defaultRelay.store.query<Event>(f) }
             assertEquals(listOf(deletion.id), relayDeletions.map { it.id })
-            relayDeletions.filterIsInstance<DeletionEvent>().forEach { local.store.insert(it) }
+            relayDeletions.filterIsInstance<DeletionRequestEvent>().forEach { local.store.insert(it) }
 
             assertTrue(
                 local.store.query<Event>(Filter(ids = listOf(target.id))).isEmpty(),
@@ -206,7 +206,7 @@ class DeletionSyncTest : RelayClientTest() {
     fun settleSendsOurDeletionUp() =
         runBlocking {
             val target = note("settle up")
-            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(target), createdAt = target.createdAt + 1))
             val localStore = EventStore(null)
             localStore.insert(target)
             localStore.insert(deletion) // deletes target locally, keeps the kind-5
@@ -239,7 +239,7 @@ class DeletionSyncTest : RelayClientTest() {
     fun settleAppliesRelayDeletionDown() =
         runBlocking {
             val target = note("settle down")
-            val deletion = signer.sign(DeletionEvent.build(listOf(target), createdAt = target.createdAt + 1))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(target), createdAt = target.createdAt + 1))
             defaultRelay.preload(listOf(target, deletion)) // relay deletes target, keeps the kind-5
             val localStore = EventStore(null)
             localStore.insert(target)

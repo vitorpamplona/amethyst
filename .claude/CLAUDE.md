@@ -5,7 +5,12 @@
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
 over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `commonsUI`, `amethyst`,
 `desktopApp`, `cli`, plus the audio-rooms transport stack `quic` + `nestsClient`. Quartz should
-contain implementations of Nostr specifications and utilities to help implement them. Commons stores
+contain implementations of Nostr specifications and utilities to help implement them — NIPs under
+`nipXX` packages, and whole non-NIP protocol families beside them: `marmot/` (MLS over Nostr,
+`mipXX`), `cordn/` (MLS over an MCP coordinator, `specXX`), `contextvm/` (MCP over Nostr, `cepXX`),
+`concord/` (`cordXX`), `buzz/`, plus the binding-agnostic RFC 9420 engine in `mls/`. A new protocol
+over Nostr belongs here as a package, not as a Gradle module; `quic`/`nestsClient`/`marmotQuic` are
+modules because they are transports with no Nostr in them. Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). The Desktop
 App is designed to be mouse first and so uses a completely different screen and navigation
 architecture while sharing the back end components with the android counterpart. `cli` ships `amy`,
@@ -279,6 +284,48 @@ replaced with an in-house pitch shifter for exactly this reason.)
 Quartz uses expect/actual for platform-specific implementations (e.g. crypto
 backed by `secp256k1-kmp-jni-android` on Android and `secp256k1-kmp-jni-jvm` on
 JVM). See `/kotlin-multiplatform` for the expect/actual and source-set patterns.
+
+## Strings
+
+**MANDATORY: every new user-visible string goes in `commonsUI` Compose resources**,
+`commonsUI/src/commonMain/composeResources/values/strings.xml` — **never** in
+`amethyst/src/main/res/values/strings.xml`, even for an Android-only screen. A
+screen cannot move to `commonsUI` (or be rendered by Desktop) while its labels
+live in Android `res/`, and every key added there has to be migrated back out
+later. (The 2026-09-22 move emptied Android `res/` down to ~190 keys; the next two
+features put 447 back.)
+
+- Reference it as `Res.string.my_key` / `Res.plurals.my_key`, importing
+  `com.vitorpamplona.amethyst.commons.resources.Res` **and** the per-key accessor
+  `com.vitorpamplona.amethyst.commons.resources.my_key` (Compose resources generates
+  each key as an extension property).
+- Read it with `stringRes(Res.string.x)` / `pluralStringRes(Res.plurals.x, n, …)`
+  in composition — the app-side `ui.stringRes` overloads delegate to the
+  commonsUI bridge (`commons/ui/StringRes.kt`), so one import serves both kinds.
+- Outside composition there is **no blocking accessor**: use `loadStringRes(…)`
+  from a coroutine (or make the function `suspend`), or resolve the label in
+  composition and pass it down as a `String`. A `runBlocking` bridge is ruled out.
+- Hold a string reference as `StringResource` / `PluralStringResource`, not a
+  `@StringRes Int`.
+- Format arguments must be positional (`%1$s`, `%2$d`) — compose-resources does
+  not format bare `%s`/`%d`.
+- Escaping is not Android's: write `'` and `"` bare (no `\'`), and never wrap a
+  value in quotes to keep its whitespace. `.claude/hooks/compose_escaping_check.py`
+  checks this before a push.
+
+The **only** strings that stay in Android `res/` are the ones a platform API
+reads synchronously under a deadline, where a `suspend` read cannot run: a
+foreground service's `startForeground` notification, a notification channel
+created during service startup, PiP `RemoteAction`s, napplet capability labels
+read in the sandbox process, and `AndroidManifest.xml` / `res/xml` references.
+Most of those are *copies* of a key that also lives in `commonsUI`. See
+`commons/plans/2026-09-22-strings-to-compose-resources.md` ("the
+synchronous-platform tier"). If you think a new string belongs in that tier,
+say why in the PR.
+
+To move keys that already landed in Android `res/`, use
+`tools/strings-migrate/migrate.py <keys…>`. It moves every locale byte-for-byte,
+so Crowdin sees a pure move. Then repoint `R.string.x` → `Res.string.x`.
 
 ## Icons
 

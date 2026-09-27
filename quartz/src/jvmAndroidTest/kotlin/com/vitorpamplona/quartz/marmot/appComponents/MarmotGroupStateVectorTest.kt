@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.quartz.TestResourceLoader
-import com.vitorpamplona.quartz.marmot.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.marmot.mls.components.ComponentData
+import com.vitorpamplona.quartz.mls.components.AppDataDictionary
+import com.vitorpamplona.quartz.mls.components.ComponentData
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

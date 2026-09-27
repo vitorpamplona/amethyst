@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.torState
 
+import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

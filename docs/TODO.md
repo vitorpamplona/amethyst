@@ -5,7 +5,7 @@
 **Question:** What happens when a conversation with an npub has both NIP-04 (kind 4) and NIP-17 (kind 14/15 in GiftWrap) messages?
 
 **Current behavior to investigate:**
-- NIP-04 messages use `PrivateDmEvent.chatroomKey(pubKey)` → creates a `ChatroomKey` based on recipient
+- NIP-04 messages use `EncryptedDmEvent.chatroomKey(pubKey)` → creates a `ChatroomKey` based on recipient
 - NIP-17 messages use `ChatMessageEvent.chatroomKey(pubKey)` → also creates a `ChatroomKey` based on group members
 - Do these produce the **same** `ChatroomKey` for 1-on-1 chats? If yes, both message types merge into one conversation. If no, they appear as separate conversations.
 - Android Amethyst handles this — check how `Account.kt` merges them

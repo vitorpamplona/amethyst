@@ -26,11 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.ParamTag
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.RelaysTag
 
-fun TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.dvmPubKey(pubKey: HexKey) = addUnique(arrayOf("p", pubKey))
+fun TagArrayBuilder<DvmContentDiscoveryRequestEvent>.dvmPubKey(pubKey: HexKey) = addUnique(arrayOf("p", pubKey))
 
-fun TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.relays(relays: Set<NormalizedRelayUrl>) = addUnique(RelaysTag.assemble(relays))
+fun TagArrayBuilder<DvmContentDiscoveryRequestEvent>.relays(relays: Set<NormalizedRelayUrl>) = addUnique(RelaysTag.assemble(relays))
 
-fun TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.param(
+fun TagArrayBuilder<DvmContentDiscoveryRequestEvent>.param(
     key: String,
     value: String,
 ) = add(ParamTag.assemble(key, value))

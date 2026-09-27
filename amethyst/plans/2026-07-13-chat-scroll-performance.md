@@ -71,7 +71,7 @@ Feed-level:
    marker update (only the newest visible timestamp matters; the marker is
    monotonic). One coroutine per scroll session instead of one per row.
 6. **Jumbo without a coroutine (#4)**: only launch the decrypt effect for
-   encrypted kinds (`PrivateDmEvent`, sealed rumors not yet in the decrypt
+   encrypted kinds (`EncryptedDmEvent`, sealed rumors not yet in the decrypt
    cache). Plaintext kinds (public chats, NIP-17 rumors already unwrapped —
    the vast majority) take the synchronous path only.
 7. **Retire settled delivery ticks (#6)**: once a message is fully accepted (or

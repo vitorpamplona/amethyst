@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Stable
@@ -33,7 +33,7 @@ class PeopleListViewModel : ViewModel() {
         this.accountViewModel = accountViewModel
     }
 
-    fun listFlow() = accountViewModel.account.peopleLists.uiListFlow
+    fun listFlow() = accountViewModel.account.followSets.uiListFlow
 
     fun cloneItem(
         followSet: PeopleList,
@@ -41,7 +41,7 @@ class PeopleListViewModel : ViewModel() {
         customDescription: String?,
     ) {
         accountViewModel.launchSigner {
-            accountViewModel.account.peopleLists.cloneFollowSet(
+            accountViewModel.account.followSets.cloneFollowSet(
                 currentPeopleList = followSet,
                 customCloneName = customName,
                 customCloneDescription = customDescription,
@@ -52,7 +52,7 @@ class PeopleListViewModel : ViewModel() {
 
     fun deleteItem(followSet: PeopleList) {
         accountViewModel.launchSigner {
-            accountViewModel.account.peopleLists.deleteFollowSet(
+            accountViewModel.account.followSets.deleteFollowSet(
                 identifierTag = followSet.identifierTag,
                 account = accountViewModel.account,
             )

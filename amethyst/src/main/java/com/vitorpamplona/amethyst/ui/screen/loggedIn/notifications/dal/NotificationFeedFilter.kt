@@ -52,7 +52,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -60,7 +60,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -78,17 +78,17 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -131,11 +131,11 @@ class NotificationFeedFilter(
                 LiveActivitiesEvent.KIND,
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
-                LongTextNoteEvent.KIND,
+                LongFormContentEvent.KIND,
                 NipTextEvent.KIND,
-                VideoVerticalEvent.KIND,
-                VideoHorizontalEvent.KIND,
-                WikiNoteEvent.KIND,
+                AddressableShortVideoEvent.KIND,
+                AddressableNormalVideoEvent.KIND,
+                WikiArticleEvent.KIND,
                 AttestationRequestEvent.KIND,
             )
 
@@ -198,7 +198,7 @@ class NotificationFeedFilter(
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
                 RepostEvent.KIND,
-                LnZapEvent.KIND,
+                ZapReceiptEvent.KIND,
                 NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
                 Bolt12ZapEvent.KIND,
@@ -206,7 +206,7 @@ class NotificationFeedFilter(
                 PictureEvent.KIND,
                 PollEvent.KIND,
                 ZapPollEvent.KIND,
-                PrivateDmEvent.KIND,
+                EncryptedDmEvent.KIND,
                 PublicMessageEvent.KIND,
                 VideoNormalEvent.KIND,
                 VideoShortEvent.KIND,
@@ -322,9 +322,9 @@ class NotificationFeedFilter(
                     // proves the comment targets a zap; the reply's explicit p tag
                     // on the user marks it as theirs.
                     val targetsZapReceipt =
-                        event.hasScopeKind(LnZapEvent.KIND.toString()) ||
+                        event.hasScopeKind(ZapReceiptEvent.KIND.toString()) ||
                             event.hasScopeKind(Bolt12ZapEvent.KIND.toString()) ||
-                            note.replyTo?.any { it.event is LnZapEvent || it.event is Bolt12ZapEvent } == true
+                            note.replyTo?.any { it.event is ZapReceiptEvent || it.event is Bolt12ZapEvent } == true
 
                     if (targetsZapReceipt && event.isTaggedUser(authorHex)) {
                         return true
@@ -578,13 +578,13 @@ class NotificationFeedFilter(
             (
                 noteEvent is ChatMessageEvent ||
                     noteEvent is ChatMessageEncryptedFileHeaderEvent ||
-                    noteEvent is PrivateDmEvent
+                    noteEvent is EncryptedDmEvent
             )
         ) {
             return false
         }
         val notifAuthor =
-            if (noteEvent is LnZapEvent) {
+            if (noteEvent is ZapReceiptEvent) {
                 val zapRequest = noteEvent.zapRequest
                 if (zapRequest != null) {
                     if (noteEvent.zapRequest?.isPrivateZap() == true) {
@@ -608,7 +608,7 @@ class NotificationFeedFilter(
 
         // Reactions/zaps/reposts target a note via `replyTo`, not via thread-root tags,
         // so isNotInMutedThread on the wrapper event misses them.
-        if (noteEvent is ReactionEvent || noteEvent is LnZapEvent || noteEvent is Bolt12ZapEvent ||
+        if (noteEvent is ReactionEvent || noteEvent is ZapReceiptEvent || noteEvent is Bolt12ZapEvent ||
             noteEvent is RepostEvent || noteEvent is GenericRepostEvent
         ) {
             val target = it.replyTo?.lastOrNull()
@@ -679,11 +679,11 @@ class NotificationFeedFilter(
         // relevance check (tagsAnEventByUser is skipped below); it still scopes
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
-            (noteEvent is LnZapEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
+            (noteEvent is ZapReceiptEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || isConcord || isReactionToMe || isThreadReplyToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe || isThreadReplyToMe) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
-            (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
+            (noteEvent !is EncryptedDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
             // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
             // otherwise need my target message already loaded to resolve replyTo.

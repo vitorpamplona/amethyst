@@ -36,8 +36,8 @@ import com.vitorpamplona.amethyst.commons.resources.login_bunker_not_supported
 import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_supported
 import com.vitorpamplona.amethyst.commons.resources.password_is_required
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
 @Stable
 class LoginViewModel : ViewModel() {

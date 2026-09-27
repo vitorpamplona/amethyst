@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
@@ -130,6 +131,24 @@ fun RenderEncryptedMediaV2(
     Amethyst.instance.keyCache.add(url, cipher, reference.mediaType)
 
     val description = event.alt()
+
+    // Audio would otherwise fall to the video branch below and play on a
+    // picture-less video surface. MIP-04 carries no waveform, so the player
+    // shows its transport without bars — still the voice UI rather than a
+    // video one.
+    if (RichTextParser.isAudioContent(reference.mediaType, url)) {
+        RenderAudioWithWaveform(
+            mediaUrl = url,
+            title = description,
+            mimeType = reference.mediaType,
+            waveform = null,
+            note = note,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+        return
+    }
+
     val dim = reference.dim?.let { DimensionTag.parse(it) }
     val content by remember(reference) {
         mutableStateOf<BaseMediaContent>(
@@ -236,6 +255,21 @@ private fun RenderMip04Content(
     Amethyst.instance.keyCache.add(meta.url, cipher, meta.mimeType)
 
     val description = note.event?.alt()
+
+    // Same reason as the reference path above.
+    if (RichTextParser.isAudioContent(meta.mimeType, meta.url)) {
+        RenderAudioWithWaveform(
+            mediaUrl = meta.url,
+            title = description,
+            mimeType = meta.mimeType,
+            waveform = null,
+            note = note,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+        return
+    }
+
     val isImage = meta.mimeType.startsWith("image/") || RichTextParser.isImageUrl(meta.url)
     val dim = meta.dimensions?.let { DimensionTag.parse(it) }
 

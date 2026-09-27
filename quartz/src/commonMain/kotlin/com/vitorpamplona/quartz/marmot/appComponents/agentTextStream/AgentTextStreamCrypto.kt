@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents.agentTextStream
 
-import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 
 /**

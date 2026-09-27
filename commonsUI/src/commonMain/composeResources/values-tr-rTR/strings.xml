@@ -71,7 +71,7 @@
     <string name="scan_qr">QR Tara</string>
     <string name="show_anyway">Yine De Göster</string>
     <string name="post_was_hidden">Bu gönderi, gizlediğiniz kullanıcıları veya kelimeleri içerdiği için gizlendi</string>
-    <string name="post_was_flagged_as_inappropriate_by">Gönderi uygun değil olarak işaretlendi tarafından: </string>
+    <string name="post_was_flagged_as_inappropriate_by">Gönderi uygun değil olarak işaretlendi tarafından:</string>
     <string name="post_not_found">Gönderi bulunamadı</string>
     <string name="channel_image">Kanal Resmi</string>
     <string name="referenced_event_not_found">Referanslı etkinlik bulunamadı</string>
@@ -272,15 +272,8 @@
     <string name="mark_all_known_as_read">Tüm bilinenleri okundu olarak işaretle</string>
     <string name="mark_all_new_as_read">Tüm yenileri okundu olarak işaretle</string>
     <string name="mark_all_as_read">Tümünü okundu olarak işaretle</string>
-    <string name="account_backup_tips2_md">        ## Anahtar Yedekleme ve Güvenlik İpuçları
-        \n\nHesabınız bir gizli anahtarla korunmaktadır. Anahtar, **nsec1** ile başlayan uzun bir karakter dizisidir. Bu gizli anahtara erişimi olan herkes kimliğiniz adına gönderi yapabilir ve kimliğinizi değiştirebilir.
-        \n\n- Gizli anahtarınızı güvenmediğiniz herhangi bir web sitesine veya yazılıma **koymayın**.
-        \n- Amethyst geliştiricileri gizli anahtarınızı **asla** istemez.
-        \n- Hesap kurtarma için gizli anahtarınızın güvenli bir yedeğini **alın**. Bir parola yöneticisi kullanmanızı öneririz.
-    </string>
-    <string name="account_backup_tips3_md">        Ek güvenlik için anahtarınızı bir parola ile şifreleyebilirsiniz. Bu anahtar **ncryptsec1** ile başlar ve parolanız olmadan kullanılamaz.
-        \n\nParolanızı kaybederseniz anahtarınızı kurtaramazsınız.
-    </string>
+    <string name="account_backup_tips2_md">## Anahtar Yedekleme ve Güvenlik İpuçları \n\nHesabınız bir gizli anahtarla korunmaktadır. Anahtar, **nsec1** ile başlayan uzun bir karakter dizisidir. Bu gizli anahtara erişimi olan herkes kimliğiniz adına gönderi yapabilir ve kimliğinizi değiştirebilir. \n\n- Gizli anahtarınızı güvenmediğiniz herhangi bir web sitesine veya yazılıma **koymayın**. \n- Amethyst geliştiricileri gizli anahtarınızı **asla** istemez. \n- Hesap kurtarma için gizli anahtarınızın güvenli bir yedeğini **alın**. Bir parola yöneticisi kullanmanızı öneririz.</string>
+    <string name="account_backup_tips3_md">Ek güvenlik için anahtarınızı bir parola ile şifreleyebilirsiniz. Bu anahtar **ncryptsec1** ile başlar ve parolanız olmadan kullanılamaz. \n\nParolanızı kaybederseniz anahtarınızı kurtaramazsınız.</string>
     <string name="encrypt_and_copy_my_secret_key">Gizli anahtarımı şifrele ve kopyala</string>
     <string name="badge_award_image_for">%1$s için rozet ödülü görseli</string>
     <string name="badge_award_image">"Rozet ödülü görseli</string>
@@ -966,9 +959,7 @@
     <string name="push_server_none_explainer">Push Bildirimlerini Devre Dışı Bırakır</string>
     <string name="push_server_uses_app_explainer">%1$s uygulamasını kullanır</string>
     <string name="push_server_install_app">Push Bildirim Kurulumu</string>
-    <string name="push_server_install_app_description">        Push bildirimleri almak için [Ntfy](https://ntfy.sh/) gibi [Unified Push](https://unifiedpush.org/) destekleyen herhangi bir uygulama yükleyin.
-        Yükledikten sonra, Ayarlar'da kullanmak istediğiniz uygulamayı seçin.
-    </string>
+    <string name="push_server_install_app_description">Push bildirimleri almak için [Ntfy](https://ntfy.sh/) gibi [Unified Push](https://unifiedpush.org/) destekleyen herhangi bir uygulama yükleyin. Yükledikten sonra, Ayarlar'da kullanmak istediğiniz uygulamayı seçin.</string>
     <string name="thread_title">Konu</string>
     <string name="send_the_seller_a_message">Satıcıya mesaj gönderin</string>
     <string name="hi_there_is_this_still_available">Merhaba, bu hâlâ mevcut mu?</string>
@@ -2024,15 +2015,7 @@
     <string name="could_not_fetch_invoice_from_details">%1$s'den fatura alınamadı: %2$s</string>
     <string name="could_not_open_the_compressed_file">Sıkıştırılmış dosya açılamadı</string>
     <string name="couldnt_find_nwc_wallets">Cüzdan bulunamadı</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst, Nostr Wallet Connect (NWC) destekleyen herhangi bir cüzdan uygulaması bulamadı.
-\n\nYapabilecekleriniz:
-\n\t1. NWC Desteğini Doğrulayın: Tercih ettiğiniz cüzdan uygulamasının Nostr Wallet Connect ile uyumlu olup olmadığını iki kez kontrol edin.
-\n\t2. Bağlantı Oluşturun: Cüzdan uygulamanıza gidin ve yeni bir NWC bağlantısı oluşturun.
-\n\t3. Amethyst'e Bağlayın: Cüzdanınız genellikle size üç seçenek sunar:
-\n\t\t3.1 Otomatik Bağlantı: Amethyst'i otomatik olarak açıp bağlamak için bir düğme. Öyleyse o düğmeye tıklayın, Amethyst'i açın ve yeni ekranda kaydet'e basın.
-\n\t\t3.2 Manuel Bağlantı: Doğrudan girmek için bu ekrandaki yapıştır simgesine tıklayabileceğiniz bir Bağlantı URI'si kopyalayın.
-\n\t\t3.3 QR Kodu: Cüzdan, bu ekrandaki QR kodu düğmesiyle okuyabileceğiniz bir QR kodu oluşturur.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst, Nostr Wallet Connect (NWC) destekleyen herhangi bir cüzdan uygulaması bulamadı. \n\nYapabilecekleriniz: \n\t1. NWC Desteğini Doğrulayın: Tercih ettiğiniz cüzdan uygulamasının Nostr Wallet Connect ile uyumlu olup olmadığını iki kez kontrol edin. \n\t2. Bağlantı Oluşturun: Cüzdan uygulamanıza gidin ve yeni bir NWC bağlantısı oluşturun. \n\t3. Amethyst'e Bağlayın: Cüzdanınız genellikle size üç seçenek sunar: \n\t\t3.1 Otomatik Bağlantı: Amethyst'i otomatik olarak açıp bağlamak için bir düğme. Öyleyse o düğmeye tıklayın, Amethyst'i açın ve yeni ekranda kaydet'e basın. \n\t\t3.2 Manuel Bağlantı: Doğrudan girmek için bu ekrandaki yapıştır simgesine tıklayabileceğiniz bir Bağlantı URI'si kopyalayın. \n\t\t3.3 QR Kodu: Cüzdan, bu ekrandaki QR kodu düğmesiyle okuyabileceğiniz bir QR kodu oluşturur.</string>
     <string name="create">Oluştur</string>
     <string name="d">g</string>
     <string name="danger_zone">Tehlike Bölgesi</string>
@@ -2677,11 +2660,8 @@
     <string name="proxy_section">Proxy Relay'leri</string>
     <string name="proxy_section_explainer">Uygulamanın akışlarınızı indirmek için kullanması gereken filter.nostr.wine gibi toplayıcı relay'ler. Bu, giden kutusu modelinin yerini alır ve uygulamanın yalnızca listelerinizdeki relay'lere bağlanmasını sağlar.</string>
     <string name="public_chat">Herkese Açık Chat</string>
-    <string name="public_chat_explainer">Genel sohbetler Nostr'daki herkese görünürdür ve herkes
-        katılabilir. Belirli konular etrafında açık topluluklar için idealdirler.
-        Moderasyon, relay'lerindeki gönderilerin silinmesiyle kontrol edilebilir</string>
-    <string name="public_chat_relays_explainer">Bu grubu barındıran 1–3 relay ekleyin.
-        Nostr istemcileri mesajları nereden indireceğini ve mesajlarınızı nereye göndereceğini öğrenmek için bu ayarı kullanır.</string>
+    <string name="public_chat_explainer">Genel sohbetler Nostr'daki herkese görünürdür ve herkes katılabilir. Belirli konular etrafında açık topluluklar için idealdirler. Moderasyon, relay'lerindeki gönderilerin silinmesiyle kontrol edilebilir</string>
+    <string name="public_chat_relays_explainer">Bu grubu barındıran 1–3 relay ekleyin. Nostr istemcileri mesajları nereden indireceğini ve mesajlarınızı nereye göndereceğini öğrenmek için bu ayarı kullanır.</string>
     <string name="public_chat_relays_title">relay'ler</string>
     <string name="public_chat_title">Genel Sohbet Meta Verisi</string>
     <string name="public_chats">Genel Sohbetler</string>
@@ -2706,10 +2686,7 @@
     <string name="read_only_user">Salt okunur kullanıcı</string>
     <string name="record_a_message_description">Sesli mesaj kaydetmek için tıklayıp basılı tutun</string>
     <string name="relay_chat">relay Sohbeti</string>
-    <string name="relay_chat_explainer">relay sohbetleri, ana relay'leri tarafından kontrol edilen sohbet gruplarıdır.
-        Nostr'daki herkese görünürdür ve herkes katılabilir.
-        Belirli konular etrafında açık topluluklar için idealdirler. Bu grupların bir kısmı geçici niteliktedir
-    ve bu nedenle sohbet mesajları zamanla silinir</string>
+    <string name="relay_chat_explainer">relay sohbetleri, ana relay'leri tarafından kontrol edilen sohbet gruplarıdır. Nostr'daki herkese görünürdür ve herkes katılabilir. Belirli konular etrafında açık topluluklar için idealdirler. Bu grupların bir kısmı geçici niteliktedir ve bu nedenle sohbet mesajları zamanla silinir</string>
     <string name="relay_chat_title">relay Sohbetleri</string>
     <string name="relay_management_tab_events">Etkinlikler</string>
     <string name="relay_management_tab_ips">IP'ler</string>
@@ -2948,4 +2925,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s adresindeki alıcının Lightning hizmeti kullanılamıyor. Bu adres "%2$s" Lightning adresinden hesaplandı. Hata: %3$s. Sunucunun çalışıp çalışmadığını ve Lightning adresinin doğru olup olmadığını kontrol edin.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s adresinden Lightning faturası oluşturulamadı: Sonuçtaki JSON'da pr öğesi bulunamadı.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning faturası oluşturulamadı. %1$s'den gelen mesaj: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

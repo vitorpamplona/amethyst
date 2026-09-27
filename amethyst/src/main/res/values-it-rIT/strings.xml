@@ -176,6 +176,9 @@
     <string name="boost">Condividi</string>
     <string name="voice_post">Post vocale</string>
     <string name="voice_reply">Risposta vocale</string>
+    <!-- Emoji packs -->
+    <!-- My Fitness: the signed-in user's own training summary. Android resource because
+         NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Messaggio privato</string>
     <string name="nest_notification_channel_description">Mantiene l\'audio attivo mentre una stanza è aperta.</string>
     <string name="nest_notification_listening">Nest connesso</string>

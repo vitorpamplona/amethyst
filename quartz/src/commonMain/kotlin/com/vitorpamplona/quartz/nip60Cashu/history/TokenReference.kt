@@ -43,9 +43,11 @@ data class TokenReference(
         const val MARKER_REDEEMED = "redeemed"
 
         fun parseFromTag(tag: Array<String>): TokenReference? {
-            if (tag.size < 4 || tag[0] != "e") return null
+            // Same id rule as ETag.parse, so redeemedReferences() and the NIP-61
+            // redeemedNutzaps() agree on which tags are valid.
+            if (tag.size < 4 || tag[0] != "e" || tag[1].length != 64) return null
             val marker = tag[3]
-            if (marker !in listOf(MARKER_CREATED, MARKER_DESTROYED, MARKER_REDEEMED)) return null
+            if (marker != MARKER_CREATED && marker != MARKER_DESTROYED && marker != MARKER_REDEEMED) return null
             return TokenReference(
                 eventId = tag[1],
                 relay = tag.getOrNull(2)?.ifEmpty { null },

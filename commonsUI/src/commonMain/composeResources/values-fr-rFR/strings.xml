@@ -220,7 +220,7 @@
     <string name="copy_user_id">Copier l'ID utilisateur</string>
     <string name="unblock_user">Débloquer l'utilisateur</string>
     <string name="user_is_blocked_hidden">Cet utilisateur est bloqué/muet. Ses publications sont masquées.</string>
-    <string name="npub_hex_username">npub, hex, nom d'utilisateur </string>
+    <string name="npub_hex_username">npub, hex, nom d'utilisateur</string>
     <string name="clear">Nettoyer</string>
     <string name="app_logo">Logo de l'App</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
@@ -268,15 +268,8 @@
     <string name="mark_all_known_as_read">Marquer tous les Connus comme lu</string>
     <string name="mark_all_new_as_read">Marquer tous les Nouveaux comme lu</string>
     <string name="mark_all_as_read">Tout marquer comme lu</string>
-    <string name="account_backup_tips2_md">        ## Sauvegarde des Clés et Conseils de Sécurité
-        \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue séquence de caractères commençant par **nsec1**. Toute personne ayant accès à cette clé secrète peut publier et modifier votre identité.
-        \n\n- Ne mettez **pas** votre clé secrète sur un site web ou un logiciel auquel vous ne faites pas confiance.
-        \n- Les développeurs d'Amethyst ne vous demanderont **jamais** votre clé secrète.
-        \n- **Faites** une sauvegarde sécurisée de votre clé secrète pour la récupération de votre compte. Nous vous recommandons d'utiliser un gestionnaire de mots de passe.
-    </string>
-    <string name="account_backup_tips3_md">        Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe.
-        \n\nSi vous perdez votre mot de passe, vous ne pourrez pas récupérer votre clé.
-    </string>
+    <string name="account_backup_tips2_md">## Sauvegarde des Clés et Conseils de Sécurité \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue séquence de caractères commençant par **nsec1**. Toute personne ayant accès à cette clé secrète peut publier et modifier votre identité. \n\n- Ne mettez **pas** votre clé secrète sur un site web ou un logiciel auquel vous ne faites pas confiance. \n- Les développeurs d'Amethyst ne vous demanderont **jamais** votre clé secrète. \n- **Faites** une sauvegarde sécurisée de votre clé secrète pour la récupération de votre compte. Nous vous recommandons d'utiliser un gestionnaire de mots de passe.</string>
+    <string name="account_backup_tips3_md">Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe. \n\nSi vous perdez votre mot de passe, vous ne pourrez pas récupérer votre clé.</string>
     <string name="encrypt_and_copy_my_secret_key">Chiffrer et copier ma clé secrète</string>
     <string name="badge_award_image_for">Image de badge pour %1$s</string>
     <string name="badge_award_image">Image du badge de récompense</string>
@@ -905,7 +898,7 @@
     <string name="max_subs">Souscription maximale</string>
     <string name="max_filters_per_sub">Nombre maximum de filtres par sub</string>
     <string name="max_limit_events_returning">Limite Max (Renvoi des Évènements)</string>
-    <string name="max_subid_length">Longueur maximale du SubID </string>
+    <string name="max_subid_length">Longueur maximale du SubID</string>
     <string name="cashu_mint_label">Mint : %1$s</string>
     <string name="cashu_redeem">Échanger</string>
     <string name="cashu_copy_token">Copier le Jeton</string>
@@ -1039,9 +1032,7 @@
     <string name="push_server_none_explainer">Désactive les Notifications Push</string>
     <string name="push_server_uses_app_explainer">Utilise l'application %1$s</string>
     <string name="push_server_install_app">Configuration des Notifications Push</string>
-    <string name="push_server_install_app_description">        Pour recevoir des notifications push, installez n'importe quelle application qui supporte les [Unified Push](https://unifiedpush.org/), tel que [Ntfy](https://ntfy.sh/).
-        Après installation, sélectionnez l'application que vous voulez utiliser dans les Paramètres.
-    </string>
+    <string name="push_server_install_app_description">Pour recevoir des notifications push, installez n'importe quelle application qui supporte les [Unified Push](https://unifiedpush.org/), tel que [Ntfy](https://ntfy.sh/). Après installation, sélectionnez l'application que vous voulez utiliser dans les Paramètres.</string>
     <string name="thread_title">Fil de discussion</string>
     <string name="send_the_seller_a_message">Envoyer un message au vendeur</string>
     <string name="hi_there_is_this_still_available">Bonjour, est-ce toujours disponible ?</string>
@@ -2883,11 +2874,8 @@
     <string name="proxy_section">Relais Proxy</string>
     <string name="proxy_section_explainer">Relais agrégateurs que l'application doit utiliser pour télécharger vos flux, tels que filter.nostr.wine. Cela remplace le modèle de boîte d'envoi et permettra à l'application de se connecter uniquement aux relais de vos listes.</string>
     <string name="public_chat">Chat public</string>
-    <string name="public_chat_explainer">Les conversations publiques sont visibles pour tout le monde sur Nostr et n'importe qui
-        peut y participer. Elles sont idéales pour les communautés ouvertes autour de sujets spécifiques.
-        La modération peut être contrôlée en supprimant les messages sur ses relais</string>
-    <string name="public_chat_relays_explainer">Insérez entre 1 et 3 relais qui hébergent ce groupe.
-         Les clients Nostr utilisent ce paramètre pour savoir où télécharger les messages et où les envoyer.</string>
+    <string name="public_chat_explainer">Les conversations publiques sont visibles pour tout le monde sur Nostr et n'importe qui peut y participer. Elles sont idéales pour les communautés ouvertes autour de sujets spécifiques. La modération peut être contrôlée en supprimant les messages sur ses relais</string>
+    <string name="public_chat_relays_explainer">Insérez entre 1 et 3 relais qui hébergent ce groupe. Les clients Nostr utilisent ce paramètre pour savoir où télécharger les messages et où les envoyer.</string>
     <string name="public_chat_relays_title">Relais</string>
     <string name="public_chat_title">Métadonnées de tchat public</string>
     <string name="public_chats">Chats publics</string>
@@ -2912,10 +2900,7 @@
     <string name="read_only_user">Utilisateur en lecture seule</string>
     <string name="record_a_message_description">Cliquez et maintenez pour enregistrer un message</string>
     <string name="relay_chat">Relais de discussion</string>
-    <string name="relay_chat_explainer">Les relais de discussions sont des groupes de discussion contrôlés par leur relais d'origine.
-          Ils sont visibles par tous les utilisateurs de Nostr et tout le monde peut y participer.
-          Ils sont idéaux pour les communautés ouvertes autour de sujets spécifiques. Certains de ces groupes sont éphémères
-    et, par conséquent, les messages de discussion disparaissent avec le temps</string>
+    <string name="relay_chat_explainer">Les relais de discussions sont des groupes de discussion contrôlés par leur relais d'origine. Ils sont visibles par tous les utilisateurs de Nostr et tout le monde peut y participer. Ils sont idéaux pour les communautés ouvertes autour de sujets spécifiques. Certains de ces groupes sont éphémères et, par conséquent, les messages de discussion disparaissent avec le temps</string>
     <string name="relay_chat_title">Relais de discussions</string>
     <string name="relay_group_flag_private">Privé</string>
     <string name="relay_management_tab_events">Événements</string>
@@ -3157,4 +3142,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Le service lightning du récepteur à %1$s n'est pas disponible. Il a été calculé à partir de l'adresse lightning "%2$s". Erreur: %3$s. Vérifiez si le serveur est en ligne et si l'adresse lightning est correcte</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Impossible de créer une facture lightning avec %1$s. Élément pr introuvable dans le JSON résultant.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Impossible de créer une facture lightning. Message de %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

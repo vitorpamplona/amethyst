@@ -473,13 +473,8 @@
     <string name="mark_all_known_as_read">Označit všechny známé jako přečtené</string>
     <string name="mark_all_new_as_read">Označit všechny nové jako přečtené</string>
     <string name="mark_all_as_read">Označit všechny jako přečtené</string>
-    <string name="account_backup_tips2_md">    ## Tipy pro zálohování klíčů a bezpečnost
-    \n\nVaše konto je zabezpečeno tajným klíčem. Klíč je dlouhá posloupnost znaků začínající s **nsec1**. Kdo má přístup k tomuto tajnému klíči, může přispívat a měnit vaši identitu.
-    \n\n- **Nedávejte** svůj tajný klíč na žádnou webovou stránku nebo do žádného softwaru, kterému nedůvěřujete.
-    \n- Vývojáři Amethystu nikdy **nebudou** žádat o váš tajný klíč.
-    \n- **Udržujte** bezpečnou zálohu vašeho tajného klíče pro obnovení účtu. Doporučujeme použití správce hesel.</string>
-    <string name="account_backup_tips3_md">    Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla.
-    \n\nPokud zapomenete heslo, nebudete moci obnovit svůj klíč.</string>
+    <string name="account_backup_tips2_md">## Tipy pro zálohování klíčů a bezpečnost \n\nVaše konto je zabezpečeno tajným klíčem. Klíč je dlouhá posloupnost znaků začínající s **nsec1**. Kdo má přístup k tomuto tajnému klíči, může přispívat a měnit vaši identitu. \n\n- **Nedávejte** svůj tajný klíč na žádnou webovou stránku nebo do žádného softwaru, kterému nedůvěřujete. \n- Vývojáři Amethystu nikdy **nebudou** žádat o váš tajný klíč. \n- **Udržujte** bezpečnou zálohu vašeho tajného klíče pro obnovení účtu. Doporučujeme použití správce hesel.</string>
+    <string name="account_backup_tips3_md">Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla. \n\nPokud zapomenete heslo, nebudete moci obnovit svůj klíč.</string>
     <string name="backup_keys_nudge_title">Zálohujte si klíče</string>
     <string name="backup_keys_nudge_body">Váš tajný klíč je jediný způsob, jak se k tomuto účtu dostat. Pokud ho ztratíte, nelze ho už nikdy obnovit. Uložte si ho někam do bezpečí.</string>
     <string name="backup_keys_nudge_backup_now">Zálohovat nyní</string>
@@ -1598,9 +1593,7 @@
     <string name="push_server_none_explainer">Zakázat Push oznámení</string>
     <string name="push_server_uses_app_explainer">Použít aplikaci %1$s</string>
     <string name="push_server_install_app">Nastavení Push-oznámení</string>
-    <string name="push_server_install_app_description">        Pro příjem Push-oznámení nainstalujte libovolnou aplikaci, která podporuje [Unified Push](https://unifiedpush.org/), jako je [Ntfy](https://ntfy.sh/).
-        Po instalaci vyberte aplikaci kterou chcete používat v Nastavení.
-    </string>
+    <string name="push_server_install_app_description">Pro příjem Push-oznámení nainstalujte libovolnou aplikaci, která podporuje [Unified Push](https://unifiedpush.org/), jako je [Ntfy](https://ntfy.sh/). Po instalaci vyberte aplikaci kterou chcete používat v Nastavení.</string>
     <string name="thread_title">Vlákno</string>
     <string name="send_the_seller_a_message">Poslat prodejci zprávu</string>
     <string name="hi_there_is_this_still_available">Ahoj, je to stále k dispozici?</string>
@@ -3393,14 +3386,7 @@
     <string name="could_not_fetch_invoice_from_details">Nelze získat fakturu z %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Nepodařilo se otevřít komprimovaný soubor</string>
     <string name="couldnt_find_nwc_wallets">Peněženka nebyla nalezená</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst nenašel žádné aplikace peněženek, které podporují Nostr Wallet Connect (NWC).
-\n\nCo můžete udělat:
-\n\t1. Ověřte podporu NWC: Zkontrolujte, že vaše oblíbená peněženka podporuje Nostr Wallet Connect.
-\n\t2. Vytvořte připojení: Otevřete svou peněženku a vytvořte nové NWC připojení.
-\n\t3. Propojte s Amethyst: Vaše peněženka obvykle nabídne tři možnosti:
-\n\t\t3.1 Automatické propojení: Tlačítko pro automatické otevření a připojení k Amethyst. Klikněte na něj, otevřete Amethyst a uložte na nové obrazovce.
-\n\t\t3.2 Ruční propojení: URI připojení, které můžete zkopírovat a vložit přes ikonu vložení na této obrazovce.
-\n\t\t3.3 QR kód: Peněženka vytvoří QR kód, který můžete naskenovat pomocí tlačítka QR kódu na této obrazovce.</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nenašel žádné aplikace peněženek, které podporují Nostr Wallet Connect (NWC). \n\nCo můžete udělat: \n\t1. Ověřte podporu NWC: Zkontrolujte, že vaše oblíbená peněženka podporuje Nostr Wallet Connect. \n\t2. Vytvořte připojení: Otevřete svou peněženku a vytvořte nové NWC připojení. \n\t3. Propojte s Amethyst: Vaše peněženka obvykle nabídne tři možnosti: \n\t\t3.1 Automatické propojení: Tlačítko pro automatické otevření a připojení k Amethyst. Klikněte na něj, otevřete Amethyst a uložte na nové obrazovce. \n\t\t3.2 Ruční propojení: URI připojení, které můžete zkopírovat a vložit přes ikonu vložení na této obrazovce. \n\t\t3.3 QR kód: Peněženka vytvoří QR kód, který můžete naskenovat pomocí tlačítka QR kódu na této obrazovce.</string>
     <string name="create">Vytvořit</string>
     <string name="d">d</string>
     <string name="danger_zone">Nebezpečná zóna</string>
@@ -4611,11 +4597,8 @@
     <string name="proxy_section">Proxy přenašeče</string>
     <string name="proxy_section_explainer">Agregační přenašeče, které aplikace používá ke stahování vašich zdrojů, jako např. filter.nostr.wine</string>
     <string name="public_chat">Veřejný chat</string>
-    <string name="public_chat_explainer">Veřejné konverzace jsou viditelné pro všechny na Nostru a kdokoli
-        se na nich může podílet. Jsou skvělé pro otevřené komunity kolem konkrétních témat.
-        Moderaci lze ovládat smazáním příspěvků na relé</string>
-    <string name="public_chat_relays_explainer">Vložte mezi 1–3 relé, které hostí tuto skupinu.
-        Klienti Nostr používají toto nastavení, aby věděli, kam stahovat zprávy a odesílat zprávy.</string>
+    <string name="public_chat_explainer">Veřejné konverzace jsou viditelné pro všechny na Nostru a kdokoli se na nich může podílet. Jsou skvělé pro otevřené komunity kolem konkrétních témat. Moderaci lze ovládat smazáním příspěvků na relé</string>
+    <string name="public_chat_relays_explainer">Vložte mezi 1–3 relé, které hostí tuto skupinu. Klienti Nostr používají toto nastavení, aby věděli, kam stahovat zprávy a odesílat zprávy.</string>
     <string name="public_chat_relays_title">Rele</string>
     <string name="public_chat_title">Metadata veřejného chatu</string>
     <string name="public_chats">Veřejné chaty</string>
@@ -4684,10 +4667,7 @@
     <string name="relay_auth_search_keywords">auth autentizace relay podepsat ověřit nip-42 identita</string>
     <string name="relay_auth_settings_title">Autentizace relay</string>
     <string name="relay_chat">Relé chat</string>
-    <string name="relay_chat_explainer">Relay chaty jsou chatové skupiny ovládané jejich domácí relé.
-        Jsou viditelné pro všechny na Nostru a každý se jich může zúčastnit.
-        Jsou skvělé pro otevřené komunity kolem konkrétních témat. Některé z těchto skupin jsou efemérní
-    a proto zprávy časem mizí</string>
+    <string name="relay_chat_explainer">Relay chaty jsou chatové skupiny ovládané jejich domácí relé. Jsou viditelné pro všechny na Nostru a každý se jich může zúčastnit. Jsou skvělé pro otevřené komunity kolem konkrétních témat. Některé z těchto skupin jsou efemérní a proto zprávy časem mizí</string>
     <string name="relay_chat_title">Relé chaty</string>
     <string name="relay_explain_account_data">Váš vlastní profil, nastavení a koncepty na vašich domovských relayích.</string>
     <string name="relay_explain_community_chats">Relaye, na které každá komunita publikuje své roviny.</string>
@@ -5148,4 +5128,15 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Služba blesku příjemce v %1$s není k dispozici. Byla vypočtena z adresy blesku "%2$s". Chyba: %3$s. Zkontrolujte, zda je server aktivní a zda je adresa blesku správná</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nelze vytvořit bleskovou fakturu z %1$s: Prvek pr nebyl nalezen ve výsledném JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nelze vytvořit bleskovou fakturu. Zpráva od %1$s: %2$s</string>
+    <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
+         The exposure strings state what the coordinator operator learns; see
+         spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <!-- cordn entries in the settings catalog and the Messages chat-type
+         list. Here rather than in amethyst/res because both screens read
+         them through Res. -->
+    <!-- cordn strings on screens main migrated to Res: the shared inbox row
+         and the new-conversation picker. -->
+    <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
+         one-shot handoff rather than continuous sync. The exposure strings say
+         what leaves the device; the fork strings say why the old phone stops. -->
 </resources>

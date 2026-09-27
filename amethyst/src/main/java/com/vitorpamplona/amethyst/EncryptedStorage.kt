@@ -24,6 +24,39 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
+/**
+ * The legacy encrypted preference files, and a permanent read-only migration
+ * source.
+ *
+ * # This class cannot be deleted
+ *
+ * Every migration in the preference layer is *lazy*: it reads the legacy store
+ * at the moment it runs, not when the app is installed. Nine of them come
+ * through here — the seven CopyOnceMigrations under LocalPreferences plus the
+ * key, secret and roster stores.
+ *
+ * So deleting this class does not only affect installs that have not upgraded
+ * yet. It strands anyone who **skips** the release that introduced the new
+ * stores: they move from a pre-migration build straight to a post-deletion one,
+ * the migration runs against a reader that no longer exists, and their keys,
+ * accounts, wallets and settings sit encrypted on disk with nothing able to
+ * read them. The app opens as a fresh install. That is not rare — auto-update
+ * off, the F-Droid cadence, or a restore from backup all skip releases.
+ *
+ * What *can* go, once the new path has shipped and held, is the legacy
+ * **writes**. Dropping those stops new data landing here while this stays able
+ * to read what is already here. The `androidx.security.crypto` dependency has
+ * to stay for as long as this does; it is an unmaintained-library risk rather
+ * than an active vulnerability, and a far smaller cost than stranding users.
+ *
+ * # Before any legacy file is deleted
+ *
+ * Deletion is only safe for an account whose every key has been migrated, and
+ * that is not yet true — see `amethyst/plans/2026-09-23-encrypted-storage-retirement.md`
+ * for what is still outstanding. NOSTR_PUBKEY is the one to watch: without it
+ * `loadAccountConfigFromEncryptedStorage` returns null and the account
+ * disappears whether or not its private key survived.
+ */
 class EncryptedStorage {
     companion object {
         private const val PREFERENCES_NAME = "secret_keeper"
