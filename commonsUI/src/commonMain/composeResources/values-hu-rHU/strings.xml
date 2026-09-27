@@ -545,7 +545,6 @@
     <string name="relays"> Átjátszó</string>
     <string name="website">Weboldal</string>
     <string name="lightning_address">Lightning-cím</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Az Nsec azonosítót (az Ön „jelszavát”) a vágólapra másolja biztonsági mentés céljából</string>
     <string name="send_a_direct_message">Közvetlen üzenet küldése</string>
     <string name="edits_the_user_s_metadata">Felhasználó metaadatainak szerkesztése</string>
     <string name="unblock">Letiltás megszüntetése</string>
@@ -654,14 +653,11 @@
     <string name="mark_all_known_as_read">Az összes ismert megjelölése olvasottként</string>
     <string name="mark_all_new_as_read">Az összes új üzenet megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
-    <string name="account_backup_tips2_md">## Kulcs- és biztonsági mentési tippek \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-vel kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet. \n\n- **Ne** helyezze el a titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik. \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni. \n- A fiókja helyrehozása érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.</string>
-    <string name="account_backup_tips3_md">A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható. \n\nHa elveszíti a jelszavát, nem tudja helyrehozni a kulcsát.</string>
     <string name="backup_keys_nudge_title">Biztonsági mentés készítése a kulcsokról</string>
     <string name="backup_keys_nudge_body">A titkos kulcs megadása az egyetlen módja a fiók elérésének. Ha elveszíti, akkor soha nem tudja helyrehozni. Mentse el biztonságos helyre most.</string>
     <string name="backup_keys_nudge_backup_now">Biztonsági mentés most</string>
     <string name="backup_keys_nudge_already_saved">Elmentettem a kulcsokat</string>
     <string name="backup_keys_nudge_dismiss">Eltüntetés</string>
-    <string name="encrypt_and_copy_my_secret_key">Saját titkos kulcs titkosítása és másolása</string>
     <string name="badge_award_image_for">Kitűző %1$s számára</string>
     <string name="badge_award_image">Kitűző képe</string>
     <string name="new_badge_award_notif">Ön egy új kitűzőt kapott</string>
@@ -3577,7 +3573,6 @@
     <string name="copied_note_text_to_clipboard">Bejegyzés szövege a vágólapra másolva</string>
     <string name="copied_to_clipboard">Vágólapra másolva</string>
     <string name="copied_user_id_to_clipboard">A szerző @npub-ja a vágólapra másolva</string>
-    <string name="copy_my_secret_key">Saját titkos kulcs másolása</string>
     <string name="copy_to_clipboard">Másolás a vágólapra</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nem sikerült az LN-webcímet a(z) „%1$s” Lightning-címről összeállítani. Ellenőrizze a felhasználó beállításait</string>
     <string name="could_not_check_downloaded_file">Nem lehetett ellenőrizni a letöltött fájlt a feltöltés után: %1$s</string>
@@ -5040,10 +5035,8 @@
     <string name="share_hls_video">HLS-feltöltés</string>
     <string name="share_or_save">Megosztás vagy mentés</string>
     <string name="shorts">Rövidek</string>
-    <string name="show_encrypted_private_key_qr_code">Jelszóval védett privát kulcs megjelenítése QR-kódként</string>
     <string name="show_messages_in_notifications_setting_description">Közvetlen és csoportos üzenetek megjelenítése az Értesítések lapon. Kapcsolja ki, ha az üzeneteket csak az Üzenetek lapon szeretné látni.</string>
     <string name="show_messages_in_notifications_setting_title">Üzenetek megjelenítése</string>
-    <string name="show_private_key_qr_code">Privát kulcs megjelenítése QR-kódként</string>
     <string name="sign_request_rejected2">Aláírási kérés elutasítva</string>
     <string name="sign_request_rejected_description">Győződjön meg arról, hogy ezt a tranzakciót az aláíró-alkalmazás hitelesítette-e</string>
     <string name="signer_illegal_state_exception_description">A külső aláíró a kéréstől eltérő, szokatlan választ küldött. Lehet, hogy hiba lépett fel az Amethystben vagy az aláíró alkalmazásban.</string>

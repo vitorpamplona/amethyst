@@ -545,7 +545,6 @@
     <string name="relays"> पुनःप्रसारक</string>
     <string name="website">जालस्थान</string>
     <string name="lightning_address">लैटनिंग पता</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">एनसेक॰ सूचक (आपका गुप्त पारणशब्द) की अनुकृति करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
     <string name="send_a_direct_message">सीधा संदेश भेजें</string>
     <string name="edits_the_user_s_metadata">उपयोगकर्ता के उपतथ्य का सम्पादन करता है</string>
     <string name="unblock">बाधा हटाएँ</string>
@@ -654,14 +653,11 @@
     <string name="mark_all_known_as_read">सब ज्ञात को पढ लिया चिह्नित करें</string>
     <string name="mark_all_new_as_read">सब नये को पढ लिया चिह्नित करें</string>
     <string name="mark_all_as_read">सब को पढ लिया चिह्नित करें</string>
-    <string name="account_backup_tips2_md">## कुंचिका सुरक्षार्थ अनुकृति तथा सुरक्षा सुझाव \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशित कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा। \n\n- आपकी गुप्त कुंचिका किसी भी जालस्थान अथवा क्रमक में **ना** डालें जिसपर आपका विश्वास ना हो। \n- अमेथिस्ट क्रमलेख विकासकर्ता आपकी गुप्त कुंचिका **कभी नहीं** पूछेंगे। \n- आपकी गुप्त कुंचिका की एक सुरक्षित अनुकृति **अवश्य** रखें अपनी लेखा पुनः प्राप्त करने के लिए। पारणशब्ध प्रबंधन क्रमक की पुनः प्रशंसा करते हैं।</string>
-    <string name="account_backup_tips3_md">अधिक सुरक्षा के लिए आप अपनी कुंचिका का रहस्यीकरण कर सकते हैं एक पारणशब्द के साथ। यह कुंचिका आरम्भ होगी **ncryptsec1** से तथा पारणशब्द के बिना प्रयोग साध्य नहीं। \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।</string>
     <string name="backup_keys_nudge_title">अपने कुंचिकाओं को सुरक्षित रखें</string>
     <string name="backup_keys_nudge_body">आपकी गुप्त कुंचिका एकमात्र विधि है इस लेखा का अभिगमन करने के लिए। यदि आप इसे खो देते हैं तो इसे कभी भी पुनःप्राप्त नहीं कर सकते। इसे कहीं सुरक्षित रखें अभी इस समय।</string>
     <string name="backup_keys_nudge_backup_now">अभी इसी समय सुरक्षित अनुकृति बनाएँ</string>
     <string name="backup_keys_nudge_already_saved">उनको मैंने सुरक्षित कर लिया</string>
     <string name="backup_keys_nudge_dismiss">हटाएँ</string>
-    <string name="encrypt_and_copy_my_secret_key">मेरी गुप्त कुंचिका का रहस्यीकरण तथा अनुकृति करें</string>
     <string name="badge_award_image_for">पदक पुरस्कार चित्र %1$s के लिए</string>
     <string name="badge_award_image">"पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
@@ -3577,7 +3573,6 @@
     <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति की गई टाँकाफलक में</string>
     <string name="copied_to_clipboard">टाँकाफलक में अनुकृत</string>
     <string name="copied_user_id_to_clipboard">लेखक के @npub की अनुकृति की गई टाँकाफलक में</string>
-    <string name="copy_my_secret_key">मेरी गुप्त कुंचिका की अनुकृति करें</string>
     <string name="copy_to_clipboard">टाँकाफलक में अनुकृति करें</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">लै॰जालपता नहीं बना पाए लै॰पता "%1$s" से। उपयोगकर्ता की स्थापना की जाँच करें</string>
     <string name="could_not_check_downloaded_file">आरोहण पश्चात अवरोहित अभिलेख की जाँच नहीं हो सकी : %1$s</string>
@@ -5040,10 +5035,8 @@
     <string name="share_hls_video">एचएलएस॰ आरोहण</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
     <string name="shorts">लघु चलचित्र</string>
-    <string name="show_encrypted_private_key_qr_code">रहस्यीकृत निजी कुंचिका क्यूआर॰ चित्र अक्षरराशि दिखाएँ</string>
     <string name="show_messages_in_notifications_setting_description">सूचनाएँ पृष्ठ पर सीधे तथा समूह सन्देशों को समाविष्ट करें। निष्क्रिय करें यदि सन्देशों को केवल सन्देश पृष्ठ में रखना चाहते हों तो।</string>
     <string name="show_messages_in_notifications_setting_title">सन्देशों को दिखाएँ</string>
-    <string name="show_private_key_qr_code">निजी कुंचिका क्यूआर॰ चित्र अक्षरराशि दिखाएँ</string>
     <string name="sign_request_rejected2">हस्ताक्षर अनुरोध अस्वीकृत</string>
     <string name="sign_request_rejected_description">सुनिश्चित करें हस्ताक्षर क्रमक ने इस व्यापार को अनुमति दिया</string>
     <string name="signer_illegal_state_exception_description">बाहरी हस्ताक्षरकर्ता द्वारा दिया गया उत्तर विचित्र है अनुरोध के लिए। अमेथिस्ट अथवा हस्ताक्षरकर्ता में कुछ दोष हो सकता है।</string>

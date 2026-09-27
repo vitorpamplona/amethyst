@@ -213,7 +213,6 @@
     <string name="number_reports">%1$s Ripoti</string>
     <string name="website">Tovuti</string>
     <string name="lightning_address">Anwani ya Umeme</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Hunakili Kitambulisho cha Nsec (nywila yako) kwenye ubao wa kunakili kwa ajili ya nakala rudufu</string>
     <string name="send_a_direct_message">Tuma Ujumbe wa Moja kwa Moja</string>
     <string name="edits_the_user_s_metadata">Huhariri Metadata ya Mtumiaji</string>
     <string name="unblock">Fungua</string>
@@ -268,9 +267,6 @@
     <string name="mark_all_known_as_read">Funga kama Zimejulikana</string>
     <string name="mark_all_new_as_read">Funga kama Mpya</string>
     <string name="mark_all_as_read">Funga kama Zimejulikana</string>
-    <string name="account_backup_tips2_md">## Vidokezo vya Nakala Rudufu ya Ufunguo na Usalama \n\nAkaunti yako inalindwa na ufunguo wa siri. Ufunguo ni mfululizo mrefu wa herufi unaoanza na **nsec1**. Mtu yeyote anayepata ufunguo huu wa siri anaweza kuchapisha na kubadilisha utambulisho wako. \n\n- **Usiweke** ufunguo wako wa siri katika tovuti yoyote au programu unayoitembelewa. \n- Watengenezaji wa Amethyst **hawatawahi** kuomba ufunguo wako wa siri. \n- **Hifadhi** nakala salama ya ufunguo wako wa siri kwa ajili ya kurejesha akaunti. Tunapendekeza kutumia kidhibiti cha nenosiri.</string>
-    <string name="account_backup_tips3_md">Kwa usalama zaidi, unaweza kusimba ufunguo wako kwa nenosiri. Ufunguo huu unaanza na **ncryptsec1** na hauwezi kutumika bila nenosiri lako. \n\nUkipoteza nenosiri lako, hutaweza kurejesha ufunguo wako.</string>
-    <string name="encrypt_and_copy_my_secret_key">Simba na nakili ufunguo wangu wa siri</string>
     <string name="badge_award_image_for">Picha ya tuzo ya alama kwa %1$s</string>
     <string name="badge_award_image">"Picha ya tuzo ya beji</string>
     <string name="new_badge_award_notif">Umepokea Tuzo Mpya ya Alama</string>
@@ -1999,7 +1995,6 @@
     <string name="copied_note_text_to_clipboard">Maudhui ya dokezo yamenakiliwa kwenye ubao wa kunakili</string>
     <string name="copied_to_clipboard">Imenakiliwa kwenye ubao wa kunakili</string>
     <string name="copied_user_id_to_clipboard">Imesakinishwa @npub ya mwandishi kwa ubao wa kunakili</string>
-    <string name="copy_my_secret_key">Nakili Ufunguo Wangu wa Siri</string>
     <string name="copy_to_clipboard">Nakili kwenye ubao wa kunakili</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Haikuweza kuunda LNUrl kutoka kwa Anwani ya Lightning "%1$s". Angalia mpangilio wa mtumiaji</string>
     <string name="could_not_check_downloaded_file">Haikuweza kukagua faili lililопakuliwa baada ya kupakia: %1$s</string>
@@ -2795,10 +2790,8 @@
     <string name="share_hls_video">Pakia HLS</string>
     <string name="share_or_save">Shiriki au Hifadhi</string>
     <string name="shorts">Mafupi</string>
-    <string name="show_encrypted_private_key_qr_code">Onyesha msimbo wa QR wa ufunguo wa siri uliofichwa</string>
     <string name="show_messages_in_notifications_setting_description">Jumuisha ujumbe wa moja kwa moja na wa kikundi kwenye kichupo cha Arifa. Zima ili kuweka ujumbe kwenye kichupo cha Ujumbe pekee.</string>
     <string name="show_messages_in_notifications_setting_title">Onyesha Ujumbe</string>
-    <string name="show_private_key_qr_code">Onyesha msimbo wa QR wa ufunguo wa siri</string>
     <string name="sign_request_rejected2">Ombi la kusaini limekataliwa</string>
     <string name="sign_request_rejected_description">Hakikisha programu ya kusaini imeidhinisha muamala huu</string>
     <string name="signer_illegal_state_exception_description">Msimamizi wa nje alirejesha data ya ajabu kwa ombi hili. Huenda kuna hitilafu katika Amethyst au Msimamizi.</string>

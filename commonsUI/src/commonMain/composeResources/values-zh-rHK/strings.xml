@@ -221,7 +221,6 @@
     <string name="relays">中繼</string>
     <string name="website">網站</string>
     <string name="lightning_address">閃電地址</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">複製 Nsec ID（您的私人密鑰）到剪貼板以備備份</string>
     <string name="send_a_direct_message">發送直接消息</string>
     <string name="edits_the_user_s_metadata">編輯用户元數據</string>
     <string name="unblock">不隱藏</string>
@@ -276,9 +275,6 @@
     <string name="mark_all_known_as_read">將所有已知內容標記為已讀</string>
     <string name="mark_all_new_as_read">將所有新內容標記為已讀</string>
     <string name="mark_all_as_read">將所有內容標記為已讀</string>
-    <string name="account_backup_tips2_md">## 备份与安全提示 \n\n你的帐户由一个私钥保护。私钥是以**nsec1**开头的随机字符串。任何拥有你的私钥的人都可以使用你的身份发布内容。 \n\n- **不要**将你的私钥添加到任何你不信任的网站或软件，亦不要在网上公开。 \n- Amethyst 开发人员**永远不会**要求你提供私钥。 \n- **请**保留你的私钥的安全备份，以备帐户恢复。我们建议使用密码管理器。</string>
-    <string name="account_backup_tips3_md">为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。 \n\n如果你丢失密码， 你将无法恢复你的密钥。</string>
-    <string name="encrypt_and_copy_my_secret_key">加密并复制我的密钥。</string>
     <string name="badge_award_image_for">頒發給 %1$s 的徽章圖片</string>
     <string name="badge_award_image">"徽章图片</string>
     <string name="new_badge_award_notif">您收到了新的徽章獎勵</string>
@@ -2020,7 +2016,6 @@
     <string name="copied_note_text_to_clipboard">文本已複製到剪貼板</string>
     <string name="copied_to_clipboard">已复制到剪贴板</string>
     <string name="copied_user_id_to_clipboard">複製作者的 @npub 到剪貼板</string>
-    <string name="copy_my_secret_key">複製我的私人密鑰</string>
     <string name="copy_to_clipboard">复制到剪贴板</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">无法从闪电地址集合LNURL"%1$s"。请检查用户设置</string>
     <string name="could_not_check_downloaded_file">无法检查经过上传后再下载的文件：%1$s</string>
@@ -2807,10 +2802,8 @@
     <string name="share_hls_video">HLS 上传</string>
     <string name="share_or_save">分享或保存</string>
     <string name="shorts">短视频</string>
-    <string name="show_encrypted_private_key_qr_code">显示加密私钥二维码</string>
     <string name="show_messages_in_notifications_setting_description">在通知选项卡上包含私信和群消息。如关闭只在消息选项卡中保留消息。</string>
     <string name="show_messages_in_notifications_setting_title">显示消息</string>
-    <string name="show_private_key_qr_code">显示私钥二维码</string>
     <string name="sign_request_rejected2">签名请求已被拒绝</string>
     <string name="sign_request_rejected_description">请确保签名应用程序已授权此交易</string>
     <string name="signer_illegal_state_exception_description">外部签名器对该请求返回了不正常的载荷。这可能是 Amethyst 或签名器上的错误。</string>

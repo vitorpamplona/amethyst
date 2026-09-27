@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
+import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -202,14 +203,17 @@ class AccountSessionManager(
         packageName: String = "",
         onError: (String?) -> Unit,
     ) {
+        // Accepts keys copied by hand from the backup screen: UPPERCASE, and split
+        // into groups by spaces, dashes or line breaks.
+        val cleanKey = Bech32Transcription.normalize(key)
         scope.launch(Dispatchers.IO) {
-            if (key.startsWith("ncryptsec")) {
+            if (cleanKey.startsWith("ncryptsec")) {
                 val newKey =
                     try {
-                        if (key.isEmpty() || password.isEmpty()) {
+                        if (cleanKey.isEmpty() || password.isEmpty()) {
                             null
                         } else {
-                            Nip49().decrypt(key, password)
+                            Nip49().decrypt(cleanKey, password)
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
@@ -223,24 +227,24 @@ class AccountSessionManager(
                 } else {
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
-            } else if (EMAIL_PATTERN.matcher(key).matches()) {
+            } else if (EMAIL_PATTERN.matcher(cleanKey).matches()) {
                 // Delegate to the shared quartz resolver so NIP-05 handling stays in
                 // lockstep with the CLI and anywhere else we accept user identifiers.
                 try {
                     val hex =
                         com.vitorpamplona.quartz.nip05DnsIdentifiers
-                            .resolveUserHexOrNull(key, nip05ClientBuilder())
+                            .resolveUserHexOrNull(cleanKey, nip05ClientBuilder())
                     if (hex == null) {
-                        onError("User not found in the nip05 server: $key")
+                        onError("User not found in the nip05 server: $cleanKey")
                     } else {
                         loginSync(Hex.decode(hex).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    onError("Could not load nip05 address from the server: $key. ${e.message}")
+                    onError("Could not load nip05 address from the server: $cleanKey. ${e.message}")
                 }
             } else {
-                loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
+                loginSync(cleanKey, transientAccount, loginWithExternalSigner, packageName, onError)
             }
         }
     }

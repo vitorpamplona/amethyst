@@ -218,7 +218,6 @@
     <string name="relays"> Релеїв</string>
     <string name="website">Сайт</string>
     <string name="lightning_address">Lightning адреса</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Копіює Nsec ID (ваш пароль) для резервного копіювання</string>
     <string name="send_a_direct_message">Відправити повідомлення</string>
     <string name="edits_the_user_s_metadata">Редагує метадані користувача</string>
     <string name="unblock">Розблокувати</string>
@@ -273,9 +272,6 @@
     <string name="mark_all_known_as_read">Позначити всі відомі прочитаними</string>
     <string name="mark_all_new_as_read">Позначити всі нові прочитаними</string>
     <string name="mark_all_as_read">Позначити все прочитаним</string>
-    <string name="account_backup_tips2_md">## Поради щодо резервного копіювання та безпеки ключа \n\nВаш обліковий запис захищений секретним ключем. Ключ — це довга послідовність символів, що починається з **nsec1**. Будь-хто, хто має доступ до цього секретного ключа, може публікувати та змінювати вашу особу. \n\n- **Не** вводьте свій секретний ключ на жодному сайті чи в програмі, якій ви не довіряєте. \n- Розробники Amethyst **ніколи** не запитуватимуть ваш секретний ключ. \n- **Зробіть** надійне резервне копіювання секретного ключа для відновлення облікового запису. Рекомендуємо використовувати менеджер паролів.</string>
-    <string name="account_backup_tips3_md">Для додаткової безпеки ви можете зашифрувати ключ паролем. Цей ключ починається з **ncryptsec1** і не може бути використаний без вашого пароля. \n\nЯкщо ви забудете пароль, ви не зможете відновити ключ.</string>
-    <string name="encrypt_and_copy_my_secret_key">Зашифрувати та скопіювати мій секретний ключ</string>
     <string name="badge_award_image_for">Картинка значка-нагороди %1$s</string>
     <string name="badge_award_image">"Зображення нагороди значком</string>
     <string name="new_badge_award_notif">Ви отримали в нагороду новий значок</string>
@@ -2020,7 +2016,6 @@
     <string name="copied_note_text_to_clipboard">Скопіювати текст</string>
     <string name="copied_to_clipboard">Скопійовано до буфера обміну</string>
     <string name="copied_user_id_to_clipboard">ID (npub) автора скопійовано</string>
-    <string name="copy_my_secret_key">Скопіювати мій приватний ключ</string>
     <string name="copy_to_clipboard">Скопіювати в буфер</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Не вдалося скласти LNUrl з Lightning адреси «%1$s». Перевірте налаштування користувача</string>
     <string name="could_not_check_downloaded_file">Не вдалося перевірити завантажений файл після вивантаження: %1$s</string>
@@ -2845,10 +2840,8 @@
     <string name="share_as_image">Поділитися як зображення</string>
     <string name="share_as_image_url">Поділитися як URL зображення</string>
     <string name="share_or_save">Поділитися або зберегти</string>
-    <string name="show_encrypted_private_key_qr_code">Показати QR-код зашифрованого приватного ключа</string>
     <string name="show_messages_in_notifications_setting_description">Включати особисті та групові повідомлення на вкладку «Сповіщення». Вимкніть, щоб залишити повідомлення лише на вкладці «Повідомлення».</string>
     <string name="show_messages_in_notifications_setting_title">Показувати повідомлення</string>
-    <string name="show_private_key_qr_code">Показати QR-код приватного ключа</string>
     <string name="sign_request_rejected2">Запит на підписання відхилено</string>
     <string name="sign_request_rejected_description">Переконайтеся, що застосунок-підписант авторизував цю транзакцію</string>
     <string name="signer_illegal_state_exception_description">Зовнішній підписувач повернув дані, що не відповідають запиту. Можливо, є помилка в Amethyst або підписувачі.</string>

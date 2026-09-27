@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
+import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
@@ -90,7 +91,7 @@ object LoginCommand {
         args.rejectUnknown("password", "pw", "private")
 
         val identity =
-            resolveIdentity(key, args)
+            resolveIdentity(Bech32Transcription.normalize(key), args)
                 ?: return Output.error(
                     "bad_key",
                     "could not parse '$key' as any supported identifier",

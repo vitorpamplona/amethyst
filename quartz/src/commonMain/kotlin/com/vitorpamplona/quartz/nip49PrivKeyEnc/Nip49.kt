@@ -31,6 +31,31 @@ import com.vitorpamplona.quartz.utils.UnicodeNormalizer
 import kotlin.math.pow
 
 class Nip49 {
+    companion object {
+        /**
+         * Shortest password Amethyst accepts when *creating* an ncryptsec. NIP-49 sets no
+         * minimum, and decrypting must accept any password other clients allowed, so this
+         * is a creation-time policy only.
+         *
+         * An ncryptsec can be attacked offline with no rate limit, at one scrypt(2^16)
+         * per guess. 12 characters keeps even a random-looking password out of reach of
+         * large GPU farms, while staying typeable on a phone at login.
+         */
+        const val MIN_PASSWORD_LENGTH = 12
+
+        /** scrypt cost used when creating: 2^16 rounds, 64 MiB. Safe on low-end phones. */
+        const val DEFAULT_LOG_N = 16
+
+        /**
+         * Length as scrypt sees it: code points of the NFKC-normalized password, so
+         * an emoji (a UTF-16 surrogate pair) counts once and compatibility forms
+         * count as what they normalize to.
+         */
+        fun passwordLength(password: String): Int = UnicodeNormalizer().normalizeNFKC(password).count { !it.isLowSurrogate() }
+
+        fun isLongEnough(password: String): Boolean = passwordLength(password) >= MIN_PASSWORD_LENGTH
+    }
+
     fun decrypt(
         nCryptSec: String,
         password: String,
@@ -42,30 +67,43 @@ class Nip49 {
     ): String {
         check(encryptedInfo != null) { "Couldn't decode key" }
         check(encryptedInfo.version == EncryptedInfo.V) { "invalid version" }
+        // 32-byte key + 16-byte tag. A shorter payload can still carry a valid tag and
+        // would otherwise come back as a zero-padded "key".
+        check(encryptedInfo.encryptedKey.size == 48) { "invalid encrypted key length" }
 
         val normalizedPassword = UnicodeNormalizer().normalizeNFKC(password).encodeToByteArray()
         val n = 2.0.pow(encryptedInfo.logn.toDouble()).toInt()
-        val key = SCrypt.scrypt(normalizedPassword, encryptedInfo.salt, n, 8, 1, 32)
+        val key = deriveKey(normalizedPassword, encryptedInfo.salt, n, encryptedInfo.logn.toInt())
         val m = ByteArray(32)
 
-        LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfDecrypt(
-            m,
-            key,
-            encryptedInfo.encryptedKey,
-            byteArrayOf(encryptedInfo.keySecurity),
-            encryptedInfo.nonce,
-            key,
-        )
+        try {
+            // The Poly1305 tag is what tells a wrong password apart. Inspecting the output
+            // instead (e.g. "any byte > 0") rejects valid keys whose bytes are all >= 0x80.
+            val authenticated =
+                LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfDecrypt(
+                    m,
+                    key,
+                    encryptedInfo.encryptedKey,
+                    byteArrayOf(encryptedInfo.keySecurity),
+                    encryptedInfo.nonce,
+                    key,
+                )
 
-        check(m.any { it > 0 }) { "Incorrect password" }
+            check(authenticated) { "Incorrect password" }
 
-        return m.toHexKey()
+            return m.toHexKey()
+        } finally {
+            // NIP-49: the symmetric key should be zeroed and discarded after use.
+            key.fill(0)
+            normalizedPassword.fill(0)
+            m.fill(0)
+        }
     }
 
     fun encrypt(
         secretKeyHex: String,
         password: String,
-        logn: Int = 16,
+        logn: Int = DEFAULT_LOG_N,
         ksb: Byte = EncryptedInfo.CLIENT_DOES_NOT_TRACK,
     ): String = encrypt(secretKeyHex.hexToByteArray(), password, logn, ksb)
 
@@ -81,21 +119,31 @@ class Nip49 {
 
         val normalizedPassword = UnicodeNormalizer().normalizeNFKC(password).encodeToByteArray()
         val n = 2.0.pow(logn.toDouble()).toInt()
-        val key = SCrypt.scrypt(normalizedPassword, salt, n, 8, 1, 32)
+        val key = deriveKey(normalizedPassword, salt, n, logn)
         val ciphertext = ByteArray(48)
 
-        // byte[] c, long[] cLen,
-        // byte[] m, long mLen,
-        // byte[] ad, long adLen,
-        // byte[] nSec, byte[] nPub, byte[] k
-        LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfEncrypt(
-            ciphertext,
-            secretKey,
-            byteArrayOf(ksb),
-            key,
-            nonce,
-            key,
-        )
+        try {
+            // byte[] c, long[] cLen,
+            // byte[] m, long mLen,
+            // byte[] ad, long adLen,
+            // byte[] nSec, byte[] nPub, byte[] k
+            val encrypted =
+                LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfEncrypt(
+                    ciphertext,
+                    secretKey,
+                    byteArrayOf(ksb),
+                    key,
+                    nonce,
+                    key,
+                )
+            // Never hand back an ncryptsec of an untouched (all-zero) buffer: it would be a
+            // backup that no password can ever open.
+            check(encrypted) { "Failed to encrypt the key" }
+        } finally {
+            // NIP-49: the symmetric key should be zeroed and discarded after use.
+            key.fill(0)
+            normalizedPassword.fill(0)
+        }
 
         return EncryptedInfo(
             EncryptedInfo.V,
@@ -106,6 +154,24 @@ class Nip49 {
             ciphertext,
         ).encodePayload()
     }
+
+    /**
+     * scrypt allocates 128 * r * N bytes up front: 1 GiB at LOG_N 20, which NIP-49 allows and
+     * other clients may choose. Past the heap that is an OutOfMemoryError, which callers'
+     * `catch (e: Exception)` would miss, crashing instead of reporting the key as unusable.
+     */
+    private fun deriveKey(
+        normalizedPassword: ByteArray,
+        salt: ByteArray,
+        n: Int,
+        logn: Int,
+    ): ByteArray =
+        try {
+            SCrypt.scrypt(normalizedPassword, salt, n, 8, 1, 32)
+        } catch (e: Error) {
+            normalizedPassword.fill(0)
+            throw IllegalStateException("Not enough memory for this key's scrypt cost (LOG_N $logn)", e)
+        }
 
     class EncryptedInfo(
         val version: Byte,

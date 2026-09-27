@@ -216,7 +216,6 @@
     <string name="relays"> Relés</string>
     <string name="website">Site</string>
     <string name="lightning_address">Endereço Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copiar a chave Nsec (sua senha) para backup</string>
     <string name="send_a_direct_message">Enviar uma mensagem direta</string>
     <string name="edits_the_user_s_metadata">Muda os dados do usuário</string>
     <string name="unblock">Desbloquear</string>
@@ -271,9 +270,6 @@
     <string name="mark_all_known_as_read">Marcar todos conhecidos como lidos</string>
     <string name="mark_all_new_as_read">Marcar todas novas solicitações como lidas</string>
     <string name="mark_all_as_read">Marcar todas como lidas</string>
-    <string name="account_backup_tips2_md">## Dicas de Backup de Chave e Segurança \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade. \n\n- **Não** coloque sua chave secreta em nenhum site ou software que você não confie. \n- Os desenvolvedores da Amethyst **nunca** pedirão sua chave secreta. \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.</string>
-    <string name="account_backup_tips3_md">Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha. \n\nSe você perder sua senha, não será possível recuperar sua chave.</string>
-    <string name="encrypt_and_copy_my_secret_key">Criptografar e copiar minha chave secreta</string>
     <string name="badge_award_image_for">Imagem da medalha para %1$s</string>
     <string name="badge_award_image">Imagem do prêmio</string>
     <string name="new_badge_award_notif">Você recebeu uma nova medalha</string>
@@ -1988,7 +1984,6 @@
     <string name="copied_note_text_to_clipboard">Texto copiado</string>
     <string name="copied_to_clipboard">Copiado para a área de transferência</string>
     <string name="copied_user_id_to_clipboard">Copiado @npub do autor</string>
-    <string name="copy_my_secret_key">Copiar minha chave secreta</string>
     <string name="copy_to_clipboard">Copiar para a Área de Transferência</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Não foi possível montar o LNUrl a partir do Endereço Lightning "%1$s". Verifique a configuração do usuário</string>
     <string name="could_not_check_downloaded_file">Não foi possível verificar o arquivo baixado após o upload: %1$s</string>
@@ -2775,10 +2770,8 @@
     <string name="share_hls_video">Upload HLS</string>
     <string name="share_or_save">Compartilhar ou Salvar</string>
     <string name="shorts">Curtas</string>
-    <string name="show_encrypted_private_key_qr_code">Mostrar o código QR da chave privada criptografado</string>
     <string name="show_messages_in_notifications_setting_description">Inclui mensagens diretas e de grupo na aba Notificações. Desative para manter as mensagens apenas na aba Mensagens.</string>
     <string name="show_messages_in_notifications_setting_title">Mostrar mensagens</string>
-    <string name="show_private_key_qr_code">Mostrar código QR de chave privada</string>
     <string name="sign_request_rejected2">Solicitação de assinatura rejeitada</string>
     <string name="sign_request_rejected_description">Certifique-se de que a aplicação assinante autorizou esta transação</string>
     <string name="signer_illegal_state_exception_description">O assinador externo retornou dados estranhos para a solicitação. Pode haver um bug no Amethyst ou no assinador.</string>

@@ -545,7 +545,6 @@
     <string name="relays"> Reläer</string>
     <string name="website">Websida</string>
     <string name="lightning_address">Lightning Adress</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopierar Nsec ID (ditt lösenord) till urklipp för säkerhetskopiering</string>
     <string name="send_a_direct_message">Skicka ett direkt meddelande</string>
     <string name="edits_the_user_s_metadata">Redigerar användarens metadata</string>
     <string name="unblock">Sluta blockera</string>
@@ -654,14 +653,11 @@
     <string name="mark_all_known_as_read">Markera alla kända som lästa</string>
     <string name="mark_all_new_as_read">Markera alla nya som lästa</string>
     <string name="mark_all_as_read">Markera allt som läst</string>
-    <string name="account_backup_tips2_md">## Nyckelsäkerhetsråd \n\nDitt konto är säkrat med en hemlig nyckel. Nyckeln är en lång följd av tecken som börjar med **nsec1**. Den som har tillgång till denna hemliga nyckel kan posta och ändra din identitet. \n\n- **Lägg inte** din hemliga nyckel på någon webbplats eller i någon mjukvara som du inte litar på. \n- Utvecklarna av Amethyst kommer **aldrig** att be om din hemliga nyckel. \n- **Spara** en säkerhetskopia av din hemliga nyckel för återställning av kontot. Vi rekommenderar att du använder en lösenordshanterare.</string>
-    <string name="account_backup_tips3_md">För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord. \n\nOm du tappar bort ditt lösenord kommer du inte att kunna återställa din nyckel.</string>
     <string name="backup_keys_nudge_title">Säkerhetskopiera dina nycklar</string>
     <string name="backup_keys_nudge_body">Din hemliga nyckel är enda sättet att komma åt det här kontot. Om du förlorar den kan den aldrig återskapas. Spara den på ett säkert ställe nu.</string>
     <string name="backup_keys_nudge_backup_now">Säkerhetskopiera nu</string>
     <string name="backup_keys_nudge_already_saved">Jag har sparat dem</string>
     <string name="backup_keys_nudge_dismiss">Avfärda</string>
-    <string name="encrypt_and_copy_my_secret_key">Kryptera och kopiera min hemliga nyckel</string>
     <string name="badge_award_image_for">Tilldelad Badge för %1$s</string>
     <string name="badge_award_image">Bild på utmärkelse</string>
     <string name="new_badge_award_notif">Du har blivit tilldelad en ny Badge</string>
@@ -3577,7 +3573,6 @@
     <string name="copied_note_text_to_clipboard">Kopierade anteckningstext till urklipp</string>
     <string name="copied_to_clipboard">Kopierat till urklipp</string>
     <string name="copied_user_id_to_clipboard">Kopierade författarens @npub till urklipp</string>
-    <string name="copy_my_secret_key">Kopiera min hemliga nyckel</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Kunde inte montera LNUrl från Lightning Address "%1$s". Kontrollera användarens konfiguration</string>
     <string name="could_not_check_downloaded_file">Kunde inte kontrollera nedladdad fil efter uppladdning: %1$s</string>
@@ -5040,10 +5035,8 @@
     <string name="share_hls_video">HLS-uppladdning</string>
     <string name="share_or_save">Dela eller Spara</string>
     <string name="shorts">Kortfilmer</string>
-    <string name="show_encrypted_private_key_qr_code">Visa QR-kod för krypterad privat nyckel</string>
     <string name="show_messages_in_notifications_setting_description">Inkludera direktmeddelanden och gruppmeddelanden på fliken Aviseringar. Stäng av för att hålla meddelanden enbart på fliken Meddelanden.</string>
     <string name="show_messages_in_notifications_setting_title">Visa meddelanden</string>
-    <string name="show_private_key_qr_code">Visa QR-kod för privat nyckel</string>
     <string name="sign_request_rejected2">Signeringsförfrågan avvisad</string>
     <string name="sign_request_rejected_description">Kontrollera att signeringsprogrammet har godkänt denna transaktion</string>
     <string name="signer_illegal_state_exception_description">Extern signatär returnerade data som är ovanliga för begäran. Det kan finnas en bugg i antingen Amethyst eller signatären.</string>

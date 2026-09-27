@@ -216,7 +216,6 @@
     <string name="relays"> Διαμοιραστές</string>
     <string name="website">Ιστοσελίδα</string>
     <string name="lightning_address">Διεύθυνση Lightning</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Αντιγράφει το "Μυστικό Κλειδί" σας (Nsec ID ή αλλιώς ο μυστικός κωδικός πρόσβασής σας) στο πρόχειρο για δημιουργία αντιγράφου ασφαλείας</string>
     <string name="send_a_direct_message">Αποστολή Άμεσου Μηνύματος</string>
     <string name="edits_the_user_s_metadata">Επεξεργασία των Μεταδεδομένων του Χρήστη</string>
     <string name="unblock">Άρση Αποκλεισμού</string>
@@ -271,9 +270,6 @@
     <string name="mark_all_known_as_read">Σήμανση όλων των γνωστοποιήσεων ως αναγνωσμένων</string>
     <string name="mark_all_new_as_read">Σήμανση όλων ως αναγνωσμένων</string>
     <string name="mark_all_as_read">Σήμανση όλων ως αναγνωσμένα</string>
-    <string name="account_backup_tips2_md">## Συμβουλές ασφαλείας και δημιουργίας αντιγράφων ασφαλείας κλειδιού \n\nΟ λογαριασμός σου ασφαλίζεται με ένα μυστικό κλειδί. Το κλειδί είναι μια μακρά ακολουθία χαρακτήρων που ξεκινά με **nsec1**. Όποιος έχει πρόσβαση σε αυτό το μυστικό κλειδί μπορεί να δημοσιεύει και να αλλάζει την ταυτότητά σου. \n\n- **Μην** βάζεις το μυστικό σου κλειδί σε κανέναν ιστότοπο ή λογισμικό που δεν εμπιστεύεσαι. \n- Οι προγραμματιστές του Amethyst **δεν** θα ζητήσουν ποτέ το μυστικό σου κλειδί. \n- **Διατήρησε** ένα ασφαλές αντίγραφο ασφαλείας του μυστικού σου κλειδιού για ανάκτηση λογαριασμού. Συνιστούμε τη χρήση διαχειριστή κωδικών πρόσβασης.</string>
-    <string name="account_backup_tips3_md">Για πρόσθετη ασφάλεια, μπορείς να κρυπτογραφήσεις το κλειδί σου με κωδικό πρόσβασης. Αυτό το κλειδί ξεκινά με **ncryptsec1** και δεν μπορεί να χρησιμοποιηθεί χωρίς τον κωδικό σου. \n\nΑν χάσεις τον κωδικό σου, δεν θα μπορείς να ανακτήσεις το κλειδί σου.</string>
-    <string name="encrypt_and_copy_my_secret_key">Κρυπτογράφηση και αντιγραφή του μυστικού μου κλειδιού</string>
     <string name="badge_award_image_for">Σήμα βράβευσης για %1$s</string>
     <string name="badge_award_image">"Εικόνα βραβείου παρασήμου</string>
     <string name="new_badge_award_notif">Λάβατε ένα νέο Σήμα Βράβευσης</string>
@@ -1990,7 +1986,6 @@
     <string name="copied_note_text_to_clipboard">Το κείμενο της δημοσίευσης αποθηκεύτηκε στο πρόχειρο</string>
     <string name="copied_to_clipboard">Αντιγράφηκε στο πρόχειρο</string>
     <string name="copied_user_id_to_clipboard">Το "Δημόσιο Κλειδί" του συντάκτη της δημοσίευσης αποθηκεύτηκε στο πρόχειρο</string>
-    <string name="copy_my_secret_key">Αντιγραφή του "Μυστικού Κλειδιού" μου</string>
     <string name="copy_to_clipboard">Αντιγραφή στο πρόχειρο</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Δεν ήταν δυνατή η δημιουργία του LNUrl από τη διεύθυνση Lightning "%1$s". Ελέγξτε ρυθμίσεις χρήστη</string>
     <string name="could_not_check_downloaded_file">Δεν ήταν δυνατός ο έλεγχος του ληφθέντος αρχείου μετά το ανέβασμα: %1$s</string>
@@ -2759,10 +2754,8 @@
     <string name="share_as_image_url">Κοινοποίηση ως URL εικόνας</string>
     <string name="share_hls_video">Μεταφόρτωση HLS</string>
     <string name="share_or_save">Κοινοποίηση ή αποθήκευση</string>
-    <string name="show_encrypted_private_key_qr_code">Εμφάνιση QR code κρυπτογραφημένου ιδιωτικού κλειδιού</string>
     <string name="show_messages_in_notifications_setting_description">Συμπερίληψη άμεσων και ομαδικών μηνυμάτων στην καρτέλα ειδοποιήσεων. Απενεργοποιήστε για να διατηρείτε τα μηνύματα μόνο στην καρτέλα μηνυμάτων.</string>
     <string name="show_messages_in_notifications_setting_title">Εμφάνιση μηνυμάτων</string>
-    <string name="show_private_key_qr_code">Εμφάνιση QR code ιδιωτικού κλειδιού</string>
     <string name="sign_request_rejected2">Αίτημα υπογραφής απορρίφθηκε</string>
     <string name="sign_request_rejected_description">Βεβαιωθείτε ότι η εφαρμογή υπογραφής έχει εξουσιοδοτήσει αυτή τη συναλλαγή</string>
     <string name="signer_illegal_state_exception_description">Ο εξωτερικός signer επέστρεψε ένα payload που είναι ασυνήθιστο για το αίτημα. Ενδέχεται να υπάρχει σφάλμα στο Amethyst ή στον signer.</string>

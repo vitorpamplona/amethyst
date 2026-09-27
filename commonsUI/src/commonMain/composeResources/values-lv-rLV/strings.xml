@@ -220,7 +220,6 @@
     <string name="relays"> Relay</string>
     <string name="website">Vietne</string>
     <string name="lightning_address">Lightning adrese</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopē Nsec ID (jūsu paroli) starpliktuvē dublēšanai</string>
     <string name="send_a_direct_message">Sūtīt tiešo ziņojumu</string>
     <string name="edits_the_user_s_metadata">Rediģē lietotāja metadatus</string>
     <string name="unblock">Atbloķēt</string>
@@ -277,11 +276,8 @@
     <string name="mark_all_known_as_read">Atzīmēt visu zināmo kā lasītu</string>
     <string name="mark_all_new_as_read">Atzīmēt visu jauno kā lasītu</string>
     <string name="mark_all_as_read">Atzīmēt visu kā lasītu</string>
-    <string name="account_backup_tips2_md">## Atslēgas dublēšanas un drošības padomi \n\nJūsu konts ir aizsargāts ar slepeno atslēgu. Atslēga ir gara rakstzīmju secība, kas sākas ar **nsec1**. Ikviens, kam ir piekļuve šai slepenai atslēgai, var publicēt un mainīt jūsu identitāti. \n\n- **Neievietojiet** savu slepeno atslēgu nevienā tīmekļa vietnē vai programmatūrā, kurai neuzticaties. \n- Amethyst izstrādātāji **nekad** neprasīs jūsu slepeno atslēgu. \n- **Glabājiet** drošu slepenas atslēgas dublējumu konta atjaunošanai. Mēs iesakām izmantot paroļu pārvaldnieku.</string>
-    <string name="account_backup_tips3_md">Papildu drošībai variet šifrēt atslēgu ar paroli. Šī atslēga sāksies ar **ncryptsec1** virkni un to nevarēs izmantot bez šīs paroles. \n\nJa jūs aizmirsīsiet paroli, vairs nevarēsiet atgūt savu atslēgu.</string>
     <string name="backup_keys_nudge_body">Jūsu slepenā atslēga ir vienīgais veids, kā piekļūt šim kontam. Ja to pazaudēsiet, tad nekad nevarēsiet atgūt piekļuvi kontam. Saglabājiet atslēgu drošā vietā tagad.</string>
     <string name="backup_keys_nudge_already_saved">Esiet tās saglabājuši</string>
-    <string name="encrypt_and_copy_my_secret_key">Šifrēt un kopēt manu slepeno atslēgu</string>
     <string name="badge_award_image_for">Žetona piešķiršanas attēls par %1$s</string>
     <string name="badge_award_image">"Žetona piešķiršanas attēls</string>
     <string name="new_badge_award_notif">Jūs saņēmāt jaunu žetonu</string>
@@ -2020,7 +2016,6 @@
     <string name="copied_note_text_to_clipboard">Piezīmes teksts nokopēts starpliktuvē</string>
     <string name="copied_to_clipboard">Nokopēts starpliktuvē</string>
     <string name="copied_user_id_to_clipboard">Autora @npub nokopēts starpliktuvē</string>
-    <string name="copy_my_secret_key">Kopēt manu slepeno atslēgu</string>
     <string name="copy_to_clipboard">Kopēt starpliktuvē</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nevarēja izveidot LNUrl no Lightning adreses "%1$s". Pārbaudiet lietotāja iestatījumus</string>
     <string name="could_not_check_downloaded_file">Nevarēja pārbaudīt lejupielādēto failu pēc augšupielādes: %1$s</string>
@@ -2842,10 +2837,8 @@
     <string name="share_hls_video">HLS augšupielāde</string>
     <string name="share_or_save">Kopīgot vai saglabāt</string>
     <string name="shorts">Šorti</string>
-    <string name="show_encrypted_private_key_qr_code">Rādīt šifrētās privātās atslēgas QR kodu</string>
     <string name="show_messages_in_notifications_setting_description">Iekļaut tiešās un grupas ziņas paziņojumu cilnē. Izslēdziet, lai ziņas tiktu rādītas tikai ziņojumu cilnē.</string>
     <string name="show_messages_in_notifications_setting_title">Rādīt ziņas</string>
-    <string name="show_private_key_qr_code">Rādīt privātās atslēgas QR kodu</string>
     <string name="sign_request_rejected2">Parakstīšanas pieprasījums noraidīts</string>
     <string name="sign_request_rejected_description">Pārliecinieties, ka parakstītāja lietotne ir autorizējusi šo darījumu</string>
     <string name="signer_illegal_state_exception_description">Ārējais parakstītājs atgrieza neparastu atbildi uz pieprasījumu. Iespējams, ir kļūda Amethyst vai parakstītājā.</string>
