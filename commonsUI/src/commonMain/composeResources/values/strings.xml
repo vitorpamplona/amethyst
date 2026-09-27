@@ -2809,8 +2809,13 @@
     <string name="relay_management_no_moderation_events">No events needing moderation</string>
     <string name="relay_management_banned_events">Banned Events</string>
     <string name="relay_management_no_banned_events">No banned events</string>
+    <string name="relay_management_allowed_events">Allowed Events</string>
+    <string name="relay_management_no_allowed_events">No allowed events</string>
+    <string name="relay_management_allow_event">Allow Event</string>
     <string name="relay_management_allowed_kinds">Allowed Kinds</string>
     <string name="relay_management_no_allowed_kinds">No allowed kinds</string>
+    <string name="relay_management_disallowed_kinds">Disallowed Kinds</string>
+    <string name="relay_management_no_disallowed_kinds">No disallowed kinds</string>
     <string name="relay_management_blocked_ips">Blocked IPs</string>
     <string name="relay_management_no_blocked_ips">No blocked IPs</string>
     <string name="relay_management_add">Add</string>
@@ -2843,6 +2848,8 @@
     <string name="relay_members_join_sent">Join request sent</string>
     <string name="relay_members_leave_sent">Leave request sent</string>
     <string name="relay_members_you_are_member">You are a member</string>
+    <string name="relay_members_invite_code">Invite code</string>
+    <string name="relay_members_invite_code_hint">This relay admits members with an invite code from its operator</string>
     <string name="relay_membership_list">Relay membership list</string>
     <string name="relay_member_added">Member added to relay</string>
     <string name="relay_members_added">%1$d members added to relay</string>

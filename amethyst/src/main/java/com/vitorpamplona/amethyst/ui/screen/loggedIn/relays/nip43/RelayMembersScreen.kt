@@ -41,6 +41,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -59,9 +60,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRoleChips
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_members_count
 import com.vitorpamplona.amethyst.commons.resources.relay_members_empty
+import com.vitorpamplona.amethyst.commons.resources.relay_members_invite_code
+import com.vitorpamplona.amethyst.commons.resources.relay_members_invite_code_hint
 import com.vitorpamplona.amethyst.commons.resources.relay_members_join_sent
 import com.vitorpamplona.amethyst.commons.resources.relay_members_leave_sent
 import com.vitorpamplona.amethyst.commons.resources.relay_members_loading
@@ -72,9 +76,9 @@ import com.vitorpamplona.amethyst.commons.resources.relay_members_you_are_member
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -83,6 +87,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.launch
@@ -97,24 +104,32 @@ fun RelayMembersScreen(
     val normalizedRelayUrl = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) }
     if (normalizedRelayUrl == null) return
 
-    var members by remember { mutableStateOf<List<HexKey>>(emptyList()) }
+    var members by remember { mutableStateOf<List<RelayMember>>(emptyList()) }
+    var roles by remember { mutableStateOf<Map<String, RelayRole>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var isMember by remember { mutableStateOf(false) }
     var joinRequestSent by remember { mutableStateOf(false) }
     var leaveRequestSent by remember { mutableStateOf(false) }
+    var inviteCode by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(normalizedRelayUrl) {
+    // NIP-43 lists (13534) and roles (33534) MUST be signed by the relay's NIP-11 `self`.
+    // Filter by it once the doc resolves; until then, take whatever the relay serves.
+    val relayInfo by loadRelayInfo(normalizedRelayUrl)
+    val relaySelf = relayInfo.self
+
+    LaunchedEffect(normalizedRelayUrl, relaySelf) {
         launch(Dispatchers.IO) {
-            val filter =
-                Filter(
-                    kinds = listOf(RelayMembershipListEvent.KIND),
-                    limit = 1,
+            val authors = relaySelf?.let { listOf(it) }
+            val filters =
+                listOf(
+                    Filter(kinds = listOf(RelayMembershipListEvent.KIND), authors = authors, limit = 1),
+                    Filter(kinds = listOf(RelayRoleEvent.KIND), authors = authors),
                 )
 
             val events =
                 accountViewModel.account.client
-                    .fetchAsFlow(normalizedRelayUrl, filter)
+                    .fetchAsFlow(normalizedRelayUrl, filters)
                     .lastOrNull()
 
             val membershipEvent =
@@ -122,9 +137,19 @@ fun RelayMembersScreen(
                     ?.mapNotNull { it as? RelayMembershipListEvent }
                     ?.maxByOrNull { it.createdAt }
 
-            val memberList = membershipEvent?.members() ?: emptyList()
+            // Only trust role definitions from whoever signed the member list.
+            val roleSigner = relaySelf ?: membershipEvent?.pubKey
+            roles =
+                events
+                    ?.mapNotNull { it as? RelayRoleEvent }
+                    ?.filter { it.pubKey == roleSigner }
+                    ?.groupBy { it.roleId() }
+                    ?.mapValues { (_, versions) -> versions.maxBy { it.createdAt }.role() }
+                    ?: emptyMap()
+
+            val memberList = membershipEvent?.membersWithRoles() ?: emptyList()
             members = memberList
-            isMember = memberList.contains(accountViewModel.account.signer.pubKey)
+            isMember = memberList.any { it.pubKey == accountViewModel.account.signer.pubKey }
             isLoading = false
         }
     }
@@ -162,9 +187,12 @@ fun RelayMembersScreen(
                 isLoading = isLoading,
                 joinRequestSent = joinRequestSent,
                 leaveRequestSent = leaveRequestSent,
+                inviteCode = inviteCode,
+                onInviteCodeChange = { inviteCode = it },
                 onJoinRequest = {
+                    val claim = inviteCode.trim()
                     accountViewModel.launchSigner {
-                        sendJoinRequest(normalizedRelayUrl, accountViewModel)
+                        sendJoinRequest(normalizedRelayUrl, claim, accountViewModel)
                         joinRequestSent = true
                     }
                 },
@@ -215,13 +243,21 @@ fun RelayMembersScreen(
                 )
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(members, key = { it }) { memberPubKey ->
-                        val user = remember(memberPubKey) { accountViewModel.account.cache.getOrCreateUser(memberPubKey) }
-                        UserCompose(
-                            baseUser = user,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
+                    items(members, key = { it.pubKey }) { member ->
+                        val user = remember(member.pubKey) { accountViewModel.account.cache.getOrCreateUser(member.pubKey) }
+                        Column {
+                            UserCompose(
+                                baseUser = user,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                            // Role ids without a published 33534 definition still show, by id.
+                            val memberRoles = remember(member, roles) { member.roles.map { roles[it] ?: RelayRole(it) } }
+                            RelayRoleChips(
+                                roles = memberRoles,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -235,9 +271,32 @@ fun MembershipActions(
     isLoading: Boolean,
     joinRequestSent: Boolean,
     leaveRequestSent: Boolean,
+    inviteCode: String,
+    onInviteCodeChange: (String) -> Unit,
     onJoinRequest: () -> Unit,
     onLeaveRequest: () -> Unit,
 ) {
+    if (!isLoading && !isMember && !joinRequestSent) {
+        // NIP-43 join requests (kind 28934) must carry the invite code the relay issued.
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        ) {
+            Text(
+                text = stringRes(Res.string.relay_members_invite_code_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = inviteCode,
+                onValueChange = onInviteCodeChange,
+                label = { Text(stringRes(Res.string.relay_members_invite_code)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
     Row(
         modifier =
             Modifier
@@ -293,7 +352,7 @@ fun MembershipActions(
                     fontWeight = FontWeight.Bold,
                 )
             } else {
-                Button(onClick = onJoinRequest) {
+                Button(onClick = onJoinRequest, enabled = inviteCode.isNotBlank()) {
                     Icon(
                         symbol = MaterialSymbols.PersonAdd,
                         contentDescription = null,
@@ -316,6 +375,8 @@ private fun MembershipActionsNotMemberPreview() {
             isLoading = false,
             joinRequestSent = false,
             leaveRequestSent = false,
+            inviteCode = "",
+            onInviteCodeChange = {},
             onJoinRequest = {},
             onLeaveRequest = {},
         )
@@ -331,6 +392,8 @@ private fun MembershipActionsIsMemberPreview() {
             isLoading = false,
             joinRequestSent = false,
             leaveRequestSent = false,
+            inviteCode = "",
+            onInviteCodeChange = {},
             onJoinRequest = {},
             onLeaveRequest = {},
         )
@@ -346,6 +409,8 @@ private fun MembershipActionsJoinSentPreview() {
             isLoading = false,
             joinRequestSent = true,
             leaveRequestSent = false,
+            inviteCode = "",
+            onInviteCodeChange = {},
             onJoinRequest = {},
             onLeaveRequest = {},
         )
@@ -361,6 +426,8 @@ private fun MembershipActionsLeaveSentPreview() {
             isLoading = false,
             joinRequestSent = false,
             leaveRequestSent = true,
+            inviteCode = "",
+            onInviteCodeChange = {},
             onJoinRequest = {},
             onLeaveRequest = {},
         )
@@ -369,9 +436,10 @@ private fun MembershipActionsLeaveSentPreview() {
 
 suspend fun sendJoinRequest(
     relay: NormalizedRelayUrl,
+    claim: String,
     accountViewModel: AccountViewModel,
 ) {
-    val template = RelayJoinRequestEvent.build()
+    val template = RelayJoinRequestEvent.build(claim)
     val signedEvent = accountViewModel.account.signer.sign(template)
     accountViewModel.account.cache.justConsumeMyOwnEvent(signedEvent)
     accountViewModel.account.client.publish(signedEvent, setOf(relay))
