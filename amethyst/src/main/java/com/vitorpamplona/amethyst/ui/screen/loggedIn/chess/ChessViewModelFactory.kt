@@ -22,20 +22,28 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStore
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.model.Account
 
 /**
- * Factory for creating ChessViewModelNew instances.
- * Uses the slim ViewModel that delegates to shared ChessLobbyLogic.
+ * Factory for the shared [ChessViewModel], wired with the Android adapters.
  */
 class ChessViewModelFactory(
     private val account: Account,
-    private val application: android.app.Application,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChessViewModelNew::class.java)) {
-            return ChessViewModelNew(account, application) as T
+        if (modelClass.isAssignableFrom(ChessViewModel::class.java)) {
+            return ChessViewModel(
+                userPubkey = account.userProfile().pubkeyHex,
+                publisher = AndroidChessPublisher(account),
+                fetcher = AndroidRelayFetcher(account),
+                metadataProvider = AndroidMetadataProvider(),
+                pollingConfig = ChessPollingDefaults.android,
+                dismissedStorage = ChessDismissedGamesStore(chessDismissedGamesData),
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

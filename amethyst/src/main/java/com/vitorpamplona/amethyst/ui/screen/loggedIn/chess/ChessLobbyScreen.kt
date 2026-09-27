@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ActiveGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChallengeCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
@@ -97,11 +98,11 @@ fun ChessLobbyScreen(
 ) {
     // Scope ViewModel to Activity so it's shared between lobby and game screens
     val activity = LocalActivity.current as FragmentActivity
-    val chessViewModel: ChessViewModelNew =
+    val chessViewModel: ChessViewModel =
         viewModel(
             viewModelStoreOwner = activity,
-            key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account, activity.application),
+            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
+            factory = ChessViewModelFactory(accountViewModel.account),
         )
 
     // Subscribe to chess events when screen is visible
@@ -133,7 +134,7 @@ fun ChessLobbyScreen(
 
 @Composable
 fun NavigateIfInAGame(
-    chessViewModel: ChessViewModelNew,
+    chessViewModel: ChessViewModel,
     nav: INav,
 ) {
     val selectedGameId by chessViewModel.selectedGameId.collectAsState()
@@ -156,7 +157,7 @@ fun NavigateIfInAGame(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChessLobbyScreen(
-    chessViewModel: ChessViewModelNew,
+    chessViewModel: ChessViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -256,7 +257,7 @@ fun ChessLobbyScreen(
 }
 
 @Composable
-fun ChessSyncBanner(chessViewModel: ChessViewModelNew) {
+fun ChessSyncBanner(chessViewModel: ChessViewModel) {
     val syncStatus by chessViewModel.syncStatus.collectAsState()
 
     ChessSyncBanner(
@@ -267,7 +268,7 @@ fun ChessSyncBanner(chessViewModel: ChessViewModelNew) {
 }
 
 @Composable
-fun ErrorDisplay(chessViewModel: ChessViewModelNew) {
+fun ErrorDisplay(chessViewModel: ChessViewModel) {
     // Error display
     val error by chessViewModel.error.collectAsState()
 
@@ -292,7 +293,7 @@ fun ErrorDisplay(chessViewModel: ChessViewModelNew) {
 
 @Composable
 fun ChessLobbyContent(
-    chessViewModel: ChessViewModelNew,
+    chessViewModel: ChessViewModel,
     accountViewModel: AccountViewModel,
     onAcceptChallenge: (ChessChallenge) -> Unit,
     onOpenOwnChallenge: (ChessChallenge) -> Unit,

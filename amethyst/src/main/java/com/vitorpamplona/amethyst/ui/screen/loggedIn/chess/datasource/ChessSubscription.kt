@@ -25,10 +25,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 
 /**
  * Subscribe to chess events when the Chess screen is active.
@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
  */
 @Composable
 fun ChessSubscription(
-    chessViewModel: ChessViewModelNew,
+    chessViewModel: ChessViewModel,
     accountViewModel: AccountViewModel,
 ) {
     // Get active game IDs from the view model for game-specific subscriptions

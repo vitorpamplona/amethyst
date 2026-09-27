@@ -65,8 +65,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.CompletedGame
 import com.vitorpamplona.amethyst.commons.nip64Chess.PublicGame
+import com.vitorpamplona.amethyst.commons.nip64Chess.desktopChessDismissedGamesStore
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ActiveGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChallengeCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBroadcastBanner
@@ -100,9 +103,18 @@ fun ChessScreen(
     compactMode: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
+    val userMetadataCache = remember(account.pubKeyHex) { UserMetadataCache() }
     val viewModel =
         remember(account.pubKeyHex) {
-            DesktopChessViewModelNew(account, relayManager, scope)
+            ChessViewModel(
+                userPubkey = account.pubKeyHex,
+                publisher = DesktopChessPublisher(account, relayManager),
+                fetcher = DesktopRelayFetcher(relayManager, account.pubKeyHex),
+                metadataProvider = DesktopMetadataProvider(userMetadataCache),
+                pollingConfig = ChessPollingDefaults.desktop,
+                dismissedStorage = desktopChessDismissedGamesStore(),
+                scope = scope,
+            )
         }
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val broadcastStatus by viewModel.broadcastStatus.collectAsState()
@@ -151,7 +163,7 @@ fun ChessScreen(
     }
 
     // Subscribe to user metadata for pubkeys that need it
-    val pubkeysNeeded by viewModel.userMetadataCache.pubkeysNeeded.collectAsState()
+    val pubkeysNeeded by userMetadataCache.pubkeysNeeded.collectAsState()
     rememberSubscription(connectedRelays, pubkeysNeeded, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty() && pubkeysNeeded.isNotEmpty()) {
             createMetadataListSubscription(
@@ -171,7 +183,7 @@ fun ChessScreen(
     val publicGames by viewModel.publicGames.collectAsState()
     val completedGames by viewModel.completedGames.collectAsState()
     // Observe metadata changes to trigger recomposition
-    val userMetadata by viewModel.userMetadataCache.metadata.collectAsState()
+    val userMetadata by userMetadataCache.metadata.collectAsState()
     val selectedGameId by viewModel.selectedGameId.collectAsState()
     val error by viewModel.error.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -289,8 +301,8 @@ fun ChessScreen(
 
                 DesktopChessGameLayout(
                     gameState = gameState,
-                    opponentName = viewModel.userMetadataCache.getDisplayName(gameState.opponentPubkey),
-                    opponentPicture = viewModel.userMetadataCache.getPictureUrl(gameState.opponentPubkey),
+                    opponentName = userMetadataCache.getDisplayName(gameState.opponentPubkey),
+                    opponentPicture = userMetadataCache.getPictureUrl(gameState.opponentPubkey),
                     onMoveMade = { from, to, _ ->
                         viewModel.publishMove(gameState.startEventId, from, to)
                     },
@@ -306,12 +318,12 @@ fun ChessScreen(
                             null
                         },
                     compactMode = compactMode,
-                    whiteName = viewModel.userMetadataCache.getDisplayName(whitePubkey),
+                    whiteName = userMetadataCache.getDisplayName(whitePubkey),
                     whiteHex = whitePubkey,
-                    whiteAvatarUrl = viewModel.userMetadataCache.getPictureUrl(whitePubkey),
-                    blackName = viewModel.userMetadataCache.getDisplayName(blackPubkey),
+                    whiteAvatarUrl = userMetadataCache.getPictureUrl(whitePubkey),
+                    blackName = userMetadataCache.getDisplayName(blackPubkey),
                     blackHex = blackPubkey,
-                    blackAvatarUrl = viewModel.userMetadataCache.getPictureUrl(blackPubkey),
+                    blackAvatarUrl = userMetadataCache.getPictureUrl(blackPubkey),
                 )
             }
         } else {
@@ -338,7 +350,7 @@ fun ChessScreen(
                 publicGames = publicGames,
                 completedGames = completedGames,
                 userPubkey = account.pubKeyHex,
-                metadataCache = viewModel.userMetadataCache,
+                metadataCache = userMetadataCache,
                 onAcceptChallenge = { viewModel.acceptChallenge(it) },
                 onOpenOwnChallenge = { viewModel.openOwnChallenge(it) },
                 onWatchGame = { viewModel.loadGameAsSpectator(it) },

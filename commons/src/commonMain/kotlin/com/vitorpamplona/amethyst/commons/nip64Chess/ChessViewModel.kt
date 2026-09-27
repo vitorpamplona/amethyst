@@ -18,59 +18,51 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.chess
+package com.vitorpamplona.amethyst.commons.nip64Chess
 
-import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessLobbyLogic
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
-import com.vitorpamplona.amethyst.commons.nip64Chess.CompletedGame
-import com.vitorpamplona.amethyst.commons.nip64Chess.PublicGame
-import com.vitorpamplona.amethyst.commons.nip64Chess.desktopChessDismissedGamesStore
-import com.vitorpamplona.amethyst.desktop.account.AccountState
-import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Slim Desktop ViewModel for chess (~120 lines).
+ * The chess screen's state holder, shared by Android and Desktop.
  *
- * Delegates all business logic to ChessLobbyLogic.
- * Only handles Desktop-specific concerns:
- * - Platform adapter creation
- * - State exposure to Compose Desktop UI
- * - UserMetadataCache for profile display
+ * All business logic lives in [ChessLobbyLogic]; this class only exposes its state and forwards
+ * the user's actions. Each platform supplies its own adapters (how to publish, fetch, resolve
+ * metadata and remember dismissed games) and its polling cadence.
+ *
+ * On Android it is a lifecycle-scoped `ViewModel`: [scope] defaults to `viewModelScope` and
+ * polling stops in [onCleared]. Desktop, which has no `ViewModelStore`, passes the scope of the
+ * composition that owns it; polling then ends when that scope is cancelled.
  */
-class DesktopChessViewModelNew(
-    private val account: AccountState.LoggedIn,
-    private val relayManager: DesktopRelayConnectionManager,
-    private val scope: CoroutineScope,
-) {
-    // Desktop-specific metadata cache
-    val userMetadataCache = UserMetadataCache()
-
-    // Platform adapters
-    private val publisher = DesktopChessPublisher(account, relayManager)
-    private val fetcher = DesktopRelayFetcher(relayManager, account.pubKeyHex)
-    private val metadataProvider = DesktopMetadataProvider(userMetadataCache)
-    private val dismissedStorage = desktopChessDismissedGamesStore()
-
+@Stable
+class ChessViewModel(
+    private val userPubkey: HexKey,
+    publisher: ChessEventPublisher,
+    fetcher: ChessRelayFetcher,
+    metadataProvider: IUserMetadataProvider,
+    pollingConfig: ChessPollingConfig,
+    dismissedStorage: ChessDismissedGamesStore?,
+    scope: CoroutineScope? = null,
+) : ViewModel() {
     // Shared business logic (creates its own ChessLobbyState internally)
     private val logic =
         ChessLobbyLogic(
-            userPubkey = account.pubKeyHex,
+            userPubkey = userPubkey,
             publisher = publisher,
             fetcher = fetcher,
             metadataProvider = metadataProvider,
-            scope = scope,
-            pollingConfig = ChessPollingDefaults.desktop,
+            scope = scope ?: viewModelScope,
+            pollingConfig = pollingConfig,
             dismissedStorage = dismissedStorage,
         )
 
@@ -87,8 +79,8 @@ class DesktopChessViewModelNew(
     val error: StateFlow<String?> = logic.state.error
     val selectedGameId: StateFlow<String?> = logic.state.selectedGameId
     val isRefreshing: StateFlow<Boolean> = logic.state.isRefreshing
-    val syncStatus: StateFlow<ChessSyncStatus> = logic.state.syncStatus
     val stateVersion: StateFlow<Long> = logic.state.stateVersion
+    val syncStatus: StateFlow<ChessSyncStatus> = logic.state.syncStatus
 
     /** Badge count (incoming challenges + your turn games) - computed property */
     val badgeCount: Int get() = logic.state.badgeCount
@@ -98,6 +90,7 @@ class DesktopChessViewModelNew(
     // ============================================
 
     init {
+        Log.d("chessdebug") { "[ChessVM] init: userPubkey=${userPubkey.take(8)}" }
         logic.startPolling()
     }
 
@@ -107,23 +100,31 @@ class DesktopChessViewModelNew(
 
     fun forceRefresh() = logic.forceRefresh()
 
+    fun dismissCompletedGame(gameId: String) = logic.dismissCompletedGame(gameId)
+
+    fun dismissAllCompletedGames() = logic.dismissAllCompletedGames()
+
     /**
      * Ensure a game ID is being polled for updates.
-     * Call this when viewing a game.
+     * Call this when entering a game screen.
      */
     fun ensureGamePolling(gameId: String) = logic.ensureGamePolling(gameId)
 
     /**
      * Set focused game mode - only poll this specific game.
-     * Call this when viewing a game to avoid refreshing unrelated games.
+     * Call this when entering a game screen to avoid refreshing unrelated games.
      */
     fun setFocusedGame(gameId: String) = logic.setFocusedGame(gameId)
 
     /**
      * Clear focused game mode - return to lobby mode (poll all games).
-     * Call this when returning to the lobby view.
+     * Call this when returning to the lobby screen.
      */
     fun clearFocusedGame() = logic.clearFocusedGame()
+
+    override fun onCleared() {
+        logic.stopPolling()
+    }
 
     // ============================================
     // Incoming event routing (from relay subscriptions)
@@ -131,7 +132,12 @@ class DesktopChessViewModelNew(
 
     fun handleIncomingEvent(event: Event) {
         if (event.kind != JesterProtocol.KIND) return
-        val jesterEvent = event.toJesterEvent() ?: return
+        val jesterEvent =
+            event.toJesterEvent() ?: run {
+                Log.d("chessdebug") { "[ChessVM] handleIncomingEvent: failed to parse kind ${event.kind} event ${event.id.take(8)} as JesterEvent" }
+                return
+            }
+        Log.d("chessdebug") { "[ChessVM] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${jesterEvent.isStartEvent()}, isMove=${jesterEvent.isMoveEvent()}" }
         logic.handleIncomingEvent(jesterEvent)
     }
 
@@ -166,10 +172,6 @@ class DesktopChessViewModelNew(
     fun claimAbandonmentVictory(gameId: String) = logic.claimAbandonmentVictory(gameId)
 
     fun dismissGame(gameId: String) = logic.dismissGame(gameId)
-
-    fun dismissCompletedGame(gameId: String) = logic.dismissCompletedGame(gameId)
-
-    fun dismissAllCompletedGames() = logic.dismissAllCompletedGames()
 
     // ============================================
     // Spectator operations
