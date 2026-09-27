@@ -29,18 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
-import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
-import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 
 /**
  * NIP-FE: the client commands HTTP carries, one path each. A body is the command's arguments
  * after its subscription id (a lone object where the command takes one); the answer ends on the
  * first frame [ends] accepts.
- *
- * `NEG` is not in NIP-FE; it is this implementation's extension: one NIP-77 round,
- * `[filter, message]`. The responder keeps no state between rounds but its snapshot, which the
- * backend caches per filter, so each round carries its filter and there is no session to close.
  */
 enum class HttpRelayCommand(
     val path: String,
@@ -48,7 +41,6 @@ enum class HttpRelayCommand(
     REQ("/req"),
     COUNT("/count"),
     EVENT("/event"),
-    NEG("/neg"),
     ;
 
     /**
@@ -74,11 +66,6 @@ enum class HttpRelayCommand(
                 if (!shape.isObject) return null
                 "[\"${EventCmd.LABEL}\",${shape.text}]"
             }
-
-            NEG -> {
-                if (shape.isObject || shape.elements != NEG_ROUND) return null
-                frame(NegOpenCmd.LABEL, SUB_ID, shape.inner)
-            }
         }
     }
 
@@ -89,7 +76,6 @@ enum class HttpRelayCommand(
                 REQ -> message is EoseMessage || message is ClosedMessage
                 COUNT -> message is CountMessage || message is ClosedMessage
                 EVENT -> message is OkMessage
-                NEG -> message is NegMsgMessage || message is NegErrMessage
             }
 
     companion object {
@@ -98,8 +84,6 @@ enum class HttpRelayCommand(
          * none, so [HttpRelayHandler] takes it back out of each frame before it goes out.
          */
         const val SUB_ID = "http"
-
-        private val NEG_ROUND = listOf('{', '"')
 
         fun forPath(path: String): HttpRelayCommand? = entries.firstOrNull { it.path == path }
 

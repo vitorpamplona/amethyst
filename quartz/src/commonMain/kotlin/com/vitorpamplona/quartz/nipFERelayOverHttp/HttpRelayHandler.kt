@@ -346,7 +346,7 @@ class HttpRelayHandler(
 }
 
 /** The frames that carry a subscription id in the engine; NIP-FE sends them without it. */
-private val SUBSCRIPTION_FRAMES = setOf("EVENT", "EOSE", "CLOSED", "COUNT", "NEG-MSG", "NEG-ERR")
+private val SUBSCRIPTION_FRAMES = setOf("EVENT", "EOSE", "CLOSED", "COUNT")
 
 private const val SUB_ID_FIELD = ",\"" + HttpRelayCommand.SUB_ID + "\""
 

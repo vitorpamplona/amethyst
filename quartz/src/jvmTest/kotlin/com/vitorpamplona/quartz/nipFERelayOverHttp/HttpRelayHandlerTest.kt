@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.quartz.nipFERelayOverHttp
 
-import com.vitorpamplona.negentropy.Negentropy
-import com.vitorpamplona.negentropy.storage.StorageVector
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -43,7 +40,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
@@ -60,7 +56,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-/** NIP-FE's handler over a relay engine and an in-memory backend: status, lines, auth, and negentropy rounds. */
+/** NIP-FE's handler over a relay engine and an in-memory backend: status, lines and auth. */
 class HttpRelayHandlerTest {
     /** Everything the backend holds; a filter naming [STALLED_KIND] never answers, one naming [TRICKLE_KIND] never ends. */
     private class MemoryBackend : SessionBackend {
@@ -91,11 +87,6 @@ class HttpRelayHandlerTest {
             if (events.none { it.id == event.id }) events += event
             onComplete(IEventStore.InsertOutcome.Accepted)
         }
-
-        override suspend fun snapshotIdsForNegentropy(
-            filters: List<Filter>,
-            maxEntries: Int?,
-        ) = events.filter { e -> filters.any { it.match(e) } }.map { IdAndTime(it.createdAt, it.id) }
     }
 
     /** Refuses every read from a connection nobody signed in on, as an AUTH-gated relay does. */
@@ -238,7 +229,6 @@ class HttpRelayHandlerTest {
         for ((command, body) in listOf(
             HttpRelayCommand.REQ to "[]",
             HttpRelayCommand.EVENT to """[{"id":"x"}]""",
-            HttpRelayCommand.NEG to """[{"kinds":[1]}]""",
             HttpRelayCommand.COUNT to "not json",
         )) {
             val answer = handler().ask(command, body)
@@ -283,45 +273,6 @@ class HttpRelayHandlerTest {
         val other = h.ask(HttpRelayCommand.REQ, """{"kinds":[0]}""", token(HttpRelayCommand.REQ, body))
         assertEquals(401, other.status)
         assertTrue("payload" in other.lines.single(), other.lines.toString())
-    }
-
-    @Test
-    fun negentropyReconcilesInStatelessRounds() {
-        val shared = (1..30).map { note("shared $it", 1_700_000_000L + it) }
-        val onlyRelay = (1..12).map { note("relay $it", 1_700_001_000L + it) }
-        val onlyClient = (1..7).map { note("client $it", 1_700_002_000L + it) }
-        backend.events += shared + onlyRelay
-
-        val mine = StorageVector().apply { (shared + onlyClient).forEach { insert(it.createdAt, it.id) } }.also { it.seal() }
-        val client = Negentropy(mine, 0)
-        var message = client.initiate().toHexKey()
-        val have = mutableSetOf<String>()
-        val need = mutableSetOf<String>()
-        var rounds = 0
-        while (true) {
-            check(++rounds < 20) { "no convergence" }
-            // A fresh handler each round: nothing on the server side carries over.
-            val answer = handler().ask(HttpRelayCommand.NEG, """[{"kinds":[1]},"$message"]""")
-            assertEquals(200, answer.status, answer.lines.toString())
-            val reply =
-                answer.lines
-                    .single()
-                    .substringAfter("""["NEG-MSG","""")
-                    .substringBefore('"')
-            val result = client.reconcile(reply.hexToByteArray())
-            have += result.sendIds.map { it.toHexString() }
-            need += result.needIds.map { it.toHexString() }
-            message = result.msg?.toHexKey() ?: break
-        }
-        assertEquals(onlyClient.map { it.id }.toSet(), have)
-        assertEquals(onlyRelay.map { it.id }.toSet(), need)
-    }
-
-    @Test
-    fun aMalformedNegentropyRoundIsRefused() {
-        val answer = handler().ask(HttpRelayCommand.NEG, """[{"kinds":[1]},"zz"]""")
-        assertEquals(400, answer.status)
-        assertTrue(answer.lines.single().startsWith("""["NEG-ERR","""), answer.lines.toString())
     }
 
     @Test
@@ -451,13 +402,12 @@ class HttpRelayHandlerTest {
     fun aBackendFailureIsA500Line() {
         val failing =
             object : SessionBackend by backend {
-                override suspend fun sealedNegentropyStorage(
-                    filters: List<Filter>,
-                    maxEntries: Int,
-                ) = error("db is down")
+                override suspend fun submit(
+                    event: Event,
+                    onComplete: (IEventStore.InsertOutcome) -> Unit,
+                ): Unit = error("db is down")
             }
-        val message = Negentropy(StorageVector().also { it.seal() }, 0).initiate().toHexKey()
-        val answer = HttpRelayHandler(MemoryRelay(failing, { VerifyPolicy }), origins = { listOf(origin) }).ask(HttpRelayCommand.NEG, """[{"kinds":[1]},"$message"]""")
+        val answer = HttpRelayHandler(MemoryRelay(failing, { VerifyPolicy }), origins = { listOf(origin) }).ask(HttpRelayCommand.EVENT, note("lost").toJson())
         assertEquals(500, answer.status, answer.lines.toString())
         assertTrue(answer.lines.single().startsWith("""["CLOSED","error:"""), answer.lines.toString())
     }
@@ -491,13 +441,9 @@ class HttpRelayHandlerTest {
     fun theBodyShapeIsReadWithoutATree() {
         assertEquals("""["REQ","http",{"kinds":[1]}]""", HttpRelayCommand.REQ.frameOf(""" {"kinds":[1]} """))
         assertEquals("""["COUNT","http",{"a":"]"},{"b":"\"["}]""", HttpRelayCommand.COUNT.frameOf("""[{"a":"]"},{"b":"\"["}]"""))
-        assertEquals("""["NEG-OPEN","http",{"kinds":[1]},"61"]""", HttpRelayCommand.NEG.frameOf("""[{"kinds":[1]},"61"]"""))
         assertEquals("""["EVENT",{"id":"x"}]""", HttpRelayCommand.EVENT.frameOf("""{"id":"x"}"""))
         for (bad in listOf("", "[]", "{", "[{}", "{}}", "{]", "[{}]x", "{} {}", "[{},]", "[,{}]", "[{} {}]", "[1]", """[{},"x"]""", "null", "\"x\"")) {
             assertEquals(null, HttpRelayCommand.REQ.frameOf(bad), "REQ '$bad'")
-        }
-        for (bad in listOf("""[{"kinds":[1]}]""", """["61",{}]""", """[{},61]""", """[{},"61",1]""", """{"kinds":[1]}""")) {
-            assertEquals(null, HttpRelayCommand.NEG.frameOf(bad), "NEG '$bad'")
         }
         for (bad in listOf("""[{"id":"x"}]""", "1")) assertEquals(null, HttpRelayCommand.EVENT.frameOf(bad), "EVENT '$bad'")
     }

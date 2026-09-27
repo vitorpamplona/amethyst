@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
-import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 
 /**
  * NIP-FE status codes. The status of an answer is decided by its first frame: an accepting one
@@ -47,7 +46,6 @@ object HttpRelayStatus {
     fun of(message: Message?): Int =
         when (message) {
             is ClosedMessage -> forReason(message.message)
-            is NegErrMessage -> forReason(message.reason)
             // A duplicate is already stored, which is what the caller asked for, whichever flag the store set.
             is OkMessage -> if (message.success || message.message.startsWith(RejectionReason.PREFIX_DUPLICATE)) OK else forReason(message.message)
             is NoticeMessage -> BAD_REQUEST

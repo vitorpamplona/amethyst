@@ -409,10 +409,10 @@ class LiveEventStore(
 
     /**
      * Serves repeated NEG-OPENs of the same filter from one sealed storage until a write lands in its
-     * set. Several slots, because NIP-FE's stateless rounds re-open per round and a relay syncs more
-     * than one filter at a time; rebuilding costs a full scan + O(n log n) seal that grows with the
-     * corpus: relayBench measured 342 ms per identical-set reconcile at 50k events vs strfry's 26 ms
-     * off its always-current tree.
+     * set. Several slots, because a relay reconciles more than one filter at a time and a busy one
+     * takes writes between every open; rebuilding costs a full scan + O(n log n) seal that grows with
+     * the corpus: relayBench measured 342 ms per identical-set reconcile at 50k events vs strfry's
+     * 26 ms off its always-current tree.
      */
     override suspend fun sealedNegentropyStorage(
         filters: List<Filter>,
