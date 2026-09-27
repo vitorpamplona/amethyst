@@ -179,7 +179,8 @@ fun GeocacheAddToHuntSheet(
                                 if (already) {
                                     stringRes(Res.string.geocache_hunt_already_on)
                                 } else {
-                                    hunt.geocaches().size.let { pluralStringRes(Res.plurals.geocache_hunt_caches, it, it) }
+                                    val cacheCount = hunt.geocaches().size
+                                    pluralStringRes(Res.plurals.geocache_hunt_caches, cacheCount, cacheCount)
                                 },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
