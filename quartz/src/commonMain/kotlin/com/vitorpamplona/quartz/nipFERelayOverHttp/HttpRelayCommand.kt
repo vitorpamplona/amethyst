@@ -20,35 +20,27 @@
  */
 package com.vitorpamplona.quartz.nipFERelayOverHttp
 
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * NIP-FE: the client commands HTTP carries, one path each. A body is the
- * command's arguments after its subscription id (a lone object where the
- * command takes one); the answer ends on the first frame [ends] accepts.
+ * NIP-FE: the client commands HTTP carries, one path each. A body is the command's arguments
+ * after its subscription id (a lone object where the command takes one); the answer ends on the
+ * first frame [ends] accepts.
  *
- * `NEG` is one NIP-77 round, `[filter, message]`: the responder keeps no
- * state between rounds but its snapshot, which the backend caches per
- * filter, so each round carries its filter and there is no session to close.
+ * `NEG` is not in NIP-FE; it is this implementation's extension: one NIP-77 round,
+ * `[filter, message]`. The responder keeps no state between rounds but its snapshot, which the
+ * backend caches per filter, so each round carries its filter and there is no session to close.
  */
 enum class HttpRelayCommand(
     val path: String,
@@ -60,28 +52,35 @@ enum class HttpRelayCommand(
     ;
 
     /**
-     * The command [body] stands for, parsed and validated, or null when it
-     * is not this command's arguments. Re-serialized from a JSON tree, so a
-     * body can only ever be arguments, never a second command.
+     * The client frame [body] stands for, or null when it is not this command's arguments. Only
+     * the body's outer shape is checked here ([JsonShape]); the engine parses the frame once, so a
+     * malformed inside is its usual NOTICE. The shape check is what makes splicing safe: the body
+     * is one balanced value with nothing after it, so it cannot close the frame or open another.
      */
-    fun parse(body: String): Parsed? {
-        val tree =
-            try {
-                Json.parseToJsonElement(body)
-            } catch (_: SerializationException) {
-                return null
+    fun frameOf(body: String): String? {
+        val shape = JsonShape.of(body) ?: return null
+        return when (this) {
+            REQ, COUNT -> {
+                val filters =
+                    when {
+                        shape.isObject -> shape.text
+                        shape.elements.isNotEmpty() && shape.elements.all { it == '{' } -> shape.inner
+                        else -> return null
+                    }
+                frame(if (this == REQ) ReqCmd.LABEL else CountCmd.LABEL, SUB_ID, filters)
             }
-        val args = arguments(tree) ?: return null
-        val frame = JsonArray(head() + args).toString()
-        val cmd = runCatching { OptimizedJsonMapper.fromJsonToCommand(frame) }.getOrNull() ?: return null
-        return if (cmd.isValid() && cmd.matches()) Parsed(cmd, frame.length) else null
-    }
 
-    /** A body as its command, with the length of the frame it stands for: what the message-length limit measures. */
-    class Parsed(
-        val command: Command,
-        val wireLength: Int,
-    )
+            EVENT -> {
+                if (!shape.isObject) return null
+                "[\"${EventCmd.LABEL}\",${shape.text}]"
+            }
+
+            NEG -> {
+                if (shape.isObject || shape.elements != NEG_ROUND) return null
+                frame(NegOpenCmd.LABEL, SUB_ID, shape.inner)
+            }
+        }
+    }
 
     /** Whether [message] is the last frame of this command's answer. */
     fun ends(message: Message): Boolean =
@@ -93,47 +92,106 @@ enum class HttpRelayCommand(
                 NEG -> message is NegMsgMessage || message is NegErrMessage
             }
 
-    private fun head(): List<JsonElement> =
-        when (this) {
-            REQ -> listOf(JsonPrimitive(ReqCmd.LABEL), JsonPrimitive(SUB_ID))
-            COUNT -> listOf(JsonPrimitive(CountCmd.LABEL), JsonPrimitive(SUB_ID))
-            EVENT -> listOf(JsonPrimitive(EventCmd.LABEL))
-            NEG -> listOf(JsonPrimitive(NegOpenCmd.LABEL), JsonPrimitive(SUB_ID))
-        }
-
-    private fun arguments(body: JsonElement): List<JsonElement>? =
-        when (this) {
-            REQ, COUNT -> {
-                when (body) {
-                    is JsonObject -> listOf(body)
-                    is JsonArray -> body.takeIf { it.isNotEmpty() && it.all { f -> f is JsonObject } }
-                    else -> null
-                }
-            }
-
-            EVENT -> {
-                (body as? JsonObject)?.let(::listOf)
-            }
-
-            NEG -> {
-                (body as? JsonArray)?.takeIf {
-                    it.size == 2 && it[0] is JsonObject && (it[1] as? JsonPrimitive)?.isString == true
-                }
-            }
-        }
-
-    private fun Command.matches(): Boolean =
-        when (this@HttpRelayCommand) {
-            REQ -> this is ReqCmd
-            COUNT -> this is CountCmd
-            EVENT -> this is EventCmd
-            NEG -> this is NegOpenCmd
-        }
-
     companion object {
-        /** The subscription id every HTTP command runs under; each request is its own connection. */
+        /**
+         * The subscription id every HTTP command runs under inside the engine. NIP-FE answers carry
+         * none, so [HttpRelayHandler] takes it back out of each frame before it goes out.
+         */
         const val SUB_ID = "http"
 
+        private val NEG_ROUND = listOf('{', '"')
+
         fun forPath(path: String): HttpRelayCommand? = entries.firstOrNull { it.path == path }
+
+        private fun frame(
+            label: String,
+            subId: String,
+            args: String,
+        ) = "[\"$label\",\"$subId\",$args]"
+    }
+}
+
+/**
+ * The outer shape of a JSON body, read without building a tree: one object or array, brackets
+ * matched by type outside strings, nesting no deeper than [MAX_DEPTH], nothing after it. An array's
+ * [elements] are each top-level element's first character. Everything inside is left to the parser.
+ */
+internal class JsonShape private constructor(
+    val text: String,
+    val isObject: Boolean,
+    val elements: List<Char>,
+) {
+    /** An array's contents without its brackets. */
+    val inner: String get() = text.substring(1, text.length - 1)
+
+    companion object {
+        /** Deep enough for any filter, event or round by a wide margin; far too shallow to exhaust a stack. */
+        const val MAX_DEPTH = 32
+
+        fun of(body: String): JsonShape? {
+            val text = body.trim()
+            if (text.length < 2 || (text[0] != '{' && text[0] != '[')) return null
+            val elements = ArrayList<Char>()
+            val open = CharArray(MAX_DEPTH)
+            var depth = 0
+            var inString = false
+            var escaped = false
+            // At depth 1 inside an array: whether the next non-space character starts an element.
+            var expectElement = text[0] == '['
+            var i = 0
+            while (i < text.length) {
+                val c = text[i]
+                if (inString) {
+                    when {
+                        escaped -> escaped = false
+                        c == '\\' -> escaped = true
+                        c == '"' -> inString = false
+                    }
+                    i++
+                    continue
+                }
+                if (depth == 0 && i > 0) return null
+                if (depth == 1 && text[0] == '[' && !c.isWhitespace()) {
+                    when {
+                        c == ',' -> {
+                            if (expectElement) return null
+                            expectElement = true
+                            i++
+                            continue
+                        }
+
+                        c == ']' -> {
+                            if (expectElement && elements.isNotEmpty()) return null
+                        }
+
+                        expectElement -> {
+                            elements.add(c)
+                            expectElement = false
+                        }
+
+                        c == '{' || c == '[' || c == '"' -> {
+                            return null
+                        }
+                    }
+                }
+                when (c) {
+                    '"' -> {
+                        inString = true
+                    }
+
+                    '{', '[' -> {
+                        if (depth == MAX_DEPTH) return null
+                        open[depth++] = c
+                    }
+
+                    '}', ']' -> {
+                        if (depth == 0 || open[--depth] != (if (c == '}') '{' else '[')) return null
+                    }
+                }
+                i++
+            }
+            if (depth != 0 || inString) return null
+            return JsonShape(text, text[0] == '{', elements)
+        }
     }
 }
