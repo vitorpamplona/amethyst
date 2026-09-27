@@ -2163,14 +2163,32 @@ class Account(
         title: String?,
         description: String,
         hashtags: List<String> = emptyList(),
+        editing: WebBookmarkEvent? = null,
     ) {
         if (!isWriteable()) return
 
-        val template = WebBookmarkEvent.build(url, title, description, tags = hashtags)
+        val now = TimeUtils.now()
+        val template =
+            WebBookmarkEvent.build(
+                url,
+                title,
+                description,
+                tags = hashtags,
+                createdAt = now,
+                firstPublishedAt = editing?.publishedAt() ?: now,
+            )
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+
+        // A different d tag is a different address, so the edit would otherwise leave the old
+        // bookmark behind. That happens when the URL was changed, and when re-saving a bookmark
+        // stored under the pre-2026 NIP-B0 rule, which also dropped `http://` (the d tag then
+        // reads as https, and saving the real http URL now keeps the scheme).
+        if (editing != null && editing.dTag() != signedEvent.dTag()) {
+            deleteWebBookmark(editing)
+        }
     }
 
     suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
