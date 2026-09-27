@@ -74,12 +74,15 @@ import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
+import com.vitorpamplona.amethyst.service.cast.resolveCastLiveness
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
+import com.vitorpamplona.amethyst.service.playback.diskCache.HlsLivenessCache
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.cast.CastDevicePickerDialog
+import com.vitorpamplona.amethyst.ui.cast.rememberCastWithLocalNetworkPermission
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -229,6 +232,7 @@ fun RenderTopButtons(
     RenderTopButtons(
         mediaData = mediaData,
         hasMultipleQualities = hasMultipleQualities,
+        castFormatSummary = castFormatSummary(videoGroup),
         qualityButton = {
             VideoQualityButton(
                 player = player,
@@ -294,6 +298,9 @@ fun RenderTopButtons(
 fun RenderTopButtons(
     mediaData: MediaItemData,
     hasMultipleQualities: Boolean,
+    // What the local player decoded this as. Only the Cast failure messages use it: a receiver that
+    // refuses a video usually will not say why, so this is the only description of it available.
+    castFormatSummary: String? = null,
     qualityButton: @Composable () -> Unit,
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
@@ -313,6 +320,7 @@ fun RenderTopButtons(
     val captionsContentDescription =
         stringRes(if (captionsEnabled) Res.string.captions_turn_off else Res.string.captions_turn_on)
     val shareDialogVisible = remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val castDialogVisible = remember { mutableStateOf(false) }
     val castSessionState by Amethyst.instance.castRegistry.sessionState
         .collectAsStateWithLifecycle()
@@ -321,15 +329,19 @@ fun RenderTopButtons(
     val castIcon = if (isThisVideoCasting) MaterialSymbols.CastConnected else MaterialSymbols.Cast
     val castContentDescription =
         stringRes(if (isThisVideoCasting) Res.string.cast_stop_casting else Res.string.cast_to_device)
+    // Android 17 Local Network Protection blocks Cast device discovery until the
+    // user grants ACCESS_LOCAL_NETWORK, so gate the picker behind the request.
+    val showCastPicker = remember { { castDialogVisible.value = true } }
+    val openCastPicker = rememberCastWithLocalNetworkPermission(context, showCastPicker)
     val onCastButtonClick =
-        remember(isThisVideoCasting) {
+        remember(isThisVideoCasting, openCastPicker) {
             {
                 if (isThisVideoCasting) {
                     Amethyst.instance.applicationIOScope.launch {
                         Amethyst.instance.castRegistry.stopCasting()
                     }
                 } else {
-                    castDialogVisible.value = true
+                    openCastPicker()
                 }
                 Unit
             }
@@ -495,6 +507,17 @@ fun RenderTopButtons(
                         mimeType = mediaData.mimeType,
                         title = mediaData.title,
                         artworkUri = mediaData.artworkUri,
+                        // By the time the cast button is reachable the player has already parsed the
+                        // playlist, so the learned verdict is normally available here.
+                        isLive =
+                            resolveCastLiveness(
+                                learned = HlsLivenessCache.verdict(mediaData.videoUri),
+                                metadataFlag = mediaData.isLiveStream,
+                            ),
+                        // The local player has already decoded this, so it knows what the receiver
+                        // is about to be handed — the only description of the media available when
+                        // the receiver refuses it without saying why.
+                        formatSummary = castFormatSummary,
                     ),
                 onDismiss = { castDialogVisible.value = false },
             )
