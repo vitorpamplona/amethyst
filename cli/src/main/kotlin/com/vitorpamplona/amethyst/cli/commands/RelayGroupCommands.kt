@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupNAddrInvite
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
@@ -56,18 +57,24 @@ object RelayGroupCommands {
         |  relaygroup browse RELAY [--timeout S]      every group a relay hosts
         |  relaygroup info RELAY GID [--timeout S]    a group's metadata + roster
         |  relaygroup create RELAY --name NAME        create a group (publishes 9007+9002)
-        |    [--about A] [--private] [--closed]
+        |    [--about A] [--picture URL] [--banner URL]
+        |    [--parent GID] [--private] [--closed]
         |  relaygroup join RELAY GID [--code CODE]    request to join (kind 9021)
         |    [--reason R]
+        |  relaygroup join naddr1…[?invite=CODE]      same, from a shared group identifier
         |  relaygroup leave RELAY GID                 leave (kind 9022)
         |  relaygroup message RELAY GID TEXT          post a kind-9 chat to the group
         |  relaygroup edit RELAY GID [--name N]       edit metadata (kind 9002, admin);
-        |    [--about A] [--private|--public]         reads current visibility and only
-        |    [--closed|--open]                        changes the axis you specify
+        |    [--about A] [--picture URL]              carries every field you don't pass
+        |    [--banner URL] [--parent GID|--root]     over from the current kind 39000
+        |    [--private|--public] [--closed|--open]
         |  relaygroup invite RELAY GID --code CODE    mint an invite code (kind 9009)
         |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
         |    [--role admin|moderator]
         |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
+        |  relaygroup pin RELAY GID REF               pin an event (kind 9010); REF is a
+        |                                             note1/nevent1/hex id or naddr1/kind:pk:d
+        |  relaygroup unpin RELAY GID REF             unpin it, keeping every other pin
         """.trimMargin()
 
     suspend fun dispatch(
@@ -77,7 +84,7 @@ object RelayGroupCommands {
         route(
             "relaygroup",
             tail,
-            "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user> …",
+            "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user|pin|unpin> …",
             help = USAGE,
             routes =
                 mapOf(
@@ -92,10 +99,15 @@ object RelayGroupCommands {
                     "invite" to { rest -> RelayGroupModerationCommands.invite(dataDir, rest) },
                     "put-user" to { rest -> RelayGroupModerationCommands.putUser(dataDir, rest) },
                     "remove-user" to { rest -> RelayGroupModerationCommands.removeUser(dataDir, rest) },
+                    "pin" to { rest -> RelayGroupModerationCommands.pin(dataDir, rest, pin = true) },
+                    "unpin" to { rest -> RelayGroupModerationCommands.pin(dataDir, rest, pin = false) },
                 ),
         )
 
-    /** `relaygroup create RELAY --name NAME [--about A] [--private] [--closed]` → publishes 9007 + 9002. */
+    /**
+     * `relaygroup create RELAY --name NAME [--about A] [--picture URL] [--banner URL] [--parent GID]
+     * [--private] [--closed]` → publishes 9007 + 9002.
+     */
     private suspend fun create(
         dataDir: DataDir,
         rest: Array<String>,
@@ -105,6 +117,9 @@ object RelayGroupCommands {
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val name = args.flag("name") ?: return Output.error("bad_args", "relaygroup create requires --name")
         val about = args.flag("about")
+        val picture = args.flag("picture")
+        val banner = args.flag("banner")
+        val parent = args.flag("parent")
         val isPrivate = args.bool("private")
         val isClosed = args.bool("closed")
         args.rejectUnknown()
@@ -116,7 +131,7 @@ object RelayGroupCommands {
 
             val createAck = ctx.publish(ctx.signer.sign(CreateGroupEvent.build(groupId)), target)
             val status = groupStatus(isPrivate, isClosed)
-            val edit = EditMetadataEvent.build(groupId, name = name, about = about, status = status)
+            val edit = EditMetadataEvent.build(groupId, name = name, about = about, picture = picture, banner = banner, status = status, parent = parent)
             val editAck = ctx.publish(ctx.signer.sign(edit), target)
             // Track it in our own kind:10009 so `relaygroup list` shows it, matching
             // the Android create flow (Account.createRelayGroup → follow).
@@ -127,6 +142,7 @@ object RelayGroupCommands {
                     "group_id" to groupId,
                     "relay" to relay.url,
                     "name" to name,
+                    "parent" to parent,
                     "private" to isPrivate,
                     "closed" to isClosed,
                     "published" to (createAck.values.any { it.accepted } && editAck.values.any { it.accepted }),
@@ -138,30 +154,50 @@ object RelayGroupCommands {
     }
 
     /**
-     * `relaygroup join RELAY GROUP_ID [--code CODE] [--reason R]` — publishes the
-     * 9021 join request to the host relay AND adds the group to the caller's
-     * kind-10009 list (private item), so `relaygroup list` reflects it.
+     * `relaygroup join RELAY GROUP_ID [--code CODE] [--reason R]` or
+     * `relaygroup join naddr1…[?invite=CODE] [--reason R]` — publishes the 9021 join request to the
+     * host relay AND adds the group to the caller's kind-10009 list, so `relaygroup list` reflects it.
+     * The naddr form is NIP-29's shareable group identifier; its `?invite=` suffix becomes the `code`
+     * tag (an explicit `--code` wins).
      */
     private suspend fun join(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val usage = "relaygroup join RELAY GROUP_ID [--code CODE]"
-        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
-        val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
-        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+        val usage = "relaygroup join RELAY GROUP_ID [--code CODE] | relaygroup join naddr1…[?invite=CODE]"
+        val first = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val reference = GroupNAddrInvite.parseReference(first)
+        val relay: NormalizedRelayUrl
+        val groupId: String
+        if (reference != null) {
+            relay = reference.groupId.relayUrl
+            groupId = reference.groupId.id
+        } else {
+            if (first.trim().removePrefix("nostr:").startsWith("naddr")) {
+                return Output.error("bad_args", "not a NIP-29 group naddr (kind 39000 with a relay hint): $first")
+            }
+            groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
+            relay = normalizeGroupRelay(first) ?: return Output.error("bad_args", "invalid relay url: $first")
+        }
+        val code = args.flag("code") ?: reference?.inviteCode
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val join = JoinRequestEvent.build(groupId, reason = args.flag("reason") ?: "", inviteCode = args.flag("code"))
+            val join = JoinRequestEvent.build(groupId, reason = args.flag("reason") ?: "", inviteCode = code)
             args.rejectUnknown()
             val signed = ctx.signer.sign(join)
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = true)
             Output.emit(
-                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it.accepted }, "listed" to listed),
+                mapOf(
+                    "group_id" to groupId,
+                    "relay" to relay.url,
+                    "code" to code,
+                    "published" to ack.values.any { it.accepted },
+                    "listed" to listed,
+                ),
             )
             return 0
         }

@@ -586,14 +586,16 @@ screen speaks.
 | `amy relaygroup list` | Your joined groups, from your kind:10009 list (public + private). |
 | `amy relaygroup browse RELAY` | Every group a relay hosts (its 39000-39003 directory). |
 | `amy relaygroup info RELAY GID` | A group's metadata + admin/member roster. |
-| `amy relaygroup create RELAY --name X [--about A] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. |
+| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. |
 | `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
+| `amy relaygroup join naddr1…[?invite=CODE]` | Same, from NIP-29's shareable group identifier; the `?invite=` suffix becomes the join `code`. |
 | `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
-| `amy relaygroup edit RELAY GID [--name X] [--about A] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads current visibility and changes only the axis you pass, so re-asserting one flag never resets the other. |
+| `amy relaygroup edit RELAY GID [--name X] [--about A] [--picture URL] [--banner URL] [--parent GID\|--root] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads the current 39000 and changes only what you pass: picture, banner, subgroup links, other flags and unknown tags are carried over. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
 | `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
+| `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list is kept. |
 
 ### Buzz workspaces (block/buzz — NIP-29 dialect)
 
