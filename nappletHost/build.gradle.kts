@@ -2,6 +2,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidLibrary)
+    // The full-screen browser / napplet windows draw the shared Compose browser chrome (commonsUI).
+    alias(libs.plugins.jetbrainsComposeCompiler)
 }
 
 android {
@@ -43,6 +45,11 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity)
+    implementation(libs.jetbrains.compose.ui)
+    implementation(libs.jetbrains.compose.foundation)
+    implementation(libs.jetbrains.compose.runtime)
+    implementation(libs.jetbrains.compose.material3)
+    implementation(libs.jetbrains.compose.components.resources)
     implementation(libs.androidx.webkit)
     implementation(libs.okhttp)
 

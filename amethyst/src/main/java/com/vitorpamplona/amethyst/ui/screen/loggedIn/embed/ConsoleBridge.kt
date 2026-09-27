@@ -21,21 +21,25 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 
 /**
  * A surface controller that exposes JavaScript console output captured from the embedded WebView.
- * The [consoleLogs] list is Compose snapshot state so [BottomConsoleSheet] recomposes as messages
- * arrive. Implemented by [com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController].
+ * The [consoleLogs] list is Compose snapshot state so the console sheet recomposes as messages arrive.
+ * Implemented by [com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController].
  */
 interface ConsoleBridge {
-    val consoleLogs: SnapshotStateList<ConsoleLogEntry>
+    val consoleLogs: SnapshotStateList<ConsoleLine>
 
     fun clearConsoleLogs()
 }
 
-data class ConsoleLogEntry(
-    val level: String,
-    val message: String,
-    val source: String,
-    val lineNumber: Int,
-)
+/** Maps a provider's console level (WebView's `ConsoleMessage.MessageLevel` name) onto the chrome's. */
+fun consoleLevelOf(level: String): ConsoleLine.Level =
+    when (level) {
+        "ERROR" -> ConsoleLine.Level.ERROR
+        "WARNING" -> ConsoleLine.Level.WARNING
+        "DEBUG" -> ConsoleLine.Level.DEBUG
+        "TIP" -> ConsoleLine.Level.INFO
+        else -> ConsoleLine.Level.LOG
+    }

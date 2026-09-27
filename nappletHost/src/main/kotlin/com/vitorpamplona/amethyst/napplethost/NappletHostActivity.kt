@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.napplethost
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -39,6 +39,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -62,6 +63,11 @@ import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
@@ -192,9 +198,11 @@ class NappletHostActivity : ComponentActivity() {
     // WebChromeClient's onProgressChanged; hidden at 100%.
     private val topProgressBar by lazy { buildTopProgressBar() }
 
-    // Bottom pull-up developer console: the page's console.log/warn/error plus any resource load errors.
-    private var consolePanel: NappletConsolePanel? = null
-    private var controlSheet: NappletControlSheet? = null
+    // The trusted pull-down pill, find and the developer console — the shared Compose chrome.
+    private var chrome: BrowserChromeHost? = null
+
+    // Set when the renderer died and the WebView was destroyed, so teardown doesn't touch it again.
+    private var webViewGone = false
 
     // Set once the WebView has begun loading the shell, so a retry doesn't reload it.
     private var started = false
@@ -204,7 +212,9 @@ class NappletHostActivity : ComponentActivity() {
     private val backCallback =
         object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                if (this@NappletHostActivity::webView.isInitialized && webView.canGoBack()) {
+                // The chrome first (open pill, find), then the applet's own history.
+                if (chrome?.handleBack() == true) return
+                if (this@NappletHostActivity::webView.isInitialized && !webViewGone && webView.canGoBack()) {
                     webView.goBack()
                 } else {
                     isEnabled = false
@@ -215,7 +225,8 @@ class NappletHostActivity : ComponentActivity() {
 
     /** Keep the in-WebView back gesture enabled exactly while the applet has history to pop. */
     private fun syncBackState() {
-        if (this::webView.isInitialized) backCallback.isEnabled = webView.canGoBack()
+        val canGoBack = this::webView.isInitialized && !webViewGone && webView.canGoBack()
+        backCallback.isEnabled = canGoBack || chrome?.wantsBack == true
     }
 
     // True between onResume and onPause. Sent to the broker (foreground hold) on connect too, in case
@@ -247,6 +258,7 @@ class NappletHostActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SandboxComposeResources.ensure(this)
 
         if (!readManifestExtras()) {
             Toast.makeText(this, getString(R.string.napplet_invalid), Toast.LENGTH_SHORT).show()
@@ -284,6 +296,7 @@ class NappletHostActivity : ComponentActivity() {
         // profile has otherwise been used), so the storage partition must be chosen before anything else.
         NappletWebViewProfile.apply(this, webView, webViewProfile)
         hardenWebView(webView)
+        webView.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
         // Theme the WebView's pre-paint background to the app's so it doesn't flash white when the shell
         // mounts. This activity has a themed context, so it resolves the color locally (no IPC needed).
         webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
@@ -311,28 +324,11 @@ class NappletHostActivity : ComponentActivity() {
         val root =
             FrameLayout(this).apply {
                 addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-                addView(
-                    buildControlSheet(),
-                    FrameLayout
-                        .LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.TOP,
-                        ),
-                )
-                addView(
-                    buildConsolePanel(),
-                    FrameLayout
-                        .LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.BOTTOM,
-                        ),
-                )
-                // Added last so the thin loading bar paints above the content (and over the grabber's top
-                // edge); it's GONE except while loading, so it never obscures the trusted chrome.
-                addView(topProgressBar)
             }
+        chrome = buildChrome().also { it.attach(root) }
+        // Added last so the thin loading bar paints above the content (and over the grabber's top edge); it's
+        // GONE except while loading, so it never obscures the trusted chrome.
+        root.addView(topProgressBar)
         setContentView(root)
         // Activities are edge-to-edge by default on recent Android; pad by the system bar, display-cutout
         // and IME insets so neither the chrome nor the applet draws under the system bars or the soft
@@ -378,7 +374,7 @@ class NappletHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (this::webView.isInitialized) {
+        if (this::webView.isInitialized && !webViewGone) {
             webView.onResume()
         }
         // Launching this :napplet-process surface backgrounded the main process; tell the broker to
@@ -392,7 +388,7 @@ class NappletHostActivity : ComponentActivity() {
         // Foreground-only: stop the applet's JS/timers in the background so it cannot fire a
         // sign/decrypt/pay request whose consent prompt would surface over (and be confused with)
         // Amethyst's own UI. Requests only happen while the user is looking at this napplet.
-        if (this::webView.isInitialized) {
+        if (this::webView.isInitialized && !webViewGone) {
             // webView.onPause() pauses THIS WebView's JS/DOM (the security goal — a backgrounded napplet can't
             // fire a sign/decrypt/pay request). Do NOT call pauseTimers(): it's process-global and freezes
             // EVERY WebView in `:napplet`, including the embedded browser/napplet surfaces, which never resume.
@@ -465,7 +461,7 @@ class NappletHostActivity : ComponentActivity() {
         // A picker still up when the applet is torn down would otherwise leave its callback unanswered.
         pendingFileChooser.cancel()
         fileChooserLauncher.teardown()
-        if (this::webView.isInitialized) {
+        if (this::webView.isInitialized && !webViewGone) {
             // Detach before destroy(): destroying an attached WebView corrupts the shared multiprocess
             // renderer/network state and breaks the other (embedded) WebViews in this `:napplet` process
             // (dead DNS, empty DOM reads, dead selection paint, broken IME). See NappletBrowserActivity.
@@ -644,6 +640,26 @@ class NappletHostActivity : ComponentActivity() {
             logConsoleError(request, getString(R.string.napplet_console_http_error, errorResponse.statusCode, errorResponse.reasonPhrase.orEmpty()))
         }
 
+        /**
+         * The renderer died. Every WebView in `:napplet` shares one renderer and an unhandled crash kills
+         * the whole process (every embedded tab too), so drop only this WebView and offer to start over.
+         */
+        override fun onRenderProcessGone(
+            view: WebView,
+            detail: RenderProcessGoneDetail,
+        ): Boolean {
+            Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}); offering a restart" }
+            webViewGone = true
+            chrome?.closeFind()
+            (view.parent as? ViewGroup)?.removeView(view)
+            view.destroy()
+            loadingView?.let { contentFrame.removeView(it) }
+            loadingView = null
+            contentFrame.addView(buildErrorView { recreate() })
+            syncBackState()
+            return true
+        }
+
         override fun shouldOverrideUrlLoading(
             view: WebView,
             request: WebResourceRequest,
@@ -686,9 +702,10 @@ class NappletHostActivity : ComponentActivity() {
         }
 
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-            val panel = consolePanel ?: return false
-            panel.appendLog(consoleMessage.messageLevel(), consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber())
-            controlSheet?.updateConsoleCount(panel.entryCount)
+            val host = chrome ?: return false
+            host.appendConsole(
+                ConsoleLine(BrowserChromeHost.levelOf(consoleMessage.messageLevel()), consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber()),
+            )
             return true
         }
     }
@@ -716,9 +733,11 @@ class NappletHostActivity : ComponentActivity() {
     private fun updateLoadProgress(progress: Int) {
         if (progress >= 100) {
             topProgressBar.visibility = View.GONE
+            chrome?.let { it.ui = it.ui.copy(loadProgress = null, chrome = it.ui.chrome.copy(isLoading = false)) }
         } else {
             topProgressBar.progress = progress
             topProgressBar.visibility = View.VISIBLE
+            chrome?.let { it.ui = it.ui.copy(loadProgress = progress / 100f, chrome = it.ui.chrome.copy(isLoading = true)) }
         }
     }
 
@@ -727,9 +746,7 @@ class NappletHostActivity : ComponentActivity() {
         request: WebResourceRequest,
         message: String,
     ) {
-        val panel = consolePanel ?: return
-        panel.appendLog(ConsoleMessage.MessageLevel.ERROR, message, request.url?.toString().orEmpty(), 0)
-        controlSheet?.updateConsoleCount(panel.entryCount)
+        chrome?.appendConsole(ConsoleLine(ConsoleLine.Level.ERROR, message, request.url?.toString().orEmpty(), 0))
     }
 
     // ---- bridge: shell <-> native ----
@@ -902,25 +919,88 @@ class NappletHostActivity : ComponentActivity() {
     private fun barTitle(): String = title.ifBlank { getString(CommonsR.string.napplet_untitled) }
 
     /**
-     * The trusted top pull-down sheet: a small grabber at the top edge (out of the corner where the app
-     * shows its own avatar) that expands to the sandbox **shield**, the nSite network/Tor row (website
-     * mode only, taps through to the confirm dialog), reload, and the "what it can access" sheet. The
-     * applet can't draw over it. Mirrors the embedded tabs' Compose `TopControlSheet`.
+     * The trusted pull-down pill: a small grabber at the top edge (out of the corner where the app shows its
+     * own avatar) that expands to the sandbox **shield**, the nSite network/Tor row (website mode only, taps
+     * through to a relaunch), reload, find, text size and "what it can access". The applet can't draw over
+     * it. The same Compose components as the embedded tabs and the web browser.
      */
-    private fun buildControlSheet(): View =
-        NappletControlSheet(
-            context = this,
-            title = barTitle(),
-            isSandbox = true,
-            onReload = { if (this::webView.isInitialized) webView.reload() },
-            // Website-mode nSites can re-route over Tor; switching rebuilds the session, so the row taps
-            // through to a full relaunch rather than toggling inline.
-            torInitiallyOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
-            onNetworkTap = if (profile.exposesNetwork && proxyPort > 0) ({ setNetworkMode(!useTor) }) else null,
-            onInfo = { showAccessDialog() },
-            onPermissions = { openPermissions() },
-            onConsole = { show -> consolePanel?.setShowing(show) },
-        ).also { controlSheet = it }
+    private fun buildChrome(): BrowserChromeHost =
+        BrowserChromeHost(
+            activity = this,
+            dark = isDarkTheme(),
+            initial =
+                BrowserPillUi(
+                    title = barTitle(),
+                    chrome =
+                        BrowserChrome.State(
+                            surface = if (profile == HostProfile.WEBSITE) BrowserChrome.Surface.NSITE else BrowserChrome.Surface.NAPPLET,
+                            presentation = BrowserChrome.Presentation.FULL_SCREEN,
+                            url = "",
+                            startUrl = "",
+                            // Website-mode nSites can re-route over Tor; switching rebuilds the session, so the
+                            // row taps through to a full relaunch rather than toggling inline.
+                            torOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
+                            canFavorite = false,
+                            hasAccessInfo = true,
+                        ),
+                ),
+            listener = chromeListener,
+        )
+
+    private fun isDarkTheme(): Boolean =
+        when (themeType) {
+            "DARK" -> true
+            "LIGHT" -> false
+            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+
+    private fun liveWebView(): WebView? = if (this::webView.isInitialized && !webViewGone) webView else null
+
+    private val chromeListener =
+        object : BrowserChromeHost.Listener {
+            override fun onPillEvent(event: BrowserPillEvent) {
+                when (event) {
+                    is BrowserPillEvent.Action ->
+                        when (event.action) {
+                            BrowserChrome.Action.RELOAD -> liveWebView()?.reload()
+                            BrowserChrome.Action.STOP -> liveWebView()?.stopLoading()
+                            BrowserChrome.Action.TOR -> setNetworkMode(!useTor)
+                            BrowserChrome.Action.ACCESS_INFO -> showAccessDialog()
+                            BrowserChrome.Action.SITE_SETTINGS -> openPermissions()
+                            else -> Unit
+                        }
+                    is BrowserPillEvent.TextZoom -> {
+                        liveWebView()?.let { BrowserWebTools.setTextZoom(it, event.percent) }
+                        chrome?.let { it.ui = it.ui.copy(textZoom = event.percent) }
+                    }
+                    BrowserPillEvent.PageInfo -> showAccessDialog()
+                    BrowserPillEvent.Close -> finish()
+                    else -> Unit
+                }
+            }
+
+            override fun onFind(query: String) {
+                val wv = liveWebView() ?: return
+                if (query.isEmpty()) wv.clearMatches() else wv.findAllAsync(query)
+            }
+
+            override fun onFindNext(forward: Boolean) {
+                liveWebView()?.findNext(forward)
+            }
+
+            override fun onFindClosed() {
+                liveWebView()?.clearMatches()
+            }
+
+            override fun onPermissionChange(
+                permission: BrowserSitePermission,
+                decision: BrowserSitePermission.Decision,
+            ) = Unit
+
+            override fun onClearSiteData() = Unit
+
+            override fun onPanelsChanged() = syncBackState()
+        }
 
     /**
      * Ask the broker to open this napplet's editable permission screen. The sandbox can't state its own
@@ -934,12 +1014,6 @@ class NappletHostActivity : ComponentActivity() {
             }
         if (brokerMessenger != null) sendToBroker(msg)
     }
-
-    private fun buildConsolePanel(): View =
-        NappletConsolePanel(this).also {
-            it.onClearCallback = { controlSheet?.updateConsoleCount(0) }
-            consolePanel = it
-        }
 
     /**
      * A thin determinate progress bar pinned to the top edge, like a browser's. Driven by
@@ -973,18 +1047,15 @@ class NappletHostActivity : ComponentActivity() {
 
     /** Lists, in plain language, exactly which capabilities this napplet was launched with. */
     private fun showAccessDialog() {
-        val body =
-            if (capabilityLabels.isEmpty()) {
-                getString(R.string.napplet_chrome_static_site)
-            } else {
-                capabilityLabels.joinToString("\n") { "•  $it" } + "\n\n" + getString(R.string.napplet_chrome_keys_safe)
-            }
-        AlertDialog
-            .Builder(this)
-            .setTitle(getString(R.string.napplet_chrome_access_title, barTitle()))
-            .setMessage(body)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+        chrome?.showAccessInfo(
+            BrowserChromeHost.AccessInfo(
+                title = barTitle(),
+                isWebsite = profile == HostProfile.WEBSITE,
+                capabilities = capabilityLabels,
+                torOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
+                onManagePermissions = if (brokerMessenger != null) ::openPermissions else null,
+            ),
+        )
     }
 
     /**

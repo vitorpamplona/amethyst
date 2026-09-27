@@ -115,6 +115,34 @@ object NappletEmbedContract {
      */
     const val MSG_FILE_CHOOSER_RESULT = 19
 
+    /** Client → provider: find [KEY_FIND_QUERY] in the page; an empty query clears the highlights. */
+    const val MSG_FIND = 20
+
+    /** Client → provider: move to the next ([KEY_FIND_FORWARD] true) or previous match. */
+    const val MSG_FIND_NEXT = 21
+
+    /** Provider → client: [KEY_FIND_ACTIVE] (0-based) of [KEY_FIND_TOTAL] matches. */
+    const val MSG_FIND_RESULT = 22
+
+    /** Client → provider: set the page's text size to [KEY_TEXT_ZOOM] percent. */
+    const val MSG_SET_TEXT_ZOOM = 23
+
+    /**
+     * Provider → client: one line for the developer console — [KEY_CONSOLE_LEVEL] (WebView's
+     * `ConsoleMessage.MessageLevel` name), [KEY_CONSOLE_MESSAGE], [KEY_CONSOLE_SOURCE], [KEY_CONSOLE_LINE].
+     */
+    const val MSG_CONSOLE_LOG = 24
+
+    const val KEY_FIND_QUERY = "findQuery"
+    const val KEY_FIND_FORWARD = "findForward"
+    const val KEY_FIND_ACTIVE = "findActive"
+    const val KEY_FIND_TOTAL = "findTotal"
+    const val KEY_TEXT_ZOOM = "textZoom"
+    const val KEY_CONSOLE_LEVEL = "consoleLevel"
+    const val KEY_CONSOLE_MESSAGE = "consoleMessage"
+    const val KEY_CONSOLE_SOURCE = "consoleSource"
+    const val KEY_CONSOLE_LINE = "consoleLine"
+
     const val KEY_FILE_CHOOSER_ID = "fileChooserId"
     const val KEY_FILE_CHOOSER_ACCEPT = "fileChooserAccept"
     const val KEY_FILE_CHOOSER_MULTIPLE = "fileChooserMultiple"
