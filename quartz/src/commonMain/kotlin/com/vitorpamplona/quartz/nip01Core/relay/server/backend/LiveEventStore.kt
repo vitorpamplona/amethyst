@@ -22,21 +22,18 @@ package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
 import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.isAddressable
-import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip01Core.store.StoreQueryContext
-import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
-import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.withContext
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -157,7 +154,7 @@ class LiveEventStore(
     ) {
         ingest.submit(event, skipVerify) { outcome ->
             if (outcome is IEventStore.InsertOutcome.Accepted) {
-                forgetSnapshotsCovering(event)
+                writeGeneration.addAndFetch(1L)
                 fanout(event)
             }
             onComplete(outcome)
@@ -391,28 +388,32 @@ class LiveEventStore(
     // ------------------------------------------------------------------
 
     /**
-     * The last few sealed negentropy snapshots, most recently used first, each valid until a write
-     * could change its set. Replaced whole on every change, never mutated, so a reader never sees a
-     * half-updated list. Deletion paths that bypass the ingest queue (expiration sweeps, NIP-86 admin
-     * purges) are not seen here, which is why entries also carry a short TTL: a snapshot is a
-     * point-in-time set by NIP-77's nature, and a few seconds of staleness only means a peer
-     * momentarily re-offers ids the relay just dropped.
+     * Bumped after every accepted write. A cached negentropy snapshot is
+     * only valid while this hasn't moved. Deletion paths that bypass the
+     * ingest queue (expiration sweeps, NIP-86 admin purges) don't bump it,
+     * which is why cache entries also carry a short TTL: a snapshot is a
+     * point-in-time set by NIP-77's nature, and a few seconds of staleness
+     * only means a peer momentarily re-offers ids the relay just dropped.
      */
-    private val snapshotCache = AtomicReference<List<CachedSnapshot>>(emptyList())
+    private val writeGeneration = AtomicLong(0L)
 
     private class CachedSnapshot(
         val filterKey: String,
-        val filters: List<Filter>,
+        val generation: Long,
         val builtAt: Long,
         val storage: IStorage?,
     )
 
+    private val snapshotCache = AtomicReference<CachedSnapshot?>(null)
+
     /**
-     * Serves repeated NEG-OPENs of the same filter from one sealed storage until a write lands in its
-     * set. Several slots, because a relay reconciles more than one filter at a time and a busy one
-     * takes writes between every open; rebuilding costs a full scan + O(n log n) seal that grows with
-     * the corpus: relayBench measured 342 ms per identical-set reconcile at 50k events vs strfry's
-     * 26 ms off its always-current tree.
+     * Serves repeated NEG-OPENs of the same filter from one sealed
+     * storage as long as no write landed in between (single slot — the
+     * mirror-heartbeat pattern is many peers reconciling the same broad
+     * filter, not many filters). Rebuilding on every open costs a full
+     * scan + O(n log n) seal that grows with the corpus: relayBench
+     * measured 342 ms per identical-set reconcile at 50k events vs
+     * strfry's 26 ms off its always-current tree.
      */
     override suspend fun sealedNegentropyStorage(
         filters: List<Filter>,
@@ -427,57 +428,30 @@ class LiveEventStore(
             store.liveNegentropySnapshot(maxEntries)?.let { return it }
         }
 
-        val key = filters.joinToString(" ") { it.toJson() } + " cap=$maxEntries"
+        val generation = writeGeneration.load()
+        val key = filters.joinToString(" ") { it.toJson() } + " cap=$maxEntries"
         val now = TimeUtils.now()
 
-        snapshotCache.load().firstOrNull { it.filterKey == key && now - it.builtAt <= SNAPSHOT_TTL_SECONDS }?.let { hit ->
-            updateSnapshots { cached -> listOf(hit) + cached.filter { it !== hit } }
-            return hit.storage
+        val cached = snapshotCache.load()
+        if (cached != null &&
+            cached.filterKey == key &&
+            cached.generation == generation &&
+            now - cached.builtAt <= SNAPSHOT_TTL_SECONDS
+        ) {
+            return cached.storage
         }
 
         val built = super.sealedNegentropyStorage(filters, maxEntries)
-        val entry = CachedSnapshot(key, filters, now, built)
-        updateSnapshots { cached -> (listOf(entry) + cached.filter { it.filterKey != key }).take(SNAPSHOT_SLOTS) }
+        snapshotCache.store(CachedSnapshot(key, generation, now, built))
         return built
-    }
-
-    /**
-     * Drops every cached snapshot whose set [event] can change: one of its filters admits the event,
-     * or the event can remove members it cannot see — a deletion or vanish request clears them all,
-     * and a replaceable or addressable event drops any snapshot whose kinds and authors it falls in,
-     * since the version it replaces may be in the set under tags or ids the new one no longer has.
-     */
-    private fun forgetSnapshotsCovering(event: Event) {
-        if (snapshotCache.load().isEmpty()) return
-        if (event.kind == DeletionRequestEvent.KIND || event.kind == RequestToVanishEvent.KIND) {
-            updateSnapshots { emptyList() }
-            return
-        }
-        val supersedes = event.kind.isReplaceable() || event.kind.isAddressable()
-        updateSnapshots { cached ->
-            cached.filter { snapshot ->
-                snapshot.filters.none { f -> f.match(event) || (supersedes && Filter(kinds = f.kinds, authors = f.authors).match(event)) }
-            }
-        }
-    }
-
-    private inline fun updateSnapshots(change: (List<CachedSnapshot>) -> List<CachedSnapshot>) {
-        while (true) {
-            val current = snapshotCache.load()
-            val next = change(current)
-            if (next == current || snapshotCache.compareAndSet(current, next)) return
-        }
     }
 
     private companion object {
         /**
          * Ceiling on how long a cached snapshot may serve NEG-OPENs even
          * with no observed writes — bounds staleness from delete paths
-         * the ingest queue never sees.
+         * the generation counter can't see.
          */
         const val SNAPSHOT_TTL_SECONDS = 30L
-
-        /** Distinct filters kept sealed at once; each holds up to maxSyncEvents ids at ~40 B each. */
-        const val SNAPSHOT_SLOTS = 4
     }
 }
