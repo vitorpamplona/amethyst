@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -40,10 +41,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -51,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_private
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_banner
 import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_open
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
@@ -134,6 +138,16 @@ private fun RelayGroupCardContent(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
+        // NIP-29 `banner`: a wide header strip across the top of the card, when the group has one.
+        val banner = channel.bannerPicture()?.takeIf { it.isNotBlank() }
+        if (banner != null && LocalDisplaySettings.current.showProfilePictures) {
+            AsyncImage(
+                model = banner,
+                contentDescription = stringRes(Res.string.relay_group_field_banner),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(72.dp),
+            )
+        }
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

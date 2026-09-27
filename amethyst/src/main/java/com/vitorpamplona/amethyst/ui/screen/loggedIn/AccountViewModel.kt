@@ -1725,6 +1725,12 @@ class AccountViewModel(
 
     fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.relayGroups.leaveRelayGroup(channel) }
 
+    /** NIP-29 migration: point our kind-10009 entry for [channel] at [newRelay] instead. */
+    fun moveRelayGroup(
+        channel: RelayGroupChannel,
+        newRelay: NormalizedRelayUrl,
+    ) = launchSigner { account.relayGroups.moveRelayGroup(channel, newRelay) }
+
     /** Delete the channel/group for everyone (kind-9008). Owner/admin only; the relay enforces it. */
     fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.relayGroups.deleteRelayGroup(channel) }
 
@@ -1859,12 +1865,12 @@ class AccountViewModel(
     fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note.idHex) }
+    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note) }
 
     fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note.idHex) }
+    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note) }
 
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,

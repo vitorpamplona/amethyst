@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -390,5 +391,30 @@ class RelayGroupChannelTest {
         c.removeThread(t1)
         assertEquals(1, c.threadCount())
         assertTrue(c.threads.value.none { it.idHex == t1.idHex })
+    }
+
+    /**
+     * NIP-29 #2416: a pin list mixes `e` and `a` entries. Pinning or unpinning one entry must
+     * re-submit every OTHER entry intact — another client's `a` pin (with its relay hint) included.
+     */
+    @Test
+    fun pinEditsPreserveOtherClientsAddressPins() {
+        val c = channel()
+        val addr = "30023:$alice:article"
+        val tags = arrayOf(arrayOf("d", gid), arrayOf("e", msg1), arrayOf("a", addr, "wss://hint.example/"), arrayOf("e", msg2))
+        c.updatePinned(EventFactory.create("00".repeat(32), relaySelf, 100, GroupPinnedEvent.KIND, tags, "", "22".repeat(64)) as GroupPinnedEvent)
+
+        assertEquals(listOf(msg1, addr, msg2), c.pins.map { it.ref })
+        assertEquals(listOf(msg1, msg2), c.pinnedEventIds)
+        assertEquals(listOf(addr), c.pinnedAddresses.map { it.toValue() })
+        assertTrue(c.isPinned(addr))
+
+        val afterUnpin = c.pinsWithout(msg1)
+        assertEquals(listOf(listOf("a", addr, "wss://hint.example/"), listOf("e", msg2)), afterUnpin.map { it.toTagArray().toList() })
+
+        val afterPin = c.pinsWith(EventPin(msg3))
+        assertEquals(listOf(msg1, addr, msg2, msg3), afterPin.map { it.ref })
+        assertEquals(c.pins, c.pinsWith(EventPin(msg2)), "re-pinning an already pinned id is a no-op")
+        assertTrue(c.hasRelaySignedState())
     }
 }

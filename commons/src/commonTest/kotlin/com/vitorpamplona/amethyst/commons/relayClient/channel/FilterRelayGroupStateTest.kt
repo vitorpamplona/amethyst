@@ -125,4 +125,31 @@ class FilterRelayGroupStateTest {
             assertNull(it.filter.tags!!["h"])
         }
     }
+
+    @Test
+    fun `address pins add a kind-author-d backfill filter`() {
+        val channel = RelayGroupChannel(groupId)
+        val author = "b".repeat(64)
+        channel.updatePinned(
+            GroupPinnedEvent(
+                id = "d".repeat(64),
+                pubKey = relaySignKey,
+                createdAt = 100L,
+                tags = arrayOf(arrayOf("d", "g1"), arrayOf("a", "30023:$author:article")),
+                content = "",
+                sig = sig,
+            ),
+        )
+
+        val filters = filterRelayGroupState(channel, since = null)
+        assertEquals(3, filters.size, "state + pins filters plus one address back-fill, no id filter")
+        assertTrue(filters.none { it.filter.ids != null })
+
+        val addressFilter = filters.first { it.filter.authors != null }
+        assertEquals(relayA, addressFilter.relay)
+        assertEquals(listOf(30023), addressFilter.filter.kinds)
+        assertEquals(listOf(author), addressFilter.filter.authors)
+        assertEquals(listOf("article"), addressFilter.filter.tags!!["d"])
+        assertNull(addressFilter.filter.since)
+    }
 }

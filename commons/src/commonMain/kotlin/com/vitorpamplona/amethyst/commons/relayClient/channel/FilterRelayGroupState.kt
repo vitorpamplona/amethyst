@@ -66,5 +66,28 @@ fun filterRelayGroupState(
             relays.map { RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.RELAY_GROUPS, ids = pinnedIds)) }
         }
 
-    return directory + pins
+    // Same back-fill for `a` pins (addressable events, NIP-29 #2416): one kind+author+#d filter per
+    // pinned address. No `since` either — the pin stays valid however old the latest version is.
+    val pinnedAddresses = channel.pinnedAddresses
+    val addressPins =
+        if (pinnedAddresses.isEmpty()) {
+            emptyList()
+        } else {
+            relays.flatMap { relay ->
+                pinnedAddresses.map { address ->
+                    RelayBasedFilter(
+                        relay = relay,
+                        filter =
+                            ExplainedFilter(
+                                purpose = SubPurpose.RELAY_GROUPS,
+                                kinds = listOf(address.kind),
+                                authors = listOf(address.pubKeyHex),
+                                tags = mapOf("d" to listOf(address.dTag)),
+                            ),
+                    )
+                }
+            }
+        }
+
+    return directory + pins + addressPins
 }

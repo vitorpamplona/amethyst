@@ -1738,6 +1738,14 @@
     <string name="relay_group_field_name">Name</string>
     <string name="relay_group_field_about">Description</string>
     <string name="relay_group_field_picture">Group picture</string>
+    <string name="relay_group_field_banner">Banner image URL</string>
+    <string name="relay_group_migration_moved_title">This group may have moved</string>
+    <string name="relay_group_migration_fork_title">This group may have a fork</string>
+    <string name="relay_group_migration_by_admins">Its admins now list it on %1$s</string>
+    <string name="relay_group_migration_by_friends">People you follow now list it on %1$s</string>
+    <string name="relay_group_migration_open">Open there</string>
+    <string name="relay_group_migration_move">Move</string>
+    <string name="relay_group_migration_dismiss">Dismiss</string>
     <string name="relay_group_add_photo">Add photo</string>
     <string name="relay_group_change_photo">Change photo</string>
     <string name="relay_group_section_discovery">Discovery</string>
