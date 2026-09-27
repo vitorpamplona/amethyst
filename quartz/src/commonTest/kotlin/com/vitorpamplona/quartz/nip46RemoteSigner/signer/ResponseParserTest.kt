@@ -177,6 +177,7 @@ class ResponseParserTest {
         val response = BunkerResponseError("req-3", "denied")
         val result = SignResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.Rejected<SignResult>>(result)
+        assertEquals("denied", result.message)
     }
 
     @Test

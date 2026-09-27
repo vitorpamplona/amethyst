@@ -54,9 +54,26 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                 }
 
                 EoseMessage.LABEL -> {
-                    EoseMessage(
-                        subId = jp.nextTextValue(),
-                    )
+                    val subId = jp.nextTextValue()
+                    // NIP-67: an optional third element, an array of hint strings. The array is
+                    // consumed here (stepping past its END_ARRAY) so the drain loop below only
+                    // ever sees the outer frame's tokens.
+                    val hints =
+                        if (jp.nextToken() == JsonToken.START_ARRAY) {
+                            val list = ArrayList<String>(2)
+                            while (jp.nextToken() != JsonToken.END_ARRAY) {
+                                if (jp.currentToken == JsonToken.VALUE_STRING) {
+                                    list.add(jp.text)
+                                } else {
+                                    jp.skipChildren()
+                                }
+                            }
+                            jp.nextToken()
+                            list
+                        } else {
+                            null
+                        }
+                    EoseMessage(subId, hints)
                 }
 
                 NoticeMessage.LABEL -> {

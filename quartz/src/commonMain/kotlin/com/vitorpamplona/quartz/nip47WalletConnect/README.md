@@ -99,7 +99,8 @@ nip47WalletConnect/
 ├── NostrWalletConnectResponseCache.kt  # Response decryption cache
 └── tags/
     ├── EncryptionTag.kt            # "encryption" tag parsing
-    └── NotificationsTag.kt         # "notifications" tag parsing
+    ├── ExtensionsTag.kt            # "extensions" tag + method → NWC extension map
+    └── NotificationsTag.kt         # "notifications" tag parsing (NWC-02)
 ```
 
 ## Event Kinds
@@ -109,26 +110,55 @@ nip47WalletConnect/
 | 13194 | `NwcInfoEvent`               | Wallet → Relay  | Service capabilities |
 | 23194 | `NwcRequestEvent`   | Client → Wallet | NWC request          |
 | 23195 | `NwcResponseEvent`  | Wallet → Client | NWC response         |
-| 23196 | `NwcNotificationEvent`       | Wallet → Client | Notification (NIP-04, legacy) |
-| 23197 | `NwcNotificationEvent`       | Wallet → Client | Notification (NIP-44) |
+| 23196 | `NwcNotificationEvent`       | Wallet → Client | Notification (NWC-02, NIP-04, legacy) |
+| 23197 | `NwcNotificationEvent`       | Wallet → Client | Notification (NWC-02, NIP-44) |
 
 ## Supported Methods
 
-| Method               | `Nip47Client` method        | Request Class             | Success Response Class            |
-|----------------------|-----------------------------|---------------------------|-----------------------------------|
-| `pay_invoice`        | `payInvoice()`              | `PayInvoiceMethod`        | `PayInvoiceSuccessResponse`       |
-| `pay_keysend`        | `payKeysend()`              | `PayKeysendMethod`        | `PayKeysendSuccessResponse`       |
-| `make_invoice`       | `makeInvoice()`             | `MakeInvoiceMethod`       | `MakeInvoiceSuccessResponse`      |
-| `lookup_invoice`     | `lookupInvoiceByHash/ByInvoice()` | `LookupInvoiceMethod`| `LookupInvoiceSuccessResponse`    |
-| `list_transactions`  | `listTransactions()`        | `ListTransactionsMethod`  | `ListTransactionsSuccessResponse` |
-| `get_balance`        | `getBalance()`              | `GetBalanceMethod`        | `GetBalanceSuccessResponse`       |
-| `get_info`           | `getInfo()`                 | `GetInfoMethod`           | `GetInfoSuccessResponse`          |
-| `get_budget`         | `getBudget()`               | `GetBudgetMethod`         | `GetBudgetSuccessResponse`        |
-| `sign_message`       | `signMessage()`             | `SignMessageMethod`       | `SignMessageSuccessResponse`      |
-| `create_connection`  | `buildRequest()`            | `CreateConnectionMethod`  | `CreateConnectionSuccessResponse` |
-| `make_hold_invoice`  | `makeHoldInvoice()`         | `MakeHoldInvoiceMethod`   | `MakeHoldInvoiceSuccessResponse`  |
-| `cancel_hold_invoice`| `cancelHoldInvoice()`       | `CancelHoldInvoiceMethod` | `CancelHoldInvoiceSuccessResponse`|
-| `settle_hold_invoice`| `settleHoldInvoice()`       | `SettleHoldInvoiceMethod` | `SettleHoldInvoiceSuccessResponse`|
+NIP-47 now defines only a small **core** command set. Everything else lives in optional
+extension specs maintained at <https://github.com/nostr-wallet-connect/nwc> (`02.md`, `03.md`, …).
+The "Spec" column says where each method is defined; `ExtensionsTag.forMethod()` returns the
+same mapping in code.
+
+| Method               | Spec         | `Nip47Client` method        | Request Class             | Success Response Class            |
+|----------------------|--------------|-----------------------------|---------------------------|-----------------------------------|
+| `pay_invoice`        | core         | `payInvoice()`              | `PayInvoiceMethod`        | `PayInvoiceSuccessResponse`       |
+| `make_invoice`       | core         | `makeInvoice()`             | `MakeInvoiceMethod`       | `MakeInvoiceSuccessResponse`      |
+| `lookup_invoice`     | core         | `lookupInvoiceByHash/ByInvoice()` | `LookupInvoiceMethod`| `LookupInvoiceSuccessResponse`    |
+| `get_balance`        | core         | `getBalance()`              | `GetBalanceMethod`        | `GetBalanceSuccessResponse`       |
+| `get_info`           | core         | `getInfo()`                 | `GetInfoMethod`           | `GetInfoSuccessResponse`          |
+| `make_hold_invoice`  | NWC-03       | `makeHoldInvoice()`         | `MakeHoldInvoiceMethod`   | `MakeHoldInvoiceSuccessResponse`  |
+| `cancel_hold_invoice`| NWC-03       | `cancelHoldInvoice()`       | `CancelHoldInvoiceMethod` | `CancelHoldInvoiceSuccessResponse`|
+| `settle_hold_invoice`| NWC-03       | `settleHoldInvoice()`       | `SettleHoldInvoiceMethod` | `SettleHoldInvoiceSuccessResponse`|
+| `pay_keysend`        | NWC-04       | `payKeysend()`              | `PayKeysendMethod`        | `PayKeysendSuccessResponse`       |
+| `list_transactions`  | NWC-05       | `listTransactions()`        | `ListTransactionsMethod`  | `ListTransactionsSuccessResponse` |
+| `get_budget`         | not in a published spec | `getBudget()`    | `GetBudgetMethod`         | `GetBudgetSuccessResponse`        |
+| `sign_message`       | not in a published spec | `signMessage()`  | `SignMessageMethod`       | `SignMessageSuccessResponse`      |
+| `create_connection`  | not in a published spec | `buildRequest()` | `CreateConnectionMethod`  | `CreateConnectionSuccessResponse` |
+
+Notifications (`payment_received`, `payment_sent`, kinds 23197/23196) are NWC-02;
+`hold_invoice_accepted` is NWC-03 delivered over NWC-02. The `metadata` key conventions are
+NWC-06, deep links (`nostrnwc://`) NWC-07.
+
+## Extension discovery
+
+A wallet advertises extensions in its kind 13194 info event with ONE space-separated tag
+value, `["extensions", "02 03 04"]`, and SHOULD also list extension methods in the content.
+`get_info` may return the per-connection set as `"extensions": ["02", "05"]`
+(`GetInfoResult.extensions`). The `encryption`, `notifications` and `extensions` tag builders
+all emit a single space-separated value; the parsers still accept multi-element tags.
+
+- `NwcInfoEvent.supportsExtension(id)` — strict: silence means **no**. Use it before changing
+  a request in a way the wallet might reject (e.g. NWC-06 `metadata`).
+- `NwcInfoEvent.supportsNotifications()` — true for the legacy `notifications` content token,
+  `02` in `extensions`, or a non-empty `notifications` tag.
+- `NwcInfoEvent.mayUseExtensionMethod(method)` — lenient: only `false` when the wallet
+  publishes an `extensions` tag that lacks the method's extension AND its content does not
+  list the method. Pre-extensions wallets (no `extensions` tag) are still sent the request,
+  as before, and answer `NOT_IMPLEMENTED` if they can't. Amethyst uses this to gate
+  `list_transactions` (05) and `pay_keysend` (04).
+- `Nip47Server` derives its `extensions` tag from its capabilities and notification types
+  (`ExtensionsTag.forCapabilities`) unless an explicit list is passed.
 
 Any method can also return `NwcErrorResponse` or (for `pay_invoice`) `PayInvoiceErrorResponse`.
 

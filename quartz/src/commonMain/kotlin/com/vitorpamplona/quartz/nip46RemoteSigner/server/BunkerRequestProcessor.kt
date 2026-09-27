@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetRelays
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestInvalid
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
@@ -73,9 +74,11 @@ import kotlinx.coroutines.sync.withLock
  *  - **per-operation consent** ([Nip46RequestAuthorizer.authorize]) gates
  *    signing/encryption/decryption.
  *
- * All failures — decryption, authorization, an unsupported method, or an
- * exception from the signer — are turned into a [BunkerResponseError] carrying
- * the request id, so the client always gets a reply it can correlate.
+ * All failures — authorization, an unsupported method, a known method with
+ * unparseable params ([BunkerRequestInvalid]), or an exception from the signer —
+ * are turned into a [BunkerResponseError] carrying the request id, so the client
+ * always gets a reply it can correlate (NIP-46: unknown or unsupported methods MUST
+ * be replied with an error). `switch_relays` is answered with `null`.
  *
  * Pairs with [NostrConnectSignerService], which subscribes to the relays,
  * decrypts each kind-24133 request, calls [process], and publishes the reply.
@@ -105,6 +108,10 @@ class BunkerRequestProcessor(
     ): BunkerResponse =
         try {
             when (request) {
+                // A known method whose params could not be parsed: still answer, so the client
+                // gets an error it can correlate instead of timing out.
+                is BunkerRequestInvalid -> BunkerResponseError(request.id, "$ERROR_INVALID_PARAMS for ${request.method}: ${request.reason}")
+
                 is BunkerRequestConnect ->
                     when (val decision = authorizer.onConnect(clientPubKey, request)) {
                         is Nip46ConnectDecision.Accept -> BunkerResponse(request.id, decision.ackSecret, null)
@@ -158,7 +165,11 @@ class BunkerRequestProcessor(
                             authorizer.onLogout(clientPubKey)
                             BunkerResponseAck(request.id)
                         }
-                        else -> BunkerResponseError(request.id, "unsupported method: ${request.method}")
+                        // This signer listens on a fixed relay set it does not migrate, so there is
+                        // never an update to hand out: NIP-46 says reply `null` ("nothing to change").
+                        // `result` is a string on the wire, so this is the JSON-stringified null.
+                        METHOD_SWITCH_RELAYS -> BunkerResponse(request.id, RESULT_NULL, null)
+                        else -> BunkerResponseError(request.id, "$ERROR_UNSUPPORTED_METHOD: ${request.method}")
                     }
             }
         } catch (e: CancellationException) {
@@ -219,5 +230,20 @@ class BunkerRequestProcessor(
 
         /** NIP-46 `logout` method name — the client asks to be disconnected. */
         const val METHOD_LOGOUT: String = "logout"
+
+        /** NIP-46 `switch_relays` method name — the client asks whether the signer moved relays. */
+        const val METHOD_SWITCH_RELAYS: String = "switch_relays"
+
+        /** JSON-stringified `null`, the `switch_relays` answer for "no relay change". */
+        const val RESULT_NULL: String = "null"
+
+        /** Error prefix for a known method whose params could not be parsed ([BunkerRequestInvalid]). */
+        const val ERROR_INVALID_PARAMS: String = "invalid params"
+
+        /** Error prefix for a method this signer does not implement. */
+        const val ERROR_UNSUPPORTED_METHOD: String = "unsupported method"
+
+        /** Error returned to a client whose requests exceed the service's rate limit. */
+        const val ERROR_RATE_LIMITED: String = "rate limited"
     }
 }

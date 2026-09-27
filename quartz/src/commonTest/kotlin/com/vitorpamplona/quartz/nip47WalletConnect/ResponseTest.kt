@@ -395,6 +395,28 @@ class ResponseTest {
         assertEquals(listOf("pay_invoice", "get_balance"), response.result?.methods)
     }
 
+    @Test
+    fun testGetInfoExtensionsRoundTrip() {
+        val json =
+            """{"result_type":"get_info","result":{"methods":["pay_invoice","get_info","list_transactions"],"extensions":["02","05"],"notifications":["payment_received"]}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetInfoSuccessResponse>(response)
+        assertEquals(listOf("02", "05"), response.result?.extensions)
+        assertEquals(listOf("payment_received"), response.result?.notifications)
+
+        val reparsed = OptimizedJsonMapper.fromJsonTo<Response>(OptimizedJsonMapper.toJson(response))
+        assertIs<GetInfoSuccessResponse>(reparsed)
+        assertEquals(listOf("02", "05"), reparsed.result?.extensions)
+    }
+
+    @Test
+    fun testGetInfoWithoutExtensions() {
+        val json = """{"result_type":"get_info","result":{"methods":["pay_invoice"]}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetInfoSuccessResponse>(response)
+        assertNull(response.result?.extensions)
+    }
+
     // --- ListTransactions with total_count ---
 
     @Test

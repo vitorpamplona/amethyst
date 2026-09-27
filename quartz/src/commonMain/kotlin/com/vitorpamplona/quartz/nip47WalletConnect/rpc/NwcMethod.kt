@@ -20,17 +20,31 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
+/**
+ * NWC method names. NIP-47 core defines `pay_invoice`, `make_invoice`, `lookup_invoice`,
+ * `get_balance` and `get_info`; the rest come from optional NWC extension specs
+ * (github.com/nostr-wallet-connect/nwc) — see [com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag.forMethod].
+ */
 object NwcMethod {
+    // NIP-47 core
     const val PAY_INVOICE = "pay_invoice"
-    const val PAY_KEYSEND = "pay_keysend"
     const val MAKE_INVOICE = "make_invoice"
     const val LOOKUP_INVOICE = "lookup_invoice"
-    const val LIST_TRANSACTIONS = "list_transactions"
     const val GET_BALANCE = "get_balance"
     const val GET_INFO = "get_info"
+
+    // NWC-04 keysend payments
+    const val PAY_KEYSEND = "pay_keysend"
+
+    // NWC-05 transaction history
+    const val LIST_TRANSACTIONS = "list_transactions"
+
+    // Not (yet) in a published NWC spec
     const val GET_BUDGET = "get_budget"
     const val SIGN_MESSAGE = "sign_message"
     const val CREATE_CONNECTION = "create_connection"
+
+    // NWC-03 hold invoices
     const val MAKE_HOLD_INVOICE = "make_hold_invoice"
     const val CANCEL_HOLD_INVOICE = "cancel_hold_invoice"
     const val SETTLE_HOLD_INVOICE = "settle_hold_invoice"

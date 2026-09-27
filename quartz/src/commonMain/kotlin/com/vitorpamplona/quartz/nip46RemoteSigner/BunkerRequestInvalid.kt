@@ -18,26 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect.tags
+package com.vitorpamplona.quartz.nip46RemoteSigner
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
-
-class NotificationsTag {
-    companion object {
-        const val TAG_NAME = "notifications"
-
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): List<String>? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag.drop(1)
-        }
-
-        // NIP-47 carries the list as ONE space-separated value (eg. ["notifications", "a b c"]);
-        // [parse] still tolerates wallets that spread it across several elements.
-        fun assemble(types: List<String>) = arrayOf(TAG_NAME, types.joinToString(" "))
-    }
-}
+/**
+ * A request whose `id` and `method` could be read but whose `params` could not be
+ * turned into the typed request for a method this library knows (e.g. `sign_event`
+ * with no params, or a param that is not an event template).
+ *
+ * [BunkerRequestParser] returns this instead of throwing so the remote signer can
+ * still answer with an error carrying the request id — NIP-46: "Requests made with
+ * unknown or unsupported methods MUST be replied with an error" — rather than
+ * dropping the request and leaving the client to time out.
+ */
+class BunkerRequestInvalid(
+    id: String,
+    method: String,
+    params: Array<String>,
+    val reason: String,
+) : BunkerRequest(id, method, params)

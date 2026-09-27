@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.EncryptionTag
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.NotificationsTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -71,11 +73,11 @@ class TagsTest {
 
     @Test
     fun testEncryptionTagAssemble() {
+        // NIP-47: one space-separated value, eg. ["encryption", "nip44_v2 nip04"]
         val tag = EncryptionTag.assemble(listOf("nip44_v2", "nip04"))
         assertEquals("encryption", tag[0])
-        assertEquals("nip44_v2", tag[1])
-        assertEquals("nip04", tag[2])
-        assertEquals(3, tag.size)
+        assertEquals("nip44_v2 nip04", tag[1])
+        assertEquals(2, tag.size)
     }
 
     @Test
@@ -120,12 +122,41 @@ class TagsTest {
 
     @Test
     fun testNotificationsTagAssemble() {
+        // NWC-02: one space-separated value, eg. ["notifications", "payment_received payment_sent"]
         val tag = NotificationsTag.assemble(listOf("payment_received", "payment_sent", "hold_invoice_accepted"))
         assertEquals("notifications", tag[0])
-        assertEquals("payment_received", tag[1])
-        assertEquals("payment_sent", tag[2])
-        assertEquals("hold_invoice_accepted", tag[3])
-        assertEquals(4, tag.size)
+        assertEquals("payment_received payment_sent hold_invoice_accepted", tag[1])
+        assertEquals(2, tag.size)
+    }
+
+    // --- ExtensionsTag ---
+
+    @Test
+    fun testExtensionsTagAssemble() {
+        // NIP-47: ["extensions", "02 03 04"]
+        val tag = ExtensionsTag.assemble(listOf("02", "03", "04"))
+        assertEquals(2, tag.size)
+        assertEquals("extensions", tag[0])
+        assertEquals("02 03 04", tag[1])
+    }
+
+    @Test
+    fun testExtensionsTagParseToleratesMultiElement() {
+        assertEquals(listOf("02", "05"), ExtensionsTag.parse(arrayOf("extensions", "02", "05")))
+        assertEquals(listOf("02 05"), ExtensionsTag.parse(arrayOf("extensions", "02 05")))
+        assertNull(ExtensionsTag.parse(arrayOf("extensions")))
+        assertNull(ExtensionsTag.parse(arrayOf("other", "02")))
+    }
+
+    @Test
+    fun testExtensionForMethod() {
+        assertEquals(ExtensionsTag.KEYSEND, ExtensionsTag.forMethod(NwcMethod.PAY_KEYSEND))
+        assertEquals(ExtensionsTag.TRANSACTION_HISTORY, ExtensionsTag.forMethod(NwcMethod.LIST_TRANSACTIONS))
+        assertEquals(ExtensionsTag.HOLD_INVOICES, ExtensionsTag.forMethod(NwcMethod.MAKE_HOLD_INVOICE))
+        assertEquals(ExtensionsTag.HOLD_INVOICES, ExtensionsTag.forMethod(NwcMethod.SETTLE_HOLD_INVOICE))
+        assertEquals(ExtensionsTag.HOLD_INVOICES, ExtensionsTag.forMethod(NwcMethod.CANCEL_HOLD_INVOICE))
+        assertNull(ExtensionsTag.forMethod(NwcMethod.PAY_INVOICE))
+        assertNull(ExtensionsTag.forMethod(NwcMethod.GET_INFO))
     }
 
     @Test

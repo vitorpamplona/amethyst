@@ -86,7 +86,10 @@ class NostrConnectSignerService(
      * NIP-55 op on the identity signer, so the queue must not run away.
      */
     val maxQueue: Int = 256,
-    /** Max requests decrypted per author within [rateWindowSeconds] before further ones are dropped. */
+    /**
+     * Max requests decrypted per author within [rateWindowSeconds]. Past it, the first extra request
+     * in the window is answered with a `rate limited` error and the rest are dropped unanswered.
+     */
     val maxRequestsPerWindow: Int = 40,
     val rateWindowSeconds: Long = 10,
     /** Cap on distinct authors tracked for rate-limiting (evicts oldest) so key-rotation can't grow it. */
@@ -132,18 +135,30 @@ class NostrConnectSignerService(
         private class Window(
             var start: Long,
             var count: Int,
+            var notified: Boolean = false,
         )
+
+        enum class Decision {
+            ALLOW,
+
+            /** Over the limit, and the first such request this window: answer it with an error. */
+            DENY_AND_NOTIFY,
+
+            /** Over the limit and the author was already told this window: drop silently. */
+            DENY,
+        }
 
         private val windows = LinkedHashMap<String, Window>()
 
-        fun allow(
+        fun check(
             author: String,
             now: Long,
-        ): Boolean {
+        ): Decision {
             val window = windows.getOrPut(author) { Window(now, 0) }
             if (now - window.start >= windowSeconds) {
                 window.start = now
                 window.count = 0
+                window.notified = false
             }
             if (windows.size > maxAuthors) {
                 windows.iterator().let {
@@ -151,9 +166,13 @@ class NostrConnectSignerService(
                     it.remove()
                 }
             }
-            if (window.count >= maxPerWindow) return false
+            if (window.count >= maxPerWindow) {
+                if (window.notified) return Decision.DENY
+                window.notified = true
+                return Decision.DENY_AND_NOTIFY
+            }
             window.count++
-            return true
+            return Decision.ALLOW
         }
     }
 
@@ -226,11 +245,32 @@ class NostrConnectSignerService(
                     Log.w("NIP46Signer") { "ignoring stale request ${event.id.take(8)}… (created ${event.createdAt})" }
                     continue
                 }
-                // Rate-limit per author BEFORE decrypting — decryption can be an external-signer
-                // round-trip, so a flooding client must not force one per event.
-                if (!rateLimiter.allow(event.pubKey, TimeUtils.now())) {
-                    Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…" }
-                    continue
+                // Rate-limit per author BEFORE decrypting: the limit exists to bound the work (envelope
+                // decrypt, reply encrypt/sign/publish, identity-signer ops) a flooding client can force.
+                // The request id is inside the encrypted content, so answering costs a decrypt plus a
+                // reply. That is paid ONCE per author per window: the first over-limit request gets a
+                // `rate limited` error (so a legitimate bursty client learns why instead of timing out),
+                // the rest of the window is dropped silently.
+                when (rateLimiter.check(event.pubKey, TimeUtils.now())) {
+                    RateLimiter.Decision.ALLOW -> {}
+
+                    RateLimiter.Decision.DENY_AND_NOTIFY -> {
+                        Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…; replying with an error" }
+                        handleGate.acquire()
+                        launch {
+                            try {
+                                replyRateLimited(event)
+                            } finally {
+                                handleGate.release()
+                            }
+                        }
+                        continue
+                    }
+
+                    RateLimiter.Decision.DENY -> {
+                        Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…" }
+                        continue
+                    }
                 }
                 // Remember this id (persisted by the host) so a later restart won't re-service the replay.
                 // Done on the single consumer — BEFORE fanning out — because the host's seen-id store is
@@ -251,6 +291,20 @@ class NostrConnectSignerService(
         } finally {
             client.unsubscribe(subId)
             events.close()
+        }
+    }
+
+    /** Answers an over-limit request with [BunkerRequestProcessor.ERROR_RATE_LIMITED], without processing it. */
+    private suspend fun replyRateLimited(event: NostrConnectEvent) {
+        val client = event.talkingWith(transportSigner.pubKey)
+        try {
+            val request = event.decryptMessage(transportSigner) as? BunkerRequest ?: return
+            val reply = NostrConnectEvent.create(BunkerResponseError(request.id, BunkerRequestProcessor.ERROR_RATE_LIMITED), client, transportSigner)
+            this.client.publish(reply, relays)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("NIP46Signer") { "could not answer rate-limited request ${event.id.take(8)}: ${e.message}" }
         }
     }
 

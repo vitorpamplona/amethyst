@@ -78,6 +78,12 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
 
             is EoseMessage -> {
                 gen.writeString(msg.subId)
+                // NIP-67: optional third element, the completeness hints.
+                msg.hints?.let { hints ->
+                    gen.writeStartArray()
+                    hints.forEach { gen.writeString(it) }
+                    gen.writeEndArray()
+                }
             }
 
             is LimitsMessage -> {

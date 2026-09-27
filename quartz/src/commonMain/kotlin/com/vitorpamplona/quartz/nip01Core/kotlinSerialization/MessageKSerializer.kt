@@ -37,6 +37,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
@@ -98,6 +99,10 @@ object MessageKSerializer : KSerializer<Message> {
 
                     is EoseMessage -> {
                         add(JsonPrimitive(value.subId))
+                        // NIP-67: optional third element, the completeness hints.
+                        value.hints?.let { hints ->
+                            add(buildJsonArray { hints.forEach { add(JsonPrimitive(it)) } })
+                        }
                     }
 
                     is LimitsMessage -> {
@@ -136,7 +141,12 @@ object MessageKSerializer : KSerializer<Message> {
             }
 
             EoseMessage.LABEL -> {
-                EoseMessage(array[1].jsonPrimitive.content)
+                // NIP-67: an optional array of hint strings; anything else there is ignored.
+                val hints =
+                    (array.getOrNull(2) as? JsonArray)?.mapNotNull { hint ->
+                        (hint as? JsonPrimitive)?.takeIf { it.isString }?.content
+                    }
+                EoseMessage(array[1].jsonPrimitive.content, hints)
             }
 
             NoticeMessage.LABEL -> {

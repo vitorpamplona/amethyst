@@ -302,6 +302,7 @@ class PoolRequests(
                 desiredSubListeners.get(msg.subId)?.onEose(
                     relay = relay.url,
                     forFilters = forFilters,
+                    hints = msg.hints,
                 )
 
                 // send a newer version when done

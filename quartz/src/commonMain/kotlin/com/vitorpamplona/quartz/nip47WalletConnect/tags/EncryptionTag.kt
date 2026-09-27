@@ -36,6 +36,8 @@ class EncryptionTag {
             return tag.drop(1)
         }
 
-        fun assemble(schemes: List<String>) = arrayOf(TAG_NAME, *schemes.toTypedArray())
+        // NIP-47 carries the list as ONE space-separated value (eg. ["encryption", "a b c"]);
+        // [parse] still tolerates wallets that spread it across several elements.
+        fun assemble(schemes: List<String>) = arrayOf(TAG_NAME, schemes.joinToString(" "))
     }
 }

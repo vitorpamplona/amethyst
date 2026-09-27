@@ -64,6 +64,15 @@ abstract class RelayServerBase(
     val activeConnections: Long get() = connections.active
 
     /**
+     * NIP-67 opt-in: when true, connections opened from now on append `"finish"` /
+     * `"more"` to their EOSEs where the stored replay proves it (see
+     * [RelaySession.completenessHints]). Enable it only for a backend that honours
+     * `limit` exactly and returns every match for an unbounded filter, and advertise
+     * `67` in the NIP-11 `supported_nips` when you do.
+     */
+    var completenessHints: Boolean = false
+
+    /**
      * Builds the per-connection policy, prepending a [LimitsPolicy] when
      * [limits] is set so requests are clamped/rejected before the application
      * policy runs.
@@ -91,6 +100,7 @@ abstract class RelayServerBase(
                 sink = sink,
                 onClose = { connections.unregister(it.id) },
                 negentropySettings = negentropySettings,
+                completenessHints = completenessHints,
             ),
         )
 
