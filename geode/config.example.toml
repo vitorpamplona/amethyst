@@ -167,12 +167,14 @@ require_auth = false
 # filter = '{"kinds":[0,1,3,7],"#t":["nostr"]}'
 
 [http]
-# NIP-FE: relay commands over HTTP. One command per POST to
-# <relay path>/req, /count or /event, answered as NDJSON
-# (application/x-ndjson) and streamed as it is found; nothing stays open
-# afterwards. NIP-98 `Authorization: Nostr ...` headers sign a request
-# in, exactly as NIP-42 AUTH would on the socket. On by default; turning
-# it off also drops "FE" from the default NIP-11 list.
+# NIP-FE: relay commands over HTTP. One REQ, COUNT or EVENT frame per
+# POST to the relay URL, exactly as it would go on the websocket,
+# answered as NDJSON (application/x-ndjson) in the socket's own frames and
+# streamed as it is found; nothing stays open afterwards. NIP-86 calls
+# share the URL, told apart by their application/nostr+json+rpc type.
+# NIP-98 `Authorization: Nostr ...` headers sign a request in, exactly as
+# NIP-42 AUTH would on the socket. On by default; turning it off also
+# drops "FE" from the default NIP-11 list.
 enabled = true
 # Every request is its own connection, so the websocket's
 # per-connection limits don't bound HTTP clients. These do: over the
@@ -185,7 +187,7 @@ deadline_seconds = 30
 max_body_bytes = 524288
 retry_after_seconds = 1
 # Other addresses this relay is reachable at: a NIP-98 token may name
-# the endpoint under any of them, as well as under [info].relay_url.
+# any of them, as well as [info].relay_url.
 # alternate_urls = ["ws://youraddress.onion/"]
 # Behind a reverse proxy every request comes from the proxy's address.
 # List the proxies here and the per-client cap counts the address the

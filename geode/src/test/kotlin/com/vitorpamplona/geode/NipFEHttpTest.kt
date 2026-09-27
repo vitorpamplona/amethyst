@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
@@ -38,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayClient
-import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayCommand
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -57,7 +57,7 @@ import kotlin.time.Duration
 /**
  * NIP-FE end to end: quartz's [HttpRelayClient] and raw OkHttp requests against a real [KtorRelay],
  * covering the answer shape, the status table, the headers each status carries, NIP-98 sign-in
- * on an AUTH-gated relay, and where the endpoints live.
+ * on an AUTH-gated relay, and sharing the relay URL with NIP-86.
  */
 class NipFEHttpTest {
     private val http = OkHttpClient.Builder().build()
@@ -94,13 +94,14 @@ class NipFEHttpTest {
         url: String,
         body: String,
         authorization: String? = null,
+        contentType: String = "text/plain",
     ): Response =
         http
             .newCall(
                 Request
                     .Builder()
                     .url(url)
-                    .post(body.toRequestBody("text/plain".toMediaType()))
+                    .post(body.toRequestBody(contentType.toMediaType()))
                     .apply { authorization?.let { header("Authorization", it) } }
                     .build(),
             ).execute()
@@ -115,7 +116,7 @@ class NipFEHttpTest {
             notes.forEach { assertTrue(assertIs<OkMessage>(client().publish(relay, it).last).success) }
 
             val got = mutableListOf<Event>()
-            val answer = client().req(relay, listOf(Filter(kinds = listOf(TextNoteEvent.KIND))), got::add)
+            val answer = client().req(relay, listOf(Filter(kinds = listOf(TextNoteEvent.KIND))), onEvent = got::add)
             assertEquals(200, answer.status)
             assertTrue(answer.complete)
             assertIs<EoseMessage>(answer.last)
@@ -123,18 +124,18 @@ class NipFEHttpTest {
         }
 
     @Test
-    fun theWireIsNdjsonWithoutSubscriptionIds() =
+    fun theWireIsNdjsonInTheSocketsOwnFrames() =
         runBlocking {
             val relay = start()
             val n = note("hello")
             client().publish(relay, n)
-            post(HttpRelayCommand.REQ.url(relay), """{"ids":["${n.id}"]}""").use { response ->
+            post(relay.toHttp(), """["REQ","q",{"ids":["${n.id}"]}]""").use { response ->
                 assertEquals(200, response.code)
                 assertTrue(response.header("Content-Type")!!.startsWith("application/x-ndjson"))
                 assertEquals("no", response.header("X-Accel-Buffering"))
                 assertEquals("*", response.header("Access-Control-Allow-Origin"))
                 val lines = response.lines()
-                assertEquals(listOf("""["EVENT",${n.toJson()}]""", """["EOSE"]"""), lines)
+                assertEquals(listOf("""["EVENT","q",${n.toJson()}]""", """["EOSE","q"]"""), lines)
             }
         }
 
@@ -158,7 +159,7 @@ class NipFEHttpTest {
             assertEquals(200, client().publish(relay, n).status)
 
             val forged = n.toJson().replace("\"once\"", "\"twice\"")
-            post(HttpRelayCommand.EVENT.url(relay), forged).use { response ->
+            post(relay.toHttp(), """["EVENT",$forged]""").use { response ->
                 assertEquals(400, response.code)
                 val line = response.lines().single()
                 assertTrue(line.startsWith("""["OK","${n.id}",false,"invalid:"""), line)
@@ -166,15 +167,17 @@ class NipFEHttpTest {
         }
 
     @Test
-    fun aBodyThatIsNotTheCommandIs400AndOneOverTheCapIs413() {
+    fun aBodyThatIsNotACommandIs400AndOneOverTheCapIs413() {
         val relay = start(settings = HttpCommandSettings(maxBodyBytes = 64))
-        post(HttpRelayCommand.REQ.url(relay), "hello").use { response ->
-            assertEquals(400, response.code)
-            assertTrue(response.lines().single().startsWith("""["CLOSED","invalid:"""))
+        for (body in listOf("hello", """{"kinds":[1]}""", """["CLOSE","q"]""")) {
+            post(relay.toHttp(), body).use { response ->
+                assertEquals(400, response.code, body)
+                assertTrue(response.lines().single().startsWith("""["NOTICE","invalid:"""))
+            }
         }
-        post(HttpRelayCommand.REQ.url(relay), """{"authors":["${"a".repeat(64)}"]}""").use { response ->
+        post(relay.toHttp(), """["REQ","q",{"authors":["${"a".repeat(64)}"]}]""").use { response ->
             assertEquals(413, response.code)
-            assertTrue(response.lines().single().startsWith("""["CLOSED","invalid:"""))
+            assertTrue(response.lines().single().startsWith("""["NOTICE","invalid:"""))
         }
     }
 
@@ -189,10 +192,10 @@ class NipFEHttpTest {
                     }
                 },
             )
-        post(HttpRelayCommand.REQ.url(relay), "{}").use { response ->
+        post(relay.toHttp(), """["REQ","q",{}]""").use { response ->
             assertEquals(429, response.code)
             assertEquals("7", response.header("Retry-After"))
-            assertEquals("""["CLOSED","rate-limited: slow down"]""", response.lines().single())
+            assertEquals("""["CLOSED","q","rate-limited: slow down"]""", response.lines().single())
         }
     }
 
@@ -202,7 +205,7 @@ class NipFEHttpTest {
         val preflight =
             Request
                 .Builder()
-                .url(HttpRelayCommand.REQ.url(relay))
+                .url(relay.toHttp())
                 .method("OPTIONS", null)
                 .header("Origin", "https://app.example")
                 .header("Access-Control-Request-Method", "POST")
@@ -220,10 +223,10 @@ class NipFEHttpTest {
     fun anAuthGatedRelayAnswers401UntilANip98TokenSignsTheRequestIn() =
         runBlocking {
             val relay = start(policy = ::SignInPolicy)
-            post(HttpRelayCommand.REQ.url(relay), "{}").use { response ->
+            post(relay.toHttp(), """["REQ","q",{}]""").use { response ->
                 assertEquals(401, response.code)
                 assertEquals("Nostr", response.header("WWW-Authenticate"))
-                assertTrue(response.lines().single().startsWith("""["CLOSED","auth-required:"""))
+                assertTrue(response.lines().single().startsWith("""["CLOSED","q","auth-required:"""))
             }
 
             val unsigned = client().req(relay, listOf(Filter(kinds = listOf(1)))) {}
@@ -236,7 +239,7 @@ class NipFEHttpTest {
             assertTrue(assertIs<OkMessage>(published.last).success)
 
             val got = mutableListOf<Event>()
-            val read = HttpRelayClient(http, alice, signFirst = true).req(relay, listOf(Filter(ids = listOf(n.id))), got::add)
+            val read = HttpRelayClient(http, alice, signFirst = true).req(relay, listOf(Filter(ids = listOf(n.id))), onEvent = got::add)
             assertEquals(200, read.status)
             assertTrue(read.complete)
             assertEquals(listOf(n.id), got.map { it.id })
@@ -246,13 +249,15 @@ class NipFEHttpTest {
     fun aTokenForAnotherBodyDoesNotSignIn() =
         runBlocking {
             val relay = start(policy = ::SignInPolicy)
-            val url = HttpRelayCommand.REQ.url(relay)
-            val token = alice.sign(HTTPAuthorizationEvent.build(url, "POST", """{"kinds":[1]}""".encodeToByteArray())).toAuthToken()
-            post(url, """{"kinds":[0]}""", token).use { response ->
+            val url = relay.toHttp()
+            val signed = """["REQ","q",{"kinds":[1]}]"""
+            val token = alice.sign(HTTPAuthorizationEvent.build(url, "POST", signed.encodeToByteArray())).toAuthToken()
+            post(url, """["REQ","q",{"kinds":[0]}]""", token).use { response ->
                 assertEquals(401, response.code)
                 assertTrue(response.lines().single().contains("payload"))
             }
-            post(url, """{"kinds":[1]}""", token).use { assertEquals(200, it.code) }
+            post(url, signed, token).use { assertEquals(200, it.code) }
+            post(url, signed, token).use { assertEquals(200, it.code, "good again for the same body within its window") }
         }
 
     @Test
@@ -260,24 +265,36 @@ class NipFEHttpTest {
         runBlocking {
             val onion = "ws://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/".normalizeRelayUrl()
             val relay = start(policy = ::SignInPolicy, settings = HttpCommandSettings(alternateUrls = listOf(onion)))
-            val body = """{"kinds":[1]}"""
-            val token = alice.sign(HTTPAuthorizationEvent.build(HttpRelayCommand.REQ.url(onion), "POST", body.encodeToByteArray())).toAuthToken()
-            post(HttpRelayCommand.REQ.url(relay), body, token).use { assertEquals(200, it.code) }
+            val body = """["REQ","q",{"kinds":[1]}]"""
+            val token = alice.sign(HTTPAuthorizationEvent.build(onion.toHttp(), "POST", body.encodeToByteArray())).toAuthToken()
+            post(relay.toHttp(), body, token).use { assertEquals(200, it.code) }
         }
 
     @Test
-    fun theEndpointsHangOffTheRelayPath() =
+    fun commandsGoToTheRelayUrlPathIncluded() =
         runBlocking {
             val relay = start(path = "/nostr")
-            assertTrue(HttpRelayCommand.REQ.url(relay).endsWith("/nostr/req"))
+            assertTrue(relay.toHttp().trimEnd('/').endsWith("/nostr"))
             assertTrue(client().req(relay, listOf(Filter(kinds = listOf(1)))) {}.complete)
-            post(HttpRelayCommand.REQ.url(relay).replace("/nostr/req", "/req"), "{}").use { assertEquals(404, it.code) }
+            post(relay.toHttp().replace("/nostr", ""), """["REQ","q",{}]""").use { assertEquals(404, it.code) }
         }
 
     @Test
-    fun turnedOffThereAreNoEndpoints() {
+    fun nip86CallsKeepTheRelayUrlByTheirContentType() {
+        val relay = start()
+        post(relay.toHttp(), """{"method":"supportedmethods","params":[]}""", contentType = "application/nostr+json+rpc").use { response ->
+            assertEquals(401, response.code, "NIP-86 asks for its own NIP-98 token")
+            assertFalse(response.header("Content-Type")!!.startsWith("application/x-ndjson"))
+        }
+    }
+
+    @Test
+    fun turnedOffEveryPostIsNip86Again() {
         val relay = start(settings = null)
-        post(HttpRelayCommand.REQ.url(relay), "{}").use { assertEquals(404, it.code) }
+        post(relay.toHttp(), """["REQ","q",{}]""").use { response ->
+            assertFalse(response.header("Content-Type")!!.startsWith("application/x-ndjson"))
+            assertEquals(401, response.code)
+        }
     }
 
     @Test

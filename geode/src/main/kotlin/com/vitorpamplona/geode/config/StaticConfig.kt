@@ -232,9 +232,9 @@ data class StaticConfig(
     )
 
     /**
-     * NIP-FE: relay commands over HTTP — `POST <path>/req`, `/count`, `/event`, one command per
-     * request, answered as NDJSON. Each request is its own connection, so the concurrency caps here
-     * stand in for the websocket's per-connection limits.
+     * NIP-FE: relay commands over HTTP — one REQ, COUNT or EVENT frame POSTed to the relay's URL,
+     * answered as NDJSON in the socket's own frames. Each request is its own connection, so the
+     * concurrency caps here stand in for the websocket's per-connection limits.
      */
     data class HttpSection(
         val enabled: Boolean = true,
@@ -250,7 +250,7 @@ data class StaticConfig(
         val retry_after_seconds: Int = 1,
         /**
          * Other `ws(s)://` URLs this relay is reachable at (a `.onion` beside the clearnet name).
-         * A NIP-98 token's `u` may name the endpoint under any of them or under `[info].relay_url`.
+         * A NIP-98 token's `u` may name any of them, read as http(s), or `[info].relay_url`.
          */
         val alternate_urls: List<String> = emptyList(),
         /**
@@ -260,7 +260,7 @@ data class StaticConfig(
         val trusted_proxies: List<String> = emptyList(),
         val client_address_header: String = "X-Forwarded-For",
     ) {
-        /** The transport settings, or null when the endpoints are off. */
+        /** The transport settings, or null when commands over HTTP are off. */
         fun toSettings(): HttpCommandSettings? =
             if (!enabled) {
                 null

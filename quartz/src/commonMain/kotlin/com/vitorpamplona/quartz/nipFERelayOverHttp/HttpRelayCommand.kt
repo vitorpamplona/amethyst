@@ -26,56 +26,22 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 
 /**
- * NIP-FE: the client commands HTTP carries, one path each. A body is the command's arguments
- * after its subscription id (a lone object where the command takes one); the answer ends on the
- * first frame [ends] accepts.
+ * NIP-FE: the client commands an HTTP request may carry, each as the frame a client sends on the
+ * websocket, and the frame that ends each one's answer.
  */
-enum class HttpRelayCommand(
-    val path: String,
-) {
-    REQ("/req"),
-    COUNT("/count"),
-    EVENT("/event"),
+enum class HttpRelayCommand {
+    REQ,
+    COUNT,
+    EVENT,
     ;
 
-    /**
-     * The client frame [body] stands for, or null when it plainly is not this command's arguments.
-     * The body is spliced in as sent and the engine parses the frame, as it parses socket text, so
-     * any other malformed body is the engine's NOTICE. The verb and subscription id come first and
-     * the parser reads one value, so nothing a body holds can make it another command.
-     */
-    fun frameOf(body: String): String? {
-        val text = body.trim()
-        return when (this) {
-            REQ, COUNT -> {
-                val filters =
-                    when {
-                        text.startsWith('{') -> text
-                        text.startsWith('[') && text.endsWith(']') -> text.substring(1, text.length - 1).trim().ifEmpty { return null }
-                        else -> return null
-                    }
-                "[\"${if (this == REQ) ReqCmd.LABEL else CountCmd.LABEL}\",\"$SUB_ID\",$filters]"
-            }
-
-            EVENT -> {
-                if (!text.startsWith('{')) return null
-                "[\"${EventCmd.LABEL}\",$text]"
-            }
-        }
-    }
-
-    /** This command's endpoint on [relay]: the relay URL read as http(s), host and path kept, plus [path]. */
-    fun url(relay: NormalizedRelayUrl): String = relay.toHttp().trimEnd('/') + path
-
-    /** Whether [message] is the last frame of this command's answer. */
+    /** Whether [message] is the last frame of this command's answer. A NOTICE ends any: the command never ran. */
     fun ends(message: Message): Boolean =
         message is NoticeMessage ||
             when (this) {
@@ -85,15 +51,25 @@ enum class HttpRelayCommand(
             }
 
     companion object {
-        /**
-         * The subscription id every HTTP command runs under inside the engine. NIP-FE answers carry
-         * none, so [HttpRelayHandler] takes it back out of each frame before it goes out.
-         */
-        const val SUB_ID = "http"
+        /** The kind of [cmd], or null for one HTTP does not carry (AUTH, CLOSE, NEG-*). */
+        fun of(cmd: Command): HttpRelayCommand? =
+            when (cmd) {
+                is ReqCmd -> REQ
+                is CountCmd -> COUNT
+                is EventCmd -> EVENT
+                else -> null
+            }
 
-        fun forPath(path: String): HttpRelayCommand? = entries.firstOrNull { it.path == path }
-
-        /** A REQ or COUNT body: the filters as the array that follows the subscription id. */
-        fun body(filters: List<Filter>): String = filters.joinToString(",", "[", "]") { it.toJson() }
+        /** The frame that refuses [cmd] with [reason], as the socket would: CLOSED for a REQ or COUNT, OK false for an EVENT. */
+        fun refusal(
+            cmd: Command,
+            reason: String,
+        ): Message =
+            when (cmd) {
+                is EventCmd -> OkMessage(cmd.event.id, false, reason)
+                is ReqCmd -> ClosedMessage(cmd.subId, reason)
+                is CountCmd -> ClosedMessage(cmd.queryId, reason)
+                else -> NoticeMessage(reason)
+            }
     }
 }

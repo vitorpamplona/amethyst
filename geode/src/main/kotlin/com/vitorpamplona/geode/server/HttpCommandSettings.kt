@@ -25,10 +25,10 @@ import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import kotlin.time.Duration
 
 /**
- * NIP-FE (relay commands over HTTP) as [com.vitorpamplona.geode.KtorRelay] serves it: `POST` to
- * `<relay path>/req`, `/count` and `/event`. The engine's policies and limits apply as they do on
- * the websocket; these bound what the websocket's per-connection limits cannot, since every request
- * is its own connection.
+ * NIP-FE (relay commands over HTTP) as [com.vitorpamplona.geode.KtorRelay] serves it: a `POST` to
+ * the relay's URL carrying one REQ, COUNT or EVENT frame. The engine's policies and limits apply as
+ * they do on the websocket; these bound what the websocket's per-connection limits cannot, since
+ * every request is its own connection.
  */
 data class HttpCommandSettings(
     /** Requests running at once across all clients before the rest get 503; 0 is no limit. */

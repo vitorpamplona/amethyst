@@ -21,7 +21,7 @@
 package com.vitorpamplona.geode.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
-import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayCommand
+import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayLines
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayRequest
@@ -31,6 +31,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.request.contentType
 import io.ktor.server.request.header
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
@@ -39,7 +40,8 @@ import io.ktor.server.response.respondText
 import io.ktor.utils.io.writeStringUtf8
 
 /**
- * NIP-FE over Ktor: the host half of [HttpRelayHandler]. It admits the request, reads the body up to
+ * NIP-FE over Ktor: the host half of [HttpRelayHandler], on POSTs to the relay's URL that are not
+ * NIP-86 calls (see [isCommand]). It admits the request, reads the body up to
  * the cap, and writes the handler's answer as `application/x-ndjson` — one refusal line with its
  * status, or a 200 streamed and flushed frame by frame — with the headers the status calls for
  * (`WWW-Authenticate` on 401, `Retry-After` on 429 and 503) and the CORS and no-buffering headers
@@ -65,11 +67,18 @@ internal class NipFEHttpRoute(
         call.respond(HttpStatusCode.NoContent)
     }
 
-    /** Answers one [command]. Admission runs first, so a refused request spends no NIP-98 token. */
-    suspend fun handle(
-        call: ApplicationCall,
-        command: HttpRelayCommand,
-    ) {
+    /**
+     * Whether a POST to the relay's URL is a NIP-FE command: anything but NIP-86's
+     * `application/nostr+json+rpc`, since commands need no `Content-Type` at all.
+     */
+    fun isCommand(call: ApplicationCall): Boolean =
+        !call.request
+            .contentType()
+            .withoutParameters()
+            .match(NIP86)
+
+    /** Answers the command in the body. Admission runs first, so a refused request spends no NIP-98 token. */
+    suspend fun handle(call: ApplicationCall) {
         call.response.header(HttpHeaders.AccessControlAllowOrigin, "*")
         call.response.header(HttpHeaders.AccessControlExposeHeaders, "${HttpHeaders.WWWAuthenticate}, ${HttpHeaders.RetryAfter}")
         call.response.header(HttpHeaders.CacheControl, "no-store")
@@ -83,9 +92,9 @@ internal class NipFEHttpRoute(
                         ?: return@admit respondLine(
                             call,
                             HttpRelayStatus.PAYLOAD_TOO_LARGE,
-                            HttpRelayHandler.refusal(MachineReadablePrefix.INVALID.format("the command exceeds $bodyCap bytes")),
+                            HttpRelayHandler.notice(MachineReadablePrefix.INVALID.format("the command exceeds $bodyCap bytes")),
                         )
-                handler.handle(HttpRelayRequest(command, call.request.header(HttpHeaders.Authorization), body), Answer(call))
+                handler.handle(HttpRelayRequest(call.request.header(HttpHeaders.Authorization), body), Answer(call))
             }
         when (verdict) {
             HttpAdmission.Verdict.ADMITTED -> {}
@@ -94,7 +103,7 @@ internal class NipFEHttpRoute(
                 respondLine(
                     call,
                     HttpRelayStatus.TOO_MANY_REQUESTS,
-                    HttpRelayHandler.refusal(MachineReadablePrefix.RATE_LIMITED.format("over ${settings.maxPerClient} requests at once from this client")),
+                    HttpRelayHandler.notice(MachineReadablePrefix.RATE_LIMITED.format("over ${settings.maxPerClient} requests at once from this client")),
                 )
             }
 
@@ -102,7 +111,7 @@ internal class NipFEHttpRoute(
                 respondLine(
                     call,
                     HttpRelayStatus.UNAVAILABLE,
-                    HttpRelayHandler.refusal(MachineReadablePrefix.RATE_LIMITED.format("the relay is at capacity")),
+                    HttpRelayHandler.notice(MachineReadablePrefix.RATE_LIMITED.format("the relay is at capacity")),
                 )
             }
         }
@@ -161,6 +170,7 @@ internal class NipFEHttpRoute(
 
     companion object {
         val NDJSON = ContentType("application", "x-ndjson")
+        private val NIP86 = ContentType.parse(Nip86HttpHandler.CONTENT_TYPE)
         const val WWW_AUTHENTICATE = "Nostr"
         const val ACCEL_BUFFERING = "X-Accel-Buffering"
         const val PREFLIGHT_MAX_AGE_SECONDS = 86_400

@@ -25,8 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -47,18 +45,8 @@ class HttpRelayAnswerReaderTest {
     ) = HttpRelayAnswerReader(command, status).also { reader -> lines.forEach { reader.read(it) } }
 
     @Test
-    fun theSubscriptionIdGoesBackWhereItWasTakenOut() {
-        for (frame in listOf("""["EVENT","http",$event]""", """["EOSE","http"]""", """["CLOSED","http","error: x"]""", """["COUNT","http",{"count":3}]""")) {
-            assertEquals(frame, withSubId(withoutSubId(frame)))
-        }
-        assertEquals("""["OK","id",true,""]""", withSubId("""["OK","id",true,""]"""))
-        assertEquals("""["NOTICE","hi"]""", withSubId("""["NOTICE","hi"]"""))
-        assertEquals("""[ "EOSE","http"]""", withSubId("""[ "EOSE"]"""))
-    }
-
-    @Test
     fun aReqThatEndsOnEoseIsComplete() {
-        val reader = read(HttpRelayCommand.REQ, 200, """["EVENT",$event]""", """["EOSE"]""")
+        val reader = read(HttpRelayCommand.REQ, 200, """["EVENT","q",$event]""", """["EOSE","q"]""")
         assertTrue(reader.complete)
         assertIs<EoseMessage>(reader.last)
     }
@@ -66,24 +54,24 @@ class HttpRelayAnswerReaderTest {
     @Test
     fun aReqWithItsTailMissingIsIncomplete() {
         val reader = HttpRelayAnswerReader(HttpRelayCommand.REQ, 200)
-        val message = reader.read("""["EVENT",$event]""")
+        val message = reader.read("""["EVENT","q",$event]""")
         assertIs<EventMessage>(message)
         assertEquals("hi", message.event.content)
-        assertEquals(HttpRelayCommand.SUB_ID, message.subId)
+        assertEquals("q", message.subId)
         assertFalse(reader.complete)
         assertFalse(HttpRelayAnswerReader(HttpRelayCommand.REQ, 200).complete, "an empty body is no answer")
     }
 
     @Test
     fun aClosedEndsAReqAndACountButNotAnEvent() {
-        assertTrue(read(HttpRelayCommand.REQ, 200, """["EVENT",$event]""", """["CLOSED","error: the answer ran past 30s"]""").complete)
-        assertTrue(read(HttpRelayCommand.COUNT, 200, """["CLOSED","error: x"]""").complete)
-        assertFalse(read(HttpRelayCommand.EVENT, 200, """["CLOSED","error: x"]""").complete)
+        assertTrue(read(HttpRelayCommand.REQ, 200, """["EVENT","q",$event]""", """["CLOSED","q","error: the answer ran past 30s"]""").complete)
+        assertTrue(read(HttpRelayCommand.COUNT, 200, """["CLOSED","q","error: x"]""").complete)
+        assertFalse(read(HttpRelayCommand.EVENT, 200, """["CLOSED","q","error: x"]""").complete)
     }
 
     @Test
     fun aCountAndAnOkAreWholeAnswers() {
-        val count = read(HttpRelayCommand.COUNT, 200, """["COUNT",{"count":7}]""")
+        val count = read(HttpRelayCommand.COUNT, 200, """["COUNT","c",{"count":7}]""")
         assertTrue(count.complete)
         assertEquals(7, assertIs<CountMessage>(count.last).result.count)
         val ok = read(HttpRelayCommand.EVENT, 200, """["OK","abc",true,""]""")
@@ -93,35 +81,21 @@ class HttpRelayAnswerReaderTest {
 
     @Test
     fun aRefusalIsOneLineWhateverItsFrame() {
-        val refused = read(HttpRelayCommand.EVENT, 401, """["CLOSED","auth-required: sign in"]""")
+        val refused = read(HttpRelayCommand.EVENT, 401, """["CLOSED","q","auth-required: sign in"]""")
         assertTrue(refused.complete)
         assertEquals("auth-required: sign in", assertIs<ClosedMessage>(refused.last).message)
-        assertFalse(read(HttpRelayCommand.REQ, 403, """["CLOSED","blocked: no"]""", """["EOSE"]""").complete)
+        assertFalse(read(HttpRelayCommand.REQ, 403, """["CLOSED","q","blocked: no"]""", """["EOSE","q"]""").complete)
     }
 
     @Test
     fun anythingAfterTheEndOrALineThatIsNoFrameBreaksTheAnswer() {
-        assertFalse(read(HttpRelayCommand.REQ, 200, """["EOSE"]""", """["EVENT",$event]""").complete)
-        assertFalse(read(HttpRelayCommand.REQ, 200, """["EVENT",$event]""", """["EOSE""").complete)
-        assertTrue(read(HttpRelayCommand.REQ, 200, """["EOSE"]""", "", "  ").complete, "blank lines are not frames")
+        assertFalse(read(HttpRelayCommand.REQ, 200, """["EOSE","q"]""", """["EVENT","q",$event]""").complete)
+        assertFalse(read(HttpRelayCommand.REQ, 200, """["EVENT","q",$event]""", """["EOSE","q""").complete)
+        assertTrue(read(HttpRelayCommand.REQ, 200, """["EOSE","q"]""", "", "  ").complete, "blank lines are not frames")
     }
 
     @Test
     fun blankLinesAreSkipped() {
         assertNull(HttpRelayAnswerReader(HttpRelayCommand.REQ, 200).read(""))
-    }
-
-    @Test
-    fun theEndpointsHangOffTheRelayUrl() {
-        assertEquals("https://relay.example/req", HttpRelayCommand.REQ.url(NormalizedRelayUrl("wss://relay.example/")))
-        assertEquals("http://127.0.0.1:7447/nostr/count", HttpRelayCommand.COUNT.url(NormalizedRelayUrl("ws://127.0.0.1:7447/nostr")))
-        assertEquals("http://127.0.0.1:7447/nostr/event", HttpRelayCommand.EVENT.url(NormalizedRelayUrl("ws://127.0.0.1:7447/nostr/")))
-    }
-
-    @Test
-    fun aFilterBodyIsTheArrayAfterTheSubscriptionId() {
-        val body = HttpRelayCommand.body(listOf(Filter(kinds = listOf(1), limit = 2), Filter(kinds = listOf(0))))
-        assertEquals("""[{"kinds":[1],"limit":2},{"kinds":[0]}]""", body)
-        assertEquals("""["REQ","http",{"kinds":[1],"limit":2},{"kinds":[0]}]""", HttpRelayCommand.REQ.frameOf(body))
     }
 }

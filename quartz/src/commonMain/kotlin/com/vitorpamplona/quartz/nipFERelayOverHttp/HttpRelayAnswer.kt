@@ -55,9 +55,8 @@ class HttpRelayAnswerReader(
     private var broken = false
 
     /**
-     * The frame on [line], typed with [HttpRelayCommand.SUB_ID] as its subscription id, or null for
-     * a blank line. A line that does not parse, or anything after the answer ended, marks the answer
-     * incomplete: the body is not what this NIP says it is.
+     * The frame on [line], or null for a blank line. A line that does not parse, or anything after
+     * the answer ended, marks the answer incomplete: the body is not what this NIP says it is.
      */
     fun read(line: String): Message? {
         if (line.isBlank()) return null
@@ -67,7 +66,7 @@ class HttpRelayAnswerReader(
         }
         val message =
             try {
-                OptimizedJsonMapper.fromJsonToMessage(withSubId(line.trim()))
+                OptimizedJsonMapper.fromJsonToMessage(line)
             } catch (_: Exception) {
                 broken = true
                 return null
@@ -82,19 +81,4 @@ class HttpRelayAnswerReader(
     val complete: Boolean get() = ended && !broken && (status == HttpRelayStatus.OK || lines == 1)
 
     fun answer(retryAfter: String? = null) = HttpRelayAnswer(status, last, complete, retryAfter)
-}
-
-/**
- * [frame] with the subscription id NIP-FE leaves out put back, so the websocket's parser reads it:
- * `["EVENT",{…}]` → `["EVENT","http",{…}]`, `["EOSE"]` → `["EOSE","http"]`. The inverse of
- * [withoutSubId]; frames that carry no subscription id pass as they are.
- */
-internal fun withSubId(frame: String): String {
-    if (!frame.startsWith('[')) return frame
-    var open = 1
-    while (open < frame.length && frame[open].isWhitespace()) open++
-    if (open >= frame.length || frame[open] != '"') return frame
-    val verbEnd = frame.indexOf('"', open + 1)
-    if (verbEnd < 0 || frame.substring(open + 1, verbEnd) !in SUBSCRIPTION_FRAMES) return frame
-    return frame.substring(0, verbEnd + 1) + SUB_ID_FIELD + frame.substring(verbEnd + 1)
 }

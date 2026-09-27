@@ -21,10 +21,16 @@
 package com.vitorpamplona.quartz.nipFERelayOverHttp
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +46,9 @@ import okhttp3.coroutines.executeAsync
 import okio.IOException
 
 /**
- * NIP-FE over OkHttp: one relay command per request, its answer read line by line as the relay
- * writes it. Nothing stays open after a call returns.
+ * NIP-FE over OkHttp: one relay command per request, POSTed to the relay's URL as the frame the
+ * websocket would carry, its answer read line by line as the relay writes it, in the socket's own
+ * frames. Nothing stays open after a call returns.
  *
  * With a [signer], a request the relay refuses with 401 goes once more carrying a NIP-98 token for
  * its exact body, as a websocket client answers a NIP-42 challenge; without one, the 401 is the
@@ -57,9 +64,10 @@ class HttpRelayClient(
     suspend fun req(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
+        subId: String = newSubId(),
         onEvent: (Event) -> Unit,
     ): HttpRelayAnswer =
-        send(relay, HttpRelayCommand.REQ, HttpRelayCommand.body(filters)) {
+        send(relay, ReqCmd(subId, filters)) {
             if (it is EventMessage) onEvent(it.event)
         }
 
@@ -67,23 +75,24 @@ class HttpRelayClient(
     suspend fun count(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
-    ): HttpRelayAnswer = send(relay, HttpRelayCommand.COUNT, HttpRelayCommand.body(filters))
+        queryId: String = newSubId(),
+    ): HttpRelayAnswer = send(relay, CountCmd(queryId, filters))
 
     /** Publishes [event]: [HttpRelayAnswer.last] is its OK, or the refusal. */
     suspend fun publish(
         relay: NormalizedRelayUrl,
         event: Event,
-    ): HttpRelayAnswer = send(relay, HttpRelayCommand.EVENT, event.toJson())
+    ): HttpRelayAnswer = send(relay, EventCmd(event))
 
-    /** Posts [body] to [command]'s endpoint on [relay], handing every frame to [onMessage] as it is read. */
+    /** Posts [cmd] (a REQ, COUNT or EVENT) to [relay], handing every frame to [onMessage] as it is read. */
     suspend fun send(
         relay: NormalizedRelayUrl,
-        command: HttpRelayCommand,
-        body: String,
+        cmd: Command,
         onMessage: (Message) -> Unit = {},
     ): HttpRelayAnswer {
-        val url = command.url(relay)
-        val bytes = body.encodeToByteArray()
+        val command = requireNotNull(HttpRelayCommand.of(cmd)) { "NIP-FE carries REQ, COUNT and EVENT, not ${cmd.label()}" }
+        val url = relay.toHttp()
+        val bytes = cmd.toJson().encodeToByteArray()
         if (signer == null || signFirst) return post(command, url, bytes, token(url, bytes), onMessage, retrying = false)
         val first = post(command, url, bytes, null, onMessage, retrying = true)
         if (first.status != HttpRelayStatus.UNAUTHORIZED) return first

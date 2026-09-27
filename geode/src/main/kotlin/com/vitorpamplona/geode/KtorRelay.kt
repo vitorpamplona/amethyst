@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
-import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayCommand
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
@@ -83,8 +82,8 @@ class KtorRelay(
     /** Ktor CIO call-handling thread count. `null` keeps Ktor's default. */
     val callGroupSize: Int? = null,
     /**
-     * NIP-FE: relay commands over HTTP at `<path>/req`, `/count` and `/event`. On by default; null
-     * turns the endpoints off (and the operator should then drop `FE` from the NIP-11 doc).
+     * NIP-FE: relay commands POSTed to the relay's URL, beside NIP-86. On by default; null turns them
+     * off, every POST going to NIP-86 again (and the operator should then drop `FE` from NIP-11).
      */
     val httpCommands: HttpCommandSettings? = HttpCommandSettings(),
 ) {
@@ -116,8 +115,8 @@ class KtorRelay(
 
     /**
      * NIP-FE. Each request runs on its own session of the same engine, so the websocket's policies
-     * and limits apply. A NIP-98 token must name the endpoint under `relay.url` read as http(s), or
-     * under one of the configured alternate URLs (a .onion).
+     * and limits apply. A NIP-98 token must name `relay.url` read as http(s), or one of the
+     * configured alternate URLs (a .onion).
      */
     private val nipFERoute =
         httpCommands?.let { settings ->
@@ -188,21 +187,18 @@ class KtorRelay(
                                 get(path) {
                                     nip11Route.handle(call)
                                 }
-                                // NIP-86: POST application/nostr+json+rpc with a NIP-98
-                                // signed Authorization header → JSON-RPC dispatch.
-                                // Always mounted; an empty admin allow-list on the engine just means
-                                // every request fails the allow-list check (403).
+                                // Two POSTs share the relay URL, told apart by Content-Type:
+                                //  - NIP-86: application/nostr+json+rpc with a NIP-98 signed
+                                //    Authorization header → JSON-RPC dispatch. Always mounted; an
+                                //    empty admin allow-list just means every call fails it (403).
+                                //  - NIP-FE: anything else is one REQ/COUNT/EVENT frame, answered
+                                //    as NDJSON in the socket's own frames.
                                 post(path) {
-                                    nip86Route.handle(call)
+                                    val commands = nipFERoute
+                                    if (commands != null && commands.isCommand(call)) commands.handle(call) else nip86Route.handle(call)
                                 }
-                                // NIP-FE: one command per POST, answered as NDJSON. The paths
-                                // hang off the relay's own path, as the NIP-98 `u` does.
                                 nipFERoute?.let { route ->
-                                    HttpRelayCommand.entries.forEach { command ->
-                                        val endpoint = path.trimEnd('/') + command.path
-                                        post(endpoint) { route.handle(call, command) }
-                                        options(endpoint) { route.preflight(call) }
-                                    }
+                                    options(path) { route.preflight(call) }
                                 }
                                 webSocket(path) {
                                     if (shuttingDown) {

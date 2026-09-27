@@ -103,23 +103,25 @@ file for every knob.
 
 ### Commands over HTTP (NIP-FE)
 
-Besides the websocket, geode answers one command per HTTP `POST` beside the
-relay path, streamed back as NDJSON — no socket, no subscription left open:
+Besides the websocket, geode answers one command per HTTP `POST` to the relay
+URL: the body is the frame you would send on the socket, and the answer is the
+socket's frames as NDJSON, streamed — no socket, no subscription left open:
 
 ```bash
-curl -N -d '{"kinds":[1],"limit":2}' http://localhost:7447/req
-# ["EVENT",{"id":"…","kind":1,…}]
-# ["EVENT",{"id":"…","kind":1,…}]
-# ["EOSE"]
-curl -d '{"kinds":[1]}' http://localhost:7447/count     # ["COUNT",{"count":2}]
-curl -d @signed-event.json http://localhost:7447/event  # ["OK","<id>",true,""]
+curl -N -d '["REQ","q",{"kinds":[1],"limit":2}]' http://localhost:7447/
+# ["EVENT","q",{"id":"…","kind":1,…}]
+# ["EVENT","q",{"id":"…","kind":1,…}]
+# ["EOSE","q"]
+curl -d '["COUNT","c",{"kinds":[1]}]' http://localhost:7447/   # ["COUNT","c",{"count":2}]
+curl -d "[\"EVENT\",$(cat signed-event.json)]" http://localhost:7447/   # ["OK","<id>",true,""]
 ```
 
 A body that does not end on `EOSE`/`CLOSED` (REQ), `COUNT`/`CLOSED` (COUNT) or
 `OK` (EVENT) was cut off. On an AUTH-gated relay the answer is `401` until the
-request carries a NIP-98 `Authorization: Nostr …` header whose `payload` is the
-body's sha256. Quartz's `HttpRelayClient` does all of this for JVM/Android
-clients.
+request carries a NIP-98 `Authorization: Nostr …` header whose `u` is the
+relay's http URL and whose `payload` is the body's sha256. NIP-86 admin calls
+share the URL, told apart by `Content-Type: application/nostr+json+rpc`.
+Quartz's `HttpRelayClient` does all of this for JVM/Android clients.
 
 ## Verbs
 
