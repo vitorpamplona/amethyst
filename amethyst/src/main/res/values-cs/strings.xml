@@ -377,4 +377,8 @@
     <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
     <string name="play">Hrát</string>
     <string name="pause">Pozastavit</string>
+    <string name="share_target_scan_qr">Skenovat QR kód</string>
+    <string name="shortcut_scan_qr_short">Skenovat QR</string>
+    <string name="shortcut_scan_qr_long">Naskenovat QR kód</string>
+    <string name="pow_notification_sending">Odesílání na relé…</string>
 </resources>

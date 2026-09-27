@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_already_on
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_caches
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_new
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_none_yet
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -178,7 +179,8 @@ fun GeocacheAddToHuntSheet(
                                 if (already) {
                                     stringRes(Res.string.geocache_hunt_already_on)
                                 } else {
-                                    stringRes(Res.string.geocache_hunt_caches, hunt.geocaches().size)
+                                    val cacheCount = hunt.geocaches().size
+                                    pluralStringRes(Res.plurals.geocache_hunt_caches, cacheCount, cacheCount)
                                 },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

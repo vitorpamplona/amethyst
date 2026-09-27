@@ -349,4 +349,8 @@
     <string name="mute_button">Som ligado. Clique para silenciar</string>
     <string name="play">Reproduzir</string>
     <string name="pause">Pausar</string>
+    <string name="share_target_scan_qr">Escanear código QR</string>
+    <string name="shortcut_scan_qr_short">Ler QR</string>
+    <string name="shortcut_scan_qr_long">Escanear um código QR</string>
+    <string name="pow_notification_sending">Enviando para relays…</string>
 </resources>

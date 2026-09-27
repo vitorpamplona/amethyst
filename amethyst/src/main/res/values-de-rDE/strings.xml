@@ -349,4 +349,8 @@
     <string name="mute_button">Ton ein. Zur Stummschaltung drücken</string>
     <string name="play">Abspielen</string>
     <string name="pause">Pausen</string>
+    <string name="share_target_scan_qr">QR-Code scannen</string>
+    <string name="shortcut_scan_qr_short">QR scannen</string>
+    <string name="shortcut_scan_qr_long">Einen QR-Code scannen</string>
+    <string name="pow_notification_sending">Wird an Relays gesendet…</string>
 </resources>

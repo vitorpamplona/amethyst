@@ -349,4 +349,8 @@
     <string name="mute_button">Ljud på. Klicka för att stänga av ljudet</string>
     <string name="play">Spela</string>
     <string name="pause">Pausa</string>
+    <string name="share_target_scan_qr">Skanna QR-kod</string>
+    <string name="shortcut_scan_qr_short">Skanna QR</string>
+    <string name="shortcut_scan_qr_long">Skanna en QR-kod</string>
+    <string name="pow_notification_sending">Skickar till reläer…</string>
 </resources>

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_health_down
 import com.vitorpamplona.amethyst.commons.resources.cordn_health_failures
 import com.vitorpamplona.amethyst.commons.resources.cordn_health_ok
 import com.vitorpamplona.amethyst.commons.resources.cordn_health_unknown
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -97,7 +98,7 @@ fun CoordinatorHealthRow(
         // deserves no words at all.
         if (state.isDown) {
             Text(
-                text = stringResource(Res.string.cordn_health_failures, state.consecutiveFailures),
+                text = pluralStringResource(Res.plurals.cordn_health_failures, state.consecutiveFailures, state.consecutiveFailures),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

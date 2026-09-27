@@ -206,7 +206,10 @@
     <string name="geocache_hunt_new">Új vadászat…</string>
     <string name="geocache_hunt_none_yet">Még nem hozott létre vadászatot.</string>
     <string name="geocache_hunt_already_on">Már szerepel ebben a vadászatban</string>
-    <string name="geocache_caches_here">%1$d láda van itt</string>
+    <plurals name="geocache_caches_here">
+        <item quantity="one">%1$d láda van itt</item>
+        <item quantity="other">%1$d láda van itt</item>
+    </plurals>
     <string name="geocache_photo_remove">Fénykép eltávolítása</string>
     <string name="geocache_archived_notice">Ezt a ládát archiválták. Már nem játszik.</string>
     <string name="geocache_ftf_won_by">Az első megtalálást %1$s szerezte meg</string>
@@ -265,7 +268,6 @@
     <string name="geocache_map_recenter">Középre</string>
     <string name="geocache_map_long_press">Egy láda elrejtéséhez nyomja meg hossza a térképet</string>
     <string name="geocache_map_open">Megnyitás</string>
-    <string name="geocache_map_pin_count">%1$d láda</string>
     <string name="geocache_new_section_where">Hol</string>
     <string name="geocache_new_section_what">Mi</string>
     <string name="geocache_new_section_extras">Extrák</string>
@@ -293,7 +295,10 @@
     <string name="geocache_new_needs_location">Válassza ki, hogy hol van elrejtve a láda.</string>
     <string name="geocache_hunt_progress">%2$d / %1$d megtalálva</string>
     <string name="geocache_hunt_start">Vadászat indítása</string>
-    <string name="geocache_hunt_caches">%1$d láda</string>
+    <plurals name="geocache_hunt_caches">
+        <item quantity="one">%1$d láda</item>
+        <item quantity="other">%1$d láda</item>
+    </plurals>
     <string name="geocache_hunt_title">Cím</string>
     <string name="geocache_hunt_description">Leírás</string>
     <string name="geocache_hunt_banner">Borítókép</string>
@@ -342,7 +347,10 @@
     <string name="qr_scanner_no_code_in_image">Nem található QR-kód a képen</string>
     <string name="qr_scanner_clipboard_empty">A vágólapon nincs semmi a beolvasáshoz</string>
     <string name="qr_scanner_pick_one">Érintse meg a beolvasandó kódot</string>
-    <string name="qr_scanner_sequence_progress">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</string>
+    <plurals name="qr_scanner_sequence_progress">
+        <item quantity="one">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</item>
+        <item quantity="other">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Nagyítás visszaállítása</string>
     <string name="qr_scanner_unsupported_title">Az Amethyst nem tudja megnyitni ezt a kódot</string>
     <string name="qr_scanner_unsupported_secret">Ez a kód egy titkos kulcsot vagy párosítási titkot tartalmaz, ezért a tartalma itt nem jelenik meg. Használja azt a képernyőt, ahol meg kell adni.</string>
@@ -5253,16 +5261,27 @@
     <string name="cyberspace_bag_cancel">Leállítás</string>
     <string name="cyberspace_bag_measuring">A keresés árazása ezen az eszközön…</string>
     <string name="cyberspace_bag_progress">%2$s régióból %1$s átkutatva</string>
-    <string name="cyberspace_bag_too_slow_minutes">Elérhetetlen: körülbelül %1$d perc keresés ezen az eszközön</string>
-    <string name="cyberspace_bag_too_slow_hours">Elérhetetlen: körülbelül %1$d óra keresés ezen az eszközön</string>
+    <plurals name="cyberspace_bag_too_slow_minutes">
+        <item quantity="one">Elérhetetlen: körülbelül %1$d perc keresés ezen az eszközön</item>
+        <item quantity="other">Elérhetetlen: körülbelül %1$d perc keresés ezen az eszközön</item>
+    </plurals>
+    <plurals name="cyberspace_bag_too_slow_hours">
+        <item quantity="one">Elérhetetlen: körülbelül %1$d óra keresés ezen az eszközön</item>
+        <item quantity="other">Elérhetetlen: körülbelül %1$d óra keresés ezen az eszközön</item>
+    </plurals>
     <string name="cyberspace_bag_not_found">Nincs abban a dobozban, amelyet a nyom megnevezett</string>
     <string name="cyberspace_bag_damaged">A régió megvan, de a tartalmát nem sikerült beolvasni</string>
-    <string name="cyberspace_bag_dropped">Az itt elrejtett %1$d elem nem egyezett az aláírásával, ezért el lett vetve</string>
-    <string name="cyberspace_bag_dropped_many">Az itt elrejtett %1$d elem nem egyezett az aláírásával, ezért el lettek vetve</string>
+    <plurals name="cyberspace_bag_dropped">
+        <item quantity="one">Az itt elrejtett %1$d elem nem egyezett az aláírásával, ezért el lett vetve</item>
+        <item quantity="other">Az itt elrejtett %1$d elem nem egyezett az aláírásával, ezért el lettek vetve</item>
+    </plurals>
     <string name="cyberspace_bag_empty">Kinyitva, és nem volt benne semmi</string>
     <string name="cyberspace_bag_unsigned">Aláírás nélküli, így ez a szerző csak állítás</string>
     <string name="cyberspace_bag_unknown_kind">Egy %1$d típusú elem, amelyet ez a kliens nem jelenít meg</string>
-    <string name="cyberspace_bag_opaque">%1$d bájt valamiből, amit ez a kliens nem olvas</string>
+    <plurals name="cyberspace_bag_opaque">
+        <item quantity="one">%1$d bájt valamiből, amit ez a kliens nem olvas</item>
+        <item quantity="other">%1$d bájt valamiből, amit ez a kliens nem olvas</item>
+    </plurals>
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="backup_action_block_again">%1$s újbóli letiltása</string>
     <string name="backup_action_keep_count">%1$s megtartása</string>
@@ -5501,13 +5520,19 @@
     <string name="backup_review_renamed">átnevezte</string>
     <string name="backup_review_renamed_tag">Átnevezve</string>
     <string name="backup_review_saved">Ezen az eszközön</string>
-    <string name="backup_review_search_people">%1$s személy keresése</string>
+    <plurals name="backup_review_search_people">
+        <item quantity="one">%1$s személy keresése</item>
+        <item quantity="other">%1$s személy keresése</item>
+    </plurals>
     <string name="backup_review_searching_tag">Keresés</string>
     <string name="backup_review_service">Szolgáltatás</string>
     <string name="backup_review_service_followers">Követők</string>
     <string name="backup_review_service_rank">Rang</string>
     <string name="backup_review_service_topics">Témák</string>
-    <string name="backup_review_services_changed">%2$s szolgáltatásból %1$s módosult</string>
+    <plurals name="backup_review_services_changed">
+        <item quantity="one">%2$s szolgáltatásból %1$s módosult</item>
+        <item quantity="other">%2$s szolgáltatásból %1$s módosult</item>
+    </plurals>
     <string name="backup_review_services_changed_explainer">Most már valaki mástól vagy senkitől sem származnak</string>
     <string name="backup_review_still_blocked">Továbbra is le van tiltva</string>
     <string name="backup_review_storing_tag">Tárolás</string>

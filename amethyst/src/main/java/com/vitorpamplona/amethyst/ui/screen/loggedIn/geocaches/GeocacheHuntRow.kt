@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_caches
 import com.vitorpamplona.amethyst.commons.resources.geocache_hunt_progress
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -119,7 +120,7 @@ fun GeocacheHuntRow(
         Text(
             text =
                 stringRes(Res.string.geocache_hunt_progress, doneCount, caches.size) +
-                    " · " + stringRes(Res.string.geocache_hunt_caches, caches.size),
+                    " · " + pluralStringRes(Res.plurals.geocache_hunt_caches, caches.size, caches.size),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

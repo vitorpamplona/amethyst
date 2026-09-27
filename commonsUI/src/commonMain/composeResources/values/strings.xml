@@ -219,7 +219,10 @@
     <string name="geocache_hunt_new">New hunt…</string>
     <string name="geocache_hunt_none_yet">You have not made a hunt yet.</string>
     <string name="geocache_hunt_already_on">Already on this hunt</string>
-    <string name="geocache_caches_here">%1$d caches here</string>
+    <plurals name="geocache_caches_here">
+        <item quantity="one">%1$d cache here</item>
+        <item quantity="other">%1$d caches here</item>
+    </plurals>
     <string name="geocache_photo_remove">Remove this photo</string>
     <string name="geocache_archived_notice">This cache has been archived. It is no longer in play.</string>
     <string name="geocache_ftf_won_by">First to find claimed by %1$s</string>
@@ -278,7 +281,6 @@
     <string name="geocache_map_recenter">Centre on me</string>
     <string name="geocache_map_long_press">Long-press the map to hide a cache there</string>
     <string name="geocache_map_open">Open</string>
-    <string name="geocache_map_pin_count">%1$d caches</string>
     <string name="geocache_new_section_where">Where</string>
     <string name="geocache_new_section_what">What</string>
     <string name="geocache_new_section_extras">Extras</string>
@@ -306,7 +308,10 @@
     <string name="geocache_new_needs_location">Pick where the cache is hidden.</string>
     <string name="geocache_hunt_progress">%1$d of %2$d found</string>
     <string name="geocache_hunt_start">Start the hunt</string>
-    <string name="geocache_hunt_caches">%1$d caches</string>
+    <plurals name="geocache_hunt_caches">
+        <item quantity="one">%1$d cache</item>
+        <item quantity="other">%1$d caches</item>
+    </plurals>
     <string name="geocache_hunt_title">Title</string>
     <string name="geocache_hunt_description">Description</string>
     <string name="geocache_hunt_banner">Banner image</string>
@@ -355,7 +360,10 @@
     <string name="qr_scanner_no_code_in_image">No QR code found in that picture</string>
     <string name="qr_scanner_clipboard_empty">Nothing on the clipboard to scan</string>
     <string name="qr_scanner_pick_one">Tap the code you want</string>
-    <string name="qr_scanner_sequence_progress">Captured %1$s of %2$s parts — keep going</string>
+    <plurals name="qr_scanner_sequence_progress">
+        <item quantity="one">Captured %1$s of %2$s part — keep going</item>
+        <item quantity="other">Captured %1$s of %2$s parts — keep going</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Reset zoom</string>
     <string name="qr_scanner_unsupported_title">Amethyst can't open this code</string>
     <string name="qr_scanner_unsupported_secret">This code carries a private key or a pairing secret, so its contents are not shown here. Use the screen that expects it.</string>
@@ -5324,7 +5332,10 @@
     <string name="cordn_health_unknown">Not contacted yet</string>
     <string name="cordn_health_ok">Responding</string>
     <string name="cordn_health_down">Not responding</string>
-    <string name="cordn_health_failures">%1$d failed attempts in a row</string>
+    <plurals name="cordn_health_failures">
+        <item quantity="one">%1$d failed attempt in a row</item>
+        <item quantity="other">%1$d failed attempts in a row</item>
+    </plurals>
 
     <string name="cordn_link_explainer">Paste a cordn1… link someone shared with you to see which coordinator carries that group, and what that operator would learn about you if you joined.</string>
     <string name="cordn_link_field">cordn1…</string>
@@ -5420,7 +5431,10 @@
     <string name="cordn_migrate_import">Bring the groups here</string>
     <string name="cordn_migrate_importing">Fetching…</string>
     <string name="cordn_migrate_replaces_warning">This replaces any cordn groups already on this phone. They cannot be merged.</string>
-    <string name="cordn_migrate_done">%1$d groups moved</string>
+    <plurals name="cordn_migrate_done">
+        <item quantity="one">%1$d group moved</item>
+        <item quantity="other">%1$d groups moved</item>
+    </plurals>
     <string name="cordn_migrate_no_groups">There are no cordn groups on this device to move.</string>
     <string name="cordn_migrate_no_server">Set a media server first — the encrypted documents need somewhere to sit while the other phone fetches them.</string>
     <string name="cordn_migrate_exposure_title">What leaves this device</string>
@@ -5446,16 +5460,27 @@
     <string name="cyberspace_bag_cancel">Stop</string>
     <string name="cyberspace_bag_measuring">Pricing the search on this device…</string>
     <string name="cyberspace_bag_progress">Searched %1$s of %2$s regions</string>
-    <string name="cyberspace_bag_too_slow_minutes">Out of reach: about %1$d minutes of searching on this device</string>
-    <string name="cyberspace_bag_too_slow_hours">Out of reach: about %1$d hours of searching on this device</string>
+    <plurals name="cyberspace_bag_too_slow_minutes">
+        <item quantity="one">Out of reach: about %1$d minute of searching on this device</item>
+        <item quantity="other">Out of reach: about %1$d minutes of searching on this device</item>
+    </plurals>
+    <plurals name="cyberspace_bag_too_slow_hours">
+        <item quantity="one">Out of reach: about %1$d hour of searching on this device</item>
+        <item quantity="other">Out of reach: about %1$d hours of searching on this device</item>
+    </plurals>
     <string name="cyberspace_bag_not_found">Not in the box the hint named</string>
     <string name="cyberspace_bag_damaged">Found the region, but the contents could not be read</string>
-    <string name="cyberspace_bag_dropped">%1$d item hidden here did not match its signature and was dropped</string>
-    <string name="cyberspace_bag_dropped_many">%1$d items hidden here did not match their signatures and were dropped</string>
+    <plurals name="cyberspace_bag_dropped">
+        <item quantity="one">%1$d item hidden here did not match its signature and was dropped</item>
+        <item quantity="other">%1$d items hidden here did not match their signatures and were dropped</item>
+    </plurals>
     <string name="cyberspace_bag_empty">Opened, and there was nothing inside</string>
     <string name="cyberspace_bag_unsigned">Unsigned, so this author is a claim</string>
     <string name="cyberspace_bag_unknown_kind">An item of kind %1$d, which this client does not draw</string>
-    <string name="cyberspace_bag_opaque">%1$d bytes of something this client does not read</string>
+    <plurals name="cyberspace_bag_opaque">
+        <item quantity="one">%1$d byte of something this client does not read</item>
+        <item quantity="other">%1$d bytes of something this client does not read</item>
+    </plurals>
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="browser_pill_close">Close</string>
     <string name="browser_pill_tile_copy">Copy link</string>
@@ -5800,13 +5825,19 @@
     <string name="backup_review_renamed">renamed</string>
     <string name="backup_review_renamed_tag">Renamed</string>
     <string name="backup_review_saved">On this device</string>
-    <string name="backup_review_search_people">Search %1$s people</string>
+    <plurals name="backup_review_search_people">
+        <item quantity="one">Search %1$s person</item>
+        <item quantity="other">Search %1$s people</item>
+    </plurals>
     <string name="backup_review_searching_tag">Searching</string>
     <string name="backup_review_service">Service</string>
     <string name="backup_review_service_followers">Followers</string>
     <string name="backup_review_service_rank">Rank</string>
     <string name="backup_review_service_topics">Topics</string>
-    <string name="backup_review_services_changed">%1$s of %2$s services changed</string>
+    <plurals name="backup_review_services_changed">
+        <item quantity="one">%1$s of %2$s service changed</item>
+        <item quantity="other">%1$s of %2$s services changed</item>
+    </plurals>
     <string name="backup_review_services_changed_explainer">They now come from someone else, or no one</string>
     <string name="backup_review_still_blocked">Still blocked</string>
     <string name="backup_review_storing_tag">Storing</string>
@@ -5924,9 +5955,15 @@
     <string name="cordn_coordinators_discover_none">Nobody is announcing on your relays.</string>
     <string name="cordn_coordinators_discover_seen">Announced %1$s ago</string>
     <string name="cordn_coordinators_discover_seen_on">Last announced %1$s</string>
-    <string name="cordn_coordinators_discover_unheard">Nothing found, and %1$d of your relays did not answer.</string>
+    <plurals name="cordn_coordinators_discover_unheard">
+        <item quantity="one">Nothing found, and %1$d of your relays did not answer.</item>
+        <item quantity="other">Nothing found, and %1$d of your relays did not answer.</item>
+    </plurals>
     <string name="cordn_coordinators_explainer">A coordinator orders one group's messages and is the only thing that can. Losing it loses the ordering, and a second one does not mirror the first — so these are named things you choose, not interchangeable relays.</string>
-    <string name="cordn_coordinators_health_down">Not answering — %1$d calls in a row have failed. Groups on it are not syncing.</string>
+    <plurals name="cordn_coordinators_health_down">
+        <item quantity="one">Not answering — %1$d call in a row has failed. Groups on it are not syncing.</item>
+        <item quantity="other">Not answering — %1$d calls in a row have failed. Groups on it are not syncing.</item>
+    </plurals>
     <string name="cordn_coordinators_health_ok">Answering.</string>
     <string name="cordn_coordinators_health_retrying">A call failed; retrying.</string>
     <string name="cordn_coordinators_health_unknown">Nothing asked of it yet.</string>
@@ -5950,7 +5987,10 @@
     <string name="cordn_coordinators_server_silent">Answered, but named nothing.</string>
     <string name="cordn_coordinators_show_all">Show all %1$d</string>
     <string name="cordn_coordinators_show_fewer">Show fewer</string>
-    <string name="cordn_coordinators_show_older">Show %1$d that stopped announcing</string>
+    <plurals name="cordn_coordinators_show_older">
+        <item quantity="one">Show %1$d that stopped announcing</item>
+        <item quantity="other">Show %1$d that stopped announcing</item>
+    </plurals>
     <string name="cordn_coordinators_stale_note">These have not announced in over a month. Creating a group on one that has gone away will fail.</string>
     <string name="cordn_create_action">Create group</string>
     <plurals name="cordn_create_action_invite">
@@ -5972,7 +6012,10 @@
     <string name="cordn_create_coordinator_new">Another coordinator</string>
     <string name="cordn_create_coordinator_pubkey">Coordinator public key (hex or npub)</string>
     <string name="cordn_create_coordinator_relays">Relays it answers on, one per line</string>
-    <string name="cordn_create_coverage_all">Reaches all %1$d of your people</string>
+    <plurals name="cordn_create_coverage_all">
+        <item quantity="one">Reaches your %1$d person</item>
+        <item quantity="other">Reaches all %1$d of your people</item>
+    </plurals>
     <string name="cordn_create_coverage_partial">Reaches %1$d of %2$d &#8212; the rest would be left out</string>
     <string name="cordn_create_coverage_unknown">Not checked &#8212; picking it will ask</string>
     <string name="cordn_create_description">Description (optional)</string>
