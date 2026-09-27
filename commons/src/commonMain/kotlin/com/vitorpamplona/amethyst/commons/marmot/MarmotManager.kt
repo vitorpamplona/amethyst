@@ -97,6 +97,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -276,35 +277,66 @@ class MarmotManager(
                     }
                 }
             val state =
-                publishGate.resolve(
-                    obligation.obligationId,
-                    if (confirmed) PublishOutcome.CONFIRMED else PublishOutcome.UNKNOWN,
-                )
-            // A confirmed retry makes the commit canonical exactly as
-            // [commitAndPublish] would, so it owes the same follow-up. Resolving
-            // the obligation and stopping there was enough to install the state
-            // and no more: the relay's echo of THIS event was never marked
-            // processed, so the inbound pipeline met an unknown kind:445 at an
-            // epoch we had already merged and opened a convergence pass against
-            // ourselves — a restart could put a healthy group into Recovering
-            // purely by succeeding.
-            if (confirmed) {
-                val framedCommit = framedCommitOf(obligation, event)
-                if (framedCommit != null) {
-                    inboundProcessor.markMessageProcessed(sha256(framedCommit).toHexKey())
-                    inboundProcessor.recordLocalCommit(
-                        groupId = obligation.groupId,
-                        framedCommitBytes = framedCommit,
-                        sourceEpoch = obligation.priorState.groupContext.epoch,
-                        preState = obligation.priorState,
-                    )
+                if (confirmed) {
+                    confirmObligation(obligation, event)
+                } else {
+                    publishGate.resolve(obligation.obligationId, PublishOutcome.UNKNOWN)
                 }
-                recordRetentionForCurrentEpoch(obligation.groupId)
-                syncGroupSystemRows(obligation.groupId, actor = signer.pubKey)
-            }
             Log.d("MarmotManager") {
                 "retryPendingPublishObligations(): ${obligation.groupId.take(8)}… " +
                     "confirmed=$confirmed lifecycle=$state"
+            }
+        }
+    }
+
+    /**
+     * Make a confirmed obligation's commit canonical, with every follow-up
+     * [commitAndPublish] owes a commit a relay acknowledged.
+     *
+     * Resolving the obligation alone installs the state and no more: the
+     * relay's echo of THIS event would not be marked processed, so the inbound
+     * pipeline would meet an unknown kind:445 at an epoch we had already merged
+     * and open a convergence pass against ourselves.
+     */
+    private suspend fun confirmObligation(
+        obligation: MarmotPublishObligation,
+        event: Event,
+    ): GroupLifecycleState {
+        val state = publishGate.resolve(obligation.obligationId, PublishOutcome.CONFIRMED)
+        val framedCommit = framedCommitOf(obligation, event)
+        if (framedCommit != null) {
+            inboundProcessor.markMessageProcessed(sha256(framedCommit).toHexKey())
+            inboundProcessor.recordLocalCommit(
+                groupId = obligation.groupId,
+                framedCommitBytes = framedCommit,
+                sourceEpoch = obligation.priorState.groupContext.epoch,
+                preState = obligation.priorState,
+            )
+        }
+        recordRetentionForCurrentEpoch(obligation.groupId)
+        syncGroupSystemRows(obligation.groupId, actor = signer.pubKey)
+        return state
+    }
+
+    /**
+     * The relay's copy of one of our own unconfirmed commits, or null.
+     *
+     * A relay only echoes what it stored, so seeing our pending kind:445 come
+     * back is the acceptance whose OK never arrived (a timeout, a dropped
+     * socket, a slow Tor circuit). It must confirm the obligation. Handed to
+     * the inbound pipeline instead, it reads as a peer's commit whose sender is
+     * our own leaf; a committer never encrypts the path secret to itself, so it
+     * fails ("no ciphertext for us") while every peer applies it, and the group
+     * forks with us one epoch behind.
+     */
+    private suspend fun pendingObligationEchoed(groupEvent: GroupEvent): MarmotPublishObligation? {
+        val groupId = groupEvent.groupId() ?: return null
+        return publishGate.pendingFor(groupId).firstOrNull { obligation ->
+            try {
+                Event.fromJson(obligation.outboundBytes.decodeToString()).id == groupEvent.id
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                false
             }
         }
     }
@@ -390,6 +422,12 @@ class MarmotManager(
      * Returns the inner event JSON if it was an application message.
      */
     suspend fun processGroupEvent(groupEvent: GroupEvent): GroupEventResult {
+        pendingObligationEchoed(groupEvent)?.let { obligation ->
+            confirmObligation(obligation, groupEvent)
+            subscriptionManager.updateGroupSince(obligation.groupId, groupEvent.createdAt)
+            return GroupEventResult.CommitProcessed(obligation.groupId, obligation.pendingState.groupContext.epoch)
+        }
+
         val result = inboundProcessor.processGroupEvent(groupEvent)
 
         // A fork just opened a bounded pass. Inbound traffic settles it

@@ -210,6 +210,7 @@ ALL_TESTS=(
   test_27_deletion_wn_to_amy
   test_28_retention_wn_to_amy
   test_29_disband_amy_to_wn
+  test_30_wn_commit_after_app_data_update
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

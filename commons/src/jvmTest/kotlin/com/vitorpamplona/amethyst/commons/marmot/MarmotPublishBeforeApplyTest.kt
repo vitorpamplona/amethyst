@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -437,6 +439,72 @@ class MarmotPublishBeforeApplyTest {
         runBlocking<Unit> {
             val fx = fixture(accepts = true)
             assertEquals(listOf(relay), fx.manager.groupRelays(fx.groupId))
+        }
+
+    /**
+     * The relay echo of our own unconfirmed commit is the confirmation that
+     * never arrived as an OK.
+     *
+     * Reproduced against White Noise on a slow (Tor) link: the admin-grant
+     * publish timed out, so the commit stayed an unresolved obligation and the
+     * group stayed at its old epoch. The relay HAD stored it, the peer applied
+     * it, and when the relay echoed it back our inbound pipeline processed it as
+     * someone else's commit. Its sender is our own leaf, and a committer does not
+     * encrypt the path secret to itself, so it failed with "UpdatePath at common
+     * ancestor carries no ciphertext for us" and the group forked: the peer at
+     * epoch n+1, us still at n, every later message undecryptable.
+     */
+    @Test
+    fun theRelayEchoOfAnUnconfirmedCommitConfirmsIt() =
+        runBlocking<Unit> {
+            val fx = foundedFixture(accepts = false)
+            val epochBefore =
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch
+
+            fx.manager.updateGroupMetadata(
+                fx.groupId,
+                MarmotGroupData(nostrGroupId = fx.groupId, name = "renamed", adminPubkeys = listOf(fx.manager.signer.pubKey)),
+                listOf(relay),
+            )
+            assertEquals(GroupLifecycleState.PENDING_PUBLISH, fx.manager.lifecycle(fx.groupId))
+
+            // What the relay sends back: the same signed kind:445, byte for byte.
+            val echo =
+                Event.fromJson(
+                    fx.publisher.published
+                        .single()
+                        .toJson(),
+                ) as GroupEvent
+            val result = fx.manager.processGroupEvent(echo)
+
+            assertTrue(result !is GroupEventResult.Error, "our own commit's echo must not be processed as a foreign commit: $result")
+            assertEquals(
+                epochBefore + 1,
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch,
+                "the echo proves a relay took the commit, so it becomes canonical",
+            )
+            assertEquals(GroupLifecycleState.STABLE, fx.manager.lifecycle(fx.groupId))
+
+            // A second echo (another relay, or a retry) is just a duplicate.
+            val again =
+                fx.manager.processGroupEvent(
+                    Event.fromJson(
+                        fx.publisher.published
+                            .single()
+                            .toJson(),
+                    ) as GroupEvent,
+                )
+            assertTrue(again !is GroupEventResult.Error, "a repeated echo must stay harmless: $again")
+            assertEquals(
+                epochBefore + 1,
+                fx.manager.groupManager
+                    .getGroup(fx.groupId)!!
+                    .epoch,
+            )
         }
 
     private class InMemoryStateStore : com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore {
