@@ -24,49 +24,139 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
- * The whole per-displayed-frame step the visualizer runs: take one queued frame, apply the decay
- * trail against what is already drawn, and hand back a fresh array. Extracted from SpectrumCanvas
- * so it is testable without a Compose harness — the composable is left as plumbing around this.
+ * The per-displayed-frame step of the visualizer: release queued frames as their audio time comes
+ * due, apply the decay trail against what is drawn, and hand back a fresh array.
+ *
+ * Frames reach the UI in clusters (~15 at a time, ~3 times a second, measured on a Pixel 9a) because
+ * the audio pipeline fills its output buffer in chunks. Releasing one per display refresh drained a
+ * cluster in ~110 ms at 120 Hz and then froze for ~220 ms. Frames must instead be released at the
+ * rate of the audio they describe, so a cluster spreads across the gap to the next one.
  */
 class SpectrumTrailTest {
-    private fun frame(vararg bins: Float) = Spectrum(bins)
+    private val ms = 1_000_000L
+
+    private fun frame(
+        value: Float,
+        durationMs: Long = 20,
+    ) = Spectrum(floatArrayOf(value), durationNanos = durationMs * ms)
 
     @Test
     fun yieldsNothingWhenStarvedSoTheDrawnFrameIsHeld() {
         val trail = SpectrumTrail(decay = 0.5f)
-        assertNull(trail.nextOrNull())
+        assertNull(trail.nextOrNull(0))
     }
 
     @Test
-    fun theFirstFrameIsDrawnAsIsWithNothingToDecayFrom() {
+    fun theFirstFrameIsDrawnOnArrivalWithNothingToDecayFrom() {
         val trail = SpectrumTrail(decay = 0.5f)
-        trail.offer(frame(1f, 0.5f, 0f))
+        trail.offer(frame(1f))
 
-        assertContentEquals(floatArrayOf(1f, 0.5f, 0f), trail.nextOrNull())
+        assertContentEquals(floatArrayOf(1f), trail.nextOrNull(0))
+    }
+
+    @Test
+    fun aClusterIsSpreadOverTheAudioTimeItCoversNotTheScreenRefresh() {
+        val trail = SpectrumTrail(decay = 0f)
+        trail.offer(frame(1f))
+        trail.offer(frame(2f))
+        trail.offer(frame(3f))
+
+        // 120 Hz refreshes (~8 ms) must not drain a frame that covers 20 ms of audio.
+        assertContentEquals(floatArrayOf(1f), trail.nextOrNull(0))
+        assertNull(trail.nextOrNull(8 * ms))
+        assertNull(trail.nextOrNull(16 * ms))
+        assertContentEquals(floatArrayOf(2f), trail.nextOrNull(20 * ms))
+        assertNull(trail.nextOrNull(33 * ms))
+        assertContentEquals(floatArrayOf(3f), trail.nextOrNull(40 * ms))
+        assertNull(trail.nextOrNull(48 * ms))
+    }
+
+    @Test
+    fun afterStarvingTheNextClusterStartsWhenItArrivesInsteadOfBeingDumpedToCatchUp() {
+        val trail = SpectrumTrail(decay = 0f)
+        trail.offer(frame(1f))
+        assertContentEquals(floatArrayOf(1f), trail.nextOrNull(0))
+        assertNull(trail.nextOrNull(100 * ms)) // starved for a while
+
+        trail.offer(frame(2f))
+        trail.offer(frame(3f))
+
+        // The idle time is not owed: frame 2 shows now and frame 3 a full frame later.
+        assertContentEquals(floatArrayOf(2f), trail.nextOrNull(300 * ms))
+        assertNull(trail.nextOrNull(308 * ms))
+        assertContentEquals(floatArrayOf(3f), trail.nextOrNull(320 * ms))
+    }
+
+    @Test
+    fun aFrameArrivingBeforeThePreviousOneElapsedStillWaitsItsTurn() {
+        val trail = SpectrumTrail(decay = 0f)
+        trail.offer(frame(1f))
+        assertContentEquals(floatArrayOf(1f), trail.nextOrNull(0))
+        assertNull(trail.nextOrNull(8 * ms)) // queue momentarily empty
+
+        trail.offer(frame(2f))
+
+        assertNull(trail.nextOrNull(16 * ms)) // frame 1 still covers until 20 ms
+        assertContentEquals(floatArrayOf(2f), trail.nextOrNull(24 * ms))
+    }
+
+    @Test
+    fun aSlowFrameClockJumpsToTheLatestDueFrame() {
+        val trail = SpectrumTrail(decay = 0f)
+        trail.offer(frame(1f))
+        trail.offer(frame(2f))
+        trail.offer(frame(3f))
+
+        assertContentEquals(floatArrayOf(1f), trail.nextOrNull(0))
+        // A janky 45 ms frame: frames 2 (due 20) and 3 (due 40) are both due; show the newest.
+        assertContentEquals(floatArrayOf(3f), trail.nextOrNull(45 * ms))
+    }
+
+    @Test
+    fun aFrameWithNoDurationIsShownOnArrival() {
+        // Producers that do not declare a duration (the synthetic preview emits one per display
+        // frame) keep the old behaviour: whatever is queued is current.
+        val trail = SpectrumTrail(decay = 0f)
+        trail.offer(Spectrum(floatArrayOf(1f)))
+        trail.offer(Spectrum(floatArrayOf(2f)))
+
+        assertContentEquals(floatArrayOf(2f), trail.nextOrNull(0))
+    }
+
+    @Test
+    fun aBacklogIsCappedByDroppingTheStalestFrame() {
+        // Faster-than-real-time playback (2x speed) produces frames faster than they come due;
+        // the cap bounds how far the picture can lag the sound.
+        val trail = SpectrumTrail(decay = 0f, capacity = 2)
+        trail.offer(frame(1f))
+        trail.offer(frame(2f))
+        trail.offer(frame(3f)) // evicts frame 1
+
+        assertContentEquals(floatArrayOf(2f), trail.nextOrNull(0))
+        assertContentEquals(floatArrayOf(3f), trail.nextOrNull(20 * ms))
+        assertNull(trail.nextOrNull(40 * ms))
     }
 
     @Test
     fun aRisingBinTakesItsNewValueImmediately() {
         val trail = SpectrumTrail(decay = 0.5f)
         trail.offer(frame(0.2f))
-        trail.nextOrNull()
+        trail.nextOrNull(0)
         trail.offer(frame(0.9f))
 
-        assertContentEquals(floatArrayOf(0.9f), trail.nextOrNull())
+        assertContentEquals(floatArrayOf(0.9f), trail.nextOrNull(20 * ms))
     }
 
     @Test
     fun aFallingBinDecaysFromWhatWasDrawnRatherThanSnapping() {
         val trail = SpectrumTrail(decay = 0.5f)
         trail.offer(frame(1f))
-        trail.nextOrNull()
+        trail.nextOrNull(0)
         trail.offer(frame(0f))
 
-        // 1f * 0.5 decay beats the new 0f, so the bar falls gradually.
-        assertContentEquals(floatArrayOf(0.5f), trail.nextOrNull())
+        assertContentEquals(floatArrayOf(0.5f), trail.nextOrNull(20 * ms))
     }
 
     @Test
@@ -75,22 +165,10 @@ class SpectrumTrailTest {
         trail.offer(frame(1f))
         trail.offer(frame(1f))
 
-        val first = trail.nextOrNull()
-        val second = trail.nextOrNull()
+        val first = trail.nextOrNull(0)
+        val second = trail.nextOrNull(20 * ms)
 
         // mutableStateOf compares by reference; reusing one array would never trigger a redraw.
         assertNotSame(first, second)
-    }
-
-    @Test
-    fun aBacklogIsBoundedByDroppingTheStalestFrame() {
-        val trail = SpectrumTrail(decay = 0f, capacity = 2)
-        trail.offer(frame(1f))
-        trail.offer(frame(2f))
-        trail.offer(frame(3f)) // evicts the 1f frame
-
-        assertContentEquals(floatArrayOf(2f), trail.nextOrNull())
-        assertContentEquals(floatArrayOf(3f), trail.nextOrNull())
-        assertTrue(trail.nextOrNull() == null)
     }
 }

@@ -136,4 +136,29 @@ class SpectrumAudioBufferSinkTest {
 
         assertTrue("non-16-bit PCM must not emit a spectrum", out.replayCache.isEmpty())
     }
+
+    // Pacing draws each frame for the audio time it covers, so the sink has to say how long that is.
+    // It is fftSize samples PER CHANNEL: a stereo stream must not report half (or double) the time.
+    @Test
+    fun eachFrameCarriesTheAudioTimeItCovers() {
+        val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
+        sink.flush(48000, 1, C.ENCODING_PCM_16BIT)
+        sink.handleBuffer(monoPcm(sineShorts(k = 2, n = fftSize)))
+
+        assertEquals(fftSize * 1_000_000_000L / 48000, out.replayCache.last().durationNanos)
+    }
+
+    @Test
+    fun stereoFramesCoverTheSameTimeAsMono() {
+        val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
+        sink.flush(44100, 2, C.ENCODING_PCM_16BIT)
+        val tone = sineShorts(k = 2, n = fftSize)
+        sink.handleBuffer(interleavedStereoPcm(tone, tone))
+
+        assertEquals(fftSize * 1_000_000_000L / 44100, out.replayCache.last().durationNanos)
+    }
 }

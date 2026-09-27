@@ -21,17 +21,13 @@
 package com.vitorpamplona.amethyst.commons.audio
 
 /**
- * Spreads a bursty spectrum stream over the frames that draw it.
+ * The bounded queue between the audio tap and the visualizer.
  *
- * The decoder hands the pcm tap a whole buffer at once, so spectrum frames arrive in bursts that run
- * ahead of what is audible (the tap sits upstream of the audio output — see `delayedByFrames`).
- * Delivering that burst straight into Compose state collapses it: every write lands before the next
- * vsync, so the burst draws ONCE, showing only its newest frame. The visual then steps at the
- * decoder-buffer rate instead of the ~43 Hz the fft produces.
- *
- * Buffering here and taking exactly one frame per drawn frame turns the burst back into motion.
- * Production (~43 Hz) is slower than the display (60 Hz+), so the queue drains and sits near empty;
- * [next] then returns null and the caller simply holds the frame it already has.
+ * Frames reach the UI in clusters, because the audio pipeline fills its output buffer in chunks
+ * (~15 frames about three times a second, measured on a Pixel 9a). This holds them until
+ * [SpectrumTrail] releases each one when its audio time comes due. It is bounded and evicts the
+ * stalest frame, so faster-than-real-time playback or a stalled UI cannot bank an ever-growing
+ * backlog and leave the picture permanently behind the sound.
  *
  * Not thread-safe by design: both ends run on the UI dispatcher.
  */
@@ -47,6 +43,8 @@ class SpectrumPacer(
         while (queue.size >= capacity) queue.removeFirst()
         queue.addLast(frame)
     }
+
+    fun isEmpty(): Boolean = queue.isEmpty()
 
     /** The next frame to draw, or null when the queue is empty and the last frame should persist. */
     fun next(): Spectrum? = queue.removeFirstOrNull()

@@ -66,6 +66,10 @@ class SpectrumAudioBufferSink(
     private var channels = 1
     private var encoding = C.ENCODING_PCM_16BIT
 
+    // Audio time one fft frame covers: fftSize samples per channel at the stream's sample rate.
+    // Zero until the first flush reports a rate, which leaves the frame unpaced rather than wrong.
+    private var frameDurationNanos = 0L
+
     @kotlin.OptIn(ExperimentalCoroutinesApi::class)
     override fun flush(
         sampleRateHz: Int,
@@ -74,6 +78,7 @@ class SpectrumAudioBufferSink(
     ) {
         this.channels = channelCount.coerceAtLeast(1)
         this.encoding = encoding
+        this.frameDurationNanos = if (sampleRateHz > 0) fftSize * 1_000_000_000L / sampleRateHz else 0L
         filled = 0
         output?.resetReplayCache()
     }
@@ -99,7 +104,7 @@ class SpectrumAudioBufferSink(
         // Skip the DC bin (index 0): toLogBins ignores it, so letting a DC/offset component be the
         // peak would scale every audible bin toward zero and wash the spectrum out.
         mags.normalizeToPeakInPlace(fromIndex = 1)
-        output?.tryEmit(Spectrum(mags.toLogBins(binCount)))
+        output?.tryEmit(Spectrum(mags.toLogBins(binCount), frameDurationNanos))
     }
 }
 
@@ -113,8 +118,8 @@ class SpectrumAudioBufferSink(
 object PcmTapRegistry {
     private const val MAX_TRACKED_FLOWS = 64
 
-    // Frames buffered per media flow beyond the 1-frame replay. One decoder buffer is typically a
-    // handful of 1024-sample hops; 63 leaves room for an unusually large one without letting a
+    // Frames buffered per media flow beyond the 1-frame replay. A cluster is ~15 fft frames (~0.33 s
+    // of audio, measured on a Pixel 9a); 63 leaves room for an unusually large one without letting a
     // stalled UI bank more than ~1.5 s of stale spectrum.
     private const val SPECTRUM_BUFFER_FRAMES = 63
 
@@ -173,12 +178,13 @@ object PcmTapRegistry {
                         if (!fedByLiveSink && !stillCollected) iter.remove()
                     }
                 }
-                // The audio thread emits every fft frame of a decoder buffer synchronously, with no
-                // suspension point, while the UI collector sits on the main dispatcher and cannot
-                // interleave. A 2-slot buffer therefore capped the visualizer at two frames per
-                // decoder buffer however much audio it carried — the update rate tracked the decoder
-                // buffer rate (~5 Hz), not the ~43 Hz the fft produces. Hold a whole burst instead,
-                // and drop the STALEST frame rather than the newest when the UI does fall behind.
+                // The audio thread emits in clusters — the pipeline fills its output buffer ~3 times a
+                // second, so ~15 fft frames land within a few ms of each other (one per decoder call,
+                // or several from one large call) — while the UI collector sits on the main dispatcher
+                // and cannot run in between. A 2-slot buffer therefore kept only ~2 frames of each
+                // cluster and dropped the rest. Hold a whole cluster instead, and drop the STALEST
+                // frame rather than the newest if the UI does fall behind. (Spreading the cluster
+                // back over time is SpectrumTrail's job, not this flow's.)
                 MutableSharedFlow(
                     replay = 1,
                     extraBufferCapacity = SPECTRUM_BUFFER_FRAMES,

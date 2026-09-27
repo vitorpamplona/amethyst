@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlinx.coroutines.flow.Flow
@@ -35,10 +36,10 @@ import kotlinx.coroutines.flow.Flow
  * then calls [draw] inside the Canvas draw lambda. The fast-changing state is read
  * ONLY in the draw lambda, so new frames trigger the draw phase, never recomposition.
  *
- * Frames are paced one per displayed frame through [SpectrumTrail] — they arrive from the decoder in
- * bursts, and writing a burst straight into state would collapse it into a single draw. The pacing
- * loop runs every frame but only writes state when a spectrum frame is actually queued, so the redraw
- * rate still tracks the ~43 Hz the fft produces rather than the display.
+ * Frames are released through [SpectrumTrail] as the audio they describe comes due — they arrive
+ * in clusters, and neither dumping a cluster into state nor draining it one per vsync looks live.
+ * The pacing loop runs every frame but only writes state when a frame is due, so the redraw rate
+ * tracks the ~43-47 Hz the fft produces rather than the display.
  *
  * Pass [animated] = false for non-time-varying styles (bars, radial): that drops the monotonic clock,
  * whose whole purpose is to redraw every frame even when the spectrum has not moved.
@@ -54,10 +55,10 @@ fun SpectrumCanvas(
 ) {
     val smoothed = remember { mutableStateOf(FloatArray(0)) }
 
-    // Frames arrive in decoder-sized bursts that run ahead of the audio, so they are queued and drawn
-    // one per displayed frame. Writing a whole burst straight into `smoothed` would collapse it into a
-    // single draw at the next vsync and the visual would step at the decoder-buffer rate. Queueing and
-    // decay live in SpectrumTrail so they are testable without a Compose harness.
+    // Frames arrive in clusters, so they are queued and released as their audio time comes due.
+    // Writing a cluster straight into `smoothed` collapses it into one draw; releasing one per vsync
+    // races through it and then freezes. Pacing and decay live in SpectrumTrail so they are testable
+    // without a Compose harness.
     val trail = remember(spectrum, decay) { SpectrumTrail(decay) }
     LaunchedEffect(spectrum, trail) {
         spectrum.collect { trail.offer(it) }
@@ -65,10 +66,10 @@ fun SpectrumCanvas(
 
     LaunchedEffect(trail) {
         while (true) {
-            withFrameMillis { }
-            // Null means starved. Production (~43 Hz) is slower than the display, so this is the common
-            // case between frames: hold what is drawn rather than redrawing identical bins.
-            smoothed.value = trail.nextOrNull() ?: continue
+            val frameTimeNanos = withFrameNanos { it }
+            // Null means nothing new is due. Frames cover ~21 ms of audio against an 8-16 ms refresh,
+            // so this is the common case: hold what is drawn rather than redrawing identical bins.
+            smoothed.value = trail.nextOrNull(frameTimeNanos) ?: continue
         }
     }
 
