@@ -140,6 +140,12 @@ android {
         buildConfigField("String", "RELEASE_NOTES_ID", "\"f7914e7a7e293988485439eb2bea29c09c388d54c452c4a19f89e106dbf1969e\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ARM Memory Tagging Extension for our native code (WebRTC, zxing-cpp, SQLite,
+        // secp256k1, Arti). Async is the low-overhead production mode; debug overrides
+        // it to sync so a tag fault crashes at the exact faulting access. Ignored on
+        // devices without MTE hardware or with it switched off.
+        manifestPlaceholders["memtagMode"] = "async"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -267,6 +273,7 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-DEBUG"
             resValue("string", "app_name", "@string/app_name_debug")
+            manifestPlaceholders["memtagMode"] = "sync"
         }
         create("benchmark") {
             initWith(getByName("release"))
