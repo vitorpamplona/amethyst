@@ -21,6 +21,9 @@
 package com.vitorpamplona.quartz.nip43RelayMembers.list
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.MemberTag
 
-fun TagArray.members() = mapNotNull(MemberTag::parse)
+fun TagArray.members() = fastMapNotNullDense(MemberTag::parse)
+
+fun TagArray.membersWithRoles() = fastMapNotNullDense(MemberTag::parseMember)

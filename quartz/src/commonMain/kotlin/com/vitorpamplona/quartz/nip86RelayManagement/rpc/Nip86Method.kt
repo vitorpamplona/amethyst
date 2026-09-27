@@ -28,16 +28,36 @@ object Nip86Method {
     const val ALLOW_PUBKEY = "allowpubkey"
     const val UNALLOW_PUBKEY = "unallowpubkey"
     const val LIST_ALLOWED_PUBKEYS = "listallowedpubkeys"
+    const val CREATE_ROLE = "createrole"
+    const val EDIT_ROLE = "editrole"
+    const val DELETE_ROLE = "deleterole"
+    const val ASSIGN_ROLE = "assignrole"
+    const val UNASSIGN_ROLE = "unassignrole"
+    const val LIST_CLAIMS = "listclaims"
+    const val CREATE_CLAIM = "createclaim"
+    const val DELETE_CLAIM = "deleteclaim"
     const val LIST_EVENTS_NEEDING_MODERATION = "listeventsneedingmoderation"
+
+    /** Adds an event to the relay's allow list (and removes it from the ban list). */
     const val ALLOW_EVENT = "allowevent"
+
+    /** Removes an event from the allow list without banning it. */
+    const val UNALLOW_EVENT = "unallowevent"
+
+    /** Bans an event (and removes it from the allow list). */
     const val BAN_EVENT = "banevent"
+
+    /** Removes an event from the ban list without allow-listing it. */
+    const val UNBAN_EVENT = "unbanevent"
     const val LIST_BANNED_EVENTS = "listbannedevents"
+    const val LIST_ALLOWED_EVENTS = "listallowedevents"
     const val CHANGE_RELAY_NAME = "changerelayname"
     const val CHANGE_RELAY_DESCRIPTION = "changerelaydescription"
     const val CHANGE_RELAY_ICON = "changerelayicon"
     const val ALLOW_KIND = "allowkind"
     const val DISALLOW_KIND = "disallowkind"
     const val LIST_ALLOWED_KINDS = "listallowedkinds"
+    const val LIST_DISALLOWED_KINDS = "listdisallowedkinds"
     const val BLOCK_IP = "blockip"
     const val UNBLOCK_IP = "unblockip"
     const val LIST_BLOCKED_IPS = "listblockedips"

@@ -27,7 +27,15 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+/**
+ * NIP-43 kind 28935: a relay-signed ephemeral event carrying an invite code.
+ *
+ * Removed from NIP-43: invite codes are now minted with the NIP-86
+ * `createclaim` method ([com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request.createClaim]).
+ * Kept so events from relays that still emit it keep parsing.
+ */
 @Immutable
+@Deprecated("Removed from NIP-43. Mint invite codes with the NIP-86 `createclaim` method (Nip86Request.createClaim).")
 class RelayInviteRequestEvent(
     id: HexKey,
     pubKey: HexKey,

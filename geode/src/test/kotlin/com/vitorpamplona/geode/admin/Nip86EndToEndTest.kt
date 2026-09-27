@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
+import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
@@ -125,7 +127,7 @@ class Nip86EndToEndTest {
     fun supportedMethodsListsTheServersMethods() {
         rpc(Nip86Request.supportedMethods(), admin).use {
             assertEquals(200, it.code)
-            val json = JsonMapper.fromJson<com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response>(it.body.string())
+            val json = JsonMapper.fromJson<Nip86Response>(it.body.string())
             val arr = json.result as JsonArray
             val names = arr.map { e -> e.jsonPrimitive.content }
             assertTrue(names.contains("supportedmethods"))
@@ -169,13 +171,40 @@ class Nip86EndToEndTest {
             // Admin bans them.
             rpc(Nip86Request.banPubkey(targetUser.pubKey, "spam"), admin).use {
                 assertEquals(200, it.code)
-                val resp = JsonMapper.fromJson<com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response>(it.body.string())
+                val resp = JsonMapper.fromJson<Nip86Response>(it.body.string())
                 assertEquals(true, (resp.result as JsonPrimitive).boolean)
             }
 
             // Subsequent EVENT from the banned author is rejected.
             val after = nostrClient.publishAndConfirm(targetUser.sign(TextNoteEvent.build("second")), setOf(relayUrl))
             assertEquals(false, after, "BanListPolicy must reject events from banned pubkeys")
+        }
+
+    @Test
+    fun allowEventLetsOneEventPastABanUntilUnallowed() =
+        runBlocking {
+            val relayUrl = server.url.normalizeRelayUrl()
+            rpc(Nip86Request.banPubkey(targetUser.pubKey, "spam"), admin).use { assertEquals(200, it.code) }
+
+            // Admin approves one specific event from the banned author.
+            val approved = targetUser.sign(TextNoteEvent.build("approved"))
+            rpc(Nip86Request.allowEvent(approved.id, "reviewed"), admin).use { assertEquals(200, it.code) }
+            assertEquals(true, nostrClient.publishAndConfirm(approved, setOf(relayUrl)), "allow-listed event bypasses the pubkey ban")
+
+            // Any other event from that author is still blocked.
+            val other = targetUser.sign(TextNoteEvent.build("other"))
+            assertEquals(false, nostrClient.publishAndConfirm(other, setOf(relayUrl)))
+
+            rpc(Nip86Request.listAllowedEvents(), admin).use {
+                val resp = JsonMapper.fromJson<Nip86Response>(it.body.string())
+                val ids = (resp.result as JsonArray).map { e -> (e as JsonObject)["id"]!!.jsonPrimitive.content }
+                assertEquals(listOf(approved.id), ids)
+            }
+
+            // unallowevent drops the exemption without banning the event.
+            rpc(Nip86Request.unallowEvent(approved.id), admin).use { assertEquals(200, it.code) }
+            assertTrue(!relay.banStore.isAllowedEvent(approved.id))
+            assertTrue(!relay.banStore.isBannedEvent(approved.id))
         }
 
     @Test

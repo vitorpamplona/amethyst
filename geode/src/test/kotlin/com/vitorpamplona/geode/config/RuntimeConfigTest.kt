@@ -24,6 +24,7 @@ import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.geode.RelayInfo
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -121,6 +122,47 @@ class RuntimeConfigTest {
             assertEquals(listOf(4), r2.banStore.listDisallowedKinds())
         } finally {
             r2.close()
+        }
+    }
+
+    @Test
+    fun eventAllowListRolesAndClaimsSurviveRestart() {
+        val pk = "b".repeat(64)
+        val allowedId = "c".repeat(64)
+        val r1 = relayPersisted()
+        try {
+            r1.banStore.allowEvent(allowedId, "approved")
+            r1.banStore.createRole(RelayRole("mod", label = "Moderator", description = "keeps order", color = 120, order = 2))
+            r1.banStore.assignRole(pk, "mod")
+            r1.banStore.createClaim("invite-123")
+        } finally {
+            r1.close()
+        }
+
+        val r2 = relayPersisted()
+        try {
+            assertEquals(listOf(allowedId to "approved"), r2.banStore.listAllowedEvents())
+            assertTrue(r2.banStore.isAllowedEvent(allowedId))
+            assertEquals(RelayRole("mod", "Moderator", "keeps order", 120, 2), r2.banStore.getRole("mod"))
+            assertEquals(listOf("mod"), r2.banStore.rolesOf(pk))
+            assertEquals(listOf("invite-123"), r2.banStore.listClaims())
+        } finally {
+            r2.close()
+        }
+    }
+
+    @Test
+    fun oldStateFileWithoutNewSectionsStillLoads() {
+        // A snapshot written before the event allow list / roles / claims existed.
+        stateFile.writeText("""{"info":{"name":"old"},"bannedEvents":[{"key":"${"d".repeat(64)}","reason":"x"}]}""")
+        val r = relayPersisted()
+        try {
+            assertTrue(r.banStore.isBannedEvent("d".repeat(64)))
+            assertEquals(emptyList(), r.banStore.listAllowedEvents())
+            assertEquals(emptyList(), r.banStore.listRoles())
+            assertEquals(emptyList(), r.banStore.listClaims())
+        } finally {
+            r.close()
         }
     }
 

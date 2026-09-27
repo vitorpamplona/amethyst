@@ -18,49 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip86RelayManagement.rpc
+package com.vitorpamplona.quartz.nip43RelayMembers.roles.tags
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Serializable
-class Nip86Response(
-    val result: JsonElement? = null,
-    val error: String? = null,
-)
+/** NIP-43 kind 33534 `order` tag: a display-only integer sort key. */
+class RoleOrderTag {
+    companion object {
+        const val TAG_NAME = "order"
 
-@Serializable
-class BannedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
+        fun parse(tag: Array<String>): Int? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return tag[1].trim().toIntOrNull()
+        }
 
-@Serializable
-class AllowedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class BannedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class AllowedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class EventNeedingModeration(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class BlockedIp(
-    val ip: String,
-    val reason: String? = null,
-)
+        fun assemble(order: Int) = arrayOf(TAG_NAME, order.toString())
+    }
+}

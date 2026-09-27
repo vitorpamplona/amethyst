@@ -250,6 +250,7 @@ import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEv
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
@@ -857,6 +858,7 @@ class EventFactory {
                 RelayAddMemberEvent.KIND -> RelayAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayRemoveMemberEvent.KIND -> RelayRemoveMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayMembershipListEvent.KIND -> RelayMembershipListEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayRoleEvent.KIND -> RelayRoleEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayJoinRequestEvent.KIND -> RelayJoinRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayInviteRequestEvent.KIND -> RelayInviteRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayLeaveRequestEvent.KIND -> RelayLeaveRequestEvent(id, pubKey, createdAt, tags, content, sig)

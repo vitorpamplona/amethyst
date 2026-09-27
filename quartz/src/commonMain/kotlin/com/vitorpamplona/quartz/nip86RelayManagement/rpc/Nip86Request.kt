@@ -20,14 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip86RelayManagement.rpc
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 
 @Serializable
 class Nip86Request(
     val method: String,
+    // NIP-86 requests always carry `params`, even when empty (`[]`).
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault
     val params: JsonArray = JsonArray(emptyList()),
 ) {
     companion object {
@@ -78,6 +84,74 @@ class Nip86Request(
                 method = Nip86Method.LIST_ALLOWED_PUBKEYS,
             )
 
+        /**
+         * NIP-86 `createrole`: `[id, label, description, color, order]`. Every
+         * position is always sent so the relay can read them positionally; a
+         * missing optional value goes out as JSON `null`. [color] is a hue
+         * (0..360) and [order] a display-only sort key, both sent as numbers.
+         */
+        fun createRole(
+            id: String,
+            label: String? = null,
+            description: String? = null,
+            color: Int? = null,
+            order: Int? = null,
+        ) = Nip86Request(
+            method = Nip86Method.CREATE_ROLE,
+            params = roleParams(id, label, description, color, order),
+        )
+
+        /** NIP-86 `editrole`: same `[id, label, description, color, order]` shape as [createRole]. */
+        fun editRole(
+            id: String,
+            label: String? = null,
+            description: String? = null,
+            color: Int? = null,
+            order: Int? = null,
+        ) = Nip86Request(
+            method = Nip86Method.EDIT_ROLE,
+            params = roleParams(id, label, description, color, order),
+        )
+
+        fun deleteRole(id: String) =
+            Nip86Request(
+                method = Nip86Method.DELETE_ROLE,
+                params = buildJsonArray { add(JsonPrimitive(id)) },
+            )
+
+        fun assignRole(
+            pubkey: String,
+            roleId: String,
+        ) = Nip86Request(
+            method = Nip86Method.ASSIGN_ROLE,
+            params = buildParams(pubkey, roleId),
+        )
+
+        fun unassignRole(
+            pubkey: String,
+            roleId: String,
+        ) = Nip86Request(
+            method = Nip86Method.UNASSIGN_ROLE,
+            params = buildParams(pubkey, roleId),
+        )
+
+        fun listClaims() =
+            Nip86Request(
+                method = Nip86Method.LIST_CLAIMS,
+            )
+
+        fun createClaim(claim: String) =
+            Nip86Request(
+                method = Nip86Method.CREATE_CLAIM,
+                params = buildJsonArray { add(JsonPrimitive(claim)) },
+            )
+
+        fun deleteClaim(claim: String) =
+            Nip86Request(
+                method = Nip86Method.DELETE_CLAIM,
+                params = buildJsonArray { add(JsonPrimitive(claim)) },
+            )
+
         fun listEventsNeedingModeration() =
             Nip86Request(
                 method = Nip86Method.LIST_EVENTS_NEEDING_MODERATION,
@@ -91,6 +165,14 @@ class Nip86Request(
             params = buildParams(eventId, reason),
         )
 
+        fun unallowEvent(
+            eventId: String,
+            reason: String? = null,
+        ) = Nip86Request(
+            method = Nip86Method.UNALLOW_EVENT,
+            params = buildParams(eventId, reason),
+        )
+
         fun banEvent(
             eventId: String,
             reason: String? = null,
@@ -99,9 +181,22 @@ class Nip86Request(
             params = buildParams(eventId, reason),
         )
 
+        fun unbanEvent(
+            eventId: String,
+            reason: String? = null,
+        ) = Nip86Request(
+            method = Nip86Method.UNBAN_EVENT,
+            params = buildParams(eventId, reason),
+        )
+
         fun listBannedEvents() =
             Nip86Request(
                 method = Nip86Method.LIST_BANNED_EVENTS,
+            )
+
+        fun listAllowedEvents() =
+            Nip86Request(
+                method = Nip86Method.LIST_ALLOWED_EVENTS,
             )
 
         fun changeRelayName(newName: String) =
@@ -139,6 +234,11 @@ class Nip86Request(
                 method = Nip86Method.LIST_ALLOWED_KINDS,
             )
 
+        fun listDisallowedKinds() =
+            Nip86Request(
+                method = Nip86Method.LIST_DISALLOWED_KINDS,
+            )
+
         fun blockIp(
             ip: String,
             reason: String? = null,
@@ -157,6 +257,21 @@ class Nip86Request(
             Nip86Request(
                 method = Nip86Method.LIST_BLOCKED_IPS,
             )
+
+        private fun roleParams(
+            id: String,
+            label: String?,
+            description: String?,
+            color: Int?,
+            order: Int?,
+        ): JsonArray =
+            buildJsonArray {
+                add(JsonPrimitive(id))
+                add(label?.let { JsonPrimitive(it) } ?: JsonNull)
+                add(description?.let { JsonPrimitive(it) } ?: JsonNull)
+                add(color?.let { JsonPrimitive(it) } ?: JsonNull)
+                add(order?.let { JsonPrimitive(it) } ?: JsonNull)
+            }
 
         private fun buildParams(
             primary: String,
