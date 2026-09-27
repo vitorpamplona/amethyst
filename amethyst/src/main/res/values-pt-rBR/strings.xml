@@ -180,6 +180,9 @@
     <string name="share_target_as_picture">Nova Foto</string>
     <string name="share_target_as_short_video">Novo Vídeo Curto</string>
     <string name="share_target_as_video">Novo Vídeo</string>
+    <string name="share_target_scan_qr">Escanear código QR</string>
+    <string name="shortcut_scan_qr_short">Ler QR</string>
+    <string name="shortcut_scan_qr_long">Escanear um código QR</string>
     <string name="new_highlight_passage_label">Texto destacado</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
@@ -291,6 +294,7 @@
         <item quantity="other">Minerando prova de trabalho… (%1$d publicações na fila)</item>
     </plurals>
     <string name="pow_mining_title">Minerando prova de trabalho</string>
+    <string name="pow_notification_sending">Enviando para relays…</string>
     <string name="pow_notification_cancel_all">Cancelar</string>
     <string name="pow_time_left">≈ %1$s restante</string>
     <string name="pow_time_left_soon">a qualquer momento</string>
@@ -349,8 +353,4 @@
     <string name="mute_button">Som ligado. Clique para silenciar</string>
     <string name="play">Reproduzir</string>
     <string name="pause">Pausar</string>
-    <string name="share_target_scan_qr">Escanear código QR</string>
-    <string name="shortcut_scan_qr_short">Ler QR</string>
-    <string name="shortcut_scan_qr_long">Escanear um código QR</string>
-    <string name="pow_notification_sending">Enviando para relays…</string>
 </resources>
