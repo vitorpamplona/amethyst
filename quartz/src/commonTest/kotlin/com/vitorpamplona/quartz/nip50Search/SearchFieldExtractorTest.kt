@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip50Search
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
@@ -38,9 +40,11 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEve
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -410,6 +414,73 @@ class SearchFieldExtractorTest {
         val tags = arrayOf(arrayOf("l", "spam", "report"), arrayOf("L", "report"))
         val fields = SearchFieldExtractor.extract(LabelEvent("2b".repeat(32), alice, 1L, tags, "obvious bot", ""))
         assertEquals(IndexableFields.Tiered(secondary = listOf("spam"), text = "obvious bot"), fields)
+    }
+
+    @Test
+    fun nip82ReleaseNotesAreTheBodyOfARelease() {
+        // indexableContent() already carried the notes; the branch used to drop them, so an
+        // engine reading this extractor could not find a release by what changed in it.
+        val tags = arrayOf(arrayOf("d", "com.example.app@1.2.0"), arrayOf("i", "com.example.app"), arrayOf("version", "1.2.0"), arrayOf("title", "Example 1.2"))
+        val fields = SearchFieldExtractor.extract(ReleaseArtifactSetEvent("2e".repeat(32), alice, 1L, tags, "fixes the offline sync crash", ""))
+        assertEquals(IndexableFields.Tiered(primary = listOf("Example 1.2"), text = "fixes the offline sync crash"), fields)
+    }
+
+    @Test
+    fun nip51ReleaseSetContentIsNeverTheBody() {
+        // A NIP-51 set (no `i` + `version`) may keep encrypted private items in content.
+        val tags = arrayOf(arrayOf("d", "release"), arrayOf("title", "Example"), arrayOf("description", "all builds"))
+        val fields = SearchFieldExtractor.extract(ReleaseArtifactSetEvent("2f".repeat(32), alice, 1L, tags, "AgJ0b3BzZWNyZXQ=", ""))
+        assertEquals(IndexableFields.Tiered(primary = listOf("Example"), secondary = listOf("all builds")), fields)
+    }
+
+    @Test
+    fun decentralizedListHeadersSplitWhatTheyAreCalledFromWhatTheyAreAbout() {
+        val tags =
+            arrayOf(
+                arrayOf("names", "podcast", "podcasts"),
+                arrayOf("titles", "Podcast", "Podcasts"),
+                arrayOf("description", "shows worth a listen"),
+                arrayOf("t", "audio"),
+            )
+        val fields = SearchFieldExtractor.extract(ListHeaderEvent("3a".repeat(32), alice, 1L, tags, "", ""))
+        assertEquals(
+            IndexableFields.Tiered(
+                primary = listOf("podcast", "podcasts", "Podcast", "Podcasts"),
+                secondary = listOf("shows worth a listen"),
+                hashtags = listOf("audio"),
+            ),
+            fields,
+        )
+    }
+
+    @Test
+    fun decentralizedListItemHashtagsAreNotIndexedTwice() {
+        // indexableContent() appends the `t` values; the funnel already carries them as
+        // hashtags, so the branch leaves them out of every tier (the 1111 reasoning).
+        val tags =
+            arrayOf(
+                arrayOf("z", "podcasts"),
+                arrayOf("title", "Bitcoin Audible"),
+                arrayOf("description", "long reads, read aloud"),
+                arrayOf("comments", "start with the classics"),
+                arrayOf("t", "bitcoin"),
+            )
+        val fields = SearchFieldExtractor.extract(AddressableListItemEvent("3b".repeat(32), alice, 1L, tags + arrayOf(arrayOf("d", "ba")), "", ""))
+        assertEquals(
+            IndexableFields.Tiered(
+                primary = listOf("Bitcoin Audible"),
+                secondary = listOf("long reads, read aloud", "start with the classics"),
+                hashtags = listOf("bitcoin"),
+            ),
+            fields,
+        )
+    }
+
+    @Test
+    fun textTracksIndexWhatIsSaidNotTheTimings() {
+        val vtt = "WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.000 align:start\n<v Roger>Hello nostr\n"
+        val fields = SearchFieldExtractor.extract(TextTrackEvent("3c".repeat(32), alice, 1L, arrayOf(arrayOf("d", "subtitles:v1")), vtt, ""))
+        assertEquals(IndexableFields.Tiered(text = "Hello nostr"), fields)
     }
 
     @Test

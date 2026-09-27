@@ -59,11 +59,15 @@ class TextTrackEvent(
     AddressHintProvider,
     SearchableEvent {
     // The cue text is the only searchable thing here: the `d` tag is a slug and the rest is
-    // plumbing. Indexing it makes a video findable by what is said in it.
-    override fun indexableContent() = content
+    // plumbing. Indexing it makes a video findable by what is said in it — the words only,
+    // not the timings, cue settings and markup around them (see WebVttText). Content with no
+    // cue at all is not a caption file and is indexed as written.
+    override fun indexableContent() = if (WebVttText.hasCues(content)) WebVttText.cueText(content) else content
 
+    // The read path: the same lines cueText() joins, one visit per line so a hit early in the
+    // track stops the walk before the rest is cleaned.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        visitor.visit(content)
+        if (WebVttText.hasCues(content)) WebVttText.forEachCueLine(content, visitor) else visitor.visit(content)
     }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
