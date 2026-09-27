@@ -5263,6 +5263,7 @@
     <string name="cyberspace_bag_unsigned">Aláírás nélküli, így ez a szerző csak állítás</string>
     <string name="cyberspace_bag_unknown_kind">Egy %1$d típusú elem, amelyet ez a kliens nem jelenít meg</string>
     <string name="cyberspace_bag_opaque">%1$d bájt valamiből, amit ez a kliens nem olvas</string>
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="backup_action_block_again">%1$s újbóli letiltása</string>
     <string name="backup_action_keep_count">%1$s megtartása</string>
     <string name="backup_action_rejoin">Újbóli csatlakozás ehhez: %1$s</string>

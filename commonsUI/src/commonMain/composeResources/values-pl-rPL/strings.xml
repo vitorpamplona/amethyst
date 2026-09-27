@@ -5485,6 +5485,7 @@
     <string name="cyberspace_bag_unsigned">Brak podpisu, więc autor to tylko domysł</string>
     <string name="cyberspace_bag_unknown_kind">Element typu %1$d, którego ten klient nie wyświetla</string>
     <string name="cyberspace_bag_opaque">%1$d bajtów danych, których ten klient nie odczytuje</string>
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="backup_action_block_again">Zablokuj %1$s ponownie</string>
     <string name="backup_action_keep_count">Zachowaj %1$s</string>
     <string name="backup_action_rejoin">Ponów %1$s</string>
