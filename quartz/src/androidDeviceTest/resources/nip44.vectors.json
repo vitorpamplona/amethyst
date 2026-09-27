@@ -526,6 +526,30 @@
           "repeat": 20000000,
           "plaintext_sha256": "aded0ea9b4d06589b13d00bab483faf479d61ed5de21f1760aa7018a28e330e5",
           "payload_sha256": "9e683311894d52e48a825837883c539263c7787c7fe024e1590d96776a31684b"
+        },
+        {
+          "conversation_key": "c41c775356fd92eadc63ff5a0dc1da211b268cbea22316767095b2871ea1412d",
+          "nonce": "0000000000000000000000000000000000000000000000000000000000000001",
+          "pattern": "a",
+          "repeat": 65535,
+          "plaintext_sha256": "6e1bebca6a8229364a162a72ef064826c4cd7457bf54f190ef782bd9deff3e42",
+          "payload_sha256": "6d8c2810d1e870fbaa1f0a0937126cca837a15f9260e27060c331d70a3c0bc84"
+        },
+        {
+          "conversation_key": "c41c775356fd92eadc63ff5a0dc1da211b268cbea22316767095b2871ea1412d",
+          "nonce": "0000000000000000000000000000000000000000000000000000000000000001",
+          "pattern": "a",
+          "repeat": 65536,
+          "plaintext_sha256": "bf718b6f653bebc184e1479f1935b8da974d701b893afcf49e701f3e2f9f9c5a",
+          "payload_sha256": "b7b4edb36ba92e267d322d56d9aebc22e7fa96ff52e3c12adc07f07a43cbc616"
+        },
+        {
+          "conversation_key": "c41c775356fd92eadc63ff5a0dc1da211b268cbea22316767095b2871ea1412d",
+          "nonce": "0000000000000000000000000000000000000000000000000000000000000001",
+          "pattern": "a",
+          "repeat": 65537,
+          "plaintext_sha256": "008ffc88d3c96a9f307524eb361e47c5222a887fc45fa0c1fb8d429c5c23b430",
+          "payload_sha256": "eeb7c7c5373894ea2c1547cfd3ccb15d5a0b2d619da852e5c79df792dcc9e435"
         }
       ]
     },

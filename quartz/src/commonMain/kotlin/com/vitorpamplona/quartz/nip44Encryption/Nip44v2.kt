@@ -28,10 +28,17 @@ import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.equalsConstantTime
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
-import kotlin.math.floor
-import kotlin.math.log2
 
-class Nip44v2 {
+/**
+ * NIP-44 v2 encryption.
+ *
+ * @param maxPayloadLength the largest base64 payload [decrypt] accepts. NIP-44 lets plaintexts reach
+ * 2^32 - 1 bytes but asks implementations to set their own ceiling and to enforce it before base64
+ * decoding, since decrypting needs several times the payload size in working memory.
+ */
+class Nip44v2(
+    val maxPayloadLength: Int = DEFAULT_MAX_PAYLOAD_LENGTH,
+) {
     private val sharedKeyCache = SharedKeyCache()
     private val hkdf = Hkdf()
     private val chaCha = ChaCha20()
@@ -40,10 +47,11 @@ class Nip44v2 {
     private val hashLength = 32
 
     private val minPlaintextSize: Int = 0x0001 // 1b msg => padded to 32b
-    private val maxPlaintextSize: Int = 0xffff // 65535 (64kb-1) => padded to 64kb
+    private val maxPlaintextSize: Int = 0xffff // 65535 (64kb-1) => padded to 64kb, u16 prefix
 
-    private val extMinPlaintextSize: Int = 0x00000001 // 1b msg => padded to 32b
-    private val extMaxPlaintextSize: Long = 0xffffffff // 4294967294 => padded
+    // Lengths at or above this use the extended [0,0][u32] prefix, and only those may.
+    private val extMinPlaintextSize: Long = 0x10000 // 65536 => padded to 64kb, 6-byte prefix
+    private val extMaxPlaintextSize: Long = 0xffffffff // 4294967295 => padded to 2^32
 
     fun clearCache() {
         sharedKeyCache.clearCache()
@@ -97,7 +105,7 @@ class Nip44v2 {
     fun decrypt(
         payload: String,
         conversationKey: ByteArray,
-    ): String = decrypt(EncryptedInfo.decodePayload(payload), conversationKey)
+    ): String = decrypt(EncryptedInfo.decodePayload(payload, maxPayloadLength), conversationKey)
 
     fun checkHMacAad(
         messageKey: Hkdf.MessageKey,
@@ -137,58 +145,76 @@ class Nip44v2 {
         return computed
     }
 
-    fun calcPaddedLen(len: Int): Int {
+    fun calcPaddedLen(len: Int): Long = calcPaddedLen(len.toLong())
+
+    /**
+     * NIP-44 padded length. Integer-only: floating point loses precision above 2^24, and the
+     * result can reach 2^32 (for 2^32 - 1), which only fits 64-bit arithmetic.
+     */
+    fun calcPaddedLen(len: Long): Long {
         check(len > 0) { "expected positive integer" }
         if (len <= 32) return 32
-        val nextPower = 1 shl (floor(log2(len - 1f)) + 1).toInt()
-        val chunk = if (nextPower <= 256) 32 else nextPower / 8
-        return chunk * (floor((len - 1f) / chunk).toInt() + 1)
+        // 1 shl (floor(log2(len - 1)) + 1) == 1 shl bitLength(len - 1)
+        val nextPower = 1L shl (Long.SIZE_BITS - (len - 1).countLeadingZeroBits())
+        val chunk = if (nextPower <= 256) 32L else nextPower / 8
+        return chunk * ((len - 1) / chunk + 1)
     }
 
     fun pad(plaintext: String): ByteArray {
         val unpadded = plaintext.encodeToByteArray()
         val unpaddedLen = unpadded.size
 
-        check(unpaddedLen > 0) { "Message is empty ($unpaddedLen): $plaintext" }
+        check(unpaddedLen >= minPlaintextSize) { "Message is empty ($unpaddedLen): $plaintext" }
 
-        val prefix =
-            if (unpaddedLen <= maxPlaintextSize) {
-                // 2 bytes in big endian
-                intTo2BytesBigEndian(unpaddedLen)
-            } else if (unpaddedLen <= extMaxPlaintextSize) {
-                // Extension to allow > 65KB payloads
-                // 2+4 bytes in big endian
-                byteArrayOf(0, 0) + intTo4BytesBigEndian(unpaddedLen)
-            } else {
-                throw IllegalArgumentException("Message is too long ($unpaddedLen): $plaintext")
-            }
+        val prefixLen = if (unpaddedLen <= maxPlaintextSize) 2 else 6
+        val totalLen = prefixLen + calcPaddedLen(unpaddedLen)
 
-        val suffix = ByteArray(calcPaddedLen(unpaddedLen) - unpaddedLen)
-        return prefix + unpadded + suffix
+        require(totalLen <= Int.MAX_VALUE) {
+            "Message is too long for this platform ($unpaddedLen bytes pad to $totalLen)"
+        }
+
+        // Zero-filled: everything after the plaintext is already the padding.
+        val padded = ByteArray(totalLen.toInt())
+        if (prefixLen == 2) {
+            // 2 bytes in big endian
+            padded[0] = (unpaddedLen shr 8).toByte()
+            padded[1] = (unpaddedLen and 0xFF).toByte()
+        } else {
+            // Extension to allow >= 64KB payloads: [0, 0] + 4 bytes in big endian
+            padded[2] = (unpaddedLen shr 24).toByte()
+            padded[3] = (unpaddedLen shr 16).toByte()
+            padded[4] = (unpaddedLen shr 8).toByte()
+            padded[5] = (unpaddedLen and 0xFF).toByte()
+        }
+        unpadded.copyInto(padded, prefixLen)
+        return padded
     }
 
     fun unpad(padded: ByteArray): String {
+        check(padded.size >= 2) { "Invalid padding: ${padded.size} bytes" }
         val unpaddedLenPreExt: Int = bytesToIntBigEndian(padded[0], padded[1])
 
         return if (unpaddedLenPreExt == 0) {
             // NIP-44 extension to handle bigger than 65K payloads
-            val unpaddedLenExt: Int = bytesToIntBigEndian(padded[2], padded[3], padded[4], padded[5])
+            check(padded.size >= 6) { "Invalid padding: ${padded.size} bytes" }
+            val unpaddedLenExt: Long = bytesToLongBigEndian(padded[2], padded[3], padded[4], padded[5])
 
+            // A length that fits the u16 prefix must use it: rejects a second encoding of short messages.
             check(unpaddedLenExt in extMinPlaintextSize..extMaxPlaintextSize) {
                 "Invalid size $unpaddedLenExt not between $extMinPlaintextSize and $extMaxPlaintextSize"
             }
 
-            check(padded.size == 6 + calcPaddedLen(unpaddedLenExt)) {
+            check(padded.size.toLong() == 6 + calcPaddedLen(unpaddedLenExt)) {
                 "Invalid padding ${calcPaddedLen(unpaddedLenExt)} != $unpaddedLenExt"
             }
 
-            padded.decodeToString(6, 6 + unpaddedLenExt)
+            padded.decodeToString(6, 6 + unpaddedLenExt.toInt())
         } else {
             check(unpaddedLenPreExt in minPlaintextSize..maxPlaintextSize) {
                 "Invalid size $unpaddedLenPreExt not between $minPlaintextSize and $maxPlaintextSize"
             }
 
-            check(padded.size == 2 + calcPaddedLen(unpaddedLenPreExt)) {
+            check(padded.size.toLong() == 2 + calcPaddedLen(unpaddedLenPreExt)) {
                 "Invalid padding ${calcPaddedLen(unpaddedLenPreExt)} != $unpaddedLenPreExt"
             }
 
@@ -235,15 +261,29 @@ class Nip44v2 {
         companion object {
             const val V: Int = 2
 
-            fun decodePayload(payload: String): EncryptedInfo {
-                check(payload.length >= 132) {
+            // version (1) + nonce (32) + smallest padded plaintext with prefix (2 + 32) + mac (32)
+            const val MIN_DECODED_LENGTH: Int = 99
+
+            // base64 of [MIN_DECODED_LENGTH] bytes
+            const val MIN_PAYLOAD_LENGTH: Int = 132
+
+            fun decodePayload(
+                payload: String,
+                maxPayloadLength: Int = DEFAULT_MAX_PAYLOAD_LENGTH,
+            ): EncryptedInfo {
+                check(payload.isNotEmpty() && payload[0] != '#') { "Unknown encryption version ${payload.getOrNull(0)}" }
+                check(payload.length >= MIN_PAYLOAD_LENGTH) {
                     "Invalid payload length ${payload.length} for $payload"
                 }
-                check(payload[0] != '#') { "Unknown encryption version ${payload.get(0)}" }
+                // Before base64 decoding, so an oversized payload costs nothing to reject.
+                check(payload.length <= maxPayloadLength) {
+                    "Payload length ${payload.length} exceeds the maximum of $maxPayloadLength"
+                }
 
                 return try {
                     val byteArray = Base64.decode(payload)
-                    check(byteArray[0].toInt() == V)
+                    check(byteArray.size >= MIN_DECODED_LENGTH) { "Invalid decoded length ${byteArray.size}" }
+                    check(byteArray[0].toInt() == V) { "Unknown encryption version ${byteArray[0]}" }
                     EncryptedInfo(
                         nonce = byteArray.copyOfRange(1, 33),
                         ciphertext = byteArray.copyOfRange(33, byteArray.size - 32),
@@ -267,32 +307,22 @@ class Nip44v2 {
         byte2: Byte,
     ): Int = (byte1.toInt() and 0xFF shl 8 or (byte2.toInt() and 0xFF))
 
-    private fun bytesToIntBigEndian(
+    private fun bytesToLongBigEndian(
         byte1: Byte,
         byte2: Byte,
         byte3: Byte,
         byte4: Byte,
-    ): Int {
-        val result =
-            ((byte1.toLong() and 0xFF) shl 24) or
-                ((byte2.toLong() and 0xFF) shl 16) or
-                ((byte3.toLong() and 0xFF) shl 8) or
-                (byte4.toLong() and 0xFF)
+    ): Long =
+        ((byte1.toLong() and 0xFF) shl 24) or
+            ((byte2.toLong() and 0xFF) shl 16) or
+            ((byte3.toLong() and 0xFF) shl 8) or
+            (byte4.toLong() and 0xFF)
 
-        check(result <= Int.MAX_VALUE) {
-            "JVM cannot handle more than 2GB payloads. Current length: $result"
-        }
-
-        return result.toInt()
+    companion object {
+        /**
+         * Default ceiling for a base64 payload: 64M chars (~48 MB decoded). Comfortably above the
+         * spec's 20,000,000-byte test vector while bounding what a hostile event can make us allocate.
+         */
+        const val DEFAULT_MAX_PAYLOAD_LENGTH: Int = 64 * 1024 * 1024
     }
-
-    private fun intTo2BytesBigEndian(value: Int): ByteArray = byteArrayOf((value shr 8).toByte(), (value and 0xFF).toByte())
-
-    private fun intTo4BytesBigEndian(value: Int): ByteArray =
-        byteArrayOf(
-            (value shr 24).toByte(),
-            (value shr 16).toByte(),
-            (value shr 8).toByte(),
-            (value and 0xFF).toByte(),
-        )
 }

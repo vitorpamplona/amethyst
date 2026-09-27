@@ -56,7 +56,7 @@ class Nip44v2BaseTest {
     fun paddingTest() {
         for (v in vectors.v2?.valid?.calcPaddedLen!!) {
             val actual = nip44v2.calcPaddedLen(v[0])
-            assertEquals(v[1], actual)
+            assertEquals(v[1].toLong(), actual)
         }
     }
 

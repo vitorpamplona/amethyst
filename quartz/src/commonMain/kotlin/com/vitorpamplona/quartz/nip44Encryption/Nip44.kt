@@ -115,14 +115,17 @@ object Nip44 {
     ): String {
         require(ciphertext.isNotBlank()) { "ciphertext must not be blank" }
 
-        // Ignores if it is not base64
-        val byteArray = Base64.decode(ciphertext)
+        require(ciphertext.length >= 4) { "ciphertext is too short" }
 
-        return when (byteArray[0].toInt()) {
+        // Only the version byte is needed here: the first base64 quantum (4 chars) holds it.
+        // Decoding the whole payload would allocate its full size just to be thrown away.
+        val version = Base64.decode(ciphertext, 0, 4)[0].toInt()
+
+        return when (version) {
             EncryptedInfo.V -> Nip04.decrypt(ciphertext, privateKey, pubKey)
             Nip44v1.EncryptedInfo.V -> v1.decrypt(ciphertext, privateKey, pubKey)
             Nip44v2.EncryptedInfo.V -> v2.decrypt(ciphertext, privateKey, pubKey)
-            else -> throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${byteArray[0].toInt()}")
+            else -> throw IllegalArgumentException("Invalid or unsupported NIP-44 version code $version")
         }
     }
 }
