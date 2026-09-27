@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +44,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
+import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.util.prettyMime
-import com.vitorpamplona.amethyst.ui.components.pdf.extractFilename
 
 /**
  * The renderer for a declared file that none of the media viewers can display — a webxdc app,
@@ -91,10 +91,10 @@ fun FileAttachmentCard(
 /**
  * The icon + title + subtitle row shared by every card that stands in for a file it can't
  * render inline: this one and the PDF placeholder/skeleton in
- * [com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard].
+ * the Android app's `PdfPreviewCard`.
  */
 @Composable
-internal fun FileAttachmentRow(
+fun FileAttachmentRow(
     symbol: MaterialSymbol,
     title: String,
     subtitle: String?,

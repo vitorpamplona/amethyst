@@ -118,10 +118,10 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_deta
 import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.model.cordn.CordnCoverage
 import com.vitorpamplona.amethyst.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex

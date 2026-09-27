@@ -55,8 +55,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_GROUP_WINDOW_SECONDS
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
+import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
+import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -89,6 +94,8 @@ import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
@@ -98,8 +105,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
-import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ActionTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
@@ -109,11 +114,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChipView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.SectionDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.TileRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.authorNameColorFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiFontSize
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.CHAT_GROUP_WINDOW_SECONDS
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes

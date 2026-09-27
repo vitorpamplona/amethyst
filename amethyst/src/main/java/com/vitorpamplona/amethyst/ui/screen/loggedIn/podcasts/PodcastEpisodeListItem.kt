@@ -43,13 +43,13 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_episode_number
 import com.vitorpamplona.amethyst.commons.resources.podcast_season
 import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
-import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode

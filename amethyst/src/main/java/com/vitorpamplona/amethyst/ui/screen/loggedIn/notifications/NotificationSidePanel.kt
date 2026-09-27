@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size12dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**

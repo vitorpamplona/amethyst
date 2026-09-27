@@ -58,8 +58,8 @@ import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.commons.resources.poll_closing_date_time
 import com.vitorpamplona.amethyst.commons.resources.poll_closing_in
+import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
+package com.vitorpamplona.amethyst.commons.chats.ui
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeBottom
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeMiddle
@@ -34,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemBottom
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemMiddle
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemTop
-import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -88,7 +88,7 @@ fun chatBubbleShapeFor(
     }
 
 /** Messages more than this far apart never group, even from the same author. */
-internal const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
+const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
 
 /**
  * Event kinds that don't render as regular bubbles (zaps, raids, clips) or that

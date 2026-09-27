@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.cordn
 
+import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.cordnGroupPositionFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.sameDayAs
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

@@ -1432,3 +1432,124 @@ functional bugs. The follow-ups:
   Java ignored, which no browser encoder produces. `%1$d` arguments now render ASCII
   digits in every locale, the same as every other migrated string.
   `ChannelFeedContentState` reaches `LocalCache.appHost` for its main-thread check.
+
+## 2026-09-27 — the rest of the single-blocker UI, `TimeAgo`, and the theme
+
+### Moved
+
+| What | To | The blocker, and how it went |
+|---|---|---|
+| `ScreenLayout` tier logic, `CappedScreenContent`, the pane widths | `commonsUI/…/ui/layouts/ScreenLayout.kt` | `material3-window-size-class` (app-only): its width breakpoints (Medium ≥ 600dp, Expanded ≥ 840dp) are inlined, and `ScreenLayoutTest` (18 cases, now in commonsUI jvmTest) passes against them. `LocalConfiguration` stays in the app, which asks the shared `rememberScreenLayoutSpec(widthDp, heightDp)`, so Desktop can supply its own window size. |
+| `animatedViewerChromeInset`, `rememberViewerControlsVisibility` | `commonsUI/…/ui/components/ViewerChrome.kt` | They sat in a file full of Android window code. Only `ImmersiveSystemBarsEffect` (Window/insets controller) stays. |
+| `SlidingCarousel` | `commonsUI/…/ui/components` | needed the inset above |
+| `AudioWaveformReadOnly` | `commonsUI/…/ui/components` | two enums from the Android-only audiowaveform library, now local enums with the same values |
+| `FileAttachmentCard` (+ `FileAttachmentRow`, now public) | `commonsUI/…/ui/components` | `extractFilename` hoisted to `commons/…/util/MimeTypeLabels.kt` |
+| `PdfFetcher` | `commonsUI/src/jvmAndroid/…/service/pdf` | `Amethyst.instance.diskCache` → a `diskCache` parameter. commonsUI jvmAndroid gained `okhttp-coroutines` (already on every module that ships OkHttp). |
+| `TimeAgoFormatter` (`timeAgo*`, `timeAbsolute*`, `dateFormatter`, `lastSeenSentence`, `timeAgoShort`, `TimeAgoLabels`) | `commonsUI/…/ui/note/TimeAgoFormatter.kt` | `android.text.format` — see below |
+| `ToggleableTimeAgoText`, `TimeAgo`, `NormalTimeAgo`, `TimeAgoStyle`, `NowProvider`, `LocalNowSeconds` | `commonsUI/…/ui/note/elements` | followed the formatter |
+| `AmethystTheme`'s scheme, typography and providers | `commonsUI/…/ui/theme/AmethystTheme.kt` (`AmethystMaterialTheme`, `amethystDark/LightColors`, `isDarkTheme`, `previewColor`, `toFontFamily`) | The app's `AmethystTheme` resolves the prefs, calls it, then tints the system bars. The Vico chart colours stay app-side (Vico is Android-only here). |
+
+**The date-format seam.** `PlatformDateFormat.kt` (commonsUI) has four expects:
+
+- `DateSkeletonFormatter(skeleton)`:
+  - Android: `getBestDateTimePattern` in a `ThreadLocal` `SimpleDateFormat`, exactly the old code.
+  - JVM: `DateTimeFormatter.ofLocalizedPattern` (JDK 19+, the same CLDR skeleton lookup), cached per locale and zone.
+  - iOS: `NSDateFormatter.setLocalizedDateFormatFromTemplate`.
+- `calendarYearAndDay`: `Calendar` on jvmAndroid, `NSCalendar` on iOS.
+- `rememberTimeOfDayFormatter`:
+  - Android: `DateFormat.getTimeFormat(context)` per call, as before, so the system 12/24-hour setting is still followed.
+  - JVM: the locale's SHORT time.
+  - iOS: `NSDateFormatterShortStyle`.
+- `relativeTimeSpanShort`:
+  - Android: `DateUtils`, as before.
+  - Elsewhere: the compact "5m" form.
+
+`DateSkeletonFormatterTest` pins the JVM side: en-US vs en-GB order from the same instance after a locale switch, the three skeletons, day/year boundaries, and the same-day branch of `timeAbsoluteWith`.
+
+Desktop still has its own `ToggleableTimeAgoText` and the older `commons/…/util/TimeAgoFormatter.kt` (hard-coded English units, `DateFormat.MEDIUM`). Merging those onto this one is the Desktop phase.
+
+### What is left in `amethyst/ui`, measured (2026-09-27)
+
+A transitive-blocker sweep of the 1,385 files under `amethyst/…/ui/`, after this round:
+
+- **80 files have no blocker left.**
+  - Many are headless and belong in `commons`, not `commonsUI`: the filter assemblers and
+    `*LastRead`, `NewMessageTagger`, `SplitConversor`, `PubKeyFormatter`, `SettingsCatalog`,
+    and the Tor status/dialog VM.
+  - The Compose ones include the chat bubble set (`ChatBubbleLayout`, `ChatGroupPosition`,
+    `JumboEmoji`, `NewDateOrSubjectDivisor`, `AutoScrollToNewest`). It moved to `commonsUI`
+    in the follow-up below. Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of it.
+- **`AccountViewModel` is the wall:**
+  - 892 files touch it, and 310 touch nothing else app-side. Yet swapping it for an interface frees only 76 files by itself, because the rest call hub composables that are blocked themselves.
+  - The ui files use 210 distinct members of it. The note renderers use 28.
+  - Only ~10 note renderers become movable with a context interface alone.
+- **The real levers are about ten hub composables**, each blocking the ui files that call it:
+
+  | Hub | Files blocked |
+  |---|---|
+  | `UserProfilePicture` | 123 |
+  | `RouteMaker` | 89 |
+  | `UsernameDisplay` | 77 |
+  | `Loaders` | 66 |
+  | `DisappearingScaffold` | 64 (AVM only, 53 lines) |
+  | `RichTextViewer` | 62 |
+  | `NoteCompose` | 58 |
+  | `FeedContentStateView` / `FeedView` | AVM only |
+
+  Also on the list:
+  - the `reqCommand` `observe*` helpers (176 files; they take `accountViewModel` themselves);
+  - the flavour-only `TranslatableRichTextViewer` (54 files), which wants a slot or a CompositionLocal.
+- **Two corrections to the MOVE-AFTER table above:**
+  - `INav`/`Route` are no longer blockers: every ui file imports the commons ones.
+  - `ui/note/types` is 111 files, not ~89, and "AVM threading" understates it: the hubs matter more than the parameter.
+
+### Follow-up in the same round: the chat bubble group, and the audit
+
+- **Moved to `commonsUI/…/commons/chats/ui`**, beside `ChatDivisor` and
+  `UserDisplayNameLayout`: `ChatBubbleLayout`, `ChatGroupPosition`, `JumboEmoji`,
+  `NewDateOrSubjectDivisor` and `AutoScrollToNewest`. `AutoScrollToNewest` and
+  `CHAT_GROUP_WINDOW_SECONDS` went from `internal` to public so the app can reach them.
+  Desktop's `ui/chats/ChatBubbleLayout.kt` is an older fork of this one (no group
+  position, jumbo emoji, swipe-to-reply or reaction row). Replacing it is the Desktop
+  phase.
+- **Audit follow-ups:**
+  - `PdfFetcher` takes the disk cache as a provider, read on the IO dispatcher, so a PDF
+    card composing on a cold start doesn't build the app's lazy cache on the main thread.
+  - The two DM lists resolve `TimeAgoLabels` once per list instead of once per row.
+  - The iOS `DateSkeletonFormatter` rebuilds on a locale change, as Android's does. (The
+    JVM one also keys on the time zone; iOS caches its system zone until reset, so keying on
+    it there would cost lookups and still not notice.)
+  - `ScreenLayoutTest` pins the inclusive 600dp boundary.
+  - Two stale KDoc links and a same-package import are fixed.
+  - The generated baseline profile has its stable-name entries repointed:
+    `NowProviderKt`, and the five theme functions now in `AmethystThemeKt`. Its R8
+    lambda entries were already stale before this round (it still lists
+    `MarkDownStyleOnDark` under `ThemeKt`), and the new theme root
+    (`AmethystThemeKt;->AmethystMaterialTheme`, `isDarkTheme`) has no entries at all, so
+    **regenerate the profile** after these moves.
+
+### Second audit, and one Desktop decision
+
+- **Fixed:**
+  - `PdfPreviewCard` closed its cache snapshot on the main thread, after `withContext(IO)`
+    returned. That was older than this branch. Closing takes the same global DiskLruCache
+    lock as opening, so `PdfFetcher.useSnapshot` now fetches, runs the block and closes, all
+    in one IO block, leaving no suspension point for cancellation to leak through.
+  - The PDF viewer's `onDispose` now closes its handle on the app IO scope, under the
+    render mutex.
+  - JVM and iOS built a time-of-day formatter per feed item; they now share one cached
+    instance. `NSDateFormatter` is costly to build.
+  - `timeAgoShort` no longer allocates an unused fallback lambda per tick on Android.
+  - The iOS skeleton formatter keys on the locale only, like Android. iOS caches its system
+    zone until reset, so keying on the zone cost lookups and still never saw a change.
+  - New tests: `JumboEmojiTest` (counts, ZWJ/skin tone/flag/keycap sequences, bubble
+    shapes). `ScreenLayoutTest` moved to commonsUI jvmTest, beside the code it tests.
+- **Desktop needs `jdk.localedata` before it uses these formatters.**
+  - `desktopApp/build.gradle.kts` `nativeDistributions.modules(...)` doesn't include it,
+    so the packaged runtime carries only en/root CLDR data.
+  - `DateTimeFormatter.ofLocalizedPattern` then gives en-GB `Jan 5, 2024` and de-DE
+    `2024 Jan 5`, and the JDK tests (full runtime) can't see it.
+  - Desktop's existing `java.time` formatting (`DesktopScheduleAtPicker`) already has the
+    same gap.
+  - Adding the module costs about +28 MB to the unpacked runtime. That is a packaging
+    call, left for the Desktop phase.

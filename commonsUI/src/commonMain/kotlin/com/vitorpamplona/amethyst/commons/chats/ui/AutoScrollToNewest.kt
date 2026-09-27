@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
+package com.vitorpamplona.amethyst.commons.chats.ui
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
@@ -46,7 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
  * message they just wrote somewhere off-screen below.
  */
 @Composable
-internal fun AutoScrollToNewest(
+fun AutoScrollToNewest(
     listState: LazyListState,
     newest: Any?,
     mine: Boolean = false,

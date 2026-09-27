@@ -131,9 +131,9 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.contentColorOnAccent
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
+import com.vitorpamplona.amethyst.commons.ui.theme.previewColor
+import com.vitorpamplona.amethyst.commons.ui.theme.toFontFamily
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.previewColor
-import com.vitorpamplona.amethyst.ui.theme.toFontFamily
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableList
