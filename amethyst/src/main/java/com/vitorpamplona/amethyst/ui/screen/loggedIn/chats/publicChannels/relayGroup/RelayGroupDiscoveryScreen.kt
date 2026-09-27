@@ -250,7 +250,7 @@ private fun WatchAccountForRelayGroupDiscovery(
         .collectAsStateWithLifecycle()
     val joinedServers by accountViewModel.account.relayGroupList.liveRelayGroupServers
         .collectAsStateWithLifecycle()
-    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+    val favoriteRelays by accountViewModel.account.favoriteRelayList.flow
         .collectAsStateWithLifecycle()
 
     // Discovery only shows groups whose 39000 is signed by the host relay's own key (NIP-29's
@@ -349,7 +349,7 @@ private fun RelayRailHeader(
     val info = loadRelayInfo(relay)
     val host = relay.displayUrl()
     val name = info.value.name?.takeIf { it.isNotBlank() } ?: host
-    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+    val favoriteRelays by accountViewModel.account.favoriteRelayList.flow
         .collectAsStateWithLifecycle()
     val isFavorite = relay in favoriteRelays
 

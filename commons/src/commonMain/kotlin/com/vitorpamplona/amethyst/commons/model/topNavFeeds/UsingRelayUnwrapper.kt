@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlinx.coroutines.flow.Flow
@@ -49,7 +49,7 @@ class UsingRelayUnwrapper {
                     val relays =
                         when (val noteEvent = outboxNote.note.event) {
                             is AdvertisedRelayListEvent -> noteEvent.relaysNorm()
-                            is ChatMessageRelayListEvent -> noteEvent.relays()
+                            is DmRelayListEvent -> noteEvent.relays()
                             else -> emptySet()
                         }
 
@@ -81,7 +81,7 @@ class UsingRelayUnwrapper {
             users
                 .map { pubkeyHex ->
                     cache
-                        .getOrCreateAddressableNote(ChatMessageRelayListEvent.createAddress(pubkeyHex))
+                        .getOrCreateAddressableNote(DmRelayListEvent.createAddress(pubkeyHex))
                         .flow()
                         .metadata.stateFlow.value
                 }.toTypedArray()
@@ -100,7 +100,7 @@ class UsingRelayUnwrapper {
                 note.flow().metadata.stateFlow
             } +
                 users.map { pubkeyHex ->
-                    val note = cache.getOrCreateAddressableNote(ChatMessageRelayListEvent.createAddress(pubkeyHex))
+                    val note = cache.getOrCreateAddressableNote(DmRelayListEvent.createAddress(pubkeyHex))
                     note.flow().metadata.stateFlow
                 }
 

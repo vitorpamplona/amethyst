@@ -26,9 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 
-fun TagArrayBuilder<ChannelListEvent>.followChat(
+fun TagArrayBuilder<PublicChatListEvent>.followChat(
     eventId: HexKey,
     relayUrl: NormalizedRelayUrl,
 ) = addUnique(ETag.assemble(eventId, relayUrl, null))
 
-fun TagArrayBuilder<ChannelListEvent>.channels(rooms: List<ChannelTag>) = addAll(rooms.map { it.toTagArray() })
+fun TagArrayBuilder<PublicChatListEvent>.channels(rooms: List<ChannelTag>) = addAll(rooms.map { it.toTagArray() })

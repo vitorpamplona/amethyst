@@ -121,7 +121,7 @@ private fun EmojiPackSelectionBody(
     ) {
         item {
             LoadAddressableNote(
-                address = accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+                address = accountViewModel.account.emoji.getEmojiListAddress(),
             ) { selectionNote ->
                 selectionNote?.let {
                     val hasAddedThis by observeNoteAndMap(it, accountViewModel) { currentNote ->

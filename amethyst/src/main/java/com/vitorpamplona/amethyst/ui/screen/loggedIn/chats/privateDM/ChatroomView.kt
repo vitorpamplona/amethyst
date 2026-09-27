@@ -71,7 +71,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
@@ -130,7 +130,7 @@ fun ChatroomView(
     // Reactively check if recipients have DM relays for NIP-17 delivery
     for (userHex in room.users) {
         LoadAddressableNote(
-            ChatMessageRelayListEvent.createAddress(userHex),
+            DmRelayListEvent.createAddress(userHex),
         ) { note ->
             if (note != null) {
                 EventFinderFilterAssemblerSubscription(note, accountViewModel)

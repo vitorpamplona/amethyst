@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 
 /** The addressable/replaceable coordinate of [event] as a NIP-01 `a`-tag value. */
@@ -68,15 +68,15 @@ suspend fun deletionsCovering(
     val covering = LinkedHashMap<HexKey, Event>()
 
     // 1. id-based NIP-09: a kind-5 `e`-tagging an event's id.
-    query(Filter(kinds = listOf(DeletionEvent.KIND), tags = mapOf("e" to events.map { it.id })))
+    query(Filter(kinds = listOf(DeletionRequestEvent.KIND), tags = mapOf("e" to events.map { it.id })))
         .forEach { covering[it.id] = it }
 
     // 2. address-based NIP-09: a kind-5 `a`-tagging an event's coordinate, cutoff-checked.
     val byAddress = events.filter { it.kind.isAddressable() || it.kind.isReplaceable() }.groupBy(::addressValue)
     if (byAddress.isNotEmpty()) {
-        query(Filter(kinds = listOf(DeletionEvent.KIND), tags = mapOf("a" to byAddress.keys.toList())))
+        query(Filter(kinds = listOf(DeletionRequestEvent.KIND), tags = mapOf("a" to byAddress.keys.toList())))
             .forEach { del ->
-                if (del !is DeletionEvent) return@forEach
+                if (del !is DeletionRequestEvent) return@forEach
                 for (addr in del.deleteAddresses()) {
                     val hit = byAddress[addr.toValue()] ?: continue
                     if (hit.any { it.createdAt <= del.createdAt }) {

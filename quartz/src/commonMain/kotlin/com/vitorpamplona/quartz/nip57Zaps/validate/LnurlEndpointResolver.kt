@@ -24,7 +24,7 @@ package com.vitorpamplona.quartz.nip57Zaps.validate
  * Resolves an LNURL-pay URL to its [LnurlEndpointInfo]. Implementations should
  * consult [LnurlEndpointCache] first and only fall through to a network fetch
  * on a miss. Lives in quartz so that pure-logic verifiers (e.g.
- * [LnZapReceiptValidator]) can be wired against an abstract interface without
+ * [ZapReceiptValidator]) can be wired against an abstract interface without
  * depending on OkHttp.
  */
 fun interface LnurlEndpointResolver {

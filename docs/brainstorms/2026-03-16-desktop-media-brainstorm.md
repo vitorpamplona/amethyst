@@ -136,7 +136,7 @@ ExoPlayer is Android-only (Media3). VLCJ wraps VLC's libvlc via JNA — supports
 | BlossomServersEvent | `quartz/nipB7Blossom/` | Ready (kind 10063) |
 | BlossomUri | `quartz/nipB7Blossom/` | Ready (blossom: URI parsing) |
 | BlossomUploadResult | `quartz/nipB7Blossom/` | Ready |
-| FileHeaderEvent (NIP-94) | `quartz/nip94FileMetadata/` | Ready (kind 1063) |
+| FileMetadataEvent (NIP-94) | `quartz/nip94FileMetadata/` | Ready (kind 1063) |
 | BlurhashTag | `quartz/nip94FileMetadata/tags/` | Ready |
 | DimensionTag | `quartz/nip94FileMetadata/tags/` | Ready |
 | IMetaTag/Builder (NIP-92) | `quartz/nip92IMeta/` | Ready |

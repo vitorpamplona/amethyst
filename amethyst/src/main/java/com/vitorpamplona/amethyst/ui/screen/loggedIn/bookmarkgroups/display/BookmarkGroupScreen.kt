@@ -101,7 +101,7 @@ fun BookmarkGroupScreen(
         bookmarkType,
         broadcastBookmarkGroup = {
             accountViewModel.launchSigner {
-                val groupNote = accountViewModel.account.labeledBookmarkLists.getLabeledBookmarkListNote(bookmarkIdentifier)
+                val groupNote = accountViewModel.account.bookmarkSets.getBookmarkSetNote(bookmarkIdentifier)
                 groupNote?.let {
                     accountViewModel.broadcast(it)
                 }

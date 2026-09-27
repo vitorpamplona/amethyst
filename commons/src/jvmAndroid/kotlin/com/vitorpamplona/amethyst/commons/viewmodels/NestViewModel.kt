@@ -45,6 +45,7 @@ import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableSet
@@ -629,7 +630,7 @@ class NestViewModel(
      * same window so the visual cadence matches the React button.
      */
     fun onZapEvent(
-        event: com.vitorpamplona.quartz.nip57Zaps.LnZapEvent,
+        event: ZapReceiptEvent,
         nowSec: Long,
         windowSec: Long = REACTION_WINDOW_SEC,
     ) {

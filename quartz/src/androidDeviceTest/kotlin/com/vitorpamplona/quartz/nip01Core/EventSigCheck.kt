@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
 import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import org.junit.Assert.assertEquals
@@ -139,7 +139,7 @@ class EventSigCheck {
     @Test
     fun checkSerializationLargeZap() {
         val event =
-            EventFactory.create<LnZapEvent>(
+            EventFactory.create<ZapReceiptEvent>(
                 id = "e7f09fddf39fc6cb604708b6af7b4d4adbb07b412847ebb004064040fe8c4b1e",
                 pubKey = "79f00d3f5a19ec806189fcab03c1be4ff81d18ee4f653c88fac41fe03570f432",
                 createdAt = 1728921077,

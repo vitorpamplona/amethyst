@@ -35,8 +35,8 @@ import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -589,7 +589,7 @@ class NestViewModelTest {
             fromPublicKey: String,
         ): String = error("not used")
 
-        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = error("not used")
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = error("not used")
 
         override suspend fun deriveKey(nonce: String): String = error("not used")
 

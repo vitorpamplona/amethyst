@@ -48,12 +48,12 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
@@ -79,7 +79,7 @@ val GroupNotificationKinds =
         PollResponseEvent.KIND,
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
-        LnZapEvent.KIND,
+        ZapReceiptEvent.KIND,
         Bolt12ZapEvent.KIND,
         ReportEvent.KIND,
     )
@@ -90,7 +90,7 @@ val SummaryKinds =
         ReactionEvent.KIND,
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
-        LnZapEvent.KIND,
+        ZapReceiptEvent.KIND,
         OnchainZapEvent.KIND,
         Bolt12ZapEvent.KIND,
     )
@@ -98,7 +98,7 @@ val SummaryKinds =
 val NotificationsPerKeyKinds =
     listOf(
         ReportEvent.KIND,
-        LnZapPaymentResponseEvent.KIND,
+        NwcResponseEvent.KIND,
         ChannelMessageEvent.KIND,
         EphemeralChatEvent.KIND,
         BadgeAwardEvent.KIND,

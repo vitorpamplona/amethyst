@@ -71,7 +71,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.live.LivesSection
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.launch
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -280,7 +280,7 @@ fun DiscoverScreen(
 
 @Composable
 private fun MiniPackThumb(
-    pack: FollowListEvent,
+    pack: StarterPackEvent,
     onClick: () -> Unit,
 ) {
     val title = pack.title()?.ifBlank { null } ?: "Untitled pack"

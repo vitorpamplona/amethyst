@@ -46,7 +46,7 @@ special case describes — does nothing.
    `GiftWrapEvent.recipientPubKey()` at unseal time, so the validation
    below works after the wrap note is GC'd.
 
-3. **Live cascade (amethyst `LocalCache.consume(DeletionEvent)`):** the
+3. **Live cascade (amethyst `LocalCache.consume(DeletionRequestEvent)`):** the
    wrap note that knew its `innerEventId` is GC'd by the time a deletion
    arrives, so find the rumor by reverse lookup: scan notes for
    `note.rumorHost?.id == deletedId` (precedent: the addressable pass in

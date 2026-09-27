@@ -23,8 +23,8 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import kotlinx.coroutines.test.runTest
@@ -50,14 +50,14 @@ class NwcRefusalRoundTripTest {
 
         for (useNip44 in listOf(false, true)) {
             val request =
-                LnZapPaymentRequestEvent.createRequest(
+                NwcRequestEvent.createRequest(
                     PayInvoiceMethod.create("lnbc50n1pjtest"),
                     walletSigner.pubKey,
                     clientSigner,
                     useNip44 = useNip44,
                 )
 
-            // Encrypted by hand rather than through LnZapPaymentResponseEvent.createResponse,
+            // Encrypted by hand rather than through NwcResponseEvent.createResponse,
             // which re-serializes a Response: the point is the wallet's bytes, verbatim.
             val encrypted =
                 if (useNip44) {
@@ -66,9 +66,9 @@ class NwcRefusalRoundTripTest {
                     walletSigner.nip04Encrypt(walletJson, clientSigner.pubKey)
                 }
             val reply =
-                walletSigner.sign<LnZapPaymentResponseEvent>(
+                walletSigner.sign<NwcResponseEvent>(
                     request.createdAt,
-                    LnZapPaymentResponseEvent.KIND,
+                    NwcResponseEvent.KIND,
                     arrayOf(arrayOf("p", clientSigner.pubKey), arrayOf("e", request.id)),
                     encrypted,
                 )

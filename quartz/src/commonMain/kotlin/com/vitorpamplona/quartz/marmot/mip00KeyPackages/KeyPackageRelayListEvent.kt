@@ -42,7 +42,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * Replaceable event that advertises which relays hold this user's MLS KeyPackages.
  * Other clients query this to discover where to fetch KeyPackages for group invitations.
  *
- * Uses the same "relay" tag format as NIP-17's ChatMessageRelayListEvent (kind 10050)
+ * Uses the same "relay" tag format as NIP-17's DmRelayListEvent (kind 10050)
  * but serves a different purpose: KeyPackage discovery vs DM inbox routing.
  */
 @Immutable

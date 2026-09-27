@@ -41,12 +41,12 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_count
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import org.jetbrains.compose.resources.pluralStringResource
 
 /** Card for a NIP-52 calendar collection (kind 31924): title, description, and event count. */
 @Composable
-fun CalendarCollectionCard(event: CalendarEvent) {
+fun CalendarCollectionCard(event: CalendarCollectionEvent) {
     val title = remember(event) { event.title() }
     val eventCount = remember(event) { event.calendarEventAddresses().size }
 

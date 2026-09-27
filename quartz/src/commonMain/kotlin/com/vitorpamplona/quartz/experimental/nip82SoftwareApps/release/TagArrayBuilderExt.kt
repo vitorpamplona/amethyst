@@ -27,13 +27,14 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.Chan
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
-fun TagArrayBuilder<SoftwareReleaseEvent>.appId(appId: String) = addUnique(AppIdTag.assemble(appId))
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.appId(appId: String) = addUnique(AppIdTag.assemble(appId))
 
-fun TagArrayBuilder<SoftwareReleaseEvent>.version(version: String) = addUnique(VersionTag.assemble(version))
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.version(version: String) = addUnique(VersionTag.assemble(version))
 
-fun TagArrayBuilder<SoftwareReleaseEvent>.channel(channel: String) = addUnique(ChannelTag.assemble(channel))
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.channel(channel: String) = addUnique(ChannelTag.assemble(channel))
 
-fun TagArrayBuilder<SoftwareReleaseEvent>.asset(asset: EventHintBundle<SoftwareAssetEvent>) = add(AssetTag.assemble(asset))
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.asset(asset: EventHintBundle<SoftwareAssetEvent>) = add(AssetTag.assemble(asset))
 
-fun TagArrayBuilder<SoftwareReleaseEvent>.assets(assets: List<EventHintBundle<SoftwareAssetEvent>>) = addAll(AssetTag.assemble(assets))
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.assets(assets: List<EventHintBundle<SoftwareAssetEvent>>) = addAll(AssetTag.assemble(assets))

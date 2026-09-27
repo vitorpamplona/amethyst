@@ -43,8 +43,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -650,7 +650,7 @@ class MeteringNostrSignerTest {
             fromPublicKey: HexKey,
         ) = "dec44"
 
-        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw UnsupportedOperationException("fake")
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = throw UnsupportedOperationException("fake")
 
         override suspend fun deriveKey(nonce: HexKey): HexKey = "bb".repeat(32)
 

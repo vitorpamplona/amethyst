@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 
@@ -38,8 +38,8 @@ class ChatroomListNewFeedFilter(
 
     private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
 
-    /** A room note is NIP-04 when its event is a [PrivateDmEvent], otherwise it is a NIP-17 message. */
-    private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is PrivateDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
+    /** A room note is NIP-04 when its event is a [EncryptedDmEvent], otherwise it is a NIP-17 message. */
+    private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is EncryptedDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {

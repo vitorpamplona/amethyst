@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 fun filterPictureAndVideoAllCommunities(
     relay: NormalizedRelayUrl,
@@ -80,7 +80,7 @@ fun filterPictureAndVideoAllCommunities(
                     tags =
                         mapOf(
                             "a" to communityList,
-                            "k" to listOf(FileHeaderEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString()),
+                            "k" to listOf(FileMetadataEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString()),
                         ),
                     limit = 200,
                     since = since,

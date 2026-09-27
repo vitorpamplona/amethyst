@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.moderation
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
 /**
  * Pure decision: should this note be collapsed because it abuses hashtag `t` tags?
@@ -46,7 +46,7 @@ object HashtagSpamCheck {
     ): Boolean {
         if (!enabled) return false
         if (displayedEvent == null) return false
-        if (displayedEvent.kind == LongTextNoteEvent.KIND) return false
+        if (displayedEvent.kind == LongFormContentEvent.KIND) return false
         if (authorPubkey != null && authorPubkey in exemptKeys) return false
         return displayedEvent.tags.hasMoreHashtagsThan(threshold)
     }

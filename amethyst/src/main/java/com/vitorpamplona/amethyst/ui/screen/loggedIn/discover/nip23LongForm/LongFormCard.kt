@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.note.types.LongFormHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 
 @Composable
 fun RenderLongFormThumb(
@@ -35,7 +35,7 @@ fun RenderLongFormThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent by observeNoteEvent<LongTextNoteEvent>(baseNote, accountViewModel)
+    val noteEvent by observeNoteEvent<LongFormContentEvent>(baseNote, accountViewModel)
 
     noteEvent?.let {
         LongFormHeader(

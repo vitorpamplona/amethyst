@@ -399,7 +399,7 @@ The KMP expert found that `AccountSessionManager` and `AccountCacheState` **cann
 - Use `#p` tag filters (not `authors`) — listening *for* the account, not *from* it
 - **Exclude kind 7 reactions** — too noisy for background counts. Use NIP-45 count query at foreground activation if needed
 - **Include kind 6 reposts** — same filter as kind 1 mentions, relatively rare, worth tracking
-- NIP-65 `readRelaysNorm()` for general notifications; kind 10050 `ChatMessageRelayListEvent` for DM-specific inbox relays
+- NIP-65 `readRelaysNorm()` for general notifications; kind 10050 `DmRelayListEvent` for DM-specific inbox relays
 - Max 5 relay connections per inactive account (3 inbox + 2 DM)
 - Always set `since` field — prevents relay flooding on reconnect
 - Separate `RelayAuthenticator` for background connections (don't reuse active account's)

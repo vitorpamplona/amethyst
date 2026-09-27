@@ -934,7 +934,7 @@ measured picture.
   are handled; the 9 without a dedicated `EventCache` overload
   (`TextNoteEvent`, `ContactListEvent`, `CommentEvent`,
   `AdvertisedRelayListEvent`, `BlossomServersEvent`, `BookmarkListEvent`,
-  `OldBookmarkListEvent`, `ChatMessageRelayListEvent`, `FollowListEvent`) fall
+  `OldBookmarkListEvent`, `DmRelayListEvent`, `StarterPackEvent`) fall
   into the generic replaceable/addressable group.
 - **13 of 13 core read methods match** by name and signature.
 - **Feed retention is already aligned** — both platforms hold feed content
@@ -982,7 +982,7 @@ a deletion: ~500 lines of genuinely Desktop-specific state survive, and the
    concentrated in five places (metadata, contact list, follow pack, live
    activity, `clear`) and re-derive cleanly from the event after consume.
 4. **Two Desktop-shaped `consume` overloads do not generalize** — the NIP-47
-   `LnZapPaymentRequestEvent` one takes a `zappedNote` and an `onResponse`
+   `NwcRequestEvent` one takes a `zappedNote` and an `onResponse`
    callback, and the response one drives `paymentTracker` + `appScope`. Android
    reaches the same tracker through account state. Keep them Desktop-side.
 5. **`clear()`** has only 2 production call sites (`Main.kt`, logout/account

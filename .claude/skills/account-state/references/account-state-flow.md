@@ -16,8 +16,8 @@ been renamed, grep `Account.kt` for the class name.)
 | `userMetadata` | `UserMetadataState` | 0 | `amethyst/.../model/nip01UserMetadata/` |
 | `kind3FollowList` | `Kind3FollowListState` | 3 | `model/nip02FollowLists/` |
 | `muteList` (+ `muteListDecryptionCache`) | `MuteListState` | 10000 | `model/nip51Lists/muteList/` |
-| `blockPeopleList`, `peopleLists` | `BlockPeopleListState`, `PeopleListsState` | NIP-51 people sets | `model/nip51Lists/peopleList/` |
-| `followLists` | `FollowListsState` | NIP-51 follow sets | `model/nip51Lists/peopleList/` |
+| `blockPeopleList`, `peopleLists` | `BlockPeopleListState`, `FollowSetsState` | NIP-51 people sets | `model/nip51Lists/followSets/` |
+| `followLists` | `StarterPacksState` | NIP-51 follow sets | `model/nip51Lists/followSets/` |
 | `hiddenUsers` | `HiddenUsersState` — derived from `muteList.flow` + `blockPeopleList.flow` | — | `model/nip51Lists/` |
 | `allFollows` | `MergedFollowListsState` — merges kind3 + people/follow/hashtag/geohash/community lists | — | `model/serverList/` |
 
@@ -31,7 +31,7 @@ been renamed, grep `Account.kt` for the class name.)
 | `blockedRelayList` | `BlockedRelayListState` | 10006 | `model/nip51Lists/blockedRelays/` |
 | `localRelayList` | `LocalRelayListState` | local | `model/localRelays/` |
 | `privateStorageRelayList` | `PrivateStorageRelayListState` | private storage | `model/edits/` |
-| `keyPackageRelayList`, `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, `relayFeedsList` | per-feature `…RelayListState` classes, each with a `DecryptionCache` sibling | custom relay sets | `model/nip51Lists/…` |
+| `keyPackageRelayList`, `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, `favoriteRelayList` | per-feature `…RelayListState` classes, each with a `DecryptionCache` sibling | custom relay sets | `model/nip51Lists/…` |
 
 Derived relay views (merge several of the above): `homeRelays`
 (`AccountHomeRelayState`), `outboxRelays`, `dmRelays`, `notificationRelays`,
@@ -43,10 +43,10 @@ Derived relay views (merge several of the above): `homeRelays`
 | Account property | State class | Kind | Package |
 |------------------|-------------|------|---------|
 | `bookmarkState` (and legacy `oldBookmarkState`) | `BookmarkListState` | 10003 | `model/nip51Lists/` |
-| `labeledBookmarkLists` | `LabeledBookmarkListsState` | NIP-51 bookmark sets | `model/nip51Lists/labeledBookmarkLists/` |
+| `bookmarkSets` | `BookmarkSetsState` | NIP-51 bookmark sets | `model/nip51Lists/bookmarkSets/` |
 | `pinState` | `PinListState` | NIP-51 | `model/nip51Lists/` |
 | `interestSets` | `InterestSetsState` | NIP-51 interest sets | `model/nip51Lists/interestSets/` |
-| `hashtagList` / `geohashList` | `HashtagListState` / `GeohashListState` | NIP-51 | `model/nip51Lists/hashtagLists/`, `…/geohashLists/` |
+| `hashtagList` / `geohashList` | `InterestListState` / `GeohashListState` | NIP-51 | `model/nip51Lists/interestLists/`, `…/geohashLists/` |
 | `communityList` | `CommunityListState` | NIP-72 communities | `model/nip72Communities/` |
 | `favoriteAlgoFeedsList` | `FavoriteAlgoFeedsListState` | NIP-51 | `model/nip51Lists/` |
 | `emoji`, `ownedEmojiPacks` | `EmojiPackState`, `OwnedEmojiPacksState` | 10030 | `commons/.../commons/model/nip30CustomEmojis/` |

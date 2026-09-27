@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -149,7 +149,7 @@ class FeedContentState(
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
-                val deletionEvents: List<DeletionEvent> = newItems.mapNotNull { it.event as? DeletionEvent }
+                val deletionEvents: List<DeletionRequestEvent> = newItems.mapNotNull { it.event as? DeletionRequestEvent }
 
                 val oldList =
                     if (deletionEvents.isEmpty()) {

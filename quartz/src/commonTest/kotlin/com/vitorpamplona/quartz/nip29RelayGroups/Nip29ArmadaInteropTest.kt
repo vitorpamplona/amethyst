@@ -32,16 +32,16 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -169,12 +169,12 @@ class Nip29ArmadaInteropTest {
     fun parsesGroupRoles() {
         val e =
             parse(
-                SupportedRolesEvent.KIND,
+                GroupRolesEvent.KIND,
                 arrayOf(
                     arrayOf("role", "admin", "Full control"),
                     arrayOf("role", "moderator"),
                 ),
-            ) as SupportedRolesEvent
+            ) as GroupRolesEvent
         val roles = e.roles()
         assertEquals("admin", roles[0].name)
         assertEquals("Full control", roles[0].description)
@@ -202,37 +202,37 @@ class Nip29ArmadaInteropTest {
         assertTrue(parse(CreateGroupEvent.KIND, arrayOf(arrayOf("h", gid)), pubKey = alice) is CreateGroupEvent)
         assertTrue(parse(DeleteGroupEvent.KIND, arrayOf(arrayOf("h", gid)), pubKey = alice) is DeleteGroupEvent)
 
-        val put = parse(PutUserEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("p", bob, "moderator")), pubKey = alice) as PutUserEvent
+        val put = parse(GroupPutUserEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("p", bob, "moderator")), pubKey = alice) as GroupPutUserEvent
         assertEquals(gid, put.groupId())
         assertEquals(listOf(bob), put.userPubKeys())
 
-        val remove = parse(RemoveUserEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("p", bob)), content = "spam", pubKey = alice) as RemoveUserEvent
+        val remove = parse(GroupRemoveUserEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("p", bob)), content = "spam", pubKey = alice) as GroupRemoveUserEvent
         assertEquals(listOf(bob), remove.userPubKeys())
         assertEquals("spam", remove.content)
 
-        val del = parse(DeleteEventEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "de".repeat(32))), pubKey = alice) as DeleteEventEvent
+        val del = parse(GroupDeleteEventEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "de".repeat(32))), pubKey = alice) as GroupDeleteEventEvent
         assertEquals(listOf("de".repeat(32)), del.deletedEventIds())
 
-        val invite = parse(CreateInviteEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("code", "abc123")), pubKey = alice) as CreateInviteEvent
+        val invite = parse(GroupCreateInviteEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("code", "abc123")), pubKey = alice) as GroupCreateInviteEvent
         assertEquals("abc123", invite.code())
 
-        val edit = parse(EditMetadataEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("name", "N"), arrayOf("public"), arrayOf("open")), pubKey = alice) as EditMetadataEvent
+        val edit = parse(GroupEditMetadataEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("name", "N"), arrayOf("public"), arrayOf("open")), pubKey = alice) as GroupEditMetadataEvent
         assertEquals("N", edit.name())
         assertEquals(gid, edit.groupId())
     }
 
     @Test
     fun parsesJoinAndLeaveRequests() {
-        val join = parse(JoinRequestEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("code", "inv1")), content = "let me in", pubKey = alice) as JoinRequestEvent
+        val join = parse(GroupJoinRequestEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("code", "inv1")), content = "let me in", pubKey = alice) as GroupJoinRequestEvent
         assertEquals(gid, join.groupId())
         assertEquals("inv1", join.inviteCode())
         assertEquals("let me in", join.content)
 
         // Armada also sends a join with no code.
-        val joinNoCode = parse(JoinRequestEvent.KIND, arrayOf(arrayOf("h", gid)), pubKey = alice) as JoinRequestEvent
+        val joinNoCode = parse(GroupJoinRequestEvent.KIND, arrayOf(arrayOf("h", gid)), pubKey = alice) as GroupJoinRequestEvent
         assertNull(joinNoCode.inviteCode())
 
-        val leave = parse(LeaveRequestEvent.KIND, arrayOf(arrayOf("h", gid)), pubKey = alice) as LeaveRequestEvent
+        val leave = parse(GroupLeaveRequestEvent.KIND, arrayOf(arrayOf("h", gid)), pubKey = alice) as GroupLeaveRequestEvent
         assertEquals(gid, leave.groupId())
     }
 
@@ -399,7 +399,7 @@ class Nip29ArmadaInteropTest {
     @Test
     fun buildsEditMetadataWithTopicsAndGeohashes() {
         val edit =
-            EditMetadataEvent.build(
+            GroupEditMetadataEvent.build(
                 groupId = gid,
                 name = "Bitcoin Devs",
                 hashtags = listOf("bitcoin"),
@@ -412,12 +412,12 @@ class Nip29ArmadaInteropTest {
     @Test
     fun buildsCreateAndModerationEvents() {
         assertTrue(CreateGroupEvent.build(gid).tags.any { it[0] == "h" && it[1] == gid })
-        assertTrue(CreateInviteEvent.build(gid, "code42").tags.any { it[0] == "code" && it[1] == "code42" })
+        assertTrue(GroupCreateInviteEvent.build(gid, "code42").tags.any { it[0] == "code" && it[1] == "code42" })
 
-        val put = PutUserEvent.build(gid, listOf(bob to listOf("moderator"))).tags
+        val put = GroupPutUserEvent.build(gid, listOf(bob to listOf("moderator"))).tags
         assertTrue(put.any { it[0] == "p" && it[1] == bob && it.contains("moderator") })
 
-        val remove = RemoveUserEvent.build(gid, listOf(bob)).tags
+        val remove = GroupRemoveUserEvent.build(gid, listOf(bob)).tags
         assertTrue(remove.any { it[0] == "p" && it[1] == bob })
 
         // relay29 forks are avoided by NOT emitting `previous` when none provided.
@@ -466,12 +466,12 @@ class Nip29ArmadaInteropTest {
 
     @Test
     fun buildsJoinLeaveAndGroupScopedChat() {
-        val join = JoinRequestEvent.build(gid, reason = "hi", inviteCode = "inv9")
+        val join = GroupJoinRequestEvent.build(gid, reason = "hi", inviteCode = "inv9")
         assertEquals("hi", join.content)
         assertTrue(join.tags.any { it[0] == "h" && it[1] == gid })
         assertTrue(join.tags.any { it[0] == "code" && it[1] == "inv9" })
 
-        assertTrue(LeaveRequestEvent.build(gid).tags.any { it[0] == "h" && it[1] == gid })
+        assertTrue(GroupLeaveRequestEvent.build(gid).tags.any { it[0] == "h" && it[1] == gid })
 
         // Group-scope a plain kind-9 chat message via the shared `hTag` helper.
         val chat = ChatEvent.build("gm") { hTag(gid) }

@@ -44,7 +44,7 @@
 - Biometric auth for sensitive operations
 
 ### Shared Infrastructure (Already in quartz/commons)
-- **NIP-57:** `LnZapEvent`, `LnZapRequestEvent`, `LnZapPrivateEvent`, private zap encryption
+- **NIP-57:** `ZapReceiptEvent`, `ZapRequestEvent`, `PrivateZapEvent`, private zap encryption
 - **NIP-47:** `Nip47Client`, request/response events, full RPC method set
 - **NIP-60:** `CashuWalletEvent`, `CashuTokenEvent`, `CashuSpendingHistoryEvent` (skeleton)
 - **NIP-61:** `NutzapEvent`, `NutzapInfoEvent` (skeleton)

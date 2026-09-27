@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
@@ -76,7 +76,7 @@ class User(
 
     val nip65RelayListNote: Note = context.addressableNote(AdvertisedRelayListEvent.createAddress(pubkeyHex))
 
-    val dmRelayListNote: Note = context.addressableNote(ChatMessageRelayListEvent.createAddress(pubkeyHex))
+    val dmRelayListNote: Note = context.addressableNote(DmRelayListEvent.createAddress(pubkeyHex))
 
     val nutzapInfoNote: Note = context.addressableNote(NutzapInfoEvent.createAddress(pubkeyHex))
 
@@ -114,7 +114,7 @@ class User(
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay(5)
 
-    fun dmInboxRelayList() = dmRelayListNote.event as? ChatMessageRelayListEvent
+    fun dmInboxRelayList() = dmRelayListNote.event as? DmRelayListEvent
 
     fun authorRelayList() = nip65RelayListNote.event as? AdvertisedRelayListEvent
 

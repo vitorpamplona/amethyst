@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
@@ -41,7 +41,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  * Inner/wrap JSON comes from the positional argument or stdin (`-`).
  *
  * Thin assembly only: seal/wrap/unwrap all live in quartz
- * (`SealedRumorEvent`, `GiftWrapEvent`).
+ * (`SealEvent`, `GiftWrapEvent`).
  */
 object GiftCommands {
     val USAGE: String =
@@ -87,7 +87,7 @@ object GiftCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peer = ctx.requireUserHex(to)
-            val seal = SealedRumorEvent.create(event = inner, encryptTo = peer, signer = ctx.signer)
+            val seal = SealEvent.create(event = inner, encryptTo = peer, signer = ctx.signer)
             val giftWrap = GiftWrapEvent.create(event = seal, recipientPubKey = peer)
             val wrapNode = Output.mapper.readTree(giftWrap.toJson())
 
@@ -134,7 +134,7 @@ object GiftCommands {
                     return Output.error("decrypt_failed", "could not unwrap (is this gift addressed to the active account?): ${e.message}")
                 }
             // The wrap holds a seal (kind:13); unseal it to recover the rumor.
-            val inner = if (unwrapped is SealedRumorEvent) unwrapped.unsealThrowing(ctx.signer) else unwrapped
+            val inner = if (unwrapped is SealEvent) unwrapped.unsealThrowing(ctx.signer) else unwrapped
             Output.emit(mapOf("event" to Output.mapper.readTree(inner.toJson())))
             return 0
         }

@@ -26,10 +26,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePost
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip72Communities.HomePostsFromCommunityKinds
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip72Communities.HomePostsFromCommunityKindsStr
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -46,8 +46,8 @@ class HomeMediaKindCoverageTest {
             PictureEvent.KIND,
             VideoNormalEvent.KIND,
             VideoShortEvent.KIND,
-            VideoHorizontalEvent.KIND,
-            VideoVerticalEvent.KIND,
+            AddressableNormalVideoEvent.KIND,
+            AddressableShortVideoEvent.KIND,
         )
 
     private fun assertCarriesMedia(

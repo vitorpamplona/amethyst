@@ -48,7 +48,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.types.GoalProgressBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 
 /**
  * Compact header rendered above the live-activity chat feed when the stream
@@ -76,7 +76,7 @@ private fun GoalHeaderContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val goal = goalNote.event as? GoalEvent ?: return
+    val goal = goalNote.event as? ZapGoalEvent ?: return
 
     val title =
         remember(goal) {

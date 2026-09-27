@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
@@ -157,8 +157,8 @@ class NwcPaymentHandlerTest {
     // -- Response event structure --
 
     @Test
-    fun `LnZapPaymentResponseEvent has correct KIND`() {
-        assertEquals(23195, LnZapPaymentResponseEvent.KIND)
+    fun `NwcResponseEvent has correct KIND`() {
+        assertEquals(23195, NwcResponseEvent.KIND)
     }
 
     // -- PayInvoiceSuccessResponse structure --

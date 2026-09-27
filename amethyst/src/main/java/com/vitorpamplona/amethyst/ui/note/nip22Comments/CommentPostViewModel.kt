@@ -109,7 +109,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -352,7 +352,7 @@ open class CommentPostViewModel :
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
         mutedNotifies = emptySet()
         notifyProvenance = emptyMap()
-        (post.event as? LnZapEvent)?.let { zap ->
+        (post.event as? ZapReceiptEvent)?.let { zap ->
             notifying = listOfNotNull(zapSenderToNotify(zap))
         }
         observeCommunityRules(post)
@@ -366,7 +366,7 @@ open class CommentPostViewModel :
      * by an ephemeral key: skip those — tagging the throwaway key is useless, and
      * tagging the decrypted sender would publicly expose a private zapper.
      */
-    private fun zapSenderToNotify(zapEvent: LnZapEvent): User? {
+    private fun zapSenderToNotify(zapEvent: ZapReceiptEvent): User? {
         val request = zapEvent.zapRequest ?: return null
         if (request.hasAnonTag()) return null
         if (request.pubKey == account.signer.pubKey) return null
@@ -554,7 +554,7 @@ open class CommentPostViewModel :
         // Replies to zaps notify the zap sender through a plain p tag (the receipt's
         // author keys above are the lightning provider). The sender chip always comes
         // back; a missing p tag in the draft means the user muted their bell.
-        (replyingTo?.event as? LnZapEvent)?.let { zap ->
+        (replyingTo?.event as? ZapReceiptEvent)?.let { zap ->
             zapSenderToNotify(zap)?.let { sender ->
                 notifying = ((notifying ?: emptyList()) + sender).distinct()
                 if (!draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
@@ -726,7 +726,7 @@ open class CommentPostViewModel :
                                     null
                                 }
                             }
-                        } else if (replyingToEvent is LnZapEvent) {
+                        } else if (replyingToEvent is ZapReceiptEvent) {
                             val sender = zapSenderToNotify(replyingToEvent)
                             // The sender's chip stays in the list; a muted bell means
                             // the user doesn't want to ping them, so don't tag them.

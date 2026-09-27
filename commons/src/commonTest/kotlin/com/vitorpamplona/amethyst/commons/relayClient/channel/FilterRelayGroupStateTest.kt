@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,7 +51,7 @@ class FilterRelayGroupStateTest {
             GroupMetadataEvent.KIND,
             GroupAdminsEvent.KIND,
             GroupMembersEvent.KIND,
-            SupportedRolesEvent.KIND,
+            GroupRolesEvent.KIND,
         )
     private val pinKinds = listOf(GroupPinnedEvent.KIND)
 

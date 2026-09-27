@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -138,7 +138,7 @@ class ChatroomListState(
     private suspend fun decryptPreview(event: com.vitorpamplona.quartz.nip01Core.core.Event?): String {
         if (event == null) return ""
         return when (event) {
-            is PrivateDmEvent -> {
+            is EncryptedDmEvent -> {
                 decryptedContentCache.getOrPut(event.id) {
                     try {
                         event.decryptContent(account.signer)

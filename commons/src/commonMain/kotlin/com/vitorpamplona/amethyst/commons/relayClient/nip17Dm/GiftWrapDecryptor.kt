@@ -22,25 +22,25 @@ package com.vitorpamplona.amethyst.commons.relayClient.nip17Dm
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
  * Fully decrypt a NIP-59 gift wrap down to the inner rumor.
  *
  * A gift wrap carries two encryption layers:
- *   kind:1059 [GiftWrapEvent] → kind:13 [SealedRumorEvent] → the rumor.
+ *   kind:1059 [GiftWrapEvent] → kind:13 [SealEvent] → the rumor.
  *
  * [GiftWrapEvent.unwrapOrNull] peels only the outer layer. Every non-Android
  * consumer that looks at the rumor directly (the CLI's `dm list`, the desktop
  * chat receive path, the Marmot welcome ingest in commons) needs both peels.
  *
- * If the inner content isn't a [SealedRumorEvent] (malformed, or a future
+ * If the inner content isn't a [SealEvent] (malformed, or a future
  * NIP-59 variant that wraps a rumor directly), the outer unwrap result is
  * returned as-is so callers can still route on kind. Either unwrap returning
  * null propagates as null.
  */
 suspend fun GiftWrapEvent.unwrapAndUnsealOrNull(signer: NostrSigner): Event? {
     val inner = unwrapOrNull(signer) ?: return null
-    return if (inner is SealedRumorEvent) inner.unsealOrNull(signer) else inner
+    return if (inner is SealEvent) inner.unsealOrNull(signer) else inner
 }

@@ -31,11 +31,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.followIdSet
-import com.vitorpamplona.quartz.nip51Lists.followList.followIds
-import com.vitorpamplona.quartz.nip51Lists.followList.follows
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.starterPack.followIdSet
+import com.vitorpamplona.quartz.nip51Lists.starterPack.followIds
+import com.vitorpamplona.quartz.nip51Lists.starterPack.follows
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag

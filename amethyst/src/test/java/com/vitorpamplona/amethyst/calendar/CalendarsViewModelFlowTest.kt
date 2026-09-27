@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -90,7 +90,7 @@ class CalendarsViewModelFlowTest {
         dTag: String?,
         title: String,
         members: List<Address> = emptyList(),
-    ) = CalendarEvent(
+    ) = CalendarCollectionEvent(
         id = id,
         pubKey = pubKey,
         createdAt = 1_700_000_000L,
@@ -121,7 +121,7 @@ class CalendarsViewModelFlowTest {
      * for the length of the test: `LocalCache.addressables` is a weak cache, and with nothing
      * holding a reference a calendar can be collected out from under the assertions.
      */
-    private fun consume(vararg calendars: CalendarEvent): List<AddressableNote?> {
+    private fun consume(vararg calendars: CalendarCollectionEvent): List<AddressableNote?> {
         calendars.forEach { LocalCache.justConsumeMyOwnEvent(it) }
         return calendars.map { LocalCache.getAddressableNoteIfExists(it.address()) }
     }

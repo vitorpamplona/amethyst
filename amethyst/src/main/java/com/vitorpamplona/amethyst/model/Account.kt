@@ -75,21 +75,21 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockPeopleList.Block
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestLists.InterestListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayFeeds.RelayFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserAssertionDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserAssertionsState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
@@ -145,18 +145,18 @@ import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.bookmarkSets.BookmarkSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetsState
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.StarterPacksState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
-import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.interestLists.InterestListState
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
-import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedListState
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
@@ -238,8 +238,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
@@ -281,10 +281,10 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
@@ -320,10 +320,10 @@ import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
 import com.vitorpamplona.quartz.nip94FileMetadata.dimension
 import com.vitorpamplona.quartz.nip94FileMetadata.fileSize
@@ -639,8 +639,8 @@ class Account(
     val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
     val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
 
-    val relayFeedsListDecryptionCache = RelayFeedsListDecryptionCache(signer)
-    val relayFeedsList = RelayFeedListState(signer, cache, relayFeedsListDecryptionCache, scope, settings)
+    val favoriteRelayListDecryptionCache = FavoriteRelayListDecryptionCache(signer)
+    val favoriteRelayList = FavoriteRelayListState(signer, cache, favoriteRelayListDecryptionCache, scope, settings)
 
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
@@ -758,8 +758,8 @@ class Account(
     val communityListDecryptionCache = CommunityListDecryptionCache(signer)
     val communityList = CommunityListState(signer, cache, communityListDecryptionCache, scope, settings)
 
-    val hashtagListDecryptionCache = HashtagListDecryptionCache(signer)
-    val hashtagList = HashtagListState(signer, cache, hashtagListDecryptionCache, scope, settings)
+    val interestListDecryptionCache = InterestListDecryptionCache(signer)
+    val interestList = InterestListState(signer, cache, interestListDecryptionCache, scope, settings)
 
     val favoriteAlgoFeedsListDecryptionCache = FavoriteAlgoFeedsListDecryptionCache(signer)
     val favoriteAlgoFeedsList = FavoriteAlgoFeedsListState(signer, cache, favoriteAlgoFeedsListDecryptionCache, scope, settings)
@@ -777,14 +777,14 @@ class Account(
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
-    val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
-    val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
-    val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
-    val followLists = FollowListsState(signer, cache, scope)
+    val followSetDecryptionCache = FollowSetDecryptionCache(signer)
+    val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)
+    val followSets = FollowSetsState(signer, cache, followSetDecryptionCache, scope)
+    val starterPacks = StarterPacksState(signer, cache, scope)
 
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
-    val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    val bookmarkSets = BookmarkSetsState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
     val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
@@ -795,8 +795,8 @@ class Account(
     val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
 
     // needs `emoji` above: nickname edits resolve :shortcodes: against the account's packs
-    val contactCardDecryptionCache = ContactCardDecryptionCache(signer)
-    val contactCards = ContactCardsState(signer, cache, contactCardDecryptionCache, emoji)
+    val userAssertionDecryptionCache = UserAssertionDecryptionCache(signer)
+    val userAssertions = UserAssertionsState(signer, cache, userAssertionDecryptionCache, emoji)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
 
@@ -893,7 +893,7 @@ class Account(
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
-    val allFollows = MergedFollowListsState(kind3FollowList, peopleLists, followLists, hashtagList, geohashList, communityList, scope)
+    val allFollows = MergedFollowListsState(kind3FollowList, followSets, starterPacks, interestList, geohashList, communityList, scope)
 
     val privateDMDecryptionCache = PrivateDMCache(signer)
     override val privateZapsDecryptionCache = PrivateZapCache(signer)
@@ -1030,10 +1030,10 @@ class Account(
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
-            peopleListCache = peopleListDecryptionCache,
+            peopleListCache = followSetDecryptionCache,
             muteListCache = muteListDecryptionCache,
             communityListCache = communityListDecryptionCache,
-            hashtagCache = hashtagListDecryptionCache,
+            hashtagCache = interestListDecryptionCache,
             geohashCache = geohashListDecryptionCache,
         )
 
@@ -1047,7 +1047,7 @@ class Account(
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             mineRelays = mineRelays.flow,
-            relayFeeds = relayFeedsList.flow,
+            relayFeeds = favoriteRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
@@ -1283,7 +1283,7 @@ class Account(
 
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
-        selectedZapType: LnZapEvent.ZapType,
+        selectedZapType: ZapReceiptEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
     ) {
         var changed = false
@@ -1707,7 +1707,7 @@ class Account(
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNotes.chunked(200).forEach { chunkedList ->
-                val template = DeletionEvent.build(chunkedList.mapNotNull { it.event })
+                val template = DeletionRequestEvent.build(chunkedList.mapNotNull { it.event })
                 val deletionEvent = signer.sign(template)
                 val myRelayList = outboxRelays.flow.value.toMutableSet()
                 chunkedList.forEach {
@@ -1738,7 +1738,7 @@ class Account(
 
         val recipients = (targetEvent.taggedUserIds() + targetEvent.pubKey).distinct().minus(signer.pubKey)
         broadcastPrivately(
-            NIP17Factory().createDeletionNIP17(DeletionEvent.build(myRumors), recipients, signer),
+            NIP17Factory().createDeletionNIP17(DeletionRequestEvent.build(myRumors), recipients, signer),
         )
     }
 
@@ -1749,7 +1749,7 @@ class Account(
         if (!isWriteable()) return
         if (event.pubKey != signer.pubKey) return
 
-        val deletionEvent = signer.sign(DeletionEvent.build(listOf(event)))
+        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(event)))
         client.publish(deletionEvent, outboxRelays.flow.value + additionalRelays)
         cache.justConsumeMyOwnEvent(deletionEvent)
     }
@@ -2126,9 +2126,9 @@ class Account(
 
     suspend fun unfollow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.unfollow(community))
 
-    suspend fun followHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.follow(tag))
+    suspend fun followHashtag(tag: String) = sendMyPublicAndPrivateOutbox(interestList.follow(tag))
 
-    suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.unfollow(tag))
+    suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(interestList.unfollow(tag))
 
     suspend fun followFavoriteAlgoFeed(dvm: AddressBookmark) = sendMyPublicAndPrivateOutbox(favoriteAlgoFeedsList.follow(dvm))
 
@@ -2176,7 +2176,7 @@ class Account(
     suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
         if (!isWriteable()) return
 
-        val template = DeletionEvent.build(listOf(event))
+        val template = DeletionRequestEvent.build(listOf(event))
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
@@ -2212,7 +2212,7 @@ class Account(
         if (!isWriteable()) return
         if (event.pubKey != signer.pubKey) return
 
-        val template = DeletionEvent.build(listOf(event))
+        val template = DeletionRequestEvent.build(listOf(event))
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
@@ -2597,7 +2597,7 @@ class Account(
                     }
                 }
             } else {
-                FileHeaderEvent.build(url, alt) {
+                FileMetadataEvent.build(url, alt) {
                     hash(headerInfo.hash)
                     fileSize(headerInfo.size)
 
@@ -2711,7 +2711,7 @@ class Account(
         val extraRelays = draftNote.relays
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
-        val deletionEvent = signer.sign(DeletionEvent.build(listOf(deletedDraft)))
+        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(deletedDraft)))
 
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
 
@@ -2937,7 +2937,7 @@ class Account(
         broadcast.forEach { client.publish(it, relayList) }
     }
 
-    override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
+    override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<EncryptedDmEvent>) {
         if (!isWriteable()) return
 
         val newEvent = signer.sign(eventTemplate)
@@ -3440,11 +3440,11 @@ class Account(
      * encrypted in the content. `null` clears a field. Goes out through the
      * account's extended outbox relays.
      */
-    suspend fun updateContactCardPetName(
+    suspend fun updateUserAssertionPetName(
         pubkeyHex: HexKey,
         petName: String?,
         summary: String?,
-    ) = sendMyPublicAndPrivateOutbox(contactCards.updatePetNameAndSummary(pubkeyHex, petName, summary))
+    ) = sendMyPublicAndPrivateOutbox(userAssertions.updatePetNameAndSummary(pubkeyHex, petName, summary))
 
     suspend fun showUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showUser(pubkeyHex))
@@ -3481,10 +3481,10 @@ class Account(
 
     suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
-        onReady: (event: NIP90ContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
+        onReady: (event: DvmContentDiscoveryRequestEvent, relays: Set<NormalizedRelayUrl>) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
-        val request = signer.sign<NIP90ContentDiscoveryRequestEvent>(NIP90ContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
+        val request = signer.sign<DvmContentDiscoveryRequestEvent>(DvmContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
 
         val relayList =
             dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }
@@ -3503,8 +3503,8 @@ class Account(
 
         return if (isWriteable()) {
             when {
-                event is PrivateDmEvent -> privateDMDecryptionCache.cachedDM(event)
-                event is LnZapRequestEvent && event.isPrivateZap() -> privateZapsDecryptionCache.cachedPrivateZap(event)?.content
+                event is EncryptedDmEvent -> privateDMDecryptionCache.cachedDM(event)
+                event is ZapRequestEvent && event.isPrivateZap() -> privateZapsDecryptionCache.cachedPrivateZap(event)?.content
                 event is DraftWrapEvent -> draftsDecryptionCache.preCachedDraft(event)?.content
                 else -> event.content
             }
@@ -3519,11 +3519,11 @@ class Account(
     suspend fun decryptContent(note: Note): String? {
         val event = note.event
         return when {
-            event is PrivateDmEvent && isWriteable() -> {
+            event is EncryptedDmEvent && isWriteable() -> {
                 privateDMDecryptionCache.decryptDM(event)
             }
 
-            event is LnZapRequestEvent && isWriteable() -> {
+            event is ZapRequestEvent && isWriteable() -> {
                 if (event.isPrivateZap()) {
                     if (isWriteable()) {
                         privateZapsDecryptionCache.decryptPrivateZap(event)?.content
@@ -3550,7 +3550,7 @@ class Account(
         }
     }
 
-    suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
+    suspend fun decryptZapOrNull(event: ZapRequestEvent): PrivateZapEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
 
     fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
@@ -3602,7 +3602,7 @@ class Account(
             note.countReportAuthorsBy(followingKeySet()) < reportWarningThreshold
     }
 
-    fun isDecryptedContentHidden(noteEvent: PrivateDmEvent): Boolean =
+    fun isDecryptedContentHidden(noteEvent: EncryptedDmEvent): Boolean =
         if (hiddenUsers.flow.value.hiddenWordsCase
                 .isNotEmpty()
         ) {
@@ -3747,11 +3747,11 @@ class Account(
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
 
-    suspend fun saveRelayFeedsList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(relayFeedsList.saveRelayList(trustedRelays))
+    suspend fun saveFavoriteRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(favoriteRelayList.saveRelayList(trustedRelays))
 
-    suspend fun followRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.addRelay(url))
+    suspend fun followRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.addRelay(url))
 
-    suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
+    suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
@@ -3783,7 +3783,7 @@ class Account(
             proxyRelayList.getProxyRelayList(),
             broadcastRelayList.getBroadcastRelayList(),
             indexerRelayList.getIndexerRelayList(),
-            relayFeedsList.getRelayFeedsList(),
+            favoriteRelayList.getFavoriteRelayList(),
             blockedRelayList.getBlockedRelayList(),
             muteList.getMuteList(),
             bookmarkState.getBookmarkList(),
@@ -4056,9 +4056,9 @@ class Account(
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
                     newNotesPreProcessor.runNew(newNotes)
-                    peopleLists.newNotes(newNotes)
-                    followLists.newNotes(newNotes)
-                    labeledBookmarkLists.newNotes(newNotes)
+                    followSets.newNotes(newNotes)
+                    starterPacks.newNotes(newNotes)
+                    bookmarkSets.newNotes(newNotes)
                     interestSets.newNotes(newNotes)
                     ownedEmojiPacks.newNotes(newNotes)
                 }
@@ -4069,9 +4069,9 @@ class Account(
             cache.live.deletedEventBundles.collect { deletedNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} deletedEventBundle Update with ${deletedNotes.size} new notes") {
                     newNotesPreProcessor.runDeleted(deletedNotes)
-                    peopleLists.deletedNotes(deletedNotes)
-                    followLists.deletedNotes(deletedNotes)
-                    labeledBookmarkLists.deletedNotes(deletedNotes)
+                    followSets.deletedNotes(deletedNotes)
+                    starterPacks.deletedNotes(deletedNotes)
+                    bookmarkSets.deletedNotes(deletedNotes)
                     interestSets.deletedNotes(deletedNotes)
                     ownedEmojiPacks.deletedNotes(deletedNotes)
                 }

@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -310,7 +311,7 @@ class DesktopRelaySubscriptionsCoordinator(
                 ),
                 // Zap receipts (kind 9735) targeting these notes
                 Filter(
-                    kinds = listOf(com.vitorpamplona.quartz.nip57Zaps.LnZapEvent.KIND),
+                    kinds = listOf(ZapReceiptEvent.KIND),
                     tags = mapOf("e" to noteIds),
                 ),
                 // Reposts (kind 6) targeting these notes

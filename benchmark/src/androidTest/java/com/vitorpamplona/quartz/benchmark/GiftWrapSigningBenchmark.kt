@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -95,7 +95,7 @@ class GiftWrapSigningBenchmark {
 
         benchmarkRule.measureRepeated {
             runBlocking {
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = msg,
                     encryptTo = receiver.pubKey,
                     signer = sender,
@@ -128,7 +128,7 @@ class GiftWrapSigningBenchmark {
 
         val seal =
             runBlocking {
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = msg,
                     encryptTo = receiver.pubKey,
                     signer = sender,
@@ -169,7 +169,7 @@ class GiftWrapSigningBenchmark {
 
         val seal =
             runBlocking {
-                SealedRumorEvent.create(
+                SealEvent.create(
                     event = msg,
                     encryptTo = receiver.pubKey,
                     signer = sender,

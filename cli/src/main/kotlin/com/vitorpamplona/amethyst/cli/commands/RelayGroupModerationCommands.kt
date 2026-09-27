@@ -26,10 +26,10 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
 
 /**
  * Moderator/admin write verbs for a relay group (the relay is the final authority
@@ -94,7 +94,7 @@ object RelayGroupModerationCommands {
             // A kind-9002 re-asserts the whole metadata, so omitted fields must be carried over
             // from the current 39000 — otherwise editing only a flag would wipe name/about/tags.
             val template =
-                EditMetadataEvent.build(
+                GroupEditMetadataEvent.build(
                     groupId,
                     name = args.flag("name") ?: meta?.name(),
                     about = args.flag("about") ?: meta?.about(),
@@ -127,7 +127,7 @@ object RelayGroupModerationCommands {
     ): Int {
         val code = Args(rest).flag("code") ?: return Output.error("bad_args", "relaygroup invite RELAY GROUP_ID --code CODE")
         return publishScoped(dataDir, rest, "relaygroup invite RELAY GROUP_ID --code CODE", allowedFlags = arrayOf("code")) { _, groupId, _ ->
-            CreateInviteEvent.build(groupId, code)
+            GroupCreateInviteEvent.build(groupId, code)
         }
     }
 
@@ -153,7 +153,7 @@ object RelayGroupModerationCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
-            val signed = ctx.signer.sign(PutUserEvent.build(groupId, listOf(pubkey to roles)))
+            val signed = ctx.signer.sign(GroupPutUserEvent.build(groupId, listOf(pubkey to roles)))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
@@ -186,7 +186,7 @@ object RelayGroupModerationCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
-            val signed = ctx.signer.sign(RemoveUserEvent.build(groupId, listOf(pubkey)))
+            val signed = ctx.signer.sign(GroupRemoveUserEvent.build(groupId, listOf(pubkey)))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(

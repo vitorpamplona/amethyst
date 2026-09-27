@@ -23,10 +23,10 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
@@ -105,7 +105,7 @@ class Nip47Server(
     /**
      * Decrypts and parses an incoming client request.
      */
-    suspend fun parseRequest(event: LnZapPaymentRequestEvent): Request = event.decryptRequest(signer)
+    suspend fun parseRequest(event: NwcRequestEvent): Request = event.decryptRequest(signer)
 
     // --- Response builders ---
 
@@ -114,9 +114,9 @@ class Nip47Server(
      */
     suspend fun buildResponse(
         response: Response,
-        requestEvent: LnZapPaymentRequestEvent,
-    ): LnZapPaymentResponseEvent =
-        LnZapPaymentResponseEvent.createResponse(
+        requestEvent: NwcRequestEvent,
+    ): NwcResponseEvent =
+        NwcResponseEvent.createResponse(
             response = response,
             requestEvent = requestEvent,
             signer = signer,
@@ -127,11 +127,11 @@ class Nip47Server(
      * Builds an error response for any method.
      */
     suspend fun respondError(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         code: NwcErrorCode,
         message: String,
         resultType: String? = null,
-    ): LnZapPaymentResponseEvent {
+    ): NwcResponseEvent {
         val method = resultType ?: requestEvent.decryptRequest(signer).method ?: NwcMethod.PAY_INVOICE
         return buildResponse(NwcErrorResponse(method, NwcError(code, message)), requestEvent)
     }
@@ -140,10 +140,10 @@ class Nip47Server(
      * Builds a pay_invoice success response.
      */
     suspend fun respondPayInvoice(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         preimage: String? = null,
         feesPaid: Long? = null,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             PayInvoiceSuccessResponse(PayInvoiceSuccessResponse.PayInvoiceResultParams(preimage, feesPaid)),
             requestEvent,
@@ -153,10 +153,10 @@ class Nip47Server(
      * Builds a pay_keysend success response.
      */
     suspend fun respondPayKeysend(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         preimage: String? = null,
         feesPaid: Long? = null,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             PayKeysendSuccessResponse(PayKeysendSuccessResponse.PayKeysendResult(preimage, feesPaid)),
             requestEvent,
@@ -166,9 +166,9 @@ class Nip47Server(
      * Builds a get_balance success response.
      */
     suspend fun respondGetBalance(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         balance: Long,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             GetBalanceSuccessResponse(GetBalanceSuccessResponse.GetBalanceResult(balance)),
             requestEvent,
@@ -178,7 +178,7 @@ class Nip47Server(
      * Builds a get_info success response.
      */
     suspend fun respondGetInfo(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         alias: String? = null,
         color: String? = null,
         pubkey: String? = null,
@@ -188,7 +188,7 @@ class Nip47Server(
         methods: List<String>? = null,
         notifications: List<String>? = null,
         lud16: String? = null,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             GetInfoSuccessResponse(
                 GetInfoSuccessResponse.GetInfoResult(
@@ -211,26 +211,26 @@ class Nip47Server(
      * Builds a make_invoice success response.
      */
     suspend fun respondMakeInvoice(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         transaction: NwcTransaction,
-    ): LnZapPaymentResponseEvent = buildResponse(MakeInvoiceSuccessResponse(transaction), requestEvent)
+    ): NwcResponseEvent = buildResponse(MakeInvoiceSuccessResponse(transaction), requestEvent)
 
     /**
      * Builds a lookup_invoice success response.
      */
     suspend fun respondLookupInvoice(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         transaction: NwcTransaction,
-    ): LnZapPaymentResponseEvent = buildResponse(LookupInvoiceSuccessResponse(transaction), requestEvent)
+    ): NwcResponseEvent = buildResponse(LookupInvoiceSuccessResponse(transaction), requestEvent)
 
     /**
      * Builds a list_transactions success response.
      */
     suspend fun respondListTransactions(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         transactions: List<NwcTransaction>,
         totalCount: Long? = null,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             ListTransactionsSuccessResponse(
                 ListTransactionsSuccessResponse.ListTransactionsResult(transactions, totalCount),
@@ -242,12 +242,12 @@ class Nip47Server(
      * Builds a get_budget success response.
      */
     suspend fun respondGetBudget(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         usedBudget: Long? = null,
         totalBudget: Long? = null,
         renewsAt: Long? = null,
         renewalPeriod: String? = null,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             GetBudgetSuccessResponse(
                 GetBudgetSuccessResponse.GetBudgetResult(usedBudget, totalBudget, renewsAt, renewalPeriod),
@@ -259,10 +259,10 @@ class Nip47Server(
      * Builds a sign_message success response.
      */
     suspend fun respondSignMessage(
-        requestEvent: LnZapPaymentRequestEvent,
+        requestEvent: NwcRequestEvent,
         message: String,
         signature: String,
-    ): LnZapPaymentResponseEvent =
+    ): NwcResponseEvent =
         buildResponse(
             SignMessageSuccessResponse(SignMessageSuccessResponse.SignMessageResult(message, signature)),
             requestEvent,
@@ -317,7 +317,7 @@ class Nip47Server(
      */
     fun requestsFilter(since: Long? = null): Filter =
         Filter(
-            kinds = listOf(LnZapPaymentRequestEvent.KIND),
+            kinds = listOf(NwcRequestEvent.KIND),
             tags = mapOf("p" to listOf(signer.pubKey)),
             since = since,
         )

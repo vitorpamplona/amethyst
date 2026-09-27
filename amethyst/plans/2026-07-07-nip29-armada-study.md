@@ -392,11 +392,11 @@ can be a group event if it carries `h` and the relay accepts the kind."
 has:
 
 - `metadata/` — `GroupMetadataEvent` (kind **39000**), `GroupAdminsEvent`
-  (39001), `GroupMembersEvent` (39002), `SupportedRolesEvent` (39003).
-- `moderation/` — `CreateGroupEvent` (9007), `EditMetadataEvent` (9002),
-  `PutUserEvent` (9000), `RemoveUserEvent` (9001), `DeleteEventEvent` (9005),
-  `DeleteGroupEvent` (9008), `CreateInviteEvent` (9009), plus tag helpers.
-- `request/` — `JoinRequestEvent` (9021), `LeaveRequestEvent` (9022).
+  (39001), `GroupMembersEvent` (39002), `GroupRolesEvent` (39003).
+- `moderation/` — `CreateGroupEvent` (9007), `GroupEditMetadataEvent` (9002),
+  `GroupPutUserEvent` (9000), `GroupRemoveUserEvent` (9001), `GroupDeleteEventEvent` (9005),
+  `DeleteGroupEvent` (9008), `GroupCreateInviteEvent` (9009), plus tag helpers.
+- `request/` — `GroupJoinRequestEvent` (9021), `GroupLeaveRequestEvent` (9022).
 - `tags/` — `GroupIdTag` (the `h` tag), `CodeTag`, `GroupAdminTag`, `RoleTag`,
   and even a `PreviousTag`.
 
@@ -427,7 +427,7 @@ NIP-04/17 DMs, NIP-28 public channels, and NIP-C7 ephemeral chats — all under
 ### 5.2 The main protocol gap
 
 There is **no kind-9 group chat message event** in `nip29RelayGroups/`
-(`CreateInviteEvent` at 9009 is the highest kind present; nothing for kind 9).
+(`GroupCreateInviteEvent` at 9009 is the highest kind present; nothing for kind 9).
 The 9xxx moderation, 39xxx metadata, and 9021/9022 request events exist, but the
 actual message carrier does not. This is the first thing to build:
 

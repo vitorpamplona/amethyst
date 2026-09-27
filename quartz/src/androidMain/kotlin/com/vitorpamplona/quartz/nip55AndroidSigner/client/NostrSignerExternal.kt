@@ -36,8 +36,8 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.BackgroundRequestHandler
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.ForegroundRequestHandler
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 class NostrSignerExternal(
     pubKey: HexKey,
@@ -163,7 +163,7 @@ class NostrSignerExternal(
         throw convertExceptions("Could not derive key", result)
     }
 
-    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
+    override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent {
         if (!event.isPrivateZap()) throw SignerExceptions.NothingToDecrypt()
 
         val result = backgroundQuery.decryptZapEvent(event) ?: foregroundQuery.decryptZapEvent(event)

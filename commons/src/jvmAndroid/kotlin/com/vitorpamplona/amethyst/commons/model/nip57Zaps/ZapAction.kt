@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 /**
  * Handles NIP-57 zap requests and invoice fetching.
@@ -66,7 +66,7 @@ object ZapAction {
         relays: Set<NormalizedRelayUrl>,
         signer: NostrSigner,
         resolver: LightningAddressResolver,
-        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        zapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
         onProgress: (Float) -> Unit = {},
     ): ZapResult {
         if (!signer.isWriteable()) {
@@ -76,7 +76,7 @@ object ZapAction {
         // Create zap request using quartz factory
         val zapRequest =
             try {
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     zappedEvent = targetEvent,
                     relays = relays,
                     signer = signer,
@@ -120,7 +120,7 @@ object ZapAction {
         relays: Set<NormalizedRelayUrl>,
         signer: NostrSigner,
         resolver: LightningAddressResolver,
-        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        zapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
         onProgress: (Float) -> Unit = {},
     ): ZapResult {
         if (!signer.isWriteable()) {
@@ -130,7 +130,7 @@ object ZapAction {
         // Create zap request for user
         val zapRequest =
             try {
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     userHex = userPubHex,
                     relays = relays,
                     signer = signer,

@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSecon
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
@@ -178,14 +178,14 @@ class DesktopNotificationAutoDispatcher(
         when (event) {
             is ReactionEvent -> NotifKind.REACTION
             is RepostEvent, is GenericRepostEvent -> NotifKind.REPOST
-            is LnZapEvent, is NutzapEvent, is OnchainZapEvent -> NotifKind.ZAP
+            is ZapReceiptEvent, is NutzapEvent, is OnchainZapEvent -> NotifKind.ZAP
             is TextNoteEvent -> {
                 val isReply = event.tags.any { it.size > 1 && it[0] == "e" }
                 if (isReply) NotifKind.REPLY else NotifKind.MENTION
             }
             is CommentEvent -> NotifKind.REPLY
             is ChannelMessageEvent -> NotifKind.MENTION
-            is PrivateDmEvent,
+            is EncryptedDmEvent,
             is ChatMessageEvent,
             is GiftWrapEvent,
             is ChatMessageEncryptedFileHeaderEvent,
@@ -199,7 +199,7 @@ class DesktopNotificationAutoDispatcher(
     ): NotificationSpec {
         val effectivePubKey =
             when (event) {
-                is LnZapEvent -> event.zapRequest?.pubKey ?: event.pubKey
+                is ZapReceiptEvent -> event.zapRequest?.pubKey ?: event.pubKey
                 else -> event.pubKey
             }
         val displayName =
@@ -207,7 +207,7 @@ class DesktopNotificationAutoDispatcher(
                 ?: "Someone"
 
         val amountText =
-            (event as? LnZapEvent)?.amount?.let { " ${it.toLong() / 1000} sats" } ?: ""
+            (event as? ZapReceiptEvent)?.amount?.let { " ${it.toLong() / 1000} sats" } ?: ""
 
         val title =
             when (kind) {

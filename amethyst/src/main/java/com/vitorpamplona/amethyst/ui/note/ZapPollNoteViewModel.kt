@@ -30,8 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -233,9 +233,9 @@ class PollNoteViewModel : ViewModel() {
         user: User,
     ): Boolean =
         pollNote!!.zaps.any {
-            val zapEvent = it.value?.event as? LnZapEvent
+            val zapEvent = it.value?.event as? ZapReceiptEvent
             val privateZapAuthor =
-                (it.key.event as? LnZapRequestEvent)?.let {
+                (it.key.event as? ZapRequestEvent)?.let {
                     account.privateZapsDecryptionCache.cachedPrivateZap(it)
                 }
             zapEvent?.zappedPollOption() == option &&
@@ -244,7 +244,7 @@ class PollNoteViewModel : ViewModel() {
 
     private fun zappedPollOptionAmount(option: Int): BigDecimal =
         pollNote?.zaps?.values?.sumOf {
-            val event = it?.event as? LnZapEvent
+            val event = it?.event as? ZapReceiptEvent
             val zapAmount = event?.amount ?: BigDecimal.ZERO
             val isValidAmount = isValidInputVoteAmount(event?.amount)
 
@@ -258,7 +258,7 @@ class PollNoteViewModel : ViewModel() {
 
     private fun totalZapped(): BigDecimal =
         pollNote?.zaps?.values?.sumOf {
-            val zapEvent = (it?.event as? LnZapEvent)
+            val zapEvent = (it?.event as? ZapReceiptEvent)
             val zapAmount = zapEvent?.amount ?: BigDecimal.ZERO
             val isValidAmount = isValidInputVoteAmount(zapEvent?.amount)
 

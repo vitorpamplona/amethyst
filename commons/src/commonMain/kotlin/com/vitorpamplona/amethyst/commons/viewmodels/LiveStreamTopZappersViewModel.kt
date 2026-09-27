@@ -30,8 +30,8 @@ import com.vitorpamplona.amethyst.commons.nip53LiveActivities.LiveActivityTopZap
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ZapContribution
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.toLongValue
 import kotlinx.coroutines.Dispatchers
@@ -163,7 +163,7 @@ class LiveStreamTopZappersViewModel(
 
     private fun contributionFromStreamZap(note: Note): ZapContribution? =
         when (val ev = note.event) {
-            is LnZapEvent -> {
+            is ZapReceiptEvent -> {
                 val request = ev.zapRequest ?: return null
                 val sats = ev.amount()?.toLongValue() ?: return null
                 ZapContribution(note.idHex, request.pubKey, request.isAnonTagged(), sats)
@@ -179,12 +179,12 @@ class LiveStreamTopZappersViewModel(
         zapRequestNote: Note,
         receiptNote: Note?,
     ): ZapContribution? {
-        val receiptEv = receiptNote?.event as? LnZapEvent ?: return null
-        val request = zapRequestNote.event as? LnZapRequestEvent ?: return null
+        val receiptEv = receiptNote?.event as? ZapReceiptEvent ?: return null
+        val request = zapRequestNote.event as? ZapRequestEvent ?: return null
         val sats = receiptEv.amount()?.toLongValue() ?: return null
         return ZapContribution(receiptNote.idHex, request.pubKey, request.isAnonTagged(), sats)
     }
 }
 
 /** True for both public anonymous and NIP-57 private zaps (any `anon` tag, empty or encrypted). */
-private fun LnZapRequestEvent.isAnonTagged(): Boolean = tags.any { it.isNotEmpty() && it[0] == "anon" }
+private fun ZapRequestEvent.isAnonTagged(): Boolean = tags.any { it.isNotEmpty() && it[0] == "anon" }

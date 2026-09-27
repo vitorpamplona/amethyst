@@ -26,6 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.toMarkedETag
 
-fun TagArrayBuilder<PrivateDmEvent>.reply(tag: EventReference) = add(MarkedETag.assemble(tag.eventId, tag.relayHint, MarkedETag.MARKER.REPLY, tag.author))
+fun TagArrayBuilder<EncryptedDmEvent>.reply(tag: EventReference) = add(MarkedETag.assemble(tag.eventId, tag.relayHint, MarkedETag.MARKER.REPLY, tag.author))
 
-fun TagArrayBuilder<PrivateDmEvent>.reply(tag: EventHintBundle<PrivateDmEvent>) = add(tag.toMarkedETag(MarkedETag.MARKER.REPLY).toTagArray())
+fun TagArrayBuilder<EncryptedDmEvent>.reply(tag: EventHintBundle<EncryptedDmEvent>) = add(tag.toMarkedETag(MarkedETag.MARKER.REPLY).toTagArray())

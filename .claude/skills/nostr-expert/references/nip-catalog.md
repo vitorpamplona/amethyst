@@ -15,7 +15,7 @@ under `experimental/`**. The categorized list below may lag behind —
 | 04 | `nip04Dm/` | EncryptedDmEvent.kt | Legacy encrypted DMs (deprecated for NIP-17) |
 | 05 | `nip05DnsIdentifiers/` | UserHexResolver.kt, Nip05Client.kt | Internet identifiers; `resolveUserHexOrNull` resolves hex/npub/nprofile/`name@domain` → pubkey (see references/nip05-identifiers.md) |
 | 06 | `nip06KeyDerivation/` | Mnemonic-related | BIP-39 key derivation |
-| 09 | `nip09Deletions/` | DeletionEvent.kt | Event deletion requests (kind 5) |
+| 09 | `nip09Deletions/` | DeletionRequestEvent.kt | Event deletion requests (kind 5) |
 | 11 | `nip11RelayInfo/` | RelayInformation.kt | Relay metadata |
 | 13 | `nip13Pow/` | ProofOfWork.kt | Proof of work |
 | 14 | `nip14Subject/` | Subject tags | Subject tags for text notes |
@@ -33,7 +33,7 @@ ent for NIP-04) |
 | 10 | `nip10Notes/` | TextNoteEvent.kt | Text notes with threading (kind 1) |
 | 18 | `nip18Reposts/` | RepostEvent.kt, GenericRepostEvent.kt | Reposts (kind 6, 16) |
 | 22 | `nip22Comments/` | CommentEvent.kt | Comments (kind 1111) |
-| 23 | `nip23LongContent/` | LongTextNoteEvent.kt | Long-form content (kind 30023) |
+| 23 | `nip23LongContent/` | LongFormContentEvent.kt | Long-form content (kind 30023) |
 | 25 | `nip25Reactions/` | ReactionEvent.kt | Reactions (kind 7) |
 | 31 | `nip31Alts/` | Alt tags | Alt description tags |
 | 36 | `nip36SensitiveContent/` | Content warnings | Content warning tags |
@@ -62,7 +62,7 @@ ent for NIP-04) |
 | 46 | `nip46RemoteSigner/` | NostrConnectEvent.kt | Remote signer protocol (bunker) |
 | 47 | `nip47WalletConnect/` | Nostr Wallet Connect | Wallet connection protocol |
 | 56 | `nip56Reports/` | ReportEvent.kt | Reports (kind 1984) |
-| 57 | `nip57Zaps/` | LnZapEvent.kt, LnZapRequestEvent.kt | Lightning zaps (kinds 9734, 9735) |
+| 57 | `nip57Zaps/` | ZapReceiptEvent.kt, ZapRequestEvent.kt | Lightning zaps (kinds 9734, 9735) |
 | 58 | `nip58Badges/` | Badge events | Badge definitions & awards (kinds 30009, 8) |
 | 59 | `nip59Giftwrap/` | GiftWrapEvent.kt | Gift-wrapped events for privacy |
 | 75 | `nip75ZapGoals/` | ZapGoalEvent.kt | Zap goals (kind 9041) |
@@ -76,7 +76,7 @@ ent for NIP-04) |
 | 35 | `nip35Torrents/` | Torrent events | Torrent tracking |
 | 52 | `nip52Calendar/` | Calendar events | Calendar time-based/date-based (kinds 31922-31925) |
 | 53 | `nip53LiveActivities/` | LiveActivitiesEvent.kt | Live events/streaming (kind 30311) |
-| 54 | `nip54Wiki/` | WikiNoteEvent.kt | Wiki pages (kind 30818) |
+| 54 | `nip54Wiki/` | WikiArticleEvent.kt | Wiki pages (kind 30818) |
 | 68 | `nip68Picture/` | Picture metadata | Picture metadata |
 | 71 | `nip71Video/` | 7 video event types | Video events (kinds 34235, 35235, 1234, 1235) |
 | 72 | `nip72ModCommunities/` | Community events | Moderated communities (kinds 34550, 34551, 9041) |
@@ -84,7 +84,7 @@ ent for NIP-04) |
 | 89 | `nip89AppHandlers/` | AppDefinitionEvent.kt | App recommendations (kinds 31990, 31989) |
 | 90 | `nip90Dvms/` | DVM job events | Data Vending Machines (DVMs) (kinds 5000-7000) |
 | 92 | `nip92IMeta/` | IMeta tags | Image metadata tags |
-| 94 | `nip94FileMetadata/` | FileHeaderEvent.kt, FileStorageEvent.kt | File metadata (kind 1063) |
+| 94 | `nip94FileMetadata/` | FileMetadataEvent.kt, FileStorageEvent.kt | File metadata (kind 1063) |
 | 96 | `nip96FileStorage/` | HTTP file storage | HTTP-based file storage |
 | 99 | `nip99Classifieds/` | ClassifiedsEvent.kt | Classifieds/marketplace (kind 30402) |
 | A0 | `nipA0VoiceMessages/` | Voice messages | Voice message events |
@@ -93,7 +93,7 @@ ent for NIP-04) |
 ### Web/Storage/Other
 | NIP | Directory | Key Files | Description |
 |-----|-----------|-----------|-------------|
-| 38 | `nip38UserStatus/` | StatusEvent.kt | User status (kind 30315) |
+| 38 | `nip38UserStatus/` | UserStatusEvent.kt | User status (kind 30315) |
 | 60 | `nip60Payment/` | Wallet events | Wallet info (kind 13194) |
 | 61 | `nip61PaymentRequest/` | Nut zaps | Cashu payment requests |
 | 64 | `nip64Chess/` | Chess moves | Chess move events |

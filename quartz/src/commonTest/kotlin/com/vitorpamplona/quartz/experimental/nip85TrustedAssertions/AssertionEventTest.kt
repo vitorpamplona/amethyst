@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.experimental.nip85TrustedAssertions
 import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -36,7 +36,7 @@ class AssertionEventTest {
     fun parseUserAssertionWithAllTags() {
         val targetUser = "e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411"
         val event =
-            ContactCardEvent(
+            UserAssertionEvent(
                 id = "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234",
                 pubKey = servicePubKey,
                 createdAt = 1700000000,
@@ -89,7 +89,7 @@ class AssertionEventTest {
     @Test
     fun parseUserAssertionMinimalTags() {
         val event =
-            ContactCardEvent(
+            UserAssertionEvent(
                 id = "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234",
                 pubKey = servicePubKey,
                 createdAt = 1700000000,
@@ -228,7 +228,7 @@ class AssertionEventTest {
 
     @Test
     fun eventKindsAreCorrect() {
-        assertEquals(30382, ContactCardEvent.KIND)
+        assertEquals(30382, UserAssertionEvent.KIND)
         assertEquals(30383, EventAssertionEvent.KIND)
         assertEquals(30384, AddressableAssertionEvent.KIND)
         assertEquals(30385, ExternalIdAssertionEvent.KIND)

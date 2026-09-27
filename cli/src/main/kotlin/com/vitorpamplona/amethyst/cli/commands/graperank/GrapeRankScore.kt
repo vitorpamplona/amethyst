@@ -34,8 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import kotlin.math.roundToInt
@@ -293,8 +293,8 @@ object GrapeRankScore {
         // Everything in the store already passed verifyAndStore, so mark the
         // deletions as verified and skip the redundant signature check.
         val deletions = DeletionIndex()
-        for (ev in ctx.store.query<Event>(Filter(kinds = listOf(DeletionEvent.KIND)))) {
-            if (ev is DeletionEvent) deletions.add(ev, wasVerified = true)
+        for (ev in ctx.store.query<Event>(Filter(kinds = listOf(DeletionRequestEvent.KIND)))) {
+            if (ev is DeletionRequestEvent) deletions.add(ev, wasVerified = true)
         }
 
         var dropped = 0

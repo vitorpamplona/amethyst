@@ -23,15 +23,15 @@ package com.vitorpamplona.quartz.nip47WalletConnect.cache
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.caches.DecryptCache
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 
 class NostrWalletConnectRequestCache(
     signer: NostrSigner,
 ) {
     private val decryptionCache =
-        object : LruCache<LnZapPaymentRequestEvent, NWCRequestDecryptCache>(50) {
-            override fun create(key: LnZapPaymentRequestEvent): NWCRequestDecryptCache? =
+        object : LruCache<NwcRequestEvent, NWCRequestDecryptCache>(50) {
+            override fun create(key: NwcRequestEvent): NWCRequestDecryptCache? =
                 if (key.content.isNotBlank() && key.canDecrypt(signer)) {
                     NWCRequestDecryptCache(signer)
                 } else {
@@ -39,16 +39,16 @@ class NostrWalletConnectRequestCache(
                 }
         }
 
-    fun cachedRequest(event: LnZapPaymentRequestEvent): Request? = decryptionCache[event]?.cached()
+    fun cachedRequest(event: NwcRequestEvent): Request? = decryptionCache[event]?.cached()
 
-    suspend fun decryptRequest(event: LnZapPaymentRequestEvent) = decryptionCache[event]?.decrypt(event)
+    suspend fun decryptRequest(event: NwcRequestEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class NWCRequestDecryptCache(
     signer: NostrSigner,
-) : DecryptCache<LnZapPaymentRequestEvent, Request>(signer) {
+) : DecryptCache<NwcRequestEvent, Request>(signer) {
     override suspend fun decryptAndParse(
-        event: LnZapPaymentRequestEvent,
+        event: NwcRequestEvent,
         signer: NostrSigner,
     ) = event.decryptRequest(signer)
 }

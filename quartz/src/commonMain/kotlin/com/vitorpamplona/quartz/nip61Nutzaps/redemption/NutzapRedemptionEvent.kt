@@ -20,52 +20,53 @@
  */
 package com.vitorpamplona.quartz.nip61Nutzaps.redemption
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Immutable
-class NutzapRedemptionEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider,
-    PubKeyHintProvider {
-    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
-
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
-
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
-
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
-
-    fun redeemedNutzaps() = tags.redeemedNutzaps()
-
-    companion object {
-        const val KIND = 7376
-
-        fun build(
-            nutzap: EventHintBundle<NutzapEvent>,
-            encryptedContent: String,
-            createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NutzapRedemptionEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, encryptedContent, createdAt) {
-            redeemedNutzap(nutzap)
-            notifySender(nutzap)
-            initializer()
-        }
-    }
+/**
+ * Builds a NIP-61 nutzap redemption: a NIP-60 spending history event (kind 7376)
+ * that publicly marks [nutzap] as redeemed and notifies its sender.
+ *
+ * [encryptedContent] is the NIP-44 encrypted history payload (direction, amount, ...).
+ */
+fun CashuSpendingHistoryEvent.Companion.buildNutzapRedemption(
+    nutzap: EventHintBundle<NutzapEvent>,
+    encryptedContent: String,
+    createdAt: Long = TimeUtils.now(),
+    initializer: TagArrayBuilder<CashuSpendingHistoryEvent>.() -> Unit = {},
+) = eventTemplate(KIND, encryptedContent, createdAt) {
+    redeemedNutzap(nutzap)
+    notifySender(nutzap)
+    initializer()
 }
+
+/** The old `NutzapRedemptionEvent.build`. */
+@Deprecated(
+    "Use CashuSpendingHistoryEvent.buildNutzapRedemption.",
+    ReplaceWith(
+        "CashuSpendingHistoryEvent.buildNutzapRedemption(nutzap, encryptedContent, createdAt, initializer)",
+        "com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent",
+        "com.vitorpamplona.quartz.nip61Nutzaps.redemption.buildNutzapRedemption",
+    ),
+)
+fun CashuSpendingHistoryEvent.Companion.build(
+    nutzap: EventHintBundle<NutzapEvent>,
+    encryptedContent: String,
+    createdAt: Long = TimeUtils.now(),
+    initializer: TagArrayBuilder<CashuSpendingHistoryEvent>.() -> Unit = {},
+) = buildNutzapRedemption(nutzap, encryptedContent, createdAt, initializer)
+
+/**
+ * NIP-61 redemptions are NIP-60 spending history events (kind 7376). This used to be a
+ * second class for the same kind, which `EventFactory` could never instantiate because
+ * [CashuSpendingHistoryEvent] matched first.
+ */
+@Deprecated(
+    "Kind 7376 is the NIP-60 spending history event. Use CashuSpendingHistoryEvent and CashuSpendingHistoryEvent.buildNutzapRedemption.",
+    ReplaceWith("CashuSpendingHistoryEvent", "com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent"),
+)
+typealias NutzapRedemptionEvent = CashuSpendingHistoryEvent

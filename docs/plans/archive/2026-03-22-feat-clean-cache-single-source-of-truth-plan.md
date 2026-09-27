@@ -166,7 +166,7 @@ Four-phase migration: FeedScreen first (proves pattern), then expand cache cover
 
 ##### 1a. Expand `DesktopLocalCache.consume()` coverage
 
-Currently handles: MetadataEvent, TextNoteEvent, ReactionEvent, LnZapRequestEvent, LnZapEvent.
+Currently handles: MetadataEvent, TextNoteEvent, ReactionEvent, ZapRequestEvent, ZapReceiptEvent.
 
 **Add support for:**
 
@@ -174,7 +174,7 @@ Currently handles: MetadataEvent, TextNoteEvent, ReactionEvent, LnZapRequestEven
 |------------|------|--------|-------|
 | `RepostEvent` | 6 | `consumeRepost()` | `Note.addBoost()` on target |
 | `ContactListEvent` | 3 | `consumeContactList()` | Updates `_followedUsers` StateFlow |
-| `LongTextNoteEvent` | 30023 | `consumeLongTextNote()` | Creates Note like TextNote |
+| `LongFormContentEvent` | 30023 | `consumeLongFormContent()` | Creates Note like TextNote |
 | `BookmarkListEvent` | 30001 | `consumeBookmarkList()` | Stores on `addressableNotes` or dedicated field |
 
 **File:** `desktopApp/.../cache/DesktopLocalCache.kt`
@@ -461,7 +461,7 @@ when (val state = feedState) {
 
 ##### Phase 1 Acceptance Criteria
 
-- [ ] `DesktopLocalCache.consume()` handles RepostEvent, ContactListEvent, LongTextNoteEvent, BookmarkListEvent
+- [ ] `DesktopLocalCache.consume()` handles RepostEvent, ContactListEvent, LongFormContentEvent, BookmarkListEvent
 - [ ] consume() uses kind-based registry dispatch (not growing `when` block)
 - [ ] `followedUsers` is `MutableStateFlow` (not `@Volatile`)
 - [ ] Coordinator scope uses `SupervisorJob` + `CoroutineExceptionHandler`
@@ -513,7 +513,7 @@ Apply the proven pattern from Phase 1 to all other screens. Each screen gets at 
 ##### 2d. ReadsScreen
 
 - `DesktopFeedViewModel(DesktopReadsFeedFilter(cache), cache)`
-- **Card rendering:** ReadsScreen needs `LongFormNoteCard` that extracts title/summary/topics from `Note.event as? LongTextNoteEvent`. Separate composable, not FeedNoteCard.
+- **Card rendering:** ReadsScreen needs `LongFormNoteCard` that extracts title/summary/topics from `Note.event as? LongFormContentEvent`. Separate composable, not FeedNoteCard.
 
 **File:** `desktopApp/.../ui/ReadsScreen.kt`
 
@@ -523,7 +523,7 @@ Apply the proven pattern from Phase 1 to all other screens. Each screen gets at 
   ```kotlin
   fun Note.toNotificationItem(): NotificationItem? = when (event) {
       is ReactionEvent -> NotificationItem.Reaction(this)
-      is LnZapEvent -> NotificationItem.Zap(this)
+      is ZapReceiptEvent -> NotificationItem.Zap(this)
       is TextNoteEvent -> if (isReply) NotificationItem.Reply(this) else NotificationItem.Mention(this)
       else -> null
   }

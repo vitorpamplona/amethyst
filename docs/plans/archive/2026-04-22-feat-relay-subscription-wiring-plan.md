@@ -61,10 +61,10 @@ private var lastDmCreatedAt = 0L
 
 fun consumeIfRelevant(event: Event): Boolean {
     return when (event.kind) {
-        ChatMessageRelayListEvent.KIND -> {
+        DmRelayListEvent.KIND -> {
             if (event.createdAt > lastDmCreatedAt) {
                 lastDmCreatedAt = event.createdAt
-                consumeDmRelayList(event as ChatMessageRelayListEvent)
+                consumeDmRelayList(event as DmRelayListEvent)
             }
             true
         }

@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 
@@ -50,7 +50,7 @@ fun filterGoalForLiveActivities(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.LIVE_CHAT,
-                        kinds = listOf(GoalEvent.KIND),
+                        kinds = listOf(ZapGoalEvent.KIND),
                         ids = listOf(goalId),
                         limit = 1,
                     ),
@@ -60,7 +60,7 @@ fun filterGoalForLiveActivities(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.LIVE_CHAT,
-                        kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
+                        kinds = listOf(ZapReceiptEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
                         tags = mapOf("e" to listOf(goalId)),
                         limit = 200,
                         since = since?.get(relay)?.time,

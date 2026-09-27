@@ -25,13 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 /**
  * NIP-57 zap-request building + LN address extraction.
  *
- * Returns a signed [LnZapRequestEvent] (kind:9734) — the artifact a caller
+ * Returns a signed [ZapRequestEvent] (kind:9734) — the artifact a caller
  * hands to a LNURL-pay callback to receive a BOLT11 invoice.
  *
  * **Caller responsibilities** that the Amethyst Android flow handles but
@@ -86,10 +86,10 @@ object ZapActions {
         amountMillisats: Long,
         inboxRelays: Set<NormalizedRelayUrl>,
         comment: String = "",
-        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        zapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
         lnurl: String? = null,
-    ): LnZapRequestEvent =
-        LnZapRequestEvent.create(
+    ): ZapRequestEvent =
+        ZapRequestEvent.create(
             userHex = recipientPubkey,
             relays = inboxRelays,
             signer = signer,
@@ -118,12 +118,12 @@ object ZapActions {
         amountMillisats: Long,
         inboxRelays: Set<NormalizedRelayUrl>,
         comment: String = "",
-        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        zapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
         toUserPubkey: HexKey? = null,
         pollOption: Int? = null,
         lnurl: String? = null,
-    ): LnZapRequestEvent =
-        LnZapRequestEvent.create(
+    ): ZapRequestEvent =
+        ZapRequestEvent.create(
             zappedEvent = zappedEvent,
             relays = inboxRelays,
             signer = signer,
@@ -142,7 +142,7 @@ object ZapActions {
     data class ZapRequestForSplit(
         val recipient: ZapSplitResolver.Recipient,
         val amountMillisats: Long,
-        val request: LnZapRequestEvent,
+        val request: ZapRequestEvent,
     )
 
     /**
@@ -172,7 +172,7 @@ object ZapActions {
         lookupLnAddress: suspend (HexKey) -> String?,
         lookupInboxRelays: suspend (HexKey) -> Set<NormalizedRelayUrl> = { emptySet() },
         comment: String = "",
-        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        zapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
         pollOption: Int? = null,
     ): List<ZapRequestForSplit> {
         val recipients = ZapSplitResolver.resolve(zappedEvent, lookupLnAddress)
@@ -189,7 +189,7 @@ object ZapActions {
             val recipientInbox = recipient.pubkey?.let { lookupInboxRelays(it) }.orEmpty()
             val allRelays = senderInboxRelays + recipientInbox + authorInbox
             val request =
-                LnZapRequestEvent.create(
+                ZapRequestEvent.create(
                     zappedEvent = zappedEvent,
                     relays = allRelays,
                     signer = signer,

@@ -130,10 +130,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.Birthday
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
@@ -194,9 +194,9 @@ fun countsOf(diff: EventDiff): ConflictCounts =
         is MuteListDiff -> diff.publicMutes.asCounts() + diff.privateItems.asCounts()
         is AdvertisedRelayListDiff -> diff.relays.asCounts()
         is RelayListDiff -> diff.relays.asCounts() + diff.privateRelays.asCounts()
-        is ChannelListDiff -> diff.channels.asCounts() + diff.privateItems.asCounts()
+        is PublicChatListDiff -> diff.channels.asCounts() + diff.privateItems.asCounts()
         is CommunityListDiff -> diff.communities.asCounts() + diff.privateItems.asCounts()
-        is HashtagListDiff -> diff.hashtags.asCounts() + diff.privateItems.asCounts()
+        is InterestListDiff -> diff.hashtags.asCounts() + diff.privateItems.asCounts()
         is GeohashListDiff -> diff.geohashes.asCounts() + diff.privateItems.asCounts()
         is FavoriteAlgoFeedsListDiff -> diff.feeds.asCounts() + diff.privateItems.asCounts()
         is EphemeralChatListDiff -> diff.rooms.asCounts() + diff.privateItems.asCounts()
@@ -459,7 +459,7 @@ fun presentationOf(
                 ) to ContentChange.NONE
             }
             is RelayListDiff -> listOf(listGroup(Res.string.backup_entry_relay, diff.relays, { ReviewItem.Relay(it) })) to diff.privateRelays
-            is ChannelListDiff ->
+            is PublicChatListDiff ->
                 listOf(
                     listGroup(
                         Res.string.backup_entry_public_chat,
@@ -477,7 +477,7 @@ fun presentationOf(
                         { ReviewItem.Addressable(it.after.address, arrow(it.before.relayHint?.url, it.after.relayHint?.url)) },
                     ),
                 ) to diff.privateItems
-            is HashtagListDiff -> listOf(listGroup(Res.string.backup_entry_hashtag, diff.hashtags, { ReviewItem.Text("#$it") })) to diff.privateItems
+            is InterestListDiff -> listOf(listGroup(Res.string.backup_entry_hashtag, diff.hashtags, { ReviewItem.Text("#$it") })) to diff.privateItems
             is GeohashListDiff -> listOf(listGroup(Res.string.backup_entry_location, diff.geohashes, { ReviewItem.Text(it) })) to diff.privateItems
             is FavoriteAlgoFeedsListDiff ->
                 listOf(

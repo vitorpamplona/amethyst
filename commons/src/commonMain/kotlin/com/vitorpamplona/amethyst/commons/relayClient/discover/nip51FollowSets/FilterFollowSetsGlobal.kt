@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 fun filterFollowSetsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -41,7 +41,7 @@ fun filterFollowSetsGlobal(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.FOLLOW_LISTS,
-                    kinds = listOf(FollowListEvent.KIND),
+                    kinds = listOf(StarterPackEvent.KIND),
                     limit = 100,
                     since = since,
                 ),

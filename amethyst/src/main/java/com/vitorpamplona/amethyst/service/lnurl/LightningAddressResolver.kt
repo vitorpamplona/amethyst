@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.utils.Log
@@ -128,7 +128,7 @@ class LightningAddressResolver {
         lnCallback: String,
         milliSats: Long,
         message: String,
-        nostrRequest: LnZapRequestEvent? = null,
+        nostrRequest: ZapRequestEvent? = null,
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
     ): String {
@@ -219,11 +219,11 @@ class LightningAddressResolver {
         lnAddress: String,
         milliSats: Long,
         message: String,
-        nostrRequest: LnZapRequestEvent? = null,
+        nostrRequest: ZapRequestEvent? = null,
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percent: Float) -> Unit,
         context: Context,
-        onZapRequestSent: (LnZapRequestEvent?) -> Unit = {},
+        onZapRequestSent: (ZapRequestEvent?) -> Unit = {},
     ): String {
         val mapper = ObjectMapper()
 

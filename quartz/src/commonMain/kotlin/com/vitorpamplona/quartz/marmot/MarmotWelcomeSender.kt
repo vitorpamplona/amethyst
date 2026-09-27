@@ -50,7 +50,7 @@ data class WelcomeDelivery(
  *
  * Delivery pipeline:
  *   Welcome bytes → base64 → WelcomeEvent (kind:444, unsigned rumor)
- *     → SealedRumorEvent (kind:13, encrypted with sender's key)
+ *     → SealEvent (kind:13, encrypted with sender's key)
  *       → GiftWrapEvent (kind:1059, encrypted with ephemeral key)
  */
 class MarmotWelcomeSender(

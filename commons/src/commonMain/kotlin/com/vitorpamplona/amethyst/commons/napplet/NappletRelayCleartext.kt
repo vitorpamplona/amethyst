@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
 
 /** NAP-RELAY read boundary: encrypted event content is decrypted or withheld, never exposed. */
@@ -56,7 +56,7 @@ object NappletRelayCleartext {
     }
 
     fun isEncrypted(event: Event): Boolean =
-        event is PrivateDmEvent ||
+        event is EncryptedDmEvent ||
             EncryptedInfo.isNIP04(event.content) ||
             isNip44V2(event.content)
 

@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.credits.CreditTarget
 import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
@@ -86,20 +86,20 @@ class DivineVideoInteropTest {
     fun aShortVideoIsAnAddressableVerticalVideo() {
         val event = Event.fromJson(video)
 
-        assertTrue(event is VideoVerticalEvent)
+        assertTrue(event is AddressableShortVideoEvent)
         // The address must come from the `d` tag: an `a` tag elsewhere on the network points at
         // `34236:<pubkey>:<d>`, and a class on the wrong base would split the cache in two.
         assertEquals(
             "34236:4d7dccc0a5116daa057348ef79c573873cddd9eff066fc6a5f3d37e8264afbeb:c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862",
             (event as AddressableEvent).address().toValue(),
         )
-        assertEquals("Xmas Already??", (event as VideoVerticalEvent).title())
+        assertEquals("Xmas Already??", (event as AddressableShortVideoEvent).title())
         assertEquals(6, event.duration())
     }
 
     @Test
     fun theBlossomUrlIsPlayedAsAVideoDespiteHavingNoFileExtension() {
-        val track = (Event.fromJson(video) as VideoVerticalEvent).selectVideoTrack()
+        val track = (Event.fromJson(video) as AddressableShortVideoEvent).selectVideoTrack()
 
         assertNotNull(track)
         assertEquals("https://media.divine.video/c855df3d07ba963e9097d5a151b0c14a0a3d494e4ff9b04a389bc0b5f5c16862", track!!.url)
@@ -125,7 +125,7 @@ class DivineVideoInteropTest {
         // itself. LocalCache.computeReplyTo has no branch for video events, so this never turns
         // the post into a reply — which would drop it out of the home feed and thread it under
         // whatever video the audio came from.
-        val event = Event.fromJson(video) as VideoVerticalEvent
+        val event = Event.fromJson(video) as AddressableShortVideoEvent
         val audio = event.tags.first { it[0] == "e" }
 
         assertEquals("218af5fc90d66a16ce273f00a4e412a71443441c04c67d1e34ff99c654871d3d", audio[1])
@@ -136,7 +136,7 @@ class DivineVideoInteropTest {
     fun captionsComeFromTheTextTrackTagsAndNotTheAudioPointer() {
         // textTrack() used to run ETag::parse, so it returned the `e` tags instead — on this
         // event, the reused-soundtrack pointer, which is not a caption track at all.
-        val tracks = (Event.fromJson(video) as VideoVerticalEvent).textTrack()
+        val tracks = (Event.fromJson(video) as AddressableShortVideoEvent).textTrack()
 
         assertEquals(2, tracks.size)
         // Divine publishes the same track twice: the WebVTT file on Blossom, and the addressable
@@ -153,7 +153,7 @@ class DivineVideoInteropTest {
 
     @Test
     fun theTwoFormsOfTheSameCaptionTrackCollapseIntoOne() {
-        val video = Event.fromJson(video) as VideoVerticalEvent
+        val video = Event.fromJson(video) as AddressableShortVideoEvent
         val refs = video.captionTracks()
 
         // One `text-track` is directly loadable, the other has to be fetched first.
@@ -230,7 +230,7 @@ class DivineVideoInteropTest {
     @Test
     fun creditsReadTheMarkerWhicheverSlotItIsIn() {
         // divine-mobile: ["p", <pubkey>, <relay>, "inspired-by"] and ["e", <id>, <relay>, "audio"].
-        val credits = (Event.fromJson(videoWithCredits) as VideoVerticalEvent).credits()
+        val credits = (Event.fromJson(videoWithCredits) as AddressableShortVideoEvent).credits()
 
         val person = credits.filterIsInstance<VideoCredit>().first { it.target is CreditTarget.Person }
         assertEquals("0db19e8f1b13e03cd07379edd37a71f07b08a4fb5e7eac222ba1d2c823807075", (person.target as CreditTarget.Person).pubKey)
@@ -250,7 +250,7 @@ class DivineVideoInteropTest {
         // divine-web's collaborator invite writes ["p", <pubkey>, "<role>"] — no relay hint at all,
         // so the slot PTag reads for a hint holds the label instead.
         val invite =
-            VideoVerticalEvent(
+            AddressableShortVideoEvent(
                 id = "a".repeat(64),
                 pubKey = "b".repeat(64),
                 createdAt = 1789666628,
@@ -269,7 +269,7 @@ class DivineVideoInteropTest {
         // No marker means nothing is being credited — printing "references <id>" for a stray
         // threading tag would invent an attribution the publisher never made.
         val stray =
-            VideoVerticalEvent(
+            AddressableShortVideoEvent(
                 id = "a".repeat(64),
                 pubKey = "b".repeat(64),
                 createdAt = 1789666628,

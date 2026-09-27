@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.VideoCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 @Composable
 fun VideoScreen(
@@ -199,8 +199,8 @@ fun VideoFeedLoaded(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                item.event is FileHeaderEvent -> {
-                    FileHeaderCardCompose(item, accountViewModel, nav)
+                item.event is FileMetadataEvent -> {
+                    FileMetadataCardCompose(item, accountViewModel, nav)
 
                     HorizontalDivider(
                         thickness = DividerThickness,

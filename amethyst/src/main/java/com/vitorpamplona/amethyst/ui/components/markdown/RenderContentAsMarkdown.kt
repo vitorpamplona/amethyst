@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -425,7 +425,7 @@ fun RenderContentAsMarkdownNotePreview() {
     runBlocking {
         withContext(Dispatchers.IO) {
             val blogPost =
-                LongTextNoteEvent(
+                LongFormContentEvent(
                     id = "e69fa72a221d0b7362f8e63fd6ab84cc6b5e7b505fe49cefe6823a47a6a4b583",
                     pubKey = "88cc134b1a65f54ef48acc1df3665063d3ea45f04eab8af4646e561c5ae99079",
                     createdAt = 1718785725,

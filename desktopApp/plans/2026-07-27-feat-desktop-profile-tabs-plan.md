@@ -56,7 +56,7 @@ override val privateZapsDecryptionCache: IPrivateZapsDecryptionCache = PrivateZa
 lazily decrypts per event via `signer.decryptZapEvent`. Gate on `isWriteable()`; decrypt
 **own-profile only** (Android `UserProfileZapsViewModel:71-85`: `if (user.pubkeyHex == account.pubKey)`
 decrypt else fall back to `zapRequest.pubKey`). Lazy per row — a NIP-46 bunker does one round-trip
-per zap. Kinds: `LnZapEvent.KIND=9735`, `OnchainZapEvent.KIND=8333`.
+per zap. Kinds: `ZapReceiptEvent.KIND=9735`, `OnchainZapEvent.KIND=8333`.
 
 ## Per-tab implementation
 

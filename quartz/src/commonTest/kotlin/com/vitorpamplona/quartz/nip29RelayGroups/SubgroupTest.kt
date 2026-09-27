@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip29RelayGroups
 
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -66,8 +66,8 @@ class SubgroupTest {
 
     @Test
     fun editMetadataRoundTripsParentAndChildren() {
-        val template = EditMetadataEvent.build("nostr", name = "Nostr", parent = "social", children = listOf("nip29"))
-        val event = EventFactory.create(id, relaySelf, template.createdAt, EditMetadataEvent.KIND, template.tags, "", sig) as EditMetadataEvent
+        val template = GroupEditMetadataEvent.build("nostr", name = "Nostr", parent = "social", children = listOf("nip29"))
+        val event = EventFactory.create(id, relaySelf, template.createdAt, GroupEditMetadataEvent.KIND, template.tags, "", sig) as GroupEditMetadataEvent
 
         assertEquals("nostr", event.groupId())
         assertEquals("social", event.parent())
@@ -76,8 +76,8 @@ class SubgroupTest {
 
     @Test
     fun editMetadataWithoutParentRoots() {
-        val template = EditMetadataEvent.build("nostr", name = "Nostr")
-        val event = EventFactory.create(id, relaySelf, template.createdAt, EditMetadataEvent.KIND, template.tags, "", sig) as EditMetadataEvent
+        val template = GroupEditMetadataEvent.build("nostr", name = "Nostr")
+        val event = EventFactory.create(id, relaySelf, template.createdAt, GroupEditMetadataEvent.KIND, template.tags, "", sig) as GroupEditMetadataEvent
         assertNull(event.parent())
     }
 
