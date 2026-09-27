@@ -106,7 +106,7 @@ Each leaving edge is a seam to cut before the group can move.
 
 | File | Blocker | Proposed cut |
 |---|---|---|
-| `Account.kt` | `BuildConfig.VERSION_NAME` (donation prompt, 3 sites) | constructor parameter `appVersion: String` |
+| `Account.kt` | `BuildConfig.VERSION_NAME` (donation prompt, 3 sites) | constructor parameter `appVersion: String`. **Done 2026-09-27**: `AccountCacheState` takes it too and `AppModules` passes `BuildConfig.VERSION_NAME`. |
 | `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry` |
 | `GeohashChatIdentityState.kt` | `androidx.core.content.edit`, `LegacySharedPreferences`, `LocalPreferences.LEGACY_WRITES_RETIRED`, `Amethyst.instance.encryptedStorage` | the legacy-prefs read/write is a migration path; put it behind a `GeohashIdentityLegacyStore` port, implemented in the app |
 | `AccountZapActions.kt` | `onError: (StringResource, String?)` with `Res.string.bolt12_*` (compose resources, which `commons` cannot see) | a typed error (sealed class) that the UI maps to a string |
@@ -164,7 +164,7 @@ first).
    skills and the tracker). Done 2026-09-27.
 2. **Cut the `Account` group's seams**, one small PR each, in the app, with no move yet. Every
    cut is a behaviour-preserving refactor that compiles and tests on its own:
-   - the `BuildConfig` parameter;
+   - the `BuildConfig` parameter (done);
    - `DefaultBottomBarEntries`;
    - `MembershipNotificationKinds`;
    - `logTime`;

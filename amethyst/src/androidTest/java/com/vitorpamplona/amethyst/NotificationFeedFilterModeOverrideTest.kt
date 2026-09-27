@@ -91,6 +91,7 @@ class NotificationFeedFilterModeOverrideTest {
                 cache = LocalCache,
                 client = client,
                 scope = scope,
+                appVersion = "test",
             )
     }
 

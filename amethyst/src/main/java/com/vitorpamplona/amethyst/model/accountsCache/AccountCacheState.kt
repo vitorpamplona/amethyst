@@ -71,6 +71,8 @@ class AccountCacheState(
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
+    /** The running app's version name, handed to every [Account] it builds. */
+    val appVersion: String,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
@@ -345,6 +347,7 @@ class AccountCacheState(
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,
+            appVersion = appVersion,
             scope =
                 CoroutineScope(
                     Dispatchers.IO +

@@ -81,6 +81,7 @@ class ThreadDualAxisChartAssemblerTest {
                 cache = LocalCache,
                 client = client,
                 scope = scope,
+                appVersion = "test",
             )
 
         val db =

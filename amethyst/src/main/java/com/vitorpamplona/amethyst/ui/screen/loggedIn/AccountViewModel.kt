@@ -3232,6 +3232,7 @@ fun mockAccountViewModel(): AccountViewModel {
             cache = LocalCache,
             client = client,
             scope = scope,
+            appVersion = "preview",
         )
 
     return AccountViewModel(
@@ -3288,6 +3289,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             cache = LocalCache,
             client = EmptyNostrClient(),
             scope = scope,
+            appVersion = "preview",
         )
 
     return AccountViewModel(

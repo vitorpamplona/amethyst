@@ -1030,6 +1030,7 @@ class AppModules(
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
+            appVersion = BuildConfig.VERSION_NAME,
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },

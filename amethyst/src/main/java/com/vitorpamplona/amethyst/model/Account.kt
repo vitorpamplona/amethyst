@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
@@ -378,6 +377,12 @@ class Account(
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
+    /**
+     * The running app's version name. The zap-the-devs prompt is dismissed per version, so a
+     * donation in one release doesn't hide it in the next. Passed in rather than read from the
+     * app's `BuildConfig`, which a shared module can't see.
+     */
+    val appVersion: String,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -3884,15 +3889,15 @@ class Account(
 
     fun loadLastReadFlow(route: String) = settings.getLastReadFlow(route)
 
-    fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(BuildConfig.VERSION_NAME)
+    fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(appVersion)
 
     fun observeDonatedInThisVersion() =
         settings
-            .observeDonatedInVersion(BuildConfig.VERSION_NAME)
+            .observeDonatedInVersion(appVersion)
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
-    fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
+    fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(appVersion)
 
     fun dismissPollNotification(noteId: String) = settings.dismissPollNotification(noteId)
 
