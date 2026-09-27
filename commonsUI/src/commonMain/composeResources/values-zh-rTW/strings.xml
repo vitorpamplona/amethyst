@@ -2926,4 +2926,5 @@
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
          what leaves the device; the fork strings say why the old phone stops. -->
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
 </resources>

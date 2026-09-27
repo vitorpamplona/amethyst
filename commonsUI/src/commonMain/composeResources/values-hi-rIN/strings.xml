@@ -5263,6 +5263,7 @@
     <string name="cyberspace_bag_unsigned">हस्ताक्षररहित। इसलिए यह कर्ता केवल एक कथन है</string>
     <string name="cyberspace_bag_unknown_kind">प्रकार %1$d का वस्तु। जिसे यह ग्राहक चित्रित नहीं करता</string>
     <string name="cyberspace_bag_opaque">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</string>
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="backup_action_block_again">पुनःबाधित करें %1$s को</string>
     <string name="backup_action_keep_count">रखें %1$s</string>
     <string name="backup_action_rejoin">पुनःजुडें %1$s</string>
