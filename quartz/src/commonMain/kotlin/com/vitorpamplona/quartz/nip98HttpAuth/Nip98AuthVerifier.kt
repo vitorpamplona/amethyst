@@ -52,10 +52,16 @@ class Nip98AuthVerifier(
     private val now: () -> Long = { TimeUtils.now() },
     /** Allowed clock skew in seconds. NIP-98 says 60. */
     private val toleranceSeconds: Long = 60,
+    /**
+     * Tokens remembered at once. When every remembered token is still inside its window, a new one
+     * is refused (`rate-limited:`) rather than an unexpired one forgotten: forgetting is what lets a
+     * captured token be replayed. Size it for the endpoint's signed-request rate over 2 x tolerance.
+     */
+    private val maxReplayEntries: Int = MAX_REPLAY_ENTRIES,
 ) {
     /**
      * Recently-accepted event ids → expiry epoch second. Bounded to
-     * [MAX_REPLAY_ENTRIES] (insertion-order eviction); each entry expires
+     * [maxReplayEntries], never by evicting a live entry; each entry expires
      * after `2 × toleranceSeconds` (twice the accepted window so a token
      * can't be reused by an attacker who buffers across the boundary).
      *
@@ -140,18 +146,13 @@ class Nip98AuthVerifier(
             while (it.hasNext()) {
                 if (it.next().value <= nowSec) it.remove() else break
             }
-            if (seenEventIds.put(event.id, expiry) != null) {
+            if (seenEventIds.containsKey(event.id)) {
                 return Result.Malformed("replay: this NIP-98 token has already been used")
             }
-            // Cap entries: drop oldest by insertion order. Equivalent to
-            // the JDK LinkedHashMap.removeEldestEntry hook we used before,
-            // but works in KMP commonMain.
-            while (seenEventIds.size > MAX_REPLAY_ENTRIES) {
-                val eldest = seenEventIds.keys.iterator()
-                if (!eldest.hasNext()) break
-                eldest.next()
-                eldest.remove()
+            if (seenEventIds.size >= maxReplayEntries) {
+                return Result.Malformed(REPLAY_CACHE_FULL)
             }
+            seenEventIds[event.id] = expiry
         }
 
         return Result.Verified(event.pubKey)
@@ -173,11 +174,13 @@ class Nip98AuthVerifier(
         const val SCHEME = "Nostr "
 
         /**
-         * Cap on the in-memory replay-cache size. With a 60s tolerance
-         * an attacker would need to push >MAX/120 verified requests per
-         * second (one new id per ~120 ms) to evict legitimate entries.
-         * 1024 is generous for an admin endpoint.
+         * Default cap on the in-memory replay cache: with a 60s tolerance, 1024 live tokens is about
+         * 8 signed requests a second, generous for an admin endpoint. A public endpoint passes a
+         * larger `maxReplayEntries`.
          */
         const val MAX_REPLAY_ENTRIES = 1024
+
+        /** Answered when the replay cache holds nothing but live tokens. */
+        const val REPLAY_CACHE_FULL = "rate-limited: too many fresh NIP-98 tokens at once; retry shortly"
     }
 }
