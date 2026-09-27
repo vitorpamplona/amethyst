@@ -107,8 +107,12 @@ fun GeocachesScreen(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Geocaches(), nav, accountViewModel) { route ->
-                if (route is Route.Geocaches) {
+            // Geocaches and Hunts are two separate pinnable tabs of this one screen, so match the
+            // exact route: a class check highlighted the wrong one and turned a tap on the other
+            // into a scroll-to-top instead of a tab switch.
+            val selfRoute = Route.Geocaches(initialTab)
+            AppBottomBar(selfRoute, nav, accountViewModel) { route ->
+                if (route == selfRoute) {
                     nearby.sendToTop()
                 } else {
                     nav.navBottomBar(route)

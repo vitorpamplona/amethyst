@@ -125,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -193,6 +194,11 @@ fun Nip46SignerScreen(
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.nip46_signer_title), nav) },
+        bottomBar = {
+            AppBottomBar(Route.Nip46Signer(), nav, accountViewModel) { route ->
+                if (route != Route.Nip46Signer()) nav.navBottomBar(route)
+            }
+        },
     ) { padding ->
         Column(
             modifier =

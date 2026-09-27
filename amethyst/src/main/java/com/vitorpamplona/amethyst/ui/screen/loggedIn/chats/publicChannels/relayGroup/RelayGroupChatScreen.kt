@@ -58,7 +58,7 @@ fun RelayGroupChatScreen(
                 RelayGroupTopBar(it, inviteCode, accountViewModel, nav)
             }
         },
-        // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+        // Hidden on in-app pushes (AppBottomBar renders only when nav.showsBottomBar()),
         // so a pinned relay group works both as a pushed detail and as a bottom-nav tab.
         bottomBar = {
             AppBottomBar(selfRoute, nav, accountViewModel) { route ->

@@ -52,8 +52,25 @@ interface INav {
 
     fun navBottomBar(route: Route)
 
+    /**
+     * Opens [route] as a top-level destination picked from the navigation drawer. It still
+     * stacks on top of the current screen (so it [canPop]), but unlike an in-app push it keeps
+     * the bottom bar — see [showsBottomBar].
+     */
+    fun navDrawer(route: Route) = nav(route)
+
+    /** [navDrawer], for a route that has to be resolved first. */
+    fun navDrawer(computeRoute: suspend () -> Route?) = nav(computeRoute)
+
     @Composable
     fun canPop(): Boolean
+
+    /**
+     * Whether this screen renders the bottom bar: tab roots, the start destination and
+     * destinations opened from the drawer ([navDrawer]) do; in-app pushes don't.
+     */
+    @Composable
+    fun showsBottomBar(): Boolean = !canPop()
 
     fun popBack()
 
