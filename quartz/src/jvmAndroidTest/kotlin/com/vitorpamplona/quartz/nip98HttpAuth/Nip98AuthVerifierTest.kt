@@ -131,4 +131,40 @@ class Nip98AuthVerifierTest {
             assertTrue(r.reason.contains("kind"))
         }
     }
+
+    @Test
+    fun aTokenIsAcceptedOnce() {
+        runBlocking {
+            val body = "hello".encodeToByteArray()
+            val (_, header) = signedToken("http://x/", "POST", body)
+            assertIs<Nip98AuthVerifier.Result.Verified>(verifier.verify(header, "POST", "http://x/", body))
+            val again = verifier.verify(header, "POST", "http://x/", body)
+            assertIs<Nip98AuthVerifier.Result.Malformed>(again)
+            assertTrue(again.reason.contains("replay"))
+        }
+    }
+
+    @Test
+    fun aFullCacheRefusesTheNewTokenAndStillRemembersTheOld() {
+        runBlocking {
+            val small = Nip98AuthVerifier(now = { 1_000L }, maxReplayEntries = 2)
+            val tokens = (0..2).map { n -> "body $n".encodeToByteArray().let { it to signedToken("http://x/", "POST", it).second } }
+            for ((body, header) in tokens.take(2)) assertIs<Nip98AuthVerifier.Result.Verified>(small.verify(header, "POST", "http://x/", body))
+            val (body, header) = tokens[2]
+            assertEquals(Nip98AuthVerifier.Result.Malformed(Nip98AuthVerifier.REPLAY_CACHE_FULL), small.verify(header, "POST", "http://x/", body))
+            val (oldBody, oldHeader) = tokens[0]
+            assertTrue((small.verify(oldHeader, "POST", "http://x/", oldBody) as Nip98AuthVerifier.Result.Malformed).reason.contains("replay"))
+        }
+    }
+
+    @Test
+    fun withoutReplayRejectionATokenVerifiesAgainButOnlyForItsBody() {
+        runBlocking {
+            val reusable = Nip98AuthVerifier(now = { 1_000L }, rejectReplays = false)
+            val body = "hello".encodeToByteArray()
+            val (_, header) = signedToken("http://x/", "POST", body)
+            repeat(3) { assertIs<Nip98AuthVerifier.Result.Verified>(reusable.verify(header, "POST", "http://x/", body)) }
+            assertIs<Nip98AuthVerifier.Result.Malformed>(reusable.verify(header, "POST", "http://x/", "other".encodeToByteArray()))
+        }
+    }
 }

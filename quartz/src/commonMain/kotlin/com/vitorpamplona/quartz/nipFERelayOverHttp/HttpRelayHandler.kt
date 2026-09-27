@@ -99,8 +99,12 @@ class HttpRelayHandler(
     private val origins: () -> List<String>,
     /** How long one answer may run, first byte to last. [Duration.INFINITE] turns the deadline off. */
     private val deadline: Duration = DEFAULT_DEADLINE,
-    /** Its own replay cache, sized for a public endpoint, so it cannot be flushed to replay a token. */
-    private val verifier: Nip98AuthVerifier = Nip98AuthVerifier(maxReplayEntries = DEFAULT_REPLAY_ENTRIES),
+    /**
+     * Tokens are not single-use: a request can land on any instance, which a per-process memory of
+     * spent tokens cannot follow, and the body's hash already limits a captured token to the one
+     * command it signs, inside its window.
+     */
+    private val verifier: Nip98AuthVerifier = Nip98AuthVerifier(rejectReplays = false),
     /** Frames queued ahead of a slow reader before the answer is cut short. */
     private val maxQueuedFrames: Int = DEFAULT_MAX_QUEUED_FRAMES,
     /** How long past the deadline the last line may take before the reader counts as stalled. */
@@ -291,7 +295,7 @@ class HttpRelayHandler(
 
     /**
      * A NIP-98 header, checked against the address it names when that is one of [origins], so a token
-     * signed at the .onion verifies there. It must bind the body's hash: it authorizes one command, once.
+     * signed at the .onion verifies there. It must bind the body's hash: it authorizes one command.
      * Another scheme (a proxy's Basic, a client's Bearer) is not addressed to the relay and is ignored.
      */
     private suspend fun proofOf(request: HttpRelayRequest): Proof {
@@ -310,7 +314,7 @@ class HttpRelayHandler(
                 Proof.Anonymous
             }
 
-            // A full replay cache is the relay's limit, not the token's fault.
+            // A full replay cache, in a verifier that keeps one, is the relay's limit, not the token's fault.
             is Nip98AuthVerifier.Result.Malformed -> {
                 if (MachineReadablePrefix.parse(r.reason) == MachineReadablePrefix.RATE_LIMITED) {
                     Proof.Refused(r.reason)
@@ -339,9 +343,6 @@ class HttpRelayHandler(
         const val DEFAULT_MAX_QUEUED_FRAMES = 8192
 
         val DEFAULT_TAIL_GRACE = 5_000.milliseconds
-
-        /** Two minutes of tokens (the replay window) at about 500 signed commands a second. */
-        const val DEFAULT_REPLAY_ENTRIES = 65_536
     }
 }
 

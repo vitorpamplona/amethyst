@@ -44,6 +44,7 @@ import kotlin.math.abs
  *  4. The `method` tag matches the HTTP method.
  *  5. The `u` tag matches the requested URL.
  *  6. If a body is present, the `payload` tag matches `sha256(body)` hex.
+ *  7. With [rejectReplays], the token has not been accepted before.
  *
  * Returns the verified pubkey on success; a [Result.Malformed] /
  * [Result.Missing] otherwise (the caller turns these into 401/403).
@@ -58,6 +59,12 @@ class Nip98AuthVerifier(
      * captured token be replayed. Size it for the endpoint's signed-request rate over 2 x tolerance.
      */
     private val maxReplayEntries: Int = MAX_REPLAY_ENTRIES,
+    /**
+     * Accept each token once. NIP-98 does not ask for it, and the memory is this process's alone, so
+     * behind a load balancer it holds per instance. Off, a token captured in its window can repeat
+     * the request it signs, and only that request when it binds the body's hash.
+     */
+    private val rejectReplays: Boolean = true,
 ) {
     /**
      * Recently-accepted event ids → expiry epoch second. Bounded to
@@ -132,6 +139,8 @@ class Nip98AuthVerifier(
                 return Result.Malformed("payload hash mismatch")
             }
         }
+
+        if (!rejectReplays) return Result.Verified(event.pubKey)
 
         // Replay check — done LAST so we don't burn a one-shot id on a
         // request that would otherwise have failed signature/url/etc.

@@ -262,14 +262,12 @@ class HttpRelayHandlerTest {
     }
 
     @Test
-    fun aTokenForAnotherBodyOrASecondUseIsRefused() {
+    fun aTokenSignsOnlyItsBodyAndIsNotSingleUse() {
         val h = handler()
         val body = """{"kinds":[1]}"""
-        val once = token(HttpRelayCommand.REQ, body)
-        assertEquals(200, h.ask(HttpRelayCommand.REQ, body, once).status)
-        val replayed = h.ask(HttpRelayCommand.REQ, body, once)
-        assertEquals(401, replayed.status)
-        assertTrue("replay" in replayed.lines.single(), replayed.lines.toString())
+        val signed = token(HttpRelayCommand.REQ, body)
+        assertEquals(200, h.ask(HttpRelayCommand.REQ, body, signed).status)
+        assertEquals(200, h.ask(HttpRelayCommand.REQ, body, signed).status, "any instance may answer it, so none remembers it")
         val other = h.ask(HttpRelayCommand.REQ, """{"kinds":[0]}""", token(HttpRelayCommand.REQ, body))
         assertEquals(401, other.status)
         assertTrue("payload" in other.lines.single(), other.lines.toString())
@@ -367,7 +365,7 @@ class HttpRelayHandlerTest {
     }
 
     @Test
-    fun aFloodOfFreshTokensCannotFlushAReplay() {
+    fun aHostsSingleUseVerifierThatIsFullIsA429() {
         val h = HttpRelayHandler(MemoryRelay(backend, false), origins = { listOf(origin) }, verifier = Nip98AuthVerifier(maxReplayEntries = 4))
 
         // A token's id is its hash, so tokens signed the same second over the same body are one token:
