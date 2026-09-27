@@ -129,6 +129,15 @@ open class FullAuthPolicy(
      */
     open suspend fun authorize(event: RelayAuthEvent) {}
 
+    final override suspend fun acceptTransportIdentity(pubkey: HexKey): String? = authorizeTransport(pubkey)
+
+    /**
+     * [authorize]'s counterpart for a key the transport proved (NIP-98 on a NIP-FE command), which
+     * has no AUTH event to hand it. Refuses by default: a subclass whose [authorize] checks or grants
+     * anything must decide what that means without one, and opt in by returning null.
+     */
+    open suspend fun authorizeTransport(pubkey: HexKey): String? = TRANSPORT_IDENTITY_REFUSED
+
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> =
         if (isAuthenticated()) {
             PolicyResult.Accepted(cmd)

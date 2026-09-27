@@ -79,14 +79,6 @@ class RelaySession(
      * open/close of the same connection. Defaults to a fresh monotonic id.
      */
     val id: Long = nextConnectionId(),
-    /**
-     * Identities the transport proved before the session existed — a
-     * NIP-98 header on an HTTP command (NIP-FE), say — recorded exactly as
-     * a NIP-42 AUTH would record them. The policy's `accept(AuthCmd)` and
-     * `onAuthenticated` are not consulted: there is no AUTH event, and the
-     * transport, not the engine, did the verifying.
-     */
-    initialAuthenticatedUsers: Set<HexKey> = emptySet(),
 ) : AutoCloseable {
     /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
     constructor(
@@ -116,7 +108,7 @@ class RelaySession(
      * the copy costs nothing on the hot path.
      */
     @Volatile
-    private var authenticatedUsers: Set<HexKey> = initialAuthenticatedUsers.toSet()
+    private var authenticatedUsers = setOf<HexKey>()
 
     /**
      * The per-connection scope. Handed to the [policy] at connect (so gating
@@ -288,6 +280,24 @@ class RelaySession(
             }
 
         send(CountMessage(cmd.queryId, countResult))
+    }
+
+    /**
+     * Records [pubkey], proved by the transport rather than a NIP-42 AUTH (NIP-FE's NIP-98 header),
+     * once the policy chain has no objection ([IRelayPolicy.acceptTransportIdentity]). Returns the
+     * refusal, or null when the key is now authenticated on this connection exactly as AUTH would.
+     */
+    suspend fun authenticateByTransport(pubkey: HexKey): String? {
+        val refused =
+            try {
+                policy.acceptTransportIdentity(pubkey)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                MachineReadablePrefix.ERROR.format(e.message ?: "authentication failed")
+            }
+        if (refused == null) authenticatedUsers = authenticatedUsers + pubkey
+        return refused
     }
 
     // -- NIP-42: AUTH ---------------------------------------------------------

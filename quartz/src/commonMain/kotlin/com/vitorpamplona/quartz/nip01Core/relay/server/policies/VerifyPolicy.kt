@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
@@ -68,6 +69,9 @@ open class VerifyEventsAndAuthPolicy(
         }
 
     override fun canSendToSession(event: Event) = true
+
+    /** No objection: this policy checks signatures, and the transport verified its own proof. */
+    override suspend fun acceptTransportIdentity(pubkey: HexKey): String? = null
 }
 
 /**

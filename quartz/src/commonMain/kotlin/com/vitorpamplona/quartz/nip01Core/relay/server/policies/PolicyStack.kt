@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -55,6 +56,9 @@ class PolicyStack(
         // identity. `fold` keeps the call on the left so no member is skipped.
         return policies.fold(false) { recorded, p -> p.onAuthenticated(event) || recorded }
     }
+
+    /** Every member must agree; the first objection is the answer. */
+    override suspend fun acceptTransportIdentity(pubkey: HexKey): String? = policies.firstNotNullOfOrNull { it.acceptTransportIdentity(pubkey) }
 
     override fun acceptMessage(message: String): String? = policies.firstNotNullOfOrNull { it.acceptMessage(message) }
 
