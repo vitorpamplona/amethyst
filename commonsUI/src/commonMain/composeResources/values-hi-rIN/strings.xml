@@ -206,7 +206,10 @@
     <string name="geocache_hunt_new">नई खोज…</string>
     <string name="geocache_hunt_none_yet">आपने कोई खोज नहीं की अब तक।</string>
     <string name="geocache_hunt_already_on">पहले से इस खोज में लगे</string>
-    <string name="geocache_caches_here">%1$d कोष यहाँ</string>
+    <plurals name="geocache_caches_here">
+        <item quantity="one">%1$d कोष यहाँ</item>
+        <item quantity="other">%1$d कोष यहाँ</item>
+    </plurals>
     <string name="geocache_photo_remove">इस चित्र को हटाएँ</string>
     <string name="geocache_archived_notice">इस कोष को संगृहीत कर दिया गया। यह अब खेल में नहीं है।</string>
     <string name="geocache_ftf_won_by">सर्वप्रथम खोज का कथन %1$s द्वारा</string>
@@ -265,7 +268,6 @@
     <string name="geocache_map_recenter">मुझ पर मध्यीकरण</string>
     <string name="geocache_map_long_press">मानचित्र पर दीर्घ दबाएँ वहाँ एक कोष छिपाने के लिए</string>
     <string name="geocache_map_open">खोलें</string>
-    <string name="geocache_map_pin_count">%1$d कोष</string>
     <string name="geocache_new_section_where">कहाँ</string>
     <string name="geocache_new_section_what">क्या</string>
     <string name="geocache_new_section_extras">अतिरिक्त</string>
@@ -293,7 +295,10 @@
     <string name="geocache_new_needs_location">कोष कहाँ छिपाया जाए चयन करें।</string>
     <string name="geocache_hunt_progress">%2$d में से %1$d प्राप्त</string>
     <string name="geocache_hunt_start">खोज आरम्भ करें</string>
-    <string name="geocache_hunt_caches">%1$d कोष</string>
+    <plurals name="geocache_hunt_caches">
+        <item quantity="one">%1$d कोष</item>
+        <item quantity="other">%1$d कोष</item>
+    </plurals>
     <string name="geocache_hunt_title">शीर्षक</string>
     <string name="geocache_hunt_description">विवरण</string>
     <string name="geocache_hunt_banner">ध्वज चित्र</string>
@@ -342,7 +347,10 @@
     <string name="qr_scanner_no_code_in_image">उस चित्र में से कोई क्यूआर॰ चित्र अक्षरराशि प्राप्त नहीं</string>
     <string name="qr_scanner_clipboard_empty">टाँकाफलक में कुछ भी नहीं परखने के लिए</string>
     <string name="qr_scanner_pick_one">अक्षरराशि का चयन करें</string>
-    <string name="qr_scanner_sequence_progress">%2$s में से %1$s भाग प्राप्त। आगे बढें</string>
+    <plurals name="qr_scanner_sequence_progress">
+        <item quantity="one">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
+        <item quantity="other">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">विस्तारण पुनःस्थापना</string>
     <string name="qr_scanner_unsupported_title">अमेथिस्ट इस अक्षरराशि को नहीं खोल सकता</string>
     <string name="qr_scanner_unsupported_secret">इस अक्षरराशि में एक निजी कुंचिका अथवा जोडनेवाला रहस्य है। इसलिए इसकी विषयवस्तु यहाँ दिखाया नहीं जाता। अनुकूल पटल का उपयोग करें।</string>
@@ -1850,7 +1858,7 @@
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
-    <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप परितथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या तो भी आरोहण करें।</string>
+    <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप उपतथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या तो भी आरोहण करें।</string>
     <string name="metadata_strip_failed_upload">तो भी आरोहण करें</string>
     <string name="edit_draft">पाण्डुलिपि सम्पादन</string>
     <string name="login_with_qr_code">क्यूआर॰ चित्र अक्षरराशि के साथ प्रवेशांकन करें</string>
@@ -2877,6 +2885,7 @@
     <string name="community_rules_violation_wot_gate_failed">आप इस समुदाय के विश्वासजाल आवश्यकताओं को पार नहीं कर सके।</string>
     <string name="community_rules_violation_stale_rules">समुदाय का नवीनतम नियम अभिलेख पुराना होने के कारण अस्वीकृत।</string>
     <string name="marmot_groups_title">मार्मोट॰ समूह</string>
+    <string name="cordn_groups_title">कोर्डन समूह</string>
     <string name="marmot_create_group">समूह बनाएँ</string>
     <string name="marmot_create_group_title">मार्मोट॰ समूह बनाएँ</string>
     <string name="marmot_create_group_footer">एक नया एमएलएस॰ समूह बनेगा। आप सदस्य जोड सकते हैं तत्पश्चात।</string>
@@ -3236,7 +3245,7 @@
     <string name="automatically_show_url_preview_description">जालपता के पूर्वीक्षण दिखाएँ</string>
     <string name="autoplay_videos">स्वतःचालन चलचित्र</string>
     <string name="autoplay_videos_description">स्वतः चालू करें चलचित्रों को जब पटल पर दिखाई दें</string>
-    <string name="avif_metadata_strip_failed">एविफ॰ से परितथ्य नहीं मिटा सके : %1$s</string>
+    <string name="avif_metadata_strip_failed">एविफ॰ से उपतथ्य नहीं मिटा सके। %1$s</string>
     <string name="award_badge">पदक पुरस्कार</string>
     <string name="back">पीछे चलें</string>
     <string name="backup_keys">कुंचिकाएँ सुरक्षित रखें</string>
@@ -4106,8 +4115,8 @@
     <string name="messages_cant_upload_title">आरोहण असफल</string>
     <string name="messages_new_message_subject">विषय</string>
     <string name="messages_settings">सन्देश</string>
-    <string name="metadata_strip_failed_title">परितथ्य हटाने में असफल</string>
-    <string name="metadata_strip_failed_upload_cancelled">श्रव्यदृश्याभिलेख से निजी परितथ्य हटाने में असफल। आरोहण निरस्त।</string>
+    <string name="metadata_strip_failed_title">उपतथ्य हटाने में असफल</string>
+    <string name="metadata_strip_failed_upload_cancelled">श्रव्यदृश्याभिलेख से निजी उपतथ्य हटाने में असफल। आरोहण निरस्त।</string>
     <string name="migrate_bookmarks_success">स्मर्त्तव्यचिह्न सफलतापूर्वक स्थानान्तरित किए गए</string>
     <string name="missing_lud16">लैटनिंग स्थापना अनुपलब्ध</string>
     <string name="more_options">अधिक विकल्प</string>
@@ -5041,8 +5050,8 @@
     <string name="spamming_users">कचरालेख प्रेषक</string>
     <string name="split_notifications_setting_description">दो सूचना पृष्ठसूचक दिखाएँ। अनुचरित (लोग जिनका आप अनुचरण करते हैं) तथा सभी। अपठित संकेतक चमकता है केवल आपके द्वारा अनुचरित लोगों के गतिविधियों के लिए।</string>
     <string name="split_notifications_setting_title">सूचनाएँ विभाजित करें अनुचरित के अनुसार</string>
-    <string name="strip_metadata_description">निजी परितथ्य हटाने का प्रयास करता है आलम्बित श्रव्यदृश्याभिलेखों से आरोहण पूर्व</string>
-    <string name="strip_metadata_label">निजी परितथ्य हटाएँ</string>
+    <string name="strip_metadata_description">निजी उपतथ्य हटाने का प्रयास करता है आलम्बित श्रव्यदृश्याभिलेखों से आरोहण पूर्व</string>
+    <string name="strip_metadata_label">निजी उपतथ्य हटाएँ</string>
     <string name="suggest_workouts_setting_description">सम्पन्न व्यायाम पढता है स्वास्थ्य संयोजन से (सामसंग स्वास्थ्य तथा गूगिल फिट तथा फिटबिट तथा गार्मिन इत्यादि) तथा पत्र के रूप में बाँटने का सुझाव देता है। अनुमति अनुरोध केवल संयोजन करने पर।</string>
     <string name="suggest_workouts_setting_title">व्यायामों का सुझाव बाँटनें के लिए</string>
     <string name="system">यन्त्रव्यवस्था</string>
@@ -5217,9 +5226,36 @@
     <!-- cordn: groups delivered by an MCP coordinator rather than by relays.
          The exposure strings state what the coordinator operator learns; see
          spec/00.md §8 and quartz/plans/2026-09-17-cordn-interop.md. -->
+    <string name="cordn_badge_coordinator">समायोजक समूह</string>
+    <string name="cordn_badge_coordinator_desc">समायोजक द्वारा भेजा गया। पुनःप्रसारकों द्वारा नहीं</string>
+    <string name="cordn_exposure_title">यह समायोजक क्या देख सकता है</string>
+    <string name="cordn_exposure_dimension_content">सन्देश विषयवस्तु</string>
+    <string name="cordn_exposure_dimension_membership">समूह में कौन हैं</string>
+    <string name="cordn_exposure_dimension_messaging">कौन क्या भेजता है</string>
+    <string name="cordn_exposure_level_none">पठन असाध्य</string>
+    <string name="cordn_exposure_level_pseudonymous">एक अस्थायी कुंचिका द्वारा</string>
+    <string name="cordn_exposure_level_identified">आपकी वास्तविक लेखा से सम्बद्ध</string>
+    <string name="cordn_exposure_details">विवरण</string>
+    <string name="cordn_exposure_coordinator">समायोजक %1$s</string>
+    <string name="cordn_health_unknown">सम्पर्क अब तक किया नहीं</string>
+    <string name="cordn_health_ok">प्रतिवचनमध्य</string>
+    <string name="cordn_health_down">कोई प्रतिवचन नहीं</string>
+    <string name="cordn_link_field">cordn1…</string>
+    <string name="cordn_link_inspect">निरीक्षण</string>
+    <string name="cordn_link_paste">चिपकाएँ</string>
+    <string name="cordn_link_clear">रिक्त</string>
+    <string name="cordn_link_invalid">वह एक कोर्डन समूह योजक नहीं। %1$s</string>
+    <string name="cordn_link_group_id">समूह परिचायक</string>
+    <string name="cordn_link_coordinator">समायोजक</string>
+    <string name="cordn_link_relays">अभिगम्य इनके द्वारा</string>
     <!-- cordn entries in the settings catalog and the Messages chat-type
          list. Here rather than in amethyst/res because both screens read
          them through Res. -->
+    <string name="cordn_link_title">कोर्डन समूह योजक</string>
+    <string name="cordn_link_search_keywords">कोर्डन समायोजक समूह योजक आमन्त्रण एमएलएस॰ चर्चा उपतथ्य गोपनीयता अनावरण</string>
+    <string name="cordn_coordinators_title">कोर्डन समायोजक</string>
+    <string name="cordn_coordinators_search_keywords">कोर्डन समायोजक जोडें हटाएँ मिटाएँ स्वास्थ्य सेवासंगणक एमएलएस॰ चर्चा अनुक्रमण</string>
+    <string name="cordn_keypackages_title">कोर्डन कुंचिका पोटलियाँ</string>
     <!-- cordn strings on screens main migrated to Res: the shared inbox row
          and the new-conversation picker. -->
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
@@ -5246,16 +5282,28 @@
     <string name="cyberspace_bag_cancel">रोकें</string>
     <string name="cyberspace_bag_measuring">खोज का मूल्यांकन इस यन्त्र पर…</string>
     <string name="cyberspace_bag_progress">खोज सम्पन्न %2$s में से %1$s क्षेत्रों में</string>
-    <string name="cyberspace_bag_too_slow_minutes">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</string>
-    <string name="cyberspace_bag_too_slow_hours">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</string>
+    <plurals name="cyberspace_bag_too_slow_minutes">
+        <item quantity="one">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</item>
+        <item quantity="other">अप्राप्य। लगभग %1$d मिनुट का खोज इस यन्त्र पर</item>
+    </plurals>
+    <plurals name="cyberspace_bag_too_slow_hours">
+        <item quantity="one">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</item>
+        <item quantity="other">अप्राप्य। लगभग %1$d घण्टों का खोज इस यन्त्र पर</item>
+    </plurals>
     <string name="cyberspace_bag_not_found">सहायक संकेत में नामित पेटिका में नहीं</string>
     <string name="cyberspace_bag_damaged">क्षेत्र प्राप्त। पर विषयवस्तु पढने में असफल</string>
-    <string name="cyberspace_bag_dropped">%1$d वस्तु जो यहाँ छिपाया गया था उसके हस्ताक्षर से मेल नहीं तथा परित्यक्त</string>
-    <string name="cyberspace_bag_dropped_many">%1$d वस्तु जो यहाँ छिपाए गए थे उनके हस्ताक्षरों से मेल नहीं तथा परित्यक्त</string>
+    <plurals name="cyberspace_bag_dropped">
+        <item quantity="one">%1$d वस्तु जो यहाँ छिपाया गया था उसके हस्ताक्षर से मेल नहीं तथा परित्यक्त</item>
+        <item quantity="other">%1$d वस्तु जो यहाँ छिपाए गए थे उनके हस्ताक्षरों से मेल नहीं तथा परित्यक्त</item>
+    </plurals>
     <string name="cyberspace_bag_empty">खोला। पर भीतर कुछ नहीं था</string>
     <string name="cyberspace_bag_unsigned">हस्ताक्षररहित। इसलिए यह कर्ता केवल एक कथन है</string>
     <string name="cyberspace_bag_unknown_kind">प्रकार %1$d का वस्तु। जिसे यह ग्राहक चित्रित नहीं करता</string>
-    <string name="cyberspace_bag_opaque">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</string>
+    <plurals name="cyberspace_bag_opaque">
+        <item quantity="one">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</item>
+        <item quantity="other">%1$d अष्टकों का अमुक जिसे यह ग्राहक पढता नहीं</item>
+    </plurals>
+    <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <string name="backup_action_block_again">पुनःबाधित करें %1$s को</string>
     <string name="backup_action_keep_count">रखें %1$s</string>
     <string name="backup_action_rejoin">पुनःजुडें %1$s</string>
@@ -5493,13 +5541,19 @@
     <string name="backup_review_renamed">पुनःनामकृत</string>
     <string name="backup_review_renamed_tag">पुनःनामकृत</string>
     <string name="backup_review_saved">इस यन्त्र पर</string>
-    <string name="backup_review_search_people">%1$s लोग खोजें</string>
+    <plurals name="backup_review_search_people">
+        <item quantity="one">%1$s लोग खोजें</item>
+        <item quantity="other">%1$s लोग खोजें</item>
+    </plurals>
     <string name="backup_review_searching_tag">खोज मध्य</string>
     <string name="backup_review_service">सेवा</string>
     <string name="backup_review_service_followers">अनुचर</string>
     <string name="backup_review_service_rank">श्रेणी</string>
     <string name="backup_review_service_topics">विषयसूची</string>
-    <string name="backup_review_services_changed">%2$s में से %1$s सेवाएँ परिवर्तित</string>
+    <plurals name="backup_review_services_changed">
+        <item quantity="one">%2$s में से %1$s सेवाएँ परिवर्तित</item>
+        <item quantity="other">%2$s में से %1$s सेवाएँ परिवर्तित</item>
+    </plurals>
     <string name="backup_review_services_changed_explainer">वे अब अन्य व्यक्ति से आते है। अथवा किसी से नहीं</string>
     <string name="backup_review_still_blocked">अभी भी बाधित</string>
     <string name="backup_review_storing_tag">अभिलेखन मध्य</string>

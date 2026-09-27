@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_cancel
 import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_damaged
 import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_destination
 import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_dropped
-import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_dropped_many
 import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_empty
 import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_measuring
 import com.vitorpamplona.amethyst.commons.resources.cyberspace_bag_no_hint
@@ -80,6 +79,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -242,7 +242,7 @@ private fun Contents(
         null -> Footnote(stringResource(Res.string.cyberspace_bag_damaged))
 
         is CyberspaceBagContents.Opaque ->
-            Footnote(asText(contents.bytes) ?: stringResource(Res.string.cyberspace_bag_opaque, contents.bytes.size))
+            Footnote(asText(contents.bytes) ?: pluralStringResource(Res.plurals.cyberspace_bag_opaque, contents.bytes.size, contents.bytes.size))
 
         is CyberspaceBagContents.Items -> {
             if (contents.items.isEmpty() && contents.dropped == 0) {
@@ -256,13 +256,7 @@ private fun Contents(
             // still worth saying that something was thrown away.
             if (contents.dropped > 0) {
                 Spacer(Modifier.height(6.dp))
-                Footnote(
-                    if (contents.dropped == 1) {
-                        stringResource(Res.string.cyberspace_bag_dropped, contents.dropped)
-                    } else {
-                        stringResource(Res.string.cyberspace_bag_dropped_many, contents.dropped)
-                    },
-                )
+                Footnote(pluralStringResource(Res.plurals.cyberspace_bag_dropped, contents.dropped, contents.dropped))
             }
         }
     }
@@ -322,9 +316,10 @@ private fun Footnote(text: String) {
 private fun outOfReach(estimateMillis: Long): String {
     val minutes = estimateMillis / 60_000L
     return if (minutes >= MINUTES_PER_HOUR) {
-        stringResource(Res.string.cyberspace_bag_too_slow_hours, (minutes / MINUTES_PER_HOUR).toInt())
+        val hours = (minutes / MINUTES_PER_HOUR).toInt()
+        pluralStringResource(Res.plurals.cyberspace_bag_too_slow_hours, hours, hours)
     } else {
-        stringResource(Res.string.cyberspace_bag_too_slow_minutes, minutes.toInt())
+        pluralStringResource(Res.plurals.cyberspace_bag_too_slow_minutes, minutes.toInt(), minutes.toInt())
     }
 }
 

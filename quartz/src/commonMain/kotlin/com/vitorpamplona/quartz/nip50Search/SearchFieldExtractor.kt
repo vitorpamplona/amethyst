@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListDescriptions
+import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListTitles
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
@@ -380,8 +383,11 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.description(), null)
             }
 
+            // kind 30063 -- the body is a NIP-82 release's notes, and nothing for a
+            // NIP-51 set (its content may be encrypted private items); the event
+            // owns that guard, so both search paths apply the same one.
             is ReleaseArtifactSetEvent -> {
-                tiers(event, event.title(), event.description(), null)
+                tiers(event, event.title(), event.description(), event.searchableReleaseNotes())
             }
 
             is AppCurationSetEvent -> {
@@ -615,6 +621,17 @@ object SearchFieldExtractor {
 
             is LiveActivitiesChatMessageEvent -> {
                 tiers(event, null, null, event.content)
+            }
+
+            // kinds 9998/39998/9999/39999 -- a list's or item's names and titles are
+            // what it is called, its description and comments what it is about. The
+            // `t` values indexableContent() appends are the funnel's hashtag role
+            // already, so -- as for 1111/1311/30382 -- they are not passed again, and
+            // content is not part of the spec. One branch for all four: an item may
+            // carry header tags (the spec's nonstandard method), and the tag helpers
+            // read whichever are present.
+            is DecentralizedListEvent -> {
+                tiers(event, event.tags.searchableListTitles(), event.tags.searchableListDescriptions(), null)
             }
 
             // kind 1 LAST among the explicit branches, defensively: a future

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_sequence_progress
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_torch_off
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_torch_on
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_zoom_reset
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlin.math.max
 
@@ -255,7 +256,7 @@ private fun HintStack(
     val message =
         when {
             state.notice != null -> state.notice
-            progress != null -> stringRes(Res.string.qr_scanner_sequence_progress, progress.first, progress.second)
+            progress != null -> pluralStringRes(Res.plurals.qr_scanner_sequence_progress, progress.second, progress.first, progress.second)
             state.candidates.size > 1 -> stringRes(Res.string.qr_scanner_pick_one)
             state.isDark && !state.torchOn -> stringRes(Res.string.qr_scanner_dark_hint)
             else -> null

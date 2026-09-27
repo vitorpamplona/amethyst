@@ -148,9 +148,11 @@ const val VIDEO_QUALITY_TAG = "VideoQuality"
  * Traces which rendition adaptive selection landed on, against the full ladder the manifest
  * offered.
  *
- * The listener is registered only when the trace can actually be emitted — debug builds set
- * `Log.minLevel = DEBUG` while benchmark/release set `ERROR` (see [PLAYBACK_DIAG_TAG]) — so the
- * release path keeps the "no listener per player" property that dropping the old selector bought.
+ * The listener is registered only when the trace can actually be emitted. `Log.minLevel` is above
+ * `DEBUG` in every variant by default — `INFO` for debug and benchmark builds, `WARN` for release
+ * (see [PLAYBACK_DIAG_TAG]) — so this costs nothing until `Amethyst.VERBOSE_LOGS` is turned on,
+ * and every build keeps the "no listener per player" property that dropping the old selector
+ * bought.
  */
 @Composable
 fun LogVideoQualitySelection(player: Player) {

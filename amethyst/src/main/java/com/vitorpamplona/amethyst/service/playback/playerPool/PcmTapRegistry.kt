@@ -27,9 +27,11 @@ import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.vitorpamplona.amethyst.commons.audio.AudioWindow
 import com.vitorpamplona.amethyst.commons.audio.Fft
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
+import com.vitorpamplona.amethyst.commons.audio.SpectrumTrail
 import com.vitorpamplona.amethyst.commons.audio.normalizeToPeakInPlace
 import com.vitorpamplona.amethyst.commons.audio.toLogBins
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.nio.ByteBuffer
@@ -65,6 +67,10 @@ class SpectrumAudioBufferSink(
     private var channels = 1
     private var encoding = C.ENCODING_PCM_16BIT
 
+    // Audio time one fft frame covers: fftSize samples per channel at the stream's sample rate.
+    // Zero until the first flush reports a rate, which leaves the frame unpaced rather than wrong.
+    private var frameDurationNanos = 0L
+
     @kotlin.OptIn(ExperimentalCoroutinesApi::class)
     override fun flush(
         sampleRateHz: Int,
@@ -73,6 +79,7 @@ class SpectrumAudioBufferSink(
     ) {
         this.channels = channelCount.coerceAtLeast(1)
         this.encoding = encoding
+        this.frameDurationNanos = if (sampleRateHz > 0) fftSize * 1_000_000_000L / sampleRateHz else 0L
         filled = 0
         output?.resetReplayCache()
     }
@@ -98,7 +105,7 @@ class SpectrumAudioBufferSink(
         // Skip the DC bin (index 0): toLogBins ignores it, so letting a DC/offset component be the
         // peak would scale every audible bin toward zero and wash the spectrum out.
         mags.normalizeToPeakInPlace(fromIndex = 1)
-        output?.tryEmit(Spectrum(mags.toLogBins(binCount)))
+        output?.tryEmit(Spectrum(mags.toLogBins(binCount), frameDurationNanos))
     }
 }
 
@@ -167,7 +174,15 @@ object PcmTapRegistry {
                         if (!fedByLiveSink && !stillCollected) iter.remove()
                     }
                 }
-                MutableSharedFlow(replay = 1, extraBufferCapacity = 1)
+                // Frames arrive in clusters (see SpectrumTrail) emitted within a few ms on the audio
+                // thread, while the collector sits on the main dispatcher and cannot run in between;
+                // a 2-slot buffer kept ~2 frames of each cluster and dropped the rest. Hold as much as
+                // the visualizer's own backlog, which is the real lag bound, dropping the stalest.
+                MutableSharedFlow(
+                    replay = 1,
+                    extraBufferCapacity = SpectrumTrail.MAX_BACKLOG_FRAMES,
+                    onBufferOverflow = BufferOverflow.DROP_OLDEST,
+                )
             }
         }
 }

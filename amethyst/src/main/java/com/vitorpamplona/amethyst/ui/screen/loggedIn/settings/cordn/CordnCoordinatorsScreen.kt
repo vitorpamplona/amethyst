@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CopyableKeyRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
@@ -444,7 +445,7 @@ private fun HealthLine(state: CoordinatorHealth.State) {
     val text =
         when {
             state.isUnknown -> stringRes(Res.string.cordn_coordinators_health_unknown)
-            state.isDown -> stringRes(Res.string.cordn_coordinators_health_down, state.consecutiveFailures)
+            state.isDown -> pluralStringRes(Res.plurals.cordn_coordinators_health_down, state.consecutiveFailures, state.consecutiveFailures)
             state.consecutiveFailures > 0 -> stringRes(Res.string.cordn_coordinators_health_retrying)
             else -> stringRes(Res.string.cordn_coordinators_health_ok)
         }
@@ -535,7 +536,7 @@ private fun DiscoverCoordinators(
                         } else {
                             // "Nobody is announcing" and "we were not told" are
                             // different answers and only one of them is final.
-                            stringRes(Res.string.cordn_coordinators_discover_unheard, found.unreachable.size)
+                            pluralStringRes(Res.plurals.cordn_coordinators_discover_unheard, found.unreachable.size, found.unreachable.size)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
