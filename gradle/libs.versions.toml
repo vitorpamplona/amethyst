@@ -16,7 +16,7 @@ activityCompose = "1.13.0"
 # 9.4.0's PerModuleBundleTask rejects an AAB entry whose name contains a colon, which every
 # .kotlin_module named after a Gradle project path has. Worked around in amethyst/build.gradle.kts
 # (stripColonNamedEntries) rather than by pinning to 9.3.1; drop that block if AGP fixes it.
-agp = "9.4.0"
+agp = "9.4.1"
 android-compileSdk = "37"
 android-minSdk = "26"
 android-targetSdk = "37"
