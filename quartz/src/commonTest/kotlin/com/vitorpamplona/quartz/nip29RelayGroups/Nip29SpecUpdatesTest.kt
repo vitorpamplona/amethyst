@@ -190,4 +190,38 @@ class Nip29SpecUpdatesTest {
             )
             assertEquals(2, moved.publicGroups().size)
         }
+
+    @Test
+    fun replaceMatchesAnUnnormalizedStoredRelayUrl() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            // Stored by another client without the trailing slash our normalizer adds.
+            val stored = GroupTag(gid, "wss://old.example.com", "Pizza")
+            val list = SimpleGroupListEvent.create(publicGroups = listOf(stored), signer = signer)
+
+            val moved =
+                SimpleGroupListEvent.replace(
+                    list,
+                    GroupTag(gid, "wss://old.example.com/", "Pizza"),
+                    GroupTag(gid, "wss://new.example.com/", "Pizza"),
+                    signer,
+                )
+
+            assertEquals(listOf(gid to "wss://new.example.com/"), moved.publicGroups().map { it.groupId to it.relayUrl })
+            assertEquals(emptyList(), moved.privateGroups(signer)?.map { it.groupId to it.relayUrl })
+        }
+
+    @Test
+    fun replaceKeepsAPrivateEntryPrivate() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val publicOther = GroupTag("other", "wss://old.example.com/", null)
+            val secret = GroupTag(gid, "wss://old.example.com/", "Pizza")
+            val list = SimpleGroupListEvent.create(publicGroups = listOf(publicOther), privateGroups = listOf(secret), signer = signer)
+
+            val moved = SimpleGroupListEvent.replace(list, secret, GroupTag(gid, "wss://new.example.com/", "Pizza"), signer)
+
+            assertEquals(listOf("other" to "wss://old.example.com/"), moved.publicGroups().map { it.groupId to it.relayUrl })
+            assertEquals(listOf(gid to "wss://new.example.com/"), moved.privateGroups(signer)?.map { it.groupId to it.relayUrl })
+        }
 }

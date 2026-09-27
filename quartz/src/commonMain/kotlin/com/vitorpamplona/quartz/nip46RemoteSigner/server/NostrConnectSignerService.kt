@@ -256,6 +256,9 @@ class NostrConnectSignerService(
 
                     RateLimiter.Decision.DENY_AND_NOTIFY -> {
                         Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…; replying with an error" }
+                        // The client is told this request failed, so a relay replaying it after a
+                        // restart must not get it serviced: persist its id like a serviced one.
+                        onHandledId?.invoke(event.id)
                         handleGate.acquire()
                         launch {
                             try {
