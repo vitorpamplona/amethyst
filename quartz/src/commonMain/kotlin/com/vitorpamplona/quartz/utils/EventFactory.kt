@@ -263,6 +263,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
@@ -702,6 +703,7 @@ class EventFactory {
                 GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapGoalEvent.KIND -> ZapGoalEvent(id, pubKey, createdAt, tags, content, sig)
                 FavoriteAlgoFeedsListEvent.KIND -> FavoriteAlgoFeedsListEvent(id, pubKey, createdAt, tags, content, sig)
+                FavoriteFollowSetsListEvent.KIND -> FavoriteFollowSetsListEvent(id, pubKey, createdAt, tags, content, sig)
                 InterestListEvent.KIND -> InterestListEvent(id, pubKey, createdAt, tags, content, sig)
                 HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
                 HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)

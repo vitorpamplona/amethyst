@@ -2474,6 +2474,8 @@
     <string name="select_list_to_filter">Select an option to filter the feed</string>
     <string name="add_dvm_to_favorites">Add feed algorithm to favorites</string>
     <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="add_follow_set_to_favorites">Add follow set to favorite feeds</string>
+    <string name="remove_follow_set_from_favorites">Remove follow set from favorite feeds</string>
     <string name="favorite_dvms_explainer">Feed algorithms you star appear here and as filter chips on the Home feed.</string>
     <string name="favorite_dvms_empty_headline">Pin your favorite algorithms</string>
     <string name="favorite_dvms_empty_step1">Tap "%1$s" below to browse algorithms.</string>

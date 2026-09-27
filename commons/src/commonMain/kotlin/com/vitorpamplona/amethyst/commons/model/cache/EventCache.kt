@@ -291,6 +291,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
@@ -3864,6 +3865,7 @@ open class EventCache :
                 is LiveChessDrawOfferEvent,
                 is InterestListEvent,
                 is FavoriteAlgoFeedsListEvent,
+                is FavoriteFollowSetsListEvent,
                 is IndexerRelayListEvent,
                 is InteractiveStoryPrologueEvent,
                 is InteractiveStorySceneEvent,

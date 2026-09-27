@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.removeAny
@@ -59,6 +60,11 @@ class InterestListEvent(
     }
 
     fun publicHashtags() = tags.mapNotNull(HashtagTag::parse)
+
+    /** NIP-51: besides hashtags, kind 10015 can point (`a`) to kind:30015 interest sets. */
+    fun publicInterestSets(): List<AddressBookmark> = tags.interestSetPointers()
+
+    suspend fun privateInterestSets(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.interestSetPointers()
 
     companion object {
         const val KIND = 10015
@@ -194,8 +200,8 @@ class InterestListEvent(
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): InterestListEvent {
-            val privateTagArray = publicHashtags.map { HashtagTag.assemble(it) }.toTypedArray()
-            val publicTagArray = privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray()
+            val publicTagArray = publicHashtags.map { HashtagTag.assemble(it) }.toTypedArray()
+            val privateTagArray = privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, privateTagArray)
         }
 

@@ -163,6 +163,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
@@ -607,6 +608,7 @@ object KindNames {
             EncryptionKeyListEvent.KIND to KindName("Encryption Keys", null),
             KeyPackageRelayListEvent.KIND to KindName("MLS KeyPackage Relays", null),
             FavoriteAlgoFeedsListEvent.KIND to KindName("Favorite Feeds", "51"),
+            FavoriteFollowSetsListEvent.KIND to KindName("Favorite Follow Sets", "51"),
             GoodWikiAuthorListEvent.KIND to KindName("Wiki Authors", "51"),
             GoodWikiRelayListEvent.KIND to KindName("Wiki Relays", "51"),
             UserGraspListEvent.KIND to KindName("GRASP Servers", "34"),

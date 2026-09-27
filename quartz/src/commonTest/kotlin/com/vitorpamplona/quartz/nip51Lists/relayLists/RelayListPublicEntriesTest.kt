@@ -116,11 +116,26 @@ class RelayListPublicEntriesTest {
         }
 
     @Test
-    fun privateOutboxRelayListKeepsTheSurvivorPublic() =
+    fun privateOutboxRelayListMovesEveryRelayIntoThePrivateContent() =
         runTest {
+            // The exception: NIP-51 requires kind 10013 relays to be NIP-44 encrypted, so the plain
+            // tags another client wrote are moved into the content instead of being kept public.
             val before = publicListFromAnotherClient<PrivateOutboxRelayListEvent>(PrivateOutboxRelayListEvent.KIND)
-            val after = PrivateOutboxRelayListEvent.updateRelayList(before, listOf(damus), signer, 1740669817)
-            assertEquals(listOf(damus), after.tags.relays())
+            val after = PrivateOutboxRelayListEvent.updateRelayList(before, listOf(damus, nosLol), signer, 1740669817)
+            assertEquals(emptyList(), after.tags.relays())
+            assertEquals(listOf(damus, nosLol), after.privateRelays(signer))
+        }
+
+    @Test
+    fun privateOutboxRelayListBuildsOnlyPrivateRelays() =
+        runTest {
+            val created = PrivateOutboxRelayListEvent.create(listOf(damus), signer, 1740669817)
+            assertEquals(emptyList(), created.tags.relays())
+            assertEquals(listOf(damus), created.privateRelays(signer))
+
+            val built = signer.sign(PrivateOutboxRelayListEvent.build(listOf(damus), signer, 1740669817))
+            assertEquals(emptyList(), built.tags.relays())
+            assertEquals(listOf(damus), built.privateRelays(signer))
         }
 
     @Test

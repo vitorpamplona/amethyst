@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockPeopleList.Block
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteFollowSetsLists.FavoriteFollowSetsListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListDecryptionCache
@@ -149,6 +150,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.bookmarkSets.BookmarkSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteFollowSetsLists.FavoriteFollowSetsListState
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.StarterPacksState
@@ -764,6 +766,9 @@ class Account(
     val favoriteAlgoFeedsListDecryptionCache = FavoriteAlgoFeedsListDecryptionCache(signer)
     val favoriteAlgoFeedsList = FavoriteAlgoFeedsListState(signer, cache, favoriteAlgoFeedsListDecryptionCache, scope, settings)
     val favoriteAlgoFeedsOrchestrator = FavoriteAlgoFeedsOrchestrator(this, scope)
+
+    val favoriteFollowSetsListDecryptionCache = FavoriteFollowSetsListDecryptionCache(signer)
+    val favoriteFollowSetsList = FavoriteFollowSetsListState(signer, cache, favoriteFollowSetsListDecryptionCache, scope)
 
     val geohashListDecryptionCache = GeohashListDecryptionCache(signer)
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
@@ -2135,6 +2140,10 @@ class Account(
     suspend fun unfollowFavoriteAlgoFeed(dvm: Address) = sendMyPublicAndPrivateOutbox(favoriteAlgoFeedsList.unfollow(dvm))
 
     fun isFavoriteAlgoFeed(dvm: Address): Boolean = favoriteAlgoFeedsList.flow.value.contains(dvm)
+
+    suspend fun followFavoriteFollowSet(followSet: AddressBookmark) = sendMyPublicAndPrivateOutbox(favoriteFollowSetsList.follow(followSet))
+
+    suspend fun unfollowFavoriteFollowSet(followSet: Address) = sendMyPublicAndPrivateOutbox(favoriteFollowSetsList.unfollow(followSet))
 
     suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 

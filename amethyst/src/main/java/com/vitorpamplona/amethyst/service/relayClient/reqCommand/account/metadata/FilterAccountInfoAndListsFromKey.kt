@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
@@ -85,6 +86,8 @@ val AccountInfoAndListsFromKeyKinds2 =
         Bolt12OfferListEvent.KIND,
         FavoriteRelayListEvent.KIND,
         InterestSetEvent.KIND,
+        // NIP-51 kind 10021: follow sets (anyone's) pinned as feeds in the top-nav picker.
+        FavoriteFollowSetsListEvent.KIND,
         // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups + servers.
         // Loaded up-front so "My Groups" and group memberships resolve immediately at login,
         // without waiting for the groups screen to mount its own subscription.

@@ -18,16 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip51Lists.interestList
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteFollowSetsLists
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.favoriteFollowSetsSet
 
-fun TagArray.hashtagList() = mapNotNull(HashtagTag::parse)
+class FavoriteFollowSetsListDecryptionCache(
+    val signer: NostrSigner,
+) {
+    val cachedPrivateLists = PrivateTagArrayEventCache<FavoriteFollowSetsListEvent>(signer)
 
-fun TagArray.hashtagSet() = mapNotNullTo(mutableSetOf(), HashtagTag::parse)
+    fun cachedFavoriteFollowSets(event: FavoriteFollowSetsListEvent) = cachedPrivateLists.mergeTagListPrecached(event).favoriteFollowSetsSet()
 
-/** `a` pointers to kind:30015 interest sets, as kind 10015 may carry them. */
-fun TagArray.interestSetPointers() = mapNotNull { tag -> AddressBookmark.parse(tag)?.takeIf { it.address.kind == InterestSetEvent.KIND } }
+    suspend fun favoriteFollowSets(event: FavoriteFollowSetsListEvent) = cachedPrivateLists.mergeTagList(event).favoriteFollowSetsSet()
+}

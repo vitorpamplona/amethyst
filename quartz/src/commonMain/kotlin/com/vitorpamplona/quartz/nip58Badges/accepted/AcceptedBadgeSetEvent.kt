@@ -34,9 +34,17 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+/**
+ * Kind 30008. NIP-58 now defines it as a NIP-51 "Badge set" (categorized groups of badges, any
+ * `d` tag, `a` badge definitions paired with `e` awards); the `profile_badges` d tag is the legacy
+ * form of the kind 10008 Profile Badges list, which is what [createAddress] points to.
+ */
 @Immutable
 class AcceptedBadgeSetEvent(
     id: HexKey,
@@ -66,6 +74,16 @@ class AcceptedBadgeSetEvent(
     fun badgeAwardEvents() = tags.badgeAwardEvents()
 
     fun badgeAwardDefinitions() = tags.badgeAwardDefinitions()
+
+    /** True for the legacy profile-badges list (`d` = `profile_badges`), false for a general badge set. */
+    fun isLegacyProfileBadges() = dTag() == STANDARD_D_TAG
+
+    /** NIP-51 set metadata of a general badge set. */
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     companion object {
         const val KIND = 30008
