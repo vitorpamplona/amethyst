@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.layouts
+package com.vitorpamplona.amethyst.commons.ui.layouts
 
-import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -85,6 +84,10 @@ class ScreenLayoutTest {
 
     @Test
     fun compactWidthKeepsTheBottomBar() = assertStyle(NavigationStyle.BOTTOM_BAR, 599, 900)
+
+    // The Medium breakpoint is inclusive: exactly 600dp is no longer Compact.
+    @Test
+    fun exactlyAtTheMediumBreakpointRails() = assertStyle(NavigationStyle.NAV_RAIL, 600, 900)
 
     // ---- Notification panel ----
 

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.commons.ui.note.elements
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,18 +33,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.now
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteWith
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.note.rememberTimeAgoLabels
-import com.vitorpamplona.amethyst.ui.note.timeAbsoluteWith
-import com.vitorpamplona.amethyst.ui.note.timeAgoShort
-import com.vitorpamplona.amethyst.ui.note.timeAgoWith
 
 /**
  * Which relative-time format to use when the timestamp is *not* toggled to absolute.
@@ -94,21 +91,20 @@ fun ToggleableTimeAgoText(
     // chat timestamp opening the relay/delivery dialog) receives the tap instead.
     toggleable: Boolean = true,
 ) {
-    val context = LocalContext.current
+    val timeOfDay = rememberTimeOfDayFormatter()
     val nowState = LocalNowSeconds.current
-    val nowStr = stringRes(id = Res.string.now)
     val labels = rememberTimeAgoLabels()
     val interactionSource = remember { MutableInteractionSource() }
     var showAbsolute by remember(timestamp) { mutableStateOf(false) }
 
     val text by
-        remember(timestamp, context, style, nowState, nowStr, labels) {
+        remember(timestamp, timeOfDay, style, nowState, labels) {
             derivedStateOf {
                 if (showAbsolute) {
                     when (style) {
-                        TimeAgoStyle.Dotted -> timeAbsoluteWith(timestamp, context, labels.never)
-                        TimeAgoStyle.DottedTight -> timeAbsoluteWith(timestamp, context, labels.never).trimStart()
-                        TimeAgoStyle.Short -> timeAbsoluteWith(timestamp, context, labels.never, prefix = "")
+                        TimeAgoStyle.Dotted -> timeAbsoluteWith(timestamp, timeOfDay, labels.never)
+                        TimeAgoStyle.DottedTight -> timeAbsoluteWith(timestamp, timeOfDay, labels.never).trimStart()
+                        TimeAgoStyle.Short -> timeAbsoluteWith(timestamp, timeOfDay, labels.never, prefix = "")
                     }
                 } else {
                     // Read nowState only when displaying a relative time, so an item
@@ -117,7 +113,7 @@ fun ToggleableTimeAgoText(
                     when (style) {
                         TimeAgoStyle.Dotted -> timeAgoWith(timestamp, labels)
                         TimeAgoStyle.DottedTight -> timeAgoWith(timestamp, labels).trimStart()
-                        TimeAgoStyle.Short -> timeAgoShort(timestamp, nowStr)
+                        TimeAgoStyle.Short -> timeAgoShort(timestamp, labels)
                     }
                 }
             }

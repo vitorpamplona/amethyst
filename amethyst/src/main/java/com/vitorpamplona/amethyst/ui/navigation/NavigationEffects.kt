@@ -40,7 +40,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.vitorpamplona.amethyst.ui.layouts.CappedScreenContent
+import com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
