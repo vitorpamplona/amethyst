@@ -641,24 +641,32 @@ fun ListContent(
     }
 }
 
-/** The Create section's rows — composer entry points, none of which is a catalog destination. */
+/**
+ * The Create section's rows — composer entry points, none of which is a catalog destination. They
+ * open as plain pushes rather than through [INav.navDrawer]: those screens host no bottom bar, and
+ * a drawer stamp would tell FabBottomBarPadding that one is showing.
+ */
 @Composable
 private fun CreateRows(nav: INav) {
-    NavigationRow(
+    IconRow(
         title = Res.string.share_hls_video,
         icon = MaterialSymbols.SettingsInputAntenna,
         tint = MaterialTheme.colorScheme.onBackground,
-        nav = nav,
-        route = Route.NewHlsVideo,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(Route.NewHlsVideo)
+        },
     )
 
     if (isDebug) {
-        NavigationRow(
+        IconRow(
             title = Res.string.route_chess,
             icon = MaterialSymbols.ChessKnight,
             tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Chess,
+            onClick = {
+                nav.closeDrawer()
+                nav.nav(Route.Chess)
+            },
         )
     }
 }
