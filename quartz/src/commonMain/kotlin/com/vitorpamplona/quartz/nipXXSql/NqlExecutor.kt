@@ -197,22 +197,19 @@ internal class NqlExecutor(
         var after = after0
         var batch = maxOf(need.toInt(), dOrderMinBatch)
         while (true) {
-            var got = 0
-            var last: String? = null
-            val ordered =
-                backend.eventsInDOrder(spec.withDAfter(after), batch) { e ->
-                    got++
-                    last = SqlProfile.d(e) ?: last
-                    if (seen.add(e.id)) events.add(e)
-                }
-            if (!ordered) return null
-            val boundary = last
-            if (got >= batch && boundary != null) {
-                // The rest of the boundary's tie group, which the batch may have cut.
+            // One past the batch: when it has a greater `d` than the batch's last, the
+            // boundary's tie group arrived whole and needs no second read.
+            val read = ArrayList<Event>(batch + 1)
+            if (!backend.eventsInDOrder(spec.withDAfter(after), batch + 1) { read.add(it) }) return null
+            val got = minOf(read.size, batch)
+            val boundary = if (got > 0) SqlProfile.d(read[got - 1]) else null
+            for (k in 0 until got) if (seen.add(read[k].id)) events.add(read[k])
+            if (read.size > batch && boundary != null && SqlProfile.d(read[batch]) == boundary) {
+                // The rest of the boundary's tie group, which the batch cut.
                 backend.events(spec.withDValues(setOf(boundary))) { e -> if (SqlProfile.d(e) == boundary && seen.add(e.id)) events.add(e) }
             }
             val result = finish(q, load(q, outer, events), outer)
-            if (got < batch || boundary == null || result.size >= limit) return result
+            if (read.size <= batch || boundary == null || result.size >= limit) return result
             after = boundary
             batch = minOf(batch * 2, D_ORDER_MAX_BATCH)
         }
