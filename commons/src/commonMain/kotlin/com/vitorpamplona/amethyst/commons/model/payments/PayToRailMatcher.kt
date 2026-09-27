@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.payments
 
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 
 /**
  * Picks the NIP-A3 payment targets a sender can hand off to when paying a note's

@@ -88,6 +88,7 @@ ent for NIP-04) |
 | 96 | `nip96FileStorage/` | HTTP file storage | HTTP-based file storage |
 | 99 | `nip99Classifieds/` | ClassifiedsEvent.kt | Classifieds/marketplace (kind 30402) |
 | A0 | `nipA0VoiceMessages/` | Voice messages | Voice message events |
+| A3 | `nipA3PaymentTargets/` | PaymentTargetsEvent.kt | Payment targets (`payto` tags, kind 10133) |
 | B7 | `nipB7Blossom/` | Blossom server URLs | Blossom file storage |
 
 ### Web/Storage/Other
@@ -127,7 +128,6 @@ Located at `/quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/experimental/
 | `limits/` | Limit enforcement |
 | `medical/` | Medical data |
 | `nip95/` | File storage support |
-| `nipA3/` | A3 protocol extension |
 | `nns/` | Nostr Name System |
 | `profileGallery/` | Profile gallery lists |
 | `publicMessages/` | Public message lists |

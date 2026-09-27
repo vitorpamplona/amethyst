@@ -18,9 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.nipA3
+package com.vitorpamplona.quartz.nipA3PaymentTargets
 
-data class PaymentTarget(
-    val type: String,
-    val authority: String,
-)
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
+import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+
+/** Changes to the NIP-A3 payment targets (the ways others can pay the user). */
+@Immutable
+class PaymentTargetsDiff(
+    val targets: ListDiff<PaymentTarget>,
+) : EventDiff {
+    override fun removesData() = targets.hasRemovals()
+}

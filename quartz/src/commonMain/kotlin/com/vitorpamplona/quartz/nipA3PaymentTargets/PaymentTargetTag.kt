@@ -18,16 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.nipA3
+package com.vitorpamplona.quartz.nipA3PaymentTargets
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
-import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-/** Changes to the NIP-A3 payment targets (the ways others can pay the user). */
-@Immutable
-class PaymentTargetsDiff(
-    val targets: ListDiff<PaymentTarget>,
-) : EventDiff {
-    override fun removesData() = targets.hasRemovals()
+class PaymentTargetTag {
+    companion object {
+        const val TAG_NAME = "payto"
+
+        fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun notMatch(tag: Array<String>) = !(tag.has(0) && tag[0] == TAG_NAME)
+
+        fun parse(tag: Array<String>): PaymentTarget? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag.has(2)) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+
+            // NIP-A3: the type is always lowercase. Normalize what other clients wrote so
+            // `Bitcoin` and `bitcoin` are one rail.
+            return PaymentTarget(tag[1].lowercase(), tag[2])
+        }
+
+        fun assemble(paymentTarget: PaymentTarget) = arrayOf(TAG_NAME, paymentTarget.type.lowercase(), paymentTarget.authority)
+    }
 }

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.payments
 
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -74,6 +74,42 @@ class PaymentTargetTypesTest {
         assertEquals("https://cash.app/\$vitor", PaymentTargetTypes.uriFor("cashapp", "\$vitor"))
         assertTrue(PaymentTargetTypes.isWebTarget("PayPal"))
         assertFalse(PaymentTargetTypes.isWebTarget("iban"))
+    }
+
+    @Test
+    fun specCashmeIsCashAppAndCashappStaysAnAlias() {
+        assertEquals("cashme", PaymentTargetTypes.canonical("cashapp"))
+        assertEquals("cashme", PaymentTargetTypes.canonical("CashMe"))
+        assertEquals("https://cash.app/\$vitor", PaymentTargetTypes.uriFor("cashme", "\$vitor"))
+        // NIP-A3 describes a $-prefixed cashtag; accept the bare name too.
+        assertEquals("https://cash.app/\$vitor", PaymentTargetTypes.uriFor("cashme", "vitor"))
+        assertTrue(PaymentTargetTypes.isWebTarget("cashme"))
+        assertEquals(PaymentTargetTypes.probeKeyFor("cashapp"), PaymentTargetTypes.probeKeyFor("cashme"))
+    }
+
+    @Test
+    fun specListedTypesUseTheirNativeScheme() {
+        assertEquals("bitcoin:bc1q", PaymentTargetTypes.uriFor("bitcoin", "bc1q"))
+        assertEquals("bitcoincash:qq1", PaymentTargetTypes.uriFor("bitcoincash", "qq1"))
+        assertEquals("ethereum:0xabc", PaymentTargetTypes.uriFor("ethereum", "0xabc"))
+        assertEquals("lightning:me@ln.tips", PaymentTargetTypes.uriFor("lightning", "me@ln.tips"))
+        assertEquals("litecoin:ltc1", PaymentTargetTypes.uriFor("litecoin", "ltc1"))
+        assertEquals("monero:4A", PaymentTargetTypes.uriFor("monero", "4A"))
+        assertEquals("nano:nano_1dctq", PaymentTargetTypes.uriFor("nano", "nano_1dctq"))
+        assertEquals("solana:So1", PaymentTargetTypes.uriFor("solana", "So1"))
+        assertEquals("tron:T9", PaymentTargetTypes.uriFor("tron", "T9"))
+        assertEquals("zcash:zs1", PaymentTargetTypes.uriFor("zcash", "zs1"))
+        // BIP-352 silent payment addresses travel in a BIP-321 bitcoin: URI's sp parameter.
+        assertEquals("bitcoin:?sp=sp1qq", PaymentTargetTypes.uriFor("bip352", "sp1qq"))
+        assertEquals("https://paypal.me/vitor", PaymentTargetTypes.uriFor("paypal", "vitor"))
+        assertEquals("https://venmo.com/vitor", PaymentTargetTypes.uriFor("venmo", "vitor"))
+        assertEquals("https://revolut.me/vitor", PaymentTargetTypes.uriFor("revolut", "vitor"))
+    }
+
+    @Test
+    fun specListedTypesWithoutASchemeUsePayto() {
+        // A BIP-353 name has to be resolved over DNS first; there is no URI scheme for it.
+        assertEquals("payto://bip353/vitor@example.com", PaymentTargetTypes.uriFor("bip353", "vitor@example.com"))
     }
 
     @Test

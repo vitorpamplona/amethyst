@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 
 fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in PaymentTargetTypes.LIGHTNING_TYPES
@@ -72,7 +72,7 @@ fun inAppPaymentRouteFor(
 
 /**
  * The URI an external wallet app should receive for [target]: the type's own
- * scheme (`bitcoin:`, `lightning:`, `https://cash.app/…`) and RFC 8905
+ * scheme (`bitcoin:`, `lightning:`, `https://cash.app/$…`) and RFC 8905
  * `payto://` for types Amethyst has no dedicated scheme for. Shared with the
  * payment-target dialog so the same pill hands off to the same app wherever
  * it is tapped.
@@ -159,6 +159,10 @@ fun paymentTargetStyleFor(rawType: String): PaymentTargetStyle {
     return when (type) {
         "bitcoin", "btc", "onchain" ->
             PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "BITCOIN")
+        "bip352" ->
+            PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "SILENT PAYMENT")
+        "bip353" ->
+            PaymentTargetStyle(MaterialSymbols.CurrencyBitcoin, BitcoinOrange, "BIP-353")
         "lightning", "ln" ->
             PaymentTargetStyle(MaterialSymbols.Bolt, BitcoinOrange, "LIGHTNING")
         "lnurl" ->
@@ -183,8 +187,12 @@ fun paymentTargetStyleFor(rawType: String): PaymentTargetStyle {
             PaymentTargetStyle(walletIcon, SOLANA_PURPLE, "SOLANA")
         "tron", "trx" ->
             PaymentTargetStyle(walletIcon, TRON_RED, "TRON")
-        "cashapp" ->
-            PaymentTargetStyle(walletIcon, CASHAPP_LIME, "CASHAPP")
+        "cashme", "cashapp" ->
+            PaymentTargetStyle(walletIcon, CASHAPP_LIME, "CASH APP")
+        "nano", "xno" ->
+            PaymentTargetStyle(walletIcon, NANO_BLUE, "NANO")
+        "revolut" ->
+            PaymentTargetStyle(walletIcon, REVOLUT_BLUE, "REVOLUT")
         "venmo" ->
             PaymentTargetStyle(walletIcon, VENMO_BLUE, "VENMO")
         "paypal" ->
@@ -213,4 +221,6 @@ private val TRON_RED = Color(0xFFEF0027)
 private val CASHAPP_LIME = Color(0xFF00E64D)
 private val VENMO_BLUE = Color(0xFF008CFF)
 private val PAYPAL_DEEP_BLUE = Color(0xFF003087)
+private val NANO_BLUE = Color(0xFF209CE9)
+private val REVOLUT_BLUE = Color(0xFF0666EB)
 private val GENERIC_TARGET_COLOR = Color(0xFF7C8DA0)
