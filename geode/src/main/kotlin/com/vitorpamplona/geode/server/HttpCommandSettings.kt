@@ -39,6 +39,8 @@ data class HttpCommandSettings(
     val deadline: Duration = HttpRelayHandler.DEFAULT_DEADLINE,
     /** The largest body read; the engine's own message limit, when it has one and it is smaller, wins. */
     val maxBodyBytes: Int = 512 * 1024,
+    /** Gzip streamed answers for clients that accept it, sync-flushed so lines still arrive as found. */
+    val compress: Boolean = true,
     /** The `Retry-After` sent with a 429 or 503 the relay decides itself. */
     val retryAfterSeconds: Int = 1,
     /** Other URLs this relay answers at (its .onion); a NIP-98 `u` may name any of them. */

@@ -246,6 +246,8 @@ data class StaticConfig(
         val deadline_seconds: Long = 30,
         /** Largest request body read; larger is 413. */
         val max_body_bytes: Int = 512 * 1024,
+        /** Gzip streamed answers when the client sends `Accept-Encoding: gzip`, flushed line by line. */
+        val gzip: Boolean = true,
         /** `Retry-After` on the relay's own 429 and 503. */
         val retry_after_seconds: Int = 1,
         /**
@@ -270,6 +272,7 @@ data class StaticConfig(
                     maxPerClient = max_requests_per_client,
                     deadline = deadline_seconds.seconds,
                     maxBodyBytes = max_body_bytes,
+                    compress = gzip,
                     retryAfterSeconds = retry_after_seconds,
                     alternateUrls = alternate_urls.map { it.normalizeRelayUrl() },
                     trustedProxies = trusted_proxies.toSet(),

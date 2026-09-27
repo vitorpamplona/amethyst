@@ -108,7 +108,7 @@ URL: the body is the frame you would send on the socket, and the answer is the
 socket's frames as NDJSON, streamed — no socket, no subscription left open:
 
 ```bash
-curl -N -d '["REQ","q",{"kinds":[1],"limit":2}]' http://localhost:7447/
+curl -N --compressed -d '["REQ","q",{"kinds":[1],"limit":2}]' http://localhost:7447/
 # ["EVENT","q",{"id":"…","kind":1,…}]
 # ["EVENT","q",{"id":"…","kind":1,…}]
 # ["EOSE","q"]
@@ -121,7 +121,10 @@ A body that does not end on `EOSE`/`CLOSED` (REQ), `COUNT`/`CLOSED` (COUNT) or
 request carries a NIP-98 `Authorization: Nostr …` header whose `u` is the
 relay's http URL and whose `payload` is the body's sha256. NIP-86 admin calls
 share the URL, told apart by `Content-Type: application/nostr+json+rpc`.
-Quartz's `HttpRelayClient` does all of this for JVM/Android clients.
+Streamed answers are gzipped for clients that send `Accept-Encoding: gzip`
+(`curl --compressed`), sync-flushed so events still arrive as they are found;
+`[http].gzip = false` turns it off. Quartz's `HttpRelayClient` does all of this
+for clients, over OkHttp via `OkHttpRelayTransport` or any `HttpRelayTransport`.
 
 ## Verbs
 

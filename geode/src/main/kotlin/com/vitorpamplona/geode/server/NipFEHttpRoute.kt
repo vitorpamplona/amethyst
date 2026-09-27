@@ -132,6 +132,27 @@ internal class NipFEHttpRoute(
             ?.ifEmpty { null } ?: peer
     }
 
+    /**
+     * Whether `Accept-Encoding` takes gzip: listed by name or as `*`, without `q=0`. A one-line
+     * answer is never compressed; only a streamed one is worth it.
+     */
+    private fun acceptsGzip(call: ApplicationCall): Boolean =
+        call.request
+            .header(HttpHeaders.AcceptEncoding)
+            .orEmpty()
+            .split(',')
+            .any { entry ->
+                val parts = entry.split(';').map { it.trim() }
+                val coding = parts.first().lowercase()
+                val q =
+                    parts
+                        .drop(1)
+                        .firstOrNull { it.startsWith("q=") }
+                        ?.removePrefix("q=")
+                        ?.toDoubleOrNull() ?: 1.0
+                (coding == "gzip" || coding == "*") && q > 0.0
+            }
+
     /** A one-line answer: a refusal, or a command answered at once. */
     private suspend fun respondLine(
         call: ApplicationCall,
@@ -153,19 +174,41 @@ internal class NipFEHttpRoute(
             frame: String,
         ) = respondLine(call, status, frame)
 
-        /** Chunked: each flush puts what the handler wrote on the wire, and a full socket suspends the writer. */
-        override suspend fun stream(lines: suspend HttpRelayLines.() -> Unit) =
+        /**
+         * Chunked: each flush puts what the handler wrote on the wire, and a full socket suspends the
+         * writer. Gzipped when the client takes it and the relay allows it, sync-flushed at every
+         * flush so the lines still arrive as they are found.
+         */
+        override suspend fun stream(lines: suspend HttpRelayLines.() -> Unit) {
+            val gzip = settings.compress && acceptsGzip(call)
+            call.response.header(HttpHeaders.Vary, HttpHeaders.AcceptEncoding)
+            if (gzip) call.response.header(HttpHeaders.ContentEncoding, "gzip")
             call.respondBytesWriter(NDJSON, HttpStatusCode.OK) {
                 val out = this
-                object : HttpRelayLines {
-                    override suspend fun line(frame: String) {
-                        out.writeStringUtf8(frame)
-                        out.writeStringUtf8("\n")
-                    }
+                if (gzip) {
+                    val body = GzipLines(out)
+                    try {
+                        object : HttpRelayLines {
+                            override suspend fun line(frame: String) = body.line(frame)
 
-                    override suspend fun flush() = out.flush()
-                }.lines()
+                            override suspend fun flush() = body.flush()
+                        }.lines()
+                        body.finish()
+                    } finally {
+                        body.close()
+                    }
+                } else {
+                    object : HttpRelayLines {
+                        override suspend fun line(frame: String) {
+                            out.writeStringUtf8(frame)
+                            out.writeStringUtf8("\n")
+                        }
+
+                        override suspend fun flush() = out.flush()
+                    }.lines()
+                }
             }
+        }
     }
 
     companion object {

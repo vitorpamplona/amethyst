@@ -185,6 +185,10 @@ max_requests_per_client = 16
 # An answer still running after this ends on a CLOSED line.
 deadline_seconds = 30
 max_body_bytes = 524288
+# Gzip streamed answers for clients that send Accept-Encoding: gzip. Each
+# batch of lines is sync-flushed, so events still arrive as they are
+# found. Turn off if a proxy in front already compresses.
+gzip = true
 retry_after_seconds = 1
 # Other addresses this relay is reachable at: a NIP-98 token may name
 # any of them, as well as [info].relay_url.

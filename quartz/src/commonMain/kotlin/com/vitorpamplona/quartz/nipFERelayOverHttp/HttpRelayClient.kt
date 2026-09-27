@@ -33,22 +33,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.coroutines.executeAsync
-import okio.IOException
 
 /**
- * NIP-FE over OkHttp: one relay command per request, POSTed to the relay's URL as the frame the
+ * NIP-FE client: one relay command per request, POSTed to the relay's URL as the frame the
  * websocket would carry, its answer read line by line as the relay writes it, in the socket's own
- * frames. Nothing stays open after a call returns.
+ * frames. Nothing stays open after a call returns. [transport] carries the bytes (OkHttp on
+ * JVM/Android: `OkHttpRelayTransport`), as a websocket builder does for the NostrClient.
  *
  * With a [signer], a request the relay refuses with 401 goes once more carrying a NIP-98 token for
  * its exact body, as a websocket client answers a NIP-42 challenge; without one, the 401 is the
@@ -56,7 +46,7 @@ import okio.IOException
  * relay known to want it.
  */
 class HttpRelayClient(
-    private val http: OkHttpClient,
+    private val transport: HttpRelayTransport,
     private val signer: NostrSigner? = null,
     private val signFirst: Boolean = false,
 ) {
@@ -92,11 +82,11 @@ class HttpRelayClient(
     ): HttpRelayAnswer {
         val command = requireNotNull(HttpRelayCommand.of(cmd)) { "NIP-FE carries REQ, COUNT and EVENT, not ${cmd.label()}" }
         val url = relay.toHttp()
-        val bytes = cmd.toJson().encodeToByteArray()
-        if (signer == null || signFirst) return post(command, url, bytes, token(url, bytes), onMessage, retrying = false)
-        val first = post(command, url, bytes, null, onMessage, retrying = true)
+        val body = cmd.toJson().encodeToByteArray()
+        if (signer == null || signFirst) return post(relay, command, url, body, token(url, body), onMessage, retrying = false)
+        val first = post(relay, command, url, body, null, onMessage, retrying = true)
         if (first.status != HttpRelayStatus.UNAUTHORIZED) return first
-        return post(command, url, bytes, token(url, bytes), onMessage, retrying = false)
+        return post(relay, command, url, body, token(url, body), onMessage, retrying = false)
     }
 
     private suspend fun token(
@@ -105,6 +95,7 @@ class HttpRelayClient(
     ): String? = signer?.sign(HTTPAuthorizationEvent.build(url, "POST", body))?.toAuthToken()
 
     private suspend fun post(
+        relay: NormalizedRelayUrl,
         command: HttpRelayCommand,
         url: String,
         body: ByteArray,
@@ -112,51 +103,25 @@ class HttpRelayClient(
         onMessage: (Message) -> Unit,
         /** A signed try follows a 401, so that refusal is not the answer and is not handed on. */
         retrying: Boolean,
-    ): HttpRelayAnswer =
-        coroutineScope {
-            val request =
-                Request
-                    .Builder()
-                    .url(url)
-                    .post(body.toRequestBody(JSON))
-                    .header("Accept", NDJSON)
-                    .apply { authorization?.let { header("Authorization", it) } }
-                    .build()
-            val call = http.newCall(request)
-            // A blocking read does not see coroutine cancellation; cancelling the call unblocks it.
-            val watcher =
-                launch {
-                    try {
-                        awaitCancellation()
-                    } finally {
-                        call.cancel()
-                    }
-                }
-            try {
-                call.executeAsync().use { response ->
-                    withContext(Dispatchers.IO) {
-                        val reader = HttpRelayAnswerReader(command, response.code)
-                        val deliver = !(retrying && response.code == HttpRelayStatus.UNAUTHORIZED)
-                        val source = response.body.source()
-                        try {
-                            while (true) {
-                                val line = source.readUtf8Line() ?: break
-                                val message = reader.read(line)
-                                if (message != null && deliver) onMessage(message)
-                            }
-                        } catch (_: IOException) {
-                            // The connection dropped mid-answer: what came is what the reader says it is.
-                        }
-                        reader.answer(response.header("Retry-After"))
-                    }
-                }
-            } finally {
-                watcher.cancel()
-            }
-        }
-
-    companion object {
-        const val NDJSON = "application/x-ndjson"
-        private val JSON = "application/json".toMediaType()
+    ): HttpRelayAnswer {
+        var reader: HttpRelayAnswerReader? = null
+        var retryAfter: String? = null
+        var deliver = true
+        transport.post(
+            relay = relay,
+            url = url,
+            body = body,
+            authorization = authorization,
+            onStatus = { status, after ->
+                reader = HttpRelayAnswerReader(command, status)
+                retryAfter = after
+                deliver = !(retrying && status == HttpRelayStatus.UNAUTHORIZED)
+            },
+            onLine = { line ->
+                val message = checkNotNull(reader) { "a line before the status" }.read(line)
+                if (message != null && deliver) onMessage(message)
+            },
+        )
+        return checkNotNull(reader) { "the transport returned without a status" }.answer(retryAfter)
     }
 }
