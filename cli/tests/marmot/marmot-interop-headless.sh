@@ -210,6 +210,7 @@ ALL_TESTS=(
   test_27_deletion_wn_to_amy
   test_28_retention_wn_to_amy
   test_29_disband_amy_to_wn
+  test_31_reaction_materializes_on_wn
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

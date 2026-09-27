@@ -87,6 +87,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -570,13 +571,20 @@ class MarmotManager(
         targetEvent: Event,
         reaction: String,
     ): Event {
+        val hint =
+            com.vitorpamplona.quartz.nip01Core.hints
+                .EventHintBundle(targetEvent)
+        // A custom-emoji reaction (":name:url") carries its image in an emoji
+        // tag, exactly as the public NIP-25 path builds it.
+        val emojiUrl = if (reaction.startsWith(":")) EmojiUrlTag.decode(reaction) else null
         val template =
-            com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-                .build(
-                    reaction,
-                    com.vitorpamplona.quartz.nip01Core.hints
-                        .EventHintBundle(targetEvent),
-                )
+            if (emojiUrl != null) {
+                com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+                    .build(emojiUrl, hint)
+            } else {
+                com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+                    .build(reaction, hint)
+            }
         return com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
             .assembleRumor<com.vitorpamplona.quartz.nip25Reactions.ReactionEvent>(
                 signer.pubKey,
@@ -739,12 +747,16 @@ class MarmotManager(
         targetEvents: List<Event>,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
-        require(targetEvents.isNotEmpty()) { "buildDeletionMessage: targetEvents must not be empty" }
-        val template = DeletionRequestEvent.build(targetEvents)
-        val innerEvent = RumorAssembler.assembleRumor<DeletionRequestEvent>(signer.pubKey, template)
+        val innerEvent = buildDeletionRumor(targetEvents)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
+    }
+
+    /** The inner kind:5 deletion rumor alone. See [buildTextRumor]. */
+    suspend fun buildDeletionRumor(targetEvents: List<Event>): DeletionRequestEvent {
+        require(targetEvents.isNotEmpty()) { "buildDeletionRumor: targetEvents must not be empty" }
+        return RumorAssembler.assembleRumor(signer.pubKey, DeletionRequestEvent.build(targetEvents))
     }
 
     /**

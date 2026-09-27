@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
@@ -244,6 +245,54 @@ class AccountMarmotActions(
         // would never reach the on-disk log. Write it here instead. Last,
         // because it rewrites the whole log and nothing on screen waits for it.
         manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+    }
+
+    /**
+     * The Marmot group [note] was received or sent in, or null when it is not a
+     * Marmot message.
+     *
+     * Only chat rows are indexed, so pass the MESSAGE a reaction or deletion is
+     * about, not the reaction itself.
+     */
+    fun marmotGroupOf(note: Note): HexKey? = account.marmotGroupList.groupIdForNote(note.idHex)
+
+    /**
+     * React to a Marmot message inside its group.
+     *
+     * A Marmot message is an unsigned rumor, which the generic reaction path
+     * handles as a NIP-17 private note: it gift-wrapped the kind:7 to the
+     * author as a DM. That never reached the group, so no other client showed
+     * it, and it moved group activity out of the group's channel. The reaction
+     * is an ordinary inner kind:7 (MIP-03), encrypted to the group like any
+     * message.
+     */
+    suspend fun reactToMarmotMessage(
+        nostrGroupId: HexKey,
+        target: Note,
+        reaction: String,
+    ) {
+        val manager = account.marmotManager ?: return
+        val targetEvent = target.event ?: return
+        if (target.hasReacted(account.userProfile(), reaction)) return
+        val rumor = manager.buildReactionRumor(targetEvent, reaction)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+    }
+
+    /**
+     * Retract our own messages or reactions in a Marmot group with an inner
+     * kind:5, for the same reason [reactToMarmotMessage] exists: the generic
+     * private path sent a gift-wrapped NIP-09 to the target's author, so the
+     * other members never saw the deletion.
+     */
+    suspend fun deleteMarmotMessages(
+        nostrGroupId: HexKey,
+        notes: List<Note>,
+    ) {
+        val manager = account.marmotManager ?: return
+        val mine = notes.filter { it.author == account.userProfile() }.mapNotNull { it.event }
+        if (mine.isEmpty()) return
+        val rumor = manager.buildDeletionRumor(mine)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
     }
 
     /**
