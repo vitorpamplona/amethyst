@@ -18,27 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip46RemoteSigner.signer
+package com.vitorpamplona.quartz.nip46RemoteSigner
 
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
-
-class PubKeyResponse {
-    companion object {
-        fun parse(response: BunkerResponse): SignerResult.RequestAddressed<PublicKeyResult> =
-            when (response) {
-                is BunkerResponsePublicKey -> {
-                    SignerResult.RequestAddressed.Successful(PublicKeyResult(response.pubkey))
-                }
-
-                is BunkerResponseError -> {
-                    SignerResult.RequestAddressed.Rejected(response.error)
-                }
-
-                else -> {
-                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                }
-            }
-    }
-}
+/**
+ * A request whose `id` and `method` could be read but whose `params` could not be
+ * turned into the typed request for a method this library knows (e.g. `sign_event`
+ * with no params, or a param that is not an event template).
+ *
+ * [BunkerRequestParser] returns this instead of throwing so the remote signer can
+ * still answer with an error carrying the request id — NIP-46: "Requests made with
+ * unknown or unsupported methods MUST be replied with an error" — rather than
+ * dropping the request and leaving the client to time out.
+ */
+class BunkerRequestInvalid(
+    id: String,
+    method: String,
+    params: Array<String>,
+    val reason: String,
+) : BunkerRequest(id, method, params)

@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
@@ -48,6 +49,8 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -328,12 +331,89 @@ class NostrConnectSignerServiceTest {
 
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
 
-            // Five distinct requests from the same author within one window → only 2 are serviced.
+            // Five distinct requests from the same author within one window → only 2 are serviced,
+            // the first over-limit one is answered with a `rate limited` error, the rest are dropped.
             repeat(5) { i ->
                 client.deliver(request(BunkerRequestConnect(id = "req$i", remoteKey = serverKey, secret = "s")))
             }
 
-            assertEquals(2, client.published.size)
+            assertEquals(3, client.published.size)
+            val replies = client.published.map { (it as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse }
+            assertEquals(listOf("req0", "req1", "req2"), replies.map { it.id })
+            assertEquals(BunkerRequestProcessor.ERROR_RATE_LIMITED, replies[2].error)
+        }
+
+    @Test
+    fun signEventWithoutParamsGetsAnErrorReply() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            // A known method with missing params used to throw while parsing and be dropped, leaving
+            // the client to time out. It must now be answered with an error carrying the request id.
+            client.deliver(request(BunkerRequest(id = "noparams", method = BunkerRequestSign.METHOD_NAME)))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner())
+            assertIs<BunkerResponseError>(reply)
+            assertEquals("noparams", reply.id)
+            assertTrue(reply.error!!.startsWith(BunkerRequestProcessor.ERROR_INVALID_PARAMS), reply.error)
+        }
+
+    @Test
+    fun signEventWithGarbageParamsGetsAnErrorReply() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequest(id = "garbage", method = BunkerRequestSign.METHOD_NAME, params = arrayOf("not an event"))))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner())
+            assertIs<BunkerResponseError>(reply)
+            assertEquals("garbage", reply.id)
+        }
+
+    @Test
+    fun unknownMethodGetsAnErrorReply() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequest(id = "unknown", method = "frobnicate")))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner())
+            assertIs<BunkerResponseError>(reply)
+            assertEquals("unknown", reply.id)
+            assertEquals("${BunkerRequestProcessor.ERROR_UNSUPPORTED_METHOD}: frobnicate", reply.error)
+        }
+
+    @Test
+    fun switchRelaysIsAnsweredWithNull() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequest(id = "sw", method = BunkerRequestProcessor.METHOD_SWITCH_RELAYS)))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse
+            assertEquals("sw", reply.id)
+            assertEquals("null", reply.result)
+            assertNull(reply.error)
         }
 
     @Test

@@ -354,7 +354,11 @@ class NostrSignerRemote(
             is SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult<*> -> IllegalStateException("$title: Failed to parse event: ${result.eventJson}.")
             is SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent<*> -> IllegalStateException("$title: Failed to verify event: ${result.invalidEvent.toJson()}.")
             is SignerResult.RequestAddressed.ReceivedButCouldNotPerform<*> -> SignerExceptions.CouldNotPerformException("$title: ${result.message}")
-            is SignerResult.RequestAddressed.Rejected<*> -> SignerExceptions.ManuallyUnauthorizedException("$title: User has rejected the request.")
+            is SignerResult.RequestAddressed.Rejected<*> ->
+                SignerExceptions.ManuallyUnauthorizedException(
+                    result.message?.takeIf { it.isNotBlank() }?.let { "$title: Remote signer returned an error: $it" }
+                        ?: "$title: User has rejected the request.",
+                )
             is SignerResult.RequestAddressed.TimedOut<*> -> SignerExceptions.TimedOutException("$title: User didn't accept or reject in time.")
         }
 

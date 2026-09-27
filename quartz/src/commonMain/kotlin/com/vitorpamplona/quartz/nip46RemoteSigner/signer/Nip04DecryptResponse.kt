@@ -33,7 +33,7 @@ class Nip04DecryptResponse {
                 }
 
                 is BunkerResponseError -> {
-                    SignerResult.RequestAddressed.Rejected()
+                    SignerResult.RequestAddressed.Rejected(response.error)
                 }
 
                 else -> {

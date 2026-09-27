@@ -35,7 +35,7 @@ class SignResponse {
                     SignerResult.RequestAddressed.Successful(SignResult(response.event))
                 }
             } else if (response is BunkerResponseError) {
-                SignerResult.RequestAddressed.Rejected()
+                SignerResult.RequestAddressed.Rejected(response.error)
             } else {
                 SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
