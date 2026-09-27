@@ -18,49 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip86RelayManagement.rpc
+package com.vitorpamplona.quartz.nip43RelayMembers.roles
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleColorTag
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleDescriptionTag
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleLabelTag
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleOrderTag
 
-@Serializable
-class Nip86Response(
-    val result: JsonElement? = null,
-    val error: String? = null,
-)
+fun TagArray.roleLabel() = fastFirstNotNullOfOrNull(RoleLabelTag::parse)
 
-@Serializable
-class BannedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
+fun TagArray.roleDescription() = fastFirstNotNullOfOrNull(RoleDescriptionTag::parse)
 
-@Serializable
-class AllowedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
+fun TagArray.roleColor() = fastFirstNotNullOfOrNull(RoleColorTag::parse)
 
-@Serializable
-class BannedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class AllowedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class EventNeedingModeration(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class BlockedIp(
-    val ip: String,
-    val reason: String? = null,
-)
+fun TagArray.roleOrder() = fastFirstNotNullOfOrNull(RoleOrderTag::parse)

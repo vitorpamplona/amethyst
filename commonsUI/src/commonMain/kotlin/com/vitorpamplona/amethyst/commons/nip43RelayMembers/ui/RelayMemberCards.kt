@@ -20,18 +20,23 @@
  */
 package com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
 
 /** NIP-43 kind 13534: the relay's current member list, shown as a count. */
 @Composable
@@ -123,6 +129,52 @@ fun RelayLeaveRequestCard() {
     )
 }
 
+/**
+ * The NIP-43 roles (kind 33534) a relay assigned to a member, as small labelled
+ * chips tinted with each role's hue. Roles without a label show their id; roles
+ * without a color use the theme's secondary container. Sorted by the roles'
+ * display `order`.
+ */
+@Composable
+fun RelayRoleChips(
+    roles: List<RelayRole>,
+    modifier: Modifier = Modifier,
+) {
+    if (roles.isEmpty()) return
+    val sorted = remember(roles) { roles.sortedWith(compareBy<RelayRole>({ it.order ?: Int.MAX_VALUE }, { it.label ?: it.id })) }
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        sorted.forEach { RelayRoleChip(it) }
+    }
+}
+
+@Composable
+fun RelayRoleChip(role: RelayRole) {
+    val hue = role.color
+    val background =
+        if (hue != null && RelayRole.isValidHue(hue)) {
+            Color.hsv(hue.toFloat(), 0.45f, 0.85f)
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        }
+    val content = if (hue != null && RelayRole.isValidHue(hue)) Color.Black else MaterialTheme.colorScheme.onSecondaryContainer
+
+    Text(
+        text = role.label ?: role.id,
+        style = MaterialTheme.typography.labelSmall,
+        color = content,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(background)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}
+
 @Composable
 private fun RelayMemberEventCard(
     icon: MaterialSymbol,
@@ -171,6 +223,20 @@ private fun RelayMembershipListCardPreview() {
             icon = MaterialSymbols.People,
             title = "Relay membership list",
             subtitle = "42 members",
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun RelayRoleChipsPreview() {
+    ThemeComparisonColumn {
+        RelayRoleChips(
+            listOf(
+                RelayRole("28b7e50f", label = "king", color = 37, order = 1),
+                RelayRole("mod", label = "moderator", color = 200, order = 2),
+                RelayRole("plain"),
+            ),
         )
     }
 }

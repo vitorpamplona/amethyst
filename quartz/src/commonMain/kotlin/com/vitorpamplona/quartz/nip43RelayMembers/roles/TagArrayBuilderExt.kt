@@ -18,49 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip86RelayManagement.rpc
+package com.vitorpamplona.quartz.nip43RelayMembers.roles
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleColorTag
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleDescriptionTag
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleLabelTag
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.tags.RoleOrderTag
 
-@Serializable
-class Nip86Response(
-    val result: JsonElement? = null,
-    val error: String? = null,
-)
+fun TagArrayBuilder<RelayRoleEvent>.roleLabel(label: String) = addUnique(RoleLabelTag.assemble(label))
 
-@Serializable
-class BannedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
+fun TagArrayBuilder<RelayRoleEvent>.roleDescription(description: String) = addUnique(RoleDescriptionTag.assemble(description))
 
-@Serializable
-class AllowedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
+fun TagArrayBuilder<RelayRoleEvent>.roleColor(hue: Int) = addUnique(RoleColorTag.assemble(hue))
 
-@Serializable
-class BannedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class AllowedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class EventNeedingModeration(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class BlockedIp(
-    val ip: String,
-    val reason: String? = null,
-)
+fun TagArrayBuilder<RelayRoleEvent>.roleOrder(order: Int) = addUnique(RoleOrderTag.assemble(order))

@@ -453,8 +453,12 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy admin RELAY supported-methods` | List the NIP-86 methods the relay implements. |
 | `amy admin RELAY ban-pubkey HEX [--reason R]` / `unban-pubkey HEX` / `list-banned-pubkeys` | Pubkey ban list. |
 | `amy admin RELAY allow-pubkey HEX [--reason R]` / `unallow-pubkey HEX` / `list-allowed-pubkeys` | Pubkey allow list. |
-| `amy admin RELAY ban-event ID [--reason R]` / `allow-event ID` / `list-banned-events` / `list-needing-moderation` | Event moderation. |
-| `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` | Kind allow list. |
+| `amy admin RELAY ban-event ID [--reason R]` / `unban-event ID` / `list-banned-events` | Event ban list. `ban-event` also drops the id from the allow list; `unban-event` does not allow-list it. |
+| `amy admin RELAY allow-event ID [--reason R]` / `unallow-event ID` / `list-allowed-events` / `list-needing-moderation` | Event allow list (approve an event: it also lifts any ban) and the moderation queue. |
+| `amy admin RELAY create-role ID [--label L] [--description D] [--color HUE] [--order N]` / `edit-role ID …` / `delete-role ID` | NIP-43 member roles (kind 33534); `--color` is a hue 0–360. |
+| `amy admin RELAY assign-role HEX ROLE` / `unassign-role HEX ROLE` | Give / take a role. |
+| `amy admin RELAY create-claim CODE` / `delete-claim CODE` / `list-claims` | NIP-43 invite codes for kind 28934 join requests. |
+| `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` / `list-disallowed-kinds` | Kind allow / deny lists. |
 | `amy admin RELAY block-ip IP [--reason R]` / `unblock-ip IP` / `list-blocked-ips` | IP block list. |
 | `amy admin RELAY change-name S` / `change-description S` / `change-icon URL` | Relay metadata. |
 

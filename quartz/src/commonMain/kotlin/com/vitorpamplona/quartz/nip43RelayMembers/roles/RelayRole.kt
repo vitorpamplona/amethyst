@@ -18,49 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip86RelayManagement.rpc
+package com.vitorpamplona.quartz.nip43RelayMembers.roles
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
+import androidx.compose.runtime.Immutable
 
-@Serializable
-class Nip86Response(
-    val result: JsonElement? = null,
-    val error: String? = null,
-)
-
-@Serializable
-class BannedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class AllowedPubkey(
-    val pubkey: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class BannedEvent(
+/**
+ * A NIP-43 role as the relay defines it: the content of a kind 33534
+ * [RelayRoleEvent], and the `[id, label, description, color, order]` params
+ * of the NIP-86 `createrole` / `editrole` methods.
+ *
+ * [color] is a hue in `0..360` (see [isValidHue]); [order] is a display-only
+ * sort key. Everything but [id] is optional.
+ */
+@Immutable
+data class RelayRole(
     val id: String,
-    val reason: String? = null,
-)
+    val label: String? = null,
+    val description: String? = null,
+    val color: Int? = null,
+    val order: Int? = null,
+) {
+    companion object {
+        const val MIN_HUE = 0
+        const val MAX_HUE = 360
 
-@Serializable
-class AllowedEvent(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class EventNeedingModeration(
-    val id: String,
-    val reason: String? = null,
-)
-
-@Serializable
-class BlockedIp(
-    val ip: String,
-    val reason: String? = null,
-)
+        fun isValidHue(hue: Int) = hue in MIN_HUE..MAX_HUE
+    }
+}

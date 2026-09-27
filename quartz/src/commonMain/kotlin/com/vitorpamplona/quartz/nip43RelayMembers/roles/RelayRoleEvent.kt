@@ -18,48 +18,72 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip43RelayMembers.joinRequest
+package com.vitorpamplona.quartz.nip43RelayMembers.roles
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * NIP-43 kind 28934: a request to join a relay. Must carry a NIP-70 `-` tag and
- * a `claim` tag with the invite code; the relay answers with an `OK`. Invite
- * codes are minted by the relay (NIP-86 `createclaim`), not requested with the
- * deprecated kind 28935.
+ * NIP-43 kind 33534: a role the relay defines and may assign to members.
+ *
+ * Signed by the relay's NIP-11 `self` pubkey and protected (NIP-70 `-` tag).
+ * The `d` tag is the role id — the value a kind 13534 `member` tag lists after
+ * the pubkey. `label`, `description`, `color` (a hue, 0..360) and `order`
+ * (display-only sort key) are optional.
  */
 @Immutable
-class RelayJoinRequestEvent(
+class RelayRoleEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun claim() = tags.claim()
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun roleId() = dTag()
+
+    fun label() = tags.roleLabel()
+
+    fun description() = tags.roleDescription()
+
+    /** Hue in `0..360`, or null when absent or out of range. */
+    fun color() = tags.roleColor()
+
+    fun order() = tags.roleOrder()
+
+    fun role() =
+        RelayRole(
+            id = roleId(),
+            label = label(),
+            description = description(),
+            color = color(),
+            order = order(),
+        )
 
     companion object {
-        const val KIND = 28934
+        const val KIND = 33534
 
         fun build(
-            claim: String,
+            role: RelayRole,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<RelayJoinRequestEvent>.() -> Unit = {},
-        ): EventTemplate<RelayJoinRequestEvent> {
-            require(claim.isNotBlank()) { "NIP-43 join requests require an invite code (claim)" }
-            return eventTemplate(KIND, "", createdAt) {
-                protect()
-                claim(claim)
-                initializer()
+            initializer: TagArrayBuilder<RelayRoleEvent>.() -> Unit = {},
+        ) = eventTemplate<RelayRoleEvent>(KIND, "", createdAt) {
+            protect()
+            dTag(role.id)
+            role.label?.let { roleLabel(it) }
+            role.description?.let { roleDescription(it) }
+            role.color?.let {
+                require(RelayRole.isValidHue(it)) { "role color must be a hue between 0 and 360, got $it" }
+                roleColor(it)
             }
+            role.order?.let { roleOrder(it) }
+            initializer()
         }
     }
 }

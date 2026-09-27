@@ -150,6 +150,7 @@ import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEv
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
@@ -614,6 +615,7 @@ object KindNames {
             Ps1SaveEvent.KIND to KindName("PS1 Save", null),
             NwcInfoEvent.KIND to KindName("NWC Info", "47"),
             RelayMembershipListEvent.KIND to KindName("Relay Memberships", "43"),
+            RelayRoleEvent.KIND to KindName("Relay Role", "43"),
             RootSiteEvent.KIND to KindName("Website Root", "5A"),
             RootNappletEvent.KIND to KindName("Napplet Root", "5D"),
             CashuWalletEvent.KIND to KindName("Cashu Wallet", "60"),

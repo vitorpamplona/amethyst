@@ -30,6 +30,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
  * non-empty pubkey allow list, or kind disallowed / not in the kind
  * allow list.
  *
+ * An event id on the NIP-86 event allow list (`allowevent`) is an
+ * explicit, per-event operator approval, so it is accepted without
+ * consulting the pubkey and kind rules — the most specific decision
+ * wins, the same way `banevent` rejects an event from an otherwise
+ * allowed author. The event allow list never restricts anything: with
+ * it empty (the default) this policy behaves exactly as before. It only
+ * short-circuits this policy; other policies stacked next to it still
+ * apply.
+ *
  * Functionally equivalent to (and a superset of) the static
  * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy] +
  * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy].
@@ -46,6 +55,9 @@ class BanListPolicy(
         val ev = cmd.event
         if (banStore.isBannedEvent(ev.id)) {
             return PolicyResult.Rejected("blocked: event id is banned")
+        }
+        if (banStore.isAllowedEvent(ev.id)) {
+            return PolicyResult.Accepted(cmd)
         }
         if (banStore.isBanned(ev.pubKey)) {
             return PolicyResult.Rejected("blocked: pubkey is banned")
