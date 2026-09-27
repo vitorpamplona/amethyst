@@ -254,10 +254,12 @@ class NqlDifferentialFuzzTest {
                     params += ""
                     val author = if (rnd.nextBoolean()) " AND e.pubkey = ?" else ""
                     if (author.isNotEmpty()) params += signers[rnd.nextInt(signers.size)].pubKey
+                    // Drops cards after they are read, so a page comes up short and refills.
+                    val high = if (rnd.nextBoolean()) " AND CAST(r.t1 AS INTEGER) > " + rnd.nextInt(90) else ""
                     val limit = if (rnd.nextBoolean()) " LIMIT " + (1 + rnd.nextInt(5)) else ""
                     val base =
                         "SELECT e.d AS target, CAST(r.t1 AS INTEGER) AS rank FROM events AS e JOIN tags AS r ON r.event_id = e.id AND r.t0 = 'rank' " +
-                            "WHERE e.kind = 30382 AND e.d > ?" + author
+                            "WHERE e.kind = 30382 AND e.d > ?" + author + high
                     (base + o + limit) to (base + so + limit)
                 }
 
@@ -296,6 +298,7 @@ class NqlDifferentialFuzzTest {
 
     @Test
     fun matchesSqliteOverEveryBackend() {
+        val dOrder = DOrderBackend(store)
         val rnd = Random(42)
         val backends =
             listOf<Pair<String, suspend (Case) -> NqlResult>>(
@@ -304,9 +307,12 @@ class NqlDifferentialFuzzTest {
                 "store" to { c -> Nql.run(c.nql, c.params, store.sqlBackend()) },
                 "filesystem store" to { c -> Nql.run(c.nql, c.params, fsStore.sqlBackend()) },
                 "id walks" to { c -> Nql.run(c.nql, c.params, IdWalkBackend(store)) },
+                "d order" to { c -> Nql.run(c.nql, c.params, dOrder) },
                 "selective" to { c -> Nql.run(c.nql, c.params, SelectiveBackend(store)) },
             )
         val problems = ArrayList<String>()
+        // Batches of one: every short page takes the refill path.
+        NqlExecutor.dOrderMinBatch = 1
         var nonEmpty = 0
         var selectiveAnswered = 0
         repeat(400) {
@@ -326,8 +332,10 @@ class NqlDifferentialFuzzTest {
                 if (got != expected) problems += "$name: ${c.nql}\n  params ${c.params}\n  nql    $got\n  sqlite $expected"
             }
         }
+        NqlExecutor.dOrderMinBatch = 100
+        assertTrue(dOrder.ordered > 20, "the d-ordered read should be taken: ${dOrder.ordered}")
         if (problems.isNotEmpty()) fail("${problems.size} mismatches:\n" + problems.take(10).joinToString("\n"))
-        assertTrue(nonEmpty > 250, "the generator should mostly hit something: $nonEmpty")
+        assertTrue(nonEmpty > 200, "the generator should mostly hit something: $nonEmpty")
         assertTrue(selectiveAnswered > 150, "the selective store should answer most queries: $selectiveAnswered")
     }
 }

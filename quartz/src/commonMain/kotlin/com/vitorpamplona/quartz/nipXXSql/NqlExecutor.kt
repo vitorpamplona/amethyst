@@ -60,8 +60,16 @@ internal class NqlExecutor(
         outer: Env?,
     ): List<Array<Any?>> {
         native(q, outer)?.let { return it }
+        inDOrder(q, outer)?.let { return it }
+        return finish(q, load(q, outer), outer)
+    }
 
-        val sources = load(q, outer)
+    /** [q] over its loaded [sources]: joined, filtered, grouped, ordered and sliced. */
+    private suspend fun finish(
+        q: NqlQuery,
+        sources: List<List<Array<Any?>>>,
+        outer: Env?,
+    ): List<Array<Any?>> {
         var rows = join(q, sources, outer)
         q.where?.let { where -> rows = rows.filter { eval(where, Env(q, it, outer)) == true } }
 
@@ -158,9 +166,63 @@ internal class NqlExecutor(
         e: NqlExpr,
     ): String? = if (e is NqlColumnRef && e.owner === q && e.output < 0 && e.source == i) q.from[i].columns[e.index].first else null
 
+    /**
+     * `… FROM events AS e … WHERE e.d > ? … ORDER BY e.d[, …] LIMIT n`: the first
+     * events in `d` order are all the query can read, when the store can hand them
+     * over in that order ([SqlStoreBackend.eventsInDOrder]). Fetched in batches,
+     * each completed with the events tied on its last `d`; the rest of the query
+     * runs over what is loaded, and stops once it fills the page, since every
+     * event not loaded has a greater `d` and sorts after every row it has. Null
+     * when the query isn't of that shape or the store can't order by `d`.
+     */
+    private suspend fun inDOrder(
+        q: NqlQuery,
+        outer: Env?,
+    ): List<Array<Any?>>? {
+        if (q.from.isEmpty() || q.from[0].table != SqlProfile.EVENTS || q.grouped || q.distinct) return null
+        val limit = count(q.limit) ?: return null
+        val first = q.orderBy.firstOrNull() ?: return null
+        val firstExpr = if (first.output >= 0) q.outputs[first.output].expr else first.expr
+        if (first.descending || columnOf(q, 0, firstExpr) != "d") return null
+        // A term that runs a subquery or a function could fail on rows the limit would skip.
+        if (q.orderBy.any { t -> t.output < 0 && !isPlain(t.expr) }) return null
+        val need = limit + (count(q.offset) ?: 0)
+        if (need > Int.MAX_VALUE / 2) return null
+        val spec = ScanAnalyzer({ columnOf(q, 0, it) }, { constant(q, it, outer) }).analyze(SqlProfile.EVENTS, q.localPredicates()[0])
+        val after0 = spec.dAfter ?: return null
+        if (spec.matchesNothing || !backend.acceptsScan(spec)) return null
+
+        val events = ArrayList<Event>()
+        val seen = HashSet<String>()
+        var after = after0
+        var batch = maxOf(need.toInt(), dOrderMinBatch)
+        while (true) {
+            var got = 0
+            var last: String? = null
+            val ordered =
+                backend.eventsInDOrder(spec.withDAfter(after), batch) { e ->
+                    got++
+                    last = SqlProfile.d(e) ?: last
+                    if (seen.add(e.id)) events.add(e)
+                }
+            if (!ordered) return null
+            val boundary = last
+            if (got >= batch && boundary != null) {
+                // The rest of the boundary's tie group, which the batch may have cut.
+                backend.events(spec.withDValues(setOf(boundary))) { e -> if (SqlProfile.d(e) == boundary && seen.add(e.id)) events.add(e) }
+            }
+            val result = finish(q, load(q, outer, events), outer)
+            if (got < batch || boundary == null || result.size >= limit) return result
+            after = boundary
+            batch = minOf(batch * 2, D_ORDER_MAX_BATCH)
+        }
+    }
+
     private suspend fun load(
         q: NqlQuery,
         outer: Env?,
+        /** Source 0's events, already fetched (by [inDOrder]). */
+        first: List<Event>? = null,
     ): List<List<Array<Any?>>> {
         val n = q.from.size
         if (n == 0) return emptyList()
@@ -209,6 +271,9 @@ internal class NqlExecutor(
 
         val newest = newestFirstLimit(q, specs[0])
         val loaded = arrayOfNulls<List<Array<Any?>>>(n)
+        // The events an `events` source kept, whole: a `tags` source joined to it by
+        // `event_id` reads their tags instead of fetching them again.
+        val kept = arrayOfNulls<List<Event>>(n)
         for (i in 0 until n) {
             val sub = q.from[i].subquery
             if (sub != null) {
@@ -216,15 +281,23 @@ internal class NqlExecutor(
                 continue
             }
             val spec = specs[i]!!
-            if (spec.matchesNothing) {
+            if (i == 0 && first != null) {
+                val keep = if (tagsJoin(q, 0, specs)) ArrayList<Event>() else null
+                loaded[0] = rows(q, 0, local[0], outer, keep) { sink -> first.forEach(sink) }
+                kept[0] = keep
+            } else if (spec.matchesNothing) {
                 loaded[i] = emptyList()
+            } else if (i > 0 && loadFromKept(q, i, spec, kept, loaded, local[i], outer)) {
+                // Tags of events already loaded whole: read from them.
             } else if (i > 0 && loadByKeys(q, i, spec, loaded, local[i], outer)) {
                 // Few join keys from a source already loaded: a lookup by them, not a scan.
             } else if (backend.acceptsScan(spec)) {
+                val keep = if (q.from[i].table == SqlProfile.EVENTS && !spec.needsOnlyIdsAndTimes && tagsJoin(q, i, specs)) ArrayList<Event>() else null
                 loaded[i] =
-                    rows(q, i, local[i], outer) { sink ->
+                    rows(q, i, local[i], outer, keep) { sink ->
                         if (newest != null && i == 0) loadNewest(spec.withLimit(newest).also { it.columns = spec.columns }, sink) else fetch(spec, sink)
                     }
+                kept[i] = keep
             }
         }
 
@@ -234,7 +307,8 @@ internal class NqlExecutor(
             progress = false
             for (i in 0 until n) {
                 if (loaded[i] != null) continue
-                if (loadByKeys(q, i, specs[i]!!, loaded, local[i], outer, maxKeys = Int.MAX_VALUE)) progress = true
+                if (loadFromKept(q, i, specs[i]!!, kept, loaded, local[i], outer)) progress = true
+                if (loaded[i] == null && loadByKeys(q, i, specs[i]!!, loaded, local[i], outer, maxKeys = Int.MAX_VALUE)) progress = true
             }
         }
         if (loaded.any { it == null }) {
@@ -281,19 +355,56 @@ internal class NqlExecutor(
         return false
     }
 
-    /** The rows of table source [i] from the events [fetch] hands over, each event once, kept where [local] holds. */
+    /** A `tags` source joins [q]'s `events` source [i] by `event_id`, so its events are worth keeping. */
+    private fun tagsJoin(
+        q: NqlQuery,
+        i: Int,
+        specs: Array<ScanSpec?>,
+    ) = specs.withIndex().any { (j, s) ->
+        j > i && q.from[j].table == SqlProfile.TAGS && s != null && s.links.any { it.target == i && it.column == "event_id" && it.targetColumn == "id" }
+    }
+
+    /**
+     * Loads `tags` source [i] from the events of an `events` source it joins by
+     * `event_id = id`, which were loaded whole: only those events' tags can
+     * join, and the join itself (and [local]) keep the right ones. The same
+     * rows a lookup by those ids would fetch, without fetching them again.
+     */
+    private suspend fun loadFromKept(
+        q: NqlQuery,
+        i: Int,
+        spec: ScanSpec,
+        kept: Array<List<Event>?>,
+        loaded: Array<List<Array<Any?>>?>,
+        local: List<NqlExpr>,
+        outer: Env?,
+    ): Boolean {
+        if (q.from[i].table != SqlProfile.TAGS) return false
+        val link = spec.links.firstOrNull { it.column == "event_id" && it.targetColumn == "id" && kept[it.target] != null } ?: return false
+        val events = kept[link.target]!!
+        loaded[i] = rows(q, i, local, outer) { sink -> events.forEach(sink) }
+        return true
+    }
+
+    /**
+     * The rows of table source [i] from the events [fetch] hands over, each event once, kept where [local] holds.
+     * [keep], when given, collects the events whose row was kept.
+     */
     private suspend fun rows(
         q: NqlQuery,
         i: Int,
         local: List<NqlExpr>,
         outer: Env?,
+        keep: MutableList<Event>? = null,
         fetch: suspend ((Event) -> Unit) -> Unit,
     ): List<Array<Any?>> {
         val seen = HashSet<String>()
         val all = ArrayList<Array<Any?>>()
+        val events = if (keep != null) ArrayList<Event>() else null
         val tags = q.from[i].table == SqlProfile.TAGS
         fetch { e ->
             if (!seen.add(e.id)) return@fetch
+            events?.add(e)
             if (tags) {
                 e.tags.forEachIndexed { idx, tag ->
                     if (tag.isNotEmpty()) {
@@ -304,13 +415,21 @@ internal class NqlExecutor(
                 all.add(arrayOf(e.id, e.pubKey, e.createdAt, e.kind.toLong(), e.content, e.sig, SqlProfile.d(e)))
             }
         }
-        if (local.isEmpty()) return all
+        if (local.isEmpty()) {
+            events?.let { keep!!.addAll(it) }
+            return all
+        }
         val row = arrayOfNulls<Array<Any?>>(q.from.size)
         val env = Env(q, row, outer)
-        return all.filter { r ->
+        val out = ArrayList<Array<Any?>>(all.size)
+        all.forEachIndexed { k, r ->
             row[i] = r
-            local.all { eval(it, env) == true }
+            if (local.all { eval(it, env) == true }) {
+                out.add(r)
+                events?.let { keep!!.add(it[k]) }
+            }
         }
+        return out
     }
 
     /**
@@ -756,6 +875,10 @@ internal class NqlExecutor(
     companion object {
         /** Join keys per store call when a source is fetched by another's keys. */
         const val JOIN_KEY_CHUNK = 500
+
+        /** The smallest batch a `d`-ordered read asks for (tests shrink it to exercise refills), and the most it doubles to. */
+        internal var dOrderMinBatch = 100
+        const val D_ORDER_MAX_BATCH = 20_000
 
         /** Up to this many join keys, a source that could be scanned is looked up by them instead. */
         const val NARROW_MAX_KEYS = 2_000

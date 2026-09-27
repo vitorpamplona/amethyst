@@ -69,3 +69,28 @@ class SelectiveBackend(
         return true
     }
 }
+
+/**
+ * Hands over events in `d` order ([SqlStoreBackend.eventsInDOrder]), as a store with a
+ * sortable `d` index does: every event of the spec, sorted by code point, the first
+ * `limit` after `dAfter`. Counts the reads.
+ */
+class DOrderBackend(
+    store: IEventStore,
+) : FilterStoreBackend(store) {
+    var ordered = 0
+
+    override suspend fun eventsInDOrder(
+        spec: ScanSpec,
+        limit: Int,
+        onEvent: (Event) -> Unit,
+    ): Boolean {
+        ordered++
+        val after = spec.dAfter!!
+        val all = ArrayList<Pair<String, Event>>()
+        events(spec) { e -> SqlProfile.d(e)?.let { d -> if (NqlValues.compare(d, after) > 0) all.add(d to e) } }
+        all.sortWith { a, b -> NqlValues.compare(a.first, b.first) }
+        all.take(limit).forEach { onEvent(it.second) }
+        return true
+    }
+}

@@ -82,6 +82,20 @@ interface SqlStoreBackend {
         spec: ScanSpec,
         onEach: (id: String, createdAt: Long) -> Unit,
     ): Boolean = false
+
+    /**
+     * The first [limit] events covering [spec] whose `d` is greater than
+     * [ScanSpec.dAfter], in ascending code-point (UTF-8 byte) order of `d`, ties
+     * in any order (the executor completes the tie group at the boundary through
+     * [events]). A superset is fine as long as the order holds and no event with
+     * a smaller `d` is left out. Returns false, having emitted nothing, when the
+     * store can't order by `d`; the executor then scans.
+     */
+    suspend fun eventsInDOrder(
+        spec: ScanSpec,
+        limit: Int,
+        onEvent: (Event) -> Unit,
+    ): Boolean = false
 }
 
 /**

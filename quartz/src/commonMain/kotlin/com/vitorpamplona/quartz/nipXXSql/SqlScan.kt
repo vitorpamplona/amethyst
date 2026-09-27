@@ -61,6 +61,12 @@ class ScanSpec(
      * spec is never [exact] with it.
      */
     val dValues: Set<String>? = null,
+    /**
+     * `events` only: `d > dAfter` (so an addressable event with a `d`). Never
+     * [exact]: the query re-checks it. What [SqlStoreBackend.eventsInDOrder]
+     * starts after.
+     */
+    val dAfter: String? = null,
 ) {
     /** A set emptied by contradictory conditions (e.g. `kind = 1 AND kind = 2`): nothing matches. */
     val matchesNothing: Boolean
@@ -96,12 +102,18 @@ class ScanSpec(
             limit = limit,
         )
 
-    fun withLimit(limit: Int) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, exact, dValues)
+    fun withLimit(limit: Int) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, exact, dValues, dAfter)
+
+    /** This spec with `d > after` instead of its own bound. */
+    fun withDAfter(after: String) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues, after)
+
+    /** This spec narrowed to events whose `d` is one of [values] (a `#d` superset). */
+    fun withDValues(values: Set<String>) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, values, dAfter)
 
     fun withTimeRange(
         since: Long?,
         until: Long?,
-    ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact, dValues)
+    ) = ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, null, exact, dValues, dAfter)
 
     /** Equalities tying this reference to another in the same FROM, for the executor's join-key propagation. */
     internal var links: List<ScanLink> = emptyList()
@@ -136,18 +148,18 @@ class ScanSpec(
     ): ScanSpec? =
         when {
             column == (if (table == SqlProfile.TAGS) "event_id" else "id") ->
-                ScanSpec(table, ids?.intersect(values) ?: values, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues)
+                ScanSpec(table, ids?.intersect(values) ?: values, authors, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues, dAfter)
             column == "pubkey" ->
-                ScanSpec(table, ids, authors?.intersect(values) ?: values, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues)
+                ScanSpec(table, ids, authors?.intersect(values) ?: values, kinds, since, until, tagName, tagValues, valueNonEmpty, limit, false, dValues, dAfter)
             // A tag value is looked up by with its name: a single-letter one, as filters and indexes take.
             table == SqlProfile.TAGS && column == "t1" && tagName != null && isIndexableTagName(tagName) ->
-                ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues?.intersect(values) ?: values, valueNonEmpty, limit, false, dValues)
+                ScanSpec(table, ids, authors, kinds, since, until, tagName, tagValues?.intersect(values) ?: values, valueNonEmpty, limit, false, dValues, dAfter)
             else -> null
         }
 
     override fun toString() =
         "ScanSpec($table ids=$ids authors=$authors kinds=$kinds since=$since until=$until " +
-            "tag=$tagName:$tagValues nonEmpty=$valueNonEmpty d=$dValues limit=$limit exact=$exact)"
+            "tag=$tagName:$tagValues nonEmpty=$valueNonEmpty d=$dValues d>$dAfter limit=$limit exact=$exact)"
 }
 
 /**
@@ -187,6 +199,7 @@ internal class ScanAnalyzer(
         var values: Set<String>? = null
         var valueNonEmpty = false
         var dValues: Set<String>? = null
+        var dAfter: String? = null
         var exact = true
         val captured = ArrayList<NqlExpr>()
 
@@ -256,6 +269,16 @@ internal class ScanAnalyzer(
                 if (column(p.right) == "d" && column(p.left) == null) dEquals(listOf(p.left))
             }
             if (p is NqlInList && !p.not && column(p.expr) == "d") dEquals(p.items)
+            // d > x / x < d: a lower bound a store can page from; also never captured.
+            if (p is NqlBinary && !isTags) {
+                val bound =
+                    when {
+                        p.op == ">" && column(p.left) == "d" && column(p.right) == null -> text(p.right)
+                        p.op == "<" && column(p.right) == "d" && column(p.left) == null -> text(p.left)
+                        else -> null
+                    }
+                if (bound != null && (dAfter == null || NqlValues.compare(bound, dAfter!!) > 0)) dAfter = bound
+            }
             val used =
                 when {
                     p is NqlBinary && p.op == "=" -> {
@@ -333,6 +356,7 @@ internal class ScanAnalyzer(
             tagValues = values,
             valueNonEmpty = valueNonEmpty,
             dValues = dValues,
+            dAfter = dAfter,
             // Several candidate names (`t0 IN ('a','b')`) aren't expressible.
             exact = exact && (names == null || name != null),
         ).also { it.captured = captured }

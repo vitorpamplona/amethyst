@@ -113,6 +113,18 @@ class NqlConformanceTest {
     }
 
     @Test
+    fun overADOrderedStore() {
+        val backend = DOrderBackend(store)
+        NqlExecutor.dOrderMinBatch = 1
+        try {
+            check(backend, unsupportedAllowed = false)
+        } finally {
+            NqlExecutor.dOrderMinBatch = 100
+        }
+        assertTrue(backend.ordered > 0, "the d-ordered read should be taken")
+    }
+
+    @Test
     fun overIdWalks() {
         check(IdWalkBackend(store), unsupportedAllowed = false)
     }

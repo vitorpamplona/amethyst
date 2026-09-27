@@ -103,8 +103,14 @@ vespa-eventstore's `VespaSqlBackend` compiles against it as is.
    fetched by that source's keys instead, in chunks of 500, when there are at
    most 2,000 of them or the store refuses the scan (`acceptsScan`). The keys can
    be ids, pubkeys, or the `t1` of a single-letter tag name.
+   A `tags` source joined by `event_id` to an `events` source that was loaded
+   whole takes its rows from those events' tags, with no fetch at all.
 3. A plain newest-first listing pushes `LIMIT + OFFSET` down and fetches the whole
-   tie group at the boundary.
+   tie group at the boundary. A keyset page by `d` (`… e.d > ? … ORDER BY e.d … LIMIT n`)
+   asks the store for its events in `d` order (`eventsInDOrder`, which Vespa answers
+   off a `d_tag` attribute) in batches, completes the boundary tie group, runs the
+   rest of the query over them and refills while joins leave the page short: every
+   event not loaded has a greater `d`, so it sorts after every row produced.
 4. An `events` source read only for `id` / `created_at` becomes an id walk
    (`idsAndTimes`).
 5. Joins hash on an equality between the joined-so-far and the new source, and
