@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -51,14 +51,14 @@ class SearchResultSorterTest {
         createdAt: Long,
         content: String = "",
         title: String? = null,
-    ): LongTextNoteEvent {
+    ): LongFormContentEvent {
         val tags =
             if (title != null) {
                 arrayOf(arrayOf("title", title))
             } else {
                 emptyArray()
             }
-        return LongTextNoteEvent(
+        return LongFormContentEvent(
             id = id,
             pubKey = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
             createdAt = createdAt,

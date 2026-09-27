@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -46,13 +46,13 @@ class RoomZapsStateTest {
         to: String?,
         createdAt: Long,
         id: String = (nextEventId++).toString(16).padStart(64, '0'),
-    ): LnZapEvent {
+    ): ZapReceiptEvent {
         val tags =
             buildList<Array<String>> {
                 add(arrayOf("a", "30312:host:room"))
                 if (to != null) add(arrayOf("p", to))
             }.toTypedArray()
-        return LnZapEvent(
+        return ZapReceiptEvent(
             id = id,
             pubKey = from,
             createdAt = createdAt,

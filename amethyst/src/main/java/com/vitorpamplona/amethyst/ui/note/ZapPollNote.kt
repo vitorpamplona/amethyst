@@ -113,7 +113,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockVitorAccountViewModel
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -145,7 +145,7 @@ fun ZapZapPollNotePreview() {
         )
 
     val zapVote =
-        LnZapEvent(
+        ZapReceiptEvent(
             id = "2a17fdcd0e387d1623c7313d7aa2848e18dde8a942cfe8a2d6b686ea5f68f01a",
             pubKey = "79f00d3f5a19ec806189fcab03c1be4ff81d18ee4f653c88fac41fe03570f432",
             createdAt = 1729186293,

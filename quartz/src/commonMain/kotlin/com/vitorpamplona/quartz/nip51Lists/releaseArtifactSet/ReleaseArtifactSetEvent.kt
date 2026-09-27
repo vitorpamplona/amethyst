@@ -21,11 +21,19 @@
 package com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.appId
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.assets
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.channel
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.version
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -42,6 +50,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * Kind 30063: the artifacts of one software release.
+ *
+ * Two specs publish this kind and both are parsed here:
+ * - NIP-51 "release artifact set": a `title`, a `description` and `e`/`a` items.
+ * - NIP-82 "software release": `d = <app-id>@<version>`, `i` (app id), `version`,
+ *   `c` (channel), `e` tags to its kind 3063 assets, and the release notes as content.
+ *   Use `isNip82SoftwareRelease()` to tell them apart.
+ */
 @Immutable
 class ReleaseArtifactSetEvent(
     id: HexKey,
@@ -50,18 +67,24 @@ class ReleaseArtifactSetEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    override fun indexableContent() = listOfNotNull(title(), description(), searchableReleaseNotes()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(description())
+        if (!visitor.visit(description())) return
+        visitor.visit(searchableReleaseNotes())
     }
+
+    // Only NIP-82 releases carry release notes in `content`. A NIP-51 set may keep
+    // encrypted private items there, which must never reach the index. The blank
+    // check runs first so empty sets skip the two tag scans on every search.
+    private fun searchableReleaseNotes() = if (content.isNotBlank() && isNip82SoftwareRelease()) content else null
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
@@ -77,8 +100,47 @@ class ReleaseArtifactSetEvent(
 
     fun items(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
 
+    /** NIP-82: the application identifier (`i` tag). */
+    fun appId() = tags.appId()
+
+    /** NIP-82: the release version. */
+    fun version() = tags.version()
+
+    /** NIP-82: the release channel (`c` tag). */
+    fun channel() = tags.channel()
+
+    /** NIP-82: the kind 3063 assets of this release. */
+    fun assets() = tags.assets()
+
+    /** NIP-82: the release notes. */
+    fun releaseNotes() = content
+
     companion object {
         const val KIND = 30063
+
+        /** NIP-82 requires `d = <app-id>@<version>`. */
+        fun buildSoftwareReleaseDTag(
+            appId: String,
+            version: String,
+        ) = "$appId@$version"
+
+        /** Builds a NIP-82 software release. */
+        fun buildSoftwareRelease(
+            appId: String,
+            version: String,
+            channel: String,
+            assets: List<EventHintBundle<SoftwareAssetEvent>>,
+            releaseNotes: String = "",
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ReleaseArtifactSetEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, releaseNotes, createdAt) {
+            dTag(buildSoftwareReleaseDTag(appId, version))
+            appId(appId)
+            version(version)
+            channel(channel)
+            assets(assets)
+            initializer()
+        }
 
         fun createAddress(
             pubKey: HexKey,

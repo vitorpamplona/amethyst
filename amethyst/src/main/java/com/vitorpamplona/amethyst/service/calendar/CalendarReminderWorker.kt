@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit
  * to as ACCEPTED.
  *
  * The work is bounded — scans LocalCache (which is bounded by the relay subscription) and
- * consults [CalendarReminderStore] to skip events that have already been notified for. Run as
+ * consults [CalendarReminderLogStore] to skip events that have already been notified for. Run as
  * a 15-minute periodic worker: that's the WorkManager minimum and matches the resolution of
  * the reminder UI ("starts in ~15 min" is the smallest interval users perceive as "soon").
  *
@@ -65,8 +65,8 @@ class CalendarReminderWorker(
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
         runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.workerRuns("calendarReminder"), 1) }
-        val prefs = CalendarReminderPrefs(applicationContext)
-        if (!prefs.isEnabled()) {
+        val settings = calendarReminderSettings().load()
+        if (!settings.enabled) {
             Log.d(TAG) { "Reminders disabled; ending periodic chain." }
             // The settings toggle re-schedules on enable; no reason to keep
             // waking the process while the feature is off.
@@ -74,8 +74,8 @@ class CalendarReminderWorker(
             return Result.success()
         }
         val now = TimeUtils.now()
-        val windowEnd = now + prefs.leadMinutes() * 60L
-        val store = CalendarReminderStore(applicationContext)
+        val windowEnd = now + settings.leadMinutes * 60L
+        val store = calendarReminderLog()
 
         // Walk every kind-31925 RSVP authored by an account on this device. We don't have a
         // multi-account "all logged-in pubkeys" view here, so we accept any RSVP that's
@@ -83,7 +83,7 @@ class CalendarReminderWorker(
         // silently break notifications for account switching during the lead window.
         val acceptedRsvps = acceptedRsvpsInCache()
 
-        Log.d(TAG) { "Worker scanning ${acceptedRsvps.size} accepted RSVPs (now=$now, lead=${prefs.leadMinutes()}m)" }
+        Log.d(TAG) { "Worker scanning ${acceptedRsvps.size} accepted RSVPs (now=$now, lead=${settings.leadMinutes}m)" }
 
         acceptedRsvps.forEach { rsvp ->
             val targetAddress = rsvp.calendarEventAddress() ?: return@forEach

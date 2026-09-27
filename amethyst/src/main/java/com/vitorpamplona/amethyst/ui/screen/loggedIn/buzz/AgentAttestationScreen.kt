@@ -181,7 +181,7 @@ fun AgentAttestationScreen(
  * Agent-side: paste an `auth` tag an owner issued to this account's key. [parseHeldAttestation]
  * turns it into a typed failure the field can show, and [BuzzHeldAttestations.put] re-checks the
  * signature before storing, so the auth coordinator attaches it when this account AUTHs to a Buzz
- * relay. Persisted across restarts, per account, by `BuzzAttestationPreferences`.
+ * relay. Persisted across restarts, per account, by `BuzzAttestationStore`.
  */
 @Composable
 private fun HoldAttestationSection(

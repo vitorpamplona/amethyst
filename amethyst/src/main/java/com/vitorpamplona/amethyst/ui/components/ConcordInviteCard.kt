@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_join
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_card_subtitle
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings

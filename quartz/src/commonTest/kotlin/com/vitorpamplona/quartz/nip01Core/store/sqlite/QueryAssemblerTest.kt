@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -980,11 +980,11 @@ class QueryAssemblerTest : BaseDBTest() {
         }
 
     @Test
-    fun testContactCardDownloadFromTrustedKeys() =
+    fun testUserAssertionDownloadFromTrustedKeys() =
         forEachDB { db ->
             val filter =
                 Filter(
-                    kinds = listOf(ContactCardEvent.KIND),
+                    kinds = listOf(UserAssertionEvent.KIND),
                     authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
                     tags =
                         mapOf(

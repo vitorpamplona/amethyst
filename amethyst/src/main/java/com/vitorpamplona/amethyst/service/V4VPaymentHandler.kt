@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
 import com.vitorpamplona.quartz.podcasts.PodcastValue
@@ -91,7 +91,7 @@ class V4VPaymentHandler(
         onProgress: (percent: Float) -> Unit,
         onPayInvoicesViaIntent: (invoices: List<String>) -> Unit,
         asZap: Boolean = false,
-        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        zapType: ZapReceiptEvent.ZapType = ZapReceiptEvent.ZapType.PUBLIC,
     ) = withContext(Dispatchers.IO) {
         val shares = value.computeShares(totalMilliSats)
         if (shares.isEmpty()) {
@@ -190,7 +190,7 @@ class V4VPaymentHandler(
         shares: List<PodcastValueShare>,
         message: String,
         asZap: Boolean,
-        zapType: LnZapEvent.ZapType,
+        zapType: ZapReceiptEvent.ZapType,
         zappedNote: Note?,
         okHttpClient: (String) -> OkHttpClient,
         context: Context,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -62,12 +63,11 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_upload
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import org.jetbrains.compose.resources.PluralStringResource
@@ -95,7 +95,7 @@ class NappletConsentSummary(
         val (title, iconUrl) =
             if (identity.authorPubKey == "browser") {
                 val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-                host to BrowserIconRegistry.iconModelFor(host)
+                host to Amethyst.instance.browserIcons.iconModelFor(host)
             } else {
                 resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
             }
@@ -199,7 +199,7 @@ class NappletConsentSummary(
                     oneRemoved = Res.string.napplet_consent_diff_unmute_one,
                 )
             // Deletions have no prior version to compare against — the tags are the whole request.
-            DeletionEvent.KIND ->
+            DeletionRequestEvent.KIND ->
                 pluralFor(Res.plurals.napplet_consent_effect_deletes, countTag(tags, "e") + countTag(tags, "a"))
                     ?.let { Consequence(it) }
             // Any other kind: at least tell the user tags exist and can be inspected, so an empty

@@ -210,7 +210,7 @@
     <string name="copy_user_id">Copier l'ID utilisateur</string>
     <string name="unblock_user">Débloquer l'utilisateur</string>
     <string name="user_is_blocked_hidden">Cet utilisateur est bloqué/muet. Ses publications sont masquées.</string>
-    <string name="npub_hex_username">npub, hex, nom d'utilisateur </string>
+    <string name="npub_hex_username">npub, hex, nom d'utilisateur</string>
     <string name="clear">Nettoyer</string>
     <string name="app_logo">Logo de l'App</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
@@ -833,7 +833,7 @@
     <string name="max_subs">Souscription maximale</string>
     <string name="max_filters_per_sub">Nombre maximum de filtres par sub</string>
     <string name="max_limit_events_returning">Limite Max (Renvoi des Évènements)</string>
-    <string name="max_subid_length">Longueur maximale du SubID </string>
+    <string name="max_subid_length">Longueur maximale du SubID</string>
     <string name="cashu_mint_label">Mint : %1$s</string>
     <string name="cashu_redeem">Échanger</string>
     <string name="cashu_copy_token">Copier le Jeton</string>
@@ -949,9 +949,7 @@
     <string name="push_server_none_explainer">Désactive les Notifications Push</string>
     <string name="push_server_uses_app_explainer">Utilise l'application %1$s</string>
     <string name="push_server_install_app">Configuration des Notifications Push</string>
-    <string name="push_server_install_app_description">        Pour recevoir des notifications push, installez n'importe quelle application qui supporte les [Unified Push](https://unifiedpush.org/), tel que [Ntfy](https://ntfy.sh/).
-        Après installation, sélectionnez l'application que vous voulez utiliser dans les Paramètres.
-    </string>
+    <string name="push_server_install_app_description">Pour recevoir des notifications push, installez n'importe quelle application qui supporte les [Unified Push](https://unifiedpush.org/), tel que [Ntfy](https://ntfy.sh/). Après installation, sélectionnez l'application que vous voulez utiliser dans les Paramètres.</string>
     <string name="thread_title">Fil de discussion</string>
     <string name="send_the_seller_a_message">Envoyer un message au vendeur</string>
     <string name="hi_there_is_this_still_available">Bonjour, est-ce toujours disponible ?</string>
@@ -2731,11 +2729,8 @@
     <string name="proxy_section">Relais Proxy</string>
     <string name="proxy_section_explainer">Relais agrégateurs que l'application doit utiliser pour télécharger vos flux, tels que filter.nostr.wine. Cela remplace le modèle de boîte d'envoi et permettra à l'application de se connecter uniquement aux relais de vos listes.</string>
     <string name="public_chat">Chat public</string>
-    <string name="public_chat_explainer">Les conversations publiques sont visibles pour tout le monde sur Nostr et n'importe qui
-        peut y participer. Elles sont idéales pour les communautés ouvertes autour de sujets spécifiques.
-        La modération peut être contrôlée en supprimant les messages sur ses relais</string>
-    <string name="public_chat_relays_explainer">Insérez entre 1 et 3 relais qui hébergent ce groupe.
-         Les clients Nostr utilisent ce paramètre pour savoir où télécharger les messages et où les envoyer.</string>
+    <string name="public_chat_explainer">Les conversations publiques sont visibles pour tout le monde sur Nostr et n'importe qui peut y participer. Elles sont idéales pour les communautés ouvertes autour de sujets spécifiques. La modération peut être contrôlée en supprimant les messages sur ses relais</string>
+    <string name="public_chat_relays_explainer">Insérez entre 1 et 3 relais qui hébergent ce groupe. Les clients Nostr utilisent ce paramètre pour savoir où télécharger les messages et où les envoyer.</string>
     <string name="public_chat_relays_title">Relais</string>
     <string name="public_chat_title">Métadonnées de tchat public</string>
     <string name="public_chats">Chats publics</string>
@@ -2760,10 +2755,7 @@
     <string name="read_only_user">Utilisateur en lecture seule</string>
     <string name="record_a_message_description">Cliquez et maintenez pour enregistrer un message</string>
     <string name="relay_chat">Relais de discussion</string>
-    <string name="relay_chat_explainer">Les relais de discussions sont des groupes de discussion contrôlés par leur relais d'origine.
-          Ils sont visibles par tous les utilisateurs de Nostr et tout le monde peut y participer.
-          Ils sont idéaux pour les communautés ouvertes autour de sujets spécifiques. Certains de ces groupes sont éphémères
-    et, par conséquent, les messages de discussion disparaissent avec le temps</string>
+    <string name="relay_chat_explainer">Les relais de discussions sont des groupes de discussion contrôlés par leur relais d'origine. Ils sont visibles par tous les utilisateurs de Nostr et tout le monde peut y participer. Ils sont idéaux pour les communautés ouvertes autour de sujets spécifiques. Certains de ces groupes sont éphémères et, par conséquent, les messages de discussion disparaissent avec le temps</string>
     <string name="relay_chat_title">Relais de discussions</string>
     <string name="relay_management_tab_events">Événements</string>
     <string name="relay_management_tab_ips">IPs</string>

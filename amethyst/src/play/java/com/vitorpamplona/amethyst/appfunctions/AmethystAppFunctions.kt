@@ -54,14 +54,15 @@ import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -778,7 +779,7 @@ class AmethystAppFunctions {
 
         val filter =
             Filter(
-                kinds = listOf(LnZapEvent.KIND, Bolt12ZapEvent.KIND),
+                kinds = listOf(ZapReceiptEvent.KIND, Bolt12ZapEvent.KIND),
                 tags = mapOf("p" to listOf(myPub)),
                 since = sinceSecs,
                 limit = 500,
@@ -789,7 +790,7 @@ class AmethystAppFunctions {
                 idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
-        val receipts = events.mapNotNull { it as? LnZapEvent }
+        val receipts = events.mapNotNull { it as? ZapReceiptEvent }
         val zapperIds = mutableSetOf<HexKey>()
         var totalSats = 0L
         var unparseable = 0
@@ -936,7 +937,7 @@ class AmethystAppFunctions {
         val filter =
             SearchActions.searchNotesFilter(
                 query = query,
-                kinds = listOf(LongTextNoteEvent.KIND),
+                kinds = listOf(LongFormContentEvent.KIND),
                 limit = cappedLimit,
             ) ?: return SearchNotesResult.empty()
 
@@ -953,7 +954,7 @@ class AmethystAppFunctions {
 
         val hits =
             events
-                .mapNotNull { it as? LongTextNoteEvent }
+                .mapNotNull { it as? LongFormContentEvent }
                 .take(cappedLimit)
                 .map { (it as com.vitorpamplona.quartz.nip01Core.core.Event).toFeedNoteHit() }
 
@@ -1403,7 +1404,7 @@ class AmethystAppFunctions {
                 amountMillisats = ZapActions.satsToMillisats(sats),
                 inboxRelays = account.nip65RelayList.inboxFlow.value,
                 comment = comment,
-                zapType = LnZapEvent.ZapType.PUBLIC,
+                zapType = ZapReceiptEvent.ZapType.PUBLIC,
             )
 
         val invoice = fetchInvoiceOrThrow(lnAddress, sats, comment, zapRequest)
@@ -1614,7 +1615,7 @@ class AmethystAppFunctions {
                 lookupLnAddress = lookupLnAddress,
                 lookupInboxRelays = lookupInboxRelays,
                 comment = trimmedComment,
-                zapType = LnZapEvent.ZapType.PUBLIC,
+                zapType = ZapReceiptEvent.ZapType.PUBLIC,
             )
         if (requests.isEmpty()) {
             throw AppFunctionInvalidArgumentException(
@@ -1787,7 +1788,7 @@ class AmethystAppFunctions {
         lnAddress: String,
         sats: Long,
         comment: String,
-        zapRequest: com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent,
+        zapRequest: ZapRequestEvent,
     ): String {
         // Compute the LNURL-pay endpoint so we can ask the privacy-aware
         // HttpClient builder for the right OkHttpClient for that host.

@@ -948,9 +948,7 @@
     <string name="push_server_none_explainer">Onemogućava push obaveštenja</string>
     <string name="push_server_uses_app_explainer">Koristi aplikaciju %1$s</string>
     <string name="push_server_install_app">Podešavanje push obaveštenja</string>
-    <string name="push_server_install_app_description">        Da biste primali push obaveštenja, instalirajte bilo koju aplikaciju koja podržava [Unified Push](https://unifiedpush.org/), kao što je [Ntfy](https://ntfy.sh/).
-        Nakon instalacije, izaberite aplikaciju koju želite da koristite u Postavkama.
-    </string>
+    <string name="push_server_install_app_description">Da biste primali push obaveštenja, instalirajte bilo koju aplikaciju koja podržava [Unified Push](https://unifiedpush.org/), kao što je [Ntfy](https://ntfy.sh/). Nakon instalacije, izaberite aplikaciju koju želite da koristite u Postavkama.</string>
     <string name="thread_title">Nit</string>
     <string name="send_the_seller_a_message">Pošaljite prodavcu poruku</string>
     <string name="hi_there_is_this_still_available">Zdravo, da li je ovo još uvek dostupno?</string>
@@ -2002,15 +2000,7 @@
     <string name="could_not_fetch_invoice_from_details">Nije moguće dohvatiti fakturu od %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Komprimovana datoteka se ne može otvoriti</string>
     <string name="couldnt_find_nwc_wallets">Novčanik nije pronađen</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst nije mogao da pronađe nijednu aplikaciju novčanika koja podržava Nostr Wallet Connect (NWC).
-\n\nŠta možete da uradite:
-\n\t1. Proverite NWC podršku: Proverite da li vaša preferovana aplikacija novčanika podržava Nostr Wallet Connect.
-\n\t2. Kreirajte vezu: Idite na aplikaciju novčanika i kreirajte novu NWC vezu.
-\n\t3. Povežite sa Amethyst: Vaš novčanik će obično ponuditi tri opcije:
-\n\t\t3.1 Automatska veza: Dugme za automatsko otvaranje i povezivanje sa Amethyst. Ako postoji, kliknite to dugme, otvorite Amethyst i pritisnite sačuvaj na novom ekranu.
-\n\t\t3.2 Ručna veza: URI veze koji možete kopirati i kliknuti ikonu za nalepljivanje na ovom ekranu da ga direktno unesete.
-\n\t\t3.3 QR kod: Novčanik kreira QR kod koji možete očitati dugmetom za QR kod na ovom ekranu.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nije mogao da pronađe nijednu aplikaciju novčanika koja podržava Nostr Wallet Connect (NWC). \n\nŠta možete da uradite: \n\t1. Proverite NWC podršku: Proverite da li vaša preferovana aplikacija novčanika podržava Nostr Wallet Connect. \n\t2. Kreirajte vezu: Idite na aplikaciju novčanika i kreirajte novu NWC vezu. \n\t3. Povežite sa Amethyst: Vaš novčanik će obično ponuditi tri opcije: \n\t\t3.1 Automatska veza: Dugme za automatsko otvaranje i povezivanje sa Amethyst. Ako postoji, kliknite to dugme, otvorite Amethyst i pritisnite sačuvaj na novom ekranu. \n\t\t3.2 Ručna veza: URI veze koji možete kopirati i kliknuti ikonu za nalepljivanje na ovom ekranu da ga direktno unesete. \n\t\t3.3 QR kod: Novčanik kreira QR kod koji možete očitati dugmetom za QR kod na ovom ekranu.</string>
     <string name="create">Napravi</string>
     <string name="danger_zone">Opasna zona</string>
     <string name="dark">Tamno</string>
@@ -2691,11 +2681,8 @@
     <string name="proxy_section">Proxy Relay-i</string>
     <string name="proxy_section_explainer">Agregatorni relay-i koje aplikacija mora koristiti za preuzimanje vaših feedova, poput filter.nostr.wine. Ovo zamenjuje outbox model i čini da se aplikacija povezuje samo na relay-e u vašim listama.</string>
     <string name="public_chat">Javni čet</string>
-    <string name="public_chat_explainer">Javni četovi vidljivi su svima na Nostr-u i svako
-        može da učestvuje. Odlični su za otvorene zajednice oko specifičnih tema.
-        Moderacija se može kontrolisati brisanjem objava na relay-ima</string>
-    <string name="public_chat_relays_explainer">Unesite između 1 i 3 relay-a koji hostuju ovu grupu.
-        Nostr klijenti koriste ovo podešavanje da znaju odakle da preuzmu poruke i kuda da ih šalju.</string>
+    <string name="public_chat_explainer">Javni četovi vidljivi su svima na Nostr-u i svako može da učestvuje. Odlični su za otvorene zajednice oko specifičnih tema. Moderacija se može kontrolisati brisanjem objava na relay-ima</string>
+    <string name="public_chat_relays_explainer">Unesite između 1 i 3 relay-a koji hostuju ovu grupu. Nostr klijenti koriste ovo podešavanje da znaju odakle da preuzmu poruke i kuda da ih šalju.</string>
     <string name="public_chat_relays_title">Relay-i</string>
     <string name="public_chat_title">Metapodaci javnog četa</string>
     <string name="public_chats">Javni razgovori</string>
@@ -2720,10 +2707,7 @@
     <string name="read_only_user">Korisnik samo za čitanje</string>
     <string name="record_a_message_description">Kliknite i držite za snimanje poruke</string>
     <string name="relay_chat">Relay čet</string>
-    <string name="relay_chat_explainer">Relay četovi su grupe za razgovor kojima upravlja njihov matični relay.
-        Vidljivi su svima na Nostr-u i svako može da učestvuje.
-        Odlični su za otvorene zajednice oko specifičnih tema. Neke od ovih grupa su efemeralne
-    i stoga poruke nestaju s vremenom</string>
+    <string name="relay_chat_explainer">Relay četovi su grupe za razgovor kojima upravlja njihov matični relay. Vidljivi su svima na Nostr-u i svako može da učestvuje. Odlični su za otvorene zajednice oko specifičnih tema. Neke od ovih grupa su efemeralne i stoga poruke nestaju s vremenom</string>
     <string name="relay_chat_title">Relay četovi</string>
     <string name="relay_management_tab_events">Događaji</string>
     <string name="relay_management_tab_ips">IP adrese</string>

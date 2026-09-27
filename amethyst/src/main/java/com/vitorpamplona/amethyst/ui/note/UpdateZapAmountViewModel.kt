@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.coroutines.CancellationException
 
 @Stable
@@ -44,7 +44,7 @@ class UpdateZapAmountViewModel : ViewModel() {
     var walletConnectRelay by mutableStateOf(TextFieldValue(""))
     var walletConnectPubkey by mutableStateOf(TextFieldValue(""))
     var walletConnectSecret by mutableStateOf(TextFieldValue(""))
-    var selectedZapType by mutableStateOf(LnZapEvent.ZapType.PRIVATE)
+    var selectedZapType by mutableStateOf(ZapReceiptEvent.ZapType.PRIVATE)
 
     // A local UI preference rather than synced account state, but it is edited on
     // this screen, so it follows this screen's Save/Cancel contract instead of

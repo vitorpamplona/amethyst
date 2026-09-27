@@ -53,7 +53,7 @@ class AddressableVideoEventAddressTest {
     @Test
     fun verticalVideoAddressUsesDTag() {
         val event =
-            VideoVerticalEvent(
+            AddressableShortVideoEvent(
                 id = "bfe2f2244fefc7cebc7b2eae825495f99dabb4649ee3f90ab1fa33bcd1e9bb9f",
                 pubKey = pubkey,
                 createdAt = 1780894816,
@@ -62,13 +62,13 @@ class AddressableVideoEventAddressTest {
                 sig = "",
             )
 
-        assertAddressUsesDTag(VideoVerticalEvent.KIND, event)
+        assertAddressUsesDTag(AddressableShortVideoEvent.KIND, event)
     }
 
     @Test
     fun horizontalVideoAddressUsesDTag() {
         val event =
-            VideoHorizontalEvent(
+            AddressableNormalVideoEvent(
                 id = "bfe2f2244fefc7cebc7b2eae825495f99dabb4649ee3f90ab1fa33bcd1e9bb9f",
                 pubKey = pubkey,
                 createdAt = 1780894816,
@@ -77,13 +77,13 @@ class AddressableVideoEventAddressTest {
                 sig = "",
             )
 
-        assertAddressUsesDTag(VideoHorizontalEvent.KIND, event)
+        assertAddressUsesDTag(AddressableNormalVideoEvent.KIND, event)
     }
 
     @Test
     fun videoWithoutDTagFallsBackToEmptyAddress() {
         val event =
-            VideoVerticalEvent(
+            AddressableShortVideoEvent(
                 id = "bfe2f2244fefc7cebc7b2eae825495f99dabb4649ee3f90ab1fa33bcd1e9bb9f",
                 pubKey = pubkey,
                 createdAt = 1780894816,
@@ -93,7 +93,7 @@ class AddressableVideoEventAddressTest {
             )
 
         assertEquals("", event.dTag())
-        assertEquals(Address(VideoVerticalEvent.KIND, pubkey, ""), event.address())
-        assertEquals("${VideoVerticalEvent.KIND}:$pubkey:", event.addressTag())
+        assertEquals(Address(AddressableShortVideoEvent.KIND, pubkey, ""), event.address())
+        assertEquals("${AddressableShortVideoEvent.KIND}:$pubkey:", event.addressTag())
     }
 }

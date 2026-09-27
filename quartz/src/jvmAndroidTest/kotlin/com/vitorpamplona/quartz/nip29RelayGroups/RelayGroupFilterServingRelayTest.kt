@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -72,7 +72,7 @@ class RelayGroupFilterServingRelayTest : RelayClientTest() {
             GroupMetadataEvent.KIND -> GroupMetadataEvent(id, relayKey, 100L, tags, "", sig)
             GroupAdminsEvent.KIND -> GroupAdminsEvent(id, relayKey, 100L, tags, "", sig)
             GroupMembersEvent.KIND -> GroupMembersEvent(id, relayKey, 100L, tags, "", sig)
-            SupportedRolesEvent.KIND -> SupportedRolesEvent(id, relayKey, 100L, tags, "", sig)
+            GroupRolesEvent.KIND -> GroupRolesEvent(id, relayKey, 100L, tags, "", sig)
             GroupPinnedEvent.KIND -> GroupPinnedEvent(id, relayKey, 100L, tags, "", sig)
             else -> error("unexpected state kind $kind")
         }
@@ -105,7 +105,7 @@ class RelayGroupFilterServingRelayTest : RelayClientTest() {
                     state(1, GroupMetadataEvent.KIND),
                     state(2, GroupAdminsEvent.KIND),
                     state(3, GroupMembersEvent.KIND),
-                    state(4, SupportedRolesEvent.KIND),
+                    state(4, GroupRolesEvent.KIND),
                     state(5, GroupPinnedEvent.KIND),
                 ),
             )
@@ -119,7 +119,7 @@ class RelayGroupFilterServingRelayTest : RelayClientTest() {
                                 GroupMetadataEvent.KIND,
                                 GroupAdminsEvent.KIND,
                                 GroupMembersEvent.KIND,
-                                SupportedRolesEvent.KIND,
+                                GroupRolesEvent.KIND,
                                 GroupPinnedEvent.KIND,
                             ),
                         tags = mapOf("d" to listOf("g1")),
@@ -268,7 +268,7 @@ class RelayGroupFilterServingRelayTest : RelayClientTest() {
                                 GroupMetadataEvent.KIND,
                                 GroupAdminsEvent.KIND,
                                 GroupMembersEvent.KIND,
-                                SupportedRolesEvent.KIND,
+                                GroupRolesEvent.KIND,
                             ),
                         limit = 500,
                     ),

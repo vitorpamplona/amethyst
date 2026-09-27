@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -39,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_fo
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -83,7 +83,7 @@ suspend fun buildSignerConsentInfo(
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
             val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-            host to BrowserIconRegistry.iconModelFor(host)
+            host to Amethyst.instance.browserIcons.iconModelFor(host)
         } else {
             resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
         }
@@ -183,7 +183,7 @@ suspend fun buildConnectInfo(
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
             val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-            host to BrowserIconRegistry.iconModelFor(host)
+            host to Amethyst.instance.browserIcons.iconModelFor(host)
         } else {
             resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
         }

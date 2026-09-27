@@ -298,12 +298,12 @@ private class WarmTargets {
 
     /**
      * Adds NIP-94 file-header media: blobs declared as top-level `url` tags (not
-     * imeta), as used by FileHeaderEvent and the gallery/file kinds. Only image
+     * imeta), as used by FileMetadataEvent and the gallery/file kinds. Only image
      * files are prefetched — detected by the URL extension or the event's top-level
      * `m` mime type (a hashed URL may carry no extension). The decode listener
      * records their dims like any other image.
      */
-    fun addFileHeaderMedia(event: Event) {
+    fun addFileMetadataMedia(event: Event) {
         val urls = event.tags.mapNotNull(UrlTag::parse)
         if (urls.isEmpty()) return
         val imageMime = event.tags.firstNotNullOfOrNull(MimeTypeTag::parse)?.startsWith("image/") == true
@@ -333,9 +333,9 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     }
 
     // NIP-94 file-header convention: the blob is a top-level `url` tag with sibling
-    // `m`/`dim`, not imeta (FileHeaderEvent and the gallery/file kinds). The generic
+    // `m`/`dim`, not imeta (FileMetadataEvent and the gallery/file kinds). The generic
     // imetas() above misses these entirely.
-    targets.addFileHeaderMedia(ev)
+    targets.addFileMetadataMedia(ev)
 
     // NIP-73 external-content scope. Only kind 1111 carries one, so the type check
     // keeps every other kind out of the tag walk. Reuses scope() — the same accessor

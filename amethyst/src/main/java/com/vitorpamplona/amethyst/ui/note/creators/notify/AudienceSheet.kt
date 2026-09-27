@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.AudienceList
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceListKind
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceMember
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audience_add_anyway
 import com.vitorpamplona.amethyst.commons.resources.audience_add_people
@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.discover_follows
 import com.vitorpamplona.amethyst.commons.resources.follow_sets
 import com.vitorpamplona.amethyst.commons.resources.num_selected
 import com.vitorpamplona.amethyst.commons.resources.select_all
+import com.vitorpamplona.amethyst.commons.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -95,7 +96,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
-import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -545,9 +545,9 @@ private fun MemberBadge(
  */
 @Composable
 fun rememberAudienceLists(accountViewModel: AccountViewModel): List<AudienceList> {
-    val peopleLists by accountViewModel.account.peopleLists.uiListFlow
+    val peopleLists by accountViewModel.account.followSets.uiListFlow
         .collectAsStateWithLifecycle()
-    val followPacks by accountViewModel.account.followLists.uiListFlow
+    val followPacks by accountViewModel.account.starterPacks.uiListFlow
         .collectAsStateWithLifecycle()
 
     return remember(peopleLists, followPacks) {

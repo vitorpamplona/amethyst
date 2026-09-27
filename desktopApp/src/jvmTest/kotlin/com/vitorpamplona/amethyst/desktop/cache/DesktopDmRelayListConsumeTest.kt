@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.cache
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -50,7 +50,7 @@ class DesktopDmRelayListConsumeTest {
         signer: NostrSignerSync,
         relays: List<NormalizedRelayUrl> = dmInbox,
         createdAt: Long = 1_700_000_000,
-    ): ChatMessageRelayListEvent = ChatMessageRelayListEvent.create(relays, signer, createdAt)
+    ): DmRelayListEvent = DmRelayListEvent.create(relays, signer, createdAt)
 
     @Test
     fun `consume routes kind 10050 into the User model`() {

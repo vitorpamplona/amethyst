@@ -24,12 +24,12 @@ import android.content.Intent
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 
 class DecryptZapRequest {
     companion object {
         fun assemble(
-            event: LnZapRequestEvent,
+            event: ZapRequestEvent,
             loggedInUser: HexKey,
             packageName: String,
         ): Intent {

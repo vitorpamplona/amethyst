@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.resources.dms
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
@@ -45,7 +45,7 @@ class DMRelayListViewModel : BasicRelaySetupInfoModel() {
                 label = Res.string.dms,
                 filter =
                     Filter(
-                        kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, PrivateDmEvent.KIND),
+                        kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, EncryptedDmEvent.KIND),
                         tags = mapOf("p" to listOf(account.pubKey)),
                     ),
             ),

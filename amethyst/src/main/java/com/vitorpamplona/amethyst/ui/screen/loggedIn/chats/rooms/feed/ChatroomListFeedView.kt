@@ -70,7 +70,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -180,8 +180,8 @@ private fun FeedLoaded(
     val user = accountViewModel.userProfile()
     val nip17Name = stringRes(Res.string.chats_history_proto_nip17)
     val nip04Name = stringRes(Res.string.chats_history_proto_nip04)
-    val oldestNip17Index = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is PrivateDmEvent }
-    val oldestNip04Index = items.list.indexOfLast { it.event is PrivateDmEvent }
+    val oldestNip17Index = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is EncryptedDmEvent }
+    val oldestNip04Index = items.list.indexOfLast { it.event is EncryptedDmEvent }
 
     // Each relay's window limit, carrying the advance() that pulls its OWN next page. Placed in the list
     // at its reached depth as a sentinel (see RelayReachMarkers): a relay pages only while its

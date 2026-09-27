@@ -27,8 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.removeAddress
 
-fun TagArrayBuilder<EmojiPackSelectionEvent>.pack(tag: ATag) = aTag(tag)
+fun TagArrayBuilder<EmojiListEvent>.pack(tag: ATag) = aTag(tag)
 
-fun TagArrayBuilder<EmojiPackSelectionEvent>.packs(tags: List<ATag>) = aTags(tags)
+fun TagArrayBuilder<EmojiListEvent>.packs(tags: List<ATag>) = aTags(tags)
 
-fun TagArrayBuilder<EmojiPackSelectionEvent>.removePack(address: Address) = removeAddress(address)
+fun TagArrayBuilder<EmojiListEvent>.removePack(address: Address) = removeAddress(address)

@@ -33,9 +33,9 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.SupportedContent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 class ShortsFeedFilter(
     val account: Account,
@@ -60,7 +60,7 @@ class ShortsFeedFilter(
             LocalCache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
             } +
-                LocalCache.addressables.filterIntoSet(VideoVerticalEvent.KIND) { _, it ->
+                LocalCache.addressables.filterIntoSet(AddressableShortVideoEvent.KIND) { _, it ->
                     acceptableEvent(it, params)
                 }
         return sort(notes)
@@ -91,7 +91,7 @@ class ShortsFeedFilter(
 
     fun acceptableVideoiMetas(iMetas: List<VideoMeta>): Boolean = iMetas.any { videoFeedSupport.acceptableUrl(it.url, it.mimeType) }
 
-    fun acceptanceEvent(noteEvent: VideoVerticalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
+    fun acceptanceEvent(noteEvent: AddressableShortVideoEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
     fun acceptanceEvent(noteEvent: VideoShortEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
@@ -106,7 +106,7 @@ class ShortsFeedFilter(
         }
 
         return (
-            (noteEvent is VideoVerticalEvent && acceptanceEvent(noteEvent)) ||
+            (noteEvent is AddressableShortVideoEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent))
         ) &&
             params.match(noteEvent, note.relays) &&

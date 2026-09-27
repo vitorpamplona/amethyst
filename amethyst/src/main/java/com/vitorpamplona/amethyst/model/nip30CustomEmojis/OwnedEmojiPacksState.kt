@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.update
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -129,12 +129,12 @@ class OwnedEmojiPacksState(
             .onStart { emit(listFeedFlow.value.getPack(dTag)) }
             .flowOn(Dispatchers.IO)
 
-    fun DeletionEvent.hasAnyDeletedOwnedEmojiPacks() = deleteAddressesWithKind(EmojiPackEvent.KIND) || deletesAnyEventIn(ownedEmojiPackEventIds.value)
+    fun DeletionRequestEvent.hasAnyDeletedOwnedEmojiPacks() = deleteAddressesWithKind(EmojiPackEvent.KIND) || deletesAnyEventIn(ownedEmojiPackEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
         notes.anyNotNullEvent { event ->
             if (event.pubKey == signer.pubKey) {
-                event is EmojiPackEvent || (event is DeletionEvent && event.hasAnyDeletedOwnedEmojiPacks())
+                event is EmojiPackEvent || (event is DeletionRequestEvent && event.hasAnyDeletedOwnedEmojiPacks())
             } else {
                 false
             }
@@ -269,7 +269,7 @@ class OwnedEmojiPacksState(
         account: Account,
     ) {
         val packEvent = getOwnedEmojiPackEvent(dTag) ?: return
-        val deletionEventTemplate = DeletionEvent.build(listOf(packEvent))
+        val deletionEventTemplate = DeletionRequestEvent.build(listOf(packEvent))
         val deletionEvent = signer.sign(deletionEventTemplate)
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
     }

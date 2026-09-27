@@ -95,7 +95,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -358,10 +358,10 @@ private fun EmojiSelector(
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiListAddress(),
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
+            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiListEvent ->
                 event.emojiPacks().toImmutableList()
             }
 

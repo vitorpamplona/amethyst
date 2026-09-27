@@ -45,7 +45,7 @@ feeds and the detail surface show an offline state instead.
 New `quartz/.../nip90Dvms/dvmHeartbeat/DvmHeartbeatEvent.kt`:
 
 - `class DvmHeartbeatEvent(...) : BaseAddressableEvent(...)`, `KIND = 11998` — the codebase
-  convention for 10xxx events with real `d` tags (e.g. `FollowListEvent`), so `dTag()` /
+  convention for 10xxx events with real `d` tags (e.g. `StarterPackEvent`), so `dTag()` /
   `address()` / `addressTag()` come from the base. The cache address is
   `Address(11998, dvmPubkey, dTag)`, the exact mirror of the announcement's
   `Address(31990, dvmPubkey, dTag)`.

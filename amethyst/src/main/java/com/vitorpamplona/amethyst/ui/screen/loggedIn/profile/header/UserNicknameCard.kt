@@ -73,8 +73,8 @@ fun UserNicknameCard(
         WatchAndLoadMyEmojiList(accountViewModel)
         EditNicknameDialog(
             user = baseUser,
-            contactCards = accountViewModel.account.contactCards,
-            onSave = { petName, summary -> accountViewModel.updateContactCardPetName(baseUser, petName, summary) },
+            userAssertions = accountViewModel.account.userAssertions,
+            onSave = { petName, summary -> accountViewModel.updateUserAssertionPetName(baseUser, petName, summary) },
             onDismiss = { isEditDialogOpen.value = false },
         )
     }

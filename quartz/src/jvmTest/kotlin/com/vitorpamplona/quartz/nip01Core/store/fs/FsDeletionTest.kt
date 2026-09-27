@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.store.fs
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -67,9 +67,9 @@ class FsDeletionTest {
         body: String,
         ts: Long,
         signer: NostrSignerSync = this.signer,
-    ) = signer.sign<LongTextNoteEvent>(
+    ) = signer.sign<LongFormContentEvent>(
         createdAt = ts,
-        kind = LongTextNoteEvent.KIND,
+        kind = LongFormContentEvent.KIND,
         tags = arrayOf(arrayOf("d", slug)),
         content = body,
     )
@@ -92,12 +92,12 @@ class FsDeletionTest {
             store.insert(n1)
             store.insert(n2)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n1), createdAt = 30))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(n1), createdAt = 30))
             store.insert(del)
 
             assertEquals(emptyList(), store.query<TextNoteEvent>(Filter(ids = listOf(n1.id))).map { it.id })
             assertEquals(listOf(n2.id), store.query<TextNoteEvent>(Filter(ids = listOf(n2.id))).map { it.id })
-            assertEquals(listOf(del.id), store.query<DeletionEvent>(Filter(ids = listOf(del.id))).map { it.id })
+            assertEquals(listOf(del.id), store.query<DeletionRequestEvent>(Filter(ids = listOf(del.id))).map { it.id })
         }
 
     @Test
@@ -106,7 +106,7 @@ class FsDeletionTest {
             val n1 = note("one", 10)
             store.insert(n1)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n1), createdAt = 30))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(n1), createdAt = 30))
             store.insert(del)
 
             store.insert(n1) // should be blocked
@@ -121,7 +121,7 @@ class FsDeletionTest {
             store.insert(theirs)
 
             // Our signer attempts to delete it.
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(theirs), createdAt = 30))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(theirs), createdAt = 30))
             store.insert(del)
 
             // Cascade did NOT run — not our author.
@@ -150,14 +150,14 @@ class FsDeletionTest {
             store.insert(v1)
             store.insert(v2)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v2), createdAt = 30))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v2), createdAt = 30))
             store.insert(del)
 
             // Slot cleared, canonical removed, indexes gone.
             val dHash = FsLayout.sha256Hex("intro")
-            val slot = root.resolve("addressable/${LongTextNoteEvent.KIND}/${signer.pubKey}/$dHash.json")
+            val slot = root.resolve("addressable/${LongFormContentEvent.KIND}/${signer.pubKey}/$dHash.json")
             assertFalse(slot.exists(), "addressable slot should be cleared")
-            assertEquals(emptyList(), store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND))).map { it.id })
+            assertEquals(emptyList(), store.query<LongFormContentEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND))).map { it.id })
         }
 
     @Test
@@ -166,14 +166,14 @@ class FsDeletionTest {
             val v1 = article("intro", "draft 1", 10)
             store.insert(v1)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v1), createdAt = 20))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v1), createdAt = 20))
             store.insert(del)
 
             // A newer addressable at the same address should still be accepted.
             val v3 = article("intro", "draft 3", 30)
             store.insert(v3)
 
-            val got = store.query<LongTextNoteEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongTextNoteEvent.KIND)))
+            val got = store.query<LongFormContentEvent>(Filter(authors = listOf(signer.pubKey), kinds = listOf(LongFormContentEvent.KIND)))
             assertEquals(listOf(v3.id), got.map { it.id })
         }
 
@@ -183,13 +183,13 @@ class FsDeletionTest {
             val v1 = article("intro", "draft 1", 10)
             store.insert(v1)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v1), createdAt = 20))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v1), createdAt = 20))
             store.insert(del)
 
             // Attempting to re-insert an event authored earlier than the deletion should fail.
             val older = article("intro", "even-older", 5)
             store.insert(older)
-            assertEquals(emptyList(), store.query<LongTextNoteEvent>(Filter(ids = listOf(older.id))).map { it.id })
+            assertEquals(emptyList(), store.query<LongFormContentEvent>(Filter(ids = listOf(older.id))).map { it.id })
         }
 
     @Test
@@ -198,12 +198,12 @@ class FsDeletionTest {
             val v = article("intro", "v", 10)
             store.insert(v)
 
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v), createdAt = 15))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v), createdAt = 15))
             store.insert(del)
 
             val equal = article("intro", "equal", 15)
             store.insert(equal)
-            assertEquals(emptyList(), store.query<LongTextNoteEvent>(Filter(ids = listOf(equal.id))).map { it.id })
+            assertEquals(emptyList(), store.query<LongFormContentEvent>(Filter(ids = listOf(equal.id))).map { it.id })
         }
 
     // ------------------------------------------------------------------
@@ -216,18 +216,18 @@ class FsDeletionTest {
             val v = article("intro", "v", 10)
             store.insert(v)
 
-            val del1 = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v), createdAt = 20))
+            val del1 = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v), createdAt = 20))
             store.insert(del1)
 
             val del2Target = article("intro", "v2", 30) // inserted only to give del2 a target
             store.insert(del2Target)
-            val del2 = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(del2Target), createdAt = 40))
+            val del2 = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(del2Target), createdAt = 40))
             store.insert(del2)
 
             // Cutoff should now be 40, so an event at createdAt=35 is blocked.
             val mid = article("intro", "mid", 35)
             store.insert(mid)
-            assertEquals(emptyList(), store.query<LongTextNoteEvent>(Filter(ids = listOf(mid.id))).map { it.id })
+            assertEquals(emptyList(), store.query<LongFormContentEvent>(Filter(ids = listOf(mid.id))).map { it.id })
         }
 
     @Test
@@ -238,23 +238,23 @@ class FsDeletionTest {
             store.insert(v1)
             store.insert(v2)
 
-            val strongDel = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v2), createdAt = 100))
+            val strongDel = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v2), createdAt = 100))
             store.insert(strongDel)
 
             // Now insert a weaker (earlier) deletion for the same address.
             val weakTarget = article("slug", "target-for-weak", 30)
             store.insert(weakTarget) // this passes? No: cutoff=100, target@30 is blocked. Actually we want to
-            // construct a DeletionEvent that targets the slug address directly. The simplest way:
+            // construct a DeletionRequestEvent that targets the slug address directly. The simplest way:
             val weakDel =
-                signer.sign<DeletionEvent>(
-                    DeletionEvent.buildAddressOnly(listOf(v1), createdAt = 50),
+                signer.sign<DeletionRequestEvent>(
+                    DeletionRequestEvent.buildAddressOnly(listOf(v1), createdAt = 50),
                 )
             store.insert(weakDel)
 
             // Cutoff should still be 100 — an event at 60 must still be blocked.
             val blocked = article("slug", "should-be-blocked", 60)
             store.insert(blocked)
-            assertEquals(emptyList(), store.query<LongTextNoteEvent>(Filter(ids = listOf(blocked.id))).map { it.id })
+            assertEquals(emptyList(), store.query<LongFormContentEvent>(Filter(ids = listOf(blocked.id))).map { it.id })
         }
 
     // ------------------------------------------------------------------
@@ -266,10 +266,10 @@ class FsDeletionTest {
         runBlocking {
             val n = note("x", 10)
             store.insert(n)
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n), createdAt = 20))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(n), createdAt = 20))
             store.insert(del)
 
-            val byKind = store.query<DeletionEvent>(Filter(kinds = listOf(DeletionEvent.KIND)))
+            val byKind = store.query<DeletionRequestEvent>(Filter(kinds = listOf(DeletionRequestEvent.KIND)))
             assertEquals(listOf(del.id), byKind.map { it.id })
         }
 
@@ -289,10 +289,10 @@ class FsDeletionTest {
             // `event_tags.pubkey_hash = NEW.pubkey_owner_hash` guard.
             val v1 = otherArticle("shared", "v1", 10)
             store.insert(v1)
-            assertEquals(listOf(v1.id), store.query<LongTextNoteEvent>(Filter(ids = listOf(v1.id))).map { it.id })
+            assertEquals(listOf(v1.id), store.query<LongFormContentEvent>(Filter(ids = listOf(v1.id))).map { it.id })
 
             val strangerDel =
-                signer.sign<DeletionEvent>(DeletionEvent.build(listOf(v1), createdAt = 20))
+                signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(v1), createdAt = 20))
             store.insert(strangerDel)
 
             // Bob can still publish a newer version at the same address. Since
@@ -300,7 +300,7 @@ class FsDeletionTest {
             // exists to block.
             val v2 = otherArticle("shared", "v2", 30)
             store.insert(v2)
-            assertEquals(listOf(v2.id), store.query<LongTextNoteEvent>(Filter(ids = listOf(v2.id))).map { it.id })
+            assertEquals(listOf(v2.id), store.query<LongFormContentEvent>(Filter(ids = listOf(v2.id))).map { it.id })
         }
 
     @Test
@@ -308,7 +308,7 @@ class FsDeletionTest {
         runBlocking {
             val n = note("x", 10)
             store.insert(n)
-            val del = signer.sign<DeletionEvent>(DeletionEvent.build(listOf(n), createdAt = 20))
+            val del = signer.sign<DeletionRequestEvent>(DeletionRequestEvent.build(listOf(n), createdAt = 20))
             store.insert(del)
 
             val tomb = root.resolve("tombstones/id/${n.id}.json")

@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip61Nutzaps
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
@@ -75,7 +75,7 @@ class NutzapInfoEventTest {
     fun deletionTargetsTheReplaceableAddress() =
         runTest {
             val empty = signer.sign(NutzapInfoEvent.buildEmpty())
-            val deletion = signer.sign(DeletionEvent.build(listOf(empty)))
+            val deletion = signer.sign(DeletionRequestEvent.build(listOf(empty)))
 
             // NIP-09 deletion of a replaceable event needs the `a` address
             // coordinate so compliant relays drop all versions, plus the `e`

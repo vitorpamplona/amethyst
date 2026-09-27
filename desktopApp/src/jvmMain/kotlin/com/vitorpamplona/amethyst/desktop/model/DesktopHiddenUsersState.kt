@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.desktop.model
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.FollowSetDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,12 +43,12 @@ import kotlinx.coroutines.flow.stateIn
  * Desktop mute/block state holder.
  *
  * Assembles the user's NIP-51 mute list (kind 10000, [MuteListEvent]) and the
- * legacy block people list (kind 30000 `d=mute`, [PeopleListEvent]) into a single
+ * legacy block people list (kind 30000 `d=mute`, [FollowSetEvent]) into a single
  * [LiveHiddenUsers] value that [com.vitorpamplona.amethyst.desktop.model.DesktopIAccount]
  * feeds to [com.vitorpamplona.amethyst.commons.model.Note.isHiddenFor].
  *
  * Both lists carry a mix of public tags and an NIP-44-encrypted private section;
- * the shared [MuteListDecryptionCache]/[PeopleListDecryptionCache] handle the
+ * the shared [MuteListDecryptionCache]/[FollowSetDecryptionCache] handle the
  * async decrypt (and are no-ops for read-only accounts, which simply see the
  * public portion). The result is exposed as a hot [StateFlow] so feeds can
  * re-filter live: when the list events change (or decryption resolves), a new
@@ -65,11 +65,11 @@ class DesktopHiddenUsersState(
     private val showSensitiveContent: StateFlow<Boolean?> = MutableStateFlow(null),
 ) {
     private val muteCache = MuteListDecryptionCache(signer)
-    private val blockCache = PeopleListDecryptionCache(signer)
+    private val blockCache = FollowSetDecryptionCache(signer)
 
     // Strong refs so the GC keeps these addressable notes (and their decrypt caches) alive.
     private val muteListNote = cache.getOrCreateAddressableNote(MuteListEvent.createAddress(signer.pubKey))
-    private val blockListNote = cache.getOrCreateAddressableNote(PeopleListEvent.createBlockAddress(signer.pubKey))
+    private val blockListNote = cache.getOrCreateAddressableNote(FollowSetEvent.createBlockAddress(signer.pubKey))
 
     /** Session-only user hides (e.g. "hide this spammer" without persisting a mute). */
     val transientHiddenUsers = MutableStateFlow<Set<String>>(emptySet())
@@ -79,7 +79,7 @@ class DesktopHiddenUsersState(
 
     private suspend fun assemble(
         muteEvent: MuteListEvent?,
-        blockEvent: PeopleListEvent?,
+        blockEvent: FollowSetEvent?,
         transient: Set<String>,
         showSensitive: Boolean?,
     ): LiveHiddenUsers {
@@ -118,7 +118,7 @@ class DesktopHiddenUsersState(
         ) { muteState, blockState, transient, showSensitive ->
             assemble(
                 muteState.note.event as? MuteListEvent,
-                blockState.note.event as? PeopleListEvent,
+                blockState.note.event as? FollowSetEvent,
                 transient,
                 showSensitive,
             )

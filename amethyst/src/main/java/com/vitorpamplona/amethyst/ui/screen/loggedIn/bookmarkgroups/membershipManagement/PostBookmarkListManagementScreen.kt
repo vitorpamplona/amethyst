@@ -37,7 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.nip51Lists.ui.BookmarkGroupManagementItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks_title
@@ -108,7 +108,7 @@ private fun ListManagementViewBody(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val bookmarkGroups by accountViewModel.account.labeledBookmarkLists.listFeedFlow
+    val bookmarkGroups by accountViewModel.account.bookmarkSets.listFeedFlow
         .collectAsStateWithLifecycle()
 
     val defaultBookmarks by accountViewModel.account.bookmarkState.bookmarks
@@ -145,7 +145,7 @@ private fun ListManagementViewBody(
             )
         }
 
-        itemsIndexed(items = bookmarkGroups, key = { _: Int, item: LabeledBookmarkList -> item.identifier }) { _, bookmarkList ->
+        itemsIndexed(items = bookmarkGroups, key = { _: Int, item: BookmarkSet -> item.identifier }) { _, bookmarkList ->
             val maybePublicBookmark = bookmarkList.publicPostBookmarks.firstOrNull { it.eventId == note.idHex }
             val maybePrivateBookmark = bookmarkList.privatePostBookmarks.firstOrNull { it.eventId == note.idHex }
             BookmarkGroupManagementItem(
@@ -158,7 +158,7 @@ private fun ListManagementViewBody(
                 onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.PostBookmark)) },
                 onAddBookmarkToGroup = { shouldBePrivate ->
                     accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.addBookmarkToList(
+                        accountViewModel.account.bookmarkSets.addBookmarkToList(
                             bookmark = EventBookmark(eventId = note.idHex, relay = note.relayHintUrl(), author = note.author?.pubkeyHex),
                             bookmarkListIdentifier = bookmarkList.identifier,
                             isBookmarkPrivate = shouldBePrivate,
@@ -168,7 +168,7 @@ private fun ListManagementViewBody(
                 },
                 onRemoveBookmarkFromGroup = {
                     accountViewModel.launchSigner {
-                        accountViewModel.account.labeledBookmarkLists.removeBookmarkFromList(
+                        accountViewModel.account.bookmarkSets.removeBookmarkFromList(
                             bookmark = EventBookmark(eventId = note.idHex),
                             bookmarkListIdentifier = bookmarkList.identifier,
                             isBookmarkPrivate = maybePrivateBookmark != null,

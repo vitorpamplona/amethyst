@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nip23LongContent
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -42,7 +42,7 @@ object LongFormPublishAction {
      * @param tags List of hashtag topics
      * @param dTag Unique identifier for this addressable event (slug)
      * @param signer The NostrSigner to sign the event
-     * @return Signed LongTextNoteEvent ready to broadcast
+     * @return Signed LongFormContentEvent ready to broadcast
      * @throws IllegalStateException if signer is not writeable
      */
     suspend fun publish(
@@ -53,7 +53,7 @@ object LongFormPublishAction {
         tags: List<String>,
         dTag: String,
         signer: NostrSigner,
-    ): LongTextNoteEvent {
+    ): LongFormContentEvent {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot publish: signer is not writeable")
         }
@@ -63,7 +63,7 @@ object LongFormPublishAction {
         }
 
         val template =
-            LongTextNoteEvent.build(
+            LongFormContentEvent.build(
                 description = content,
                 title = title,
                 summary = summary,

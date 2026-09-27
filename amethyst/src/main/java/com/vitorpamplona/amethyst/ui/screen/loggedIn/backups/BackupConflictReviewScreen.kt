@@ -59,11 +59,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.backups.BackupEventType
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.backup_action_block_again
+import com.vitorpamplona.amethyst.commons.resources.backup_action_keep_count
+import com.vitorpamplona.amethyst.commons.resources.backup_action_rejoin
+import com.vitorpamplona.amethyst.commons.resources.backup_action_remute
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_count
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_feeds
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_places
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_profile
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_providers
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_relays
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_topics
+import com.vitorpamplona.amethyst.commons.resources.backup_action_restore_wallet
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_added
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_changed
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_keep_new
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_private_added
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_private_changed
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_private_cleared
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_removed
+import com.vitorpamplona.amethyst.commons.resources.backup_conflict_restore_mine
+import com.vitorpamplona.amethyst.commons.resources.backup_review_changed_by_other_app
+import com.vitorpamplona.amethyst.commons.resources.backup_review_title_cleared
+import com.vitorpamplona.amethyst.commons.resources.backup_review_title_updated
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -86,10 +109,10 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDif
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff
 import com.vitorpamplona.quartz.nip02FollowList.ContactListDiff
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListDiff
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListDiff
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListDiff
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListDiff
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListDiff
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListDiff
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListDiff
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListDiff
@@ -97,22 +120,23 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletDiff
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListDiff
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListDiff
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDiff
+import org.jetbrains.compose.resources.StringResource
 
 /** A row of the review list, flattened so hundreds of entries scroll lazily. */
 @Immutable
 internal sealed interface ReviewRow {
     class Section(
-        val titleRes: Int,
+        val titleRes: StringResource,
         val count: Int,
         val tone: Tone,
     ) : ReviewRow
 
     class Note(
-        val textRes: Int,
+        val textRes: StringResource,
     ) : ReviewRow
 
     class Group(
-        val labelRes: Int,
+        val labelRes: StringResource,
     ) : ReviewRow
 
     class Entry(
@@ -124,15 +148,15 @@ internal enum class Tone { REMOVED, ADDED, CHANGED }
 
 internal fun buildRows(
     presentation: DiffPresentation,
-    skipGroups: Set<Int> = emptySet(),
+    skipGroups: Set<StringResource> = emptySet(),
 ): List<ReviewRow> {
     val rows = mutableListOf<ReviewRow>()
 
     fun section(
-        titleRes: Int,
+        titleRes: StringResource,
         count: Int,
         tone: Tone,
-        contentNote: Int?,
+        contentNote: StringResource?,
         items: (DiffGroup) -> List<ReviewItem>,
     ) {
         if (count == 0 && contentNote == null) return
@@ -149,9 +173,9 @@ internal fun buildRows(
     }
 
     val content = presentation.content
-    section(R.string.backup_conflict_removed, presentation.removedCount, Tone.REMOVED, R.string.backup_conflict_private_cleared.takeIf { content == ContentChange.CLEARED }) { it.removed }
-    section(R.string.backup_conflict_added, presentation.addedCount, Tone.ADDED, R.string.backup_conflict_private_added.takeIf { content == ContentChange.ADDED }) { it.added }
-    section(R.string.backup_conflict_changed, presentation.changedCount, Tone.CHANGED, R.string.backup_conflict_private_changed.takeIf { content == ContentChange.CHANGED }) { it.changed }
+    section(Res.string.backup_conflict_removed, presentation.removedCount, Tone.REMOVED, Res.string.backup_conflict_private_cleared.takeIf { content == ContentChange.CLEARED }) { it.removed }
+    section(Res.string.backup_conflict_added, presentation.addedCount, Tone.ADDED, Res.string.backup_conflict_private_added.takeIf { content == ContentChange.ADDED }) { it.added }
+    section(Res.string.backup_conflict_changed, presentation.changedCount, Tone.CHANGED, Res.string.backup_conflict_private_changed.takeIf { content == ContentChange.CHANGED }) { it.changed }
     return rows
 }
 
@@ -268,7 +292,7 @@ internal fun LazyListScope.genericDiffItems(
 }
 
 @Composable
-internal fun GroupLabel(labelRes: Int) {
+internal fun GroupLabel(labelRes: StringResource) {
     Text(
         text = stringRes(labelRes),
         style = MaterialTheme.typography.labelLarge,
@@ -339,7 +363,7 @@ internal fun eventTitle(conflict: ReplaceableBackupConflict): String {
     val name = stringRes(eventTypeName(conflict.eventType)).replaceFirstChar { it.uppercase() }
     // Says what happened to it, not just what it is: "Community list updated".
     val emptied = conflict.incoming.tags.isEmpty() && conflict.incoming.content.isEmpty()
-    return stringRes(if (emptied) R.string.backup_review_title_cleared else R.string.backup_review_title_updated, name)
+    return stringRes(if (emptied) Res.string.backup_review_title_cleared else Res.string.backup_review_title_updated, name)
 }
 
 /** The two choices, worded for what they do to this event: "Keep 120" / "Restore 523". */
@@ -348,48 +372,48 @@ private fun actionLabels(conflict: ReplaceableBackupConflict): Pair<String, Stri
     when (val diff = conflict.diff) {
         is ContactListDiff -> {
             val (saved, new) = conflict.followCounts
-            stringRes(R.string.backup_action_keep_count, new.toString()) to stringRes(R.string.backup_action_restore_count, saved.toString())
+            stringRes(Res.string.backup_action_keep_count, new.toString()) to stringRes(Res.string.backup_action_restore_count, saved.toString())
         }
         is MuteListDiff -> {
             val removed = diff.publicMutes.removed.size
-            stringRes(R.string.backup_conflict_keep_new) to
-                if (removed > 0) stringRes(R.string.backup_action_remute, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
+            stringRes(Res.string.backup_conflict_keep_new) to
+                if (removed > 0) stringRes(Res.string.backup_action_remute, removed.toString()) else stringRes(Res.string.backup_conflict_restore_mine)
         }
         is SimpleGroupListDiff -> {
             val removed = diff.groups.removed.size
-            stringRes(R.string.backup_conflict_keep_new) to
-                if (removed > 0) stringRes(R.string.backup_action_rejoin, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
+            stringRes(Res.string.backup_conflict_keep_new) to
+                if (removed > 0) stringRes(Res.string.backup_action_rejoin, removed.toString()) else stringRes(Res.string.backup_conflict_restore_mine)
         }
-        is MetadataDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_profile)
+        is MetadataDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_profile)
         is RelayListDiff ->
             if (conflict.eventType == BackupEventType.BLOCKED_RELAYS && diff.relays.removed.isNotEmpty()) {
-                stringRes(R.string.backup_conflict_keep_new) to
+                stringRes(Res.string.backup_conflict_keep_new) to
                     stringRes(
-                        R.string.backup_action_block_again,
+                        Res.string.backup_action_block_again,
                         diff.relays.removed.size
                             .toString(),
                     )
             } else {
-                stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_relays)
+                stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_relays)
             }
-        is AdvertisedRelayListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_relays)
-        is ChannelListDiff -> rejoinLabels(diff.channels.removed.size)
+        is AdvertisedRelayListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_relays)
+        is PublicChatListDiff -> rejoinLabels(diff.channels.removed.size)
         is CommunityListDiff -> rejoinLabels(diff.communities.removed.size)
         is EphemeralChatListDiff -> rejoinLabels(diff.rooms.removed.size)
-        is FavoriteAlgoFeedsListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_feeds)
-        is HashtagListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_topics)
+        is FavoriteAlgoFeedsListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_feeds)
+        is InterestListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_topics)
         // Geohashes are places, not topics: the screen counts "places gone" under "Followed
         // locations", so the button has to agree with the page it sits on.
-        is GeohashListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_places)
-        is TrustProviderListDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_providers)
-        is CashuWalletDiff -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_action_restore_wallet)
-        else -> stringRes(R.string.backup_conflict_keep_new) to stringRes(R.string.backup_conflict_restore_mine)
+        is GeohashListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_places)
+        is TrustProviderListDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_providers)
+        is CashuWalletDiff -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_action_restore_wallet)
+        else -> stringRes(Res.string.backup_conflict_keep_new) to stringRes(Res.string.backup_conflict_restore_mine)
     }
 
 @Composable
 private fun rejoinLabels(removed: Int): Pair<String, String> =
-    stringRes(R.string.backup_conflict_keep_new) to
-        if (removed > 0) stringRes(R.string.backup_action_rejoin, removed.toString()) else stringRes(R.string.backup_conflict_restore_mine)
+    stringRes(Res.string.backup_conflict_keep_new) to
+        if (removed > 0) stringRes(Res.string.backup_action_rejoin, removed.toString()) else stringRes(Res.string.backup_conflict_restore_mine)
 
 /** When the other app changed it, and what the event is for. */
 @Composable
@@ -399,7 +423,7 @@ private fun BackupConflictIntro(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-            text = stringRes(R.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt)),
+            text = stringRes(Res.string.backup_review_changed_by_other_app, timeAgoNoDot(conflict.cause.createdAt)),
             style = MaterialTheme.typography.labelLarge,
             color = conflictTones().removed,
         )

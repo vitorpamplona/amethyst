@@ -460,9 +460,9 @@ Common event kinds you'll work with:
 | 0 | NIP-01 | `MetadataEvent` | User metadata (name, picture, about) |
 | 1 | NIP-01 | `TextNoteEvent` | Text note (short post) |
 | 3 | NIP-02 | `ContactListEvent` | Contact list / follow list |
-| 4 | NIP-04 | `PrivateDmEvent` | Encrypted direct message |
+| 4 | NIP-04 | `EncryptedDmEvent` | Encrypted direct message |
 | 7 | NIP-25 | `ReactionEvent` | Reaction (like, emoji) |
-| 30023 | NIP-23 | `LongTextNoteEvent` | Long-form content (articles) |
+| 30023 | NIP-23 | `LongFormContentEvent` | Long-form content (articles) |
 
 ## Multi-Relay Subscriptions
 

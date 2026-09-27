@@ -88,7 +88,7 @@
     <string name="quote">نقل قول</string>
     <string name="fork">فورک</string>
     <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
-    <string name="replying_to"> پاسخ به</string>
+    <string name="replying_to">پاسخ به</string>
     <string name="and"> و </string>
     <string name="following">دنبال شونده</string>
     <string name="followers">دنبال کننده</string>
@@ -210,7 +210,7 @@
     <string name="copy_user_id">کپی شناسه کاربر</string>
     <string name="unblock_user">از بلاک درآوردن کاربر</string>
     <string name="user_is_blocked_hidden">این کاربر مسدود/بی‌صدا شده است. پست‌های آن‌ها مخفی است.</string>
-    <string name="npub_hex_username">npub, hex, نام کاربری </string>
+    <string name="npub_hex_username">npub, hex, نام کاربری</string>
     <string name="clear">پاک کردن</string>
     <string name="app_logo">لوگوی اپ</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex کلید خصوصی</string>
@@ -232,7 +232,7 @@
     <string name="chats_reply_searching_history">در حال جستجوی پیام اصلی…</string>
     <string name="chats_reply_not_found">این پیام پیدا نشد</string>
     <string name="chats_reply_searched">همه relay ها جستجو شد · برای مشاهده ضربه بزنید</string>
-    <string name="error_loading_replies"> :خطا در بارگیری پاسخ ها</string>
+    <string name="error_loading_replies">:خطا در بارگیری پاسخ ها</string>
     <string name="try_again">دوباره تلاش کنید</string>
     <string name="notification_feed_is_empty">هنوز هیچ اعلانی نیست.</string>
     <string name="open_poll">نظرسنجی باز</string>
@@ -276,7 +276,7 @@
     <string name="quick_action_request_deletion_gallery_title">حذف از گالری</string>
     <string name="quick_action_request_deletion_gallery_alert_body_v2">این رسانه را از گالری خود حذف کنید.</string>
     <string name="quick_action_request_deletion_alert_title">درخواست حذف</string>
-    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که یادداشت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که یادداشت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
+    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که یادداشت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که یادداشت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد..</string>
     <string name="quick_action_block_dialog_btn">بلاک</string>
     <string name="quick_action_delete_dialog_btn">حذف</string>
     <string name="quick_action_block">بلاک</string>
@@ -949,9 +949,7 @@
     <string name="push_server_none_explainer">غیرفعال سازی اعلان ها</string>
     <string name="push_server_uses_app_explainer">از اپلیکیشن %1$s استفاده می کند</string>
     <string name="push_server_install_app">تنظیمات اعلان ها</string>
-    <string name="push_server_install_app_description">برای دریافت اعلان ها، می توانید هر اپلیکیشنی که از [Unified Push](https://unifiedpush.org/) پشتیبانی می کند نصب کنید، مانند[Ntfy](https://ntfy.sh/).
-        پس از نصب، اپلیکیشنی را که می خواهید استفاده کنید در تنظیمات انتخاب کنید.
-    </string>
+    <string name="push_server_install_app_description">برای دریافت اعلان ها، می توانید هر اپلیکیشنی که از [Unified Push](https://unifiedpush.org/) پشتیبانی می کند نصب کنید، مانند[Ntfy](https://ntfy.sh/). پس از نصب، اپلیکیشنی را که می خواهید استفاده کنید در تنظیمات انتخاب کنید.</string>
     <string name="thread_title">رسته</string>
     <string name="send_the_seller_a_message">به فروشنده پیغام دهید</string>
     <string name="hi_there_is_this_still_available">سلام، هنوز موجوده؟</string>
@@ -1303,10 +1301,7 @@
     <string name="show_nprofile_as_a_qr_code">نمایش nprofile به عنوان کد QR</string>
     <string name="dm_relays_not_found">تنظیم رله های صندوق دریافت خصوصی</string>
     <string name="dm_relays_not_found_description">با این تنظیمات همه می توانند بدانند که هنگام ارسال پیام به شما از کدام رله ها استفاده کنند. بدون این تنظیمات ممکن است برخی پیام ها را از دست بدهید.</string>
-    <string name="dm_relays_not_found_examples2">گزینه های خوب:
-- inbox.nostr.wine (پولی)
-- auth.nostr1.com (رایگان)
-- you.nostr1.com (رله شخصی - پولی)</string>
+    <string name="dm_relays_not_found_examples2">گزینه های خوب: - inbox.nostr.wine (پولی) - auth.nostr1.com (رایگان) - you.nostr1.com (رله شخصی - پولی)</string>
     <string name="dm_relays_not_found_editing">از ۱ تا ۳ رله به عنوان رله خصوصی وارد کنید. رله های صندوق دربافت پیام های خصوصی می بایست هر پیامی از هرکس را بپذیرند، ولی تنها به شما اجازه بارگیری پیام ها را می دهند.</string>
     <string name="dm_relays_not_found_create_now">هم اکنون تنظیم شود</string>
     <string name="recipient_missing_dm_relays">relay های صندوق ورودی DM یافت نشد. پیام‌ها تحویل داده نمی‌شوند تا زمانی که لیست relay خود را پیکربندی کنند.</string>
@@ -1333,7 +1328,7 @@
     <string name="zap_the_devs_title">به توسعه دهندگان رپ دهید!</string>
     <string name="zap_the_devs_description">هدیه شما به ما برای تاثیرگذاری کمک می کند. هر ساتوشی به حساب می آید!</string>
     <string name="donate_now">اکنون کمک کنید</string>
-    <string name="brought_to_you_by">تقدیم از طرف: </string>
+    <string name="brought_to_you_by">تقدیم از طرف:</string>
     <string name="this_version_brought_to_you_by">این نسخه نرم‌افزار پیشکش از:</string>
     <string name="version_name">نسخه %1$s</string>
     <string name="thank_you">متشکریم!</string>
@@ -2038,7 +2033,7 @@
     <string name="copied_note_id_to_clipboard">(@note1)شناسه یادداشت در کلیپبورد کپی شد</string>
     <string name="copied_note_text_to_clipboard">یادداشت در کلیپبورد کپی شد</string>
     <string name="copied_to_clipboard">در کلیپ‌بورد کپی شد</string>
-    <string name="copied_user_id_to_clipboard">@npubنویسنده در کلیپبورد کپی شد </string>
+    <string name="copied_user_id_to_clipboard">@npubنویسنده در کلیپبورد کپی شد</string>
     <string name="copy_to_clipboard">کپی به کلیپ‌بورد</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">LNUrl از آدرس لایتنینگ "%1$s" بدست نیامد. تنظیمات کاربر را بررسی کنید.</string>
     <string name="could_not_check_downloaded_file">فایل بارگیری شده پس از بارگذاری بررسی نشد: %1$s</string>
@@ -2046,15 +2041,7 @@
     <string name="could_not_fetch_invoice_from_details">صورتحساب از %1$s گرفته نشد: %2$s</string>
     <string name="could_not_open_the_compressed_file">فایل فشرده باز نشد</string>
     <string name="couldnt_find_nwc_wallets">کیف پول یافت نشد</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst هیچ برنامه کیف پولی که از Nostr Wallet Connect (NWC) پشتیبانی کند پیدا نکرد.
-\n\nکارهایی که می‌توانید انجام دهید:
-\n\t1. بررسی پشتیبانی NWC: مطمئن شوید که برنامه کیف پول مورد نظر شما با Nostr Wallet Connect سازگار است.
-\n\t2. ایجاد اتصال: به برنامه کیف پول خود بروید و یک اتصال NWC جدید ایجاد کنید.
-\n\t3. اتصال به Amethyst: کیف پول شما معمولاً سه گزینه ارائه می‌دهد:
-\n\t\t3.1 اتصال خودکار: دکمه‌ای برای باز کردن و اتصال خودکار به Amethyst. اگر این گزینه وجود دارد، آن دکمه را بزنید، Amethyst را باز کنید و روی صفحه جدید ذخیره کنید.
-\n\t\t3.2 اتصال دستی: یک URI اتصال که می‌توانید کپی کنید و با کلیک روی آیکون paste در این صفحه مستقیماً وارد کنید.
-\n\t\t3.3 کد QR: کیف پول یک کد QR ایجاد می‌کند که می‌توانید با دکمه کد QR در این صفحه آن را بخوانید.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst هیچ برنامه کیف پولی که از Nostr Wallet Connect (NWC) پشتیبانی کند پیدا نکرد. \n\nکارهایی که می‌توانید انجام دهید: \n\t1. بررسی پشتیبانی NWC: مطمئن شوید که برنامه کیف پول مورد نظر شما با Nostr Wallet Connect سازگار است. \n\t2. ایجاد اتصال: به برنامه کیف پول خود بروید و یک اتصال NWC جدید ایجاد کنید. \n\t3. اتصال به Amethyst: کیف پول شما معمولاً سه گزینه ارائه می‌دهد: \n\t\t3.1 اتصال خودکار: دکمه‌ای برای باز کردن و اتصال خودکار به Amethyst. اگر این گزینه وجود دارد، آن دکمه را بزنید، Amethyst را باز کنید و روی صفحه جدید ذخیره کنید. \n\t\t3.2 اتصال دستی: یک URI اتصال که می‌توانید کپی کنید و با کلیک روی آیکون paste در این صفحه مستقیماً وارد کنید. \n\t\t3.3 کد QR: کیف پول یک کد QR ایجاد می‌کند که می‌توانید با دکمه کد QR در این صفحه آن را بخوانید.</string>
     <string name="create">ساختن</string>
     <string name="d">روز</string>
     <string name="danger_zone">منطقه خطر</string>
@@ -2721,10 +2708,7 @@
     <string name="privacy_policy">سیاست حریم خصوصی</string>
     <string name="private_conversation_notification">&lt;پیام خصوصی رمزگشایی نشد&gt;\\n\nدر یک پیام خصوصی/رمزنگاری شده بین %1$s و %2$s نام شما آمده بود.</string>
     <string name="private_inbox_section">رله های صندوق دریافت پیام خصوصی</string>
-    <string name="private_inbox_section_explainer">بین ۱-۳ رله به عنوان رله صندوق ورودی خصوصی وارد کنید. دیگران از این رله ها برای ارسال پیام خصوصی به شما استفاده خواهند کرد. رله های صندوق دریافت پیام خصوصی می بایست هر پیامی از هر کسی را بپذیرند، اما فقط بگذارند شما آن ها را بارگیری کنید. انتخاب های خوب شامل:
- - inbox.nostr.wine (پولی)
-- auth.nostr1.com (رایگان)
-- you.nostr1.com (رله پولی یا شخصی)</string>
+    <string name="private_inbox_section_explainer">بین ۱-۳ رله به عنوان رله صندوق ورودی خصوصی وارد کنید. دیگران از این رله ها برای ارسال پیام خصوصی به شما استفاده خواهند کرد. رله های صندوق دریافت پیام خصوصی می بایست هر پیامی از هر کسی را بپذیرند، اما فقط بگذارند شما آن ها را بارگیری کنید. انتخاب های خوب شامل: - inbox.nostr.wine (پولی) - auth.nostr1.com (رایگان) - you.nostr1.com (رله پولی یا شخصی)</string>
     <string name="private_inbox_section_explainer_profile">کاربر DM ها را روی این relay ها دریافت می‌کند</string>
     <string name="private_message">پیام خصوصی</string>
     <string name="private_note">خصوصی کردن: یادداشت را به صورت gift-wrap فقط برای کاربران مطلع‌شده ارسال کن</string>
@@ -2771,10 +2755,7 @@
     <string name="read_only_user">کاربر با امکان خواندن فقط</string>
     <string name="record_a_message_description">برای ضبط پیام کلیک کنید و نگه دارید</string>
     <string name="relay_chat">گفتگوی relay</string>
-    <string name="relay_chat_explainer">گفتگوهای relay گروه‌های چت هستند که توسط relay خانگی خود کنترل می‌شوند.
-        آن‌ها برای همه در Nostr قابل مشاهده هستند و هر کسی می‌تواند در آن‌ها شرکت کند.
-        آن‌ها برای جوامع باز حول موضوعات خاص عالی هستند. برخی از این گروه‌ها ناپایدار
-    هستند و بنابراین پیام‌های چت با گذشت زمان ناپدید می‌شوند</string>
+    <string name="relay_chat_explainer">گفتگوهای relay گروه‌های چت هستند که توسط relay خانگی خود کنترل می‌شوند. آن‌ها برای همه در Nostr قابل مشاهده هستند و هر کسی می‌تواند در آن‌ها شرکت کند. آن‌ها برای جوامع باز حول موضوعات خاص عالی هستند. برخی از این گروه‌ها ناپایدار هستند و بنابراین پیام‌های چت با گذشت زمان ناپدید می‌شوند</string>
     <string name="relay_chat_title">گفتگوهای relay</string>
     <string name="relay_management_tab_events">رویدادها</string>
     <string name="relay_management_tab_ips">آدرس‌های IP</string>
@@ -2930,7 +2911,7 @@
     <string name="tor_use_new_relays_explainer">تور را برای رله های ارسال/دریافت الزامی کن</string>
     <string name="tor_use_nip05_verification">تایید آدرس ناستر</string>
     <string name="tor_use_nip05_verification_explainer">تور را برای تایید آدرس های NIP-05 الزامی کن</string>
-    <string name="tor_use_onion_address">رله ها / آدرس های Onion </string>
+    <string name="tor_use_onion_address">رله ها / آدرس های Onion</string>
     <string name="tor_use_onion_address_explainer">از تور برای هر آدرس اونیون استفاده کن</string>
     <string name="tor_use_profile_pictures">تصاویر نمایه</string>
     <string name="tor_use_profile_pictures_explainer">تور را برای بارگیری تصاویر نمایه اجباری کن</string>

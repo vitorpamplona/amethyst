@@ -68,7 +68,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrEventUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
@@ -78,7 +78,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -184,7 +184,7 @@ class ChatNewMessageViewModel :
                         combine(dmRelayListNoteFlows) { dmRelayListNotes ->
                             dmRelayListNotes
                                 .mapNotNull { noteState ->
-                                    val noteEvent = noteState.note.event as? ChatMessageRelayListEvent
+                                    val noteEvent = noteState.note.event as? DmRelayListEvent
                                     if (noteEvent == null || noteEvent.relays().isEmpty()) {
                                         noteState.note.author
                                     } else {
@@ -409,7 +409,7 @@ class ChatNewMessageViewModel :
             if (replyId != null) {
                 replyTo.value = LocalCache.checkGetOrCreateNote(replyId)
             }
-        } else if (draftEvent is PrivateDmEvent) {
+        } else if (draftEvent is EncryptedDmEvent) {
             val recipientNPub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
             toUsers.setTextAndPlaceCursorAtEnd("@$recipientNPub")
 
@@ -420,7 +420,7 @@ class ChatNewMessageViewModel :
         }
 
         val draftText =
-            if (draftEvent is PrivateDmEvent) {
+            if (draftEvent is EncryptedDmEvent) {
                 accountViewModel.account.privateDMDecryptionCache.cachedDM(draftEvent) ?: ""
             } else {
                 draftEvent.content

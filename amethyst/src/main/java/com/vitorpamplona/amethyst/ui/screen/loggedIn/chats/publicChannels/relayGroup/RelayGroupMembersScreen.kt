@@ -408,7 +408,7 @@ private fun RelayGroupMemberRow(
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    val declaredRoles = channel.supportedRoles
+                    val declaredRoles = channel.groupRoles
                     if (declaredRoles.isNotEmpty()) {
                         // The relay declares its own role set (kind 39003) — offer exactly those
                         // instead of the built-in admin/moderator pair. Roles are privilege grants,

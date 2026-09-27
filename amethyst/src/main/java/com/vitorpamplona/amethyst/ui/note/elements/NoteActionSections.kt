@@ -80,7 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import kotlinx.coroutines.Dispatchers
@@ -222,7 +222,7 @@ fun noteActionSections(
             // nostr source pre-tagged (`a` for an addressable article, else `e`) plus the author,
             // and the passage left for the user to type or paste. Prose kinds only, and never a
             // private rumor (a public highlight would e-tag the unsigned rumor onto relays).
-            if (!isPrivateRumor && (note.event is TextNoteEvent || note.event is LongTextNoteEvent)) {
+            if (!isPrivateRumor && (note.event is TextNoteEvent || note.event is LongFormContentEvent)) {
                 add(
                     NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.highlight_action)) {
                         val author = note.author?.pubkeyHex
@@ -256,7 +256,7 @@ fun noteActionSections(
                             onClick = handlers.onEditPost,
                         ),
                     )
-                } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
+                } else if (note.event is LongFormContentEvent && state.isLoggedUser) {
                     add(
                         NoteAction(MaterialSymbols.Edit, stringRes(Res.string.edit_article)) {
                             nav.nav { Route.NewLongFormPost(version = note.idHex) }
@@ -343,10 +343,10 @@ fun noteActionSections(
                 }
 
                 else -> {
-                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(Res.string.article) else stringRes(Res.string.post)
+                    val noteBookmarkType = if (note.event is LongFormContentEvent) stringRes(Res.string.article) else stringRes(Res.string.post)
                     add(
                         NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType)) {
-                            if (note.event is LongTextNoteEvent) {
+                            if (note.event is LongFormContentEvent) {
                                 nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
                             } else {
                                 nav.nav(Route.PostBookmarkManagement(note.idHex))

@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
 fun filterLongFormByCommunity(
@@ -48,7 +48,7 @@ fun filterLongFormByCommunity(
                     tags =
                         mapOf(
                             "a" to listOf(community),
-                            "k" to listOf(LongTextNoteEvent.KIND.toString()),
+                            "k" to listOf(LongFormContentEvent.KIND.toString()),
                         ),
                     limit = 30,
                     since = since,
@@ -62,7 +62,7 @@ fun filterLongFormByCommunity(
                     purpose = SubPurpose.DISCOVER_FEED,
                     authors = authors,
                     tags = mapOf("k" to listOf("5300"), "a" to listOf(community)),
-                    kinds = listOf(LongTextNoteEvent.KIND),
+                    kinds = listOf(LongFormContentEvent.KIND),
                     limit = 30,
                     since = since,
                 ),

@@ -41,7 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
@@ -486,7 +486,7 @@ class CashuWalletState(
 
                     // Process our own NIP-09 deletions inline rather than
                     // relying on LocalCache's `deletedEventBundles`. That
-                    // path only fires when `consume(DeletionEvent)` finds
+                    // path only fires when `consume(DeletionRequestEvent)` finds
                     // the target Note still resident in `notes` — a
                     // LargeSoftCache backed by WeakReferences, which can
                     // be cleared on any GC cycle. When the weak ref is
@@ -503,7 +503,7 @@ class CashuWalletState(
                     val ourDeleteIds =
                         all
                             .asSequence()
-                            .filterIsInstance<DeletionEvent>()
+                            .filterIsInstance<DeletionRequestEvent>()
                             .filter { it.pubKey == pubKey }
                             .flatMap { it.deleteEventIds().asSequence() }
                             .toSet()
@@ -1447,7 +1447,7 @@ class CashuWalletState(
         }
         val redundantIds = redundant.map { it.event.id }.toSet()
         runCatching {
-            val template = DeletionEvent.build(redundant.map { it.event })
+            val template = DeletionRequestEvent.build(redundant.map { it.event })
             val signed = signer.sign(template)
             publishEvent(signed)
         }.onFailure {

@@ -224,7 +224,7 @@
     <string name="copy_user_id">Скопіювати ID користувача</string>
     <string name="unblock_user">Розблокувати користувача</string>
     <string name="user_is_blocked_hidden">Цього користувача заблоковано/заглушено. Їхні публікації приховано.</string>
-    <string name="npub_hex_username">npub, hex, нікнейм </string>
+    <string name="npub_hex_username">npub, hex, нікнейм</string>
     <string name="clear">Очистити</string>
     <string name="app_logo">Логотип додатка</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / приватний ключ в hex</string>
@@ -959,9 +959,7 @@
     <string name="push_server_none_explainer">Вимикає push-сповіщення</string>
     <string name="push_server_uses_app_explainer">Використовує додаток %1$s</string>
     <string name="push_server_install_app">Налаштування push-сповіщень</string>
-    <string name="push_server_install_app_description">        Щоб отримувати push-сповіщення, встановіть будь-який додаток з підтримкою [Unified Push](https://unifiedpush.org/), наприклад [Ntfy](https://ntfy.sh/).
-        Після встановлення виберіть потрібний додаток у налаштуваннях.
-    </string>
+    <string name="push_server_install_app_description">Щоб отримувати push-сповіщення, встановіть будь-який додаток з підтримкою [Unified Push](https://unifiedpush.org/), наприклад [Ntfy](https://ntfy.sh/). Після встановлення виберіть потрібний додаток у налаштуваннях.</string>
     <string name="thread_title">Тема</string>
     <string name="send_the_seller_a_message">Надіслати продавцю повідомлення</string>
     <string name="hi_there_is_this_still_available">Привіт, це ще доступно?</string>
@@ -2025,15 +2023,7 @@
     <string name="could_not_fetch_invoice_from_details">Не вдалося отримати інвойс від %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Не вдалося відкрити стиснутий файл</string>
     <string name="couldnt_find_nwc_wallets">Гаманець не знайдено</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst не знайшов жодного гаманця, який підтримує Nostr Wallet Connect (NWC).
-\n\nЩо можна зробити:
-\n\t1. Перевірте підтримку NWC: переконайтеся, що ваш гаманець сумісний з Nostr Wallet Connect.
-\n\t2. Створіть підключення: відкрийте гаманець і створіть нове NWC-підключення.
-\n\t3. Прив'яжіть до Amethyst: зазвичай гаманець надає три варіанти:
-\n\t\t3.1 Автоматичне підключення: кнопка для автоматичного відкриття та підключення до Amethyst. Якщо так — натисніть її, відкрийте Amethyst і збережіть налаштування на новому екрані.
-\n\t\t3.2 Ручне підключення: URI підключення, який можна скопіювати та вставити за допомогою значка вставки на цьому екрані.
-\n\t\t3.3 QR-код: гаманець створює QR-код, який можна зчитати за допомогою кнопки QR-коду на цьому екрані.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst не знайшов жодного гаманця, який підтримує Nostr Wallet Connect (NWC). \n\nЩо можна зробити: \n\t1. Перевірте підтримку NWC: переконайтеся, що ваш гаманець сумісний з Nostr Wallet Connect. \n\t2. Створіть підключення: відкрийте гаманець і створіть нове NWC-підключення. \n\t3. Прив'яжіть до Amethyst: зазвичай гаманець надає три варіанти: \n\t\t3.1 Автоматичне підключення: кнопка для автоматичного відкриття та підключення до Amethyst. Якщо так — натисніть її, відкрийте Amethyst і збережіть налаштування на новому екрані. \n\t\t3.2 Ручне підключення: URI підключення, який можна скопіювати та вставити за допомогою значка вставки на цьому екрані. \n\t\t3.3 QR-код: гаманець створює QR-код, який можна зчитати за допомогою кнопки QR-коду на цьому екрані.</string>
     <string name="create">Створити</string>
     <string name="d">дн</string>
     <string name="danger_zone">Небезпечна зона</string>
@@ -2714,11 +2704,8 @@
     <string name="proxy_section">Proxy relay-сервери</string>
     <string name="proxy_section_explainer">Агрегаторні relay-сервери, які застосунок має використовувати для завантаження ваших стрічок, наприклад filter.nostr.wine. Це замінює модель outbox і змусить застосунок підключатися лише до relay-серверів у ваших списках.</string>
     <string name="public_chat">Публічний чат</string>
-    <string name="public_chat_explainer">Публічні чати видимі всім у Nostr, і кожен
-        може брати в них участь. Вони чудово підходять для відкритих спільнот за певними темами.
-        Модерацію можна здійснювати, видаляючи публікації на відповідних relay</string>
-    <string name="public_chat_relays_explainer">Вкажіть від 1 до 3 relay, що розміщують цю групу.
-        Клієнти Nostr використовують це налаштування, щоб знати, звідки завантажувати повідомлення та куди їх надсилати.</string>
+    <string name="public_chat_explainer">Публічні чати видимі всім у Nostr, і кожен може брати в них участь. Вони чудово підходять для відкритих спільнот за певними темами. Модерацію можна здійснювати, видаляючи публікації на відповідних relay</string>
+    <string name="public_chat_relays_explainer">Вкажіть від 1 до 3 relay, що розміщують цю групу. Клієнти Nostr використовують це налаштування, щоб знати, звідки завантажувати повідомлення та куди їх надсилати.</string>
     <string name="public_chat_relays_title">Relay</string>
     <string name="public_chat_title">Метадані публічного чату</string>
     <string name="public_chats">Публічні чати</string>
@@ -2743,10 +2730,7 @@
     <string name="read_only_user">Користувач лише для читання</string>
     <string name="record_a_message_description">Натисніть і утримуйте, щоб записати повідомлення</string>
     <string name="relay_chat">Чат relay</string>
-    <string name="relay_chat_explainer">Чати relay — це групи чатів, керовані їхнім домашнім relay.
-        Вони видимі всім у Nostr, і кожен може брати в них участь.
-        Вони чудово підходять для відкритих спільнот за певними темами. Деякі з цих груп є тимчасовими,
-    і тому повідомлення чату зникають з часом</string>
+    <string name="relay_chat_explainer">Чати relay — це групи чатів, керовані їхнім домашнім relay. Вони видимі всім у Nostr, і кожен може брати в них участь. Вони чудово підходять для відкритих спільнот за певними темами. Деякі з цих груп є тимчасовими, і тому повідомлення чату зникають з часом</string>
     <string name="relay_chat_title">Чати relay</string>
     <string name="relay_management_tab_events">Події</string>
     <string name="relay_management_tab_ips">IP-адреси</string>

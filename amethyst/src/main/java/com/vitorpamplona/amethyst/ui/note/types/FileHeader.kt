@@ -35,16 +35,16 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 
 @Composable
-fun FileHeaderDisplay(
+fun FileMetadataDisplay(
     note: Note,
     roundedCorner: Boolean,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
 ) {
-    val event = (note.event as? FileHeaderEvent) ?: return
+    val event = (note.event as? FileMetadataEvent) ?: return
     val fullUrl = event.url() ?: return
     val mimeType = remember(note) { event.mimeType() }
     val content = remember(note) { event.toMediaContent(note, fullUrl, mimeType) }
@@ -53,7 +53,7 @@ fun FileHeaderDisplay(
     // which viewer happens to render it, so an NSFW-tagged archive stays behind the same gate.
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
         if (content == null) {
-            FileHeaderAttachmentCard(event, fullUrl, mimeType)
+            FileMetadataAttachmentCard(event, fullUrl, mimeType)
         } else {
             ZoomableContentView(
                 content = content,
@@ -70,9 +70,9 @@ fun FileHeaderDisplay(
  *
  * Kind 1063 is a *generic* file container — its `m` tag can name any type, so unlike a NIP-71
  * video event the kind itself asserts nothing about how to render the payload. A null here means
- * the file belongs in [FileHeaderAttachmentCard] rather than being pushed into the video player.
+ * the file belongs in [FileMetadataAttachmentCard] rather than being pushed into the video player.
  */
-internal fun FileHeaderEvent.toMediaContent(
+internal fun FileMetadataEvent.toMediaContent(
     note: Note,
     url: String,
     mimeType: String?,
@@ -128,8 +128,8 @@ internal fun FileHeaderEvent.toMediaContent(
 
 /** The link card a kind-1063 header falls back to when [toMediaContent] returns null. */
 @Composable
-internal fun FileHeaderAttachmentCard(
-    event: FileHeaderEvent,
+internal fun FileMetadataAttachmentCard(
+    event: FileMetadataEvent,
     url: String,
     mimeType: String?,
 ) {
@@ -145,4 +145,4 @@ internal fun FileHeaderAttachmentCard(
 }
 
 /** The human-facing name of the file: NIP-94 `content` when present, else the `alt` tag. */
-private fun FileHeaderEvent.fileDescription(): String? = content.ifEmpty { null } ?: alt()
+private fun FileMetadataEvent.fileDescription(): String? = content.ifEmpty { null } ?: alt()

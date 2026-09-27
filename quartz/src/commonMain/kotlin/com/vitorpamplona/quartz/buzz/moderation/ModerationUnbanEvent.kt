@@ -35,8 +35,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * `buzz-sdk/src/builders.rs::build_moderation_unban`.
  *
  * WARNING — KIND COLLISION: `9041` is also
- * [com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent]'s kind in Quartz. This class MUST NOT
- * be registered in `utils/EventFactory.kt` (the NIP-75 GoalEvent owns 9041 there). Buzz
+ * [com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent]'s kind in Quartz. This class MUST NOT
+ * be registered in `utils/EventFactory.kt` (the NIP-75 ZapGoalEvent owns 9041 there). Buzz
  * relays dispatch moderation commands by connection context, not by the shared `EventFactory`
  * kind switch, so leaving 9041 unregistered is correct — construct/parse this type explicitly.
  */
@@ -53,7 +53,7 @@ class ModerationUnbanEvent(
     fun target() = tags.moderationTarget()
 
     companion object {
-        /** Kind 9041 — COLLIDES with NIP-75 GoalEvent. Do not register in EventFactory. */
+        /** Kind 9041 — COLLIDES with NIP-75 ZapGoalEvent. Do not register in EventFactory. */
         const val KIND = 9041
 
         fun build(

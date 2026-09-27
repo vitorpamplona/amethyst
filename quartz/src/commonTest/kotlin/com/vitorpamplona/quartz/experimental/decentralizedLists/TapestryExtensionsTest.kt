@@ -247,7 +247,10 @@ class TapestryExtensionsTest {
 
         assertEquals(
             listOf(
-                listOf("d", "event-tag-awesome-tag-cccccccc-aaaaaaaa"),
+                // <author8>-<d16>-<hash8>: cccccccc is the assistant, good-tag the target's own
+                // `d`, and 4d7a80b1 = sha256("39999:${"c".repeat(64)}:good-tag").take(8), the one
+                // segment that makes two of the assistant's tags land on different addresses.
+                listOf("d", "event-tag-awesome-tag-cccccccc-good-tag-4d7a80b1-aaaaaaaa"),
                 listOf("z", "39998:$ta:nostr-event-tag"),
                 listOf("z", "39999:$bob:tagging:awesome-tag-tagging"),
                 listOf("a", "39999:$assistant:good-tag"),

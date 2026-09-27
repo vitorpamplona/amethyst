@@ -10,7 +10,7 @@ Two problems:
 
 1. **Duplicates standard Nostr kinds.** `ConcordKinds.MESSAGE=9`, `REACTION=7`,
    `DELETE=5`, `COMMENT=1111`, `EDIT=3302` shadow `ChatEvent.KIND`,
-   `ReactionEvent.KIND`, `DeletionEvent.KIND`, `CommentEvent.KIND`. Concord chat
+   `ReactionEvent.KIND`, `DeletionRequestEvent.KIND`, `CommentEvent.KIND`. Concord chat
    rumors *are* those standard events (they already parse back as `ChatEvent`
    etc. on read) — the build side should reuse the classes, not re-derive by
    number.
@@ -37,7 +37,7 @@ binding. Introduce a binding-tag package and reuse the standard builders:
 | message (9) | `ChatEvent.build` | `channel` + `epoch` |
 | reply (9 + q) | `ChatEvent.build` + `q`/`p` | `channel` + `epoch` |
 | reaction (7) | `ReactionEvent.build` | `channel` + `epoch` |
-| delete (5) | `DeletionEvent.build` | `channel` + `epoch` |
+| delete (5) | `DeletionRequestEvent.build` | `channel` + `epoch` |
 
 `ChannelChat` keeps its public API (returns unsigned rumors via `RumorAssembler`)
 but builds tags from the standard event's DSL + the binding ext. Delete

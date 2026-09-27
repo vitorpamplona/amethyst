@@ -29,10 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 
@@ -134,7 +134,7 @@ class SearchTest : BaseDBTest() {
             val time = TimeUtils.now()
             val v1 =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "first version uniqalpha",
                         title = "blog title",
                         dTag = "fts-rotation",
@@ -143,7 +143,7 @@ class SearchTest : BaseDBTest() {
                 )
             val v2 =
                 signer.sign(
-                    LongTextNoteEvent.build(
+                    LongFormContentEvent.build(
                         "second version uniqbeta",
                         title = "blog title",
                         dTag = "fts-rotation",
@@ -163,10 +163,10 @@ class SearchTest : BaseDBTest() {
     @Test
     fun testNewlySearchableKinds() =
         forEachDB { db ->
-            // CalendarEvent indexes the title tag plus the free-text content.
+            // CalendarCollectionEvent indexes the title tag plus the free-text content.
             val cal =
                 signer.sign(
-                    CalendarEvent.build(
+                    CalendarCollectionEvent.build(
                         title = "uniqtitle Meetup",
                         content = "annual uniqbody gathering",
                     ),
@@ -254,7 +254,7 @@ class SearchTest : BaseDBTest() {
             // events that were stored before their kind became searchable.
             val cal =
                 signer.sign(
-                    CalendarEvent.build(
+                    CalendarCollectionEvent.build(
                         title = "uniqtitle Meetup",
                         content = "annual uniqbody gathering",
                     ),

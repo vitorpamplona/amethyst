@@ -24,11 +24,11 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
@@ -40,9 +40,9 @@ import com.vitorpamplona.quartz.utils.DualCase
  * Used by Note.kt for checking NWC payment status.
  */
 interface INwcSignerState {
-    suspend fun decryptResponse(event: LnZapPaymentResponseEvent): Response?
+    suspend fun decryptResponse(event: NwcResponseEvent): Response?
 
-    suspend fun decryptRequest(event: LnZapPaymentRequestEvent): Request?
+    suspend fun decryptRequest(event: NwcRequestEvent): Request?
 
     fun isNIP47Author(pubKey: String?): Boolean
 }
@@ -127,7 +127,7 @@ interface IAccount {
     fun isAcceptable(note: Note): Boolean
 
     /** Send a NIP-04 encrypted direct message */
-    suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>)
+    suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<EncryptedDmEvent>)
 
     /** Send a NIP-17 gift-wrapped direct message */
     suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>)

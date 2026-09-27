@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.GalleryThum
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
@@ -278,7 +278,7 @@ private fun secondaryLineFor(
     return when {
         event is PictureEvent -> stringRes(Res.string.share_as_qr_kind_picture)
         event is VideoEvent -> stringRes(Res.string.kind_video)
-        event is LongTextNoteEvent -> stringRes(Res.string.article)
+        event is LongFormContentEvent -> stringRes(Res.string.article)
         hasContentImage -> stringRes(Res.string.share_as_qr_kind_picture)
         else -> ""
     }
@@ -293,7 +293,7 @@ internal fun secondaryBodyTextFor(
     // Gated: never surface the note's own title, content or alt text, only the kind label above.
     if (isGated) return null
 
-    if (event is LongTextNoteEvent) {
+    if (event is LongFormContentEvent) {
         val title = event.title()
         if (!title.isNullOrBlank()) return title
     }

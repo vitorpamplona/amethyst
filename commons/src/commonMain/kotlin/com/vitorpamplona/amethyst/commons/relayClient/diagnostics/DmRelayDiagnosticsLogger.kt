@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -171,7 +171,7 @@ class DmRelayDiagnosticsLogger(
         // The kinds a DM-path REQ carries: NIP-17 gift wraps (1059 + 21059) and NIP-04 legacy DMs
         // (4). Matched exactly against the filter's "kinds" array — never as a substring of the whole
         // command, since a pubkey hex or timestamp can incidentally contain "1059" or "4".
-        private val DM_KINDS = setOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, PrivateDmEvent.KIND)
+        private val DM_KINDS = setOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, EncryptedDmEvent.KIND)
 
         private val KINDS_ARRAY = Regex("\"kinds\":\\[([0-9,\\s]*)]")
 

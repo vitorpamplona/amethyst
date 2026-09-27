@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip28PublicChats
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.channelSet
 import com.vitorpamplona.quartz.nip28PublicChat.list.channels
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
@@ -29,13 +29,13 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
 class PublicChatListDecryptionCache(
     val signer: NostrSigner,
 ) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<ChannelListEvent>(signer)
+    val cachedPrivateLists = PrivateTagArrayEventCache<PublicChatListEvent>(signer)
 
-    fun cachedChannelSet(event: ChannelListEvent) = cachedPrivateLists.mergeTagListPrecached(event).channelSet()
+    fun cachedChannelSet(event: PublicChatListEvent) = cachedPrivateLists.mergeTagListPrecached(event).channelSet()
 
-    fun cachedChannels(event: ChannelListEvent) = cachedPrivateLists.mergeTagListPrecached(event).channels()
+    fun cachedChannels(event: PublicChatListEvent) = cachedPrivateLists.mergeTagListPrecached(event).channels()
 
-    suspend fun channelSet(event: ChannelListEvent) = cachedPrivateLists.mergeTagList(event).channelSet()
+    suspend fun channelSet(event: PublicChatListEvent) = cachedPrivateLists.mergeTagList(event).channelSet()
 
-    suspend fun channels(event: ChannelListEvent) = cachedPrivateLists.mergeTagList(event).channels()
+    suspend fun channels(event: PublicChatListEvent) = cachedPrivateLists.mergeTagList(event).channels()
 }

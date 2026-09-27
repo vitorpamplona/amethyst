@@ -42,8 +42,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -137,7 +137,7 @@ class NappletBrokerTest {
             fromPublicKey: HexKey,
         ): String = throw NotImplementedError()
 
-        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw NotImplementedError()
+        override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent = throw NotImplementedError()
 
         override suspend fun deriveKey(nonce: HexKey): HexKey = throw NotImplementedError()
 

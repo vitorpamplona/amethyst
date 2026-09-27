@@ -19,6 +19,17 @@ It does not handle these Android conventions, so this script applies them itself
 \\n, \\t, \\uXXXX and \\\\ are deliberately left alone -- Compose already resolves
 them, and converting them here would double-process.
 
+Whitespace is the other half. aapt collapses every whitespace run in an unquoted
+value to one space and trims the ends; Compose keeps the XML text verbatim. A value
+wrapped over several indented lines therefore showed on Android as one line, and in
+Compose as a leading line break plus eight spaces -- which CommonMark renders as a
+code block (`account_backup_tips2_md`). This script applies aapt's rule to runs that
+contain a line break or tab, which only XML layout produces (a deliberate newline is
+written \\n). In a translation it also trims a leading/trailing space the source
+string does not have: Crowdin exports a translator's stray edge space, aapt used to
+drop it, Compose would draw it (" miejsca zniknęły" beside "tematy zniknęły").
+Deliberate edge spaces (" and ") exist in the source too, and are kept.
+
 Usage:  fix_escapes.py <file-or-dir> [...]        (idempotent; safe to re-run)
 """
 import re
@@ -35,9 +46,28 @@ TOOLS_ATTR = re.compile(r'\s+tools:[\w.-]+="[^"]*"')
 TOOLS_NS = re.compile(r'\s+xmlns:tools="[^"]*"')
 # a backslash escape NOT itself preceded by a backslash
 ANDROID_ONLY = re.compile(r"(?<!\\)\\(['\"?@])")
+# A whitespace run that holds a line break or a tab: XML layout, never content.
+LAYOUT_WS = re.compile(r"[ \t]*[\r\n\t][ \t\r\n]*")
+STRING_NAME = re.compile(r'<string\b[^>]*\bname="([^"]+)"')
 
 
-def fix_text(text: str, unwrap_quotes: bool = True) -> str:
+def normalize_whitespace(text: str, source: str = None) -> str:
+    """Apply the aapt whitespace handling that Compose lacks. Idempotent.
+
+    [source] is the default-locale value of the same key when [text] is a translation.
+    """
+    if "<![CDATA[" in text:
+        return text
+    text = LAYOUT_WS.sub(lambda m: "" if m.start() == 0 or m.end() == len(text) else " ", text)
+    if source is not None:
+        if not source[:1].isspace():
+            text = text.lstrip(" ")
+        if not source[-1:].isspace():
+            text = text.rstrip(" ")
+    return text
+
+
+def fix_text(text: str, unwrap_quotes: bool = True, source: str = None) -> str:
     """Convert one element's text.
 
     NOTE: quote-unwrapping is NOT idempotent and must run exactly once per file, at
@@ -47,8 +77,9 @@ def fix_text(text: str, unwrap_quotes: bool = True) -> str:
     already-migrated files must therefore pass unwrap_quotes=False.
     """
     if unwrap_quotes and len(text) >= 2 and text.startswith('"') and text.endswith('"'):
-        text = text[1:-1]
-    return ANDROID_ONLY.sub(r"\1", text)
+        # Quoted: aapt kept this whitespace exactly, so Compose keeps it too.
+        return ANDROID_ONLY.sub(r"\1", text[1:-1])
+    return normalize_whitespace(ANDROID_ONLY.sub(r"\1", text), source)
 
 
 def strip_android_only_attrs(src: str) -> tuple:
@@ -58,13 +89,31 @@ def strip_android_only_attrs(src: str) -> tuple:
     return out, n + m
 
 
+def source_values(path: str) -> dict:
+    """The default-locale values beside a `values-<locale>/strings.xml`, else {}."""
+    parent = os.path.dirname(os.path.abspath(path))
+    if not os.path.basename(parent).startswith("values-"):
+        return {}
+    default = os.path.join(os.path.dirname(parent), "values", os.path.basename(path))
+    if not os.path.exists(default):
+        return {}
+    out = {}
+    for m in STRING_EL.finditer(open(default, encoding="utf-8").read()):
+        name = STRING_NAME.match(m.group(1))
+        if name:
+            out[name.group(1)] = m.group(2)
+    return out
+
+
 def fix_file(path: str, unwrap_quotes: bool = True) -> int:
     src = open(path, encoding="utf-8").read()
+    sources = source_values(path)
     changed = 0
 
     def repl(m):
         nonlocal changed
-        fixed = fix_text(m.group(2), unwrap_quotes)
+        name = STRING_NAME.match(m.group(1))
+        fixed = fix_text(m.group(2), unwrap_quotes, sources.get(name.group(1)) if name else None)
         if fixed != m.group(2):
             changed += 1
         return m.group(1) + fixed + m.group(3)

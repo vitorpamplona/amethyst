@@ -381,7 +381,7 @@ The bulk of the change lives in `quartz/.../nip01Core/relay/client/` (publish pa
 **Scope:**
 
 1. **Shared `rumorCreatedAt` across recipient wraps** (R9):
-   - In `NIP17Factory.createWraps` (currently `quartz/.../nip17Dm/NIP17Factory.kt:43-72`), compute `rumorCreatedAt = TimeUtils.now()` once before the per-recipient `mapNotNullAsync` loop. Pass into every `SealedRumorEvent.create(...)` so all seals encode the same rumor (same `rumor.id`).
+   - In `NIP17Factory.createWraps` (currently `quartz/.../nip17Dm/NIP17Factory.kt:43-72`), compute `rumorCreatedAt = TimeUtils.now()` once before the per-recipient `mapNotNullAsync` loop. Pass into every `SealEvent.create(...)` so all seals encode the same rumor (same `rumor.id`).
    - Same `rumorId` becomes the dedupe anchor + receipt target across all recipients of a group message.
 
 2. **Self-copy gift wrap to own DM relays** (R10):
@@ -476,7 +476,7 @@ ComposeUI(send button click)
         → RecipientRelayFetcher.fetch([indexer relays])
       → NIP17Factory.createWraps(text, recipients, signer)           ── shared rumor_created_at (Phase 5)
         → for each recipient (parallel):
-          → SealedRumorEvent.create(rumor, recipient, signer)
+          → SealEvent.create(rumor, recipient, signer)
             → signer.sign(seal) (bunker round-trip if Remote)         ── batch via Phase 6 capability
             → signer.nip44Encrypt(rumor, recipient) (bunker round-trip)── batch via Phase 6 capability
           → GiftWrapEvent.create(seal, recipient, ephemeralKey)

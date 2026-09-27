@@ -48,15 +48,30 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_untitled
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_accept
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_decline
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_decline_warning
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_explainer
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_load_failed
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_members
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_members_more
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_no_coordinators
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_refresh
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_skipped
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_unreachable
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_via
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.model.cordn.CordnInvitation
@@ -68,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CoordinatorI
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * Invitations to cordn groups, waiting to be answered.
@@ -105,7 +121,7 @@ fun CordnInvitationsScreen(
     var invitations by remember { mutableStateOf<CordnInvitations?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val loadFailed = stringRes(R.string.cordn_invitations_load_failed)
+    val loadFailed = stringRes(Res.string.cordn_invitations_load_failed)
 
     suspend fun reload() {
         busy = true
@@ -129,10 +145,10 @@ fun CordnInvitationsScreen(
                         Icon(MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
                     }
                 },
-                title = { Text(stringRes(R.string.cordn_invitations_title)) },
+                title = { Text(stringRes(Res.string.cordn_invitations_title)) },
                 actions = {
                     IconButton(onClick = { scope.launch { reload() } }, enabled = !busy) {
-                        Icon(MaterialSymbols.Refresh, contentDescription = stringRes(R.string.cordn_invitations_refresh))
+                        Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.cordn_invitations_refresh))
                     }
                 },
             )
@@ -149,14 +165,20 @@ fun CordnInvitationsScreen(
         ) {
             if (runtime == null) {
                 EmptyState(
-                    title = stringRes(R.string.cordn_group_unavailable),
-                    description = stringRes(R.string.cordn_group_unavailable_detail),
+                    title = stringRes(Res.string.cordn_group_unavailable),
+                    description = stringRes(Res.string.cordn_group_unavailable_detail),
                 )
                 return@Column
             }
 
+            // Collected rather than read as `.value` further down: the empty
+            // state says either "you have no coordinators" or "nobody has
+            // invited you", and adding a coordinator in another tab has to
+            // change which of those two this screen is showing.
+            val coordinators by runtime.coordinators.collectAsStateWithLifecycle()
+
             Text(
-                text = stringRes(R.string.cordn_invitations_explainer),
+                text = stringRes(Res.string.cordn_invitations_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -205,7 +227,7 @@ fun CordnInvitationsScreen(
                     NoticeCard(
                         title =
                             stringRes(
-                                R.string.cordn_invitations_unreachable,
+                                Res.string.cordn_invitations_unreachable,
                                 coordinatorDisplayName(it.coordinator.pubKey, it.coordinator.label, accountViewModel),
                             ),
                         detail = it.reason,
@@ -218,7 +240,7 @@ fun CordnInvitationsScreen(
                 // friend swears they sent simply does not exist here.
                 loaded.skipped.forEach {
                     NoticeCard(
-                        title = stringRes(R.string.cordn_invitations_skipped),
+                        title = stringRes(Res.string.cordn_invitations_skipped),
                         detail = it.reason,
                         isError = false,
                     )
@@ -227,10 +249,10 @@ fun CordnInvitationsScreen(
                 if (loaded.isEmpty) {
                     Text(
                         text =
-                            if (runtime.coordinators.value.isEmpty()) {
-                                stringRes(R.string.cordn_invitations_no_coordinators)
+                            if (coordinators.isEmpty()) {
+                                stringRes(Res.string.cordn_invitations_no_coordinators)
                             } else {
-                                stringRes(R.string.cordn_invitations_none)
+                                stringRes(Res.string.cordn_invitations_none)
                             },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -269,7 +291,7 @@ private fun InvitationCard(
 
             // "Already in it", never "invited you" — see the screen KDoc.
             Text(
-                text = pluralStringResource(R.plurals.cordn_invitations_members, welcome.members.size, welcome.members.size),
+                text = pluralStringResource(Res.plurals.cordn_invitations_members, welcome.members.size, welcome.members.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -293,7 +315,7 @@ private fun InvitationCard(
                     }
                     if (welcome.members.size > MEMBER_FACES) {
                         Text(
-                            text = stringRes(R.string.cordn_invitations_members_more, welcome.members.size - MEMBER_FACES),
+                            text = stringRes(Res.string.cordn_invitations_members_more, welcome.members.size - MEMBER_FACES),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -322,7 +344,7 @@ private fun InvitationCard(
                 size = 20.dp,
             ) { name ->
                 Text(
-                    text = stringRes(R.string.cordn_invitations_via, name),
+                    text = stringRes(Res.string.cordn_invitations_via, name),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -333,11 +355,11 @@ private fun InvitationCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Button(onClick = onAccept) { Text(stringRes(R.string.cordn_invitations_accept)) }
-                TextButton(onClick = onDecline) { Text(stringRes(R.string.cordn_invitations_decline)) }
+                Button(onClick = onAccept) { Text(stringRes(Res.string.cordn_invitations_accept)) }
+                TextButton(onClick = onDecline) { Text(stringRes(Res.string.cordn_invitations_decline)) }
             }
             Text(
-                text = stringRes(R.string.cordn_invitations_decline_warning),
+                text = stringRes(Res.string.cordn_invitations_decline_warning),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

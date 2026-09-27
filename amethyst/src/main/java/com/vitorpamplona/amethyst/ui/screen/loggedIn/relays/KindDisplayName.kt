@@ -206,25 +206,25 @@ import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -239,32 +239,32 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
@@ -272,16 +272,16 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -296,29 +296,29 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.DvmUserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -366,12 +366,12 @@ fun kindDisplayName(kind: Int): StringResource? =
         BookmarkListEvent.KIND -> Res.string.kind_bookmark_list
         OldBookmarkListEvent.KIND -> Res.string.kind_old_bookmark_list
         CalendarDateSlotEvent.KIND -> Res.string.kind_day_appointment
-        CalendarEvent.KIND -> Res.string.kind_calendar
+        CalendarCollectionEvent.KIND -> Res.string.kind_calendar
         CalendarTimeSlotEvent.KIND -> Res.string.kind_appointment
         CalendarRSVPEvent.KIND -> Res.string.kind_appt_rsvp
         ChessGameEvent.KIND -> Res.string.kind_chess_games
         JesterEvent.KIND -> Res.string.kind_chess_auth
-        RelayFeedsListEvent.KIND -> Res.string.kind_favorite_relays
+        FavoriteRelayListEvent.KIND -> Res.string.kind_favorite_relays
         LiveChessGameChallengeEvent.KIND -> Res.string.kind_chess_challenges
         LiveChessGameAcceptEvent.KIND -> Res.string.kind_chess_game_accept
         LiveChessMoveEvent.KIND -> Res.string.kind_chess_move
@@ -379,32 +379,32 @@ fun kindDisplayName(kind: Int): StringResource? =
         LiveChessDrawOfferEvent.KIND -> Res.string.kind_chess_draw_offer
         ChannelCreateEvent.KIND -> Res.string.kind_channel_definition
         ChannelHideMessageEvent.KIND -> Res.string.kind_channel_hide_msg
-        ChannelListEvent.KIND -> Res.string.kind_channel_list
+        PublicChatListEvent.KIND -> Res.string.kind_channel_list
         ChannelMessageEvent.KIND -> Res.string.kind_channel_message
         ChannelMetadataEvent.KIND -> Res.string.kind_channel_metadata
         ChannelMuteUserEvent.KIND -> Res.string.kind_channel_mute_user
         ChatMessageEncryptedFileHeaderEvent.KIND -> Res.string.kind_dm_file
         ChatMessageEvent.KIND -> Res.string.kind_dm_message
-        ChatMessageRelayListEvent.KIND -> Res.string.kind_dm_relays
+        DmRelayListEvent.KIND -> Res.string.kind_dm_relays
         ClassifiedsEvent.KIND -> Res.string.kind_classifieds
         CommentEvent.KIND -> Res.string.kind_comments
         CommunityDefinitionEvent.KIND -> Res.string.kind_community_def
         CommunityListEvent.KIND -> Res.string.kind_community_list
         CommunityPostApprovalEvent.KIND -> Res.string.kind_community_post
         ContactListEvent.KIND -> Res.string.kind_follow_list
-        DeletionEvent.KIND -> Res.string.kind_deletions
+        DeletionRequestEvent.KIND -> Res.string.kind_deletions
         DraftWrapEvent.KIND -> Res.string.kind_drafts
         EmojiPackEvent.KIND -> Res.string.kind_emoji_packs
-        EmojiPackSelectionEvent.KIND -> Res.string.kind_emoji_pack_list
+        EmojiListEvent.KIND -> Res.string.kind_emoji_pack_list
         EphemeralChatEvent.KIND -> Res.string.kind_ephemeral_chat
         EphemeralChatListEvent.KIND -> Res.string.kind_ephemeral_chatrooms
-        FileHeaderEvent.KIND -> Res.string.kind_file_headers
+        FileMetadataEvent.KIND -> Res.string.kind_file_headers
         ProfileGalleryEntryEvent.KIND -> Res.string.kind_profile_gallery
         FileServersEvent.KIND -> Res.string.kind_file_servers
         FileStorageEvent.KIND -> Res.string.kind_blob_data
         FileStorageHeaderEvent.KIND -> Res.string.kind_blob_headers
         FhirResourceEvent.KIND -> Res.string.kind_medical_data
-        FollowListEvent.KIND -> Res.string.kind_follow_packs
+        StarterPackEvent.KIND -> Res.string.kind_follow_packs
         GenericRepostEvent.KIND -> Res.string.kind_reposts_16
         GeohashListEvent.KIND -> Res.string.kind_geohash_follows
         GiftWrapEvent.KIND -> Res.string.kind_gift_wraps
@@ -419,24 +419,24 @@ fun kindDisplayName(kind: Int): StringResource? =
         GitStatusAppliedEvent.KIND -> Res.string.kind_git_status_applied
         GitStatusClosedEvent.KIND -> Res.string.kind_git_status_closed
         GitStatusDraftEvent.KIND -> Res.string.kind_git_status_draft
-        GoalEvent.KIND -> Res.string.kind_zap_goals
-        HashtagListEvent.KIND -> Res.string.kind_hashtag_follows
+        ZapGoalEvent.KIND -> Res.string.kind_zap_goals
+        InterestListEvent.KIND -> Res.string.kind_hashtag_follows
         HighlightEvent.KIND -> Res.string.kind_highlights
         HTTPAuthorizationEvent.KIND -> Res.string.kind_http_auth
         IndexerRelayListEvent.KIND -> Res.string.kind_index_relay_list
         InteractiveStoryPrologueEvent.KIND -> Res.string.kind_adventure_prologue
         InteractiveStorySceneEvent.KIND -> Res.string.kind_adventure_scene
         InteractiveStoryReadingStateEvent.KIND -> Res.string.kind_adventure_reading
-        LabeledBookmarkListEvent.KIND -> Res.string.kind_named_bookmarks
+        BookmarkSetEvent.KIND -> Res.string.kind_named_bookmarks
         LiveActivitiesChatMessageEvent.KIND -> Res.string.kind_live_chats
         LiveActivitiesEvent.KIND -> Res.string.kind_live_streams
-        LnZapEvent.KIND -> Res.string.kind_zaps
+        ZapReceiptEvent.KIND -> Res.string.kind_zaps
         Bolt12ZapEvent.KIND -> Res.string.kind_zaps
-        LnZapPaymentRequestEvent.KIND -> Res.string.kind_nwc_request
-        LnZapPaymentResponseEvent.KIND -> Res.string.kind_nwc_response
-        LnZapPrivateEvent.KIND -> Res.string.kind_private_zaps
-        LnZapRequestEvent.KIND -> Res.string.kind_zap_req
-        LongTextNoteEvent.KIND -> Res.string.kind_blogs
+        NwcRequestEvent.KIND -> Res.string.kind_nwc_request
+        NwcResponseEvent.KIND -> Res.string.kind_nwc_response
+        PrivateZapEvent.KIND -> Res.string.kind_private_zaps
+        ZapRequestEvent.KIND -> Res.string.kind_zap_req
+        LongFormContentEvent.KIND -> Res.string.kind_blogs
         MeetingRoomEvent.KIND -> Res.string.kind_meeting_room
         MeetingRoomPresenceEvent.KIND -> Res.string.kind_room_presence
         MeetingSpaceEvent.KIND -> Res.string.kind_meeting_space
@@ -445,14 +445,14 @@ fun kindDisplayName(kind: Int): StringResource? =
         NNSEvent.KIND -> Res.string.kind_nns
         NipTextEvent.KIND -> Res.string.kind_nip
         NostrConnectEvent.KIND -> Res.string.kind_nostr_connect
-        NIP90StatusEvent.KIND -> Res.string.kind_dvm_status
-        NIP90ContentDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_content_req
-        NIP90ContentDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_content_resp
-        NIP90UserDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_user_req
-        NIP90UserDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_user_resp
+        DvmStatusEvent.KIND -> Res.string.kind_dvm_status
+        DvmContentDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_content_req
+        DvmContentDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_content_resp
+        DvmUserDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_user_req
+        DvmUserDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_user_resp
         OtsEvent.KIND -> Res.string.kind_ots
         PaymentTargetsEvent.KIND -> Res.string.kind_pay_to
-        PeopleListEvent.KIND -> Res.string.kind_people_lists
+        FollowSetEvent.KIND -> Res.string.kind_people_lists
         ProfileBadgesEvent.KIND -> Res.string.kind_profile_badges
         PictureEvent.KIND -> Res.string.kind_pictures
         WorkoutRecordEvent.KIND -> Res.string.kind_workouts
@@ -460,12 +460,12 @@ fun kindDisplayName(kind: Int): StringResource? =
         ZapPollEvent.KIND -> Res.string.kind_zap_poll
         PollEvent.KIND -> Res.string.kind_poll
         PollResponseEvent.KIND -> Res.string.kind_poll_response
-        PrivateDmEvent.KIND -> Res.string.kind_nip04_dms
+        EncryptedDmEvent.KIND -> Res.string.kind_nip04_dms
         PrivateOutboxRelayListEvent.KIND -> Res.string.kind_private_relays
         ProxyRelayListEvent.KIND -> Res.string.kind_proxy_relays
         PublicMessageEvent.KIND -> Res.string.kind_public_message
         ReactionEvent.KIND -> Res.string.kind_reactions
-        ContactCardEvent.KIND -> Res.string.kind_contact_card
+        UserAssertionEvent.KIND -> Res.string.kind_contact_card
         RelayAuthEvent.KIND -> Res.string.kind_relay_auth
         RelayDiscoveryEvent.KIND -> Res.string.kind_relay_discovery
         RelayMonitorEvent.KIND -> Res.string.kind_relay_monitor
@@ -473,9 +473,9 @@ fun kindDisplayName(kind: Int): StringResource? =
         ReportEvent.KIND -> Res.string.kind_reports
         RepostEvent.KIND -> Res.string.kind_reposts
         RequestToVanishEvent.KIND -> Res.string.kind_user_delete
-        SealedRumorEvent.KIND -> Res.string.kind_seals
+        SealEvent.KIND -> Res.string.kind_seals
         SearchRelayListEvent.KIND -> Res.string.kind_search_relays
-        StatusEvent.KIND -> Res.string.kind_user_status
+        UserStatusEvent.KIND -> Res.string.kind_user_status
         TextNoteEvent.KIND -> Res.string.kind_notes
         TextNoteModificationEvent.KIND -> Res.string.kind_edits
         TorrentEvent.KIND -> Res.string.kind_torrents
@@ -485,15 +485,15 @@ fun kindDisplayName(kind: Int): StringResource? =
         VideoCurationSetEvent.KIND -> Res.string.kind_video_list
         VideoCollaborationEvent.KIND -> Res.string.kind_video_collaboration
         TextTrackEvent.KIND -> Res.string.kind_video_subtitles
-        VideoHorizontalEvent.KIND -> Res.string.kind_video_repl
-        VideoVerticalEvent.KIND -> Res.string.kind_shorts_repl
+        AddressableNormalVideoEvent.KIND -> Res.string.kind_video_repl
+        AddressableShortVideoEvent.KIND -> Res.string.kind_shorts_repl
         VideoNormalEvent.KIND -> Res.string.kind_video
         VideoShortEvent.KIND -> Res.string.kind_shorts
         VoiceEvent.KIND -> Res.string.kind_voice_msg
         VoiceReplyEvent.KIND -> Res.string.kind_voice_reply
         WakeUpEvent.KIND -> Res.string.kind_wake
         WebBookmarkEvent.KIND -> Res.string.kind_web_bookmark
-        WikiNoteEvent.KIND -> Res.string.kind_wiki
+        WikiArticleEvent.KIND -> Res.string.kind_wiki
         else -> null
     }
 

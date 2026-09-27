@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.cli.commands.graperank.GrapeRankScore
  *    Answers "do I need to crawl again?" with no network and no signing.
  *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store,
  *    score (same as bare `--offline`), and ALWAYS reconcile the result into the
- *    store as kind:30382 ContactCardEvent cards signed by the observer's
+ *    store as kind:30382 UserAssertionEvent cards signed by the observer's
  *    per-observer service key (`rank = round(score*100)`, cutoff `--min-rank`):
  *    changed ranks are re-signed, unchanged ones skipped, dropped targets
  *    retracted with a kind:5. That persisted card set is what `publish` and

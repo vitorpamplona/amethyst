@@ -24,14 +24,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip90Dvms.status.tags.AmountTag
 import com.vitorpamplona.quartz.nip90Dvms.status.tags.StatusTag
 
-fun TagArrayBuilder<NIP90StatusEvent>.status(
+fun TagArrayBuilder<DvmStatusEvent>.status(
     code: String,
     description: String,
 ) = addUnique(StatusTag.assemble(code, description))
 
-fun TagArrayBuilder<NIP90StatusEvent>.amount(amount: Long) = addUnique(AmountTag.assemble(amount))
+fun TagArrayBuilder<DvmStatusEvent>.amount(amount: Long) = addUnique(AmountTag.assemble(amount))
 
-fun TagArrayBuilder<NIP90StatusEvent>.amount(
+fun TagArrayBuilder<DvmStatusEvent>.amount(
     amount: Long,
     lnInvoice: String,
 ) = addUnique(AmountTag.assemble(amount, lnInvoice))

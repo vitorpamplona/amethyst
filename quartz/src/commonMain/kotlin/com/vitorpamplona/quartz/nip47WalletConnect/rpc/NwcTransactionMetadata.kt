@@ -179,7 +179,7 @@ class NwcTransactionMetadata(
          *
          * NIP-57 sets a zap invoice's `description_hash` to the sha256 of the raw
          * JSON the LNURL callback received in `nostr=`, and that is
-         * `LnZapRequestEvent.toJson()` — the exact string used here. A wallet can
+         * `ZapRequestEvent.toJson()` — the exact string used here. A wallet can
          * therefore bind this stored event to the invoice it labels, which is what
          * turns "the client says it paid X" into something the wallet checked.
          *

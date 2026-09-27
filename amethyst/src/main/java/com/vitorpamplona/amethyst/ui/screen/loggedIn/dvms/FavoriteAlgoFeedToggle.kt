@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 
 /**
  * Inline star toggle that follows / unfollows a NIP-90 content-discovery DVM.
@@ -60,7 +60,7 @@ fun FavoriteAlgoFeedToggle(
 ) {
     val supportsContentDiscovery by
         observeNoteAndMap(appDefinitionNote, accountViewModel) { note ->
-            (note.event as? AppDefinitionEvent)?.includeKind(NIP90ContentDiscoveryRequestEvent.KIND) == true
+            (note.event as? AppDefinitionEvent)?.includeKind(DvmContentDiscoveryRequestEvent.KIND) == true
         }
 
     if (!supportsContentDiscovery) return

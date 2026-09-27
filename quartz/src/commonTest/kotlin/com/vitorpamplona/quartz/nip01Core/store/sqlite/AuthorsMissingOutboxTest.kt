@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -83,7 +83,7 @@ class AuthorsMissingOutboxTest : BaseDBTest() {
 
             // NIP-09: the author deletes their own relay list. No 10002 row
             // remains, so the anti-join reports them as missing again.
-            db.insert(signer.sign(DeletionEvent.build(listOf(relayList))))
+            db.insert(signer.sign(DeletionRequestEvent.build(listOf(relayList))))
 
             assertEquals(setOf(signer.pubKey), db.authorsMissingOutbox().toSet())
         }

@@ -117,7 +117,7 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 
@@ -163,35 +163,35 @@ fun ZapCustomDialog(
     val zapTypes =
         listOf(
             Triple(
-                LnZapEvent.ZapType.PUBLIC,
+                ZapReceiptEvent.ZapType.PUBLIC,
                 stringRes(id = Res.string.zap_type_public),
                 stringRes(id = Res.string.zap_type_public_explainer),
             ),
             Triple(
-                LnZapEvent.ZapType.PRIVATE,
+                ZapReceiptEvent.ZapType.PRIVATE,
                 stringRes(id = Res.string.zap_type_private),
                 stringRes(id = Res.string.zap_type_private_explainer),
             ),
             Triple(
-                LnZapEvent.ZapType.ANONYMOUS,
+                ZapReceiptEvent.ZapType.ANONYMOUS,
                 stringRes(id = Res.string.zap_type_anonymous),
                 stringRes(id = Res.string.zap_type_anonymous_explainer),
             ),
             Triple(
-                LnZapEvent.ZapType.NONZAP,
+                ZapReceiptEvent.ZapType.NONZAP,
                 stringRes(id = Res.string.zap_type_nonzap),
                 stringRes(id = Res.string.zap_type_nonzap_explainer),
             ),
         ).filter {
-            !isPrivateTarget || it.first == LnZapEvent.ZapType.PRIVATE || it.first == LnZapEvent.ZapType.NONZAP
+            !isPrivateTarget || it.first == ZapReceiptEvent.ZapType.PRIVATE || it.first == ZapReceiptEvent.ZapType.NONZAP
         }
 
     var selectedZapType by
         remember(accountViewModel, baseNote) {
             val default = accountViewModel.defaultZapType()
             mutableStateOf(
-                if (isPrivateTarget && default != LnZapEvent.ZapType.NONZAP) {
-                    LnZapEvent.ZapType.PRIVATE
+                if (isPrivateTarget && default != ZapReceiptEvent.ZapType.NONZAP) {
+                    ZapReceiptEvent.ZapType.PRIVATE
                 } else {
                     default
                 },
@@ -327,15 +327,15 @@ fun ZapCustomDialog(
                 OutlinedTextField(
                     label = {
                         when (selectedZapType) {
-                            LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
+                            ZapReceiptEvent.ZapType.PUBLIC, ZapReceiptEvent.ZapType.ANONYMOUS -> {
                                 Text(text = stringRes(id = Res.string.custom_zaps_add_a_message))
                             }
 
-                            LnZapEvent.ZapType.PRIVATE -> {
+                            ZapReceiptEvent.ZapType.PRIVATE -> {
                                 Text(text = stringRes(id = Res.string.custom_zaps_add_a_message_private))
                             }
 
-                            LnZapEvent.ZapType.NONZAP -> {
+                            ZapReceiptEvent.ZapType.NONZAP -> {
                                 Text(text = stringRes(id = Res.string.custom_zaps_add_a_message_nonzap))
                             }
                         }

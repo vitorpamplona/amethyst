@@ -59,8 +59,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -68,16 +68,16 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -203,20 +203,20 @@ class AccountSettings(
     val showMessagesInNotifications: MutableStateFlow<Boolean> = MutableStateFlow(true),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
-    var backupDMRelayList: ChatMessageRelayListEvent? = null,
+    var backupDMRelayList: DmRelayListEvent? = null,
     var backupKeyPackageRelayList: KeyPackageRelayListEvent? = null,
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
-    var backupRelayFeedsList: RelayFeedsListEvent? = null,
+    var backupFavoriteRelayList: FavoriteRelayListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
     var backupAppSpecificData: AppSpecificDataEvent? = null,
-    var backupChannelList: ChannelListEvent? = null,
+    var backupPublicChatList: PublicChatListEvent? = null,
     var backupCommunityList: CommunityListEvent? = null,
-    var backupHashtagList: HashtagListEvent? = null,
+    var backupInterestList: InterestListEvent? = null,
     var backupFavoriteAlgoFeedsList: FavoriteAlgoFeedsListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
@@ -375,7 +375,7 @@ class AccountSettings(
     // Zaps and Reactions
     // ---
 
-    fun changeDefaultZapType(zapType: LnZapEvent.ZapType): Boolean {
+    fun changeDefaultZapType(zapType: ZapReceiptEvent.ZapType): Boolean {
         if (syncedSettings.zaps.defaultZapType.value != zapType) {
             syncedSettings.zaps.defaultZapType.tryEmit(zapType)
             saveAccountSettings()
@@ -1075,7 +1075,7 @@ class AccountSettings(
         when (incoming) {
             is MetadataEvent -> updateUserMetadata(incoming)
             is ContactListEvent -> updateContactListTo(incoming)
-            is ChatMessageRelayListEvent -> updateDMRelayList(incoming)
+            is DmRelayListEvent -> updateDMRelayList(incoming)
             is KeyPackageRelayListEvent -> updateKeyPackageRelayList(incoming)
             is AdvertisedRelayListEvent -> updateNIP65RelayList(incoming)
             is CashuWalletEvent -> updateCashuWallet(incoming)
@@ -1084,13 +1084,13 @@ class AccountSettings(
             is Bolt12OfferListEvent -> updateBolt12Offers(incoming)
             is SearchRelayListEvent -> updateSearchRelayList(incoming)
             is IndexerRelayListEvent -> updateIndexRelayList(incoming)
-            is RelayFeedsListEvent -> updateRelayFeedList(incoming)
+            is FavoriteRelayListEvent -> updateFavoriteRelayList(incoming)
             is BlockedRelayListEvent -> updateBlockedRelayList(incoming)
             is TrustedRelayListEvent -> updateTrustedRelayList(incoming)
             is PrivateOutboxRelayListEvent -> updatePrivateHomeRelayList(incoming)
-            is ChannelListEvent -> updateChannelListTo(incoming)
+            is PublicChatListEvent -> updatePublicChatListTo(incoming)
             is GeohashListEvent -> updateGeohashListTo(incoming)
-            is HashtagListEvent -> updateHashtagListTo(incoming)
+            is InterestListEvent -> updateInterestListTo(incoming)
             is FavoriteAlgoFeedsListEvent -> updateFavoriteAlgoFeedsListTo(incoming)
             is CommunityListEvent -> updateCommunityListTo(incoming)
             is EphemeralChatListEvent -> updateEphemeralChatListTo(incoming)
@@ -1140,7 +1140,7 @@ class AccountSettings(
         }
     }
 
-    fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
+    fun updateDMRelayList(newDMRelayList: DmRelayListEvent?) {
         if (newDMRelayList == null) return
 
         if (backupGuard.accept(backupDMRelayList, newDMRelayList, isEmpty = newDMRelayList.tags.isEmpty()) { updateDMRelayList(newDMRelayList) }) {
@@ -1221,7 +1221,8 @@ class AccountSettings(
      * Reserve [count] consecutive NUT-13 counters for [keysetId],
      * returning the first one. Caller derives `(secret, r)` from
      * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
-     * Persisted synchronously before returning — see [CashuKeysetCounterStore].
+     * Persisted before returning — see [CashuKeysetCounterStore]. Suspends
+     * because that write is what stands between a crash and a reused counter.
      *
      * One-time migration: when this keyset has a non-zero value in the
      * legacy [cashuKeysetCounters] map (from a build that persisted
@@ -1229,7 +1230,7 @@ class AccountSettings(
      * still at zero, the legacy value is copied over before we reserve
      * so an upgrade doesn't reset the counter.
      */
-    fun reserveCashuCounters(
+    suspend fun reserveCashuCounters(
         keysetId: String,
         count: Int,
     ): Long {
@@ -1238,12 +1239,12 @@ class AccountSettings(
     }
 
     /** Inspect the next counter for [keysetId] without consuming any. */
-    fun peekCashuCounter(keysetId: String): Long {
+    suspend fun peekCashuCounter(keysetId: String): Long {
         migrateLegacyCashuCounter(keysetId)
         return cashuCounters.peek(keysetId)
     }
 
-    private fun migrateLegacyCashuCounter(keysetId: String) {
+    private suspend fun migrateLegacyCashuCounter(keysetId: String) {
         val legacy = cashuKeysetCounters[keysetId] ?: return
         cashuCounters.seedIfMissing(keysetId, legacy)
     }
@@ -1284,11 +1285,11 @@ class AccountSettings(
         }
     }
 
-    fun updateRelayFeedList(newRelayFeedList: RelayFeedsListEvent?) {
-        if (newRelayFeedList == null) return
+    fun updateFavoriteRelayList(newFavoriteRelayList: FavoriteRelayListEvent?) {
+        if (newFavoriteRelayList == null) return
 
-        if (backupGuard.accept(backupRelayFeedsList, newRelayFeedList, isEmpty = newRelayFeedList.tags.isEmpty()) { updateRelayFeedList(newRelayFeedList) }) {
-            backupRelayFeedsList = newRelayFeedList
+        if (backupGuard.accept(backupFavoriteRelayList, newFavoriteRelayList, isEmpty = newFavoriteRelayList.tags.isEmpty()) { updateFavoriteRelayList(newFavoriteRelayList) }) {
+            backupFavoriteRelayList = newFavoriteRelayList
             saveAccountSettings()
         }
     }
@@ -1320,13 +1321,13 @@ class AccountSettings(
         }
     }
 
-    override fun channelList() = backupChannelList
+    override fun publicChatList() = backupPublicChatList
 
-    override fun updateChannelListTo(newChannelList: ChannelListEvent?) {
-        if (newChannelList == null) return
+    override fun updatePublicChatListTo(newPublicChatList: PublicChatListEvent?) {
+        if (newPublicChatList == null) return
 
-        if (backupGuard.accept(backupChannelList, newChannelList, isEmpty = newChannelList.tags.isEmpty()) { updateChannelListTo(newChannelList) }) {
-            backupChannelList = newChannelList
+        if (backupGuard.accept(backupPublicChatList, newPublicChatList, isEmpty = newPublicChatList.tags.isEmpty()) { updatePublicChatListTo(newPublicChatList) }) {
+            backupPublicChatList = newPublicChatList
             saveAccountSettings()
         }
     }
@@ -1340,11 +1341,11 @@ class AccountSettings(
         }
     }
 
-    fun updateHashtagListTo(newHashtagList: HashtagListEvent?) {
-        if (newHashtagList == null) return
+    fun updateInterestListTo(newInterestList: InterestListEvent?) {
+        if (newInterestList == null) return
 
-        if (backupGuard.accept(backupHashtagList, newHashtagList, isEmpty = newHashtagList.tags.isEmpty()) { updateHashtagListTo(newHashtagList) }) {
-            backupHashtagList = newHashtagList
+        if (backupGuard.accept(backupInterestList, newInterestList, isEmpty = newInterestList.tags.isEmpty()) { updateInterestListTo(newInterestList) }) {
+            backupInterestList = newInterestList
             saveAccountSettings()
         }
     }

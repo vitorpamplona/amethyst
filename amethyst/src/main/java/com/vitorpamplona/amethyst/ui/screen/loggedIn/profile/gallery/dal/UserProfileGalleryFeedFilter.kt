@@ -32,10 +32,10 @@ import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 class UserProfileGalleryFeedFilter(
     val user: User,
@@ -57,7 +57,7 @@ class UserProfileGalleryFeedFilter(
                     // Both NIP-71 addressable kinds: acceptableEvent() takes any
                     // AddressableVideoEvent, so listing 34236 twice silently kept every
                     // 34235 (horizontal) video out of the gallery.
-                    listOf(VideoVerticalEvent.KIND, VideoHorizontalEvent.KIND),
+                    listOf(AddressableShortVideoEvent.KIND, AddressableNormalVideoEvent.KIND),
                     user.pubkeyHex,
                 ) { _, it ->
                     acceptableEvent(it, params, user)

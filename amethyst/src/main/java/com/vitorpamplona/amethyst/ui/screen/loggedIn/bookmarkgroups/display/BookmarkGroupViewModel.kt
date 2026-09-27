@@ -40,8 +40,8 @@ class BookmarkGroupViewModel(
     val bookmarkGroupIdentifier: String,
 ) : ViewModel() {
     val selectedBookmarkGroupFlow =
-        account.labeledBookmarkLists
-            .getLabeledBookmarkListFlow(bookmarkGroupIdentifier)
+        account.bookmarkSets
+            .getBookmarkSetFlow(bookmarkGroupIdentifier)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2500), null)
 
     fun publicPosts() =
@@ -69,7 +69,7 @@ class BookmarkGroupViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     suspend fun deleteBookmarkGroup(groupIdentifier: String) {
-        account.labeledBookmarkLists.deleteBookmarkList(groupIdentifier, account)
+        account.bookmarkSets.deleteBookmarkList(groupIdentifier, account)
     }
 
     suspend fun addBookmarkToGroup(
@@ -77,7 +77,7 @@ class BookmarkGroupViewModel(
         bookmark: BookmarkIdTag,
         isPrivate: Boolean,
     ) {
-        account.labeledBookmarkLists.addBookmarkToList(
+        account.bookmarkSets.addBookmarkToList(
             bookmark,
             groupIdentifier,
             isPrivate,
@@ -108,7 +108,7 @@ class BookmarkGroupViewModel(
         bookmark: BookmarkIdTag,
         isCurrentlyPrivate: Boolean,
     ) {
-        account.labeledBookmarkLists.moveBookmarkInList(
+        account.bookmarkSets.moveBookmarkInList(
             bookmark,
             groupIdentifier,
             isCurrentlyPrivate,
@@ -147,7 +147,7 @@ class BookmarkGroupViewModel(
         bookmark: BookmarkIdTag,
         isPrivate: Boolean,
     ) {
-        account.labeledBookmarkLists.removeBookmarkFromList(
+        account.bookmarkSets.removeBookmarkFromList(
             bookmark,
             groupIdentifier,
             isPrivate,
@@ -160,7 +160,7 @@ class BookmarkGroupViewModel(
         deletedEventIds: Set<String>,
         deletedAddresses: Set<Address>,
     ) {
-        account.labeledBookmarkLists.removeDeletedBookmarksFromList(
+        account.bookmarkSets.removeDeletedBookmarksFromList(
             groupIdentifier,
             deletedEventIds,
             deletedAddresses,

@@ -26,24 +26,24 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEve
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 
 val FollowAndMutesFromKeyKinds =
     listOf(
-        PeopleListEvent.KIND,
-        FollowListEvent.KIND,
+        FollowSetEvent.KIND,
+        StarterPackEvent.KIND,
         MuteListEvent.KIND,
         AcceptedBadgeSetEvent.KIND,
         ProfileBadgesEvent.KIND,
-        EmojiPackSelectionEvent.KIND,
+        EmojiListEvent.KIND,
         EphemeralChatListEvent.KIND,
-        ChannelListEvent.KIND,
+        PublicChatListEvent.KIND,
     )
 
 fun filterFollowsAndMutesFromKey(

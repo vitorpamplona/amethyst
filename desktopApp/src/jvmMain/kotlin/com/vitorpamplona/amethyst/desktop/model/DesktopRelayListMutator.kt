@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relays.health.RelayRemovalResult
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import kotlinx.coroutines.async
@@ -80,7 +80,7 @@ class DesktopRelayListMutator(
                     async {
                         runCatching {
                             val newRelays = (dmRelays - url).toList()
-                            val event = ChatMessageRelayListEvent.create(newRelays, signer)
+                            val event = DmRelayListEvent.create(newRelays, signer)
                             accountRelays.consumePublishedEvent(event)
                             relayManager.broadcastToAll(event)
                         }.fold(onSuccess = { null }, onFailure = { RelayListKind.DmInbox })

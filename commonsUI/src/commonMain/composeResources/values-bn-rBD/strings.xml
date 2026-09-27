@@ -952,9 +952,7 @@
     <string name="push_server_none_explainer">Push বিজ্ঞপ্তি নিষ্ক্রিয় করে</string>
     <string name="push_server_uses_app_explainer">অ্যাপ %1$s ব্যবহার করে</string>
     <string name="push_server_install_app">Push বিজ্ঞপ্তি সেটআপ</string>
-    <string name="push_server_install_app_description">        পুশ নোটিফিকেশন পেতে, [Unified Push](https://unifiedpush.org/) সমর্থন করে এমন যেকোনো অ্যাপ ইনস্টল করুন, যেমন [Ntfy](https://ntfy.sh/)।
-        ইনস্টল করার পরে, সেটিংসে আপনি যে অ্যাপটি ব্যবহার করতে চান তা নির্বাচন করুন।
-    </string>
+    <string name="push_server_install_app_description">পুশ নোটিফিকেশন পেতে, [Unified Push](https://unifiedpush.org/) সমর্থন করে এমন যেকোনো অ্যাপ ইনস্টল করুন, যেমন [Ntfy](https://ntfy.sh/)। ইনস্টল করার পরে, সেটিংসে আপনি যে অ্যাপটি ব্যবহার করতে চান তা নির্বাচন করুন।</string>
     <string name="thread_title">থ্রেড</string>
     <string name="send_the_seller_a_message">বিক্রেতাকে একটি বার্তা পাঠান</string>
     <string name="hi_there_is_this_still_available">হাই, এটা কি এখনও পাওয়া যায়?</string>
@@ -2010,15 +2008,7 @@
     <string name="could_not_fetch_invoice_from_details">%1$s থেকে ইনভয়েস আনতে পারেনি: %2$s</string>
     <string name="could_not_open_the_compressed_file">সংকুচিত ফাইলটি খোলা যায়নি</string>
     <string name="couldnt_find_nwc_wallets">ওয়ালেট পাওয়া যায়নি</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst কোনো ওয়ালেট অ্যাপ খুঁজে পায়নি যা Nostr Wallet Connect (NWC) সমর্থন করে।
-\n\nআপনি যা করতে পারেন:
-\n\t১. NWC সমর্থন যাচাই করুন: নিশ্চিত করুন যে আপনার পছন্দের ওয়ালেট অ্যাপ Nostr Wallet Connect-এর সাথে সামঞ্জস্যপূর্ণ।
-\n\t২. সংযোগ তৈরি করুন: আপনার ওয়ালেট অ্যাপে যান এবং একটি নতুন NWC সংযোগ তৈরি করুন।
-\n\t৩. Amethyst-এ লিঙ্ক করুন: আপনার ওয়ালেট সাধারণত তিনটি বিকল্প দেবে:
-\n\t\t৩.১ স্বয়ংক্রিয় লিঙ্ক: একটি বোতাম যা স্বয়ংক্রিয়ভাবে Amethyst খুলে সংযুক্ত করবে। যদি তাই হয়, সেই বোতামে ক্লিক করুন, Amethyst খুলুন এবং নতুন স্ক্রিনে সেভ চাপুন।
-\n\t\t৩.২ ম্যানুয়াল লিঙ্ক: একটি Connection URI যা কপি করে এই স্ক্রিনের পেস্ট আইকনে ক্লিক করে সরাসরি ইনপুট করতে পারবেন।
-\n\t\t৩.৩ QR কোড: ওয়ালেট একটি QR কোড তৈরি করে যা আপনি এই স্ক্রিনের QR কোড বোতাম থেকে পড়তে পারবেন।
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst কোনো ওয়ালেট অ্যাপ খুঁজে পায়নি যা Nostr Wallet Connect (NWC) সমর্থন করে। \n\nআপনি যা করতে পারেন: \n\t১. NWC সমর্থন যাচাই করুন: নিশ্চিত করুন যে আপনার পছন্দের ওয়ালেট অ্যাপ Nostr Wallet Connect-এর সাথে সামঞ্জস্যপূর্ণ। \n\t২. সংযোগ তৈরি করুন: আপনার ওয়ালেট অ্যাপে যান এবং একটি নতুন NWC সংযোগ তৈরি করুন। \n\t৩. Amethyst-এ লিঙ্ক করুন: আপনার ওয়ালেট সাধারণত তিনটি বিকল্প দেবে: \n\t\t৩.১ স্বয়ংক্রিয় লিঙ্ক: একটি বোতাম যা স্বয়ংক্রিয়ভাবে Amethyst খুলে সংযুক্ত করবে। যদি তাই হয়, সেই বোতামে ক্লিক করুন, Amethyst খুলুন এবং নতুন স্ক্রিনে সেভ চাপুন। \n\t\t৩.২ ম্যানুয়াল লিঙ্ক: একটি Connection URI যা কপি করে এই স্ক্রিনের পেস্ট আইকনে ক্লিক করে সরাসরি ইনপুট করতে পারবেন। \n\t\t৩.৩ QR কোড: ওয়ালেট একটি QR কোড তৈরি করে যা আপনি এই স্ক্রিনের QR কোড বোতাম থেকে পড়তে পারবেন।</string>
     <string name="create">তৈরি করুন</string>
     <string name="d">d</string>
     <string name="danger_zone">বিপদজনক এলাকা</string>
@@ -2687,11 +2677,8 @@
     <string name="proxy_section">প্রক্সি Relay</string>
     <string name="proxy_section_explainer">অ্যাগ্রিগেটর relay যা অ্যাপটিকে আপনার ফিড ডাউনলোড করতে অবশ্যই ব্যবহার করতে হবে, যেমন filter.nostr.wine। এটি আউটবক্স মডেলকে প্রতিস্থাপন করে এবং অ্যাপটিকে শুধুমাত্র আপনার তালিকার relay গুলোতে সংযুক্ত করবে।</string>
     <string name="public_chat">সার্বজনীন আলাপ</string>
-    <string name="public_chat_explainer">পাবলিক চ্যাটগুলো Nostr-এর সবার কাছে দৃশ্যমান এবং যে কেউ
-        এতে অংশগ্রহণ করতে পারে। নির্দিষ্ট বিষয়ের চারপাশে উন্মুক্ত সম্প্রদায়ের জন্য এগুলো দুর্দান্ত।
-        এর relay-তে পোস্ট মুছে পরিচালনা নিয়ন্ত্রণ করা যায়</string>
-    <string name="public_chat_relays_explainer">এই গ্রুপটি হোস্ট করে এমন ১-৩ টি relay যোগ করুন।
-        Nostr ক্লায়েন্টগুলো এই সেটিং ব্যবহার করে জানে যে কোথা থেকে বার্তা ডাউনলোড করতে হবে এবং আপনার বার্তা কোথায় পাঠাতে হবে।</string>
+    <string name="public_chat_explainer">পাবলিক চ্যাটগুলো Nostr-এর সবার কাছে দৃশ্যমান এবং যে কেউ এতে অংশগ্রহণ করতে পারে। নির্দিষ্ট বিষয়ের চারপাশে উন্মুক্ত সম্প্রদায়ের জন্য এগুলো দুর্দান্ত। এর relay-তে পোস্ট মুছে পরিচালনা নিয়ন্ত্রণ করা যায়</string>
+    <string name="public_chat_relays_explainer">এই গ্রুপটি হোস্ট করে এমন ১-৩ টি relay যোগ করুন। Nostr ক্লায়েন্টগুলো এই সেটিং ব্যবহার করে জানে যে কোথা থেকে বার্তা ডাউনলোড করতে হবে এবং আপনার বার্তা কোথায় পাঠাতে হবে।</string>
     <string name="public_chat_relays_title">Relay-গুলি</string>
     <string name="public_chat_title">পাবলিক চ্যাট মেটাডেটা</string>
     <string name="public_chats">পাবলিক চ্যাট</string>
@@ -2716,10 +2703,7 @@
     <string name="read_only_user">শুধু-পড়ার ব্যবহারকারী</string>
     <string name="record_a_message_description">একটি বার্তা রেকর্ড করতে ক্লিক করুন এবং ধরে রাখুন</string>
     <string name="relay_chat">Relay চ্যাট</string>
-    <string name="relay_chat_explainer">Relay চ্যাটগুলো হলো চ্যাট গ্রুপ যা তাদের হোম relay দ্বারা নিয়ন্ত্রিত হয়।
-        এগুলো Nostr-এর সবার কাছে দৃশ্যমান এবং যে কেউ এতে অংশগ্রহণ করতে পারে।
-        নির্দিষ্ট বিষয়ের চারপাশে উন্মুক্ত সম্প্রদায়ের জন্য এগুলো দুর্দান্ত। এই গ্রুপগুলোর কিছু ক্ষণস্থায়ী
-    এবং সেজন্য চ্যাট বার্তাগুলো সময়ের সাথে মুছে যায়</string>
+    <string name="relay_chat_explainer">Relay চ্যাটগুলো হলো চ্যাট গ্রুপ যা তাদের হোম relay দ্বারা নিয়ন্ত্রিত হয়। এগুলো Nostr-এর সবার কাছে দৃশ্যমান এবং যে কেউ এতে অংশগ্রহণ করতে পারে। নির্দিষ্ট বিষয়ের চারপাশে উন্মুক্ত সম্প্রদায়ের জন্য এগুলো দুর্দান্ত। এই গ্রুপগুলোর কিছু ক্ষণস্থায়ী এবং সেজন্য চ্যাট বার্তাগুলো সময়ের সাথে মুছে যায়</string>
     <string name="relay_chat_title">Relay চ্যাট</string>
     <string name="relay_management_tab_events">ইভেন্ট</string>
     <string name="relay_management_tab_ips">আইপি</string>

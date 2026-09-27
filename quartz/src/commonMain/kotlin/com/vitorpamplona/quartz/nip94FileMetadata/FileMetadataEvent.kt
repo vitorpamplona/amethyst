@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip94FileMetadata
+
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
+import com.vitorpamplona.quartz.utils.TimeUtils
+
+@Immutable
+class FileMetadataEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, handed over without
+    // building the joined string a scan would throw away.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(summary())) return
+        visitor.visit(content)
+    }
+
+    fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
+
+    fun urls() = tags.mapNotNull(UrlTag::parse)
+
+    fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
+
+    fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
+
+    fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
+
+    fun dimensions() = tags.firstNotNullOfOrNull(DimensionTag::parse)
+
+    fun magnetURI() = tags.firstNotNullOfOrNull(MagnetTag::parse)
+
+    fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
+
+    fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
+
+    fun thumbhash() = tags.firstNotNullOfOrNull(ThumbhashTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    fun thumb() = tags.firstNotNullOfOrNull(ThumbTag::parse)
+
+    fun service() = tags.firstNotNullOfOrNull(ServiceTag::parse)
+
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
+    fun fallback() = tags.firstNotNullOfOrNull(FallbackTag::parse)
+
+    fun hasUrl() = tags.any(UrlTag::isTag)
+
+    fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
+
+    companion object {
+        const val KIND = 1063
+
+        fun build(
+            url: String,
+            caption: String?,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<FileMetadataEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, caption ?: "", createdAt) {
+            url(url)
+            // NIP-94 accessibility description of the file (kept; the deprecated
+            // generic NIP-31 boilerplate alt is not written).
+            caption?.ifBlank { null }?.let { alt(it) }
+            initializer()
+        }
+
+        fun build(
+            url: String,
+            caption: String?,
+            mimeType: String? = null,
+            hash: String? = null,
+            size: Int? = null,
+            dimension: DimensionTag? = null,
+            blurhash: String? = null,
+            thumbhash: String? = null,
+            originalHash: String? = null,
+            magnetUri: String? = null,
+            torrentInfoHash: String? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<FileMetadataEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, caption ?: "", createdAt) {
+            url(url)
+            // NIP-94 accessibility description of the file (kept; the deprecated
+            // generic NIP-31 boilerplate alt is not written).
+            caption?.ifBlank { null }?.let { alt(it) }
+
+            hash?.let { hash(it) }
+            size?.let { fileSize(it) }
+            mimeType?.let { mimeType(it) }
+            dimension?.let { dimension(it) }
+            blurhash?.let { blurhash(it) }
+            thumbhash?.let { thumbhash(it) }
+            originalHash?.let { originalHash(it) }
+            magnetUri?.let { magnet(it) }
+            torrentInfoHash?.let { torrentInfohash(it) }
+
+            initializer()
+        }
+    }
+}
+
+@Deprecated(
+    "Renamed to FileMetadataEvent. NIP-94 names kind 1063 file metadata.",
+    ReplaceWith("FileMetadataEvent", "com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent"),
+)
+typealias FileHeaderEvent = FileMetadataEvent

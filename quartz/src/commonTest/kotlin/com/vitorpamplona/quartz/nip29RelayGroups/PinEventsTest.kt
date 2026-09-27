@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryContent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
@@ -90,19 +90,19 @@ class PinEventsTest {
     @Test
     fun updatePinListEventParsesGroupAndIds() {
         val tags = arrayOf(arrayOf("h", gid), arrayOf("e", id1), arrayOf("e", id2))
-        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, UpdatePinListEvent.KIND, tags, "", "22".repeat(64))
+        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, GroupUpdatePinListEvent.KIND, tags, "", "22".repeat(64))
 
-        assertEquals(true, event is UpdatePinListEvent)
-        event as UpdatePinListEvent
+        assertEquals(true, event is GroupUpdatePinListEvent)
+        event as GroupUpdatePinListEvent
         assertEquals(gid, event.groupId())
         assertEquals(listOf(id1, id2), event.pinnedEventIds())
     }
 
     @Test
     fun updatePinListBuildCarriesHTagAndFullList() {
-        val template = UpdatePinListEvent.build(gid, listOf(id1, id2))
+        val template = GroupUpdatePinListEvent.build(gid, listOf(id1, id2))
 
-        assertEquals(UpdatePinListEvent.KIND, template.kind)
+        assertEquals(GroupUpdatePinListEvent.KIND, template.kind)
         assertEquals(gid, template.tags.firstOrNull { it[0] == GroupIdTag.TAG_NAME }?.getOrNull(1))
         assertEquals(listOf(id1, id2), template.tags.filter { it[0] == "e" }.map { it[1] })
     }

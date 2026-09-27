@@ -181,7 +181,7 @@ private fun EmojiListOptions(
     emojiPackNote: Note,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiListAddress(),
     ) {
         it?.let { usersEmojiList ->
             val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {

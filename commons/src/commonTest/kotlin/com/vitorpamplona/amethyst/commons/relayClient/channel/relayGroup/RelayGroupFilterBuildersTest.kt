@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.FiltersChanged
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -32,8 +32,8 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -187,7 +187,7 @@ class RelayGroupFilterBuildersTest {
         val filter = buildRelayGroupAuxFilter(GroupId("g1", relayA), 42L)
 
         assertEquals(relayA, filter.relay)
-        assertEquals(listOf(DeletionEvent.KIND, ReactionEvent.KIND, DeleteEventEvent.KIND), filter.filter.kinds)
+        assertEquals(listOf(DeletionRequestEvent.KIND, ReactionEvent.KIND, GroupDeleteEventEvent.KIND), filter.filter.kinds)
         assertEquals(listOf("g1"), filter.filter.tags!!["h"])
         assertEquals(42L, filter.filter.since)
         assertEquals(RELAY_GROUP_AUX_LIMIT, filter.filter.limit)
@@ -293,7 +293,7 @@ class RelayGroupFilterBuildersTest {
     @Test
     fun `directory kinds are 39000-39003 and exclude the pin list`() {
         assertEquals(
-            listOf(GroupMetadataEvent.KIND, GroupAdminsEvent.KIND, GroupMembersEvent.KIND, SupportedRolesEvent.KIND),
+            listOf(GroupMetadataEvent.KIND, GroupAdminsEvent.KIND, GroupMembersEvent.KIND, GroupRolesEvent.KIND),
             RELAY_GROUP_DIRECTORY_KINDS,
         )
         assertFalse(RELAY_GROUP_DIRECTORY_KINDS.contains(GroupPinnedEvent.KIND), "the directory doesn't fetch each group's pins")

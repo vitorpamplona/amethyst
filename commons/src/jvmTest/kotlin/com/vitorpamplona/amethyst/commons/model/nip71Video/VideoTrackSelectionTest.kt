@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip71Video
 
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -36,7 +36,7 @@ class VideoTrackSelectionTest {
     private val hls = "application/vnd.apple.mpegurl"
 
     private fun event(vararg metas: VideoMeta) =
-        VideoVerticalEvent(
+        AddressableShortVideoEvent(
             id = "bfe2f2244fefc7cebc7b2eae825495f99dabb4649ee3f90ab1fa33bcd1e9bb9f",
             pubKey = "3b6187c08b9dd5617150ea047e788a0fdd44b4394cb5566cba76f683ddc027d2",
             createdAt = 1780894816,

@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
@@ -50,7 +50,7 @@ object FilterDMs {
         limit: Int? = null,
     ): Filter =
         Filter(
-            kinds = listOf(PrivateDmEvent.KIND),
+            kinds = listOf(EncryptedDmEvent.KIND),
             tags = mapOf("p" to listOf(userPubKeyHex)),
             since = since,
             limit = limit,
@@ -70,7 +70,7 @@ object FilterDMs {
         limit: Int? = null,
     ): Filter =
         Filter(
-            kinds = listOf(PrivateDmEvent.KIND),
+            kinds = listOf(EncryptedDmEvent.KIND),
             authors = listOf(userPubKeyHex),
             since = since,
             limit = limit,
@@ -96,14 +96,14 @@ object FilterDMs {
         return listOf(
             // Messages TO me from conversation participants
             Filter(
-                kinds = listOf(PrivateDmEvent.KIND),
+                kinds = listOf(EncryptedDmEvent.KIND),
                 authors = conversationPubKeys.toList(),
                 tags = mapOf("p" to listOf(userPubKeyHex)),
                 since = since,
             ),
             // Messages FROM me to conversation participants
             Filter(
-                kinds = listOf(PrivateDmEvent.KIND),
+                kinds = listOf(EncryptedDmEvent.KIND),
                 authors = listOf(userPubKeyHex),
                 tags = mapOf("p" to conversationPubKeys.toList()),
                 since = since,

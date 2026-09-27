@@ -30,13 +30,13 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -116,7 +116,7 @@ object PoWPolicy {
         setOf(
             MetadataEvent.KIND,
             ContactListEvent.KIND,
-            LnZapRequestEvent.KIND, // blocks the invoice fetch
+            ZapRequestEvent.KIND, // blocks the invoice fetch
             OtsEvent.KIND, // machine-generated companion events
             DraftWrapEvent.KIND, // re-signed on a 1s debounce while typing
         )
@@ -141,7 +141,7 @@ object PoWPolicy {
             TextNoteEvent.KIND -> PoWCategory.SHORT_NOTES
             CommentEvent.KIND -> PoWCategory.COMMENTS
             ReportEvent.KIND -> PoWCategory.REPORTS
-            LongTextNoteEvent.KIND, HighlightEvent.KIND -> PoWCategory.LONG_FORM
+            LongFormContentEvent.KIND, HighlightEvent.KIND -> PoWCategory.LONG_FORM
             VoiceEvent.KIND, VoiceReplyEvent.KIND -> PoWCategory.VOICE
             RepostEvent.KIND, GenericRepostEvent.KIND -> PoWCategory.REPOSTS
             ReactionEvent.KIND -> PoWCategory.REACTIONS

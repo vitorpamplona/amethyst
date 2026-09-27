@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySet
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.runBlocking
@@ -81,7 +81,7 @@ class DeletionSettleBenchmark : RelayClientTest() {
             // The last K are the ones we deleted locally.
             val deleted = notes.takeLast(k)
             val kept = notes.dropLast(k)
-            val deletions = deleted.map { signer.sign(DeletionEvent.build(listOf(it), createdAt = it.createdAt + 1)) }
+            val deletions = deleted.map { signer.sign(DeletionRequestEvent.build(listOf(it), createdAt = it.createdAt + 1)) }
 
             // Relay holds all N notes; we hold the N-K we didn't delete, plus the K kind-5s.
             defaultRelay.preload(notes)

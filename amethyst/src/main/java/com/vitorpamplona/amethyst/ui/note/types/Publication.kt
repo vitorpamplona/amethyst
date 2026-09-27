@@ -80,8 +80,8 @@ import com.vitorpamplona.quartz.experimental.publications.PublicationContentEven
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import kotlinx.collections.immutable.toImmutableList
 
 // A 2:3 portrait cover — a book jacket, which is what NKBIP-01's default `book` type is. The
@@ -355,8 +355,8 @@ private fun ObservedSectionRow(
             // list long-form, wiki and spec events as sections too.
             is PublicationIndexEvent -> event.titleOrIdentifier()
             is PublicationContentEvent -> event.titleOrIdentifier()
-            is LongTextNoteEvent -> event.title()
-            is WikiNoteEvent -> event.title()
+            is LongFormContentEvent -> event.title()
+            is WikiArticleEvent -> event.title()
             // A bookshelf directory lists whatever it likes, including another directory, so the
             // row has to name the library kinds too -- otherwise a nested entry falls through to
             // the section placeholder and reads "Untitled section", which it is not.

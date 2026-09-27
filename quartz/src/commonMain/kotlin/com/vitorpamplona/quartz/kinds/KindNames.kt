@@ -88,8 +88,8 @@ import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRequestEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
@@ -99,35 +99,35 @@ import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
 import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
-import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -141,7 +141,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
@@ -151,45 +151,45 @@ import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequest
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent
 import com.vitorpamplona.quartz.nip51Lists.goodWikiRelayList.GoodWikiRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.kindMuteSet.KindMuteSetEvent
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
@@ -199,19 +199,19 @@ import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEve
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -238,15 +238,15 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
-import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -255,7 +255,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableA
 import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -263,46 +263,46 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.DvmEventCountRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.DvmEventCountResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.DvmEventPowDelegationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.DvmEventPowDelegationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.DvmEventPublishScheduleRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.DvmEventPublishScheduleResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.DvmEventTimestampingRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.DvmEventTimestampingResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.DvmImageGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.DvmImageGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.DvmImageToVideoRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.DvmImageToVideoResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.DvmMalwareScanRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.DvmMalwareScanResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.DvmOpReturnRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.DvmOpReturnResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.DvmPeopleSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.DvmPeopleSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.DvmSummarizationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.DvmSummarizationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.DvmTextExtractionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.DvmTextExtractionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.DvmTextGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.DvmTextGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.DvmTextToSpeechRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.DvmTextToSpeechResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.DvmTranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.DvmTranslationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.DvmUserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.DvmVideoConversionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.DvmVideoConversionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.DvmVideoTranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.DvmVideoTranslationResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -387,12 +387,12 @@ object KindNames {
             BookmarkListEvent.KIND to KindName("Bookmark List", "51"),
             OldBookmarkListEvent.KIND to KindName("Old Bookmark List", "51"),
             CalendarDateSlotEvent.KIND to KindName("Day Appointment", "52"),
-            CalendarEvent.KIND to KindName("Calendar", "52"),
+            CalendarCollectionEvent.KIND to KindName("Calendar", "52"),
             CalendarTimeSlotEvent.KIND to KindName("Appointment", "52"),
             CalendarRSVPEvent.KIND to KindName("Appt RSVP", "52"),
             ChessGameEvent.KIND to KindName("Chess Games", "64"),
             JesterEvent.KIND to KindName("Chess Auth", "64"),
-            RelayFeedsListEvent.KIND to KindName("Favorite Relays", "51"),
+            FavoriteRelayListEvent.KIND to KindName("Favorite Relays", "51"),
             LiveChessGameChallengeEvent.KIND to KindName("Chess Challenges", "64"),
             LiveChessGameAcceptEvent.KIND to KindName("Chess Game Accept", "64"),
             LiveChessMoveEvent.KIND to KindName("Chess Move", "64"),
@@ -400,13 +400,13 @@ object KindNames {
             LiveChessDrawOfferEvent.KIND to KindName("Chess Draw Offer", "64"),
             ChannelCreateEvent.KIND to KindName("Channel Definition", "28"),
             ChannelHideMessageEvent.KIND to KindName("Channel Hide Msg", "28"),
-            ChannelListEvent.KIND to KindName("Channel List", "28"),
+            PublicChatListEvent.KIND to KindName("Channel List", "28"),
             ChannelMessageEvent.KIND to KindName("Channel Message", "28"),
             ChannelMetadataEvent.KIND to KindName("Channel Metadata", "28"),
             ChannelMuteUserEvent.KIND to KindName("Channel Mute User", "28"),
             ChatMessageEncryptedFileHeaderEvent.KIND to KindName("DM File", "17"),
             ChatMessageEvent.KIND to KindName("DM Message", "17"),
-            ChatMessageRelayListEvent.KIND to KindName("DM Relays", "17"),
+            DmRelayListEvent.KIND to KindName("DM Relays", "17"),
             ClassifiedsEvent.KIND to KindName("Classifieds", "99"),
             CommentEvent.KIND to KindName("Comments", "22"),
             GeocacheListingEvent.KIND to KindName("Geocache", "CC"),
@@ -417,19 +417,19 @@ object KindNames {
             CommunityListEvent.KIND to KindName("Community List", "72"),
             CommunityPostApprovalEvent.KIND to KindName("Community Post", "72"),
             ContactListEvent.KIND to KindName("Follow List", "02"),
-            DeletionEvent.KIND to KindName("Deletions", "09"),
+            DeletionRequestEvent.KIND to KindName("Deletions", "09"),
             DraftWrapEvent.KIND to KindName("Drafts", "37"),
             EmojiPackEvent.KIND to KindName("Emoji Packs", "30"),
-            EmojiPackSelectionEvent.KIND to KindName("Emoji Pack List", "30"),
+            EmojiListEvent.KIND to KindName("Emoji Pack List", "30"),
             EphemeralChatEvent.KIND to KindName("Ephemeral Chat", null),
             EphemeralChatListEvent.KIND to KindName("Ephemeral Chatrooms", null),
-            FileHeaderEvent.KIND to KindName("File Headers", "94"),
+            FileMetadataEvent.KIND to KindName("File Headers", "94"),
             ProfileGalleryEntryEvent.KIND to KindName("Profile Gallery", null),
             FileServersEvent.KIND to KindName("File Servers", "96"),
             FileStorageEvent.KIND to KindName("Blob Data", null),
             FileStorageHeaderEvent.KIND to KindName("Blob Headers", null),
             FhirResourceEvent.KIND to KindName("Medical Data", null),
-            FollowListEvent.KIND to KindName("Follow Packs", "51"),
+            StarterPackEvent.KIND to KindName("Follow Packs", "51"),
             GenericRepostEvent.KIND to KindName("Reposts (16)", "18"),
             GeohashListEvent.KIND to KindName("Geohash Follows", "51"),
             GiftWrapEvent.KIND to KindName("GiftWraps", "59"),
@@ -438,23 +438,23 @@ object KindNames {
             GitPatchEvent.KIND to KindName("Git Patch", "34"),
             GitRepositoryEvent.KIND to KindName("Git Repo", "34"),
             GitReplyEvent.KIND to KindName("Git Reply", "34"),
-            GoalEvent.KIND to KindName("Zap Goals", "75"),
-            HashtagListEvent.KIND to KindName("Hashtag Follows", "51"),
+            ZapGoalEvent.KIND to KindName("Zap Goals", "75"),
+            InterestListEvent.KIND to KindName("Hashtag Follows", "51"),
             HighlightEvent.KIND to KindName("Highlights", "84"),
             HTTPAuthorizationEvent.KIND to KindName("Http Auth", "98"),
             IndexerRelayListEvent.KIND to KindName("Index Relay List", "51"),
             InteractiveStoryPrologueEvent.KIND to KindName("Adventure Prologue", null),
             InteractiveStorySceneEvent.KIND to KindName("Adventure Scene", null),
             InteractiveStoryReadingStateEvent.KIND to KindName("Adventure Reading", null),
-            LabeledBookmarkListEvent.KIND to KindName("Named Bookmarks", "51"),
+            BookmarkSetEvent.KIND to KindName("Named Bookmarks", "51"),
             LiveActivitiesChatMessageEvent.KIND to KindName("Live Chats", "53"),
             LiveActivitiesEvent.KIND to KindName("Live Streams", "53"),
-            LnZapEvent.KIND to KindName("Zaps", "57"),
-            LnZapPaymentRequestEvent.KIND to KindName("NWC Request", "47"),
-            LnZapPaymentResponseEvent.KIND to KindName("NWC Response", "47"),
-            LnZapPrivateEvent.KIND to KindName("Private Zaps", "57"),
-            LnZapRequestEvent.KIND to KindName("Zap Req", "57"),
-            LongTextNoteEvent.KIND to KindName("Blogs", "23"),
+            ZapReceiptEvent.KIND to KindName("Zaps", "57"),
+            NwcRequestEvent.KIND to KindName("NWC Request", "47"),
+            NwcResponseEvent.KIND to KindName("NWC Response", "47"),
+            PrivateZapEvent.KIND to KindName("Private Zaps", "57"),
+            ZapRequestEvent.KIND to KindName("Zap Req", "57"),
+            LongFormContentEvent.KIND to KindName("Blogs", "23"),
             MeetingRoomEvent.KIND to KindName("Meeting Room", "53"),
             MeetingRoomPresenceEvent.KIND to KindName("Room Presence", "53"),
             MeetingSpaceEvent.KIND to KindName("Meeting Space", "53"),
@@ -463,14 +463,14 @@ object KindNames {
             NNSEvent.KIND to KindName("NNS", null),
             NipTextEvent.KIND to KindName("NIP", null),
             NostrConnectEvent.KIND to KindName("Nostr Connect", "46"),
-            NIP90StatusEvent.KIND to KindName("DVM Status", "90"),
-            NIP90ContentDiscoveryRequestEvent.KIND to KindName("DVM Content Req", "90"),
-            NIP90ContentDiscoveryResponseEvent.KIND to KindName("DVM Content Resp", "90"),
-            NIP90UserDiscoveryRequestEvent.KIND to KindName("DVM User Req", "90"),
-            NIP90UserDiscoveryResponseEvent.KIND to KindName("DVM User Resp", "90"),
+            DvmStatusEvent.KIND to KindName("DVM Status", "90"),
+            DvmContentDiscoveryRequestEvent.KIND to KindName("DVM Content Req", "90"),
+            DvmContentDiscoveryResponseEvent.KIND to KindName("DVM Content Resp", "90"),
+            DvmUserDiscoveryRequestEvent.KIND to KindName("DVM User Req", "90"),
+            DvmUserDiscoveryResponseEvent.KIND to KindName("DVM User Resp", "90"),
             OtsEvent.KIND to KindName("OTS", "03"),
             PaymentTargetsEvent.KIND to KindName("PayTo", null),
-            PeopleListEvent.KIND to KindName("People Lists", "51"),
+            FollowSetEvent.KIND to KindName("People Lists", "51"),
             ProfileBadgesEvent.KIND to KindName("Profile Badges", "58"),
             PictureEvent.KIND to KindName("Pictures", "68"),
             WorkoutRecordEvent.KIND to KindName("Workouts", null),
@@ -478,12 +478,12 @@ object KindNames {
             ZapPollEvent.KIND to KindName("Zap Poll", null),
             PollEvent.KIND to KindName("Poll", "88"),
             PollResponseEvent.KIND to KindName("Poll Response", "88"),
-            PrivateDmEvent.KIND to KindName("NIP-04 DMs", "04"),
+            EncryptedDmEvent.KIND to KindName("NIP-04 DMs", "04"),
             PrivateOutboxRelayListEvent.KIND to KindName("Private Relays", "37"),
             ProxyRelayListEvent.KIND to KindName("Proxy Relays", "51"),
             PublicMessageEvent.KIND to KindName("Public Message", "A4"),
             ReactionEvent.KIND to KindName("Reactions", "25"),
-            ContactCardEvent.KIND to KindName("Contact Card", "85"),
+            UserAssertionEvent.KIND to KindName("Contact Card", "85"),
             RelayAuthEvent.KIND to KindName("Relay Auth", "42"),
             RelayDiscoveryEvent.KIND to KindName("Relay Discovery", "66"),
             RelayMonitorEvent.KIND to KindName("Relay Monitor Announcement", "66"),
@@ -491,24 +491,24 @@ object KindNames {
             ReportEvent.KIND to KindName("Reports", "56"),
             RepostEvent.KIND to KindName("Reposts", "18"),
             RequestToVanishEvent.KIND to KindName("User Delete", "62"),
-            SealedRumorEvent.KIND to KindName("Seals", "59"),
+            SealEvent.KIND to KindName("Seals", "59"),
             SearchRelayListEvent.KIND to KindName("Search Relays", "50"),
-            StatusEvent.KIND to KindName("User Status", "38"),
+            UserStatusEvent.KIND to KindName("User Status", "38"),
             TextNoteEvent.KIND to KindName("Notes", "10"),
             TextNoteModificationEvent.KIND to KindName("Edits", null),
             TorrentEvent.KIND to KindName("Torrents", "35"),
             TorrentCommentEvent.KIND to KindName("Torrent Comments", "35"),
             TrustedRelayListEvent.KIND to KindName("Trusted Relays", "51"),
             TrustProviderListEvent.KIND to KindName("Trusted Providers", "85"),
-            VideoHorizontalEvent.KIND to KindName("Video (Repl)", "71"),
-            VideoVerticalEvent.KIND to KindName("Shorts (Repl)", "71"),
+            AddressableNormalVideoEvent.KIND to KindName("Video (Repl)", "71"),
+            AddressableShortVideoEvent.KIND to KindName("Shorts (Repl)", "71"),
             VideoNormalEvent.KIND to KindName("Video", "71"),
             VideoShortEvent.KIND to KindName("Shorts", "71"),
             VoiceEvent.KIND to KindName("Voice Msg", "A0"),
             VoiceReplyEvent.KIND to KindName("Voice Reply", "A0"),
             WakeUpEvent.KIND to KindName("WakeUp", null),
             WebBookmarkEvent.KIND to KindName("Web Bookmark", "B0"),
-            WikiNoteEvent.KIND to KindName("Wiki", "54"),
+            WikiArticleEvent.KIND to KindName("Wiki", "54"),
             WikiMergeRequestEvent.KIND to KindName("Wiki Merge Request", "54"),
             WikiMergeAcceptanceEvent.KIND to KindName("Wiki Merge Accepted", null),
             WikiRedirectEvent.KIND to KindName("Wiki Redirect", "54"),
@@ -544,41 +544,41 @@ object KindNames {
             LabelEvent.KIND to KindName("Label", "32"),
             SoftwareAssetEvent.KIND to KindName("Software Asset", "82"),
             AdminCommandEvent.KIND to KindName("Nests Admin Command", null),
-            NIP90TextExtractionRequestEvent.KIND to KindName("DVM Text Extraction Req", "90"),
-            NIP90SummarizationRequestEvent.KIND to KindName("DVM Summarization Req", "90"),
-            NIP90TranslationRequestEvent.KIND to KindName("DVM Translation Req", "90"),
-            NIP90TextGenerationRequestEvent.KIND to KindName("DVM Text Generation Req", "90"),
-            NIP90ImageGenerationRequestEvent.KIND to KindName("DVM Image Generation Req", "90"),
+            DvmTextExtractionRequestEvent.KIND to KindName("DVM Text Extraction Req", "90"),
+            DvmSummarizationRequestEvent.KIND to KindName("DVM Summarization Req", "90"),
+            DvmTranslationRequestEvent.KIND to KindName("DVM Translation Req", "90"),
+            DvmTextGenerationRequestEvent.KIND to KindName("DVM Text Generation Req", "90"),
+            DvmImageGenerationRequestEvent.KIND to KindName("DVM Image Generation Req", "90"),
             NappletSnapshotEvent.KIND to KindName("Napplet Snapshot", "5D"),
-            NIP90VideoConversionRequestEvent.KIND to KindName("DVM Video Conversion Req", "90"),
-            NIP90VideoTranslationRequestEvent.KIND to KindName("DVM Video Translation Req", "90"),
-            NIP90ImageToVideoRequestEvent.KIND to KindName("DVM Image To Video Req", "90"),
-            NIP90TextToSpeechRequestEvent.KIND to KindName("DVM Text To Speech Req", "90"),
-            NIP90ContentSearchRequestEvent.KIND to KindName("DVM Content Search Req", "90"),
-            NIP90PeopleSearchRequestEvent.KIND to KindName("DVM People Search Req", "90"),
-            NIP90EventCountRequestEvent.KIND to KindName("DVM Event Count Req", "90"),
-            NIP90MalwareScanRequestEvent.KIND to KindName("DVM Malware Scan Req", "90"),
-            NIP90EventTimestampingRequestEvent.KIND to KindName("DVM Timestamping Req", "90"),
-            NIP90OpReturnRequestEvent.KIND to KindName("DVM OpReturn Req", "90"),
-            NIP90EventPublishScheduleRequestEvent.KIND to KindName("DVM Publish Schedule Req", "90"),
-            NIP90EventPowDelegationRequestEvent.KIND to KindName("DVM PoW Delegation Req", "90"),
-            NIP90TextExtractionResponseEvent.KIND to KindName("DVM Text Extraction Resp", "90"),
-            NIP90SummarizationResponseEvent.KIND to KindName("DVM Summarization Resp", "90"),
-            NIP90TranslationResponseEvent.KIND to KindName("DVM Translation Resp", "90"),
-            NIP90TextGenerationResponseEvent.KIND to KindName("DVM Text Generation Resp", "90"),
-            NIP90ImageGenerationResponseEvent.KIND to KindName("DVM Image Generation Resp", "90"),
-            NIP90VideoConversionResponseEvent.KIND to KindName("DVM Video Conversion Resp", "90"),
-            NIP90VideoTranslationResponseEvent.KIND to KindName("DVM Video Translation Resp", "90"),
-            NIP90ImageToVideoResponseEvent.KIND to KindName("DVM Image To Video Resp", "90"),
-            NIP90TextToSpeechResponseEvent.KIND to KindName("DVM Text To Speech Resp", "90"),
-            NIP90ContentSearchResponseEvent.KIND to KindName("DVM Content Search Resp", "90"),
-            NIP90PeopleSearchResponseEvent.KIND to KindName("DVM People Search Resp", "90"),
-            NIP90EventCountResponseEvent.KIND to KindName("DVM Event Count Resp", "90"),
-            NIP90MalwareScanResponseEvent.KIND to KindName("DVM Malware Scan Resp", "90"),
-            NIP90EventTimestampingResponseEvent.KIND to KindName("DVM Timestamping Resp", "90"),
-            NIP90OpReturnResponseEvent.KIND to KindName("DVM OpReturn Resp", "90"),
-            NIP90EventPublishScheduleResponseEvent.KIND to KindName("DVM Publish Schedule Resp", "90"),
-            NIP90EventPowDelegationResponseEvent.KIND to KindName("DVM PoW Delegation Resp", "90"),
+            DvmVideoConversionRequestEvent.KIND to KindName("DVM Video Conversion Req", "90"),
+            DvmVideoTranslationRequestEvent.KIND to KindName("DVM Video Translation Req", "90"),
+            DvmImageToVideoRequestEvent.KIND to KindName("DVM Image To Video Req", "90"),
+            DvmTextToSpeechRequestEvent.KIND to KindName("DVM Text To Speech Req", "90"),
+            DvmContentSearchRequestEvent.KIND to KindName("DVM Content Search Req", "90"),
+            DvmPeopleSearchRequestEvent.KIND to KindName("DVM People Search Req", "90"),
+            DvmEventCountRequestEvent.KIND to KindName("DVM Event Count Req", "90"),
+            DvmMalwareScanRequestEvent.KIND to KindName("DVM Malware Scan Req", "90"),
+            DvmEventTimestampingRequestEvent.KIND to KindName("DVM Timestamping Req", "90"),
+            DvmOpReturnRequestEvent.KIND to KindName("DVM OpReturn Req", "90"),
+            DvmEventPublishScheduleRequestEvent.KIND to KindName("DVM Publish Schedule Req", "90"),
+            DvmEventPowDelegationRequestEvent.KIND to KindName("DVM PoW Delegation Req", "90"),
+            DvmTextExtractionResponseEvent.KIND to KindName("DVM Text Extraction Resp", "90"),
+            DvmSummarizationResponseEvent.KIND to KindName("DVM Summarization Resp", "90"),
+            DvmTranslationResponseEvent.KIND to KindName("DVM Translation Resp", "90"),
+            DvmTextGenerationResponseEvent.KIND to KindName("DVM Text Generation Resp", "90"),
+            DvmImageGenerationResponseEvent.KIND to KindName("DVM Image Generation Resp", "90"),
+            DvmVideoConversionResponseEvent.KIND to KindName("DVM Video Conversion Resp", "90"),
+            DvmVideoTranslationResponseEvent.KIND to KindName("DVM Video Translation Resp", "90"),
+            DvmImageToVideoResponseEvent.KIND to KindName("DVM Image To Video Resp", "90"),
+            DvmTextToSpeechResponseEvent.KIND to KindName("DVM Text To Speech Resp", "90"),
+            DvmContentSearchResponseEvent.KIND to KindName("DVM Content Search Resp", "90"),
+            DvmPeopleSearchResponseEvent.KIND to KindName("DVM People Search Resp", "90"),
+            DvmEventCountResponseEvent.KIND to KindName("DVM Event Count Resp", "90"),
+            DvmMalwareScanResponseEvent.KIND to KindName("DVM Malware Scan Resp", "90"),
+            DvmEventTimestampingResponseEvent.KIND to KindName("DVM Timestamping Resp", "90"),
+            DvmOpReturnResponseEvent.KIND to KindName("DVM OpReturn Resp", "90"),
+            DvmEventPublishScheduleResponseEvent.KIND to KindName("DVM Publish Schedule Resp", "90"),
+            DvmEventPowDelegationResponseEvent.KIND to KindName("DVM PoW Delegation Resp", "90"),
             CashuMintQuoteEvent.KIND to KindName("Cashu Mint Quote", "60"),
             CashuTokenEvent.KIND to KindName("Cashu Token", "60"),
             CashuSpendingHistoryEvent.KIND to KindName("Cashu History", "60"),
@@ -587,15 +587,15 @@ object KindNames {
             OnchainZapEvent.KIND to KindName("Onchain Zap", "BC"),
             Bolt12ZapEvent.KIND to KindName("Bolt12 Zap", "B1"),
             Bolt12OfferListEvent.KIND to KindName("Bolt12 Offers", "B1"),
-            PutUserEvent.KIND to KindName("Group Put User", "29"),
-            RemoveUserEvent.KIND to KindName("Group Remove User", "29"),
-            EditMetadataEvent.KIND to KindName("Group Edit Metadata", "29"),
-            DeleteEventEvent.KIND to KindName("Group Delete Event", "29"),
+            GroupPutUserEvent.KIND to KindName("Group Put User", "29"),
+            GroupRemoveUserEvent.KIND to KindName("Group Remove User", "29"),
+            GroupEditMetadataEvent.KIND to KindName("Group Edit Metadata", "29"),
+            GroupDeleteEventEvent.KIND to KindName("Group Delete Event", "29"),
             CreateGroupEvent.KIND to KindName("Group Create", "29"),
             DeleteGroupEvent.KIND to KindName("Group Delete", "29"),
-            CreateInviteEvent.KIND to KindName("Group Create Invite", "29"),
-            JoinRequestEvent.KIND to KindName("Group Join Request", "29"),
-            LeaveRequestEvent.KIND to KindName("Group Leave Request", "29"),
+            GroupCreateInviteEvent.KIND to KindName("Group Create Invite", "29"),
+            GroupJoinRequestEvent.KIND to KindName("Group Join Request", "29"),
+            GroupLeaveRequestEvent.KIND to KindName("Group Leave Request", "29"),
             NutzapEvent.KIND to KindName("Nutzap", "61"),
             SimpleGroupListEvent.KIND to KindName("Group List", "51"),
             ExternalIdentitiesEvent.KIND to KindName("External Identities", "39"),
@@ -668,7 +668,7 @@ object KindNames {
             GroupMetadataEvent.KIND to KindName("Group Metadata", "29"),
             GroupAdminsEvent.KIND to KindName("Group Admins", "29"),
             GroupMembersEvent.KIND to KindName("Group Members", "29"),
-            SupportedRolesEvent.KIND to KindName("Group Roles", "29"),
+            GroupRolesEvent.KIND to KindName("Group Roles", "29"),
             GroupParticipantsEvent.KIND to KindName("Group Participants", "29"),
             MediaStarterPackEvent.KIND to KindName("Media Starter Pack", "51"),
         )

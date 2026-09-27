@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
@@ -114,7 +114,7 @@ private fun toMeFilter(
     filter =
         ExplainedFilter(
             purpose = SubPurpose.DIRECT_MESSAGES,
-            kinds = listOf(PrivateDmEvent.KIND),
+            kinds = listOf(EncryptedDmEvent.KIND),
             authors = authors.toList(),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
             since = since,
@@ -135,7 +135,7 @@ private fun fromMeFilter(
     filter =
         ExplainedFilter(
             purpose = SubPurpose.DIRECT_MESSAGES,
-            kinds = listOf(PrivateDmEvent.KIND),
+            kinds = listOf(EncryptedDmEvent.KIND),
             authors = listOf(account.userProfile().pubkeyHex),
             tags = mapOf("p" to pTags.toList()),
             since = since,

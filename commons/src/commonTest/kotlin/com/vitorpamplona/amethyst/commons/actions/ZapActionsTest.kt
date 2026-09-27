@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -108,7 +108,7 @@ class ZapActionsTest {
                     amountMillisats = 21_000L,
                     inboxRelays = setOf(relay),
                     comment = "thanks!",
-                    zapType = LnZapEvent.ZapType.PUBLIC,
+                    zapType = ZapReceiptEvent.ZapType.PUBLIC,
                     lnurl = "lnurl1example",
                 )
 
@@ -133,7 +133,7 @@ class ZapActionsTest {
                     recipientPubkey = recipientPubkey,
                     amountMillisats = 1_000L,
                     inboxRelays = setOf(relay),
-                    zapType = LnZapEvent.ZapType.ANONYMOUS,
+                    zapType = ZapReceiptEvent.ZapType.ANONYMOUS,
                 )
 
             assertTrue(
@@ -152,7 +152,7 @@ class ZapActionsTest {
                     recipientPubkey = recipientPubkey,
                     amountMillisats = 1_000L,
                     inboxRelays = setOf(relay),
-                    zapType = LnZapEvent.ZapType.PRIVATE,
+                    zapType = ZapReceiptEvent.ZapType.PRIVATE,
                 )
 
             // NIP-57 PRIVATE zaps use an ephemeral key derived from

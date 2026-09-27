@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.stateIn
  * Desktop equivalent of DmInboxRelayState.
  *
  * Aggregates DM inbox relays from multiple sources:
- * - DM relay list (NIP-17 ChatMessageRelayListEvent, kind 10050)
+ * - DM relay list (NIP-17 DmRelayListEvent, kind 10050)
  * - Connected relays (fallback when no DM-specific relays are configured)
  *
  * On Android, the full Account class manages four relay sources:

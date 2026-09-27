@@ -115,12 +115,12 @@ fun DmRelayEditor(
 
 - Simple relay list (no read/write split — DM relays are all-or-nothing)
 - Warning banner if empty: "No DM relays configured — DMs will use connected relays as fallback"
-- "Save" builds `ChatMessageRelayListEvent` → sign → publish
+- "Save" builds `DmRelayListEvent` → sign → publish
 - Security: highlight that these relays see your DM metadata
 
 **Data flow:**
 1. Read current: `accountRelays.dmRelayList` StateFlow
-2. Save: build `ChatMessageRelayListEvent.create(relays, signer)` → publish
+2. Save: build `DmRelayListEvent.create(relays, signer)` → publish
 
 **Integration:**
 - Replace "DM Relays — coming soon" placeholder in `RelayConfigTab`
@@ -197,7 +197,7 @@ All editors follow the same pattern — reuse `RelayListEditor` for the add/remo
 | Kind | Event Class | Tag Format |
 |------|------------|------------|
 | 10002 | `AdvertisedRelayListEvent` | `["r", "wss://...", "read"\|"write"]` |
-| 10050 | `ChatMessageRelayListEvent` | `["relay", "wss://..."]` |
+| 10050 | `DmRelayListEvent` | `["relay", "wss://..."]` |
 | 10007 | `SearchRelayListEvent` | `["relay", "wss://..."]` |
 | 10006 | `BlockedRelayListEvent` | `["relay", "wss://..."]` |
 
@@ -214,7 +214,7 @@ All editors follow the same pattern — reuse `RelayListEditor` for the add/remo
 ### Phase 3b: DM Relays
 - [ ] DM section shows current kind 10050 relays
 - [ ] Warning if empty
-- [ ] Save signs + publishes ChatMessageRelayListEvent
+- [ ] Save signs + publishes DmRelayListEvent
 - [ ] Shows publish confirmation
 
 ### Phase 3c: Search Relays

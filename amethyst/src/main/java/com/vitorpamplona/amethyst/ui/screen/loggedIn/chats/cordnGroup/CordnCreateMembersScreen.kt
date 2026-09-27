@@ -47,15 +47,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_add_member
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_admin
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_people_done
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_people_empty
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_people_note
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_reach_count
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_reach_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_reach_unknown
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_step_people
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_you
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
+import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_add_member_none
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_add_member_placeholder
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_has_key_package
+import com.vitorpamplona.amethyst.commons.resources.cordn_info_remove_member
+import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -101,12 +117,12 @@ fun CordnCreateMembersScreen(
     val draft = rememberCordnGroupDraft(accountViewModel)
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.cordn_create_step_people), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_create_step_people), nav) },
     ) { padding ->
         if (runtime == null) {
             EmptyState(
-                title = stringRes(R.string.cordn_group_unavailable),
-                description = stringRes(R.string.cordn_group_unavailable_detail),
+                title = stringRes(Res.string.cordn_group_unavailable),
+                description = stringRes(Res.string.cordn_group_unavailable_detail),
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -137,7 +153,7 @@ fun CordnCreateMembersScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = stringRes(R.string.cordn_create_people_note),
+                text = stringRes(Res.string.cordn_create_people_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -148,8 +164,8 @@ fun CordnCreateMembersScreen(
                     search = it
                     if (it.length > 2) userSuggestions.processCurrentWord(it) else userSuggestions.reset()
                 },
-                label = { Text(stringRes(R.string.cordn_create_add_member)) },
-                placeholder = { Text(stringRes(R.string.cordn_info_add_member_placeholder)) },
+                label = { Text(stringRes(Res.string.cordn_create_add_member)) },
+                placeholder = { Text(stringRes(Res.string.cordn_info_add_member_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -168,7 +184,7 @@ fun CordnCreateMembersScreen(
                     modifier = SuggestionListDefaultHeightChat,
                     onEmpty = {
                         Text(
-                            text = stringRes(R.string.cordn_info_add_member_none),
+                            text = stringRes(Res.string.cordn_info_add_member_none),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -182,7 +198,7 @@ fun CordnCreateMembersScreen(
                             if (user.pubkeyHex in reachable) {
                                 Icon(
                                     symbol = MaterialSymbols.Key,
-                                    contentDescription = stringRes(R.string.cordn_info_has_key_package),
+                                    contentDescription = stringRes(Res.string.cordn_info_has_key_package),
                                     modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -194,7 +210,7 @@ fun CordnCreateMembersScreen(
                             }) {
                                 Icon(
                                     symbol = MaterialSymbols.PersonAdd,
-                                    contentDescription = stringRes(R.string.cordn_create_add_member),
+                                    contentDescription = stringRes(Res.string.cordn_create_add_member),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
@@ -206,7 +222,7 @@ fun CordnCreateMembersScreen(
             HorizontalDivider()
 
             Text(
-                text = pluralStringRes(LocalContext.current, R.plurals.cordn_member_count, draft.roster.size + 1, draft.roster.size + 1),
+                text = pluralStringRes(Res.plurals.cordn_member_count, draft.roster.size + 1, draft.roster.size + 1),
                 style = MaterialTheme.typography.titleSmall,
             )
 
@@ -230,7 +246,7 @@ fun CordnCreateMembersScreen(
 
             if (draft.roster.isEmpty()) {
                 Text(
-                    text = stringRes(R.string.cordn_create_people_empty),
+                    text = stringRes(Res.string.cordn_create_people_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -240,7 +256,7 @@ fun CordnCreateMembersScreen(
                 onClick = { nav.popBack() },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             ) {
-                Text(stringRes(R.string.cordn_create_people_done))
+                Text(stringRes(Res.string.cordn_create_people_done))
             }
         }
     }
@@ -263,14 +279,14 @@ private fun CreatorRow(
         Column(Modifier.weight(1f)) {
             Text(observeUserNameByHex(me, accountViewModel), style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = stringRes(R.string.cordn_create_you),
+                text = stringRes(Res.string.cordn_create_you),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (!egalitarian) {
             Text(
-                text = stringRes(R.string.cordn_create_admin),
+                text = stringRes(Res.string.cordn_create_admin),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -304,9 +320,9 @@ private fun MemberRow(
             Text(
                 text =
                     when {
-                        answered == 0 -> stringRes(R.string.cordn_create_reach_unknown)
-                        reaching > 0 -> pluralStringRes(LocalContext.current, R.plurals.cordn_create_reach_count, reaching, reaching)
-                        else -> stringRes(R.string.cordn_create_reach_none)
+                        answered == 0 -> stringRes(Res.string.cordn_create_reach_unknown)
+                        reaching > 0 -> pluralStringRes(Res.plurals.cordn_create_reach_count, reaching, reaching)
+                        else -> stringRes(Res.string.cordn_create_reach_none)
                     },
                 style = MaterialTheme.typography.labelSmall,
                 color =
@@ -323,7 +339,7 @@ private fun MemberRow(
         if (!egalitarian) {
             TextButton(onClick = onToggleAdmin) {
                 Text(
-                    text = stringRes(R.string.cordn_create_admin),
+                    text = stringRes(Res.string.cordn_create_admin),
                     style = MaterialTheme.typography.labelMedium,
                     color = if (isAdmin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -333,7 +349,7 @@ private fun MemberRow(
         IconButton(onClick = onRemove) {
             Icon(
                 symbol = MaterialSymbols.PersonRemove,
-                contentDescription = stringRes(R.string.cordn_info_remove_member),
+                contentDescription = stringRes(Res.string.cordn_info_remove_member),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -57,7 +57,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -181,7 +181,7 @@ fun DmRelayEditor(
                     }
                     scope.launch {
                         try {
-                            val event = ChatMessageRelayListEvent.create(localRelays.toList(), signer)
+                            val event = DmRelayListEvent.create(localRelays.toList(), signer)
                             onPublish(event)
                             onDmRelaysUpdated(localRelays.toSet())
                             savedMessage = "Published ${localRelays.size} relay(s)"

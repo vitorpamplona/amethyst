@@ -31,12 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -73,7 +73,7 @@ class RouteForPointerTest {
         // the wrap has to be opened before it can say anything
         assertNull(routeForPointer(GiftWrapEvent.KIND, id))
         // addressables are cited by `a` tag, not by id
-        assertNull(routeForPointer(LongTextNoteEvent.KIND, id))
+        assertNull(routeForPointer(LongFormContentEvent.KIND, id))
         // a kind:0 IS the person — Route.Profile, not a note
         assertNull(routeForPointer(MetadataEvent.KIND, id))
     }
@@ -111,7 +111,7 @@ class RouteForPointerTest {
      */
     @Test
     fun addressableVideoKindsDoNotTakeTheShortcut() {
-        assertNull(routeForPointer(VideoHorizontalEvent.KIND, id))
-        assertNull(routeForPointer(VideoVerticalEvent.KIND, id))
+        assertNull(routeForPointer(AddressableNormalVideoEvent.KIND, id))
+        assertNull(routeForPointer(AddressableShortVideoEvent.KIND, id))
     }
 }

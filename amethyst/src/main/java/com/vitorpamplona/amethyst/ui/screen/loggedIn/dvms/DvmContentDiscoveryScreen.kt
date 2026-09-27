@@ -87,13 +87,13 @@ import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscoveryFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.DvmContentDiscoveryFeedViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import kotlinx.coroutines.launch
 
 @Composable
@@ -190,9 +190,9 @@ fun ObserverContentDiscoveryResponse(
     val resultFlow =
         remember(dvmRequestId) {
             accountViewModel.account.cache
-                .observeLatestEvent<NIP90ContentDiscoveryResponseEvent>(
+                .observeLatestEvent<DvmContentDiscoveryResponseEvent>(
                     Filter(
-                        kinds = listOf(NIP90ContentDiscoveryResponseEvent.KIND),
+                        kinds = listOf(DvmContentDiscoveryResponseEvent.KIND),
                         tags = mapOf("e" to listOf(dvmRequestId.idHex)),
                         limit = 1,
                     ),
@@ -231,9 +231,9 @@ fun ObserverDvmStatusResponse(
     val statusFlow =
         remember(dvmRequestId) {
             accountViewModel.account.cache
-                .observeLatestEvent<NIP90StatusEvent>(
+                .observeLatestEvent<DvmStatusEvent>(
                     Filter(
-                        kinds = listOf(NIP90StatusEvent.KIND),
+                        kinds = listOf(DvmStatusEvent.KIND),
                         tags = mapOf("e" to listOf(dvmRequestId)),
                         limit = 1,
                     ),
@@ -258,27 +258,27 @@ fun ObserverDvmStatusResponse(
 fun PrepareViewContentDiscoveryModels(
     dvm: User,
     dvmRequestId: String,
-    latestResponse: NIP90ContentDiscoveryResponseEvent,
+    latestResponse: DvmContentDiscoveryResponseEvent,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel =
+    val resultFeedViewModel: DvmContentDiscoveryFeedViewModel =
         viewModel(
             key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
-            factory = NIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
+            factory = DvmContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
         )
 
     LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
         resultFeedViewModel.invalidateData()
     }
 
-    RenderNostrNIP90ContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
+    RenderNostrDvmContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
 }
 
 @Composable
-fun RenderNostrNIP90ContentDiscoveryScreen(
-    resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel,
+fun RenderNostrDvmContentDiscoveryScreen(
+    resultFeedViewModel: DvmContentDiscoveryFeedViewModel,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -303,7 +303,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
 @Composable
 fun FeedDVM(
     appDefinitionNote: Note,
-    latestStatus: NIP90StatusEvent,
+    latestStatus: DvmStatusEvent,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -374,7 +374,7 @@ fun FeedDVM(
 
 @Composable
 fun DvmPaymentActions(
-    latestStatus: NIP90StatusEvent,
+    latestStatus: DvmStatusEvent,
     accountViewModel: AccountViewModel,
     nav: INav,
     onStatusUpdate: (String) -> Unit,

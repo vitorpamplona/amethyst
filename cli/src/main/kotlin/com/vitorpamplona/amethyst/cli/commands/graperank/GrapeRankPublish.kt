@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEve
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 
 /**
  * The transport + consumption sides of NIP-85: `graperank publish` pushes the
@@ -169,12 +169,12 @@ object GrapeRankPublish {
             val provider = providerArg?.let { ctx.requireUserHex(it) }
             val cardFilter =
                 Filter(
-                    kinds = listOf(ContactCardEvent.KIND),
+                    kinds = listOf(UserAssertionEvent.KIND),
                     tags = mapOf("d" to listOf(user)),
                     authors = provider?.let { listOf(it) },
                 )
 
-            suspend fun localCards(): List<ContactCardEvent> = ctx.store.query<Event>(cardFilter).filterIsInstance<ContactCardEvent>()
+            suspend fun localCards(): List<UserAssertionEvent> = ctx.store.query<Event>(cardFilter).filterIsInstance<UserAssertionEvent>()
 
             var cards = localCards()
             if (refresh || cards.isEmpty()) {
@@ -190,7 +190,7 @@ object GrapeRankPublish {
                 cards
                     .groupBy { it.pubKey }
                     .mapNotNull { (_, list) -> list.maxByOrNull { it.createdAt } }
-                    .sortedWith(compareByDescending<ContactCardEvent> { it.rank() ?: -1 }.thenByDescending { it.createdAt })
+                    .sortedWith(compareByDescending<UserAssertionEvent> { it.rank() ?: -1 }.thenByDescending { it.createdAt })
 
             // A provider key this machine's operator master derived maps back to
             // the observer whose subjective view the rank expresses.
@@ -236,7 +236,7 @@ object GrapeRankPublish {
             if (!ctx.anonymous) {
                 providerListOf(ctx, ctx.identity.pubKeyHex)
                     ?.serviceProviders()
-                    ?.filter { it.service.kind == ContactCardEvent.KIND && (provider == null || it.pubkey == provider) }
+                    ?.filter { it.service.kind == UserAssertionEvent.KIND && (provider == null || it.pubkey == provider) }
                     ?.map { it.relayUrl }
                     .orEmpty()
             } else {

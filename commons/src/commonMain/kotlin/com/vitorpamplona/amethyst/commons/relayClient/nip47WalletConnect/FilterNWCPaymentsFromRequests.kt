@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 
 // The request event id (#e) is a unique 32-byte identifier — sufficient on
 // its own to match a spec-compliant kind-23195 response. We deliberately keep
@@ -43,7 +43,7 @@ fun filterNWCPaymentsFromRequests(
     fromUsers: Set<HexKey>,
 ): Filter =
     Filter(
-        kinds = listOf(LnZapPaymentResponseEvent.KIND),
+        kinds = listOf(NwcResponseEvent.KIND),
         tags =
             mapOf(
                 "e" to paymentRequests.sorted(),

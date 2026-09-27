@@ -80,8 +80,10 @@ import com.vitorpamplona.amethyst.commons.resources.use_internal_tor_explainer
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.explainerId
 import com.vitorpamplona.amethyst.commons.tor.parseTorPresetType
 import com.vitorpamplona.amethyst.commons.tor.parseTorType
+import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes

@@ -35,10 +35,10 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 
 @Composable
-fun RenderNIP90ContentDiscoveryResponse(
+fun RenderDvmContentDiscoveryResponse(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
@@ -47,7 +47,7 @@ fun RenderNIP90ContentDiscoveryResponse(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? NIP90ContentDiscoveryResponseEvent ?: return
+    val noteEvent = note.event as? DvmContentDiscoveryResponseEvent ?: return
     val callbackUri = remember(note) { note.toNostrUri() }
 
     SensitivityWarning(

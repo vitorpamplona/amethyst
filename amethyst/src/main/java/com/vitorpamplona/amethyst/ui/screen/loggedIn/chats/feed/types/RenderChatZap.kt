@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 
 private const val BIG_ZAP_THRESHOLD_SATS = 50_000L
 
@@ -65,7 +65,7 @@ fun RenderChatZap(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val zapEvent = baseNote.event as? LnZapEvent ?: return
+    val zapEvent = baseNote.event as? ZapReceiptEvent ?: return
 
     val card by produceState(
         ZapAmountCommentNotification(user = null, comment = null, amount = null),

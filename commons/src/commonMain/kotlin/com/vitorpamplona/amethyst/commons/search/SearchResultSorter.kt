@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.utils.currentTimeSeconds
 
 object SearchResultSorter {
@@ -66,7 +66,7 @@ object SearchResultSorter {
         }
 
         // Article title boost
-        if (event is LongTextNoteEvent) {
+        if (event is LongFormContentEvent) {
             val title = event.title()?.lowercase()
             if (title != null) {
                 if (title.contains(query)) {

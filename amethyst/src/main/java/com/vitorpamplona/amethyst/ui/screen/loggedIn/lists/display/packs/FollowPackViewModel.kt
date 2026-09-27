@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -57,12 +57,12 @@ class FollowPackViewModel : ViewModel() {
         selectedDTag
             .transformLatest {
                 emitAll(
-                    account.followLists.selectListFlow(it).flowOn(Dispatchers.IO),
+                    account.starterPacks.selectListFlow(it).flowOn(Dispatchers.IO),
                 )
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun selectedAddress() = FollowListEvent.createAddress(account.userProfile().pubkeyHex, selectedDTag.value)
+    fun selectedAddress() = StarterPackEvent.createAddress(account.userProfile().pubkeyHex, selectedDTag.value)
 
     fun selectedNote() = account.cache.getOrCreateAddressableNote(selectedAddress())
 
@@ -79,17 +79,17 @@ class FollowPackViewModel : ViewModel() {
     }
 
     suspend fun deleteFollowSet() {
-        account.followLists.deleteFollowSet(selectedDTag.value, account)
+        account.starterPacks.deleteFollowSet(selectedDTag.value, account)
     }
 
-    fun loadNote(): AddressableNote? = account.followLists.getPeopleListNote(selectedDTag.value)
+    fun loadNote(): AddressableNote? = account.starterPacks.getPeopleListNote(selectedDTag.value)
 
     suspend fun removeUserFromSet(user: User) {
-        account.followLists.removeUserFromSet(user, selectedDTag.value, account)
+        account.starterPacks.removeUserFromSet(user, selectedDTag.value, account)
     }
 
     suspend fun addUserToSet(user: User) {
-        account.followLists.addUserToSet(user, selectedDTag.value, account)
+        account.starterPacks.addUserToSet(user, selectedDTag.value, account)
     }
 
     fun hasUserFlow(user: User): Flow<Boolean> =

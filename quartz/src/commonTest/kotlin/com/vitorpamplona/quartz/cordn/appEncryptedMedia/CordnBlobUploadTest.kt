@@ -44,7 +44,7 @@ class CordnBlobUploadTest {
     private val sealed = CordnMediaEncryption.encrypt(file, key, "image/jpeg", "holiday.jpg")
 
     @Test
-    fun `the host is given the ciphertext, and its hash names the blob`() {
+    fun `the host is given the ciphertext and its hash names the blob`() {
         val blob = CordnBlobUpload.of(sealed)
 
         // Blossom addresses a blob by the hash of what it stores.
@@ -65,7 +65,7 @@ class CordnBlobUploadTest {
     }
 
     @Test
-    fun `the declared type is opaque, never the real one`() {
+    fun `the declared type is opaque rather than the real one`() {
         val blob = CordnBlobUpload.of(sealed)
 
         assertEquals("application/octet-stream", blob.contentType)
@@ -93,7 +93,7 @@ class CordnBlobUploadTest {
     }
 
     @Test
-    fun `upload, never the media endpoint`() {
+    fun `upload rather than the media endpoint`() {
         // `/media` asks the server to re-encode. Re-encoding ciphertext
         // destroys it, so an account with "optimize uploads" on would break
         // every attachment and only the recipient would find out.

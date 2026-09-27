@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.desktop.followpacks.subscribeMetadataFor
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.launch
 
 /**
@@ -94,7 +94,7 @@ fun FollowPackDetailScreen(
     @Suppress("UNUSED_VARIABLE")
     val metadataVersion by cache.metadataVersion.collectAsState()
 
-    val pack: FollowListEvent? =
+    val pack: StarterPackEvent? =
         remember(addressTag, allPacks) {
             allPacks.firstOrNull { FollowPackEditor.aTag(it) == addressTag }
         }
@@ -208,7 +208,7 @@ fun FollowPackDetailScreen(
 
 @Composable
 private fun PackHeroDetail(
-    pack: FollowListEvent,
+    pack: StarterPackEvent,
     cache: DesktopLocalCache,
     onFollowAll: () -> Unit,
     onShare: () -> Unit,

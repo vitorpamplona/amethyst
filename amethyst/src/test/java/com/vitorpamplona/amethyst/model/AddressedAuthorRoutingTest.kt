@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -49,7 +49,7 @@ class AddressedAuthorRoutingTest {
         )
 
     private fun calendar(vararg tags: Array<String>) =
-        CalendarEvent(
+        CalendarCollectionEvent(
             id = "22".repeat(32),
             pubKey = host,
             createdAt = 1700000000,

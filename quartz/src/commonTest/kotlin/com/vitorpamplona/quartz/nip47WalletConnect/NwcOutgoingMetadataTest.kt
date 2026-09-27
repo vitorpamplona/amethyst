@@ -84,7 +84,7 @@ class NwcOutgoingMetadataTest {
     /**
      * THE INTEROP PROPERTY. NIP-57 sets a zap invoice's `description_hash` to the
      * sha256 of the raw JSON the LNURL callback received in `nostr=` — which is
-     * `LnZapRequestEvent.toJson()` (see LightningAddressResolver). A wallet that
+     * `ZapRequestEvent.toJson()` (see LightningAddressResolver). A wallet that
      * binds a stored zap request to the invoice it labels hashes the bytes of the
      * `nostr` member, so anything short of byte-identity reads as a forged event
      * and the row is silently stored unlabelled.

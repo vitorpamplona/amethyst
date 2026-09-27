@@ -36,8 +36,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 
 @Composable
 fun StoriesTopBar(
@@ -50,7 +50,7 @@ fun StoriesTopBar(
     // The feed's own kind window, plus whatever the list spinner narrowed it to — a hashtag
     // or a geohash says itself as a token; a follow set does not, and seeds nothing.
     val me = accountViewModel.userProfile().pubkeyHex
-    val seed = remember(list, me) { SearchSeed.merge(SearchSeed.ofKinds(VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND), list.asSearchQuery(me)) }
+    val seed = remember(list, me) { SearchSeed.merge(SearchSeed.ofKinds(AddressableNormalVideoEvent.KIND, AddressableShortVideoEvent.KIND), list.asSearchQuery(me)) }
 
     UserDrawerSearchTopBar(accountViewModel, nav, seed) {
         TopNavFilterBar(

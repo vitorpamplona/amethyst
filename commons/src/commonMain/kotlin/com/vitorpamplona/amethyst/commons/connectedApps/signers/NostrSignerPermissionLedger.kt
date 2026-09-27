@@ -28,27 +28,27 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
@@ -232,7 +232,7 @@ class NostrSignerPermissionLedger(
                 PublicMessageEvent.KIND, // 24 — NIP-A4 public messages (plaintext, public)
                 ChannelMessageEvent.KIND, // 42 — public chat messages
                 PollResponseEvent.KIND, // 1018 — voting in a poll (additive, like a reaction)
-                FileHeaderEvent.KIND, // 1063 — NIP-94 file metadata (shares a file reference)
+                FileMetadataEvent.KIND, // 1063 — NIP-94 file metadata (shares a file reference)
                 PollEvent.KIND, // 1068 — creating a poll (additive public content)
                 CommentEvent.KIND, // 1111 — NIP-22 threaded comments (same risk as kind 1)
                 VoiceEvent.KIND, // 1222 — voice messages (audio post, like a picture/video)
@@ -243,12 +243,12 @@ class NostrSignerPermissionLedger(
                 TorrentEvent.KIND, // 2003 — NIP-35 torrent announcements (additive public content)
                 TorrentCommentEvent.KIND, // 2004 — NIP-35 torrent comments
                 HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly
-                LnZapRequestEvent.KIND, // 9734 — Lightning zap request; the payment itself still prompts
-                LongTextNoteEvent.KIND, // 30023 — NIP-23 long-form articles (addressable content)
-                StatusEvent.KIND, // 30315 — ephemeral user status / presence
-                WikiNoteEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)
-                VideoHorizontalEvent.KIND, // 34235 — addressable horizontal video (NIP-71)
-                VideoVerticalEvent.KIND, // 34236 — addressable vertical video (NIP-71)
+                ZapRequestEvent.KIND, // 9734 — Lightning zap request; the payment itself still prompts
+                LongFormContentEvent.KIND, // 30023 — NIP-23 long-form articles (addressable content)
+                UserStatusEvent.KIND, // 30315 — ephemeral user status / presence
+                WikiArticleEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)
+                AddressableNormalVideoEvent.KIND, // 34235 — addressable horizontal video (NIP-71)
+                AddressableShortVideoEvent.KIND, // 34236 — addressable vertical video (NIP-71)
                 PublicationIndexEvent.KIND, // 30040 — NKBIP-01 publication index (addressable content)
                 LearningResourceEvent.KIND, // 30142 — learning resources (addressable content)
                 BlossomPieceIndexEvent.KIND, // 32176 — Blossom piece indexes (addressable content)

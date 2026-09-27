@@ -959,9 +959,7 @@
     <string name="push_server_none_explainer">Atspējo push paziņojumus</string>
     <string name="push_server_uses_app_explainer">Izmanto lietotni %1$s</string>
     <string name="push_server_install_app">Push paziņojumu iestatīšana</string>
-    <string name="push_server_install_app_description">        Lai saņemtu push paziņojumus, instalējiet jebkuru lietotni, kas atbalsta [Unified Push](https://unifiedpush.org/), piemēram, [Ntfy](https://ntfy.sh/).
-        Pēc instalēšanas iestatījumos atlasiet lietotni, kuru vēlaties izmantot.
-    </string>
+    <string name="push_server_install_app_description">Lai saņemtu push paziņojumus, instalējiet jebkuru lietotni, kas atbalsta [Unified Push](https://unifiedpush.org/), piemēram, [Ntfy](https://ntfy.sh/). Pēc instalēšanas iestatījumos atlasiet lietotni, kuru vēlaties izmantot.</string>
     <string name="thread_title">Diskusija</string>
     <string name="send_the_seller_a_message">Nosūtīt pārdevējam ziņojumu</string>
     <string name="hi_there_is_this_still_available">Sveiki, vai tas joprojām ir pieejams?</string>
@@ -2025,15 +2023,7 @@
     <string name="could_not_fetch_invoice_from_details">Nevarēja iegūt rēķinu no %1$s: %2$s</string>
     <string name="could_not_open_the_compressed_file">Nevarēja atvērt saspiestu failu</string>
     <string name="couldnt_find_nwc_wallets">Maks nav atrasts</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst nevarēja atrast nevienu maka lietotni, kas atbalsta Nostr Wallet Connect (NWC).
-\n\nKo varat darīt:
-\n\t1. Pārbaudiet NWC atbalstu: Pārliecinieties, vai jūsu vēlamā maka lietotne ir saderīga ar Nostr Wallet Connect.
-\n\t2. Izveidojiet savienojumu: Atveriet savu maka lietotni un izveidojiet jaunu NWC savienojumu.
-\n\t3. Saistiet ar Amethyst: Jūsu maks parasti piedāvās trīs iespējas:
-\n\t\t3.1 Automātiska saistīšana: Poga, lai automātiski atvērtu un savienotu ar Amethyst. Ja tā, noklikšķiniet uz šīs pogas, atveriet Amethyst un nospiediet saglabāt jaunajā ekrānā.
-\n\t\t3.2 Manuāla saistīšana: Savienojuma URI, ko varat kopēt un noklikšķināt uz ielīmēšanas ikonas šajā ekrānā, lai to ievadītu tieši.
-\n\t\t3.3 QR kods: Maks izveido QR kodu, kuru varat nolasīt ar QR koda pogu šajā ekrānā.
-    </string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nevarēja atrast nevienu maka lietotni, kas atbalsta Nostr Wallet Connect (NWC). \n\nKo varat darīt: \n\t1. Pārbaudiet NWC atbalstu: Pārliecinieties, vai jūsu vēlamā maka lietotne ir saderīga ar Nostr Wallet Connect. \n\t2. Izveidojiet savienojumu: Atveriet savu maka lietotni un izveidojiet jaunu NWC savienojumu. \n\t3. Saistiet ar Amethyst: Jūsu maks parasti piedāvās trīs iespējas: \n\t\t3.1 Automātiska saistīšana: Poga, lai automātiski atvērtu un savienotu ar Amethyst. Ja tā, noklikšķiniet uz šīs pogas, atveriet Amethyst un nospiediet saglabāt jaunajā ekrānā. \n\t\t3.2 Manuāla saistīšana: Savienojuma URI, ko varat kopēt un noklikšķināt uz ielīmēšanas ikonas šajā ekrānā, lai to ievadītu tieši. \n\t\t3.3 QR kods: Maks izveido QR kodu, kuru varat nolasīt ar QR koda pogu šajā ekrānā.</string>
     <string name="create">Izveidot</string>
     <string name="danger_zone">Bīstamā zona</string>
     <string name="dark">Tumšs</string>
@@ -2712,11 +2702,8 @@
     <string name="proxy_section">Starpniekservera Relay</string>
     <string name="proxy_section_explainer">Agregātori relay, ko lietotnei jāizmanto, lai lejupielādētu jūsu plūsmas, piemēram, filter.nostr.wine. Tas aizstāj izejošo ziņojumu modeli un liks lietotnei pieslēgties tikai jūsu sarakstos esošajiem relay.</string>
     <string name="public_chat">Publiskā tērzēšana</string>
-    <string name="public_chat_explainer">Publiskās tērzēšanas ir redzamas visiem Nostr lietotājiem un ikviens
-        var tajās piedalīties. Tās ir lieliski piemērotas atvērtām kopienām par konkrētām tēmām.
-        Moderēšanu var kontrolēt, dzēšot ierakstus tās relay</string>
-    <string name="public_chat_relays_explainer">Ievadiet no 1 līdz 3 relay, kas mitina šo grupu.
-        Nostr klienti izmanto šo iestatījumu, lai zinātu, no kurienes lejupielādēt ziņojumus un kur nosūtīt jūsu ziņojumus.</string>
+    <string name="public_chat_explainer">Publiskās tērzēšanas ir redzamas visiem Nostr lietotājiem un ikviens var tajās piedalīties. Tās ir lieliski piemērotas atvērtām kopienām par konkrētām tēmām. Moderēšanu var kontrolēt, dzēšot ierakstus tās relay</string>
+    <string name="public_chat_relays_explainer">Ievadiet no 1 līdz 3 relay, kas mitina šo grupu. Nostr klienti izmanto šo iestatījumu, lai zinātu, no kurienes lejupielādēt ziņojumus un kur nosūtīt jūsu ziņojumus.</string>
     <string name="public_chat_relays_title">Relay</string>
     <string name="public_chat_title">Publiskās tērzēšanas metadati</string>
     <string name="public_chats">Publiskie čati</string>
@@ -2741,10 +2728,7 @@
     <string name="read_only_user">Tikai lasāms lietotājs</string>
     <string name="record_a_message_description">Noklikšķiniet un turiet, lai ierakstītu ziņojumu</string>
     <string name="relay_chat">Relay tērzēšana</string>
-    <string name="relay_chat_explainer">Relay tērzēšanas ir tērzēšanas grupas, kuras kontrolē to mājas relay.
-        Tās ir redzamas visiem Nostr lietotājiem un ikviens var tajās piedalīties.
-        Tās ir lieliski piemērotas atvērtām kopienām par konkrētām tēmām. Dažas no šīm grupām ir īslaicīgas
-        un tāpēc tērzēšanas ziņojumi laika gaitā pazūd</string>
+    <string name="relay_chat_explainer">Relay tērzēšanas ir tērzēšanas grupas, kuras kontrolē to mājas relay. Tās ir redzamas visiem Nostr lietotājiem un ikviens var tajās piedalīties. Tās ir lieliski piemērotas atvērtām kopienām par konkrētām tēmām. Dažas no šīm grupām ir īslaicīgas un tāpēc tērzēšanas ziņojumi laika gaitā pazūd</string>
     <string name="relay_chat_title">Relay tērzēšanas</string>
     <string name="relay_management_tab_events">Notikumi</string>
     <string name="relay_management_tab_ips">IP adreses</string>

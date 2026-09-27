@@ -34,9 +34,9 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -49,7 +49,7 @@ val PostsByGeohashKinds =
     listOf(
         TextNoteEvent.KIND,
         ChannelMessageEvent.KIND,
-        LongTextNoteEvent.KIND,
+        LongFormContentEvent.KIND,
         PollEvent.KIND,
         ZapPollEvent.KIND,
         ClassifiedsEvent.KIND,
@@ -60,7 +60,7 @@ val PostsByGeohashKinds =
         MusicPlaylistEvent.KIND,
         PodcastEpisodeEvent.KIND,
         PodcastMetadataEvent.KIND,
-        WikiNoteEvent.KIND,
+        WikiArticleEvent.KIND,
         RoadEventReportEvent.KIND,
         RoadEventConfirmationEvent.KIND,
         GeocacheListingEvent.KIND,

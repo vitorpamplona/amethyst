@@ -45,9 +45,9 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -66,16 +66,16 @@ class FollowPackFeedNewThreadFeedFilter(
                 MusicPlaylistEvent.KIND,
                 PodcastMetadataEvent.KIND,
                 InteractiveStoryPrologueEvent.KIND,
-                WikiNoteEvent.KIND,
+                WikiArticleEvent.KIND,
                 NipTextEvent.KIND,
                 ClassifiedsEvent.KIND,
                 FundraiserEvent.KIND,
                 BirdexEvent.KIND,
-                LongTextNoteEvent.KIND,
+                LongFormContentEvent.KIND,
             )
     }
 
-    val followPackEvent = followPackNote.event as? FollowListEvent
+    val followPackEvent = followPackNote.event as? StarterPackEvent
     val follows = followPackEvent?.followIdSet() ?: emptySet()
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followPackNote.idHex
@@ -143,8 +143,8 @@ class FollowPackFeedNewThreadFeedFilter(
                 noteEvent is BirdexEvent ||
                 noteEvent is BirdDetectionEvent ||
                 noteEvent.isRenderableRepost() ||
-                (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
-                (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
+                (noteEvent is LongFormContentEvent && noteEvent.content.isNotEmpty()) ||
+                (noteEvent is WikiArticleEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is ZapPollEvent ||
                 noteEvent is HighlightEvent ||
                 noteEvent is InteractiveStoryPrologueEvent ||

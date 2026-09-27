@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 /**
  * Stack of overlapping circular avatars for pack members.
@@ -143,7 +143,7 @@ fun FollowPackAvatarStack(
  */
 @Composable
 fun FollowPackHeroCard(
-    pack: FollowListEvent,
+    pack: StarterPackEvent,
     cache: DesktopLocalCache,
     onFollowAll: () -> Unit,
     onShare: () -> Unit,
@@ -284,7 +284,7 @@ fun FollowPackChipRail(
  */
 @Composable
 fun FollowPackRow(
-    pack: FollowListEvent,
+    pack: StarterPackEvent,
     cache: DesktopLocalCache,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

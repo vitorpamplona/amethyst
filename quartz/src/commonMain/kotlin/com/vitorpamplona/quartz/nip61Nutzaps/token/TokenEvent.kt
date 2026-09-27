@@ -20,31 +20,31 @@
  */
 package com.vitorpamplona.quartz.nip61Nutzaps.token
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Immutable
-class TokenEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    companion object {
-        const val KIND = 7375
+/**
+ * NIP-61 does not define its own kind 7375: redeemed nutzap proofs are stored as
+ * ordinary NIP-60 wallet token events. This used to be a second class for the same
+ * kind, which `EventFactory` could never instantiate because [CashuTokenEvent] matched first.
+ */
+@Deprecated(
+    "Kind 7375 is the NIP-60 Cashu wallet token event. Use CashuTokenEvent.",
+    ReplaceWith("CashuTokenEvent", "com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent"),
+)
+typealias TokenEvent = CashuTokenEvent
 
-        fun build(
-            encryptedContent: String,
-            createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<TokenEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, encryptedContent, createdAt) {
-            initializer()
-        }
-    }
+/** The old `TokenEvent.build` took content that was already encrypted. */
+@Deprecated(
+    "Use CashuTokenEvent.build(tokenContent, signer), which encrypts the token content.",
+    ReplaceWith("CashuTokenEvent.build(tokenContent, signer)", "com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent"),
+)
+fun CashuTokenEvent.Companion.build(
+    encryptedContent: String,
+    createdAt: Long = TimeUtils.now(),
+    initializer: TagArrayBuilder<CashuTokenEvent>.() -> Unit = {},
+) = eventTemplate(KIND, encryptedContent, createdAt) {
+    initializer()
 }

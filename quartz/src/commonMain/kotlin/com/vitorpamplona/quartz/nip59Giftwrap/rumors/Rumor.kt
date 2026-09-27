@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.kotlinSerialization.RumorKSerializer
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.serialization.Serializable
 
@@ -41,7 +41,7 @@ class Rumor(
     val tags: Array<Array<String>>?,
     val content: String?,
 ) : OptimizedSerializable {
-    fun mergeWith(event: SealedRumorEvent): Event {
+    fun mergeWith(event: SealEvent): Event {
         val newPubKey = event.pubKey // forces to be the pubkey of the seal to make sure impersonators don't impersonate
         val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
         val newKind = kind ?: -1

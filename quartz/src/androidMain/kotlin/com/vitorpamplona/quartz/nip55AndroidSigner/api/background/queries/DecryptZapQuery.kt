@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 
 class DecryptZapQuery(
     val loggedInUser: HexKey,
@@ -45,7 +45,7 @@ class DecryptZapQuery(
             val decryptedEventAsJson = cursor.getStringByName("result")
             if (!decryptedEventAsJson.isNullOrBlank()) {
                 if (decryptedEventAsJson.startsWith("{")) {
-                    val event = Event.fromJsonOrNull(decryptedEventAsJson) as? LnZapPrivateEvent
+                    val event = Event.fromJsonOrNull(decryptedEventAsJson) as? PrivateZapEvent
                     if (event != null) {
                         if (event.verify()) {
                             SignerResult.RequestAddressed.Successful(ZapEventDecryptionResult(event))

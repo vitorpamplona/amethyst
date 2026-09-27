@@ -55,7 +55,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -63,8 +63,8 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -89,7 +89,7 @@ val RELAY_GROUP_METADATA_KINDS =
         GroupMetadataEvent.KIND,
         GroupAdminsEvent.KIND,
         GroupMembersEvent.KIND,
-        SupportedRolesEvent.KIND,
+        GroupRolesEvent.KIND,
     )
 
 /**
@@ -224,9 +224,9 @@ val RELAY_GROUP_ALL_TIMELINE_KINDS = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GRO
  */
 val RELAY_GROUP_AUX_KINDS =
     listOf(
-        DeletionEvent.KIND,
+        DeletionRequestEvent.KIND,
         ReactionEvent.KIND,
-        DeleteEventEvent.KIND,
+        GroupDeleteEventEvent.KIND,
     )
 
 /** How many aux events a channel replays on subscribe. Bounds the backfill; live delivery is unbounded. */

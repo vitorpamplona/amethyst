@@ -47,7 +47,7 @@ class ScheduledPostStoreTest {
         file = File(temp.root, "scheduled_posts.json")
     }
 
-    private fun newStore(now: () -> Long = { System.currentTimeMillis() / 1000 }) = ScheduledPostStore(file, now)
+    private fun newStore(now: () -> Long = { System.currentTimeMillis() / 1000 }) = ScheduledPostStore(file.path, now)
 
     private fun samplePost(
         id: String = "id-1",

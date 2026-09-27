@@ -76,7 +76,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -288,7 +288,7 @@ private fun ProfileCardChips(
     // A self-follow in your own kind:3 is common; "Follows you" on your own card is not a fact.
     val followsMe by observeUserIsFollowing(author, accountViewModel.account.userProfile(), accountViewModel)
     val followsYou = followsMe && !accountViewModel.isLoggedUser(author)
-    val followerCount by observeUserContactCardsFollowerCount(author, accountViewModel)
+    val followerCount by observeUserAssertionsFollowerCount(author, accountViewModel)
     // "--" is the placeholder the contact-card observer emits while no trusted
     // assertion for this user has arrived. Nothing to brag about yet.
     val followers = followerCount.takeIf { it != "--" }

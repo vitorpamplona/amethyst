@@ -34,14 +34,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_settings
+import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +53,7 @@ fun OtsSettingsScreen(nav: INav) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtsSettingsScreen(
-    otsPrefs: OtsSharedPreferences,
+    otsPrefs: OtsSettingsStore,
     torSettings: TorSettingsFlow,
     nav: INav,
 ) {

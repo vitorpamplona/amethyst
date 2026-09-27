@@ -20,18 +20,14 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionStore
 import kotlinx.coroutines.flow.first
-
-private val Context.nappletPermissionsDataStore by preferencesDataStore(name = "napplet_permissions")
 
 /**
  * Persists the standing napplet grants ([GrantState.ALLOW_ALWAYS] / [GrantState.DENY]) in a
@@ -43,9 +39,6 @@ class DataStoreNappletPermissionStore(
     private val dataStore: DataStore<Preferences>,
     private val accountPubKey: () -> String,
 ) : NappletPermissionStore {
-    constructor(context: Context, accountPubKey: () -> String) :
-        this(context.applicationContext.nappletPermissionsDataStore, accountPubKey)
-
     /**
      * Grants belong to one account. [accountPubKey] is read at call time, so an account switch moves
      * every read and write to that account's namespace with no rebuild — a grant made by one account

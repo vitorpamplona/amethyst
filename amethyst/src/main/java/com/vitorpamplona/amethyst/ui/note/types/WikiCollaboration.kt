@@ -55,9 +55,9 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 
 /**
@@ -215,7 +215,7 @@ private fun WikiArticleRow(
 ) {
     LoadAddressableNote(address) { articleNote ->
         if (articleNote != null) {
-            val article by observeNoteEvent<WikiNoteEvent>(articleNote, accountViewModel)
+            val article by observeNoteEvent<WikiArticleEvent>(articleNote, accountViewModel)
 
             WikiRow(
                 // The coordinate's own identifier is a readable slug, so it stands in until the
@@ -240,7 +240,7 @@ private fun WikiVersionRow(
 ) {
     LoadNote(eventId) { versionNote ->
         if (versionNote != null) {
-            val article by observeNoteEvent<WikiNoteEvent>(versionNote, accountViewModel)
+            val article by observeNoteEvent<WikiArticleEvent>(versionNote, accountViewModel)
 
             WikiRow(
                 title = article?.title() ?: eventId.take(8),
