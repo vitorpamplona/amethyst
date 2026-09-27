@@ -114,6 +114,31 @@ class SimpleGroupListEvent(
             )
         }
 
+        /**
+         * Swaps [from] for [to] in one signed version — e.g. a NIP-29 group that migrated to another
+         * relay keeps its id but gets a new relay hint. [from] is dropped from both the public tags and
+         * the private items; [to] is added as a public tag.
+         */
+        suspend fun replace(
+            earlierVersion: SimpleGroupListEvent,
+            from: GroupTag,
+            to: GroupTag,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): SimpleGroupListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            return resign(
+                privateTags = privateTags.remove(from.toTagIdOnly()),
+                tags =
+                    earlierVersion.tags
+                        .remove(from.toTagIdOnly())
+                        .remove(to.toTagIdOnly())
+                        .plus(to.toTagArray()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
         suspend fun resign(
             tags: TagArray,
             privateTags: TagArray,

@@ -26,12 +26,26 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.CodeTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
 
 fun <T : Event> TagArrayBuilder<T>.groupId(groupId: String) = addUnique(GroupIdTag.assemble(groupId))
 
-fun <T : Event> TagArrayBuilder<T>.previous(eventIdPrefixes: List<String>) = addAll(PreviousTag.assemble(eventIdPrefixes))
+/**
+ * Adds the NIP-29 timeline references as ONE `previous` tag holding every prefix
+ * (`["previous", "eb96c864", "2db75638", …]`). Nothing is added for an empty list.
+ */
+fun <T : Event> TagArrayBuilder<T>.previous(eventIdPrefixes: List<String>): TagArrayBuilder<T> {
+    PreviousTag.assemble(eventIdPrefixes)?.let { addUnique(it) }
+    return this
+}
+
+/** Appends the ordered pin list (`e` and `a` references) of a kind-9010 / kind-39005 event. */
+fun <T : Event> TagArrayBuilder<T>.groupPins(pins: List<GroupPin>): TagArrayBuilder<T> {
+    pins.forEach { add(it.toTagArray()) }
+    return this
+}
 
 /** Sets the subgroup `parent` tag (the parent group's id). At most one per event. */
 fun <T : Event> TagArrayBuilder<T>.parentGroup(parentGroupId: String) = addUnique(ParentTag.assemble(parentGroupId))

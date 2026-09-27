@@ -22,13 +22,17 @@ package com.vitorpamplona.quartz.nip29RelayGroups
 
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryContent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * NIP-29 message-pinning wire format (PR #2379): the kind-9010 `update-pin-list`
@@ -77,7 +81,7 @@ class PinEventsTest {
     /** Both classes' own builders keep that shape, so outbound signing routes back to the right class. */
     @Test
     fun bothBuildersRoundTripThroughTheFactory() {
-        val pin = GroupPinnedEvent.build(gid, listOf(id1, id2))
+        val pin = GroupPinnedEvent.build(gid, listOf(EventPin(id1), EventPin(id2)))
         val summary = ThreadSummaryEvent.build(id1, gid, ThreadSummaryContent(replyCount = 1, descendantCount = 1))
 
         val parsedPin: Event = EventFactory.create("00".repeat(32), relaySelf, 100, pin.kind, pin.tags, pin.content, "22".repeat(64))
@@ -100,7 +104,7 @@ class PinEventsTest {
 
     @Test
     fun updatePinListBuildCarriesHTagAndFullList() {
-        val template = UpdatePinListEvent.build(gid, listOf(id1, id2))
+        val template = UpdatePinListEvent.build(gid, listOf(EventPin(id1), EventPin(id2)))
 
         assertEquals(UpdatePinListEvent.KIND, template.kind)
         assertEquals(gid, template.tags.firstOrNull { it[0] == GroupIdTag.TAG_NAME }?.getOrNull(1))
@@ -109,10 +113,81 @@ class PinEventsTest {
 
     @Test
     fun groupPinnedBuildCarriesDTagAndFullList() {
-        val template = GroupPinnedEvent.build(gid, listOf(id1, id2, id3))
+        val template = GroupPinnedEvent.build(gid, listOf(EventPin(id1), EventPin(id2), EventPin(id3)))
 
         assertEquals(GroupPinnedEvent.KIND, template.kind)
         assertEquals(gid, template.tags.firstOrNull { it[0] == "d" }?.getOrNull(1))
         assertEquals(listOf(id1, id2, id3), template.tags.filter { it[0] == "e" }.map { it[1] })
+    }
+
+    private val author = "bb".repeat(32)
+    private val addr = "30023:$author:my-article"
+
+    /** NIP-29 (#2416): the 39005 list interleaves `e` and `a` references and keeps their order. */
+    @Test
+    fun groupPinnedEventParsesMixedEventAndAddressPinsInOrder() {
+        val tags =
+            arrayOf(
+                arrayOf("d", gid),
+                arrayOf("e", id1),
+                arrayOf("a", addr, "wss://relay.example.com/"),
+                arrayOf("e", id2),
+            )
+        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, GroupPinnedEvent.KIND, tags, "", "22".repeat(64))
+
+        assertTrue(event is GroupPinnedEvent, "an a-tagged pin list has no `h`, so it is still a pin list, not a Buzz summary")
+        event as GroupPinnedEvent
+        assertEquals(listOf(id1, addr, id2), event.pins().map { it.ref })
+        assertTrue(event.pins()[1] is AddressPin)
+        assertEquals(listOf(id1, id2), event.pinnedEventIds())
+        assertEquals(listOf(addr), event.pinnedAddresses().map { it.toValue() })
+    }
+
+    @Test
+    fun updatePinListParsesAddressPins() {
+        val tags = arrayOf(arrayOf("h", gid), arrayOf("a", addr), arrayOf("e", id1))
+        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, UpdatePinListEvent.KIND, tags, "", "22".repeat(64))
+
+        event as UpdatePinListEvent
+        assertEquals(listOf(addr, id1), event.pins().map { it.ref })
+    }
+
+    /** Re-submitting a pin list must reproduce every entry — relay hints included — in order. */
+    @Test
+    fun updatePinListBuildRoundTripsMixedPinsVerbatim() {
+        val pinned =
+            GroupPinnedEvent(
+                "00".repeat(32),
+                relaySelf,
+                100,
+                arrayOf(arrayOf("d", gid), arrayOf("e", id1, "wss://r.example/"), arrayOf("a", addr, "wss://relay.example.com/")),
+                "",
+                "22".repeat(64),
+            )
+        val newPin = AddressPin(Address(30023, author, "second"))
+        val template = UpdatePinListEvent.build(gid, pinned.pins() + newPin)
+
+        assertEquals(
+            listOf(
+                listOf("e", id1, "wss://r.example/"),
+                listOf("a", addr, "wss://relay.example.com/"),
+                listOf("a", "30023:$author:second"),
+            ),
+            template.tags.filter { it[0] == "e" || it[0] == "a" }.map { it.toList() },
+        )
+    }
+
+    @Test
+    fun malformedPinsAreSkipped() {
+        val tags = arrayOf(arrayOf("d", gid), arrayOf("e", "not-hex"), arrayOf("a", "garbage"), arrayOf("e", id3))
+        val event = GroupPinnedEvent("00".repeat(32), relaySelf, 100, tags, "", "22".repeat(64))
+
+        assertEquals(listOf(id3), event.pins().map { it.ref })
+    }
+
+    @Test
+    fun pinEqualityIsByReference() {
+        assertEquals(EventPin(id1), EventPin(id1, listOf("wss://r.example/")))
+        assertEquals<Any>(AddressPin(Address(30023, author, "my-article")), AddressPin(Address(30023, author, "my-article"), listOf("wss://x/")))
     }
 }

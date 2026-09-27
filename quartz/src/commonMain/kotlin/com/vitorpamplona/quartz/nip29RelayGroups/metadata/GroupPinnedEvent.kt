@@ -21,12 +21,16 @@
 package com.vitorpamplona.quartz.nip29RelayGroups.metadata
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.groupPins
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.pinnedAddresses
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.pinnedEventIds
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -35,8 +39,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * (kind 9010) moderation actions, so this is the read side clients render — the
  * source of truth for which messages are pinned and in what display order.
  *
- * Addressed by the group id (`d` tag). The pinned event ids are carried as `e`
- * tags in display order.
+ * Addressed by the group id (`d` tag). The pins are carried as `e` tags (regular
+ * events, by id) and `a` tags (addressable events, by `kind:pubkey:d`), interleaved in
+ * display order.
  */
 @Immutable
 class GroupPinnedEvent(
@@ -49,20 +54,26 @@ class GroupPinnedEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun groupId() = dTag()
 
-    /** Pinned message ids, in the relay's display order. */
-    fun pinnedEventIds(): List<HexKey> = tags.mapValueTagged("e") { it }
+    /** The full ordered pin list — `e` and `a` references — in the relay's display order. */
+    fun pins(): List<GroupPin> = tags.groupPins()
+
+    /** Only the `e`-tagged pinned event ids, in order. Prefer [pins], which also carries `a` pins. */
+    fun pinnedEventIds(): List<HexKey> = tags.pinnedEventIds()
+
+    /** Only the `a`-tagged pinned addresses, in order. */
+    fun pinnedAddresses(): List<Address> = tags.pinnedAddresses()
 
     companion object {
         const val KIND = 39005
 
         fun build(
             groupId: String,
-            pinnedEventIds: List<HexKey>,
+            pins: List<GroupPin>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupPinnedEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(groupId)
-            pinnedEventIds.forEach { add(arrayOf("e", it)) }
+            groupPins(pins)
             initializer()
         }
     }

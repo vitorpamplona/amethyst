@@ -25,11 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * NIP-29 `update-pin-list` moderation event (kind 9010). Carries the group `h`
- * tag plus the FULL list of pinned message ids as `e` tags — pinning, unpinning,
+ * tag plus the FULL ordered pin list as `e` tags (regular events) and `a` tags
+ * (addressable events) — pinning, unpinning,
  * reordering and clearing pins are all done by submitting a new complete list.
  * The relay checks the sender's role, applies it, and republishes the group's
  * kind-39005 [com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent].
@@ -45,19 +47,25 @@ class UpdatePinListEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun groupId() = tags.groupId()
 
+    /** The full ordered pin list — `e` and `a` references. */
+    fun pins() = tags.groupPins()
+
+    /** Only the `e`-tagged pinned event ids. Prefer [pins], which also carries `a` pins. */
     fun pinnedEventIds() = tags.pinnedEventIds()
+
+    fun pinnedAddresses() = tags.pinnedAddresses()
 
     companion object {
         const val KIND = 9010
 
         fun build(
             groupId: String,
-            pinnedEventIds: List<HexKey>,
+            pins: List<GroupPin>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<UpdatePinListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             groupId(groupId)
-            pinnedEventIds.forEach { add(arrayOf("e", it)) }
+            groupPins(pins)
             initializer()
         }
     }
