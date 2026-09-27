@@ -20,13 +20,17 @@
  */
 package com.vitorpamplona.geode
 
+import com.vitorpamplona.geode.server.HttpCommandSettings
 import com.vitorpamplona.geode.server.Nip11HttpRoute
 import com.vitorpamplona.geode.server.Nip86HttpRoute
+import com.vitorpamplona.geode.server.NipFEHttpRoute
 import com.vitorpamplona.geode.server.WebSocketSessionPump
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
+import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayCommand
+import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import io.ktor.server.application.install
 import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
@@ -34,6 +38,7 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.routing.get
+import io.ktor.server.routing.options
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
@@ -77,6 +82,11 @@ class KtorRelay(
     val workerGroupSize: Int? = null,
     /** Ktor CIO call-handling thread count. `null` keeps Ktor's default. */
     val callGroupSize: Int? = null,
+    /**
+     * NIP-FE: relay commands over HTTP at `<path>/req`, `/count` and `/event`. On by default; null
+     * turns the endpoints off (and the operator should then drop `FE` from the NIP-11 doc).
+     */
+    val httpCommands: HttpCommandSettings? = HttpCommandSettings(),
 ) {
     /**
      * NIP-86 HTTP adapter. Wraps the engine's [RelayEngine.nip86Server]
@@ -103,6 +113,20 @@ class KtorRelay(
         )
 
     private val nip11Route = Nip11HttpRoute(liveJson = { relay.info.json })
+
+    /**
+     * NIP-FE. Each request runs on its own session of the same engine, so the websocket's policies
+     * and limits apply. A NIP-98 token must name the endpoint under `relay.url` read as http(s), or
+     * under one of the configured alternate URLs (a .onion).
+     */
+    private val nipFERoute =
+        httpCommands?.let { settings ->
+            val origins = (listOf(relay.url) + settings.alternateUrls).map { it.toHttp() }
+            NipFEHttpRoute(
+                handler = HttpRelayHandler(relay.server, origins = { origins }, deadline = settings.deadline),
+                settings = settings,
+            )
+        }
 
     private var engine: CIOApplicationEngine? = null
     private var resolvedPort: Int = -1
@@ -170,6 +194,15 @@ class KtorRelay(
                                 // every request fails the allow-list check (403).
                                 post(path) {
                                     nip86Route.handle(call)
+                                }
+                                // NIP-FE: one command per POST, answered as NDJSON. The paths
+                                // hang off the relay's own path, as the NIP-98 `u` does.
+                                nipFERoute?.let { route ->
+                                    HttpRelayCommand.entries.forEach { command ->
+                                        val endpoint = path.trimEnd('/') + command.path
+                                        post(endpoint) { route.handle(call, command) }
+                                        options(endpoint) { route.preflight(call) }
+                                    }
                                 }
                                 webSocket(path) {
                                     if (shuttingDown) {

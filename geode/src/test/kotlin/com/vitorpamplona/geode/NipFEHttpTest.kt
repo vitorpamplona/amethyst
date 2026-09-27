@@ -1,0 +1,307 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.geode
+
+import com.vitorpamplona.geode.server.HttpCommandSettings
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayClient
+import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayCommand
+import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.net.ServerSocket
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.time.Duration
+
+/**
+ * NIP-FE end to end: quartz's [HttpRelayClient] and raw OkHttp requests against a real [KtorRelay],
+ * covering the answer shape, the status table, the headers each status carries, NIP-98 sign-in
+ * on an AUTH-gated relay, and where the endpoints live.
+ */
+class NipFEHttpTest {
+    private val http = OkHttpClient.Builder().build()
+    private val alice = NostrSignerInternal(KeyPair())
+    private val running = mutableListOf<Pair<KtorRelay, RelayEngine>>()
+
+    @AfterTest
+    fun teardown() {
+        running.forEach { (server, relay) ->
+            server.stop(0, 1_000)
+            relay.close()
+        }
+    }
+
+    /** A relay whose advertised URL is the one it listens on, so a NIP-98 `u` names a reachable endpoint. */
+    private fun start(
+        path: String = "/",
+        settings: HttpCommandSettings? = HttpCommandSettings(),
+        policy: ((NormalizedRelayUrl) -> IRelayPolicy)? = null,
+    ): NormalizedRelayUrl {
+        val port = ServerSocket(0).use { it.localPort }
+        val url = "ws://127.0.0.1:$port$path".normalizeRelayUrl()
+        val relay = if (policy == null) RelayEngine(url) else RelayEngine(url, policyBuilder = { policy(url) })
+        val server = KtorRelay(relay, host = "127.0.0.1", port = port, path = path, httpCommands = settings).start()
+        running += server to relay
+        return url
+    }
+
+    private fun client(signer: NostrSignerInternal? = null) = HttpRelayClient(http, signer)
+
+    private suspend fun note(text: String): Event = alice.sign(TextNoteEvent.build(text))
+
+    private fun post(
+        url: String,
+        body: String,
+        authorization: String? = null,
+    ): Response =
+        http
+            .newCall(
+                Request
+                    .Builder()
+                    .url(url)
+                    .post(body.toRequestBody("text/plain".toMediaType()))
+                    .apply { authorization?.let { header("Authorization", it) } }
+                    .build(),
+            ).execute()
+
+    private fun Response.lines() = body.string().lines().filter { it.isNotEmpty() }
+
+    @Test
+    fun aReqStreamsWhatWasPublishedAndEndsOnEose() =
+        runBlocking {
+            val relay = start()
+            val notes = listOf(note("one"), note("two"), note("three"))
+            notes.forEach { assertTrue(assertIs<OkMessage>(client().publish(relay, it).last).success) }
+
+            val got = mutableListOf<Event>()
+            val answer = client().req(relay, listOf(Filter(kinds = listOf(TextNoteEvent.KIND))), got::add)
+            assertEquals(200, answer.status)
+            assertTrue(answer.complete)
+            assertIs<EoseMessage>(answer.last)
+            assertEquals(notes.map { it.id }.toSet(), got.map { it.id }.toSet())
+        }
+
+    @Test
+    fun theWireIsNdjsonWithoutSubscriptionIds() =
+        runBlocking {
+            val relay = start()
+            val n = note("hello")
+            client().publish(relay, n)
+            post(HttpRelayCommand.REQ.url(relay), """{"ids":["${n.id}"]}""").use { response ->
+                assertEquals(200, response.code)
+                assertTrue(response.header("Content-Type")!!.startsWith("application/x-ndjson"))
+                assertEquals("no", response.header("X-Accel-Buffering"))
+                assertEquals("*", response.header("Access-Control-Allow-Origin"))
+                val lines = response.lines()
+                assertEquals(listOf("""["EVENT",${n.toJson()}]""", """["EOSE"]"""), lines)
+            }
+        }
+
+    @Test
+    fun aCountIsOneCountLine() =
+        runBlocking {
+            val relay = start()
+            client().publish(relay, note("a"))
+            client().publish(relay, note("b"))
+            val answer = client().count(relay, listOf(Filter(kinds = listOf(TextNoteEvent.KIND))))
+            assertTrue(answer.complete)
+            assertEquals(2, assertIs<CountMessage>(answer.last).result.count)
+        }
+
+    @Test
+    fun aDuplicateIs200AndAForgeryIs400() =
+        runBlocking {
+            val relay = start(policy = { VerifyPolicy })
+            val n = note("once")
+            assertEquals(200, client().publish(relay, n).status)
+            assertEquals(200, client().publish(relay, n).status)
+
+            val forged = n.toJson().replace("\"once\"", "\"twice\"")
+            post(HttpRelayCommand.EVENT.url(relay), forged).use { response ->
+                assertEquals(400, response.code)
+                val line = response.lines().single()
+                assertTrue(line.startsWith("""["OK","${n.id}",false,"invalid:"""), line)
+            }
+        }
+
+    @Test
+    fun aBodyThatIsNotTheCommandIs400AndOneOverTheCapIs413() {
+        val relay = start(settings = HttpCommandSettings(maxBodyBytes = 64))
+        post(HttpRelayCommand.REQ.url(relay), "hello").use { response ->
+            assertEquals(400, response.code)
+            assertTrue(response.lines().single().startsWith("""["CLOSED","invalid:"""))
+        }
+        post(HttpRelayCommand.REQ.url(relay), """{"authors":["${"a".repeat(64)}"]}""").use { response ->
+            assertEquals(413, response.code)
+            assertTrue(response.lines().single().startsWith("""["CLOSED","invalid:"""))
+        }
+    }
+
+    @Test
+    fun aRateLimitedRefusalIs429WithRetryAfter() {
+        val relay =
+            start(
+                settings = HttpCommandSettings(retryAfterSeconds = 7),
+                policy = {
+                    object : PassThroughPolicy() {
+                        override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> = PolicyResult.Rejected("rate-limited: slow down")
+                    }
+                },
+            )
+        post(HttpRelayCommand.REQ.url(relay), "{}").use { response ->
+            assertEquals(429, response.code)
+            assertEquals("7", response.header("Retry-After"))
+            assertEquals("""["CLOSED","rate-limited: slow down"]""", response.lines().single())
+        }
+    }
+
+    @Test
+    fun aPreflightLetsAnyOriginPostWithAuthorization() {
+        val relay = start()
+        val preflight =
+            Request
+                .Builder()
+                .url(HttpRelayCommand.REQ.url(relay))
+                .method("OPTIONS", null)
+                .header("Origin", "https://app.example")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization")
+                .build()
+        http.newCall(preflight).execute().use { response ->
+            assertEquals(204, response.code)
+            assertEquals("*", response.header("Access-Control-Allow-Origin"))
+            assertTrue(response.header("Access-Control-Allow-Methods")!!.contains("POST"))
+            assertTrue(response.header("Access-Control-Allow-Headers")!!.contains("Authorization"))
+        }
+    }
+
+    @Test
+    fun anAuthGatedRelayAnswers401UntilANip98TokenSignsTheRequestIn() =
+        runBlocking {
+            val relay = start(policy = ::SignInPolicy)
+            post(HttpRelayCommand.REQ.url(relay), "{}").use { response ->
+                assertEquals(401, response.code)
+                assertEquals("Nostr", response.header("WWW-Authenticate"))
+                assertTrue(response.lines().single().startsWith("""["CLOSED","auth-required:"""))
+            }
+
+            val unsigned = client().req(relay, listOf(Filter(kinds = listOf(1)))) {}
+            assertEquals(401, unsigned.status)
+            assertTrue(unsigned.complete)
+
+            val n = note("signed in")
+            val published = client(alice).publish(relay, n)
+            assertEquals(200, published.status)
+            assertTrue(assertIs<OkMessage>(published.last).success)
+
+            val got = mutableListOf<Event>()
+            val read = HttpRelayClient(http, alice, signFirst = true).req(relay, listOf(Filter(ids = listOf(n.id))), got::add)
+            assertEquals(200, read.status)
+            assertTrue(read.complete)
+            assertEquals(listOf(n.id), got.map { it.id })
+        }
+
+    @Test
+    fun aTokenForAnotherBodyDoesNotSignIn() =
+        runBlocking {
+            val relay = start(policy = ::SignInPolicy)
+            val url = HttpRelayCommand.REQ.url(relay)
+            val token = alice.sign(HTTPAuthorizationEvent.build(url, "POST", """{"kinds":[1]}""".encodeToByteArray())).toAuthToken()
+            post(url, """{"kinds":[0]}""", token).use { response ->
+                assertEquals(401, response.code)
+                assertTrue(response.lines().single().contains("payload"))
+            }
+            post(url, """{"kinds":[1]}""", token).use { assertEquals(200, it.code) }
+        }
+
+    @Test
+    fun aTokenSignedAtTheOnionAddressVerifies() =
+        runBlocking {
+            val onion = "ws://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/".normalizeRelayUrl()
+            val relay = start(policy = ::SignInPolicy, settings = HttpCommandSettings(alternateUrls = listOf(onion)))
+            val body = """{"kinds":[1]}"""
+            val token = alice.sign(HTTPAuthorizationEvent.build(HttpRelayCommand.REQ.url(onion), "POST", body.encodeToByteArray())).toAuthToken()
+            post(HttpRelayCommand.REQ.url(relay), body, token).use { assertEquals(200, it.code) }
+        }
+
+    @Test
+    fun theEndpointsHangOffTheRelayPath() =
+        runBlocking {
+            val relay = start(path = "/nostr")
+            assertTrue(HttpRelayCommand.REQ.url(relay).endsWith("/nostr/req"))
+            assertTrue(client().req(relay, listOf(Filter(kinds = listOf(1)))) {}.complete)
+            post(HttpRelayCommand.REQ.url(relay).replace("/nostr/req", "/req"), "{}").use { assertEquals(404, it.code) }
+        }
+
+    @Test
+    fun turnedOffThereAreNoEndpoints() {
+        val relay = start(settings = null)
+        post(HttpRelayCommand.REQ.url(relay), "{}").use { assertEquals(404, it.code) }
+    }
+
+    @Test
+    fun nip11AdvertisesFE() {
+        val relay = start()
+        val request =
+            Request
+                .Builder()
+                .url(relay.url.replace("ws://", "http://"))
+                .header("Accept", "application/nostr+json")
+                .build()
+        http.newCall(request).execute().use { response ->
+            assertTrue(response.body.string().contains("\"FE\""))
+        }
+    }
+
+    @Test
+    fun noFirstFrameWithinTheDeadlineIs503WithRetryAfter() =
+        runBlocking {
+            val relay = start(settings = HttpCommandSettings(deadline = Duration.ZERO, retryAfterSeconds = 3))
+            val answer = client().req(relay, listOf(Filter(kinds = listOf(1)))) {}
+            assertEquals(503, answer.status)
+            assertEquals("3", answer.retryAfter)
+            assertTrue(answer.complete)
+            assertFalse(answer.last is EoseMessage)
+        }
+}

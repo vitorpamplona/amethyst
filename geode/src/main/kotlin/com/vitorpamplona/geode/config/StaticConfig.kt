@@ -21,12 +21,15 @@
 package com.vitorpamplona.geode.config
 
 import cc.ekblad.toml.decode
+import cc.ekblad.toml.model.TomlValue
 import cc.ekblad.toml.tomlMapper
 import com.vitorpamplona.geode.RelayInfo
+import com.vitorpamplona.geode.server.HttpCommandSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Operator-facing **boot-time** configuration. Parsed once from a TOML
@@ -45,10 +48,14 @@ data class StaticConfig(
     val authorization: AuthorizationSection = AuthorizationSection(),
     val admin: AdminSection = AdminSection(),
     val negentropy: NegentropySection = NegentropySection(),
+    val http: HttpSection = HttpSection(),
     /** `[[mirror]]` entries — upstream relays this relay streams from. */
     val mirror: List<MirrorSection> = emptyList(),
 ) {
-    fun resolveInfo(fullTextSearch: Boolean = true): RelayInfo =
+    fun resolveInfo(
+        fullTextSearch: Boolean = true,
+        httpCommands: Boolean = http.enabled,
+    ): RelayInfo =
         RelayInfo(
             Nip11RelayInformation(
                 name = info.name ?: RelayInfo.NAME,
@@ -59,10 +66,10 @@ data class StaticConfig(
                 software = info.software ?: RelayInfo.SOFTWARE,
                 version = info.version ?: RelayInfo.VERSION,
                 supported_nips =
-                    info.supported_nips?.map(Int::toString)
+                    info.supported_nips
                         // An explicit [info] nips list is operator-authoritative;
-                        // the default list stays honest about search.
-                        ?: if (fullTextSearch) RelayInfo.SUPPORTED_NIPS else RelayInfo.SUPPORTED_NIPS - "50",
+                        // the default list stays honest about search and HTTP commands.
+                        ?: RelayInfo.SUPPORTED_NIPS.filter { (fullTextSearch || it != "50") && (httpCommands || it != "FE") },
                 privacy_policy = info.privacy_policy,
                 terms_of_service = info.terms_of_service,
                 relay_countries = info.relay_countries,
@@ -80,7 +87,8 @@ data class StaticConfig(
         val icon: String? = null,
         val software: String? = null,
         val version: String? = null,
-        val supported_nips: List<Int>? = null,
+        /** NIP numbers, and the hex-named NIPs as strings: `[1, 11, 42, "FE"]`. */
+        val supported_nips: List<String>? = null,
         val privacy_policy: String? = null,
         val terms_of_service: String? = null,
         val relay_countries: List<String>? = null,
@@ -223,6 +231,53 @@ data class StaticConfig(
         val live_index: Boolean = true,
     )
 
+    /**
+     * NIP-FE: relay commands over HTTP — `POST <path>/req`, `/count`, `/event`, one command per
+     * request, answered as NDJSON. Each request is its own connection, so the concurrency caps here
+     * stand in for the websocket's per-connection limits.
+     */
+    data class HttpSection(
+        val enabled: Boolean = true,
+        /** Requests running at once across all clients; over it, 503. 0 = no limit. */
+        val max_concurrent_requests: Int = 256,
+        /** Requests one client address may run at once; over it, 429. 0 = no limit. */
+        val max_requests_per_client: Int = 16,
+        /** How long one answer may run before it ends on a `CLOSED` line. */
+        val deadline_seconds: Long = 30,
+        /** Largest request body read; larger is 413. */
+        val max_body_bytes: Int = 512 * 1024,
+        /** `Retry-After` on the relay's own 429 and 503. */
+        val retry_after_seconds: Int = 1,
+        /**
+         * Other `ws(s)://` URLs this relay is reachable at (a `.onion` beside the clearnet name).
+         * A NIP-98 token's `u` may name the endpoint under any of them or under `[info].relay_url`.
+         */
+        val alternate_urls: List<String> = emptyList(),
+        /**
+         * Addresses of the reverse proxies in front of the relay. Only from these peers is
+         * [client_address_header] believed when counting a client's requests.
+         */
+        val trusted_proxies: List<String> = emptyList(),
+        val client_address_header: String = "X-Forwarded-For",
+    ) {
+        /** The transport settings, or null when the endpoints are off. */
+        fun toSettings(): HttpCommandSettings? =
+            if (!enabled) {
+                null
+            } else {
+                HttpCommandSettings(
+                    maxConcurrent = max_concurrent_requests,
+                    maxPerClient = max_requests_per_client,
+                    deadline = deadline_seconds.seconds,
+                    maxBodyBytes = max_body_bytes,
+                    retryAfterSeconds = retry_after_seconds,
+                    alternateUrls = alternate_urls.map { it.normalizeRelayUrl() },
+                    trustedProxies = trusted_proxies.toSet(),
+                    clientAddressHeader = client_address_header,
+                )
+            }
+    }
+
     data class AuthorizationSection(
         val pubkey_whitelist: List<String> = emptyList(),
         val pubkey_blacklist: List<String> = emptyList(),
@@ -297,6 +352,11 @@ data class StaticConfig(
      * the store.
      */
     fun validate() {
+        require(http.max_concurrent_requests >= 0) { "[http].max_concurrent_requests must be >= 0 (0 = no limit), got ${http.max_concurrent_requests}" }
+        require(http.max_requests_per_client >= 0) { "[http].max_requests_per_client must be >= 0 (0 = no limit), got ${http.max_requests_per_client}" }
+        require(http.deadline_seconds > 0) { "[http].deadline_seconds must be > 0, got ${http.deadline_seconds}" }
+        require(http.max_body_bytes > 0) { "[http].max_body_bytes must be > 0, got ${http.max_body_bytes}" }
+        require(http.retry_after_seconds >= 0) { "[http].retry_after_seconds must be >= 0, got ${http.retry_after_seconds}" }
         database.readers?.let {
             require(it >= 1) { "[database].readers must be >= 1 (got $it); a 0/negative pool can never answer a query" }
         }
@@ -308,7 +368,11 @@ data class StaticConfig(
     }
 
     companion object {
-        private val mapper = tomlMapper { }
+        private val mapper =
+            tomlMapper {
+                // `supported_nips = [1, 11, "FE"]`: numbered NIPs are integers, hex-named ones strings.
+                decoder { it: TomlValue.Integer -> it.value.toString() }
+            }
 
         fun fromToml(toml: String): StaticConfig = mapper.decode<StaticConfig>(toml)
 

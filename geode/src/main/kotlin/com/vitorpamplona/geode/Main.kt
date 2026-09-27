@@ -35,9 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
@@ -356,6 +354,7 @@ private fun serve(args: Array<String>) {
             connectionGroupSize = config.network.connection_group_size,
             workerGroupSize = config.network.worker_group_size,
             callGroupSize = config.network.call_group_size,
+            httpCommands = config.http.toSettings(),
         ).start()
 
     // `[[mirror]]` upstreams: dial each configured relay and stream its
@@ -526,9 +525,9 @@ private fun composePolicy(
     val pieces = mutableListOf<IRelayPolicy>()
 
     if (requireAuth) {
-        pieces += FullAuthPolicy(advertisedUrl)
+        pieces += SignInPolicy(advertisedUrl)
     } else if (optionalAuth) {
-        pieces += OptionalAuthPolicy(advertisedUrl)
+        pieces += OptionalSignInPolicy(advertisedUrl)
     }
 
     config.options.reject_future_seconds?.let { secs ->

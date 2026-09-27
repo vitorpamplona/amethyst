@@ -19,7 +19,8 @@ contact = "admin@example.com"
 # pubkey = "..."
 # Override the supported NIPs advertised on the NIP-11 endpoint. If
 # omitted, the relay advertises the NIPs it actually implements.
-# supported_nips = [1, 9, 11, 40, 42, 45, 50, 62]
+# Hex-named NIPs go in as strings.
+# supported_nips = [1, 9, 11, 40, 42, 45, 50, 62, "FE"]
 
 [network]
 host = "0.0.0.0"
@@ -164,6 +165,35 @@ require_auth = false
 # trusted = true
 # backfill_seconds = 3600
 # filter = '{"kinds":[0,1,3,7],"#t":["nostr"]}'
+
+[http]
+# NIP-FE: relay commands over HTTP. One command per POST to
+# <relay path>/req, /count or /event, answered as NDJSON
+# (application/x-ndjson) and streamed as it is found; nothing stays open
+# afterwards. NIP-98 `Authorization: Nostr ...` headers sign a request
+# in, exactly as NIP-42 AUTH would on the socket. On by default; turning
+# it off also drops "FE" from the default NIP-11 list.
+enabled = true
+# Every request is its own connection, so the websocket's
+# per-connection limits don't bound HTTP clients. These do: over the
+# per-client cap a request gets 429, over the global cap 503, both with
+# Retry-After. 0 = no limit.
+max_concurrent_requests = 256
+max_requests_per_client = 16
+# An answer still running after this ends on a CLOSED line.
+deadline_seconds = 30
+max_body_bytes = 524288
+retry_after_seconds = 1
+# Other addresses this relay is reachable at: a NIP-98 token may name
+# the endpoint under any of them, as well as under [info].relay_url.
+# alternate_urls = ["ws://youraddress.onion/"]
+# Behind a reverse proxy every request comes from the proxy's address.
+# List the proxies here and the per-client cap counts the address the
+# proxy writes in client_address_header instead (its last entry). The
+# header is ignored from anyone else. Also set `proxy_buffering off`
+# (nginx) or equivalent; the relay sends X-Accel-Buffering: no.
+# trusted_proxies = ["127.0.0.1"]
+# client_address_header = "X-Forwarded-For"
 
 [admin]
 # NIP-86 relay management API. When `pubkeys` is non-empty, the relay

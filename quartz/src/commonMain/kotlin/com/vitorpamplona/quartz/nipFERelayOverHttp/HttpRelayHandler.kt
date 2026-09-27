@@ -309,9 +309,12 @@ class HttpRelayHandler(
         return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("NIP-98 ${refusal?.reason}"))
     }
 
-    private fun closed(reason: String) = withoutSubId(ClosedMessage(HttpRelayCommand.SUB_ID, reason).toJson())
+    private fun closed(reason: String) = refusal(reason)
 
     companion object {
+        /** A `CLOSED` line with [reason], as NIP-FE sends it: for a host that refuses before the handler runs (413, 429, 503). */
+        fun refusal(reason: String) = withoutSubId(ClosedMessage(HttpRelayCommand.SUB_ID, reason).toJson())
+
         val DEFAULT_DEADLINE = 30_000.milliseconds
 
         /** The websocket's slow-consumer bound in the reference relays. */
@@ -322,9 +325,9 @@ class HttpRelayHandler(
 }
 
 /** The frames that carry a subscription id in the engine; NIP-FE sends them without it. */
-private val SUBSCRIPTION_FRAMES = setOf("EVENT", "EOSE", "CLOSED", "COUNT")
+internal val SUBSCRIPTION_FRAMES = setOf("EVENT", "EOSE", "CLOSED", "COUNT")
 
-private const val SUB_ID_FIELD = ",\"" + HttpRelayCommand.SUB_ID + "\""
+internal const val SUB_ID_FIELD = ",\"" + HttpRelayCommand.SUB_ID + "\""
 
 /**
  * [frame] as NIP-FE sends it: the engine's frame with its `"http"` subscription id taken out,

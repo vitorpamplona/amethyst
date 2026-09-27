@@ -3,8 +3,8 @@
 A standalone [Nostr](https://github.com/nostr-protocol/nips) relay for the JVM,
 built on Quartz's relay-server code (Ktor CIO). It speaks the core relay
 protocol plus NIP-11 (info doc), NIP-42 (AUTH), NIP-45 (COUNT), NIP-50
-(full-text search), NIP-77 (Negentropy sync), and NIP-86 (relay management),
-stores events in SQLite (or a filesystem backend), and can mirror upstream
+(full-text search), NIP-77 (Negentropy sync), NIP-86 (relay management) and
+NIP-FE (REQ/COUNT/EVENT over plain HTTP), stores events in SQLite (or a filesystem backend), and can mirror upstream
 relays strfry-router style.
 
 geode depends only on `:quartz` — no Android, no Compose. `amy serve` (the
@@ -97,8 +97,29 @@ geode --version
 
 Key sections: `[info]` (NIP-11 doc), `[network]` (bind + thread pools),
 `[database]` (SQLite path/tuning), `[options]` (AUTH / verify / search),
-`[authorization]` (allow/deny lists), `[[mirror]]` (upstream mirroring), and
-`[admin]` (NIP-86 management). See the example file for every knob.
+`[authorization]` (allow/deny lists), `[[mirror]]` (upstream mirroring),
+`[http]` (NIP-FE limits) and `[admin]` (NIP-86 management). See the example
+file for every knob.
+
+### Commands over HTTP (NIP-FE)
+
+Besides the websocket, geode answers one command per HTTP `POST` beside the
+relay path, streamed back as NDJSON — no socket, no subscription left open:
+
+```bash
+curl -N -d '{"kinds":[1],"limit":2}' http://localhost:7447/req
+# ["EVENT",{"id":"…","kind":1,…}]
+# ["EVENT",{"id":"…","kind":1,…}]
+# ["EOSE"]
+curl -d '{"kinds":[1]}' http://localhost:7447/count     # ["COUNT",{"count":2}]
+curl -d @signed-event.json http://localhost:7447/event  # ["OK","<id>",true,""]
+```
+
+A body that does not end on `EOSE`/`CLOSED` (REQ), `COUNT`/`CLOSED` (COUNT) or
+`OK` (EVENT) was cut off. On an AUTH-gated relay the answer is `401` until the
+request carries a NIP-98 `Authorization: Nostr …` header whose `payload` is the
+body's sha256. Quartz's `HttpRelayClient` does all of this for JVM/Android
+clients.
 
 ## Verbs
 

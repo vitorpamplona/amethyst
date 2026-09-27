@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 
 /**
  * NIP-FE: the client commands HTTP carries, one path each. A body is the command's arguments
@@ -69,6 +72,9 @@ enum class HttpRelayCommand(
         }
     }
 
+    /** This command's endpoint on [relay]: the relay URL read as http(s), host and path kept, plus [path]. */
+    fun url(relay: NormalizedRelayUrl): String = relay.toHttp().trimEnd('/') + path
+
     /** Whether [message] is the last frame of this command's answer. */
     fun ends(message: Message): Boolean =
         message is NoticeMessage ||
@@ -86,5 +92,8 @@ enum class HttpRelayCommand(
         const val SUB_ID = "http"
 
         fun forPath(path: String): HttpRelayCommand? = entries.firstOrNull { it.path == path }
+
+        /** A REQ or COUNT body: the filters as the array that follows the subscription id. */
+        fun body(filters: List<Filter>): String = filters.joinToString(",", "[", "]") { it.toJson() }
     }
 }
