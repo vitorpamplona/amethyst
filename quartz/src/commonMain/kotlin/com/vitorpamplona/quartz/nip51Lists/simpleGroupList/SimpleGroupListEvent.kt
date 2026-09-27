@@ -116,8 +116,14 @@ class SimpleGroupListEvent(
 
         /**
          * Swaps [from] for [to] in one signed version — e.g. a NIP-29 group that migrated to another
-         * relay keeps its id but gets a new relay hint. [from] is dropped from both the public tags and
-         * the private items; [to] is added as a public tag.
+         * relay keeps its id but gets a new relay hint.
+         *
+         * Entries are matched by group id + *normalized* relay url on both sides, so a stored
+         * `wss://relay.example` (another client's spelling) is still found when [from] carries the
+         * normalized `wss://relay.example/`. Every copy of [from] and [to] is dropped from both the
+         * public tags and the private items, then [to] is added back where [from] lived: as a private
+         * item when [from] was only in the encrypted items (so a private membership stays private),
+         * otherwise as a public tag.
          */
         suspend fun replace(
             earlierVersion: SimpleGroupListEvent,
@@ -127,17 +133,30 @@ class SimpleGroupListEvent(
             createdAt: Long = TimeUtils.now(),
         ): SimpleGroupListEvent {
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            return resign(
-                privateTags = privateTags.remove(from.toTagIdOnly()),
-                tags =
-                    earlierVersion.tags
-                        .remove(from.toTagIdOnly())
-                        .remove(to.toTagIdOnly())
-                        .plus(to.toTagArray()),
-                signer = signer,
-                createdAt = createdAt,
-            )
+
+            val fromKey = groupKey(from.groupId, from.relayUrl)
+            val toKey = groupKey(to.groupId, to.relayUrl)
+            val isFrom = { tag: Array<String> -> tagGroupKey(tag) == fromKey }
+            val isFromOrTo = { tag: Array<String> -> tagGroupKey(tag).let { it == fromKey || it == toKey } }
+
+            val wasPrivateOnly = privateTags.any(isFrom) && earlierVersion.tags.none(isFrom)
+
+            val newPublic = earlierVersion.tags.remove(isFromOrTo)
+            val newPrivate = privateTags.remove(isFromOrTo)
+
+            return if (wasPrivateOnly) {
+                resign(tags = newPublic, privateTags = newPrivate.plus(to.toTagArray()), signer = signer, createdAt = createdAt)
+            } else {
+                resign(tags = newPublic.plus(to.toTagArray()), privateTags = newPrivate, signer = signer, createdAt = createdAt)
+            }
         }
+
+        private fun groupKey(
+            groupId: String,
+            relayUrl: String,
+        ) = groupId + "@" + (RelayUrlNormalizer.normalizeOrNull(relayUrl)?.url ?: relayUrl)
+
+        private fun tagGroupKey(tag: Array<String>): String? = GroupTag.parse(tag)?.let { groupKey(it.groupId, it.relayUrl) }
 
         suspend fun resign(
             tags: TagArray,

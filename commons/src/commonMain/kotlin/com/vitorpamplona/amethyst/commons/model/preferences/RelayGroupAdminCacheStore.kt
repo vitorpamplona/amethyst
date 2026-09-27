@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupAdmin
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -47,19 +46,30 @@ class RelayGroupAdminCacheStore(
 ) {
     init {
         scope.launch {
-            restoreFromDisk()
-            RelayGroupAdminCache.flow.drop(1).collect { persist(it) }
+            // What the disk holds; only a map that differs from it is written back. Comparing instead
+            // of dropping the flow's first value also persists a remember() that raced the restore.
+            var onDisk = restoreFromDisk()
+            RelayGroupAdminCache.flow.collect {
+                if (it != onDisk) {
+                    persist(it)
+                    onDisk = it
+                }
+            }
         }
     }
 
-    private suspend fun restoreFromDisk() {
-        try {
-            val raw = store.data.first()[KEY] ?: return
-            if (raw.isNotEmpty()) RelayGroupAdminCache.restore(decode(raw))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e("RelayGroupAdminCache") { "Error reading cached group admins: ${e.message}" }
-        }
+    /** Merges the saved map into the cache (in-memory entries win) and returns what the disk held. */
+    private suspend fun restoreFromDisk(): Map<String, Set<HexKey>> {
+        val fromDisk =
+            try {
+                store.data.first()[KEY]?.let(::decode) ?: emptyMap()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("RelayGroupAdminCache") { "Error reading cached group admins: ${e.message}" }
+                emptyMap()
+            }
+        RelayGroupAdminCache.restore(fromDisk)
+        return fromDisk
     }
 
     private suspend fun persist(map: Map<String, Set<HexKey>>) {

@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.equalsConstantTime
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
+import kotlin.math.floor
+import kotlin.math.log2
 
 /**
  * NIP-44 v2 encryption.
@@ -160,6 +162,21 @@ class Nip44v2(
         return chunk * ((len - 1) / chunk + 1)
     }
 
+    /**
+     * The padded length earlier Amethyst builds produced: the spec formula evaluated in Float/Int
+     * math, which rounds `len - 1` to the nearest Float above 2^24 and so sometimes jumps a bucket.
+     * Only [unpad] uses it, to keep decrypting payloads those builds encrypted. Replicates the old
+     * code exactly, Int overflow included; lengths that never fit an Int could not have been padded.
+     */
+    private fun legacyCalcPaddedLen(len: Long): Long {
+        if (len <= 0 || len > Int.MAX_VALUE) return -1
+        val intLen = len.toInt()
+        if (intLen <= 32) return 32
+        val nextPower = 1 shl (floor(log2(intLen - 1f)) + 1).toInt()
+        val chunk = if (nextPower <= 256) 32 else nextPower / 8
+        return (chunk * (floor((intLen - 1f) / chunk).toInt() + 1)).toLong()
+    }
+
     fun pad(plaintext: String): ByteArray {
         val unpadded = plaintext.encodeToByteArray()
         val unpaddedLen = unpadded.size
@@ -204,7 +221,10 @@ class Nip44v2(
                 "Invalid size $unpaddedLenExt not between $extMinPlaintextSize and $extMaxPlaintextSize"
             }
 
-            check(padded.size.toLong() == 6 + calcPaddedLen(unpaddedLenExt)) {
+            // Encryption is spec-exact, but earlier Amethyst builds padded with float math that picks a
+            // bigger bucket for some lengths above 2^24; accept those so old payloads still decrypt.
+            val paddedLen = padded.size.toLong() - 6
+            check(paddedLen == calcPaddedLen(unpaddedLenExt) || paddedLen == legacyCalcPaddedLen(unpaddedLenExt)) {
                 "Invalid padding ${calcPaddedLen(unpaddedLenExt)} != $unpaddedLenExt"
             }
 

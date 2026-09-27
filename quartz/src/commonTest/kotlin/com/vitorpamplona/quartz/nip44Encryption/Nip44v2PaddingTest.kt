@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip44Encryption
 
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlin.io.encoding.Base64
+import kotlin.math.floor
+import kotlin.math.log2
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -85,6 +87,48 @@ class Nip44v2PaddingTest {
         padded2[4] = 0xff.toByte()
         padded2[5] = 0xff.toByte()
         assertFailsWith<IllegalStateException> { nip44v2.unpad(padded2) }
+    }
+
+    @Test
+    fun unpadAcceptsLegacyFloatPaddingAbove2e24() {
+        // Earlier builds padded 20,971,520 bytes to 25,165,824 (float bucket) instead of 20,971,520.
+        val len = 20_971_520
+        val legacy = extendedPadded(len, paddedLen = 25_165_824)
+        assertEquals(len, nip44v2.unpad(legacy).length)
+
+        // The spec-correct padding for the same length still decodes.
+        assertEquals(len, nip44v2.unpad(extendedPadded(len, paddedLen = 20_971_520)).length)
+
+        // Neither bucket: still rejected.
+        assertFailsWith<IllegalStateException> { nip44v2.unpad(extendedPadded(len, paddedLen = 20_971_520 + 32)) }
+    }
+
+    @Test
+    fun unpadAcceptsLegacyFloatPaddingAt2e25() {
+        // 2^25 - 1 rounds up to 2^25 as a Float, so the old math jumped to the 2^26 power bucket.
+        val len = 1 shl 25
+        assertEquals(41_943_040, extendedPaddedLenLegacy(len))
+        assertEquals(len, nip44v2.unpad(extendedPadded(len, paddedLen = 41_943_040)).length)
+    }
+
+    // The old Float formula, verbatim, as an independent oracle for the crafted arrays above.
+    private fun extendedPaddedLenLegacy(len: Int): Int {
+        val nextPower = 1 shl (floor(log2(len - 1f)) + 1).toInt()
+        val chunk = if (nextPower <= 256) 32 else nextPower / 8
+        return chunk * (floor((len - 1f) / chunk).toInt() + 1)
+    }
+
+    private fun extendedPadded(
+        len: Int,
+        paddedLen: Int,
+    ): ByteArray {
+        val padded = ByteArray(6 + paddedLen)
+        padded[2] = (len shr 24).toByte()
+        padded[3] = (len shr 16).toByte()
+        padded[4] = (len shr 8).toByte()
+        padded[5] = (len and 0xFF).toByte()
+        padded.fill('a'.code.toByte(), 6, 6 + len)
+        return padded
     }
 
     @Test

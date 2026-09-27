@@ -24,7 +24,10 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
@@ -144,6 +147,10 @@ object RelayGroupModerationCommands {
      * list, so this reads the group's current kind-39005 and re-submits it with REF added (at the
      * end) or removed — every other pin, `e` or `a`, kept verbatim. REF is an event (`note1`,
      * `nevent1`, 64-hex → `e`) or an addressable event (`naddr1`, `kind:pubkey:d` → `a`).
+     *
+     * The 39005 is only trusted when signed by the relay's NIP-11 `self` key, and a read that did not
+     * reach EOSE aborts instead of being taken as "no pins" — publishing a full replacement from a
+     * failed read would wipe every existing pin.
      */
     suspend fun pin(
         dataDir: DataDir,
@@ -162,14 +169,23 @@ object RelayGroupModerationCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val filter = Filter(kinds = listOf(GroupPinnedEvent.KIND), tags = mapOf("d" to listOf(groupId)), limit = 1)
+            // NIP-29: the 39005 is "signed by the relay keypair … as stated by the NIP-11 `self`".
+            // Without that key we cannot tell the real list from a forged one, so do not rewrite it.
+            val relayKey =
+                ctx.relayInfo(relay)?.self
+                    ?: return Output.error("no_relay_key", "could not read the NIP-11 self pubkey of ${relay.url}; refusing to rewrite the pin list")
+            val filter =
+                Filter(
+                    kinds = listOf(GroupPinnedEvent.KIND),
+                    authors = listOf(relayKey),
+                    tags = mapOf("d" to listOf(groupId)),
+                    limit = 1,
+                )
             val current =
-                ctx
-                    .drain(mapOf(relay to listOf(filter)), 6_000)
-                    .map { it.second }
-                    .filterIsInstance<GroupPinnedEvent>()
-                    .maxByOrNull { it.createdAt }
-                    ?.pins() ?: emptyList()
+                when (val read = readPinList(ctx.drainResult(mapOf(relay to listOf(filter)), 6_000), relay, relayKey)) {
+                    is PinListRead.Found -> read.pins
+                    is PinListRead.Failed -> return Output.error(read.code, read.detail)
+                }
 
             val updated =
                 if (pin) {
@@ -192,6 +208,42 @@ object RelayGroupModerationCommands {
                 ),
             )
             return 0
+        }
+    }
+
+    /** The outcome of reading a group's current kind-39005 before a read-merge-write. */
+    internal sealed interface PinListRead {
+        class Found(
+            val pins: List<GroupPin>,
+        ) : PinListRead
+
+        class Failed(
+            val code: String,
+            val detail: String,
+        ) : PinListRead
+    }
+
+    /**
+     * The latest relay-signed 39005 in [result]; an empty list only when the relay answered (EOSE)
+     * and had none. A timeout maps to `timeout` (exit 124), any other unanswered read to
+     * `fetch_failed` (exit 1).
+     */
+    internal fun readPinList(
+        result: FetchAllResult,
+        relay: NormalizedRelayUrl,
+        relayKey: HexKey,
+    ): PinListRead {
+        val latest =
+            result.events
+                .map { it.second }
+                .filterIsInstance<GroupPinnedEvent>()
+                .filter { it.pubKey == relayKey }
+                .maxByOrNull { it.createdAt }
+        return when {
+            latest != null -> PinListRead.Found(latest.pins())
+            result.anyRelayServed -> PinListRead.Found(emptyList())
+            relay in result.stalled -> PinListRead.Failed("timeout", "${relay.url} did not answer the pin-list read; refusing to overwrite pins")
+            else -> PinListRead.Failed("fetch_failed", "could not read the pin list from ${relay.url} (${result.doneReasons[relay] ?: "no answer"}); refusing to overwrite pins")
         }
     }
 

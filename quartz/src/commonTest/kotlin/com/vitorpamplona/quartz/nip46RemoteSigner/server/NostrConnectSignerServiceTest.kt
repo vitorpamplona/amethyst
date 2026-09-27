@@ -344,6 +344,36 @@ class NostrConnectSignerServiceTest {
         }
 
     @Test
+    fun aRateLimitedRequestThatWasAnsweredIsRecordedAsHandled() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val handled = mutableListOf<String>()
+            val service =
+                NostrConnectSignerService(
+                    client,
+                    signer,
+                    processor,
+                    setOf(relay),
+                    maxRequestsPerWindow = 1,
+                    rateWindowSeconds = 3600,
+                    onHandledId = { handled.add(it) },
+                )
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            val serviced = request(BunkerRequestConnect(id = "ok", remoteKey = serverKey, secret = "s"))
+            val limited = request(BunkerRequestConnect(id = "limited", remoteKey = serverKey, secret = "s"))
+            client.deliver(serviced)
+            client.deliver(limited)
+
+            // The client was told `limited` failed; a relay replaying it after a restart must not get it
+            // serviced, so its id is persisted just like a serviced one.
+            assertEquals(listOf(serviced.id, limited.id), handled)
+        }
+
+    @Test
     fun signEventWithoutParamsGetsAnErrorReply() =
         runTest {
             val client = LoopbackClient()

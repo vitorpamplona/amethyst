@@ -115,6 +115,14 @@ object RelayGroupMigrationDetector {
  * [com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCacheStore].
  */
 object RelayGroupAdminCache {
+    /**
+     * Most groups kept. The cache is device-global (shared by every account on the device) and is
+     * filled for any group whose migration bar is shown, so it is bounded by recency of change instead
+     * of by one account's kind-10009: past the cap, the entry changed least recently is dropped.
+     */
+    const val MAX_GROUPS = 256
+
+    // Insertion order = recency of change (oldest first), so the cap trims from the front.
     private val admins = MutableStateFlow<Map<String, Set<HexKey>>>(emptyMap())
 
     val flow: StateFlow<Map<String, Set<HexKey>>> = admins
@@ -131,13 +139,40 @@ object RelayGroupAdminCache {
         while (true) {
             val current = admins.value
             if (current[key] == pubkeys) return
-            if (admins.compareAndSet(current, current + (key to pubkeys))) return
+            val next = LinkedHashMap(current)
+            next.remove(key)
+            next[key] = pubkeys
+            if (admins.compareAndSet(current, next.trimToCap())) return
         }
     }
 
-    /** Replaces the whole map — used to restore from disk at startup. */
-    fun restore(map: Map<String, Set<HexKey>>) {
-        admins.value = map
+    /**
+     * Merges the map read from disk at startup UNDER the in-memory one: the disk read is async, so a
+     * [remember] that landed before it completed is newer and wins. Returns the merged map.
+     */
+    fun restore(fromDisk: Map<String, Set<HexKey>>): Map<String, Set<HexKey>> {
+        while (true) {
+            val current = admins.value
+            val merged = LinkedHashMap<String, Set<HexKey>>(fromDisk.size + current.size)
+            merged.putAll(fromDisk)
+            for ((key, value) in current) {
+                merged.remove(key)
+                merged[key] = value
+            }
+            val next = merged.trimToCap()
+            if (admins.compareAndSet(current, next)) return next
+        }
+    }
+
+    private fun LinkedHashMap<String, Set<HexKey>>.trimToCap(): LinkedHashMap<String, Set<HexKey>> {
+        if (size > MAX_GROUPS) {
+            val oldestFirst = entries.iterator()
+            repeat(size - MAX_GROUPS) {
+                oldestFirst.next()
+                oldestFirst.remove()
+            }
+        }
+        return this
     }
 
     /** Test-only: clears the cache so unit tests don't leak state into each other. */

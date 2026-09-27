@@ -599,7 +599,7 @@ screen speaks.
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
 | `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
-| `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list is kept. |
+| `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
 
 ### Buzz workspaces (block/buzz — NIP-29 dialect)
 

@@ -360,8 +360,11 @@ suspend fun INostrClient.fetchAllPages(
 
         // Ids delivered on this page, kept only while an EOSE `"auth"` hint could still make
         // the relay re-serve the page after AUTH (at most once per walk), so the re-served
-        // copies of events already handed to [onEvent] are dropped. Reader-thread only.
-        val pageIds: HashSet<HexKey>? = if (pendingOnAuthRequired && !authRetried) HashSet() else null
+        // copies of events already handed to [onEvent] are dropped. The hint is rare, so the
+        // page only appends to a plain list (no hashing, no per-entry node); the lookup set
+        // is built from it once, on the first re-served event. Both are reader-thread only.
+        val pageIds: ArrayList<HexKey>? = if (pendingOnAuthRequired && !authRetried) ArrayList() else null
+        var reServedIds: HashSet<HexKey>? = null
         var reServing = false
 
         try {
@@ -393,7 +396,10 @@ suspend fun INostrClient.fetchAllPages(
                             if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
                             // The relay re-serving this page after an EOSE "auth" hint: skip what
                             // this page already delivered.
-                            if (reServing && pageIds != null && event.id in pageIds) return
+                            if (reServing && pageIds != null) {
+                                val seenOnPage = reServedIds ?: HashSet(pageIds).also { reServedIds = it }
+                                if (event.id in seenOnPage) return
+                            }
 
                             // Count this event against every active filter it satisfies
                             // (one event can match more than one). Only a non-search filter
@@ -421,7 +427,10 @@ suspend fun INostrClient.fetchAllPages(
                             if (atLeastOne) {
                                 onEvent(event)
                                 delivered++
-                                pageIds?.add(event.id)
+                                if (pageIds != null) {
+                                    val seenOnPage = reServedIds
+                                    if (seenOnPage != null) seenOnPage.add(event.id) else pageIds.add(event.id)
+                                }
                                 // Track the oldest advancing second and the ids delivered
                                 // in it — that becomes the next boundary and its dedup set.
                                 if (advancesCursor) {
