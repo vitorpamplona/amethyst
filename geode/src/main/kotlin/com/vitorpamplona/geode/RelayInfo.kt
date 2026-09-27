@@ -62,9 +62,10 @@ data class RelayInfo(
          *  - 62 NIP-62 right to vanish
          *  - 77 NIP-77 negentropy reconciliation
          *  - 86 NIP-86 relay management API (when admin pubkeys configured)
+         *  - FE NIP-FE relay commands over HTTP (KtorRelay; `[http].enabled`)
          */
         val SUPPORTED_NIPS: List<String> =
-            listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86")
+            listOf("1", "9", "11", "40", "42", "45", "50", "62", "77", "86", "FE")
 
         /** Pre-built default for `RelayEngine(url = ...)` — advertises the supported NIPs. */
         fun default(url: NormalizedRelayUrl): RelayInfo =

@@ -21,13 +21,16 @@
 package com.vitorpamplona.quartz.nipFERelayOverHttp
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelayServerBase
 import com.vitorpamplona.quartz.nip01Core.relay.server.SessionSink
 import com.vitorpamplona.quartz.nip98HttpAuth.Nip98AuthVerifier
+import com.vitorpamplona.quartz.nip98HttpAuth.tags.UrlTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
@@ -36,18 +39,19 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
-/** One NIP-FE request as the handler needs it. The host routes by [HttpRelayCommand.path]. */
+/** One NIP-FE request as the handler needs it: a POST to the relay's URL that is not a NIP-86 call. */
 class HttpRelayRequest(
-    val command: HttpRelayCommand,
     /** The `Authorization` header as sent, or null. */
     val authorization: String?,
     /**
-     * The body. Hosts bound the read at [HttpRelayHandler.maxBodyBytes]: the engine measures a
-     * frame in characters, and a UTF-8 character takes up to three bytes.
+     * The body: one client frame. Hosts bound the read at [HttpRelayHandler.maxBodyBytes]: the
+     * engine measures a frame in characters, and a UTF-8 character takes up to three bytes.
      */
     val body: ByteArray,
 )
@@ -82,16 +86,17 @@ interface HttpRelayLines {
 class HttpRelayReaderStalled : Exception("the client stopped reading the answer")
 
 /**
- * NIP-FE: one relay command per HTTP request, run on its own [RelayServerBase] session, so every
- * limit and policy the socket applies applies here, and answered with the relay's own frames up to
- * the command's answer, without their subscription id. Nothing outlives the request.
+ * NIP-FE: one relay command per HTTP request. The body is the frame a client would send on the
+ * websocket; it runs on its own [RelayServerBase] session, fed as socket text, so every limit and
+ * policy the socket applies applies here; and the answer is the session's frames as the socket
+ * would carry them, up to the one that ends the command's answer. Nothing outlives the request.
  *
  * Admission (how many requests a client may run) is the host's: gate before calling [handle], so a
  * refused request does not spend a NIP-98 token the handler would have verified.
  */
 class HttpRelayHandler(
     private val server: RelayServerBase,
-    /** The prefixes a NIP-98 `u` may carry (the relay's http origin, its .onion), asked per request; never from the request. */
+    /** The URLs a NIP-98 `u` may name (the relay's http URL, its .onion), asked per request; never from the request. */
     private val origins: () -> List<String>,
     /** How long one answer may run, first byte to last. [Duration.INFINITE] turns the deadline off. */
     private val deadline: Duration = DEFAULT_DEADLINE,
@@ -107,36 +112,35 @@ class HttpRelayHandler(
         request: HttpRelayRequest,
         response: HttpRelayResponse,
     ) {
-        val command = request.command
         val max = server.limits?.maxMessageLength
+        val tooLarge = "invalid: the command exceeds $max characters"
         maxBodyBytes?.let { cap ->
-            if (request.body.size > cap) {
-                return response.single(HttpRelayStatus.PAYLOAD_TOO_LARGE, closed("invalid: the command exceeds $max characters"))
-            }
+            if (request.body.size > cap) return response.single(HttpRelayStatus.PAYLOAD_TOO_LARGE, notice(tooLarge))
         }
-        val frame =
-            command.frameOf(request.body.decodeToString())
-                ?: return response.single(HttpRelayStatus.BAD_REQUEST, closed("invalid: the body is not ${command.name}'s arguments"))
+        val text = request.body.decodeToString()
         // Characters, as the engine's own limit counts them.
-        if (max != null && frame.length > max) {
-            return response.single(HttpRelayStatus.PAYLOAD_TOO_LARGE, closed("invalid: the command exceeds $max characters"))
-        }
+        if (max != null && text.length > max) return response.single(HttpRelayStatus.PAYLOAD_TOO_LARGE, notice(tooLarge))
+
+        // Parsed here, once: to refuse the commands HTTP does not carry, to know what ends the
+        // answer and how to refuse it, and for the session, which still runs the policies that
+        // judge the raw text before it dispatches the parsed command.
+        val cmd =
+            try {
+                OptimizedJsonMapper.fromJsonToCommand(text)
+            } catch (_: Exception) {
+                null
+            }
+        val command =
+            cmd?.let { HttpRelayCommand.of(it) }
+                ?: return response.single(HttpRelayStatus.BAD_REQUEST, notice("invalid: the body is not one REQ, COUNT or EVENT frame"))
+
         val signedIn =
             when (val proof = proofOf(request)) {
-                is Proof.Anonymous -> {
-                    null
-                }
-
-                is Proof.Signed -> {
-                    proof.pubkey
-                }
-
-                is Proof.Refused -> {
-                    val reason = proof.reason
-                    return response.single(HttpRelayStatus.forReason(reason), closed(reason))
-                }
+                is Proof.Anonymous -> null
+                is Proof.Signed -> proof.pubkey
+                is Proof.Refused -> return response.single(HttpRelayStatus.forReason(proof.reason), HttpRelayCommand.refusal(cmd, proof.reason).toJson())
             }
-        exchange(frame, command, signedIn, response)
+        exchange(text, cmd, command, signedIn, response)
     }
 
     /** A frame as queued: its wire text, its type when the engine built one, and whether it ends the answer. */
@@ -147,7 +151,8 @@ class HttpRelayHandler(
     )
 
     private suspend fun exchange(
-        frame: String,
+        text: String,
+        cmd: Command,
         command: HttpRelayCommand,
         signedIn: HexKey?,
         response: HttpRelayResponse,
@@ -165,23 +170,25 @@ class HttpRelayHandler(
             }
         }
 
-        fun fail(reason: String) = offer(Frame(closed(reason), ClosedMessage(HttpRelayCommand.SUB_ID, reason), last = true))
+        fun refusal(reason: String) = HttpRelayCommand.refusal(cmd, reason)
+
+        fun fail(reason: String) = refusal(reason).let { offer(Frame(it.toJson(), it, last = true)) }
         val sink =
             object : SessionSink {
                 override fun message(message: Message) {
                     // The challenge every connection opens with; this one proves its key by NIP-98 instead.
                     if (message is AuthMessage) return
-                    offer(Frame(withoutSubId(message.toJson()), message, command.ends(message)))
+                    offer(Frame(message.toJson(), message, command.ends(message)))
                 }
 
-                override fun raw(json: String) = offer(Frame(withoutSubId(json), null, last = false))
+                override fun raw(json: String) = offer(Frame(json, null, last = false))
             }
         val session =
             launch {
                 try {
                     server.serve(sink) { session ->
                         val refused = signedIn?.let { session.authenticateByTransport(it) }
-                        if (refused != null) fail(refused) else session.receive(frame)
+                        if (refused != null) fail(refused) else session.receive(text, cmd)
                         ended.await()
                     }
                 } catch (e: CancellationException) {
@@ -202,7 +209,7 @@ class HttpRelayHandler(
             val status = HttpRelayStatus.of(first?.message)
             when {
                 first == null -> {
-                    single(HttpRelayStatus.UNAVAILABLE, closed("error: no answer within $deadline"))
+                    single(HttpRelayStatus.UNAVAILABLE, notice("error: no answer within $deadline"))
                 }
 
                 first.last || status != HttpRelayStatus.OK -> {
@@ -214,8 +221,8 @@ class HttpRelayHandler(
                         bounded(due) {
                             when (drain(first, frames, due)) {
                                 Ending.ANSWERED -> {}
-                                Ending.DEADLINE -> line(closed("error: the answer ran past $deadline"))
-                                Ending.CUT -> line(closed("error: slow reader, over $maxQueuedFrames frames waiting"))
+                                Ending.DEADLINE -> line(refusal("error: the answer ran past $deadline").toJson())
+                                Ending.CUT -> line(refusal("error: slow reader, over $maxQueuedFrames frames waiting").toJson())
                             }
                             flush()
                         }
@@ -284,56 +291,55 @@ class HttpRelayHandler(
     }
 
     /**
-     * A NIP-98 header, checked against every address in [origins], so a token signed at the .onion
-     * verifies there. It must bind the body's hash: it authorizes one command.
-     * Another scheme (a proxy's Basic, a client's Bearer) is not addressed to the relay and is ignored.
+     * A NIP-98 header. Its `u` may name any address in [origins], with or without the trailing
+     * slash, so a token signed at the .onion verifies there; the token is checked once, against the
+     * address it names. It must bind the body's hash and be within 60 seconds of now; within that
+     * window it may come again for the same body. Another scheme (a proxy's Basic, a client's
+     * Bearer) is not addressed to the relay and is ignored.
      */
     private suspend fun proofOf(request: HttpRelayRequest): Proof {
         val header = request.authorization?.trim().orEmpty()
         val scheme = Nip98AuthVerifier.SCHEME
         if (!header.regionMatches(0, scheme, 0, scheme.length, ignoreCase = true)) return Proof.Anonymous
         val token = scheme + header.substring(scheme.length).trim()
-        val accepted = origins().map { it.trimEnd('/') + request.command.path }
-        if (accepted.isEmpty()) return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("this relay names no url to sign"))
+        val addresses = origins()
+        if (addresses.isEmpty()) return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("this relay names no url to sign"))
+        // The address the token names, when it is one of ours; otherwise the first, and the
+        // verifier refuses the mismatch (or whatever else is wrong with the token) itself.
+        val signed = claimedUrl(token)
+        val url = signed?.takeIf { u -> addresses.any { it.trimEnd('/') == u.trimEnd('/') } } ?: addresses.first()
         // A fresh verifier each time: it remembers the tokens it accepts, and a NIP-FE token is not
-        // single-use. A request can land on any instance, which no one process's memory can follow,
-        // and the body's hash already limits a captured token to the command it signs, in its window.
-        var refusal: Nip98AuthVerifier.Result.Malformed? = null
-        for (url in accepted) {
-            when (val r = Nip98AuthVerifier().verify(token, "POST", url, request.body)) {
-                is Nip98AuthVerifier.Result.Verified -> return Proof.Signed(r.pubkey)
-                is Nip98AuthVerifier.Result.Missing -> return Proof.Anonymous
-                is Nip98AuthVerifier.Result.Malformed -> refusal = refusal ?: r
-            }
+        // single-use. Every command it can sign is idempotent, so a repeat only repeats a read or
+        // re-sends an event the relay has, and a client may retry without signing again.
+        return when (val r = Nip98AuthVerifier(toleranceSeconds = TOKEN_WINDOW_SECONDS).verify(token, "POST", url, request.body)) {
+            is Nip98AuthVerifier.Result.Verified -> Proof.Signed(r.pubkey)
+            is Nip98AuthVerifier.Result.Missing -> Proof.Anonymous
+            is Nip98AuthVerifier.Result.Malformed -> Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("NIP-98 ${r.reason}"))
         }
-        return Proof.Refused(MachineReadablePrefix.AUTH_REQUIRED.format("NIP-98 ${refusal?.reason}"))
     }
 
-    private fun closed(reason: String) = withoutSubId(ClosedMessage(HttpRelayCommand.SUB_ID, reason).toJson())
+    /** The `u` a NIP-98 [token] names, or null when it does not decode; the verifier then says why. */
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun claimedUrl(token: String): String? =
+        try {
+            val event = OptimizedJsonMapper.fromJson(Base64.decode(token.substring(Nip98AuthVerifier.SCHEME.length)).decodeToString())
+            event.tags.firstNotNullOfOrNull(UrlTag::parse)
+        } catch (_: Exception) {
+            null
+        }
 
     companion object {
+        /** A `NOTICE` line: how a request is refused before its command runs (400, 413, 429, 503), by the handler or its host. */
+        fun notice(reason: String) = NoticeMessage(reason).toJson()
+
         val DEFAULT_DEADLINE = 30_000.milliseconds
 
         /** The websocket's slow-consumer bound in the reference relays. */
         const val DEFAULT_MAX_QUEUED_FRAMES = 8192
 
         val DEFAULT_TAIL_GRACE = 5_000.milliseconds
+
+        /** NIP-FE: a token is good for 60 seconds either side of its `created_at`. */
+        const val TOKEN_WINDOW_SECONDS = 60L
     }
-}
-
-/** The frames that carry a subscription id in the engine; NIP-FE sends them without it. */
-private val SUBSCRIPTION_FRAMES = setOf("EVENT", "EOSE", "CLOSED", "COUNT")
-
-private const val SUB_ID_FIELD = ",\"" + HttpRelayCommand.SUB_ID + "\""
-
-/**
- * [frame] as NIP-FE sends it: the engine's frame with its `"http"` subscription id taken out,
- * `["EVENT","http",{…}]` → `["EVENT",{…}]`, `["EOSE","http"]` → `["EOSE"]`. Other frames pass as they are.
- */
-internal fun withoutSubId(frame: String): String {
-    if (!frame.startsWith("[\"")) return frame
-    val verbEnd = frame.indexOf('"', 2)
-    if (verbEnd < 0 || frame.substring(2, verbEnd) !in SUBSCRIPTION_FRAMES) return frame
-    if (!frame.startsWith(SUB_ID_FIELD, verbEnd + 1)) return frame
-    return frame.substring(0, verbEnd + 1) + frame.substring(verbEnd + 1 + SUB_ID_FIELD.length)
 }

@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.CordnGroupRoomCompose
@@ -123,6 +124,11 @@ fun CordnGroupListScreen(
                         modifier = Modifier.size(24.dp),
                     )
                 }
+            }
+        },
+        bottomBar = {
+            AppBottomBar(Route.CordnGroupList, nav, accountViewModel) { route ->
+                if (route != Route.CordnGroupList) nav.navBottomBar(route)
             }
         },
     ) { padding ->

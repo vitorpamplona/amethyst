@@ -137,7 +137,7 @@ fun ConcordHomeScreen(
             )
         },
         bottomBar = {
-            // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+            // Hidden on in-app pushes (AppBottomBar renders only when nav.showsBottomBar()),
             // so the same screen works both as a pushed destination and a bottom-nav tab.
             AppBottomBar(Route.Concords, nav, accountViewModel) { route ->
                 if (route != Route.Concords) nav.navBottomBar(route)

@@ -210,7 +210,7 @@ private fun DrawerContentBody(
     accountViewModel: AccountViewModel,
 ) {
     val onClickUser = {
-        nav.nav(routeFor(accountViewModel.userProfile()))
+        nav.navDrawer(routeFor(accountViewModel.userProfile()))
         nav.closeDrawer()
     }
 
@@ -641,24 +641,32 @@ fun ListContent(
     }
 }
 
-/** The Create section's rows — composer entry points, none of which is a catalog destination. */
+/**
+ * The Create section's rows — composer entry points, none of which is a catalog destination. They
+ * open as plain pushes rather than through [INav.navDrawer]: those screens host no bottom bar, and
+ * a drawer stamp would tell FabBottomBarPadding that one is showing.
+ */
 @Composable
 private fun CreateRows(nav: INav) {
-    NavigationRow(
+    IconRow(
         title = Res.string.share_hls_video,
         icon = MaterialSymbols.SettingsInputAntenna,
         tint = MaterialTheme.colorScheme.onBackground,
-        nav = nav,
-        route = Route.NewHlsVideo,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(Route.NewHlsVideo)
+        },
     )
 
     if (isDebug) {
-        NavigationRow(
+        IconRow(
             title = Res.string.route_chess,
             icon = MaterialSymbols.ChessKnight,
             tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Chess,
+            onClick = {
+                nav.closeDrawer()
+                nav.nav(Route.Chess)
+            },
         )
     }
 }
@@ -742,7 +750,7 @@ private fun ScheduledPostsNavigationRow(
         badgeCount = pendingCount,
         onClick = {
             nav.closeDrawer()
-            nav.nav { def.resolveRoute(accountViewModel) }
+            nav.navDrawer { def.resolveRoute(accountViewModel) }
         },
     )
 }
@@ -850,7 +858,7 @@ fun NavigationRow(
         tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(route)
+            nav.navDrawer(route)
         },
     )
 }
@@ -871,7 +879,7 @@ fun NavigationRow(
         tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(computeRoute)
+            nav.navDrawer(computeRoute)
         },
     )
 }
@@ -890,7 +898,7 @@ fun NavigationRow(
         tint = tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(route)
+            nav.navDrawer(route)
         },
     )
 }
@@ -909,7 +917,7 @@ fun NavigationRow(
         tint = tint,
         onClick = {
             nav.closeDrawer()
-            nav.nav(computeRoute)
+            nav.navDrawer(computeRoute)
         },
     )
 }

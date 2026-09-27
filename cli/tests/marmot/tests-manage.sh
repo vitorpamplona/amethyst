@@ -301,3 +301,39 @@ test_30_wn_commit_after_app_data_update() {
     record_result "$id" fail "amy applied the rename but cannot decrypt wn's next message (forked)"
   fi
 }
+
+# A reaction White Noise can SEE. Test 09 only proves wn's raw event log holds a
+# kind:7; the app renders the materialized timeline, which attaches a reaction
+# to its target by its own rules. An amy reaction the raw log kept but the
+# timeline dropped read as a pass there and as "no reaction" in the app.
+test_31_reaction_materializes_on_wn() {
+  banner "Test 31 — amy's reaction shows in wn's materialized timeline"
+  local id="31 reaction materialized"
+
+  local out gid mls_gid b_gid anchor_id
+  out=$(amy_json marmot group create --name "Interop-31") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  wn_b messages send "$mls_gid" "31 anchor" >/dev/null 2>&1 || true
+  amy_json marmot await message "$gid" --match "31 anchor" --timeout 90 >/dev/null || { record_result "$id" fail "amy never got the anchor"; return; }
+  anchor_id=$(amy_json marmot message list "$gid" --limit 50 2>/dev/null | jq_list messages \
+                | jq -r 'select((.plaintext // .content // "") == "31 anchor") | (.message_id // .event_id)' | head -n 1)
+  [[ -n "$anchor_id" && "$anchor_id" != "null" ]] || { record_result "$id" fail "no anchor id in amy's log"; return; }
+  amy_json marmot message react "$gid" "$anchor_id" "🍕" >/dev/null || { record_result "$id" fail "amy react failed"; return; }
+
+  local deadline=$(( $(date +%s) + 90 )) tl=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    tl=$(wn_b --json messages timeline list "$mls_gid" --limit 50 2>/dev/null || true)
+    if printf '%s' "$tl" | grep -q '🍕'; then
+      record_result "$id" pass; return
+    fi
+    sleep 3
+  done
+  printf '%s\n' "$tl" >> "$LOG_FILE"
+  record_result "$id" fail "wn's timeline never showed amy's reaction (timeline JSON in the log)"
+}

@@ -28,6 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 class StaticConfigTest {
     @Test
@@ -219,7 +220,7 @@ class StaticConfigTest {
 
         assertEquals("wss://relay.example.com/", c.info.relay_url)
         assertEquals("Example", c.info.name)
-        assertEquals(listOf(1, 9, 11, 42), c.info.supported_nips)
+        assertEquals(listOf("1", "9", "11", "42"), c.info.supported_nips)
 
         assertEquals("127.0.0.1", c.network.host)
         assertEquals(9988, c.network.port)
@@ -247,6 +248,56 @@ class StaticConfigTest {
             )
         val info = c.resolveInfo()
         assertEquals(listOf("1", "11", "42"), info.document.supported_nips)
+    }
+
+    @Test
+    fun supportedNipsTakeHexNamedNipsAsStrings() {
+        val c =
+            StaticConfig.fromToml(
+                """
+                [info]
+                supported_nips = [1, 11, "FE"]
+                """.trimIndent(),
+            )
+        assertEquals(listOf("1", "11", "FE"), c.resolveInfo().document.supported_nips)
+    }
+
+    @Test
+    fun httpCommandsAreOnByDefaultAndAdvertised() {
+        val c = StaticConfig.fromToml("")
+        assertTrue(c.http.enabled)
+        assertNotNull(c.http.toSettings())
+        assertTrue("FE" in c.resolveInfo().document.supported_nips!!)
+    }
+
+    @Test
+    fun httpSectionParsesAndTurningItOffDropsFE() {
+        val c =
+            StaticConfig.fromToml(
+                """
+                [http]
+                enabled = false
+                max_concurrent_requests = 10
+                max_requests_per_client = 2
+                deadline_seconds = 5
+                alternate_urls = ["ws://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion/"]
+                trusted_proxies = ["127.0.0.1"]
+                """.trimIndent(),
+            )
+        assertEquals(10, c.http.max_concurrent_requests)
+        assertEquals(2, c.http.max_requests_per_client)
+        assertEquals(listOf("127.0.0.1"), c.http.trusted_proxies)
+        assertEquals(null, c.http.toSettings())
+        assertTrue("FE" !in c.resolveInfo().document.supported_nips!!)
+        val on = c.copy(http = c.http.copy(enabled = true)).http.toSettings()!!
+        assertEquals(5.seconds, on.deadline)
+        assertEquals(1, on.alternateUrls.size)
+    }
+
+    @Test
+    fun httpLimitsMustBeSane() {
+        assertFailsWith<IllegalArgumentException> { StaticConfig.fromToml("[http]\ndeadline_seconds = 0").validate() }
+        assertFailsWith<IllegalArgumentException> { StaticConfig.fromToml("[http]\nmax_requests_per_client = -1").validate() }
     }
 
     @Test

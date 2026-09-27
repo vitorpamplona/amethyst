@@ -26,16 +26,35 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.amethyst.service.cast.summarizeCastFormat
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlin.math.ceil
 
 internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+
+// Describes the video being played, for the Cast failure messages. Uses the highest-resolution
+// track in the group: that is the one an adaptive stream will climb to, so it is the one a
+// receiver with limited codec or resolution support will choke on.
+@OptIn(UnstableApi::class)
+internal fun castFormatSummary(group: Tracks.Group?): String? {
+    if (group == null) return null
+    var best: Format? = null
+    for (i in 0 until group.length) {
+        val format = group.getTrackFormat(i)
+        if (best == null || format.width.toLong() * format.height > best!!.width.toLong() * best!!.height) {
+            best = format
+        }
+    }
+    val format = best ?: return null
+    return summarizeCastFormat(format.sampleMimeType, format.codecs, format.width, format.height)
+}
 
 /**
  * Constrains adaptive selection to the area the player is actually drawn in.

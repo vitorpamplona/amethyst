@@ -36,7 +36,9 @@ import androidx.navigation.NavHostController
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
+import com.vitorpamplona.amethyst.ui.navigation.DRAWER_ROOT_KEY
 import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
+import com.vitorpamplona.amethyst.ui.navigation.isDrawerRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -89,6 +91,31 @@ class Nav(
         }
     }
 
+    override fun navDrawer(route: Route) {
+        navigationScope.launch {
+            ime.settle()
+            navigateFromDrawer(route)
+        }
+    }
+
+    override fun navDrawer(computeRoute: suspend () -> Route?) {
+        navigationScope.launch {
+            ime.settle()
+            computeRoute()?.let { navigateFromDrawer(it) }
+        }
+    }
+
+    /**
+     * Same push as [nav], then stamps the new entry [DRAWER_ROOT_KEY] so [showsBottomBar] keeps
+     * the bottom bar on it. The stamp lands in the same frame as the navigate, before the entry
+     * composes, the way [navBottomBar] stamps its tab roots.
+     */
+    private fun navigateFromDrawer(route: Route) {
+        if (getRouteWithArguments(route::class, controller) == route) return
+        controller.navigate(route)
+        controller.currentBackStackEntry?.savedStateHandle?.set(DRAWER_ROOT_KEY, true)
+    }
+
     override fun newStack(route: Route) {
         navigationScope.launch {
             ime.settle()
@@ -107,9 +134,10 @@ class Nav(
 
             // A nav-bar tap asks for a tab, never for whatever the user pushed on top of one. Drop
             // those pushes first, and without saving them, so the restoreState below can never hand
-            // a deep stack back. On phones this is always a no-op — AppBottomBar hides itself off
-            // tab roots, so the bar is only ever tapped from one — but the large-screen rail stays
-            // on screen the whole time and is routinely tapped from three screens deep.
+            // a deep stack back. On phones the bar shows only on tab roots and on screens opened
+            // from the drawer (dropped here, back to the tab they were opened over), but the
+            // large-screen rail stays on screen the whole time and is routinely tapped from three
+            // screens deep.
             popPushesAboveTabRoot()
 
             // Dropping those pushes is often the whole job — re-tapping the tab the user is inside,
@@ -211,11 +239,24 @@ class Nav(
         // Outside a NavHost destination (shell chrome, drawer) the current owner
         // is the account-scoped ViewModelStoreOwner, not an entry; fall back to
         // the globally-current entry so those callers keep their prior behavior.
-        val entry =
-            (LocalViewModelStoreOwner.current as? NavBackStackEntry)
-                ?: controller.currentBackStackEntry
-                ?: return false
+        val entry = ownEntry() ?: return false
+        return canPop(entry)
+    }
 
+    @Composable
+    override fun showsBottomBar(): Boolean {
+        val entry = ownEntry() ?: return true
+        // Drawer destinations can pop (they sit on whatever screen the drawer was opened over),
+        // but they are top-level sections, so they keep the bar the tab roots have.
+        return entry.isDrawerRoot() || !canPop(entry)
+    }
+
+    @Composable
+    private fun ownEntry(): NavBackStackEntry? =
+        (LocalViewModelStoreOwner.current as? NavBackStackEntry)
+            ?: controller.currentBackStackEntry
+
+    private fun canPop(entry: NavBackStackEntry): Boolean {
         // Hidden on tab roots (reached via the bottom nav) and on Home (the
         // graph's start destination): nothing sits below either that a back
         // arrow could return to. Every other entry is a push on top of Home,

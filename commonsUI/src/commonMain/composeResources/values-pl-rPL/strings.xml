@@ -669,6 +669,24 @@
     <string name="mark_all_known_as_read">Zaznacz wszystkie popularne jako przeczytane</string>
     <string name="mark_all_new_as_read">Zaznacz wszystkie nowe jako przeczytane</string>
     <string name="mark_all_as_read">Zaznacz wszystkie jako przeczytane</string>
+    <string name="account_backup_headline">Twój tajny klucz to Twoje konto</string>
+    <string name="account_backup_intro">Każdy, kto go posiada, może publikować posty pod twoim imieniem. Jeśli go zgubisz, nikt nie będzie w stanie go odzyskać, nawet Amethyst.</string>
+    <string name="account_backup_tap_to_reveal">Kliknij, aby przejrzeć</string>
+    <string name="account_backup_write_down_hint">Zapisz to w tej kolejności. Można używać zarówno wielkich, jak i małych liter.</string>
+    <string name="account_backup_qr_code">Kod QR</string>
+    <string name="account_backup_encrypted_title">Kopia chroniona hasłem</string>
+    <string name="account_backup_encrypted_password">Hasło</string>
+    <string name="account_backup_encrypted_body">Ncryptsec1… który działa tylko z twoim hasłem.</string>
+    <string name="account_backup_password_min_length">Co najmniej %1$d znaków</string>
+    <string name="account_backup_encrypted_repeat_password">Powtórz hasło</string>
+    <string name="account_backup_encrypted_password_mismatch">Hasła nie są identyczne</string>
+    <string name="account_backup_encrypt">Zaszyfruj klucz</string>
+    <string name="account_backup_encrypting">Szyfrowanie…</string>
+    <string name="account_backup_encrypted_saved_hint">Można je bezpiecznie przechowywać w menedżerze haseł lub notatkach w chmurze: nie da się ich otworzyć bez hasła, a zapomnianego hasła nie da się odzyskać.</string>
+    <string name="account_backup_encrypt_again">Użyj innego hasła</string>
+    <string name="account_backup_tip_storage">Schowaj ten zapis w miejscu, które znasz tylko ty, albo zapisz klucz w menedżerze haseł.</string>
+    <string name="account_backup_tip_trust">Nigdy nie wpisuj swojego klucza na stronach internetowych ani w aplikacjach, do których nie masz zaufania.</string>
+    <string name="account_backup_tip_developers">Programiści serwisu Amethyst nigdy nie poproszą Cię o podanie klucza.</string>
     <string name="backup_keys_nudge_title">Kopia zapasowa kluczy</string>
     <string name="backup_keys_nudge_body">Twój tajny klucz jest jedynym sposobem na dostęp do tego konta. Jeśli go zgubisz, nigdy nie będzie można go odzyskać. Zapisz go w bezpiecznym miejscu.</string>
     <string name="backup_keys_nudge_backup_now">Utwórz kopię zapasową</string>
@@ -5476,6 +5494,12 @@
     <string name="cordn_health_unknown">Jeszcze się nie skontaktowano</string>
     <string name="cordn_health_ok">Odpowiedź</string>
     <string name="cordn_health_down">Brak odpowiedzi</string>
+    <plurals name="cordn_health_failures">
+        <item quantity="one">%1$d nieudana próba z rzędu</item>
+        <item quantity="few">%1$d nieudanych prób z rzędu</item>
+        <item quantity="many">%1$d nieudanych prób z rzędu</item>
+        <item quantity="other">%1$d nieudane próby z rzędu</item>
+    </plurals>
     <string name="cordn_link_explainer">Wklej link „cordn1…” udostępniony przez inną osobę, aby sprawdzić, który koordynator prowadzi tę grupę oraz jakie informacje o tobie uzyskałby ten operator, gdybyś do niej dołączył.</string>
     <string name="cordn_link_field">cordn1…</string>
     <string name="cordn_link_inspect">Zbadaj</string>
@@ -5564,6 +5588,12 @@
     <string name="cordn_migrate_import">Przynieś grupy tutaj</string>
     <string name="cordn_migrate_importing">Pobieranie…</string>
     <string name="cordn_migrate_replaces_warning">Powyższe dane zastępują wszelkie grupy „cordn” już istniejące w tym telefonie. Nie można ich połączyć.</string>
+    <plurals name="cordn_migrate_done">
+        <item quantity="one">%1$d grupa przeniesiona</item>
+        <item quantity="few">%1$d grup przeniesionych</item>
+        <item quantity="many">%1$d grup przeniesiono</item>
+        <item quantity="other">%1$d grupy przeniesione</item>
+    </plurals>
     <string name="cordn_migrate_no_groups">Na tym urządzeniu nie ma żadnych grup cordn, które można by przenieść.</string>
     <string name="cordn_migrate_no_server">Najpierw skonfiguruj serwer multimediów — zaszyfrowane dokumenty muszą gdzieś się znaleźć, dopóki drugi telefon je pobierze.</string>
     <string name="cordn_migrate_exposure_title">Co opuszcza to urządzenie</string>
