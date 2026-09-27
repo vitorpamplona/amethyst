@@ -51,17 +51,30 @@ object RejectionReason {
     const val DUPLICATE = "duplicate: already have this event"
 
     /**
-     * A replaceable or addressable event that a stored version already supersedes
-     * (newer `created_at`, or the same `created_at` and a lower id). Nothing is
-     * written, and — like [DUPLICATE] — the relay answers `OK true`: NIP-01 keeps
-     * `duplicate:` as the machine-readable prefix for "already covered", and that
-     * is what nostr-rs-relay sends here too, so clients that retry on anything
-     * else (MDK's `wn`) settle instead of re-offering the same event forever.
+     * No longer produced by any store: a superseded version is [REPLACED]. Its
+     * `duplicate:` prefix made the relay answer `OK true` for an event that was
+     * never written, which NIP-01 reserves for an accepted one.
      */
+    @Deprecated(
+        "A stale replaceable/addressable version is not written, so it is REPLACED (OK false), not a duplicate.",
+        ReplaceWith("RejectionReason.REPLACED", "com.vitorpamplona.quartz.nip01Core.store.RejectionReason"),
+    )
     const val SUPERSEDED = "duplicate: a newer version of this replaceable event is already stored"
     const val EXPIRED = "blocked: Cannot insert an expired event"
     const val DELETED = "blocked: a deletion event exists"
     const val VANISHED = "blocked: a request to vanish event exists"
+
+    /**
+     * A replaceable or addressable event that a stored version already supersedes
+     * (newer `created_at`, or the same `created_at` and a lower id): STORE-W01/W02.
+     * Nothing is written, so the relay answers `OK false` — NIP-01's third field is
+     * `true` only when the event was accepted, and acking it would tell the client
+     * its event is on this relay when no REQ will ever return it. `replaced:` is
+     * also strfry's answer (`false, "replaced: have newer event"`), and it does not
+     * misname the case the way `duplicate:` would: the relay does not have THIS
+     * event, it has a newer one. A client should not retry it; nothing a retry can
+     * change. A byte-for-byte re-offer of the stored version is [DUPLICATE] instead.
+     */
     const val REPLACED = "replaced: a newer version exists"
     const val INSERT_FAILED = "error: insert failed"
 }

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -151,12 +152,12 @@ class NostrServerTest {
 
     /**
      * STORE-W01: a replaceable event older than the stored version is not written,
-     * and the relay acknowledges it the way nostr-rs-relay does — `OK true` with the
-     * NIP-01 `duplicate:` prefix — rather than leaking the unique-index text as a
-     * rejection the client would keep retrying.
+     * so the relay answers `OK false` with `replaced:` (strfry's answer) — never
+     * `OK true`, which NIP-01 keeps for an accepted event, and never the raw
+     * unique-index text, which no client can classify.
      */
     @Test
-    fun olderReplaceableIsAcknowledgedAsDuplicateNotRejected() =
+    fun olderReplaceableIsRejectedAsReplaced() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
@@ -172,8 +173,8 @@ class NostrServerTest {
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
             assertTrue(okMessages[0].contains(",true,"))
-            assertTrue(okMessages[1].contains(",true,"), "older version must be acked, got ${okMessages[1]}")
-            assertTrue(okMessages[1].contains("duplicate:"), "older version must carry the duplicate: prefix")
+            assertTrue(okMessages[1].contains(",false,"), "older version was not stored, so it must not be acked, got ${okMessages[1]}")
+            assertTrue(okMessages[1].contains(RejectionReason.PREFIX_REPLACED), "older version must carry the replaced: prefix")
 
             val stored = store.query<Event>(Filter(kinds = listOf(0)))
             assertEquals(listOf(newer.id), stored.map { it.id }, "the newer version stays the only stored one")
@@ -183,12 +184,13 @@ class NostrServerTest {
 
     /**
      * STORE-W02 tie: two addressable events with the same `d` tag and the same
-     * `created_at` — the lower id wins, the other is acknowledged as superseded.
-     * This is the exact shape MDK's `wn keys publish` produces when it mints a
-     * second KeyPackage within the same second as the first.
+     * `created_at` — the lower id wins, the other is rejected as `replaced:`. This
+     * is the shape MDK's `wn keys publish` produces when it mints a second
+     * KeyPackage within the same second as the first; the loser is not stored,
+     * so the client must learn that rather than be told it was accepted.
      */
     @Test
-    fun sameSecondAddressableTieLoserIsAcknowledgedAsDuplicate() =
+    fun sameSecondAddressableTieLoserIsRejectedAsReplaced() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
@@ -204,8 +206,8 @@ class NostrServerTest {
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
-            assertTrue(okMessages[1].contains(",true,"), "tie loser must be acked, got ${okMessages[1]}")
-            assertTrue(okMessages[1].contains("duplicate:"))
+            assertTrue(okMessages[1].contains(",false,"), "tie loser was not stored, so it must not be acked, got ${okMessages[1]}")
+            assertTrue(okMessages[1].contains(RejectionReason.PREFIX_REPLACED))
 
             val stored = store.query<Event>(Filter(kinds = listOf(30443)))
             assertEquals(listOf(lowerId.id), stored.map { it.id }, "lowest id wins the tie")
