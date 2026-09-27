@@ -1,6 +1,6 @@
 ---
 name: feed-patterns
-description: Feed composition and data-access layer patterns in Amethyst. Use when adding or modifying a feed (home, profile, hashtag, bookmarks, notifications, DMs, communities), working with the shared `FeedFilter` / `AdditiveFeedFilter` / `ChangesFlowFilter` / `FeedContentState` in `commons/.../feeds/`, the Android-only `AdditiveComplexFeedFilter` / `FilterByListParams` in `amethyst/.../ui/dal/`, or extending the `FeedViewModel` family in `commons/.../viewmodels/`. Covers how feeds scan `LocalCache`, react to changes, apply ordering, and render through Compose.
+description: Feed composition and data-access layer patterns in Amethyst. Use when adding or modifying a feed (home, profile, hashtag, bookmarks, notifications, DMs, communities), working with the shared `FeedFilter` / `AdditiveFeedFilter` / `ChangesFlowFilter` / `FeedContentState` in `commons/.../feeds/`, `FilterByListParams` in `commons/.../feeds/`, the Android-only `AdditiveComplexFeedFilter` in `amethyst/.../ui/dal/`, or extending the `FeedViewModel` family in `commons/.../viewmodels/`. Covers how feeds scan `LocalCache`, react to changes, apply ordering, and render through Compose.
 ---
 
 # Feed Patterns
@@ -101,7 +101,7 @@ Concrete filters (Home, Hashtag, Profile, Bookmark, Notifications, Communities, 
 ## Filter Sharing (Android vs Desktop)
 
 - The filter **base classes** (`FeedFilter`, `AdditiveFeedFilter`, `ChangesFlowFilter`) and feed state (`FeedContentState`) are in `commons/.../feeds/` — **shared**. ViewModels are in `commons/.../viewmodels/` — **shared**.
-- The **concrete** filters are platform-local: Android's in `amethyst/.../ui/screen/loggedIn/*/dal/`, Desktop's in `desktopApp/.../feeds/`. `amethyst/.../ui/dal/` keeps Android-only helpers (`AdditiveComplexFeedFilter`, `FilterByListParams`, `DefaultFeedOrder`) plus back-compat typealiases.
+- The **concrete** filters are platform-local: Android's in `amethyst/.../ui/screen/loggedIn/*/dal/`, Desktop's in `desktopApp/.../feeds/`. `amethyst/.../ui/dal/` keeps Android-only helpers (`AdditiveComplexFeedFilter`, `DefaultFeedOrder`) plus back-compat typealiases; `FilterByListParams` is shared, in `commons/.../feeds/`.
 - When porting a feed, share the concrete filter only if both platforms need identical inclusion rules.
 
 ## Gotchas

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.vitorpamplona.amethyst.commons.qrcode.ScanFrame
+import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.math.max
 

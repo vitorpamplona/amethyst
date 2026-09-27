@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityEntry
+import com.vitorpamplona.amethyst.commons.nip46RemoteSigner.ui.Nip46ActivityCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_background_hint

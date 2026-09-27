@@ -26,7 +26,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

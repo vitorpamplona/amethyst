@@ -12,7 +12,7 @@ Step-by-step recipe for composing a new feed. Assume the feed shows `Note`s filt
 | The feed is a simple list that changes frequently (e.g. bookmarks, lists) | `FeedFilter<Note>` + `ListChangeFeedViewModel` |
 | The feed is a DM thread | `ChatroomFeedViewModel` (already provides filter machinery) |
 
-The bases live in `commons/src/commonMain/.../commons/ui/feeds/`; `AdditiveComplexFeedFilter` and the `FilterByListParams` / `DefaultFeedOrder` helpers in `amethyst/src/main/java/.../ui/dal/`.
+The bases live in `commons/src/commonMain/.../commons/ui/feeds/`; `AdditiveComplexFeedFilter` and the `DefaultFeedOrder` helper in `amethyst/src/main/java/.../ui/dal/`; `FilterByListParams` in `commons/src/commonMain/.../commons/feeds/`.
 
 ## 2. Write the Filter
 

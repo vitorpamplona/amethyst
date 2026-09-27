@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.mediaServers.MediaServerHealthProbe
+import com.vitorpamplona.amethyst.commons.mediaServers.ServerHealth
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder

@@ -23,6 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 import android.graphics.Bitmap
 import android.graphics.Rect
 import androidx.camera.core.ImageProxy
+import com.vitorpamplona.amethyst.commons.qrcode.ScanBounds
+import com.vitorpamplona.amethyst.commons.qrcode.ScanPoint
+import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.quartz.utils.Log
 import zxingcpp.BarcodeReader
 

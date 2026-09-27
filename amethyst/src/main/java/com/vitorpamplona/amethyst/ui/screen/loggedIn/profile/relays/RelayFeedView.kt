@@ -44,6 +44,8 @@ import com.vitorpamplona.amethyst.commons.resources.public_notif_section_explain
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.viewmodels.MyRelayInfo
+import com.vitorpamplona.amethyst.commons.viewmodels.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory

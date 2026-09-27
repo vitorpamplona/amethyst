@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.badges.BadgesFilterAssembl
 import com.vitorpamplona.amethyst.commons.relayClient.badges.profile.ProfileBadgesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.calendars.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RelayGroupOpenThreadsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.communities.list.CommunitiesListFilterAssembler
@@ -85,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStateFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatHistoryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatTailFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsHistoryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelayFilterAssembler

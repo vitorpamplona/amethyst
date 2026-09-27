@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsByAuthors
+import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.filterRelayGroupsDiscovery
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.relayGroupChannelsByRelay
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo

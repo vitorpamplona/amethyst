@@ -1553,3 +1553,136 @@ A transitive-blocker sweep of the 1,385 files under `amethyst/…/ui/`, after th
     same gap.
   - Adding the module costs about +28 MB to the unpacked runtime. That is a packaging
     call, left for the Desktop phase.
+
+## 2026-09-27 (later) — the unblocked `ui/` files, and one chess view model
+
+### How the list was rebuilt
+
+The morning's "80 files have no blocker" count was not saved, so it was recomputed
+with a script (not committed; it is a one-off) that:
+
+- indexes every public top-level declaration in `amethyst/src/{main,play,fdroid}`;
+- follows each file's imports **and** its same-package references (the
+  under-count this plan's header warns about);
+- marks a file blocked by `android.*`, a non-KMP `androidx.*`, `R.`/`BuildConfig`,
+  or a library the shared modules lack;
+- takes the fixpoint, then assigns each survivor a module and source set from what it
+  (transitively) uses: Compose UI, `Res` or a `commonsUI` symbol means `commonsUI`;
+  `java.*`/JVM tokens or a jvmAndroid-only `commons` symbol means `jvmAndroid`.
+
+It found **96** such files under `ui/` (142 app-wide). 68 of the `ui/` ones moved
+(plus `service/uploads/SuspendableConfirmation`, which one of them needs), 3 were app
+copies of existing `commons` code and were deleted, and 25 stay, for the reasons below.
+
+### Moved
+
+**To `commons`**
+
+| Package | Files |
+|---|---|
+| `model` | `ConcordLastRead`, `MarmotGroupLastRead`, `RelayGroupLastRead` (beside `privateChatLastReadRoute`) |
+| `model/chats` | `ConcordServerRoomNote`, `RelayGroupServerRoomNote`, `HistoryDateFormat` (jvmAndroid) |
+| `model/composer` | `NewMessageTagger`, `DraftTagState`, `IExpiration`, `SplitConversor`, `PreviewState` (jvmAndroid) |
+| `model/navigation` | `RouteTextArgs`, `ShareToDMRouteRewriter` |
+| `model/buzz` | `AgentWork` |
+| `model/nip29RelayGroups` | `GroupDiscoveryConstraintResolver` (was `dal/GroupDiscoveryConstraint.kt`; renamed because the matcher it resolves to already owns that file name here) |
+| `model/nip47WalletConnect` | `TransactionRowLabels` |
+| `model/nip72Communities` | `CommunityRulesLookup` |
+| `model/nip92IMeta` | `ImetaContent` |
+| `relayClient/chatrooms` (new) | the five `Filter*` functions of the chatroom-list assembler |
+| `relayClient/channel/relayGroup` | `RelayGroupOpenThreadsFilterAssembler`, `RelayGroupsDiscoveryFilter` |
+| `relayClient/hashtag` (new), `relayClient/geocaches`, `relayClient/polls/results` | `FilterPostsByHashtags`, `GeocacheListingKinds`, `RelayPollResponseLoader` |
+| `feeds` | `FilterByListParams`, `UserFeedState`, `StringFeedState`, `SupportedContent` |
+| `viewmodels` | `RelayFeedViewModel`, `UserExternalIdentitiesViewModel` |
+| `service/upload` | `MediaUploadTracker`, `HlsPublishState`, `SuspendableConfirmation` |
+| `audio`, `music`, `qrcode`, `cashu`, `mediaServers`, `tor` | `PitchShifter`; `MusicFormatting`; `ScanResult` + `StructuredAppendAccumulator`; `CashuWalletDiscovery` (jvmAndroid); `MediaServerHealth` (jvmAndroid); `TorDialogViewModel` |
+| `util` | `DebouncedPublisher`, `TimeFormatUtils` + `ZapFormatterNoDecimals` (jvmAndroid) |
+
+**To `commonsUI`**
+
+| Package | Files |
+|---|---|
+| `ui/components` | `InformationDialog`, `UrlPreviewCard` (both jvmAndroid) |
+| `ui/text` | `MentionPreservingInputTransformation` (its `MENTION_REGEX` is now public; the app's `UrlUserTagOutputTransformation` shares it) |
+| `ui/navigation/navs` | `ObservableNav`, `TwoPaneNav`, `ShareToDMNav` |
+| `ui/navigation/bottombars`, `ui/insets`, `ui/theme`, `ui/settings` (new) | `TabReselectCoordinator`; `KeyboardState`; `ColorSchemePreview` (jvmAndroid: it formats with `String.format`); `SettingsCatalog` |
+| feature `ui/` packages | `account/ui/login/LoginErrorManager`, `clink/ui/ClinkBudgetDialog`, `cordn/ui/{BusyLabel,SettingsFormBlock}`, `nip46RemoteSigner/ui/Nip46ActivityUi`, `nip52Calendar/ui/CalendarsViewMode`, `nip53LiveActivities/ui/StreamingStatusFlags`, `nip72ModCommunities/ui/CommunityRulesViolationBanner`, `relays/ui/SubPurposeLabels`, `service/upload/ui/StrippingFailureDialog` |
+| `audio` | `VoicePreset`, `RecordingIndicators` (jvmAndroid) |
+
+Most files moved unchanged apart from the package line. The exceptions, all for
+`commonMain`:
+
+- `formatTrackDuration` went from `internal` to public so the app's music renderers can
+  still call it. Its `"%d:%02d".format(...)` is now a `padStart`, because `String.format`
+  is JVM-only.
+- `RouteTextArgs`: `codePointAt` / `Character.charCount` → the commons
+  `codePointAtKmp` / `codePointCharCount`, which mirror the JDK ones.
+- `TorDialogViewModel`: `Integer.parseInt` → `toInt()`. Both throw
+  `NumberFormatException` on the JVM.
+- `UserExternalIdentitiesViewModel.Factory`: `create(Class<T>)` → the multiplatform
+  `create(KClass<T>, CreationExtras)`, as `PollResultsViewModel` already does.
+- `Dispatchers.IO` needs `import kotlinx.coroutines.IO` in common code, and
+  `RelayFeedViewModel`'s `javaClass.simpleName` log is now `this::class.simpleName`.
+
+A tooling note for the next sweep: stripping comments with a regex before scanning
+identifiers breaks on a `/*` inside a string (`"image/*"`), which swallows code up to the
+next `*/`. Tokenize strings and comments together. And scan bodies, not only imports,
+for inline `android.`/`java.` names and `javaClass`.
+
+Eleven pure unit tests moved with their code to `commons` jvmTest (NewMessageTagger key
+parsing, PitchShifter, RouteTextArgs, ShareToDMRouteRewriter, DebouncedPublisher,
+RelayGroupDiscoveryConstraint, StructuredAppendAccumulator, SupportedContent,
+TransactionRowLabels, CommunityRulesLookup) and `commonsUI` jvmTest
+(SettingsCatalogFilter).
+
+**Deleted app copies** (callers repointed at the `commons` original):
+`ui/note/PubKeyFormatter.kt` (the commons `toShortDisplay` is the same with an optional
+`prefixSize`), `ui/note/ZapFormatter.kt` (same functions; the commons `TenGiga`…`OneKilo`
+constants became public for `ZapFormatterNoDecimals`), and the
+`EqualImmutableLists.kt` re-export shim.
+
+### `ChessViewModelNew` and `DesktopChessViewModelNew` → one `ChessViewModel`
+
+The two classes forwarded the same ~40 members to `ChessLobbyLogic`; only the
+adapters and the scope differed. `commons/nip64Chess/ChessViewModel` now takes the
+adapters, the polling config, the dismissed-games store and an optional scope:
+
+- **Android:** `ChessViewModelFactory` builds it with the Android adapters and no
+  scope, so it runs on `viewModelScope` and stops polling in `onCleared`, as before.
+  The factory lost its unused `Application` parameter. The `viewModel(key = …)` key
+  changed from `ChessViewModelNew-<pubkey>` to `ChessViewModel-<pubkey>`, in all four
+  call sites together, so the lobby, game screen, note card and home button still share
+  one instance.
+- **Desktop:** `ChessScreen` builds it with the Desktop adapters and its
+  `rememberCoroutineScope()`, which is what `DesktopChessViewModelNew` did. The
+  `UserMetadataCache` that class owned is now remembered next to it in `ChessScreen`.
+  The debug `instanceId` (`System.identityHashCode`) went, since it isn't KMP.
+
+### Left in the app on purpose (unblocked, but not shared code)
+
+- `ui/screen/AndroidFeedViewModel`, `threadview/dal/AndroidLevelFeedViewModel`: they
+  exist to bind Android's process-wide `LocalCache`. Desktop still runs
+  `DesktopLocalCache` (Wave 2 part B).
+- `ui/navigation/ShareIntentRouting`: names the manifest's `<activity-alias>`es.
+- `ui/screen/loggedIn/embed/*` (9 files) and `browser/EmbeddedPageRequests`: bridges
+  for the Android WebView host. No other front end embeds a WebView.
+- `workouts/health/HealthConnectRationaleScreen`: Health Connect is Android-only.
+- `ui/tor/{TorManager,TorBackend,ArtiNative,ArtiGuardState,TorConnectionFailureDialog}`:
+  the in-process Arti client. Desktop drives an external Tor.
+- `ui/tor/TorServiceStatus`: `commons/tor` has its own copy that differs on purpose
+  (Android has `Bootstrapping`, Desktop has `Error`). Merging them changes every `when`
+  over it on both platforms; that's a design step, not a move.
+- `ui/actions/UrlUserTagOutputTransformation`: calls `android.util.Patterns.WEB_URL`
+  by its fully-qualified name, which an import-based scan cannot see. It needs a KMP URL
+  matcher (commons `richtext` has one) before it can move.
+- `nests/room/{lifecycle/NestRoomEventCollectors, participants/RoomParticipantActions,
+  stage/SpeakerReactionOverlay, stage/SpeakerZapOverlay}`: `internal` pieces of the
+  Android audio-room screen, which Desktop doesn't have.
+
+### Unblocked outside `ui/` (not moved in this round)
+
+The same sweep finds 46 more movable files outside `ui/`. The notable groups are
+`service/resourceusage` (9, the resource-usage ledger), `service/uploads/blossom`
+(`InFlightInvoices`, `PaymentPromptLedger`, the `bud10` resolver trio),
+`service/playback` leaves (`HlsLivenessCache`, `SessionRegistry`,
+`WssDataStreamCollector`, the player control buttons), and `model/MediaAspectRatioCache`.
