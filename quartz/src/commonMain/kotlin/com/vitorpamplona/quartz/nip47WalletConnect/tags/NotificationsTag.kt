@@ -36,6 +36,8 @@ class NotificationsTag {
             return tag.drop(1)
         }
 
-        fun assemble(types: List<String>) = arrayOf(TAG_NAME, *types.toTypedArray())
+        // NIP-47 carries the list as ONE space-separated value (eg. ["notifications", "a b c"]);
+        // [parse] still tolerates wallets that spread it across several elements.
+        fun assemble(types: List<String>) = arrayOf(TAG_NAME, types.joinToString(" "))
     }
 }

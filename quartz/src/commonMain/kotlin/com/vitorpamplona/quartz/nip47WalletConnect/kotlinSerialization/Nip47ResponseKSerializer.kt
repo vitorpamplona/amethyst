@@ -237,6 +237,9 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
             }
             result.metadata?.let { put("metadata", anyToJsonElement(it)) }
             result.lud16?.let { put("lud16", it) }
+            result.extensions?.let { extensions ->
+                put("extensions", buildJsonArray { extensions.forEach { add(it) } })
+            }
         }
 
     private fun serializeGetBudgetResult(result: GetBudgetSuccessResponse.GetBudgetResult): JsonObject =
@@ -528,6 +531,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
                     notifications = it.stringListOrNull("notifications"),
                     metadata = it.anyMapOrNull("metadata"),
                     lud16 = it.stringOrNull("lud16"),
+                    extensions = it.stringListOrNull("extensions"),
                 )
             },
         )

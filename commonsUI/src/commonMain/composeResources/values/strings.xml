@@ -4630,6 +4630,7 @@
     <string name="podcast_trailer_upload_hint">Short audio or video preview</string>
     <string name="podcast_value_error_title">Value-for-Value error</string>
     <string name="podcast_value_keysend_requires_nwc">Connect a Nostr Wallet Connect wallet to send to keysend (node) recipients.</string>
+    <string name="podcast_value_keysend_not_supported">Your wallet does not support keysend, so node recipients were skipped.</string>
     <string name="podcast_value_no_recipients">This podcast has no payable value recipients.</string>
     <string name="podcast_value_stream_requires_wallet">Connect a Nostr Wallet Connect or debit wallet to stream sats while listening.</string>
     <string name="podcast_value_user_no_lnaddress">This user has no Lightning address</string>
@@ -5280,6 +5281,7 @@
     </plurals>
     <string name="wallet_transactions_load_failed">Could not load transactions</string>
     <string name="wallet_transactions_load_more_failed">Could not load more transactions</string>
+    <string name="wallet_transactions_not_supported">Your wallet does not offer transaction history</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts or profiles have reports from your follows</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
     <string name="web_bookmark_add_title">Add Web Bookmark</string>

@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentSentNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
 
 /**
  * High-level NIP-47 Wallet Connect server (wallet service).
@@ -86,18 +87,30 @@ class Nip47Server(
     val useNip44: Boolean = false,
     val encryptionSchemes: List<String>? = null,
     val notificationTypes: List<String>? = null,
+    /**
+     * NWC extension specs to advertise. Null derives them from [capabilities] and
+     * [notificationTypes] via [ExtensionsTag.forCapabilities] (eg. `pay_keysend` → `04`).
+     */
+    extensions: List<String>? = null,
 ) {
+    val extensions: List<String> = extensions ?: ExtensionsTag.forCapabilities(capabilities, notificationTypes)
+
     // --- Info event ---
 
     /**
      * Builds a kind 13194 info event advertising wallet capabilities.
      * Sign and publish this event to your relay.
+     *
+     * The content lists every method in [capabilities], including extension methods
+     * (NIP-47: they SHOULD also be in the content), and the `extensions` tag lists
+     * [extensions] as one space-separated value when there are any.
      */
     fun buildInfoEvent() =
         NwcInfoEvent.build(
             capabilities = capabilities,
             encryptionSchemes = encryptionSchemes,
             notificationTypes = notificationTypes,
+            extensions = extensions.ifEmpty { null },
         )
 
     // --- Request parsing ---
@@ -188,20 +201,22 @@ class Nip47Server(
         methods: List<String>? = null,
         notifications: List<String>? = null,
         lud16: String? = null,
+        extensions: List<String>? = this.extensions.ifEmpty { null },
     ): NwcResponseEvent =
         buildResponse(
             GetInfoSuccessResponse(
                 GetInfoSuccessResponse.GetInfoResult(
-                    alias,
-                    color,
-                    pubkey,
-                    network,
-                    blockHeight,
-                    blockHash,
-                    methods,
-                    notifications,
-                    null,
-                    lud16,
+                    alias = alias,
+                    color = color,
+                    pubkey = pubkey,
+                    network = network,
+                    block_height = blockHeight,
+                    block_hash = blockHash,
+                    methods = methods,
+                    notifications = notifications,
+                    metadata = null,
+                    lud16 = lud16,
+                    extensions = extensions,
                 ),
             ),
             requestEvent,

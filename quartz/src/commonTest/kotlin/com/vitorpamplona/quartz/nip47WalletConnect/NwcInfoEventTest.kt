@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.utils.DeterministicSigner
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlin.test.Test
@@ -152,5 +154,89 @@ class NwcInfoEventTest {
 
         assertTrue(event.encryptionSchemes().isEmpty())
         assertTrue(event.notificationTypes().isEmpty())
+    }
+
+    private fun info(
+        content: String,
+        vararg tags: Array<String>,
+    ) = NwcInfoEvent("id", "pub", 0L, arrayOf(*tags), content, "sig")
+
+    @Test
+    fun testSupportsNotificationsViaExtensionsTag() {
+        // Post-extensions NIP-47: notifications moved to NWC-02, advertised as `02`,
+        // and the content no longer carries the `notifications` token.
+        val event = info("pay_invoice get_balance get_info", arrayOf("encryption", "nip44_v2"), arrayOf("extensions", "02 03 04"))
+        assertTrue(event.supportsNotifications())
+    }
+
+    @Test
+    fun testSupportsNotificationsViaNotificationsTag() {
+        val event = info("pay_invoice get_info", arrayOf("notifications", "payment_received payment_sent"))
+        assertTrue(event.supportsNotifications())
+    }
+
+    @Test
+    fun testNoNotificationsWhenExtensionsLackIt() {
+        val event = info("pay_invoice get_info", arrayOf("extensions", "04 05"))
+        assertFalse(event.supportsNotifications())
+    }
+
+    @Test
+    fun testBuildEmitsSingleValueTags() {
+        val template =
+            NwcInfoEvent.build(
+                listOf("pay_invoice", "get_info"),
+                encryptionSchemes = listOf("nip44_v2", "nip04"),
+                notificationTypes = listOf("payment_received", "payment_sent"),
+                extensions = listOf("02", "05"),
+            )
+        val event = signer.sign<NwcInfoEvent>(template)
+
+        assertTrue(event.tags.any { it.contentEquals(arrayOf("encryption", "nip44_v2 nip04")) })
+        assertTrue(event.tags.any { it.contentEquals(arrayOf("notifications", "payment_received payment_sent")) })
+        assertTrue(event.tags.any { it.contentEquals(arrayOf("extensions", "02 05")) })
+        assertEquals(listOf("02", "05"), event.extensions())
+        assertEquals(listOf("nip44_v2", "nip04"), event.encryptionSchemes())
+    }
+
+    @Test
+    fun testMayUseExtensionMethod() {
+        // Listed in content: allowed regardless of the extensions tag.
+        assertTrue(info("pay_invoice list_transactions", arrayOf("extensions", "02")).mayUseExtensionMethod(NwcMethod.LIST_TRANSACTIONS))
+        // Advertised extension: allowed even if the content forgot the method.
+        assertTrue(info("pay_invoice", arrayOf("extensions", "05")).mayUseExtensionMethod(NwcMethod.LIST_TRANSACTIONS))
+        // New-spec wallet that advertises extensions but neither 05 nor the method: skip.
+        assertFalse(info("pay_invoice get_info", arrayOf("extensions", "02 03")).mayUseExtensionMethod(NwcMethod.LIST_TRANSACTIONS))
+        assertFalse(info("pay_invoice get_info", arrayOf("extensions", "02 03")).mayUseExtensionMethod(NwcMethod.PAY_KEYSEND))
+        // Legacy wallet with no extensions tag: keep sending, it answers NOT_IMPLEMENTED if needed.
+        assertTrue(info("pay_invoice get_info").mayUseExtensionMethod(NwcMethod.LIST_TRANSACTIONS))
+        assertTrue(info("pay_invoice get_info").mayUseExtensionMethod(NwcMethod.PAY_KEYSEND))
+        // Core methods always pass.
+        assertTrue(info("get_info", arrayOf("extensions", "02")).mayUseExtensionMethod(NwcMethod.PAY_INVOICE))
+    }
+
+    @Test
+    fun testServerAdvertisesExtensions() {
+        val server =
+            Nip47Server(
+                signer = NostrSignerInternal(signer.key),
+                capabilities = listOf(NwcMethod.PAY_INVOICE, NwcMethod.GET_INFO, NwcMethod.PAY_KEYSEND, NwcMethod.LIST_TRANSACTIONS, NwcMethod.MAKE_HOLD_INVOICE),
+                notificationTypes = listOf("payment_received"),
+            )
+        val event = signer.sign<NwcInfoEvent>(server.buildInfoEvent())
+
+        assertEquals(listOf("02", "03", "04", "05"), event.extensions())
+        assertTrue(event.tags.any { it.contentEquals(arrayOf("extensions", "02 03 04 05")) })
+        // Extension methods SHOULD also be listed in the content.
+        assertTrue(event.supportsMethod(NwcMethod.PAY_KEYSEND))
+        assertTrue(event.supportsMethod(NwcMethod.LIST_TRANSACTIONS))
+        assertTrue(event.supportsNotifications())
+    }
+
+    @Test
+    fun testServerWithCoreMethodsOnlyHasNoExtensionsTag() {
+        val server = Nip47Server(signer = NostrSignerInternal(signer.key), capabilities = listOf(NwcMethod.PAY_INVOICE, NwcMethod.GET_INFO))
+        val event = signer.sign<NwcInfoEvent>(server.buildInfoEvent())
+        assertFalse(event.advertisesExtensions())
     }
 }
