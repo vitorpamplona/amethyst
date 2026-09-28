@@ -687,10 +687,13 @@ class CashuMintOperations(
         val ys = ArrayList<String>(proofs.size)
         proofs.forEach { proof ->
             val y = Bdhke.hashToCurveCompressed(proof.secret.encodeToByteArray()).toHexKey()
-            // putIfAbsent: two proofs can legitimately carry the same secret
+            // First one wins: two proofs can legitimately carry the same secret
             // (a duplicated kind:7375 the dedup pass hasn't retired yet), and
             // they map to the same state anyway.
-            if (secretByY.putIfAbsent(y, proof.secret) == null) ys.add(y)
+            if (y !in secretByY) {
+                secretByY[y] = proof.secret
+                ys.add(y)
+            }
         }
 
         val out = HashMap<String, ProofState>(secretByY.size)
