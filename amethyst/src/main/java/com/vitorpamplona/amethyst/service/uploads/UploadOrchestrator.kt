@@ -25,6 +25,7 @@ import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.model.mediaServers.blossomUploadOrder
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.blossom_payment_required
@@ -200,6 +201,32 @@ class UploadOrchestrator {
             if (e is CancellationException) throw e
             error(Res.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    /**
+     * Tries [selected], then the rest of the servers the picker offered (see
+     * [blossomUploadOrder]) until one stores the blob. A failure that no other server would
+     * fix (a read-only login) stops at once. When every server fails, the error shown is the
+     * selected server's: that is the one the user chose and will recognize.
+     */
+    private suspend fun uploadBlossomWithFallback(
+        selected: ServerName,
+        account: Account,
+        uploadTo: suspend (serverBaseUrl: String) -> UploadingFinalState,
+    ): UploadingFinalState {
+        val order = blossomUploadOrder(selected, account.blossomServers.hostNameFlow.value)
+        var firstError: UploadingState.Error? = null
+        for (server in order) {
+            when (val result = uploadTo(server.baseUrl)) {
+                is UploadingState.Finished -> return result
+                is UploadingState.Error -> {
+                    if (firstError == null) firstError = result
+                    if (result.errorResource == Res.string.login_with_a_private_key_to_be_able_to_upload) return result
+                    Log.w("UploadOrchestrator", "Upload to ${server.baseUrl} failed, trying the next server")
+                }
+            }
+        }
+        return firstError!!.also { updateState(0.0, it) }
     }
 
     private suspend fun uploadBlossom(
@@ -482,7 +509,10 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                 ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
-                ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
+                ServerType.Blossom ->
+                    uploadBlossomWithFallback(server, account) { baseUrl ->
+                        uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, baseUrl, null, null, account, forcedSigner, context)
+                    }
             }
         } finally {
             deleteTempUri(finalUri, uri)
@@ -527,7 +557,12 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
                 ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
-                ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                // The same encrypted file goes to every server tried, so its key, nonce and
+                // hash stay valid whichever one ends up holding it.
+                ServerType.Blossom ->
+                    uploadBlossomWithFallback(server, account) { baseUrl ->
+                        uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                    }
             }
         } finally {
             deleteTempUri(encrypted.uri, uri)

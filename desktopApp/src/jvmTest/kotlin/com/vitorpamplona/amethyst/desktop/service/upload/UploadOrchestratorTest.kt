@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -218,6 +219,82 @@ class UploadOrchestratorTest {
                 )
 
                 assertEquals("Nostr fakeAuthToken", authSlot.captured)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun encryptedUploadFallsBackToTheNextServerWithTheSameCiphertext() =
+        runTest {
+            // A server that refuses opaque blobs (415) must not fail the upload while
+            // another listed server would take it -- and the retry has to send the very
+            // bytes the cipher and hash describe.
+            val mockClient = mockk<BlossomClient>()
+            val servers = mutableListOf<String>()
+            val bodies = mutableListOf<ByteArray>()
+            coEvery {
+                mockClient.upload(bytes = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers {
+                val server = arg<String>(2)
+                servers += server
+                bodies += arg<ByteArray>(0)
+                if (server.contains("primal")) {
+                    throw IllegalStateException("Unsupported Media Type")
+                }
+                BlossomUploadResult(url = "$server/blob")
+            }
+
+            val file = File.createTempFile("test_", ".bin")
+            file.deleteOnExit()
+            file.writeBytes(ByteArray(64) { it.toByte() })
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val result =
+                    UploadOrchestrator(mockClient).uploadEncrypted(
+                        file = file,
+                        cipher = AESGCM(),
+                        serverBaseUrl = "https://blossom.primal.net",
+                        signer = mockSigner,
+                        fallbackServerBaseUrls = listOf("https://BLOSSOM.PRIMAL.NET/", "https://nostr.download"),
+                    )
+
+                assertEquals(listOf("https://blossom.primal.net", "https://nostr.download"), servers)
+                assertTrue(bodies[0].contentEquals(bodies[1]))
+                assertEquals("https://nostr.download/blob", result.blossom.url)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun whenEveryServerFailsTheSelectedServersErrorIsThrown() =
+        runTest {
+            val mockClient = mockk<BlossomClient>()
+            coEvery {
+                mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
+            } answers { throw IllegalStateException("refused by ${arg<String>(2)}") }
+
+            val file = File.createTempFile("test_", ".txt")
+            file.deleteOnExit()
+            file.writeText("content")
+            val mockSigner = mockk<com.vitorpamplona.quartz.nip01Core.signers.NostrSigner>(relaxed = true)
+
+            try {
+                val error =
+                    kotlin
+                        .runCatching {
+                            UploadOrchestrator(mockClient).upload(
+                                file = file,
+                                alt = null,
+                                serverBaseUrl = "https://a.example",
+                                signer = mockSigner,
+                                stripExif = false,
+                                fallbackServerBaseUrls = listOf("https://b.example"),
+                            )
+                        }.exceptionOrNull()
+                assertEquals("refused by https://a.example", error?.message)
             } finally {
                 file.delete()
             }

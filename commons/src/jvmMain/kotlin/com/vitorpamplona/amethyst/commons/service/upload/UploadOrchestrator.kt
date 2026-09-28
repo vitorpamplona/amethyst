@@ -24,12 +24,15 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.Reencode
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 data class UploadResult(
     val blossom: BlossomUploadResult,
@@ -76,6 +79,8 @@ class UploadOrchestrator(
         quality: CompressionQuality? = null,
         bypassReencode: Boolean = false,
         preCompressed: File? = null,
+        // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
+        fallbackServerBaseUrls: List<String> = emptyList(),
     ): UploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
@@ -133,12 +138,14 @@ class UploadOrchestrator(
 
             // 5. Upload.
             val result =
-                client.upload(
-                    file = finalFile,
-                    contentType = metadata.mimeType,
-                    serverBaseUrl = serverBaseUrl,
-                    authHeader = authHeader,
-                )
+                uploadToFirstAccepting(serverBaseUrl, fallbackServerBaseUrls) { server ->
+                    client.upload(
+                        file = finalFile,
+                        contentType = metadata.mimeType,
+                        serverBaseUrl = server,
+                        authHeader = authHeader,
+                    )
+                }
 
             return UploadResult(blossom = result, metadata = metadata)
         } finally {
@@ -171,6 +178,8 @@ class UploadOrchestrator(
         // When true it's uploaded with the real media type — less private, but
         // required by strict Blossom servers that reject octet-stream (HTTP 415).
         declareRealMimeType: Boolean = false,
+        // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
+        fallbackServerBaseUrls: List<String> = emptyList(),
     ): EncryptedUploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
@@ -230,13 +239,17 @@ class UploadOrchestrator(
             //    415) also work, at the cost of leaking the media category.
             val uploadContentType =
                 if (declareRealMimeType) metadata.mimeType else "application/octet-stream"
+            // The same ciphertext goes to every server tried, so the cipher and the
+            // encrypted hash stay valid wherever it lands.
             val result =
-                client.upload(
-                    bytes = encrypted,
-                    contentType = uploadContentType,
-                    serverBaseUrl = serverBaseUrl,
-                    authHeader = authHeader,
-                )
+                uploadToFirstAccepting(serverBaseUrl, fallbackServerBaseUrls) { server ->
+                    client.upload(
+                        bytes = encrypted,
+                        contentType = uploadContentType,
+                        serverBaseUrl = server,
+                        authHeader = authHeader,
+                    )
+                }
 
             return EncryptedUploadResult(
                 blossom = result,
@@ -250,5 +263,32 @@ class UploadOrchestrator(
                 reencodedTemp?.deleteOrWarn("UploadOrchestrator", "encrypted reencoded temp")
             }
         }
+    }
+
+    /**
+     * [serverBaseUrl] first, then each of [fallbacks] (skipping duplicates by domain) until
+     * one accepts. Servers differ in what they take -- several answer an opaque encrypted
+     * blob with 415, paid ones with 402 -- and the user can't see that in advance. The auth
+     * header is not server-scoped, so the same one serves every attempt. When all fail, the
+     * first server's error is thrown: that is the server the user chose.
+     */
+    private suspend fun uploadToFirstAccepting(
+        serverBaseUrl: String,
+        fallbacks: List<String>,
+        upload: suspend (String) -> BlossomUploadResult,
+    ): BlossomUploadResult {
+        val seen = mutableSetOf<String>()
+        val order = (listOf(serverBaseUrl) + fallbacks).filter { seen.add(BlossomServerUrl.domain(it)) }
+        var firstError: Exception? = null
+        for (server in order) {
+            try {
+                return upload(server)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (firstError == null) firstError = e
+                Log.w("UploadOrchestrator") { "Upload to $server failed (${e.message}), trying the next server" }
+            }
+        }
+        throw firstError!!
     }
 }
