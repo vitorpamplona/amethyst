@@ -2915,7 +2915,7 @@
     <string name="upload_error_voice_message_exception">Unggahan suara gagal: %1$s</string>
     <string name="upload_error_voice_message_failed">Gagal mengunggah pesan suara</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 belum didukung untuk pesan suara</string>
-    <string name="uptime">%1$d%% uptime</string>
+    <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Mesin Tor Aktif</string>
     <string name="use_internal_tor_explainer">Gunakan versi internal atau Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Pengguna tidak memiliki alamat lightning (LN) yang diatur untuk menerima sats</string>

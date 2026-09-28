@@ -2915,7 +2915,7 @@
     <string name="upload_error_voice_message_exception">การอัปโหลดเสียงล้มเหลว: %1$s</string>
     <string name="upload_error_voice_message_failed">ไม่สามารถอัปโหลดข้อความเสียงได้</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ยังไม่รองรับข้อความเสียง</string>
-    <string name="uptime">เวลาทำงาน %1$d%%</string>
+    <string name="uptime">เวลาทำงาน %1$d%</string>
     <string name="use_internal_tor">เครื่องยนต์ Tor ที่ใช้งานอยู่</string>
     <string name="use_internal_tor_explainer">ใช้เวอร์ชันภายในหรือ Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">ผู้ใช้นี้ไม่ได้ตั้งค่า lightning address เพื่อรับ sats</string>

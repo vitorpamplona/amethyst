@@ -2952,7 +2952,7 @@
     <string name="upload_error_voice_message_exception">குரல் பதிவேற்றம் தோல்வியடைந்தது: %1$s</string>
     <string name="upload_error_voice_message_failed">குரல் செய்தியை பதிவேற்ற தோல்வியடைந்தது</string>
     <string name="upload_error_voice_message_nip95_not_supported">குரல் செய்திகளுக்கு NIP-95 இன்னும் ஆதரிக்கப்படவில்லை</string>
-    <string name="uptime">%1$d%% இயக்க நேரம்</string>
+    <string name="uptime">%1$d% இயக்க நேரம்</string>
     <string name="use_internal_tor">செயலில் Tor எஞ்சின்</string>
     <string name="use_internal_tor_explainer">உள்ளமைக்கப்பட்ட பதிப்பு அல்லது Orbot பயன்படுத்தவும்</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">பயனர் ஸாட்கள் பெறுவதற்கு லைட்னிங் முகவரி அமைக்கவில்லை</string>

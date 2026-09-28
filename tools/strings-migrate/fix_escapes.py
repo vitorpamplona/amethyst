@@ -78,8 +78,17 @@ def fix_text(text: str, unwrap_quotes: bool = True, source: str = None) -> str:
     """
     if unwrap_quotes and len(text) >= 2 and text.startswith('"') and text.endswith('"'):
         # Quoted: aapt kept this whitespace exactly, so Compose keeps it too.
-        return ANDROID_ONLY.sub(r"\1", text[1:-1])
-    return normalize_whitespace(ANDROID_ONLY.sub(r"\1", text), source)
+        return unescape_percent(ANDROID_ONLY.sub(r"\1", text[1:-1]))
+    return unescape_percent(normalize_whitespace(ANDROID_ONLY.sub(r"\1", text), source))
+
+
+def unescape_percent(text: str) -> str:
+    """`%%` is a printf escape Compose never resolves: `%1$d%%` renders `100%%`.
+
+    Compose substitutes only `%N$s`/`%N$d` and leaves every other `%` alone, so a
+    bare `%` is already literal. Idempotent.
+    """
+    return text.replace("%%", "%")
 
 
 def strip_android_only_attrs(src: str) -> tuple:

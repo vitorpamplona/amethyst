@@ -2935,7 +2935,7 @@
     <string name="upload_error_voice_message_exception">Помилка завантаження голосу: %1$s</string>
     <string name="upload_error_voice_message_failed">Не вдалося завантажити голосове повідомлення</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ще не підтримується для голосових повідомлень</string>
-    <string name="uptime">%1$d%% доступності</string>
+    <string name="uptime">%1$d% доступності</string>
     <string name="use_internal_tor">Активний рушій Tor</string>
     <string name="use_internal_tor_explainer">Використовувати вбудовану версію або Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Користувач не встановив Lightning адресу для отримання чайових</string>

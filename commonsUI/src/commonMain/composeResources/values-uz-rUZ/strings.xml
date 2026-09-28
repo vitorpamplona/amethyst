@@ -2886,7 +2886,7 @@
     <string name="upload_error_voice_message_exception">Ovoz yuklash muvaffaqiyatsiz tugadi: %1$s</string>
     <string name="upload_error_voice_message_failed">Ovozli xabarni yuklash muvaffaqiyatsiz tugadi</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ovozli xabarlar uchun hali qo'llab-quvvatlanmaydi</string>
-    <string name="uptime">%1$d%% ishga tayyor vaqt</string>
+    <string name="uptime">%1$d% ishga tayyor vaqt</string>
     <string name="use_internal_tor">Faol Tor Mexanizmi</string>
     <string name="use_internal_tor_explainer">Ichki versiya yoki Orbot'dan foydalaning</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Foydalanuvchi sats qabul qilish uchun lightning manzilini o'rnatmagan</string>
