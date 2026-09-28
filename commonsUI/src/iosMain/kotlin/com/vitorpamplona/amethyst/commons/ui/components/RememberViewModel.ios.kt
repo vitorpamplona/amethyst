@@ -21,22 +21,44 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.MutableCreationExtras
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.CreationExtras
 import kotlin.reflect.KClass
 
+/**
+ * No navigation back stack owns view models here yet, so each call gets its own store, scoped to
+ * the composition, and clears it on the way out: that is what runs `onCleared()` and cancels the
+ * view model's `viewModelScope`, which a bare `remember` never would.
+ */
 @Composable
 actual fun <VM : ViewModel> rememberViewModel(
     modelClass: KClass<VM>,
     key: String?,
     factory: ViewModelProvider.Factory,
-): VM = remember(modelClass, key) { factory.create(modelClass, MutableCreationExtras()) }
+): VM {
+    val store = remember(modelClass, key) { ViewModelStore() }
+    DisposableEffect(store) { onDispose { store.clear() } }
+    return remember(store) { ViewModelProvider.create(store, factory).get(modelClass) }
+}
 
 @Composable
 actual fun <VM : ViewModel> rememberViewModel(
     modelClass: KClass<VM>,
     key: String?,
     factory: () -> VM,
-): VM = remember(modelClass, key) { factory() }
+): VM =
+    rememberViewModel(
+        modelClass,
+        key,
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(
+                modelClass: KClass<T>,
+                extras: CreationExtras,
+            ): T = factory() as T
+        },
+    )

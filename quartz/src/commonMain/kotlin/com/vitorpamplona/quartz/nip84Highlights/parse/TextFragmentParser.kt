@@ -113,6 +113,63 @@ object TextFragmentParser {
         return if (beforeDirective.isEmpty()) base else "$base#$beforeDirective"
     }
 
+    /**
+     * Builds [baseUrl] with a `text=` directive that scrolls the page to [exact]. A few words of
+     * [prefix] and [suffix] (the ones nearest the quote) are added as `prefix-,` / `,-suffix`
+     * disambiguators, so the browser lands on the right occurrence when the quote repeats.
+     * [parse] reads back what this writes.
+     */
+    fun buildUrl(
+        baseUrl: String,
+        exact: String,
+        prefix: String? = null,
+        suffix: String? = null,
+    ): String {
+        val separator = if (baseUrl.contains("#")) "&" else "#"
+        val prefixPart = trimToEdge(prefix, keepStart = false)?.let { "${percentEncode(it)}-," } ?: ""
+        val suffixPart = trimToEdge(suffix, keepStart = true)?.let { ",-${percentEncode(it)}" } ?: ""
+        return "$baseUrl$separator$DIRECTIVE_DELIMITER$TEXT_PARAM$prefixPart${percentEncode(exact)}$suffixPart"
+    }
+
+    /** Words of a prefix/suffix kept next to the quote: enough to disambiguate, short enough to match. */
+    private const val EDGE_WORDS = 4
+    private const val UNRESERVED = "_!.~'()*"
+    private val HEX_DIGITS = "0123456789ABCDEF".toCharArray()
+    private val WHITESPACE = Regex("\\s+")
+
+    /**
+     * Keeps the [EDGE_WORDS] words nearest the quote (the last ones of a prefix, the first ones of
+     * a suffix) and collapses whitespace, so newlines in a selector don't break the match.
+     */
+    private fun trimToEdge(
+        text: String?,
+        keepStart: Boolean,
+    ): String? {
+        if (text == null) return null
+        val words = text.trim().split(WHITESPACE).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return null
+        return (if (keepStart) words.take(EDGE_WORDS) else words.takeLast(EDGE_WORDS)).joinToString(" ")
+    }
+
+    /**
+     * Percent-encodes as UTF-8, leaving only ASCII letters, digits and `_!.~'()*`: spaces become
+     * `%20` (not `+`, which [percentDecode] keeps literal), and `&`, `,` and `-` never appear raw,
+     * as the Text Fragments spec requires, so a quote that starts with `-` cannot be read back as
+     * a suffix.
+     */
+    private fun percentEncode(text: String): String {
+        val out = StringBuilder(text.length)
+        for (byte in text.encodeToByteArray()) {
+            val c = (byte.toInt() and 0xFF).toChar()
+            if (c < '\u0080' && (c.isLetterOrDigit() || c in UNRESERVED)) {
+                out.append(c)
+            } else {
+                out.append('%').append(HEX_DIGITS[(byte.toInt() shr 4) and 0xF]).append(HEX_DIGITS[byte.toInt() and 0xF])
+            }
+        }
+        return out.toString()
+    }
+
     private fun decode(value: String?): String? {
         if (value.isNullOrEmpty()) return null
         return percentDecode(value).takeIf { it.isNotEmpty() }

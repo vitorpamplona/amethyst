@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -41,7 +42,9 @@ import com.vitorpamplona.amethyst.commons.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.VideoPlayerButtonItem
 import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
@@ -58,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningSt
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
+import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync
@@ -96,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.commons.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
+import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningInvoiceResolver
@@ -169,10 +175,12 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
@@ -184,7 +192,6 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import com.vitorpamplona.quartz.utils.plus
-import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -259,7 +266,7 @@ class AccountViewModel(
     init {
         // Populate CallSessionBridge so CallActivity and background
         // receivers can reach callManager + account + accountViewModel.
-        com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
+        CallSessionBridge
             .set(callManager, account, this)
 
         // A mined post that fails to sign or broadcast would otherwise die
@@ -845,16 +852,6 @@ class AccountViewModel(
         }
     }
 
-    private fun zapraiserStatus(
-        zapped: BigDecimal,
-        goal: Long,
-    ): ZapraiserStatus {
-        // A goal of zero is met by definition (the BigDecimal division this replaces threw on it).
-        val percentage = if (goal > 0) (zapped.toDoubleValue() / goal).toFloat().coerceAtMost(1f) else 1f
-        val left = if (percentage > 0.99) "0" else showAmount(BigDecimal((goal * (1 - percentage)).toString()))
-        return ZapraiserStatus(percentage, left)
-    }
-
     class DecryptedInfo(
         val zapRequest: Note,
         val zapEvent: Note?,
@@ -1292,7 +1289,7 @@ class AccountViewModel(
             )
             return@launchSigner
         }
-        val zappedEvent = baseNote.toEventHint<com.vitorpamplona.quartz.nip01Core.core.Event>()
+        val zappedEvent = baseNote.toEventHint<Event>()
         if (zappedEvent == null) {
             onError(
                 loadStringRes(Res.string.nutzap_failed_title),
@@ -1976,7 +1973,7 @@ class AccountViewModel(
 
     fun reactionRowItemsFlow() = account.settings.syncedSettings.reactions.reactionRowItems
 
-    fun changeReactionRowItems(items: List<com.vitorpamplona.amethyst.commons.model.ReactionRowItem>) =
+    fun changeReactionRowItems(items: List<ReactionRowItem>) =
         launchSigner {
             account.changeReactionRowItems(items)
         }
@@ -1989,7 +1986,7 @@ class AccountViewModel(
         viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
     }
 
-    fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.commons.model.VideoPlayerButtonItem>) =
+    fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) =
         launchSigner {
             account.changeVideoPlayerButtonItems(items)
         }
@@ -2412,7 +2409,7 @@ class AccountViewModel(
     suspend fun sendMarmotGroupMediaMessage(
         nostrGroupId: String,
         url: String,
-        imeta: com.vitorpamplona.quartz.nip92IMeta.IMetaTag,
+        imeta: IMetaTag,
     ) {
         val template =
             eventTemplate(
@@ -2426,8 +2423,8 @@ class AccountViewModel(
         // is authenticated by the MLS sender's LeafNode + the pubkey↔
         // credential-identity equality check on the receive side.
         val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<com.vitorpamplona.quartz.nip01Core.core.Event>(
+            RumorAssembler
+                .assembleRumor<Event>(
                     account.signer.pubKey,
                     template,
                 )
@@ -2556,7 +2553,7 @@ class AccountViewModel(
         account.marmot.resetMarmotState()
     }
 
-    fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
+    fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
 
     suspend fun addMarmotGroupMember(
         nostrGroupId: String,
@@ -2633,9 +2630,9 @@ class AccountViewModel(
         // reference is dropped; the call itself is account-scoped and keeps running.
         // Real logout / account switch tears the call down via CallSessionBridge.clear(),
         // called from AccountSessionManager alongside NestBridge.clear().
-        com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
+        CallSessionBridge
             .clearViewModel()
-        com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
+        NestBridge
             .clear()
         feedStates.destroy()
     }

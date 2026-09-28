@@ -78,6 +78,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip84Highlights.parse.TextFragmentParser
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.Dispatchers
@@ -267,67 +268,6 @@ fun DisplayHighlight(
     }
 }
 
-private const val FRAGMENT_EDGE_WORDS = 4
-
-/**
- * Builds a URL with a Text Fragment (`#:~:text=`) directive that scrolls the source page
- * to the highlighted text. When a W3C `textquoteselector` supplies surrounding prefix/suffix
- * text, a few words of each are added as `prefix-,` / `,-suffix` disambiguators so the browser
- * lands on the correct occurrence even when the quote repeats on the page.
- *
- * See https://wicg.github.io/scroll-to-text-fragment/
- */
-private fun buildTextFragmentUrl(
-    baseUrl: String,
-    exact: String,
-    prefix: String?,
-    suffix: String?,
-): String {
-    val separator = if (baseUrl.contains("#")) "&" else "#"
-
-    val prefixPart = trimToFragmentEdge(prefix, keepStart = false)?.let { "${encodeFragmentComponent(it)}-," } ?: ""
-    val suffixPart = trimToFragmentEdge(suffix, keepStart = true)?.let { ",-${encodeFragmentComponent(it)}" } ?: ""
-
-    return "$baseUrl$separator:~:text=$prefixPart${encodeFragmentComponent(exact)}$suffixPart"
-}
-
-private const val FRAGMENT_SAFE = "_-!.~'()*"
-private val HEX_DIGITS = "0123456789ABCDEF".toCharArray()
-
-/**
- * Percent-encodes [text] as UTF-8, leaving only letters, digits and `_-!.~'()*` alone: what
- * Android's `Uri.encode` does, so spaces become `%20` (not `+`) and `-`, `,` and `&` cannot be
- * mistaken for text-fragment syntax.
- */
-private fun encodeFragmentComponent(text: String): String {
-    val out = StringBuilder(text.length)
-    for (byte in text.encodeToByteArray()) {
-        val c = (byte.toInt() and 0xFF).toChar()
-        if (c < '\u0080' && (c.isLetterOrDigit() || c in FRAGMENT_SAFE)) {
-            out.append(c)
-        } else {
-            out.append('%').append(HEX_DIGITS[(byte.toInt() shr 4) and 0xF]).append(HEX_DIGITS[byte.toInt() and 0xF])
-        }
-    }
-    return out.toString()
-}
-
-/**
- * Keeps only the [FRAGMENT_EDGE_WORDS] words nearest the highlight (the last words when
- * [keepStart] is false, for a prefix; the first words when true, for a suffix) and collapses
- * whitespace so newlines from the selector don't break Text Fragment matching.
- */
-private fun trimToFragmentEdge(
-    text: String?,
-    keepStart: Boolean,
-): String? {
-    if (text == null) return null
-    val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    if (words.isEmpty()) return null
-    val slice = if (keepStart) words.take(FRAGMENT_EDGE_WORDS) else words.takeLast(FRAGMENT_EDGE_WORDS)
-    return slice.joinToString(" ")
-}
-
 @Composable
 private fun DisplayQuoteAuthor(
     highlightQuote: String,
@@ -399,7 +339,7 @@ private fun DisplayQuoteAuthor(
         baseUrl != null && HighlightEvent.isUrlReference(baseUrl) -> {
             val url =
                 remember(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
-                    buildTextFragmentUrl(HttpUrlFormatter.addSchemeIfNeeded(baseUrl), highlightQuote, textFragmentPrefix, textFragmentSuffix)
+                    TextFragmentParser.buildUrl(HttpUrlFormatter.addSchemeIfNeeded(baseUrl), highlightQuote, textFragmentPrefix, textFragmentSuffix)
                 }
 
             DisplayEntryForAUrl(url, userBase, accountViewModel, nav)

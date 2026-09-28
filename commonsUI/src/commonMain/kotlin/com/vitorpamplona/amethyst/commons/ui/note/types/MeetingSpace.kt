@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.LiveFlag
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.ScheduledFlag
@@ -76,8 +77,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.JoinNestButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
@@ -85,8 +88,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -198,7 +203,7 @@ fun RenderMeetingSpaceEventInner(
                 ListenToRecordingButton(url = it, accountViewModel = accountViewModel)
             }
         } else {
-            com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.JoinNestButton(
+            JoinNestButton(
                 event = noteEvent,
                 nav = nav,
             )
@@ -330,13 +335,13 @@ fun RenderMeetingRoomEventInner(
  */
 @Composable
 private fun ParentMeetingSpaceLink(
-    spaceAddress: com.vitorpamplona.quartz.nip01Core.core.Address,
+    spaceAddress: Address,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (spaceAddress.kind != MeetingSpaceEvent.KIND) return
 
-    com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote(
+    LoadAddressableNote(
         address = spaceAddress,
     ) { spaceNote ->
         spaceNote ?: return@LoadAddressableNote
@@ -388,7 +393,7 @@ fun RenderMeetingRoomPresence(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = baseNote.event as? com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent ?: return
+    val event = baseNote.event as? MeetingRoomPresenceEvent ?: return
 
     val handRaised = remember(event) { event.handRaised() == true }
     val publishing = remember(event) { event.publishing() == true }
@@ -405,7 +410,7 @@ fun RenderMeetingRoomPresence(
 
     val user =
         remember(event.pubKey) {
-            com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+            LocalCache
                 .getOrCreateUser(event.pubKey)
         }
 

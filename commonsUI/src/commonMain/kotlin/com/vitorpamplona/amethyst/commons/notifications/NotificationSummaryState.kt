@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.search.calendar.EpochDayCounter
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
@@ -78,13 +79,19 @@ class NotificationSummaryState(
     val todaysReactionCount = reactions.map { showCount(it[today()]) }.distinctUntilChanged()
     val todaysZapAmount = zaps.map { showAmountInteger(it[today()]) }.distinctUntilChanged()
 
-    // Buckets are local calendar days, keyed yyyy-MM-dd.
-    fun formatDate(createAt: Long): String = SearchDate.civilFromDays(LocalClock.epochDayCounter().epochDay(createAt)).ymd()
+    // Buckets are local calendar days, keyed yyyy-MM-dd. [days] is built once per pass: it reads
+    // the zone rules once, and a pass buckets every notification in the cache.
+    private fun formatDate(
+        createAt: Long,
+        days: EpochDayCounter,
+    ): String = SearchDate.civilFromDays(days.epochDay(createAt)).ymd()
 
     fun today(): String = LocalClock.today().ymd()
 
     suspend fun initializeSuspend() {
         LocalCache.appHost.assertNotMainThread()
+
+        val days = LocalClock.epochDayCounter()
 
         val currentUser = user.pubkeyHex
 
@@ -100,7 +107,7 @@ class NotificationSummaryState(
                 when {
                     noteEvent is ReactionEvent -> {
                         if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                            val netDate = formatDate(noteEvent.createdAt)
+                            val netDate = formatDate(noteEvent.createdAt, days)
                             reactions[netDate] = (reactions[netDate] ?: 0) + 1
                             takenIntoAccount.add(noteEvent.id)
                         }
@@ -108,7 +115,7 @@ class NotificationSummaryState(
 
                     noteEvent is RepostEvent || noteEvent is GenericRepostEvent -> {
                         if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                            val netDate = formatDate(noteEvent.createdAt)
+                            val netDate = formatDate(noteEvent.createdAt, days)
                             boosts[netDate] = (boosts[netDate] ?: 0) + 1
                             takenIntoAccount.add(noteEvent.id)
                         }
@@ -117,7 +124,7 @@ class NotificationSummaryState(
                     noteEvent is ZapReceiptEvent -> {
                         // the user might be sending his own receipts noteEvent.pubKey != currentUser
                         if (noteEvent.isTaggedUser(currentUser)) {
-                            val netDate = formatDate(noteEvent.createdAt)
+                            val netDate = formatDate(noteEvent.createdAt, days)
                             zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + (noteEvent.amount ?: BigDecimal(0))
                             takenIntoAccount.add(noteEvent.id)
                         }
@@ -127,7 +134,7 @@ class NotificationSummaryState(
                         if (noteEvent.isTaggedUser(currentUser)) {
                             val amount = noteEvent.claimedAmountInSats()
                             if (amount != null) {
-                                val netDate = formatDate(noteEvent.createdAt)
+                                val netDate = formatDate(noteEvent.createdAt, days)
                                 zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount)
                                 takenIntoAccount.add(noteEvent.id)
                             }
@@ -138,7 +145,7 @@ class NotificationSummaryState(
                         if (noteEvent.isTaggedUser(currentUser)) {
                             val amount = noteEvent.amount()
                             if (amount != null) {
-                                val netDate = formatDate(noteEvent.createdAt)
+                                val netDate = formatDate(noteEvent.createdAt, days)
                                 zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount / 1000)
                                 takenIntoAccount.add(noteEvent.id)
                             }
@@ -153,7 +160,7 @@ class NotificationSummaryState(
                                 LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
                             }
 
-                        val netDate = formatDate(noteEvent.createdAt)
+                        val netDate = formatDate(noteEvent.createdAt, days)
                         if (isCitation) {
                             boosts[netDate] = (boosts[netDate] ?: 0) + 1
                         } else {
@@ -177,6 +184,8 @@ class NotificationSummaryState(
     suspend fun addToStatsSuspend(newBlockNotes: Set<Set<Note>>) {
         LocalCache.appHost.assertNotMainThread()
 
+        val days = LocalClock.epochDayCounter()
+
         val currentUser = user.pubkeyHex
 
         val reactions = this.reactions.value.toMutableMap()
@@ -193,7 +202,7 @@ class NotificationSummaryState(
                     when {
                         noteEvent is ReactionEvent -> {
                             if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                                val netDate = formatDate(noteEvent.createdAt)
+                                val netDate = formatDate(noteEvent.createdAt, days)
                                 reactions[netDate] = (reactions[netDate] ?: 0) + 1
                                 takenIntoAccount.add(noteEvent.id)
                                 hasNewElements = true
@@ -202,7 +211,7 @@ class NotificationSummaryState(
 
                         noteEvent is RepostEvent || noteEvent is GenericRepostEvent -> {
                             if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                                val netDate = formatDate(noteEvent.createdAt)
+                                val netDate = formatDate(noteEvent.createdAt, days)
                                 boosts[netDate] = (boosts[netDate] ?: 0) + 1
                                 takenIntoAccount.add(noteEvent.id)
                                 hasNewElements = true
@@ -212,7 +221,7 @@ class NotificationSummaryState(
                         noteEvent is ZapReceiptEvent -> {
                             if (noteEvent.isTaggedUser(currentUser)) {
                                 //  && noteEvent.pubKey != currentUser User might be sending his own receipts
-                                val netDate = formatDate(noteEvent.createdAt)
+                                val netDate = formatDate(noteEvent.createdAt, days)
                                 zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + (noteEvent.amount ?: BigDecimal(0))
                                 takenIntoAccount.add(noteEvent.id)
                                 hasNewElements = true
@@ -223,7 +232,7 @@ class NotificationSummaryState(
                             if (noteEvent.isTaggedUser(currentUser)) {
                                 val amount = noteEvent.claimedAmountInSats()
                                 if (amount != null) {
-                                    val netDate = formatDate(noteEvent.createdAt)
+                                    val netDate = formatDate(noteEvent.createdAt, days)
                                     zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount)
                                     takenIntoAccount.add(noteEvent.id)
                                     hasNewElements = true
@@ -235,7 +244,7 @@ class NotificationSummaryState(
                             if (noteEvent.isTaggedUser(currentUser)) {
                                 val amount = noteEvent.amount()
                                 if (amount != null) {
-                                    val netDate = formatDate(noteEvent.createdAt)
+                                    val netDate = formatDate(noteEvent.createdAt, days)
                                     zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount / 1000)
                                     takenIntoAccount.add(noteEvent.id)
                                     hasNewElements = true
@@ -251,7 +260,7 @@ class NotificationSummaryState(
                                     LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
                                 }
 
-                            val netDate = formatDate(noteEvent.createdAt)
+                            val netDate = formatDate(noteEvent.createdAt, days)
                             if (isCitation) {
                                 boosts[netDate] = (boosts[netDate] ?: 0) + 1
                             } else {

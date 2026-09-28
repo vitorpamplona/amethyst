@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.util.showAmount
+import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.toDoubleValue
 
 @Immutable
 data class ZapAmountCommentNotification(
@@ -46,3 +49,16 @@ data class CombinedZap(
     val progress: Float,
     val left: String,
 )
+
+/**
+ * How far [zapped] sats have come toward a [goal] of sats: the progress (capped at 1) and the
+ * amount left, formatted. A goal of zero is met by definition.
+ */
+fun zapraiserStatus(
+    zapped: BigDecimal,
+    goal: Long,
+): ZapraiserStatus {
+    val percentage = if (goal > 0) (zapped.toDoubleValue() / goal).toFloat().coerceAtMost(1f) else 1f
+    val left = if (percentage > 0.99) "0" else showAmount(BigDecimal((goal * (1 - percentage)).toString()))
+    return ZapraiserStatus(percentage, left)
+}

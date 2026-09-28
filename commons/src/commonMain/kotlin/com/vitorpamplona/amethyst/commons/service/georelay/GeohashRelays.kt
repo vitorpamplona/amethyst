@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.service.georelay
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.concurrent.Volatile
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Process-wide geohash → relay directory, shared by everything that routes
@@ -46,7 +47,14 @@ object GeohashRelays {
     suspend fun ensureLoaded(): Boolean {
         if (refreshed) return false
         val loader = liveRelayLoader ?: return false
-        directory.setRelays(runCatching { loader() }.getOrDefault(emptyList()))
+        val relays =
+            try {
+                loader()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                emptyList()
+            }
+        directory.setRelays(relays)
         val loaded = directory.size > GeoRelayDirectory.FALLBACK.size
         refreshed = loaded
         return loaded

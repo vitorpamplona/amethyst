@@ -63,8 +63,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlin.math.roundToInt
+import com.vitorpamplona.amethyst.commons.model.zapraiserStatus as computeZapraiserStatus
 
 @Composable
 fun RenderGoal(
@@ -154,19 +154,7 @@ fun GoalProgressBar(
 
     LaunchedEffect(key1 = zapsState) {
         zapsState?.note?.let {
-            val newZapAmount = accountViewModel.account.zaps.calculateZappedAmount(note)
-            var percentage = (newZapAmount.toDoubleValue() / goalAmountSats).toFloat()
-            if (percentage > 1) percentage = 1f
-
-            val left =
-                if (percentage > 0.99) {
-                    "0"
-                } else {
-                    showAmount(
-                        BigDecimal(goalAmountSats * (1.0 - percentage)),
-                    )
-                }
-            zapraiserStatus = ZapraiserStatus(percentage, left)
+            zapraiserStatus = computeZapraiserStatus(accountViewModel.account.zaps.calculateZappedAmount(note), goalAmountSats)
         }
     }
 
