@@ -107,22 +107,22 @@ Each leaving edge is a seam to cut before the group can move.
 | File | Blocker | Proposed cut |
 |---|---|---|
 | `Account.kt` | `BuildConfig.VERSION_NAME` (donation prompt, 3 sites) | constructor parameter `appVersion: String`. **Done 2026-09-27**: `AccountCacheState` takes it too and `AppModules` passes `BuildConfig.VERSION_NAME`. |
-| `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry`. **Defaults done 2026-09-28**: `DefaultBottomBarItems` + `DefaultBottomBarEntries` are in `commons/…/model/navigation/DefaultBottomBar.kt`; the language list is still open. |
+| `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry`. **Defaults done 2026-09-28**: `DefaultBottomBarItems` + `DefaultBottomBarEntries` are in `commons/…/model/navigation/DefaultBottomBar.kt`. **Languages done 2026-09-28**: an `expect fun getLanguagesSpokenByUser()` in `commons/util/SpokenLanguages.kt` (it is a `@Serializable` default, so it could not be injected). |
 | `GeohashChatIdentityState.kt` | `androidx.core.content.edit`, `LegacySharedPreferences`, `LocalPreferences.LEGACY_WRITES_RETIRED`, `Amethyst.instance.encryptedStorage` | the legacy-prefs read/write is a migration path; put it behind a `GeohashIdentityLegacyStore` port, implemented in the app |
-| `AccountZapActions.kt` | `onError: (StringResource, String?)` with `Res.string.bolt12_*` (compose resources, which `commons` cannot see) | a typed error (sealed class) that the UI maps to a string |
+| `AccountZapActions.kt` | `onError: (StringResource, String?)` with `Res.string.bolt12_*` (compose resources, which `commons` cannot see) | a typed error (sealed class) that the UI maps to a string. **Done 2026-09-28**: `Bolt12ZapFailure` (commons/model); `ZapPaymentHandler` maps it to the same strings. |
 | `nip46Signer/Nip46ConsentBridge.kt` | `Res` + `loadStringRes`; `Amethyst.instance.appContext`; the app's `SignerConnectCoordinator` / `SignerConsentCoordinator` / napplet op labels | it is the Android consent-dialog bridge: leave it in the app and inject it into `Account` through an interface |
 
 ### Edges that leave the group (14 targets)
 
 | Target | Used for | Proposed cut |
 |---|---|---|
-| `Amethyst.kt` | `keyCache` (Account), `encryptedStorage` (Geohash), `appContext` (Nip46 bridge), `notificationDispatcher` (EventProcessor) | constructor parameters / ports; the notification dispatcher gets an interface |
-| `LocalPreferences.kt` | `saveToEncryptedStorage(accountSettings)` on settings change | a `AccountSettingsPersister` port, implemented in the app |
-| `DebugUtils.kt` | `logTime` (2 sites) | move `logTime` to `commons/util` (it is timing + `Log`) |
-| `service/MainThreadChecker.kt` | `checkNotInMainThread` (HiddenUsersState) | the same settable hook `LocalCache` already needed |
-| `service/location/LocationState.kt` | the `LocationResult` type in `geolocationFlow` and the around-me feed | move the result type to `commons`; the `LocationManager` half stays |
-| `service/uploads/FileHeader.kt` | the `FileHeader` data type in three send methods | split: the data class to `commons`, the `MediaMetadataRetriever` reader stays |
-| `service/relayClient/…/BuzzMembershipEoseManager.kt` | the `MembershipNotificationKinds` constant | move the constant to `commons/model/buzz` |
+| `Amethyst.kt` | `keyCache` (Account), `encryptedStorage` (Geohash), `appContext` (Nip46 bridge), `notificationDispatcher` (EventProcessor) | constructor parameters / ports; the notification dispatcher gets an interface. **`keyCache` done 2026-09-28** (`Account.encryptionKeyCache`). |
+| `LocalPreferences.kt` | `saveToEncryptedStorage(accountSettings)` on settings change | **Done 2026-09-28** as a constructor lambda, `Account.saveSettings: suspend (AccountSettings) -> Unit`, rather than a named port. |
+| `DebugUtils.kt` | `logTime` (2 sites) | **Done 2026-09-28.** `commons/util` already had an identical `logTime`; its Android `isDebug` was hard-coded `false`, so it now reads `AndroidDebugFlag.enabled`, which `Amethyst.onCreate` sets. The app copy is gone. |
+| `service/MainThreadChecker.kt` | `checkNotInMainThread` (HiddenUsersState) | **Done 2026-09-28**: `LocalCache.appHost.assertNotMainThread()`, which the app host delegates to the same check. |
+| `service/location/LocationState.kt` | the `LocationResult` type in `geolocationFlow` and the around-me feed | **Done 2026-09-28**: `commons/model/location/LocationResult.kt`; 25 files repointed. |
+| `service/uploads/FileHeader.kt` | the `FileHeader` data type in three send methods | **Done 2026-09-28**: `commons/service/upload/FileHeader.kt` (with `BlurhashWrapper`/`ThumbhashWrapper` moved from commonsUI, same package); `prepare` stays in the app as `FileHeader.Companion` extensions. |
+| `service/relayClient/…/BuzzMembershipEoseManager.kt` | the `MembershipNotificationKinds` constant | **Done 2026-09-28**: `commons/model/buzz/BuzzMembershipKinds.kt`. |
 | `ui/navigation/bottombars/NavBarItem.kt` | `DefaultBottomBarEntries` | moved to `commons` (done 2026-09-28) |
 | `ui/screen/loggedIn/DecryptAndIndexProcessor.kt` | `EventProcessor`, built by `Account` | moves with the group (see above) |
 | `AccountSecretsStore.kt`, `LegacySharedPreferences.kt` | Geohash identity storage | behind the Geohash port above |
@@ -166,13 +166,15 @@ first).
    cut is a behaviour-preserving refactor that compiles and tests on its own:
    - the `BuildConfig` parameter (done);
    - `DefaultBottomBarEntries` (done);
-   - `MembershipNotificationKinds`;
-   - `logTime`;
-   - `checkNotInMainThread`;
-   - the `LocationResult` and `FileHeader` types;
-   - the settings-persister, Geohash legacy-store, Nip46-bridge and notification-dispatcher
-     ports;
-   - the typed zap error.
+   - `MembershipNotificationKinds` (done);
+   - `logTime` (done);
+   - `checkNotInMainThread` (done);
+   - the `LocationResult` and `FileHeader` types (done);
+   - the settings saver and the media key cache (done, as constructor parameters);
+   - the typed zap error (done);
+   - the language list (done);
+   - **still open:** the Geohash legacy-store, Nip46-bridge and notification-dispatcher
+     ports.
 3. **Move the group** (77 files) to `commons/jvmAndroid` in one PR. Desktop keeps its
    `DesktopIAccount` until the old app is retired; `IAccount` stays as the port it already is.
 4. **`AccountViewModel`**: the same recipe, using the dependency list above.
