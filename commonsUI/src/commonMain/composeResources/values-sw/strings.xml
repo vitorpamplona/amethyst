@@ -2882,7 +2882,7 @@
     <string name="upload_error_voice_message_exception">Upakiaji wa sauti umeshindwa: %1$s</string>
     <string name="upload_error_voice_message_failed">Imeshindwa kupakia ujumbe wa sauti</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 haijatarajiwa kwa ujumbe wa sauti bado</string>
-    <string name="uptime">%1$d%% wakati wa uendeshaji</string>
+    <string name="uptime">%1$d% wakati wa uendeshaji</string>
     <string name="use_internal_tor">Injini ya Tor Inayofanya Kazi</string>
     <string name="use_internal_tor_explainer">Tumia toleo la ndani au Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Mtumiaji hana anwani ya umeme iliyoandaliwa kupokea sati</string>

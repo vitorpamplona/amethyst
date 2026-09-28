@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.quartz.marmot.GroupEventResult
+import com.vitorpamplona.quartz.marmot.InMemoryIngestDedupStore
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
@@ -258,6 +260,81 @@ class MarmotDisbandTest {
             f.manager.disbandGroup(nostrGroupId)
             f.manager.syncMetadataTo(nostrGroupId, chatroom)
             assertEquals(LocalOutboundGate.DISBANDING, chatroom.outboundGate.value)
+        }
+
+    @Test
+    fun `a group we created stays Known after a restart, an invitation does not`() =
+        runBlocking {
+            // "Known" at creation was an in-memory flag, so after a restart a creator who
+            // had not posted yet found their own group under New Requests. The sync that
+            // runs on restore has to reach the same answer from the MLS state alone.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            val alicesRoom = MarmotGroupChatroom(nostrGroupId)
+            val bobsRoom = MarmotGroupChatroom(nostrGroupId)
+            alice.manager.syncMetadataTo(nostrGroupId, alicesRoom)
+            bob.manager.syncMetadataTo(nostrGroupId, bobsRoom)
+
+            assertTrue(alicesRoom.isKnown(emptySet()), "the creator's own group")
+            assertTrue(!bobsRoom.isKnown(emptySet()), "an invitation from someone we don't follow")
+        }
+
+    @Test
+    fun `a member reset after falling out of sync is back in once re-added`() =
+        runBlocking {
+            // The recovery for a device stuck on a dead epoch: it drops its copy without
+            // publishing anything, an admin removes and re-adds it, and the new Welcome
+            // joins instead of being taken for a replay of a group it still holds.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            bob.manager.resetOutOfSyncGroup(nostrGroupId)
+            assertNull(bob.manager.groupState(nostrGroupId), "the stale copy is gone")
+
+            val bobLeaf =
+                alice.manager
+                    .memberPubkeys(nostrGroupId)
+                    .first { it.pubkey == bob.signer.pubKey }
+                    .leafIndex
+            alice.manager.removeMember(nostrGroupId, bobLeaf)
+            val freshKp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, reinvite) = alice.manager.addMember(nostrGroupId, freshKp, emptyList())
+            val joined = bob.manager.ingest(reinvite!!.giftWrapEvent)
+            assertTrue(joined is MarmotIngestResult.JoinedGroup, "re-invite joins, got $joined")
+
+            val hello = alice.manager.buildTextMessage(nostrGroupId, "welcome back")
+            val received = bob.manager.processGroupEvent(hello.outbound.signedEvent)
+            assertTrue(received is GroupEventResult.ApplicationMessage, "and reads the group again, got $received")
+        }
+
+    @Test
+    fun `a group we created is still ours after a restart`() =
+        runBlocking {
+            // The marker is what survives, not the tree position: a fresh manager on the same
+            // stores has to find it on restore.
+            val signer = NostrSignerInternal(KeyPair())
+            val states = SnapshotStateStore()
+            val messages = SnapshotMessageStore()
+            val bundles = SnapshotBundleStore()
+            val markers = InMemoryIngestDedupStore()
+            val before = MarmotManager(signer, states, messages, bundles, publisher = ACCEPTING_RELAY, ingestDedupStore = markers)
+            before.createCurrentProfileGroup(nostrGroupId, listOf("wss://relay.invalid"), GroupProfileV1("mine", ""))
+
+            val after = MarmotManager(signer, states, messages, bundles, publisher = ACCEPTING_RELAY, ingestDedupStore = markers)
+            after.restoreAll()
+            val room = MarmotGroupChatroom(nostrGroupId)
+            after.syncMetadataTo(nostrGroupId, room)
+
+            assertTrue(room.isKnown(emptySet()), "the creator's own group, after a restart")
         }
 
     @Test

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
@@ -82,6 +84,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
@@ -177,6 +180,8 @@ class MarmotManager(
      * Restore all Marmot state from persistent storage.
      * Call once during Account initialization.
      */
+    private val desync = MarmotDesyncDetector()
+
     suspend fun restoreAll() {
         Log.d("MarmotManager") { "restoreAll(): begin for ${signer.pubKey.take(8)}…" }
         try {
@@ -186,8 +191,13 @@ class MarmotManager(
             // syncWithGroupManager fills in default (since = null) entries,
             // so even the first filter set sent to relays skips the
             // already-processed kind:445 backlog.
-            subscriptionSinceFromStoredMessages(activeIds).forEach { (groupId, since) ->
-                subscriptionManager.subscribeGroup(groupId, since)
+            newestStoredMessageTimes(activeIds).forEach { (groupId, newest) ->
+                // The newest event this group decrypted before the restart is where "behind"
+                // starts counting (see MarmotDesyncDetector).
+                desync.seed(groupId, newest)
+                if (newest > GROUP_EVENT_REFETCH_OVERLAP_SEC) {
+                    subscriptionManager.subscribeGroup(groupId, newest - GROUP_EVENT_REFETCH_OVERLAP_SEC)
+                }
             }
             subscriptionManager.syncWithGroupManager(activeIds)
             // Seed convergence with each restored state. A commit that arrives
@@ -204,7 +214,8 @@ class MarmotManager(
             keyPackageRotationManager.restoreFromStore()
             ingestDedupStore?.loadAll()?.let { marks ->
                 terminallyIngestedMutex.withLock { terminallyIngested.addAll(marks) }
-                Unit
+                val created = activeIds.filter { createdLocallyMarker(it) in marks }
+                createdLocallyLock.withLock { createdLocally.addAll(created) }
             }
             retryPendingPublishObligations()
             Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
@@ -220,6 +231,23 @@ class MarmotManager(
      */
     private val terminallyIngested = mutableSetOf<HexKey>()
     private val terminallyIngestedMutex = Mutex()
+
+    // Groups this device created. Holding leaf 0 is not proof: a commit that removes leaf 0
+    // and adds someone in the same epoch places the invitee there, which let a crafted
+    // invite skip New Requests. So creation leaves a durable marker, stored with the ingest
+    // markers (hashed, so it cannot collide with an event id) and read back on restore.
+    private val createdLocally = mutableSetOf<HexKey>()
+    private val createdLocallyLock = KmpLock()
+
+    private fun createdLocallyMarker(nostrGroupId: HexKey): HexKey = sha256("amethyst:marmot:created-locally:$nostrGroupId".encodeToByteArray()).toHexKey()
+
+    private suspend fun markCreatedLocally(nostrGroupId: HexKey) {
+        createdLocallyLock.withLock { createdLocally.add(nostrGroupId) }
+        markTerminallyIngested(createdLocallyMarker(nostrGroupId))
+    }
+
+    /** Whether this device created [nostrGroupId]. */
+    fun isCreatedLocally(nostrGroupId: HexKey): Boolean = createdLocallyLock.withLock { nostrGroupId in createdLocally }
 
     suspend fun isTerminallyIngested(eventId: HexKey): Boolean = terminallyIngestedMutex.withLock { eventId in terminallyIngested }
 
@@ -391,7 +419,7 @@ class MarmotManager(
      * are still fetched; replays inside the window are deduplicated by the
      * message store and by note identity in the chatroom.
      */
-    private suspend fun subscriptionSinceFromStoredMessages(groupIds: Set<HexKey>): Map<HexKey, Long> {
+    private suspend fun newestStoredMessageTimes(groupIds: Set<HexKey>): Map<HexKey, Long> {
         if (messageStore == null) return emptyMap()
         val result = mutableMapOf<HexKey, Long>()
         for (groupId in groupIds) {
@@ -408,10 +436,7 @@ class MarmotManager(
             // and a single future-dated message must not push `since` past
             // the present — that would skip genuinely new events on every
             // restart until a fresher message arrives.
-            val newest = minOf(newestStored, TimeUtils.now())
-            if (newest > GROUP_EVENT_REFETCH_OVERLAP_SEC) {
-                result[groupId] = newest - GROUP_EVENT_REFETCH_OVERLAP_SEC
-            }
+            result[groupId] = minOf(newestStored, TimeUtils.now())
         }
         return result
     }
@@ -442,14 +467,17 @@ class MarmotManager(
         when (result) {
             is GroupEventResult.ApplicationMessage -> {
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+                desync.onDecrypted(result.groupId, groupEvent.createdAt)
             }
 
             is GroupEventResult.CommitProcessed -> {
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+                desync.onDecrypted(result.groupId, groupEvent.createdAt)
             }
 
             is GroupEventResult.ProposalStaged -> {
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+                desync.onDecrypted(result.groupId, groupEvent.createdAt)
             }
 
             is GroupEventResult.CommitPending,
@@ -457,11 +485,41 @@ class MarmotManager(
             is GroupEventResult.UndecryptableOuterLayer,
             is GroupEventResult.AppMessageOnCandidateBranch,
             is GroupEventResult.RefusedByLifecycle,
-            is GroupEventResult.Error,
             -> {}
+
+            is GroupEventResult.Error -> {
+                val groupId = result.groupId
+                if (groupId != null && result.message.startsWith(NO_CANONICAL_EPOCH_ERROR)) {
+                    if (desync.onUndecryptable(groupId, groupEvent.id, groupEvent.createdAt)) {
+                        Log.w("MarmotManager") { "group ${groupId.take(8)}… is out of sync: newer peer messages decrypt on no epoch here" }
+                    }
+                }
+            }
         }
 
         return result
+    }
+
+    /** Whether the other members of [nostrGroupId] have moved on to epochs this device can't follow. */
+    fun isOutOfSync(nostrGroupId: HexKey): Boolean = desync.isDesynced(nostrGroupId)
+
+    /**
+     * Drop this device's copy of a group it has fallen out of sync with, so it can be
+     * invited back.
+     *
+     * A fork cannot be repaired from this side: the peers hold no copy of our epoch and
+     * we cannot apply theirs, and an external join needs a GroupInfo nobody publishes.
+     * What does work is the ordinary invite path. With the MLS state gone, a new Welcome
+     * is not "already a member" and joins; an admin removes this member and adds it back.
+     * Nothing is published: a SelfRemove at our stale epoch would decrypt for no one.
+     * The decrypted history stays on disk, so it is back when the group is.
+     */
+    suspend fun resetOutOfSyncGroup(nostrGroupId: HexKey) {
+        subscriptionManager.unsubscribeGroup(nostrGroupId)
+        publishGate.forget(nostrGroupId)
+        groupManager.removeGroupState(nostrGroupId)
+        desync.forget(nostrGroupId)
+        Log.w("MarmotManager") { "reset out-of-sync group ${nostrGroupId.take(8)}…; waiting for a new Welcome" }
     }
 
     /**
@@ -478,6 +536,8 @@ class MarmotManager(
         val result = inboundProcessor.processWelcome(welcomeEvent, hintNostrGroupId)
 
         if (result is WelcomeResult.Joined) {
+            // Joined now: only what is sent from here on has to decrypt.
+            desync.seed(result.nostrGroupId, TimeUtils.now())
             // An authenticated re-join is what clears a departure gate — the
             // rule `LocalOutboundGate.REMOVED` states, and `LEAVING` needs it
             // just as much: a member who left and was invited back holds a gate
@@ -744,6 +804,21 @@ class MarmotManager(
     fun currentEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
+     * The kind:1009 edit rumor alone, for a caller that sends it through its own
+     * show-then-publish path (the app's composer) rather than [buildMessageEdit].
+     */
+    fun buildMessageEditRumor(
+        targetEventId: HexKey,
+        replacement: String,
+    ): Event {
+        val template =
+            eventTemplate<Event>(kind = MarmotAppEvent.KIND_EDIT, description = replacement) {
+                addUnique(arrayOf("e", targetEventId))
+            }
+        return RumorAssembler.assembleRumor(signer.pubKey, template)
+    }
+
+    /**
      * Build a kind:1009 edit that replaces the text of a prior message.
      *
      * An edit is not chat and must never render as its own row: the
@@ -762,14 +837,7 @@ class MarmotManager(
         replacement: String,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
-        val template =
-            com.vitorpamplona.quartz.nip01Core.signers
-                .eventTemplate<Event>(kind = MarmotAppEvent.KIND_EDIT, description = replacement) {
-                    addUnique(arrayOf("e", targetEventId))
-                }
-        val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<Event>(signer.pubKey, template)
+        val innerEvent = buildMessageEditRumor(targetEventId, replacement)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
@@ -1063,7 +1131,9 @@ class MarmotManager(
         publishGate.satisfyEmptyObligation(nostrGroupId)
         recordRetentionForCurrentEpoch(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
+        desync.seed(nostrGroupId, TimeUtils.now())
         subscriptionManager.subscribeGroup(nostrGroupId)
+        markCreatedLocally(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
     }
@@ -1105,7 +1175,9 @@ class MarmotManager(
         publishGate.satisfyEmptyObligation(nostrGroupId)
         recordRetentionForCurrentEpoch(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
+        desync.seed(nostrGroupId, TimeUtils.now())
         subscriptionManager.subscribeGroup(nostrGroupId)
+        markCreatedLocally(nostrGroupId)
         return nostrGroupId
     }
 
@@ -1118,6 +1190,11 @@ class MarmotManager(
         /** True when at least one relay in scope acknowledged an accept. */
         val confirmed: Boolean,
     )
+
+    private val commitPreparationLocks = mutableMapOf<HexKey, Mutex>()
+    private val commitPreparationLocksLock = Mutex()
+
+    private suspend fun commitPreparationLock(nostrGroupId: HexKey): Mutex = commitPreparationLocksLock.withLock { commitPreparationLocks.getOrPut(nostrGroupId) { Mutex() } }
 
     /**
      * Prepare a local commit, publish it, and apply it only if publication was
@@ -1140,41 +1217,49 @@ class MarmotManager(
         ignoringGate: LocalOutboundGate? = null,
         stage: suspend () -> MlsGroupManager.StagedCommit,
     ): CommitPublication {
-        requireOutboundAllowed(nostrGroupId, "commit a group-state change", ignoringGate)
-        // A commit whose publish went unconfirmed leaves the group in
-        // `PendingPublish`, which correctly refuses new commits — but the only
-        // thing that ever resolved it was `restoreAll`, so one dropped socket
-        // wedged the group until the app was restarted. Retrying this group's
-        // obligations here makes the next attempt the recovery: republishing
-        // the same event is safe (a peer deduplicates it by id) and a retry
-        // that still fails leaves the group held exactly as before.
-        if (publishGate.lifecycle(nostrGroupId) == GroupLifecycleState.PENDING_PUBLISH) {
-            retryPendingPublishObligations(onlyGroupId = nostrGroupId)
-        }
-        check(publishGate.canPrepareLocalCommit(nostrGroupId, ignoringGate)) {
-            "Group $nostrGroupId cannot prepare a local commit " +
-                "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
-        }
+        // One lock per group from the gate check to the durable obligation. The auto-commit of a
+        // member's leave runs from ingest while the user may be committing a rename or an add;
+        // the gate check alone let both pass before either recorded its obligation, and two
+        // commits staged from one epoch fork the group.
+        val (staged, event, obligation) =
+            commitPreparationLock(nostrGroupId).withLock {
+                requireOutboundAllowed(nostrGroupId, "commit a group-state change", ignoringGate)
+                // A commit whose publish went unconfirmed leaves the group in
+                // `PendingPublish`, which correctly refuses new commits — but the only
+                // thing that ever resolved it was `restoreAll`, so one dropped socket
+                // wedged the group until the app was restarted. Retrying this group's
+                // obligations here makes the next attempt the recovery: republishing
+                // the same event is safe (a peer deduplicates it by id) and a retry
+                // that still fails leaves the group held exactly as before.
+                if (publishGate.lifecycle(nostrGroupId) == GroupLifecycleState.PENDING_PUBLISH) {
+                    retryPendingPublishObligations(onlyGroupId = nostrGroupId)
+                }
+                check(publishGate.canPrepareLocalCommit(nostrGroupId, ignoringGate)) {
+                    "Group $nostrGroupId cannot prepare a local commit " +
+                        "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
+                }
 
-        val staged = stage()
-        val event =
-            outboundProcessor.buildCommitEvent(
-                nostrGroupId = nostrGroupId,
-                commitBytes = staged.result.framedCommitBytes,
-                exporterKey = staged.result.preCommitExporterSecret,
-            )
+                val staged = stage()
+                val event =
+                    outboundProcessor.buildCommitEvent(
+                        nostrGroupId = nostrGroupId,
+                        commitBytes = staged.result.framedCommitBytes,
+                        exporterKey = staged.result.preCommitExporterSecret,
+                    )
 
-        // Durable BEFORE the publish. Publishing first would leave a crash
-        // window in which peers have accepted a commit this client has no
-        // memory of preparing — and on restart it would generate a
-        // replacement, forking itself at the same epoch.
-        val obligation =
-            publishGate.prepare(
-                groupId = nostrGroupId,
-                staged = staged,
-                outboundBytes = event.signedEvent.toJson().encodeToByteArray(),
-                recipientScope = relays.map { it.url },
-            )
+                // Durable BEFORE the publish. Publishing first would leave a crash
+                // window in which peers have accepted a commit this client has no
+                // memory of preparing — and on restart it would generate a
+                // replacement, forking itself at the same epoch.
+                val obligation =
+                    publishGate.prepare(
+                        groupId = nostrGroupId,
+                        staged = staged,
+                        outboundBytes = event.signedEvent.toJson().encodeToByteArray(),
+                        recipientScope = relays.map { it.url },
+                    )
+                Triple(staged, event, obligation)
+            }
 
         val confirmed =
             try {
@@ -1548,24 +1633,50 @@ class MarmotManager(
      * targets together, since a deletion is only authorized against the message
      * it names.
      */
-    fun deletedIds(messages: List<Event>): Set<HexKey> {
+    fun deletedIds(
+        messages: List<Event>,
+        /** The group's admins: their kind-4891 removals apply to anyone's message. */
+        admins: Set<HexKey> = emptySet(),
+    ): Set<HexKey> {
         val authorOf = HashMap<HexKey, HexKey>(messages.size)
         val claims = ArrayList<Pair<HexKey, HexKey>>()
+        val removed = HashSet<HexKey>()
         for (event in messages) {
             if (event.kind == DeletionRequestEvent.KIND) {
                 for (tag in event.tags) {
                     if (tag.size >= 2 && tag[0] == "e") claims.add(tag[1] to event.pubKey)
                 }
+            } else if (event.kind == MarmotAppEvent.KIND_REMOVE) {
+                if (event.pubKey in admins) removed.addAll(adminRemovalTargets(event))
             } else {
                 authorOf[event.id] = event.pubKey
             }
         }
-        val deleted = HashSet<HexKey>(claims.size)
+        val deleted = HashSet<HexKey>(claims.size + removed.size)
         for ((targetId, deleter) in claims) {
             if (authorOf[targetId] == deleter) deleted.add(targetId)
         }
+        deleted.addAll(removed.filter { it in authorOf })
         return deleted
     }
+
+    /**
+     * The messages a kind-4891 removal names, if its author may remove them: a current
+     * admin of [nostrGroupId]. Empty for anything else. White Noise sends 4891 instead of
+     * kind 5 whenever the deleter is an admin (their own messages included), so without
+     * this an admin's deletion from White Noise never reached us.
+     */
+    fun adminRemovalTargets(
+        nostrGroupId: HexKey,
+        event: Event,
+    ): List<HexKey> {
+        if (event.kind != MarmotAppEvent.KIND_REMOVE) return emptyList()
+        val admins = groupView(nostrGroupId)?.adminPubkeys ?: return emptyList()
+        if (event.pubKey !in admins) return emptyList()
+        return adminRemovalTargets(event)
+    }
+
+    private fun adminRemovalTargets(event: Event): List<HexKey> = event.tags.mapNotNull { tag -> if (tag.size >= 2 && tag[0] == "e") tag[1] else null }
 
     /**
      * The slice of canonical group state that kind:1210 rows are derived from,
@@ -2012,6 +2123,30 @@ class MarmotManager(
         return commitAndPublish(nostrGroupId, relays) {
             groupManager.stageCommit(nostrGroupId)
         }.event
+    }
+
+    /**
+     * Commit a staged departure when this account may: the step [commitPendingProposals]
+     * describes, driven from ingest.
+     *
+     * Nothing called it, so when a White Noise member left a group whose only admin was
+     * this account, the SelfRemove sat in the pool forever: the leaver stayed in the tree
+     * (still able to decrypt the group), and both apps kept listing them. Only admins
+     * commit here, the authority MIP-03 gives; another admin committing the same
+     * proposal at the same time is an ordinary fork that convergence settles. A failure
+     * is logged, not thrown: it is follow-up work, and the proposal stays staged for the
+     * next attempt.
+     */
+    suspend fun commitStagedProposalsIfAdmin(nostrGroupId: HexKey): OutboundGroupEvent? {
+        val view = groupView(nostrGroupId) ?: return null
+        if (signer.pubKey !in view.adminPubkeys) return null
+        return try {
+            commitPendingProposals(nostrGroupId)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotManager") { "could not commit staged proposals for ${nostrGroupId.take(8)}…: ${e.message}" }
+            null
+        }
     }
 
     /**
@@ -2676,6 +2811,12 @@ class MarmotManager(
         // events the UI never sees directly — a disband request resolving, a
         // removal being realized.
         chatroom.outboundGate.value = publishGate.outboundGateNow(nostrGroupId)
+        chatroom.isOutOfSync.value = desync.isDesynced(nostrGroupId)
+        // A group we created is ours: keep it out of "New Requests" across restarts.
+        // `markAsKnown` at creation is in-memory only, and a creator who has not posted
+        // yet has nothing else that says so. See [isCreatedLocally] for why this is not
+        // read off the tree.
+        if (isCreatedLocally(nostrGroupId)) chatroom.ownerSentMessage = true
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members
@@ -2695,6 +2836,9 @@ class MarmotManager(
          * absorb relay/system clock skew and out-of-order publishes.
          */
         internal val GROUP_EVENT_REFETCH_OVERLAP_SEC: Long = TimeUtils.ONE_DAY.toLong()
+
+        /** Prefix of the inbound error for an app message no epoch here can open. */
+        internal const val NO_CANONICAL_EPOCH_ERROR = "Application message decrypts on no canonical epoch"
 
         /**
          * How often the settler re-checks an open pass.

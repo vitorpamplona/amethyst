@@ -2861,7 +2861,7 @@
     <string name="upload_error_voice_message_exception">Falha no upload de voz: %1$s</string>
     <string name="upload_error_voice_message_failed">Falha ao enviar mensagem de voz</string>
     <string name="upload_error_voice_message_nip95_not_supported">O NIP-95 ainda não é suportado para mensagens de voz</string>
-    <string name="uptime">%1$d%% de disponibilidade</string>
+    <string name="uptime">%1$d% de disponibilidade</string>
     <string name="use_internal_tor">Motor Tor Ativo</string>
     <string name="use_internal_tor_explainer">Use a versão interna ou o Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Usuário não tem um endereço lightning configurado para receber sats</string>

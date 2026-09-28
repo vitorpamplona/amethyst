@@ -172,7 +172,8 @@ fun EditProfileDialog(
     }
 
     val orchestrator = remember { UploadOrchestrator() }
-    val serverBaseUrl = LocalBlossomServers.current?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
+    val blossomServers = LocalBlossomServers.current
+    val serverBaseUrl = blossomServers?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
 
     fun uploadFile(
         file: File,
@@ -182,7 +183,7 @@ fun EditProfileDialog(
         scope.launch(Dispatchers.IO) {
             setUploading(true)
             try {
-                val result = orchestrator.upload(file, null, serverBaseUrl, account.signer)
+                val result = orchestrator.upload(file, null, serverBaseUrl, account.signer, fallbackServerBaseUrls = blossomServers?.value.orEmpty())
                 result.blossom.url?.let { onUrl(it) }
             } catch (e: CancellationException) {
                 throw e

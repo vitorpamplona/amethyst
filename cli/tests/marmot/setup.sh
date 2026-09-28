@@ -17,26 +17,35 @@ preflight() {
     info "$cmd: $(command -v "$cmd")"
   done
 
-  # Build `amy` via gradle if missing.
+  # Build `amy` via gradle.
   #
   # jitpack.io and dl.google.com both return transient 503s on a non-trivial
   # fraction of cold-cache fetches, and Gradle disables the entire repository
   # for the rest of the build the moment a single 503 lands — so one bad
   # roll aborts the whole harness. Retry a few times; each attempt resumes
   # from Gradle's cache so only the still-missing artifacts get re-fetched.
-  if [[ ! -x "$AMY_BIN" ]]; then
-    if [[ "$NO_BUILD" -eq 1 ]]; then
-      fail_msg "amy not found at $AMY_BIN and --no-build set"; exit 1
-    fi
-    local attempt max_attempts=4
+  #
+  # Build even when the binary exists: an old install/amy from another branch
+  # tests yesterday's code and fails in misleading ways (a stale amy produced
+  # "UNIQUE constraint" publish rejections that looked like relay bugs). Gradle
+  # makes an up-to-date install a no-op. --no-build keeps whatever is there.
+  if [[ "$NO_BUILD" -eq 1 ]]; then
+    [[ -x "$AMY_BIN" ]] || { fail_msg "amy not found at $AMY_BIN and --no-build set"; exit 1; }
+    warn "--no-build: using the existing $AMY_BIN, which may be older than this checkout"
+  else
+    local attempt max_attempts=4 built=0
     for attempt in $(seq 1 $max_attempts); do
       step "building :cli:installDist (attempt $attempt/$max_attempts)"
-      if ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE" \
-          && [[ -x "$AMY_BIN" ]]; then
-        break
+      ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE"
+      # gradle's status, not tee's: a failed build must not fall through to the old binary.
+      if [[ "${PIPESTATUS[0]}" -eq 0 && -x "$AMY_BIN" ]]; then
+        built=1; break
       fi
       [[ "$attempt" -lt "$max_attempts" ]] && warn "gradle build failed (likely transient jitpack/Google 503) — retrying"
     done
+    # The binary may still exist from an earlier build; running the suite on it would test
+    # code this checkout no longer has.
+    [[ "$built" -eq 1 ]] || { fail_msg "amy build failed after $max_attempts attempts"; exit 1; }
   fi
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
   info "amy: $AMY_BIN"
@@ -68,17 +77,18 @@ preflight() {
   # what users are running", which is the question the harness exists to answer.
   #
   # THE TWO APPS NO LONGER AGREE, and the rule for that is: take the newer.
-  # As of 2026-09-10 android is on 0.9.21 (`fdd398a8`) and ios is still on
-  # 0.9.20 (`2f44f6b6`) — android syncs its bindings on its own cadence and got
+  # As of 2026-09-27 android is on a master snapshot after 0.10.4
+  # (`03b1809e`, 2026-09-26) and ios on the 0.10.4 release (`fcc85edd`), which
+  # is an ancestor of it — android syncs its bindings on its own cadence and got
   # there first. The newer one is where new validation lands, so it is where
-  # drift shows up first; a client that satisfies 0.9.21 satisfies 0.9.20,
-  # since every 0.9.20 rule is still in 0.9.21. Pinning to the laggard would
-  # test the subset and call it coverage.
+  # drift shows up first; a client that satisfies the newer MDK satisfies the
+  # older one. Pinning to the laggard would test the subset and call it
+  # coverage.
   #
   # Bump it deliberately, by reading those lockfiles again — not by drifting.
   # If they agree again, that is the value; if they disagree, take the newer
   # and say so here.
-  MDK_PIN="${MDK_PIN:-fdd398a80f1626f1713787cebe416f7890b5b204}"
+  MDK_PIN="${MDK_PIN:-03b1809e6387f2d95e566a6a2d2f1212bec4d41b}"
   if [[ "$(git -C "$WN_REPO" rev-parse HEAD 2>/dev/null)" != "$MDK_PIN" ]]; then
     if [[ "$NO_BUILD" -eq 1 ]]; then
       info "mdk is not at the pinned $MDK_PIN and --no-build set — testing whatever is checked out"

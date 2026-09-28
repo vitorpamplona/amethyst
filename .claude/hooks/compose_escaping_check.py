@@ -66,6 +66,11 @@ def find_violations(root: Path):
         )
         if n:
             found[path]["raw line break/tab in a value"] += n
+        # Android's printf escape. Compose substitutes only %N$s / %N$d, so `%%`
+        # renders as two percent signs ("100%% uptime").
+        n = sum(m.group(2).count("%%") for m in STRING_TEXT.finditer(text))
+        if n:
+            found[path]["%%"] += n
     return found
 
 

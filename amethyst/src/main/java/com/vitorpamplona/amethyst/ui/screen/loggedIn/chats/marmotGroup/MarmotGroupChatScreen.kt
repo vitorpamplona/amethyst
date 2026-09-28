@@ -71,7 +71,7 @@ fun MarmotGroupChatScreen(
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val memberCount by chatroom.memberCount.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
-    val memberPubkeys = remember(members) { members.map { it.pubkey } }
+    val memberPubkeys = remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) }
 
     DisappearingScaffold(
         isInvertedLayout = true,

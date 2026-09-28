@@ -159,14 +159,15 @@ fun noteActionSections(
                         },
                     )
                 }
-            }
 
-            add(
-                NoteAction(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(Res.string.follow_set_add_author_from_note_action)) {
-                    note.author?.pubkeyHex?.let { nav.nav(Route.PeopleListManagement(it)) }
-                    handlers.onDismiss()
-                },
-            )
+                // Your own posts: there is no "author" to follow or file into a list.
+                add(
+                    NoteAction(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(Res.string.follow_set_add_author_from_note_action)) {
+                        note.author?.pubkeyHex?.let { nav.nav(Route.PeopleListManagement(it)) }
+                        handlers.onDismiss()
+                    },
+                )
+            }
         }
 
     // When the rendered note was translated, Copy Text opens a chooser (Copy

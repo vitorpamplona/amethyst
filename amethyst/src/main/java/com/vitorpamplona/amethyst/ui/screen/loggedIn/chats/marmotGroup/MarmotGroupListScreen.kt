@@ -59,7 +59,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatUnreadBadge
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -73,11 +72,6 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_groups_desc
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_invitations_desc
-import com.vitorpamplona.amethyst.commons.resources.marmot_no_messages_yet
-import com.vitorpamplona.amethyst.commons.resources.marmot_preview_group_updated
-import com.vitorpamplona.amethyst.commons.resources.marmot_preview_media
-import com.vitorpamplona.amethyst.commons.resources.marmot_preview_no_text
-import com.vitorpamplona.amethyst.commons.resources.marmot_preview_with_sender
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_known_count
 import com.vitorpamplona.amethyst.commons.resources.marmot_tab_new_requests
@@ -90,14 +84,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DisplayUserSetAsSubject
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -297,7 +287,7 @@ fun MarmotGroupListItem(
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
-    val memberPubkeys = remember(members) { members.map { it.pubkey } }
+    val memberPubkeys = remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) }
     val newestMessage = chatroom.newestMessage
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(groupId)).collectAsStateWithLifecycle()
@@ -307,53 +297,7 @@ fun MarmotGroupListItem(
     // to ~100 entries, so counting per recomposition is cheap.
     val unread = chatroom.messages.count { (it.createdAt() ?: Long.MIN_VALUE) > lastReadTime }
 
-    // A preview has to survive the messages that carry no text: a system row
-    // keeps its state in tags and MIP-04 media keeps its in imeta, so both used
-    // to render as a blank second line under the group name.
-    val myPubKey = accountViewModel.account.signer.pubKey
-    val previewEvent = newestMessage?.event
-    val previewBody =
-        when {
-            newestMessage == null -> stringRes(Res.string.marmot_no_messages_yet)
-            previewEvent == null -> stringRes(Res.string.marmot_preview_no_text)
-            previewEvent.kind == MarmotAppEvent.KIND_SYSTEM -> stringRes(Res.string.marmot_preview_group_updated)
-            // Text first: an attachment usually carries a caption, and showing
-            // "Attachment" over the words the sender actually wrote would be a
-            // step back from the raw `content` this replaced.
-            previewEvent.content.isNotBlank() -> previewEvent.content
-            hasMip04Media(previewEvent) || hasEncryptedMediaV2(previewEvent) -> stringRes(Res.string.marmot_preview_media)
-            else -> stringRes(Res.string.marmot_preview_no_text)
-        }
-    // Only a genuinely known name earns the prefix: `bestName` returns null
-    // without metadata, and "a1b2c3d4: hi" is noise, not attribution.
-    //
-    // Read through `observeUserInfo`, not `metadataOrNull()`: the latter is a
-    // plain StateFlow.value read, so a kind:0 arriving after the row composed
-    // would never reach it.
-    //
-    // Deliberately `getUserIfExists` rather than the `LoadUser` idiom: this only
-    // subscribes for a sender the cache already knows, and a sender it does not
-    // simply goes unprefixed. Creating a User per unknown sender would put a
-    // metadata REQ behind every row of a list that is mostly strangers' names
-    // the reader never asked for — a preview line is not worth that.
-    val senderUser =
-        previewEvent
-            ?.pubKey
-            ?.takeIf { it != myPubKey }
-            ?.let { LocalCache.getUserIfExists(it) }
-    val senderName =
-        if (senderUser != null) {
-            observeUserInfo(senderUser, accountViewModel).value?.info?.bestName()
-        } else {
-            null
-        }
-    val previewText =
-        // A system caption already names its actor, so prefixing one would say it twice.
-        if (senderName != null && previewEvent?.kind != MarmotAppEvent.KIND_SYSTEM) {
-            stringRes(Res.string.marmot_preview_with_sender, senderName, previewBody)
-        } else {
-            previewBody
-        }
+    val previewText = marmotGroupPreviewText(newestMessage, accountViewModel)
 
     Row(
         modifier =

@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
@@ -88,6 +91,33 @@ class AccountMarmotActions(
     /** Last (timestamp, answer) from [latestKeyPackageOwner], for passive callers. */
     private var lastOwnerCheck: Pair<Long, LatestKeyPackageOwner>? = null
 
+    // Welcome rumor ids with a retry already scheduled, so a relay re-delivering the same
+    // wrap while one waits does not start a second chain of retries.
+    private val welcomeRetries = mutableSetOf<HexKey>()
+
+    // Welcome rumor ids whose retries ran out this session. Relays re-deliver two days of gift
+    // wraps on every re-subscription, and each delivery used to start a fresh chain, so a
+    // Welcome that can never apply was re-run through MLS for as long as relays kept it.
+    // In memory on purpose: the next app start still gives it one more try.
+    private val welcomeRetriesExhausted = mutableSetOf<HexKey>()
+    private val welcomeRetriesLock = KmpLock()
+
+    /** True when [welcomeId] had no retry pending, has retries left, and now has one pending. */
+    fun claimWelcomeRetry(welcomeId: HexKey): Boolean =
+        welcomeRetriesLock.withLock {
+            welcomeId !in welcomeRetriesExhausted && welcomeRetries.add(welcomeId)
+        }
+
+    fun markWelcomeRetriesExhausted(welcomeId: HexKey) {
+        welcomeRetriesLock.withLock { welcomeRetriesExhausted.add(welcomeId) }
+    }
+
+    fun welcomeRetriesExhausted(welcomeId: HexKey): Boolean = welcomeRetriesLock.withLock { welcomeId in welcomeRetriesExhausted }
+
+    fun releaseWelcomeRetry(welcomeId: HexKey) {
+        welcomeRetriesLock.withLock { welcomeRetries.remove(welcomeId) }
+    }
+
     /**
      * Resolve the relay set for a Marmot group. Prefer the relays carried in
      * the MLS GroupContext metadata so every member converges on the same
@@ -128,12 +158,11 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         innerEvent: Event,
     ) {
-        // wasVerified=true: MIP-03 inner events are unsigned rumors, so
-        // Schnorr verification would reject every one. This one we built
-        // ourselves, which is as authenticated as it gets.
-        val isNew = account.cache.justConsume(innerEvent, null, true)
-        val innerNote = account.cache.getOrCreateNote(innerEvent.id)
-        if (isNew) innerNote.event = innerEvent
+        // The same indexing as a received message. A bare justConsume returns false for a kind
+        // LocalCache does not dispatch (push-token lists 447-449, edits, stream starts), which
+        // left our own copy an EVENTLESS note in the conversation: an "Event is loading or can't
+        // be found" row for every push-token answer we sent.
+        val innerNote = indexMarmotInnerEvent(innerEvent).note
         account.marmotGroupList.addMessage(nostrGroupId, innerNote)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before the relay round-trip so the UI
@@ -282,6 +311,21 @@ class AccountMarmotActions(
             }
         }
         return IndexedInnerEvent(innerNote, isNew)
+    }
+
+    /**
+     * Apply a kind-4891 admin removal: drop the messages it names from the conversation
+     * when its author is an admin of the group (see [MarmotManager.adminRemovalTargets]).
+     * Runs on live delivery and on the restart replay, which re-adds every stored message.
+     */
+    fun applyMarmotAdminRemoval(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        val manager = account.marmotManager ?: return
+        manager.adminRemovalTargets(nostrGroupId, innerEvent).forEach { targetId ->
+            account.marmotGroupList.applyAdminRemoval(nostrGroupId, targetId, account.cache.getNoteIfExists(targetId))
+        }
     }
 
     /** [note] holds the inner event; [isNew] is true the first time this client indexed it. */
@@ -592,6 +636,21 @@ class AccountMarmotActions(
     }
 
     /**
+     * Drop this device's copy of a group it has fallen out of sync with, and make sure a
+     * fresh KeyPackage is out there for the admin's re-invite. See
+     * [MarmotManager.resetOutOfSyncGroup].
+     */
+    suspend fun resetOutOfSyncMarmotGroup(nostrGroupId: HexKey) {
+        val manager = account.marmotManager ?: return
+        manager.resetOutOfSyncGroup(nostrGroupId)
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        chatroom.isOutOfSync.value = false
+        chatroom.awaitingReinvite.value = true
+        account.marmotGroupList.notifyGroupChanged(nostrGroupId)
+        ensureMarmotKeyPackagePublished()
+    }
+
+    /**
      * Ensure the local user has at least one active KeyPackage bundle and
      * a published KeyPackage event on relays. Called from [init] after
      * Marmot state has been restored from disk.
@@ -769,6 +828,18 @@ class AccountMarmotActions(
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.
         account.marmotGroupList.markAsKnown(nostrGroupId)
+        syncAndNotify(nostrGroupId)
+    }
+
+    /**
+     * Copy the group's current MLS state (name, admins, members, relays) into its
+     * chatroom and tell the list to re-render it. For actions that commit outside the
+     * paths here which already sync.
+     */
+    fun syncAndNotify(nostrGroupId: HexKey) {
+        val manager = account.marmotManager ?: return
+        manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
+        account.marmotGroupList.notifyGroupChanged(nostrGroupId)
     }
 
     /**
@@ -951,13 +1022,40 @@ class AccountMarmotActions(
      *
      * The endpoints come from the account's own Blossom server list, because a
      * policy naming servers the uploader does not use would describe a group
-     * nobody can actually post media to.
+     * nobody can actually post media to. An account without one uploads to the
+     * default list (the same one the upload picker offers and falls back
+     * through), so that is what its policy names.
      */
+    fun marmotMediaPolicyServers(): List<String> =
+        account.blossomServers.flow.value
+            .ifEmpty {
+                account.blossomServers.hostNameFlow.value
+                    .filter { it.type == ServerType.Blossom }
+                    .map { it.baseUrl }
+            }.mapNotNull { normalizedPolicyBaseUrl(it) }
+            .distinct()
+            .take(EncryptedMediaPolicyV2.MAX_ENTRIES)
+
+    /**
+     * [url] in the byte-exact form the media policy requires, or null when it has none.
+     * The component rejects a base URL that isn't its own WHATWG serialization, so the
+     * everyday spelling without a trailing slash (`https://cdn.nostrcheck.me`) failed the
+     * whole commit.
+     */
+    private fun normalizedPolicyBaseUrl(url: String): String? =
+        try {
+            MarmotWebUrl.normalize(url, allowHttp = true, label = "base_url").also {
+                EncryptedMediaPolicyV2.requireNormalizedBaseUrl(it)
+            }
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+
     suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: HexKey) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val servers = account.blossomServers.flow.value
+        val servers = marmotMediaPolicyServers()
         require(servers.isNotEmpty()) {
             "Cannot enable encrypted media without at least one Blossom server configured"
         }
@@ -1018,6 +1116,9 @@ class AccountMarmotActions(
         if (view.adminPubkeys.contains(targetPubKey)) return
 
         manager.setGroupAdmins(nostrGroupId, view.adminPubkeys + targetPubKey, groupRelays.toList())
+        // The commit is canonical once published; without this the roster and the
+        // admin badges keep the pre-commit admin list until our own echo or a restart.
+        manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
     }
 
     /**
@@ -1042,5 +1143,8 @@ class AccountMarmotActions(
         }
 
         manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
+        // The commit is canonical once published; without this the roster and the
+        // admin badges keep the pre-commit admin list until our own echo or a restart.
+        manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
     }
 }

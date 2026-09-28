@@ -5147,7 +5147,7 @@
     <string name="upload_error_voice_message_exception">ध्वनि आरोहण असफल : %1$s</string>
     <string name="upload_error_voice_message_failed">ध्वनि सन्देश आरोहण असफल</string>
     <string name="upload_error_voice_message_nip95_not_supported">निप॰९५ का आलम्बन अभी नहीं है ध्वनि सन्देशों के लिए</string>
-    <string name="uptime">%1$d%% समय निरन्तर उपलब्ध</string>
+    <string name="uptime">%1$d% समय निरन्तर उपलब्ध</string>
     <string name="use_internal_tor">सक्रिय टोर उपकरण</string>
     <string name="use_internal_tor_explainer">आन्तरीय संस्करण का प्रयोग करें अथवा ओर्बोट</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता का कोई लैटनिंग पता स्थापित नहीं जिसपर साट्स प्राप्त कर सके</string>

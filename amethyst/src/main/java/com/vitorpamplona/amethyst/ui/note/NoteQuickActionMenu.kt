@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_follow
 import com.vitorpamplona.amethyst.commons.resources.quick_action_mute_thread
 import com.vitorpamplona.amethyst.commons.resources.quick_action_report
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body_group
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body_private
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
@@ -436,7 +438,7 @@ fun CardBody(
                     stringRes(Res.string.quick_action_delete),
                 ) {
                     if (accountViewModel.account.settings.hideDeleteRequestDialog) {
-                        accountViewModel.delete(note)
+                        accountViewModel.deleteOwn(note)
                         onDismiss()
                     } else {
                         showDeleteAlertDialog.value = true
@@ -579,6 +581,21 @@ fun NoteQuickActionItem(
     }
 }
 
+/**
+ * What a deletion actually does for [note]: a public NIP-09 to relays, a request sent
+ * inside a Marmot group, or a gift-wrapped request to a NIP-17 conversation. The public
+ * wording ("deleted from the relays you are connected to") is wrong for the last two.
+ */
+fun deletionRequestBody(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): StringResource =
+    when {
+        accountViewModel.account.marmot.marmotGroupOf(note) != null -> Res.string.quick_action_request_deletion_alert_body_group
+        note.isPrivateRumor() -> Res.string.quick_action_request_deletion_alert_body_private
+        else -> Res.string.quick_action_request_deletion_alert_body
+    }
+
 @Composable
 fun DeleteAlertDialog(
     note: Note,
@@ -587,15 +604,15 @@ fun DeleteAlertDialog(
 ) {
     QuickActionAlertDialog(
         title = stringRes(Res.string.quick_action_request_deletion_alert_title),
-        textContent = stringRes(Res.string.quick_action_request_deletion_alert_body),
+        textContent = stringRes(deletionRequestBody(note, accountViewModel)),
         buttonIcon = MaterialSymbols.Delete,
         buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            accountViewModel.delete(note)
+            accountViewModel.deleteOwn(note)
             onDismiss()
         },
         onClickDontShowAgain = {
-            accountViewModel.delete(note)
+            accountViewModel.deleteOwn(note)
             accountViewModel.account.settings.setHideDeleteRequestDialog()
             onDismiss()
         },

@@ -313,7 +313,7 @@
     <string name="geocache_hunt_needs_caches">Füge mindestens einen Cache hinzu.</string>
     <string name="geocache_publish_failed">Veröffentlichen fehlgeschlagen. Prüfe deine Relay-Verbindung und versuche es erneut.</string>
     <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">Öffnen</string>
     <string name="relay_monitor_rtt_read">Lesen</string>
@@ -3088,7 +3088,7 @@
         <item quantity="other">%1$d Relays</item>
     </plurals>
     <string name="active_subs_search_keywords">abonnements subscriptions filter relays anfragen reqs verbindungen warum diagnose</string>
-    <string name="active_subs_share">%1$d %% von allen</string>
+    <string name="active_subs_share">%1$d % von allen</string>
     <string name="active_subs_title">Aktive Relay-Abonnements</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d Filter ist noch nicht zugeordnet</item>
@@ -5136,7 +5136,7 @@
     <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
     <string name="upload_error_voice_message_failed">Sprachnachricht konnte nicht hochgeladen werden</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
-    <string name="uptime">%1$d%% Verfügbarkeit</string>
+    <string name="uptime">%1$d% Verfügbarkeit</string>
     <string name="use_internal_tor">Aktiver Tor-Engine</string>
     <string name="use_internal_tor_explainer">Verwende die interne Version oder Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>

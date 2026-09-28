@@ -106,6 +106,35 @@ class MarmotLeaveProposalTest {
         }
 
     @Test
+    fun `after ingest an admin commits a staged departure and a non-admin does not`() =
+        runBlocking {
+            // The app and amy call commitStagedProposalsIfAdmin on every ProposalStaged.
+            // Before that nothing did, and a member who left a group we administer never left.
+            val alice = Fixture()
+            val bob = Fixture()
+            val carol = Fixture()
+            alice.manager.createCurrentProfileGroup(
+                nostrGroupId = nostrGroupId,
+                relays = listOf("wss://relay.invalid"),
+                profile = GroupProfileV1("departures", ""),
+            )
+            val (_, bobWelcome) = alice.manager.addMember(nostrGroupId, bob.manager.generateKeyPackageEvent(relays = emptyList()), emptyList())
+            bob.manager.ingest(bobWelcome!!.giftWrapEvent)
+            val (addCarol, carolWelcome) = alice.manager.addMember(nostrGroupId, carol.manager.generateKeyPackageEvent(relays = emptyList()), emptyList())
+            bob.manager.ingest(addCarol!!.signedEvent)
+            carol.manager.ingest(carolWelcome!!.giftWrapEvent)
+
+            val proposal = carol.manager.leaveGroup(nostrGroupId)
+            assertIs<MarmotIngestResult.ProposalStaged>(bob.manager.ingest(proposal.signedEvent))
+            assertIs<MarmotIngestResult.ProposalStaged>(alice.manager.ingest(proposal.signedEvent))
+
+            assertNull(bob.manager.commitStagedProposalsIfAdmin(nostrGroupId), "bob is not an admin")
+            assertNotNull(alice.manager.commitStagedProposalsIfAdmin(nostrGroupId), "alice is")
+            assertEquals(2, alice.manager.memberCount(nostrGroupId))
+            assertNull(alice.manager.commitStagedProposalsIfAdmin(nostrGroupId), "nothing left to commit")
+        }
+
+    @Test
     fun `every member applies the commit that evicts the leaver, not just the committer`() =
         runBlocking {
             // Three members, because the bug only shows with a WITNESS: alice

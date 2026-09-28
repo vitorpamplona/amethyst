@@ -55,6 +55,9 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -394,11 +397,17 @@ class GiftWrapEventHandler(
 private suspend fun processMarmotWelcomeFlow(
     innerEvent: Event,
     account: Account,
+    attempt: Int = 0,
 ) {
     val manager = account.marmotManager ?: return
     if (innerEvent !is WelcomeEvent) {
         return
     }
+    // A Welcome that already joined (or never can) is done. Replays of its wrap are routine:
+    // every re-subscription re-delivers the last two days of gift wraps.
+    if (manager.isTerminallyIngested(innerEvent.id)) return
+    // Out of retries this session: a re-delivered wrap waits for the next app start.
+    if (attempt == 0 && account.marmot.welcomeRetriesExhausted(innerEvent.id)) return
 
     // "h" tag is optional per MIP-02 — some senders (e.g. whitenoise-rs) omit it.
     // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension instead.
@@ -407,12 +416,14 @@ private suspend fun processMarmotWelcomeFlow(
 
     when (result) {
         is WelcomeResult.Joined -> {
+            manager.markTerminallyIngested(innerEvent.id)
             Log.d("MarmotDbg") {
                 "processMarmotWelcomeFlow: Joined ${result.nostrGroupId.take(8)}… needsKeyPackageRotation=${result.needsKeyPackageRotation}"
             }
 
             // Sync MIP-01 metadata from group extensions to chatroom
             val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
+            chatroom.awaitingReinvite.value = false
             manager.syncMetadataTo(result.nostrGroupId, chatroom)
             Log.d("MarmotDbg") {
                 "processMarmotWelcomeFlow: synced metadata name=${chatroom.displayName.value} " +
@@ -437,6 +448,7 @@ private suspend fun processMarmotWelcomeFlow(
         }
 
         is WelcomeResult.AlreadyJoined -> {
+            manager.markTerminallyIngested(innerEvent.id)
             // Benign replay of a gift-wrapped Welcome (kind:1059) we already
             // processed in a prior session — the relay is just re-delivering
             // it after app restart. Log at DEBUG, not WARN.
@@ -446,8 +458,39 @@ private suspend fun processMarmotWelcomeFlow(
         }
 
         is WelcomeResult.Error -> {
-            Log.w("MarmotDbg") { "processMarmotWelcomeFlow: ERROR ${result.message}" }
+            Log.w("MarmotDbg") { "processMarmotWelcomeFlow: ERROR (attempt ${attempt + 1}) ${result.message}" }
+            if (result.message.contains("No matching KeyPackageBundle")) {
+                // Bundles are generated before their KeyPackage is published, so a Welcome
+                // for one we never held can never become processable.
+                manager.markTerminallyIngested(innerEvent.id)
+            } else {
+                scheduleWelcomeRetry(innerEvent, account, attempt)
+            }
         }
+    }
+}
+
+/**
+ * Backoff for a Welcome that failed for a reason that can pass (the signer was busy, the
+ * KeyPackage store was still loading, a relay round trip failed). Before this a failed
+ * Welcome was only retried on the next app start: a replayed wrap skipped the flow.
+ */
+private val WELCOME_RETRY_DELAYS_MS = longArrayOf(30_000L, 120_000L, 600_000L)
+
+private fun scheduleWelcomeRetry(
+    welcome: WelcomeEvent,
+    account: Account,
+    attempt: Int,
+) {
+    if (attempt >= WELCOME_RETRY_DELAYS_MS.size) {
+        account.marmot.markWelcomeRetriesExhausted(welcome.id)
+        return
+    }
+    if (!account.marmot.claimWelcomeRetry(welcome.id)) return
+    account.scope.launch(Dispatchers.IO) {
+        delay(WELCOME_RETRY_DELAYS_MS[attempt])
+        account.marmot.releaseWelcomeRetry(welcome.id)
+        processMarmotWelcomeFlow(welcome, account, attempt + 1)
     }
 }
 
@@ -529,7 +572,13 @@ class SealEventHandler(
         cache.copyRelaysFromTo(publicNote, rumorId)
         val innerRumorNote = cache.getOrCreateNote(rumorId)
         innerRumorNote.event?.let { innerRumor ->
-            eventProcessor.consumeEvent(innerRumor, innerRumorNote, publicNote)
+            // A re-delivered Welcome goes back through the MLS flow, which returns at once
+            // when it already joined; one that failed the first time gets another chance.
+            if (MarmotInboundProcessor.isWelcomeEvent(innerRumor)) {
+                processMarmotWelcomeFlow(innerRumor, account)
+            } else {
+                eventProcessor.consumeEvent(innerRumor, innerRumorNote, publicNote)
+            }
         }
     }
 }
@@ -647,6 +696,10 @@ class GroupEventHandler(
 
             when (result) {
                 is GroupEventResult.ApplicationMessage -> {
+                    // A message that decrypts means this device is back in step.
+                    account.marmotGroupList
+                        .getOrCreateGroup(result.groupId)
+                        .isOutOfSync.value = false
                     // Parse the inner event JSON and index it
                     val innerEvent = Event.fromJson(result.innerEventJson)
                     Log.d("MarmotDbg") {
@@ -723,6 +776,7 @@ class GroupEventHandler(
                     // peer-sent kind:1210 is dropped inside addMessage — see
                     // `MarmotGroupList.isDisplayableFeedMessage`.
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
+                    account.marmot.applyMarmotAdminRemoval(result.groupId, innerEvent)
 
                     // Traffic is the natural clock for disappearing messages: a
                     // group being read is a group whose expired messages should
@@ -827,6 +881,14 @@ class GroupEventHandler(
                     Log.d("MarmotDbg") {
                         "GroupEventHandler.add: ProposalStaged group=${result.groupId.take(8)}… senderLeaf=${result.senderLeafIndex}"
                     }
+                    // A departure only takes effect once an admin commits it; if that is us, do it.
+                    val groupId = result.groupId
+                    account.scope.launch(Dispatchers.IO) {
+                        if (manager.commitStagedProposalsIfAdmin(groupId) != null) {
+                            manager.syncMetadataTo(groupId, account.marmotGroupList.getOrCreateGroup(groupId))
+                            account.marmotGroupList.notifyGroupChanged(groupId)
+                        }
+                    }
                 }
 
                 is GroupEventResult.AppMessageOnCandidateBranch -> {
@@ -853,7 +915,12 @@ class GroupEventHandler(
                 }
 
                 is GroupEventResult.Error -> {
-                    Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR ${result.message}" }
+                    Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR group=${result.groupId?.take(8)} ${result.message}" }
+                    result.groupId?.let { groupId ->
+                        val outOfSync = manager.isOutOfSync(groupId)
+                        val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+                        if (chatroom.isOutOfSync.value != outOfSync) chatroom.isOutOfSync.value = outOfSync
+                    }
                 }
             }
         } catch (e: Exception) {

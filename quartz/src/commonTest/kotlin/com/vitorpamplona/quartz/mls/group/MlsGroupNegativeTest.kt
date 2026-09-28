@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.mls.framing.WireFormat
+import com.vitorpamplona.quartz.mls.messages.Commit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -84,6 +85,61 @@ class MlsGroupNegativeTest {
             confirmationTag = pub.confirmationTag!!,
             signature = pub.signature,
             pubMsg = pub,
+        )
+    }
+
+    /**
+     * Removing the last other member leaves the committer alone, so its direct path is
+     * empty — but RFC 9420 §12.4.1 still requires an UpdatePath for any Remove. We used to
+     * omit it, and openmls/MDK dropped the commit (`RequiredPathNotFound`): White Noise never
+     * learned it had been removed or that the group was disbanded.
+     */
+    @Test
+    fun removingTheLastOtherMemberStillCarriesAnUpdatePath() {
+        val fx = twoMemberGroup()
+        val result = fx.alice.removeMember(1)
+        val commit = Commit.decodeTls(TlsReader(result.commitBytes))
+        val path = commit.updatePath
+        assertTrue(path != null, "a Remove commit must carry an UpdatePath even with no path nodes")
+        assertEquals(0, path.nodes.size, "a one-leaf tree has an empty direct path")
+        assertEquals(1, fx.alice.members().size)
+    }
+
+    /**
+     * The empty-path commit also changes how the committer derives the new epoch (the commit
+     * secret is the leaf's own path secret). No remaining member re-derives it, so the check
+     * is that the group stays usable: the removed member sees the removal, and a member
+     * added afterwards exchanges messages with the committer in both directions.
+     */
+    @Test
+    fun groupKeepsWorkingAfterAnEmptyPathCommit() {
+        val fx = twoMemberGroup()
+        val removal = fx.alice.removeMember(1)
+        val parts = parseCommit(removal.framedCommitBytes)
+        fx.bob.processCommit(
+            commitBytes = parts.content,
+            senderLeafIndex = parts.senderLeafIndex,
+            confirmationTag = parts.confirmationTag,
+            signature = parts.signature,
+            wireFormat = WireFormat.PUBLIC_MESSAGE,
+        )
+        // Bob applies his own removal: the empty path does not stop the tree update.
+        assertEquals(1, fx.bob.members().size)
+
+        val daveBundle = fx.alice.createKeyPackage(identity = "dave".encodeToByteArray(), signingKey = ByteArray(32) { 3 })
+        val addDave = fx.alice.addMember(daveBundle.keyPackage.toTlsBytes())
+        val dave = MlsGroup.processWelcome(addDave.welcomeBytes!!, daveBundle)
+        assertEquals(fx.alice.epoch, dave.epoch)
+
+        val fromAlice = fx.alice.encrypt("after the removal".encodeToByteArray())
+        assertEquals("after the removal", dave.decrypt(fromAlice).content.decodeToString())
+        val fromDave = dave.encrypt("and back".encodeToByteArray())
+        assertEquals(
+            "and back",
+            fx.alice
+                .decrypt(fromDave)
+                .content
+                .decodeToString(),
         )
     }
 

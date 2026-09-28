@@ -28,10 +28,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -52,11 +55,17 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.marmot_awaiting_reinvite
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_disbanding
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_leaving
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_removed
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_not_a_member
+import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_body
+import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_body
+import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_title
+import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_reset
 import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -75,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatIsOneOnOne
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
@@ -82,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
@@ -157,18 +168,24 @@ fun MarmotGroupChatView(
                     .fillMaxHeight()
                     .weight(1f, true),
         ) {
-            RefreshingChatroomFeedView(
-                feedContentState = feedViewModel.feedState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
-                onWantsToReply = { note -> newMessageModel.reply(note) },
-                onWantsToEditDraft = { },
-                // kind:1210 rows sit in the conversation in order but are
-                // group-state captions rather than messages, so they get their
-                // own centered style instead of a bubble.
-                rowRenderer = remember(accountViewModel) { MarmotSystemRowRenderer(accountViewModel) },
-            )
+            // Two members is a 1:1 chat: drop the other person's name and picture from every
+            // bubble, as a NIP-17 conversation does. Zero means not loaded yet, so keep them.
+            val memberCount by chatroom.memberCount.collectAsStateWithLifecycle()
+            CompositionLocalProvider(LocalChatIsOneOnOne provides (memberCount in 1..2)) {
+                RefreshingChatroomFeedView(
+                    feedContentState = feedViewModel.feedState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
+                    onWantsToReply = { note -> newMessageModel.reply(note) },
+                    onWantsToEditDraft = { },
+                    onWantsToEditChatMessage = { note -> newMessageModel.editMarmotMessage(note) },
+                    // kind:1210 rows sit in the conversation in order but are
+                    // group-state captions rather than messages, so they get their
+                    // own centered style instead of a bubble.
+                    rowRenderer = remember(accountViewModel) { MarmotSystemRowRenderer(accountViewModel) },
+                )
+            }
         }
 
         Spacer(modifier = DoubleVertSpacer)
@@ -180,10 +197,17 @@ fun MarmotGroupChatView(
         // stays readable either way, which is the point of a gate that is not
         // a terminal state.
         val outboundGate by chatroom.outboundGate.collectAsStateWithLifecycle()
+        val isOutOfSync by chatroom.isOutOfSync.collectAsStateWithLifecycle()
+        val awaitingReinvite by chatroom.awaitingReinvite.collectAsStateWithLifecycle()
         val gate = outboundGate
-        if (gate != null) {
+        if (awaitingReinvite) {
+            MarmotGroupNoticeRow(stringRes(Res.string.marmot_awaiting_reinvite))
+        } else if (gate != null) {
             MarmotGroupClosedComposer(gate)
         } else {
+            if (isOutOfSync) {
+                MarmotOutOfSyncBanner(nostrGroupId, accountViewModel)
+            }
             MarmotGroupMessageComposer(
                 nostrGroupId = nostrGroupId,
                 newMessageModel = newMessageModel,
@@ -233,6 +257,10 @@ fun MarmotGroupMessageComposer(
         DisplayReplyingToNote(it, accountViewModel, nav) {
             newMessageModel.clearReply()
         }
+    }
+
+    newMessageModel.editingMessage.value?.let {
+        EditingMessageBanner(onCancel = { newMessageModel.cancelEdit() })
     }
 
     Column(modifier = EditFieldModifier) {
@@ -379,6 +407,49 @@ private fun MarmotGroupFileUploadDialog(
 }
 
 /**
+ * This device has fallen off the group's epoch chain (MarmotDesyncDetector): nothing the
+ * other members send decrypts here, and it will not heal on its own. Offers the one way
+ * back that exists, dropping the local copy so an admin can add this member again.
+ */
+@Composable
+private fun MarmotOutOfSyncBanner(
+    nostrGroupId: HexKey,
+    accountViewModel: AccountViewModel,
+) {
+    var confirming by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Text(
+            text = stringRes(Res.string.marmot_out_of_sync_body),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        TextButton(onClick = { confirming = true }, modifier = Modifier.align(Alignment.End)) {
+            Text(stringRes(Res.string.marmot_out_of_sync_reset))
+        }
+    }
+
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(stringRes(Res.string.marmot_out_of_sync_confirm_title)) },
+            text = { Text(stringRes(Res.string.marmot_out_of_sync_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirming = false
+                        accountViewModel.resetOutOfSyncMarmotGroup(nostrGroupId)
+                    },
+                ) { Text(stringRes(Res.string.marmot_out_of_sync_reset)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirming = false }) { Text(stringRes(Res.string.cancel)) }
+            },
+        )
+    }
+}
+
+/**
  * Stands in for the composer when an outbound gate is up.
  *
  * Deliberately a statement rather than a disabled text field: a greyed-out
@@ -394,6 +465,11 @@ private fun MarmotGroupClosedComposer(gate: LocalOutboundGate) {
             LocalOutboundGate.LEAVING -> stringRes(Res.string.marmot_group_composer_leaving)
             LocalOutboundGate.REMOVED -> stringRes(Res.string.marmot_group_composer_removed)
         }
+    MarmotGroupNoticeRow(message)
+}
+
+@Composable
+private fun MarmotGroupNoticeRow(message: String) {
     Row(
         modifier = EditFieldModifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,

@@ -597,6 +597,15 @@ class AccountViewModel(
     }
 
     /**
+     * Retracts one of your own notes the way its transport requires. Private rumors (NIP-17 DMs,
+     * Marmot group messages) take a private deletion; a public NIP-09 would e-tag the rumor id
+     * onto public relays.
+     */
+    fun deleteOwn(note: Note) {
+        if (note.isPrivateRumor()) deletePrivately(note) else delete(note)
+    }
+
+    /**
      * Retracts the user's own private rumor (e.g. a NIP-17 DM message) with a
      * gift-wrapped NIP-09 deletion to the same participants. A public deletion
      * would e-tag the private rumor id onto public relays.
@@ -2465,6 +2474,23 @@ class AccountViewModel(
     }
 
     /**
+     * Replace the text of my own Marmot message [target] with a kind:1009 edit. The edit
+     * overlays the original everywhere it is shown (here, and in White Noise), and goes
+     * through the same show-then-publish path as a new message, so a failed send shows on
+     * the edit's delivery state rather than silently.
+     */
+    suspend fun sendMarmotGroupMessageEdit(
+        nostrGroupId: String,
+        target: Note,
+        text: String,
+    ) {
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
+        val manager = account.marmotManager ?: return
+        deliverMarmotGroupMessage(nostrGroupId, manager.buildMessageEditRumor(target.idHex, tagger.message))
+    }
+
+    /**
      * Show [innerEvent] in the group's chat now and publish it on the account
      * scope. Shared by every Marmot send that originates in the UI.
      */
@@ -2528,9 +2554,16 @@ class AccountViewModel(
     fun marmotUsesEncryptedMediaV2(nostrGroupId: String): Boolean = account.marmotManager?.encryptedMediaPolicy(nostrGroupId) != null
 
     /** True when this account has somewhere to upload a group's encrypted media. */
-    fun hasBlossomServers(): Boolean =
-        account.blossomServers.flow.value
-            .isNotEmpty()
+    fun hasBlossomServers(): Boolean = account.marmot.marmotMediaPolicyServers().isNotEmpty()
+
+    /**
+     * On the account scope, not the screen's: the reset drops local state, flags the group as
+     * awaiting a re-invite and publishes a KeyPackage, and leaving the chat mid-way must not
+     * stop it between those steps.
+     */
+    fun resetOutOfSyncMarmotGroup(nostrGroupId: String) {
+        account.scope.launch(Dispatchers.IO) { account.marmot.resetOutOfSyncMarmotGroup(nostrGroupId) }
+    }
 
     suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: String) {
         account.marmot.enableMarmotEncryptedMediaV2(nostrGroupId)
@@ -2706,6 +2739,9 @@ class AccountViewModel(
                     relays.toList(),
                 )
         }
+        // The commits are canonical once published. Surface them now: a freshly created
+        // group otherwise sat at "0 members" with no name until our own echo or a restart.
+        account.marmot.syncAndNotify(nostrGroupId)
     }
 
     override fun onCleared() {

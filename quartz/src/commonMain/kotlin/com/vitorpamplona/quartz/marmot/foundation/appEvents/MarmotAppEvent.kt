@@ -83,6 +83,13 @@ class MarmotAppEvent(
         /** A durable group system row, synthesized from canonical state. */
         const val KIND_SYSTEM = 1210
 
+        /**
+         * An admin's removal of a message (anyone's, their own included), with an `e` tag
+         * naming the target and `{"v":1,"action":"remove"}` as content. White Noise sends
+         * it instead of a kind-5 deletion whenever the deleter is a group admin.
+         */
+        const val KIND_REMOVE = 4891
+
         private val ALLOWED_MEMBERS = setOf("id", "pubkey", "created_at", "kind", "tags", "content")
 
         val EMPTY_TAGS: TagArray = emptyArray()

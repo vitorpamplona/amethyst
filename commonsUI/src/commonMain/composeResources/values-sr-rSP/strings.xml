@@ -2907,7 +2907,7 @@
     <string name="upload_error_voice_message_exception">Otpremanje glasa nije uspelo: %1$s</string>
     <string name="upload_error_voice_message_failed">Otpremanje glasovne poruke nije uspelo</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 još nije podržan za glasovne poruke</string>
-    <string name="uptime">%1$d%% dostupnost</string>
+    <string name="uptime">%1$d% dostupnost</string>
     <string name="use_internal_tor">Aktivan Tor motor</string>
     <string name="use_internal_tor_explainer">Koristite internu verziju ili Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Korisnik nema podešenu Lightning adresu za primanje sats-a</string>

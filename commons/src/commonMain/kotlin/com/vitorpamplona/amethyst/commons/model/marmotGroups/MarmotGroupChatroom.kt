@@ -90,6 +90,12 @@ class MarmotGroupChatroom(
      */
     var isCurrentProfile = MutableStateFlow(true)
 
+    /** This device can no longer read what the other members send (see MarmotDesyncDetector). */
+    val isOutOfSync = MutableStateFlow(false)
+
+    /** This device dropped its copy of the group and waits for an admin to add it back. */
+    val awaitingReinvite = MutableStateFlow(false)
+
     /**
      * True once the group carries the `encrypted-media-v2` policy (`0x800b`).
      *

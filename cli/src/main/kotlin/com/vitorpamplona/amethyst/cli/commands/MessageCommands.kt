@@ -113,7 +113,14 @@ object MessageCommands {
             // A deletion is not its own row either. The retracted body is
             // blanked rather than the row dropped, so a harness (or a reader
             // paging back) can tell "retracted" from "never arrived".
-            val deleted = ctx.marmot.deletedIds(parsed)
+            val deleted =
+                ctx.marmot.deletedIds(
+                    parsed,
+                    ctx.marmot
+                        .groupView(gid)
+                        ?.adminPubkeys
+                        ?.toSet() ?: emptySet(),
+                )
             // Pinned at persist time from the retention of the epoch that
             // DELIVERED each message, so it is the message's own expiry and not
             // a recomputation against whatever the group's setting is now.

@@ -313,7 +313,7 @@
     <string name="geocache_hunt_needs_caches">Adjon hozzá legalább egy ládát.</string>
     <string name="geocache_publish_failed">Nem sikerült közzétenni. Ellenőrizze a kapcsolatot az átjátszóval, és próbálja újra.</string>
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
     <string name="relay_monitor_rtt_open">Megnyitás</string>
     <string name="relay_monitor_rtt_read">Olvasás</string>
@@ -3088,7 +3088,7 @@
         <item quantity="other">%1$d átjátszó</item>
     </plurals>
     <string name="active_subs_search_keywords">előfizetések, szűrők, átjátszók, kérések, kapcsolatok, miért diagnosztika</string>
-    <string name="active_subs_share">%1$d%% az összesből</string>
+    <string name="active_subs_share">%1$d% az összesből</string>
     <string name="active_subs_title">Aktív átjátszó-előfizetések</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d szűrő még nincs hozzárendelve</item>
@@ -5134,7 +5134,7 @@
     <string name="upload_error_voice_message_exception">Nem sikerült feltölteni a hangüzenetet: %1$s</string>
     <string name="upload_error_voice_message_failed">Nem sikerült feltölteni a hangüzenetet</string>
     <string name="upload_error_voice_message_nip95_not_supported">A NIP-95 még nem támogatja a hangüzeneteket</string>
-    <string name="uptime">Üzemidő: %1$d%%</string>
+    <string name="uptime">Üzemidő: %1$d%</string>
     <string name="use_internal_tor">Aktív Tor-motor</string>
     <string name="use_internal_tor_explainer">Használja a beépített verziót vagy az Orbotot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>

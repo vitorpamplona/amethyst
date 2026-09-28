@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_descri
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 
 @Stable
 class LoginViewModel : ViewModel() {
@@ -60,6 +61,20 @@ class LoginViewModel : ViewModel() {
     var password by mutableStateOf(TextFieldValue(""))
     val needsPassword by derivedStateOf {
         Bech32Transcription.normalize(key.text).startsWith("ncryptsec1")
+    }
+
+    /**
+     * The key field holds a whole, checksummed ncryptsec. [needsPassword] turns true at the
+     * first "ncryptsec1", which is what shows the password field; moving focus there has to
+     * wait for this, or a key typed by hand loses focus after its tenth character.
+     */
+    val isCompleteNcryptsec by derivedStateOf {
+        needsPassword &&
+            try {
+                Bech32Transcription.normalize(key.text).bechToBytes("ncryptsec").size == NCRYPTSEC_PAYLOAD_SIZE
+            } catch (e: Exception) {
+                false
+            }
     }
 
     var isFirstLogin by mutableStateOf(false)
@@ -191,5 +206,10 @@ class LoginViewModel : ViewModel() {
                 errorManager.error(Res.string.sign_request_rejected_description)
             }
         }
+    }
+
+    companion object {
+        // version + log_n + salt(16) + nonce(24) + key security + ciphertext(48), per NIP-49.
+        private const val NCRYPTSEC_PAYLOAD_SIZE = 91
     }
 }
