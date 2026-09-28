@@ -78,7 +78,7 @@ fun SlimListItem(
 ) {
     val decoratedHeadlineContent: @Composable () -> Unit = {
         ProvideTextStyleFromToken(
-            colors.headlineColor,
+            colors.contentColor,
             MaterialTheme.typography.bodyLarge,
             headlineContent,
         )
@@ -88,7 +88,7 @@ fun SlimListItem(
             {
                 Box(SupportingContentTopPadding) {
                     ProvideTextStyleFromToken(
-                        colors.supportingTextColor,
+                        colors.supportingContentColor,
                         MaterialTheme.typography.bodyMedium,
                         it,
                     )
@@ -99,7 +99,7 @@ fun SlimListItem(
         overlineContent?.let {
             {
                 ProvideTextStyleFromToken(
-                    colors.overlineColor,
+                    colors.overlineContentColor,
                     MaterialTheme.typography.labelSmall,
                     it,
                 )
@@ -110,7 +110,7 @@ fun SlimListItem(
             {
                 Box(LeadingContentEndPadding) {
                     CompositionLocalProvider(
-                        LocalContentColor provides colors.leadingIconColor,
+                        LocalContentColor provides colors.leadingContentColor,
                         content = it,
                     )
                 }
@@ -121,7 +121,7 @@ fun SlimListItem(
             {
                 Box(TrailingContentStartPadding) {
                     ProvideTextStyleFromToken(
-                        colors.trailingIconColor,
+                        colors.trailingContentColor,
                         MaterialTheme.typography.labelSmall,
                         content = it,
                     )
