@@ -199,6 +199,29 @@ jq_list() {
     ' 2>/dev/null || true
 }
 
+# Whether <b|c>'s wn lists <hex> in the group's <members|admins>. Three answers, because a
+# query that fails is not evidence of absence: piped straight into `jq -e select`, a dead
+# daemon or an `ok:false` reply read exactly like "not listed" and passed removal tests.
+#   0 listed · 1 wn answered and <hex> is not listed · 2 no usable answer
+wn_lists() {
+    local who="$1" gid="$2" list="$3" hex="$4" out
+    out=$("wn_$who" --json groups members "$gid" 2>/dev/null) || return 2
+    printf '%s' "$out" | jq -e '.ok == true' >/dev/null 2>&1 || return 2
+    if printf '%s' "$out" | jq_list "$list" | jq -e --arg p "$hex" \
+        'select((.member_id // .admin_id // .pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+# Whether <b|c>'s wn reports that it was itself removed from the group: MDK's
+# `groups show` carries `self_membership: "removed"` once the removal commit applied.
+wn_self_removed() {
+    local who="$1" gid="$2"
+    "wn_$who" --json groups show "$gid" 2>/dev/null \
+        | jq -e '.ok == true and .result.group.self_membership == "removed"' >/dev/null 2>&1
+}
+
 # npub or hex pubkey of one member/admin entry. MDK names the field per
 # collection: members carry `member_id`, admins carry `admin_id`.
 jq_member_ids() {

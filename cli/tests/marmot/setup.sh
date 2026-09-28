@@ -33,15 +33,19 @@ preflight() {
     [[ -x "$AMY_BIN" ]] || { fail_msg "amy not found at $AMY_BIN and --no-build set"; exit 1; }
     warn "--no-build: using the existing $AMY_BIN, which may be older than this checkout"
   else
-    local attempt max_attempts=4
+    local attempt max_attempts=4 built=0
     for attempt in $(seq 1 $max_attempts); do
       step "building :cli:installDist (attempt $attempt/$max_attempts)"
-      if ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE" \
-          && [[ -x "$AMY_BIN" ]]; then
-        break
+      ( cd "$REPO_ROOT" && ./gradlew :cli:installDist ) 2>&1 | tee -a "$LOG_FILE"
+      # gradle's status, not tee's: a failed build must not fall through to the old binary.
+      if [[ "${PIPESTATUS[0]}" -eq 0 && -x "$AMY_BIN" ]]; then
+        built=1; break
       fi
       [[ "$attempt" -lt "$max_attempts" ]] && warn "gradle build failed (likely transient jitpack/Google 503) — retrying"
     done
+    # The binary may still exist from an earlier build; running the suite on it would test
+    # code this checkout no longer has.
+    [[ "$built" -eq 1 ]] || { fail_msg "amy build failed after $max_attempts attempts"; exit 1; }
   fi
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy still missing after build"; exit 1; }
   info "amy: $AMY_BIN"

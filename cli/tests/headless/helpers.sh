@@ -72,13 +72,26 @@ assert_eq() {
 # checkout under an ordinary home dir already crosses it: ~85 bytes failed. Move
 # such a socket into a short private temp dir (0700, since wnd also refuses a
 # socket dir others can read).
+#
+# The dir is derived from the long path, not random: the same checkout gets the same
+# socket every run, so `start_daemon` still finds a wnd a killed run left behind
+# instead of starting a second one on the same data, and runs stop piling up dirs.
 short_socket_path() {
   local path="$1"
   if [[ ${#path} -lt 70 ]]; then printf '%s' "$path"; return; fi
   # Resolved, not /tmp itself: on macOS /tmp is a symlink to /private/tmp and wnd
   # refuses a socket path through an alias ("untrusted directory alias").
-  local dir
-  dir="$(mktemp -d "$(cd /tmp && pwd -P)/wnd.XXXXXX")" && chmod 700 "$dir"
+  local tmp dir
+  tmp="$(cd /tmp && pwd -P)"
+  dir="$tmp/wnd-$(id -u)-$(printf '%s' "$path" | cksum | cut -d' ' -f1)"
+  if ! mkdir -m 700 "$dir" 2>/dev/null; then
+    # Reuse only a dir that is ours and private: /tmp is shared, and a socket in a
+    # dir someone else controls could be swapped under wnd.
+    if [[ ! -d "$dir" || -L "$dir" || ! -O "$dir" ]]; then
+      dir="$(mktemp -d "$tmp/wnd.XXXXXX")"
+    fi
+    chmod 700 "$dir"
+  fi
   printf '%s/%s.sock' "$dir" "$(basename "$(dirname "$path")")"
 }
 

@@ -446,7 +446,7 @@ test_27_deletion_wn_to_amy() {
     record_result "$id" fail "wn messages delete failed"; return
   }
   printf 'wn messages delete %s -> %s\n' "$target" "$del" >>"$LOG_FILE"
-  if ! printf '%s' "$del" | jq -e '.result.published != false' >/dev/null 2>&1; then
+  if ! printf '%s' "$del" | jq -e '(.result.published // 0) > 0' >/dev/null 2>&1; then
     record_result "$id" fail "wn did not publish the delete tombstone: $del"; return
   fi
 

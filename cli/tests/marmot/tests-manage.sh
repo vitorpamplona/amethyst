@@ -27,10 +27,7 @@ test_06_member_removal() {
   # C should no longer see the group on its own member view.
   local deadline=$(( $(date +%s) + 120 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    if ! wn_c --json groups members "$mls_gid" 2>/dev/null \
-         | jq_list members | jq -e --arg p "$C_HEX" \
-             'select((.member_id // .pubkey // .public_key) == $p)' \
-         >/dev/null 2>&1; then
+    if wn_self_removed c "$mls_gid"; then
       removed=1; break
     fi
     sleep 3
@@ -180,10 +177,9 @@ test_11_leave_group() {
 
   local deadline=$(( $(date +%s) + 120 )) gone=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-         | jq_list admins | jq -e --arg p "$A_HEX" \
-             'select((.admin_id // .pubkey // .public_key) == $p)' \
-         >/dev/null 2>&1; then
+    local rc=0
+    wn_lists b "$mls_gid" admins "$A_HEX" || rc=$?
+    if [[ "$rc" -eq 1 ]]; then
       gone=1; break
     fi
     sleep 3
@@ -222,10 +218,9 @@ test_17_group_image_commit() {
 
   # Skip cleanly if A is no longer a member of GROUP_02 (a later test may have removed
   # A) — this test only makes sense while A can still commit to the group.
-  if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-        | jq_list members | jq -e --arg p "$A_HEX" \
-            'select((.member_id // .pubkey // .public_key) == $p)' \
-        >/dev/null 2>&1; then
+  local listed=0
+  wn_lists b "$mls_gid" members "$A_HEX" || listed=$?
+  if [[ "$listed" -eq 1 ]]; then
     record_result "$id" skip "A not in GROUP_02"; return
   fi
 
@@ -423,12 +418,10 @@ test_34_amy_removes_last_other_member() {
   local deadline=$(( $(date +%s) + 120 )) gone=0 view
   while [[ $(date +%s) -lt $deadline ]]; do
     wn_b sync >/dev/null 2>&1 || true
-    # `groups members`, as test 06 reads it: `groups show` carries no member list, and
-    # reading one there made this pass before wn had processed anything.
+    # A positive signal: wn marks its own copy removed once it applied the commit. Reading
+    # "B is not in the member list" instead passed whenever the query itself failed.
     view=$(wn_b_json groups show "$mls_gid" 2>/dev/null || true)
-    if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-         | jq_list members | jq -e --arg p "$B_HEX" \
-             'select((.member_id // .pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+    if wn_self_removed b "$mls_gid"; then
       gone=1; break
     fi
     sleep 3
