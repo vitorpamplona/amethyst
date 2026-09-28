@@ -287,7 +287,7 @@ fun MarmotGroupListItem(
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
-    val memberPubkeys = remember(members) { members.map { it.pubkey } }
+    val memberPubkeys = remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) }
     val newestMessage = chatroom.newestMessage
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(groupId)).collectAsStateWithLifecycle()

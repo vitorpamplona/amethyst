@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.marmot_preview_group_updated
 import com.vitorpamplona.amethyst.commons.resources.marmot_preview_media
@@ -34,7 +37,9 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
  * The second line of a Marmot group's row: the newest message, prefixed with its
@@ -97,4 +102,34 @@ fun marmotGroupPreviewText(
         }
 
     return previewText
+}
+
+/**
+ * The members a group's row or header should picture and name: everyone but us, like a
+ * NIP-17 room. A group of just us falls back to us, so a fresh group still has a face.
+ */
+fun marmotOtherMembers(
+    members: List<GroupMemberInfo>,
+    myPubKey: HexKey,
+): List<HexKey> {
+    val all = members.map { it.pubkey }.distinct()
+    return all.filter { it != myPubKey }.ifEmpty { all }
+}
+
+/**
+ * A group's title: its name, else the other members' names. White Noise creates 1:1
+ * chats without a name, and "Group c4f0426f…" told the reader nothing about who was
+ * on the other side.
+ */
+@Composable
+fun marmotGroupTitle(
+    displayName: String?,
+    otherMembers: List<HexKey>,
+    nostrGroupId: HexKey,
+    accountViewModel: AccountViewModel,
+): String {
+    if (!displayName.isNullOrBlank()) return displayName
+    if (otherMembers.isEmpty()) return stringRes(Res.string.marmot_group_fallback_name, nostrGroupId.take(8))
+    val names = otherMembers.take(4).map { key(it) { observeUserNameByHex(it, accountViewModel) } }
+    return names.joinToString(", ")
 }

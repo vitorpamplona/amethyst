@@ -144,6 +144,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimeli
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupPreviewText
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupTitle
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
@@ -515,7 +517,9 @@ private fun MarmotGroupRoomCompose(
     val relays by chatroom.relays.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
-    val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+    val members by chatroom.members.collectAsStateWithLifecycle()
+    val otherMembers = remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) }
+    val groupName = marmotGroupTitle(displayName, otherMembers, chatroom.nostrGroupId, accountViewModel)
 
     // Prefer the group's own avatar — the plain https link first, then the
     // encrypted Blossom blob; when it has neither, fall back to the NIP-11 icon
@@ -531,6 +535,21 @@ private fun MarmotGroupRoomCompose(
     val lastContent = marmotGroupPreviewText(lastMessage.takeIf { it.event != null }, accountViewModel)
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
+
+    val hasGroupFace = avatarUrl != null || image != null || !displayName.isNullOrBlank()
+    if (!hasGroupFace && otherMembers.isNotEmpty()) {
+        // An unnamed group without an avatar (White Noise's 1:1 chats) is about its people:
+        // show them, as a NIP-17 room does, instead of a relay icon.
+        ChannelName(
+            channelPicture = { NonClickableUserPictures(userHexList = otherMembers, size = Size55dp, accountViewModel = accountViewModel) },
+            channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, Res.string.marmot_group, modifier) },
+            channelLastTime = lastMessage.createdAt(),
+            channelLastContent = lastContent,
+            hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+            onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
+        )
+        return
+    }
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
