@@ -2575,6 +2575,8 @@ class Account(
 
         val isImage = headerInfo.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(url)
         val isVideo = headerInfo.mimeType?.startsWith("video/") == true || RichTextParser.isVideoUrl(url)
+        // A local, so the null check below smart-casts: FileHeader lives in another module.
+        val dim = headerInfo.dim
 
         val template =
             if (isImage) {
@@ -2600,7 +2602,7 @@ class Account(
                     // add title
                     contentWarningReason?.let { contentWarning(contentWarningReason) }
                 }
-            } else if (isVideo && headerInfo.dim != null) {
+            } else if (isVideo && dim != null) {
                 val videoMeta =
                     VideoMeta(
                         url = url,
@@ -2616,7 +2618,7 @@ class Account(
                 // The composer forces the kind when it was opened from a feed that only reads one of
                 // them (Shorts, Longs) or from that feed's share target, so the post lands where the
                 // user asked for it. Everywhere else the orientation decides.
-                if (videoKind.isShort(headerInfo.dim)) {
+                if (videoKind.isShort(dim)) {
                     VideoShortEvent.build(videoMeta, alt ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
