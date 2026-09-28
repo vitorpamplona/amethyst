@@ -270,6 +270,32 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      `NoteCompose`.
 
    Once `AccountViewModel` is in `commons`, these move without retyping.
+
+   **Progress 2026-09-28.** With the VM shared, re-measured closures were far smaller than the
+   tracker's counts:
+   - **Moved to `commonsUI`:** `RouteMaker`; `UserProfilePicture`, `UsernameDisplay` and
+     `Loaders` (`commons.ui.note`, with `LoadUser`); `RobohashAsyncImage` (jvmAndroid →
+     commonMain).
+   - **The `accountViewModel` overloads were moved, not dropped.** That covers
+     `DisappearingScaffold` and the per-note, per-user and user-finder `observe*` helpers,
+     which now sit in `commonsUI` beside the shared versions they delegate to
+     (`Account*.kt` files). They read the account and data sources off the VM, so they work
+     under Activity roots that provide no composition locals. Dropping them would rewrite
+     ~176 call sites, and stays a later cleanup.
+   - **Promoted to commonMain:** `CachedRichTextParser` and `CachedAsciiDocToMarkdown`.
+     Their only JVM tie was `ConcurrentLruCache`, which moved in step 4.
+   - **Left: `RichTextViewer` and `NoteCompose`.** They depend on each other (embedded notes
+     ↔ rich text) and reach the Android media stack, so they need a design, not a move:
+     - **Media:** media3 video, the zoomable image viewer, GIF video, LaTeX (JLatexMath),
+       the OSM map.
+     - **Intents and share sheets:** Blossom URIs, torrents, chat links, napplets.
+     - **Old JVM formatting:** `SimpleDateFormat`/`NumberFormat` in a dozen note types.
+     - **Translations:** the flavour-only `TranslatableRichTextViewer`.
+
+     The likely shape is renderer slots provided through a CompositionLocal at the Android
+     root (and later the Desktop one) for the media and intents, plus KMP swaps for the
+     formatting. RichTextViewer's own closure is 32 files with 41 exits; NoteCompose's is
+     144 files with 81.
 6. **Screens**, feature by feature, into `commonsUI`.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and

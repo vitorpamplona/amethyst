@@ -27,10 +27,6 @@ import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
  * The shared, cross-platform cache in front of [RichTextParser]. Both Amethyst
  * Android and Amethyst Desktop render the same parsed [RichTextViewerState] from
  * one place, so the same content quoted in multiple notes is only parsed once.
- *
- * Lives in `jvmAndroid` because it depends on [ConcurrentLruCache] (a JCA-free,
- * lock-free-read LRU that is not in `commonMain`). iOS/`commonMain` callers use
- * the uncached [RichTextParser] directly until a KMP cache is available.
  */
 object CachedRichTextParser {
     // Global across every feed. Sized to hold the active feed's visible + prefetched
