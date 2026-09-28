@@ -261,6 +261,28 @@ class MarmotDisbandTest {
         }
 
     @Test
+    fun `a group we created stays Known after a restart, an invitation does not`() =
+        runBlocking {
+            // "Known" at creation was an in-memory flag, so after a restart a creator who
+            // had not posted yet found their own group under New Requests. The sync that
+            // runs on restore has to reach the same answer from the MLS state alone.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            val alicesRoom = MarmotGroupChatroom(nostrGroupId)
+            val bobsRoom = MarmotGroupChatroom(nostrGroupId)
+            alice.manager.syncMetadataTo(nostrGroupId, alicesRoom)
+            bob.manager.syncMetadataTo(nostrGroupId, bobsRoom)
+
+            assertTrue(alicesRoom.isKnown(emptySet()), "the creator's own group")
+            assertTrue(!bobsRoom.isKnown(emptySet()), "an invitation from someone we don't follow")
+        }
+
+    @Test
     fun `rejoining a group we left clears the departure gate`() =
         runBlocking {
             // Leaving raises a durable `Leaving` gate, and nothing but a

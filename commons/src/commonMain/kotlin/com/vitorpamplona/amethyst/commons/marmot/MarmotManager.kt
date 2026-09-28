@@ -2676,6 +2676,12 @@ class MarmotManager(
         // events the UI never sees directly — a disband request resolving, a
         // removal being realized.
         chatroom.outboundGate.value = publishGate.outboundGateNow(nostrGroupId)
+        // A group we created is ours: keep it out of "New Requests" across restarts.
+        // `markAsKnown` at creation is in-memory only, and a creator who has not posted
+        // yet has nothing else that says so. The creator holds leaf 0 (RFC 9420 adds a
+        // joiner at the leftmost BLANK leaf, and leaf 0 is never blank while its creator
+        // is in the group), so an invitee only lands there after the creator has left.
+        if (groupManager.getGroup(nostrGroupId)?.leafIndex == 0) chatroom.ownerSentMessage = true
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members
