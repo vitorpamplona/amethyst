@@ -36,6 +36,14 @@ import kotlin.test.assertNull
  * kind:10050 routing + `UserContext` wiring, `route` dropped kind 10050 and the
  * User model was backed by a map nothing populated, so every recipient looked
  * "unreachable via NIP-17" until an indexer fan-out ran.
+ *
+ * Each test takes the [com.vitorpamplona.amethyst.commons.model.User] *before*
+ * consuming and keeps it. The cache's users and addressable notes live in a
+ * weakly-valued `LargeSoftCache`, so a note nothing references can be collected
+ * between two `consume` calls — taking the stored kind 10050 with it and letting
+ * a stale list land on a fresh, empty note. The app keeps a DM recipient's `User`
+ * alive while it is in use, and a `User` strongly holds its `dmRelayListNote`;
+ * the tests do the same, otherwise a GC mid-test made them fail on CI.
  */
 class DesktopDmRelayListConsumeTest {
     private val relayUrl = NormalizedRelayUrl("wss://relay.test/")
@@ -56,11 +64,11 @@ class DesktopDmRelayListConsumeTest {
     fun `consume routes kind 10050 into the User model`() {
         val cache = DesktopLocalCache()
         val signer = NostrSignerSync(KeyPair())
+        val user = cache.getOrCreateUser(signer.pubKey)
         val event = signedDmRelayList(signer)
 
         cache.consume(event, relayUrl)
 
-        val user = cache.getOrCreateUser(signer.pubKey)
         assertEquals(dmInbox, user.dmInboxRelaysStrict())
     }
 
@@ -76,25 +84,27 @@ class DesktopDmRelayListConsumeTest {
     fun `a newer kind 10050 replaces an older one`() {
         val cache = DesktopLocalCache()
         val signer = NostrSignerSync(KeyPair())
+        val user = cache.getOrCreateUser(signer.pubKey)
 
         cache.consume(signedDmRelayList(signer, dmInbox, createdAt = 1_700_000_000), relayUrl)
 
         val newerRelays = listOf(NormalizedRelayUrl("wss://moved.example/"))
         cache.consume(signedDmRelayList(signer, newerRelays, createdAt = 1_700_000_100), relayUrl)
 
-        assertEquals(newerRelays, cache.getOrCreateUser(signer.pubKey).dmInboxRelaysStrict())
+        assertEquals(newerRelays, user.dmInboxRelaysStrict())
     }
 
     @Test
     fun `an older kind 10050 does not overwrite a newer one`() {
         val cache = DesktopLocalCache()
         val signer = NostrSignerSync(KeyPair())
+        val user = cache.getOrCreateUser(signer.pubKey)
 
         cache.consume(signedDmRelayList(signer, dmInbox, createdAt = 1_700_000_100), relayUrl)
 
         val staleRelays = listOf(NormalizedRelayUrl("wss://stale.example/"))
         cache.consume(signedDmRelayList(signer, staleRelays, createdAt = 1_700_000_000), relayUrl)
 
-        assertEquals(dmInbox, cache.getOrCreateUser(signer.pubKey).dmInboxRelaysStrict())
+        assertEquals(dmInbox, user.dmInboxRelaysStrict())
     }
 }

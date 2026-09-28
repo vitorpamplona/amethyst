@@ -80,7 +80,7 @@ class SnoObjectCardRenderTest {
                 MaterialTheme(colorScheme = darkColorScheme()) {
                     Surface(color = MaterialTheme.colorScheme.surface) {
                         Column(Modifier.fillMaxSize()) {
-                            SnoObjectCard(payload = payload!!, eventId = "render-test", onClick = {})
+                            SnoObjectCard(payload = payload, eventId = "render-test", onClick = {})
                         }
                     }
                 }
@@ -122,7 +122,7 @@ class SnoObjectCardRenderTest {
                 MaterialTheme(colorScheme = darkColorScheme()) {
                     Surface(color = MaterialTheme.colorScheme.surface) {
                         SnoObjectViewer(
-                            payload = payload!!,
+                            payload = payload,
                             eventId = "viewer-test",
                             modifier = Modifier.size(200.dp),
                         )
