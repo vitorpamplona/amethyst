@@ -28,12 +28,12 @@
 #   amethyst-desktop-1.08.0-windows-arm64.zip
 #   amethyst-desktop-1.08.0-linux-x64.deb
 #   amethyst-desktop-1.08.0-linux-x64.rpm
-#   amethyst-desktop-1.08.0-linux-x64.AppImage
+#   amethyst-desktop-1.08.0-x86_64.AppImage
 #   amethyst-desktop-1.08.0-linux-x64.flatpak
 #   amethyst-desktop-1.08.0-linux-x64.tar.gz
 #   amethyst-desktop-1.08.0-linux-arm64.deb
 #   amethyst-desktop-1.08.0-linux-arm64.rpm
-#   amethyst-desktop-1.08.0-linux-arm64.AppImage
+#   amethyst-desktop-1.08.0-aarch64.AppImage
 #   amethyst-desktop-1.08.0-linux-arm64.flatpak
 #   amethyst-desktop-1.08.0-linux-arm64.tar.gz
 #   amy-1.08.0-macos-arm64.tar.gz
@@ -56,7 +56,12 @@
 #   geode-1.08.0-windows-x64.zip
 #   geode-1.08.0-windows-arm64.zip
 #
-# Two assets break the family/arch shape on purpose: the no-JRE jar bundles for
+# The AppImage breaks the family/arch shape on purpose: AppImageHub
+# (appimage.github.io) flags "linux" in an AppImage name, since every AppImage
+# is for Linux, and expects the AppImage arch names, so it is
+#   amethyst-desktop-<version>-<x86_64|aarch64>.AppImage
+#
+# Two more assets break the family/arch shape on purpose: the no-JRE jar bundles for
 # Homebrew-core are pure JVM bytecode (no bundled runtime), so a single
 # platform-independent artifact serves every OS:
 #   amy-1.08.0-jvm.tar.gz
@@ -87,6 +92,19 @@ geode_asset_name() {
     printf 'geode-%s-%s-%s.%s' "$version" "$family" "$arch" "$ext"
 }
 
+# AppImage variant: no <family> (all AppImages are for Linux) and the AppImage
+# arch names (x86_64 / aarch64) instead of x64 / arm64.
+# Usage: appimage_asset_name <arch> <version>
+appimage_asset_name() {
+    local arch="$1" version="$2" appimage_arch
+    case "$arch" in
+        x64)   appimage_arch="x86_64" ;;
+        arm64) appimage_arch="aarch64" ;;
+        *)     echo "appimage_asset_name: unsupported arch '$arch'" >&2; return 1 ;;
+    esac
+    printf 'amethyst-desktop-%s-%s.AppImage' "$version" "$appimage_arch"
+}
+
 # Copy + rename build outputs into <dest_dir> using the canonical naming scheme.
 # Usage: collect_assets <family> <arch> <version> <dest_dir>
 # Expects build outputs under desktopApp/build/... (Compose binaries + custom tasks + portable archives).
@@ -115,7 +133,11 @@ collect_assets() {
             *.tar.gz) ext="tar.gz" ;;
             *)        ext="${base##*.}" ;;
         esac
-        dst="$dest/$(asset_name "$family" "$arch" "$version" "$ext")"
+        if [[ "$ext" == "AppImage" ]]; then
+            dst="$dest/$(appimage_asset_name "$arch" "$version")"
+        else
+            dst="$dest/$(asset_name "$family" "$arch" "$version" "$ext")"
+        fi
         cp "$src" "$dst"
         echo "Collected: $dst"
     done

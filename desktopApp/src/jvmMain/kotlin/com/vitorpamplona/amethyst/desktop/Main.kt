@@ -95,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrN
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -122,6 +124,7 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.LocalScheduledP
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
 import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
@@ -160,6 +163,8 @@ import com.vitorpamplona.amethyst.desktop.ui.settings.SettingsAccordionCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.SettingsEntry
 import com.vitorpamplona.amethyst.desktop.ui.settings.SettingsMeta
 import com.vitorpamplona.amethyst.desktop.ui.settings.WalletConnectSettingsSection
+import com.vitorpamplona.amethyst.desktop.ui.tor.TorConnectingSplash
+import com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsDialog
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -873,58 +878,45 @@ private fun AppInner(
     }
 
     // Always reload from prefs — after key() rebuild, prefs have the latest saved settings.
+    // The mode comes from the window-level torTypeFlow instead, so a session-only "continue
+    // without Tor" (which never touches prefs) survives the rebuild.
     // Tests can short-circuit the prefs read via `testOverrides.torSettingsOverride` so the
     // Tor splash gate (below) does not block them behind a real kmp-tor runtime.
     var torSettings by remember {
         mutableStateOf(
             testOverrides?.torSettingsOverride
-                ?: com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                    .load(),
+                ?: DesktopTorPreferences.load().copy(torType = torTypeFlow.value),
         )
     }
 
     // Gate: block EVERYTHING until Tor proxy is ready (when Tor expected)
     // This must be before any OkHttpClient/Coil/relay creation
     val torStatus by torManager.status.collectAsState()
-    val isTorExpected = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
-    if (isTorExpected && torStatus !is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active) {
-        val splashIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
-        androidx.compose.foundation.layout.Box(
-            modifier =
-                androidx.compose.ui.Modifier
-                    .fillMaxSize(),
-            contentAlignment = androidx.compose.ui.Alignment.Center,
-        ) {
-            androidx.compose.foundation.layout.Column(
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-            ) {
-                androidx.compose.material3.CircularProgressIndicator()
-                androidx.compose.foundation.layout.Spacer(
-                    modifier =
-                        androidx.compose.ui.Modifier
-                            .height(16.dp),
-                )
-                if (torStatus is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Error) {
-                    androidx.compose.material3.Text(
-                        "Tor error: ${(torStatus as com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Error).message}",
-                    )
-                } else {
-                    androidx.compose.material3.Text("Connecting to Tor...")
-                }
-                androidx.compose.foundation.layout.Spacer(
-                    modifier =
-                        androidx.compose.ui.Modifier
-                            .height(24.dp),
-                )
-                androidx.compose.material3.Icon(
-                    painter = splashIcon,
-                    contentDescription = "Amethyst",
-                    modifier =
-                        androidx.compose.ui.Modifier
-                            .size(96.dp),
-                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                )
-            }
+    val isTorExpected = torSettings.torType != TorType.OFF
+    if (isTorExpected && torStatus !is TorServiceStatus.Active) {
+        var showTorSettings by remember { mutableStateOf(false) }
+        TorConnectingSplash(
+            status = torStatus,
+            onContinueWithoutTor = {
+                // Session only: prefs keep the user's Tor choice for the next launch.
+                torSettings = torSettings.copy(torType = TorType.OFF)
+                torTypeFlow.value = TorType.OFF
+            },
+            onOpenTorSettings = { showTorSettings = true },
+        )
+        if (showTorSettings) {
+            TorSettingsDialog(
+                currentSettings = torSettings,
+                torStatus = torStatus,
+                onSettingsChanged = { newSettings ->
+                    torSettings = newSettings
+                    DesktopTorPreferences.save(newSettings)
+                    torTypeFlow.value = newSettings.torType
+                    externalPortFlow.value = newSettings.externalSocksPort
+                    onRestartApp()
+                },
+                onDismiss = { showTorSettings = false },
+            )
         }
         return // Nothing below runs until Tor is Active
     }
