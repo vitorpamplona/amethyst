@@ -40,6 +40,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
+import com.vitorpamplona.quartz.utils.currentTimeMillis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,7 +52,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -332,7 +334,7 @@ class EventSync(
         filterSince: Long? = null,
         filterUntil: Long? = null,
     ) {
-        val startTime = System.currentTimeMillis()
+        val startTime = currentTimeMillis()
 
         _liveActivity.value = LiveSyncActivity()
 
@@ -391,18 +393,18 @@ class EventSync(
 
         // Thread-safe dedup sets — prevent the same event from being forwarded twice when
         // multiple source relays return the same event concurrently.
-        val outboxDedup = ConcurrentHashMap.newKeySet<String>()
-        val inboxDedup = ConcurrentHashMap.newKeySet<String>()
-        val dmDedup = ConcurrentHashMap.newKeySet<String>()
+        val outboxDedup = ConcurrentSet<String>()
+        val inboxDedup = ConcurrentSet<String>()
+        val dmDedup = ConcurrentSet<String>()
 
-        val sourceRelayOfEvent = ConcurrentHashMap<HexKey, NormalizedRelayUrl>()
+        val sourceRelayOfEvent = ConcurrentMap<HexKey, NormalizedRelayUrl>()
 
         // (event id, destination) pairs already counted as sent. The outbox is
         // at-least-once: it writes an event as soon as the socket is ready and
         // resends everything still unacknowledged when the connection finishes
         // syncing, so one event can hit the same relay twice before its OK lands.
         // The relay dedups the second copy; the counters must too.
-        val sentPairs = ConcurrentHashMap.newKeySet<String>()
+        val sentPairs = ConcurrentSet<String>()
 
         val runningState =
             SyncState.Running(
@@ -608,14 +610,14 @@ class EventSync(
                 // forwarded from the last page of the last relay are still waiting for a
                 // socket or an OK when the outbox is destroyed — the sync reports Done and
                 // silently never delivers them. Bounded by the same per-relay timeout.
-                awaitOutboxDrain(client, outboxDedup + inboxDedup + dmDedup)
+                awaitOutboxDrain(client, outboxDedup.snapshot() + inboxDedup.snapshot() + dmDedup.snapshot())
 
                 _syncState.value =
                     SyncState.Done(
                         totalEventsReceived = runningState.eventsReceived.value,
                         totalEventsSent = runningState.eventsSent.value,
                         totalEventsAccepted = runningState.eventsAccepted.value,
-                        durationMs = System.currentTimeMillis() - startTime,
+                        durationMs = currentTimeMillis() - startTime,
                         sinceFilter = filterSince,
                         untilFilter = filterUntil,
                     )
@@ -625,7 +627,7 @@ class EventSync(
                         totalEventsReceived = runningState.eventsReceived.value,
                         totalEventsSent = runningState.eventsSent.value,
                         totalEventsAccepted = runningState.eventsAccepted.value,
-                        durationMs = System.currentTimeMillis() - startTime,
+                        durationMs = currentTimeMillis() - startTime,
                         sinceFilter = filterSince,
                         untilFilter = filterUntil,
                     )

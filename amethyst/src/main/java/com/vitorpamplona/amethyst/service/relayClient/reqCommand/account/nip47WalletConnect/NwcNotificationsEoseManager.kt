@@ -36,13 +36,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Always-on subscription for NIP-47 wallet notifications (kind 23197/23196),
@@ -64,7 +64,7 @@ class NwcNotificationsEoseManager(
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     private val startSince = TimeUtils.now()
-    private val seen = ConcurrentHashMap.newKeySet<HexKey>()
+    private val seen = ConcurrentSet<HexKey>()
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
     override fun user(key: AccountQueryState) = key.account.userProfile()

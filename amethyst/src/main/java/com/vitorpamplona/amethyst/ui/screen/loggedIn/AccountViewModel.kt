@@ -253,7 +253,7 @@ class AccountViewModel(
 
     val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
-    val feedStates = AccountFeedContentStates(account, viewModelScope)
+    val feedStates = AccountFeedContentStates(account, viewModelScope, Amethyst.instance.memoryPressureEvents)
 
     /**
      * `true` when the local Blossom cache is enabled and the probe sees it up. Only drives the

@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.content.ComponentCallbacks2
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -85,6 +83,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
@@ -93,6 +92,7 @@ import kotlinx.coroutines.launch
 class AccountFeedContentStates(
     val account: Account,
     val scope: CoroutineScope,
+    memoryPressure: Flow<Unit>,
 ) {
     val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
     val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache)
@@ -161,15 +161,10 @@ class AccountFeedContentStates(
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
 
     init {
-        // Under real memory pressure (process on the system LRU list — the strongest trim
-        // level the OS still delivers since API 34), trim every feed down to release the
-        // strong Note references that would otherwise keep pruned cache objects alive.
+        // Under real memory pressure, trim every feed down to release the strong Note
+        // references that would otherwise keep pruned cache objects alive.
         scope.launch(Dispatchers.IO) {
-            Amethyst.instance.trimLevelEvents.collect { level ->
-                if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
-                    trimFeedsToSize(200)
-                }
-            }
+            memoryPressure.collect { trimFeedsToSize(200) }
         }
 
         // Marmot group list changes (new group, group marked known, group

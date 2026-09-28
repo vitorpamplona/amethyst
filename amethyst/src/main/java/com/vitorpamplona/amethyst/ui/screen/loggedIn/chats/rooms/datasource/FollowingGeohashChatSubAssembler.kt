@@ -29,13 +29,13 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFee
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Keeps the user's joined geohash location channels ([account.geohashList]) live
@@ -62,7 +62,7 @@ class FollowingGeohashChatSubAssembler(
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
-    private val userJobMap = ConcurrentHashMap<User, List<Job>>()
+    private val userJobMap = ConcurrentMap<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
     override fun newSub(key: ChatroomListState): Subscription {

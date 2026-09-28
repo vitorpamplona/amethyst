@@ -200,6 +200,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -240,6 +241,13 @@ class AppModules(
 
     private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val trimLevelEvents = _trimLevelEvents.asSharedFlow()
+
+    /**
+     * Fires when memory is tight enough that feeds should drop the strong Note references they
+     * hold: the process is on the system LRU list, the strongest level the OS still delivers
+     * since API 34, or the heap watchdog raised the same level itself.
+     */
+    val memoryPressureEvents: Flow<Unit> = trimLevelEvents.filter { it >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND }.map { }
 
     /**
      * The app-wide DataStore files — the ones that belong to the install rather
