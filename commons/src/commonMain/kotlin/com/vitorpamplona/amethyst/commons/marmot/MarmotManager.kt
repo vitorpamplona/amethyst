@@ -1191,6 +1191,11 @@ class MarmotManager(
         val confirmed: Boolean,
     )
 
+    private val commitPreparationLocks = mutableMapOf<HexKey, Mutex>()
+    private val commitPreparationLocksLock = Mutex()
+
+    private suspend fun commitPreparationLock(nostrGroupId: HexKey): Mutex = commitPreparationLocksLock.withLock { commitPreparationLocks.getOrPut(nostrGroupId) { Mutex() } }
+
     /**
      * Prepare a local commit, publish it, and apply it only if publication was
      * acknowledged (`protocol-core/publish-lifecycle.md`).
@@ -1212,41 +1217,49 @@ class MarmotManager(
         ignoringGate: LocalOutboundGate? = null,
         stage: suspend () -> MlsGroupManager.StagedCommit,
     ): CommitPublication {
-        requireOutboundAllowed(nostrGroupId, "commit a group-state change", ignoringGate)
-        // A commit whose publish went unconfirmed leaves the group in
-        // `PendingPublish`, which correctly refuses new commits — but the only
-        // thing that ever resolved it was `restoreAll`, so one dropped socket
-        // wedged the group until the app was restarted. Retrying this group's
-        // obligations here makes the next attempt the recovery: republishing
-        // the same event is safe (a peer deduplicates it by id) and a retry
-        // that still fails leaves the group held exactly as before.
-        if (publishGate.lifecycle(nostrGroupId) == GroupLifecycleState.PENDING_PUBLISH) {
-            retryPendingPublishObligations(onlyGroupId = nostrGroupId)
-        }
-        check(publishGate.canPrepareLocalCommit(nostrGroupId, ignoringGate)) {
-            "Group $nostrGroupId cannot prepare a local commit " +
-                "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
-        }
+        // One lock per group from the gate check to the durable obligation. The auto-commit of a
+        // member's leave runs from ingest while the user may be committing a rename or an add;
+        // the gate check alone let both pass before either recorded its obligation, and two
+        // commits staged from one epoch fork the group.
+        val (staged, event, obligation) =
+            commitPreparationLock(nostrGroupId).withLock {
+                requireOutboundAllowed(nostrGroupId, "commit a group-state change", ignoringGate)
+                // A commit whose publish went unconfirmed leaves the group in
+                // `PendingPublish`, which correctly refuses new commits — but the only
+                // thing that ever resolved it was `restoreAll`, so one dropped socket
+                // wedged the group until the app was restarted. Retrying this group's
+                // obligations here makes the next attempt the recovery: republishing
+                // the same event is safe (a peer deduplicates it by id) and a retry
+                // that still fails leaves the group held exactly as before.
+                if (publishGate.lifecycle(nostrGroupId) == GroupLifecycleState.PENDING_PUBLISH) {
+                    retryPendingPublishObligations(onlyGroupId = nostrGroupId)
+                }
+                check(publishGate.canPrepareLocalCommit(nostrGroupId, ignoringGate)) {
+                    "Group $nostrGroupId cannot prepare a local commit " +
+                        "(lifecycle=${publishGate.lifecycle(nostrGroupId)}, gate=${publishGate.outboundGate(nostrGroupId)})"
+                }
 
-        val staged = stage()
-        val event =
-            outboundProcessor.buildCommitEvent(
-                nostrGroupId = nostrGroupId,
-                commitBytes = staged.result.framedCommitBytes,
-                exporterKey = staged.result.preCommitExporterSecret,
-            )
+                val staged = stage()
+                val event =
+                    outboundProcessor.buildCommitEvent(
+                        nostrGroupId = nostrGroupId,
+                        commitBytes = staged.result.framedCommitBytes,
+                        exporterKey = staged.result.preCommitExporterSecret,
+                    )
 
-        // Durable BEFORE the publish. Publishing first would leave a crash
-        // window in which peers have accepted a commit this client has no
-        // memory of preparing — and on restart it would generate a
-        // replacement, forking itself at the same epoch.
-        val obligation =
-            publishGate.prepare(
-                groupId = nostrGroupId,
-                staged = staged,
-                outboundBytes = event.signedEvent.toJson().encodeToByteArray(),
-                recipientScope = relays.map { it.url },
-            )
+                // Durable BEFORE the publish. Publishing first would leave a crash
+                // window in which peers have accepted a commit this client has no
+                // memory of preparing — and on restart it would generate a
+                // replacement, forking itself at the same epoch.
+                val obligation =
+                    publishGate.prepare(
+                        groupId = nostrGroupId,
+                        staged = staged,
+                        outboundBytes = event.signedEvent.toJson().encodeToByteArray(),
+                        recipientScope = relays.map { it.url },
+                    )
+                Triple(staged, event, obligation)
+            }
 
         val confirmed =
             try {
