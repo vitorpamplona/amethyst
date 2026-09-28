@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cachedDvmAnnouncements
 import com.vitorpamplona.amethyst.commons.model.dvmHeartbeatOf
 import com.vitorpamplona.amethyst.commons.model.hasFreshDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.model.nip90DVMs.DvmHeartbeatRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -38,9 +40,22 @@ import org.junit.Test
 /**
  * `LocalCache` is a process-wide object and JUnit 4 runs methods in hash order, so every test
  * uses its own pubkeys/dTags/ids (same discipline as ReportNamingIndexIngestionTest).
+ *
+ * Events go in through [consumePinned], which takes each event's note from the cache *before*
+ * consuming it and keeps it for the test's lifetime. Beat and announcement notes live in
+ * `LocalCache`'s weakly-held store, and `dvmHeartbeatOf` / `cachedDvmAnnouncements` read them from
+ * there, so a GC between the consume and the read would make them vanish. Fetching the note after
+ * the consume is too late: the window is already open.
  */
 class DvmHeartbeatTest {
     private val appDefPubKey = "f1".repeat(32)
+
+    private val pinned = mutableListOf<Note>()
+
+    private fun consumePinned(event: Event) {
+        pinned.add(LocalCache.getOrCreateNote(event))
+        LocalCache.justConsume(event, null, true)
+    }
 
     private fun appDef(
         dTag: String,
@@ -76,7 +91,7 @@ class DvmHeartbeatTest {
     @Test
     fun aConsumedHeartbeatLandsAtTheAnnouncementMirrorAddress() {
         val app = appDef("dvm-one")
-        LocalCache.justConsume(beat("dvm-one", createdAt = 1_760_000_100L, id = "f3".repeat(32)), null, true)
+        consumePinned(beat("dvm-one", createdAt = 1_760_000_100L, id = "f3".repeat(32)))
 
         val found = LocalCache.dvmHeartbeatOf(app)
         assertTrue("heartbeat should be found via the announcement's address", found != null)
@@ -93,8 +108,8 @@ class DvmHeartbeatTest {
         val staleApp = appDef("dvm-two-stale")
         assertNull("no beat yet", LocalCache.dvmHeartbeatOf(freshApp))
 
-        LocalCache.justConsume(beat("dvm-two-fresh", createdAt = now - 900, id = "f4".repeat(32)), null, true)
-        LocalCache.justConsume(beat("dvm-two-stale", createdAt = now - 901, id = "f5".repeat(32)), null, true)
+        consumePinned(beat("dvm-two-fresh", createdAt = now - 900, id = "f4".repeat(32)))
+        consumePinned(beat("dvm-two-stale", createdAt = now - 901, id = "f5".repeat(32)))
 
         assertTrue("exactly 900s old counts as fresh", LocalCache.hasFreshDvmHeartbeat(freshApp, now))
         assertFalse("901s old is stale", LocalCache.hasFreshDvmHeartbeat(staleApp, now))
@@ -104,8 +119,8 @@ class DvmHeartbeatTest {
     fun theNewestBeatPerAddressWins() {
         val now = 1_760_000_000L
         val app = appDef("dvm-three")
-        LocalCache.justConsume(beat("dvm-three", createdAt = now - 600, id = "f6".repeat(32)), null, true)
-        LocalCache.justConsume(beat("dvm-three", createdAt = now - 60, id = "f7".repeat(32)), null, true)
+        consumePinned(beat("dvm-three", createdAt = now - 600, id = "f6".repeat(32)))
+        consumePinned(beat("dvm-three", createdAt = now - 60, id = "f7".repeat(32)))
 
         assertEquals(now - 60, LocalCache.dvmHeartbeatOf(app)?.createdAt)
     }
@@ -115,7 +130,7 @@ class DvmHeartbeatTest {
         val now = 1_760_000_000L
         val appA = appDef("dvm-a")
         val appB = appDef("dvm-b")
-        LocalCache.justConsume(beat("dvm-a", createdAt = now - 60, id = "f8".repeat(32)), null, true)
+        consumePinned(beat("dvm-a", createdAt = now - 60, id = "f8".repeat(32)))
 
         assertTrue(LocalCache.hasFreshDvmHeartbeat(appA, now))
         assertFalse("no beat for dvm-b", LocalCache.hasFreshDvmHeartbeat(appB, now))
@@ -177,11 +192,10 @@ class DvmHeartbeatTest {
         // scanning for them clears the lot and the scan returns nothing — which is exactly how
         // this failed on CI, where the heap is tighter than a dev box's. A fixture has to hold
         // what it expects to find, the same discipline LargeCacheAddressableFilterTest spells
-        // out; the forced GC below is what keeps that honest rather than assumed.
-        val held =
-            listOf(alive, appDef("dvm-x"), subscriptionApp, nonDiscoveryApp, secondSubscriptionApp)
-                .onEach { LocalCache.justConsume(it, null, true) }
-                .map { LocalCache.getOrCreateNote(it) }
+        // out, and it has to take hold BEFORE consuming (see [consumePinned]); the forced GC
+        // below is what keeps that honest rather than assumed.
+        listOf(alive, appDef("dvm-x"), subscriptionApp, nonDiscoveryApp, secondSubscriptionApp)
+            .forEach { consumePinned(it) }
 
         System.gc()
 
@@ -192,6 +206,6 @@ class DvmHeartbeatTest {
         assertFalse("k=9999 apps are not content-discovery DVMs", scanned.any { it.dTag() == "other" })
         assertEquals("newest-first so the cap keeps the most relevant announcements", scanned.sortedByDescending { it.createdAt }, scanned)
         assertTrue("capped", scanned.size <= 100)
-        assertEquals("the fixture notes must stay reachable for the whole test", 5, held.size)
+        assertEquals("the fixture notes must stay reachable for the whole test", 5, pinned.size)
     }
 }

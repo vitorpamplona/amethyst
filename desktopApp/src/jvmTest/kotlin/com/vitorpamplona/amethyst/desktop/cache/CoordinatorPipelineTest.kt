@@ -55,6 +55,12 @@ import kotlin.test.assertTrue
  *
  * Key invariant being tested: when coordinator.consumeEvent() is called,
  * the event should flow through cache → eventStream → ViewModel.feedState.
+ *
+ * Tests that expect a note in a feed take it from the cache *before* it is consumed and
+ * keep it ([pinned]). [DesktopLocalCache] holds notes weakly (LargeSoftCache) and the feed
+ * filters find notes by scanning it, so a note nothing references can be collected during
+ * the bundler wait and never reach the feed. In the app the screen showing it is that
+ * strong referent.
  */
 class CoordinatorPipelineTest {
     private val userPubKey = "a".repeat(64)
@@ -63,6 +69,13 @@ class CoordinatorPipelineTest {
     private val relayUrl = NormalizedRelayUrl("wss://relay.test/")
 
     private suspend fun waitForBundler() = delay(600)
+
+    /** Strong references to notes a test expects to see in a feed. See the class KDoc. */
+    private val pinned = mutableListOf<Any>()
+
+    private fun DesktopLocalCache.pinNote(id: HexKey) {
+        pinned.add(getOrCreateNote(id))
+    }
 
     /**
      * Stub INostrClient — records subscription calls but doesn't connect to any relay.
@@ -171,6 +184,7 @@ class CoordinatorPipelineTest {
                     content = "Hello from relay",
                     sig = dummySig,
                 )
+            cache.pinNote(event.id)
             coordinator.consumeEvent(event, relayUrl, wasVerified = true)
 
             waitForBundler()
@@ -278,6 +292,7 @@ class CoordinatorPipelineTest {
                     content = "Note from followed user",
                     sig = dummySig,
                 )
+            cache.pinNote(textEvent.id)
             coordinator.consumeEvent(textEvent, relayUrl, wasVerified = true)
             waitForBundler()
 
@@ -351,6 +366,8 @@ class CoordinatorPipelineTest {
                     content = "test",
                     sig = dummySig,
                 )
+
+            cache.pinNote(event.id)
 
             // Consume same event twice (can happen with multiple relays)
             coordinator.consumeEvent(event, relayUrl, wasVerified = true)

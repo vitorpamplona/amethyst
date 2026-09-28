@@ -36,6 +36,12 @@ import kotlin.test.assertTrue
  * only collected kind:6/kind:16 reposts — so quote-reposts never showed in the
  * quoted note's reaction row. These tests pin the fix: consuming a `q`-tagged note
  * adds it as a boost of the quoted note.
+ *
+ * Each test takes the quoted note from the cache *before* consuming and keeps it.
+ * [DesktopLocalCache] holds notes weakly (LargeSoftCache), and nothing else references the
+ * quoted note — a quote is kept out of `replyTo` — so a GC before the read-back would drop
+ * it along with the boost it just received. In the app the screen showing it is that
+ * strong referent.
  */
 class DesktopLocalCacheQuoteBoostTest {
     private val relayUrl = NormalizedRelayUrl("wss://relay.test/")
@@ -65,13 +71,12 @@ class DesktopLocalCacheQuoteBoostTest {
     fun `a quote-repost counts as a boost of the quoted note`() {
         val cache = DesktopLocalCache()
         val quote = Event.fromJson(quoteJson)
+        val quotedNote = cache.getOrCreateNote(quotedId)
 
         // wasVerified = true: this test pins the boost wiring, not signature checks.
         val consumed = cache.consume(quote, relayUrl, wasVerified = true)
         assertTrue(consumed, "The quote-repost should be consumed")
 
-        val quotedNote = cache.getNoteIfExists(quotedId)
-        assertTrue(quotedNote != null, "The quoted note placeholder should exist")
         assertEquals(1, quotedNote.boosts.size, "The quote should count as one boost")
         assertEquals(quote.id, quotedNote.boosts.first().idHex)
     }
@@ -88,6 +93,7 @@ class DesktopLocalCacheQuoteBoostTest {
                 tags = emptyArray(),
                 content = "the original post",
             )
+        val originalNote = cache.getOrCreateNote(original.id)
         cache.consume(original, relayUrl, wasVerified = true)
 
         val quote =
@@ -99,8 +105,6 @@ class DesktopLocalCacheQuoteBoostTest {
             )
         cache.consume(quote, relayUrl, wasVerified = true)
 
-        val originalNote = cache.getNoteIfExists(original.id)
-        assertTrue(originalNote != null)
         assertEquals(1, originalNote.boosts.size, "The quote should boost the original")
         assertEquals(quote.id, originalNote.boosts.first().idHex)
     }
@@ -117,6 +121,7 @@ class DesktopLocalCacheQuoteBoostTest {
                 tags = emptyArray(),
                 content = "target",
             )
+        val targetNote = cache.getOrCreateNote(target.id)
         cache.consume(target, relayUrl, wasVerified = true)
 
         val plain =
@@ -128,6 +133,6 @@ class DesktopLocalCacheQuoteBoostTest {
             )
         cache.consume(plain, relayUrl, wasVerified = true)
 
-        assertEquals(0, cache.getNoteIfExists(target.id)?.boosts?.size)
+        assertEquals(0, targetNote.boosts.size)
     }
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -45,6 +46,11 @@ import java.io.File
  *
  * `LocalCache` is a process-wide object and JUnit's method order is hash-based, so the corpus is
  * loaded once and every assertion here is read-only.
+ *
+ * The corpus' notes are taken from the cache *before* consuming and kept in [pinned] for the whole
+ * class. `LocalCache` holds notes weakly (LargeSoftCache) and nothing else references a corpus note,
+ * so without the pin any GC between loading and a query drops notes and the query comes back short.
+ * In the app the screen showing a note is that strong referent.
  */
 class LocalCacheSearchParityTest {
     companion object {
@@ -52,6 +58,9 @@ class LocalCacheSearchParityTest {
         private val json = Json { ignoreUnknownKeys = true }
 
         private lateinit var corpus: List<Event>
+
+        /** Strong references to every corpus note. See the class KDoc. */
+        private lateinit var pinned: List<Note>
 
         @BeforeClass
         @JvmStatic
@@ -68,6 +77,8 @@ class LocalCacheSearchParityTest {
                     .flatMap { it.jsonObject["events"]!!.jsonArray }
                     .map { Event.fromJson(it.toString()) }
                     .distinctBy { it.id }
+
+            pinned = corpus.map { LocalCache.getOrCreateNote(it) }
 
             // LocalCache.consume refuses the main thread; a plain JVM test has no Looper, so the
             // check passes and the events land synchronously.

@@ -24,14 +24,20 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * `LocalCache` is a process-wide object (`LocalCache.kt:353`) and JUnit 4's default method order is
  * hash-based, not source order. So each test method uses its **own** reporter, target and event ids —
  * sharing them across methods would let one test's consumed report inflate another's count depending
- * on which ran first.
+ * on which ran first. The ids must also be unused by every OTHER test class in the JVM: this suite
+ * once shared `c3…`/`d3…`/`e5…` with the rating, appointment and calendar suites, and whenever one
+ * of their notes was still alive the report here was treated as already seen and never indexed.
+ *
+ * Each test takes the reported users from the cache *before* consuming and keeps them. `LocalCache`
+ * holds users weakly (LargeSoftCache) and nothing else references a user that is only named by a
+ * report, so a GC before the read-back would drop the user and the report index with it. In the app
+ * the screen showing the user is that strong referent.
  */
 class ReportNamingIndexIngestionTest {
     private fun reportNamingBothNoteAndAuthor(
@@ -54,33 +60,30 @@ class ReportNamingIndexIngestionTest {
 
     @Test
     fun aReportFiledFromANoteStillReachesTheUserNamingIndex() {
-        val reporter = "c1".repeat(32)
-        val target = "c2".repeat(32)
+        val reporter = "7a".repeat(32)
+        val target = "7b".repeat(32)
+        val reported = LocalCache.getOrCreateUser(target)
 
         LocalCache.consume(
-            reportNamingBothNoteAndAuthor("c3".repeat(32), reporter, target, "c4".repeat(32)),
+            reportNamingBothNoteAndAuthor("7c".repeat(32), reporter, target, "7d".repeat(32)),
             null,
             true,
         )
 
-        val reported = LocalCache.getUserIfExists(target)
-        assertTrue("the reported author must exist in the cache", reported != null)
-
-        assertEquals(1, reported!!.reports().reportsNaming(setOf(reporter)).size)
+        assertEquals(1, reported.reports().reportsNaming(setOf(reporter)).size)
     }
 
     @Test
     fun theHideThresholdCountIsUnaffectedByNoteFiledReports() {
-        val reporter = "d1".repeat(32)
-        val target = "d2".repeat(32)
+        val reporter = "8a".repeat(32)
+        val target = "8b".repeat(32)
+        val reported = LocalCache.getOrCreateUser(target)
 
         LocalCache.consume(
-            reportNamingBothNoteAndAuthor("d3".repeat(32), reporter, target, "d4".repeat(32)),
+            reportNamingBothNoteAndAuthor("8c".repeat(32), reporter, target, "8d".repeat(32)),
             null,
             true,
         )
-
-        val reported = LocalCache.getUserIfExists(target)!!
 
         assertEquals(1, reported.reports().reportsNaming(setOf(reporter)).size)
         assertEquals(0, reported.reports().countReportAuthorsBy(setOf(reporter)))
@@ -88,14 +91,14 @@ class ReportNamingIndexIngestionTest {
 
     @Test
     fun aBareCoMentionedPTagIsNotIndexedWhileTheExplicitlyTypedOffenderIs() {
-        val reporter = "e1".repeat(32)
-        val offender = "e2".repeat(32)
-        val bystander = "e3".repeat(32)
-        val reportedNoteId = "e4".repeat(32)
+        val reporter = "9a".repeat(32)
+        val offender = "9b".repeat(32)
+        val bystander = "9c".repeat(32)
+        val reportedNoteId = "9e".repeat(32)
 
         val report =
             ReportEvent(
-                id = "e5".repeat(32),
+                id = "7e".repeat(32),
                 pubKey = reporter,
                 createdAt = 1_700_000_000L,
                 tags =
@@ -110,14 +113,12 @@ class ReportNamingIndexIngestionTest {
                 sig = "sig",
             )
 
+        val reportedOffender = LocalCache.getOrCreateUser(offender)
+        val reportedBystander = LocalCache.getOrCreateUser(bystander)
+
         LocalCache.consume(report, null, true)
 
-        val reportedOffender = LocalCache.getUserIfExists(offender)
-        assertTrue("the offender must exist in the cache", reportedOffender != null)
-        assertEquals(1, reportedOffender!!.reports().reportsNaming(setOf(reporter)).size)
-
-        val reportedBystander = LocalCache.getUserIfExists(bystander)
-        assertTrue("the bystander must exist in the cache", reportedBystander != null)
-        assertEquals(0, reportedBystander!!.reports().reportsNaming(setOf(reporter)).size)
+        assertEquals(1, reportedOffender.reports().reportsNaming(setOf(reporter)).size)
+        assertEquals(0, reportedBystander.reports().reportsNaming(setOf(reporter)).size)
     }
 }
