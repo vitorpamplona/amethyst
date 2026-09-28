@@ -28,6 +28,7 @@ import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,11 +39,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,6 +67,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_compressing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_downloading
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_error
@@ -216,10 +222,55 @@ fun OrchestratorOverlay(
     val progress by orchestrator.progress.collectAsState()
     val progressState by orchestrator.progressState.collectAsState()
 
-    if (progressState is UploadingState.Ready) {
+    val state = progressState
+    if (state is UploadingState.Ready) {
         DeleteButton(onDelete)
+    } else if (state is UploadingState.Error) {
+        UploadErrorBadge(progress, state, onDelete)
     } else {
-        UploadingState(progress, progressState)
+        UploadingState(progress, state)
+    }
+}
+
+/**
+ * A failed upload: the badge alone has room for one word, so tapping it opens the reason
+ * (server refused the file type, payment required, no connection, ...). Without it the
+ * user had "Error" and nothing to act on, and no way to drop the failed attachment.
+ */
+@Composable
+private fun UploadErrorBadge(
+    progress: Double,
+    state: UploadingState.Error,
+    onDelete: () -> Unit,
+) {
+    var showDetails by remember { mutableStateOf(false) }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .clickable { showDetails = true },
+    ) {
+        UploadingState(progress, state)
+    }
+
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text(stringRes(Res.string.upload_error_title)) },
+            text = { Text(stringRes(state.errorResource, *state.params)) },
+            confirmButton = {
+                TextButton(onClick = { showDetails = false }) { Text(stringRes(Res.string.close)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDetails = false
+                        onDelete()
+                    },
+                ) { Text(stringRes(Res.string.remove)) }
+            },
+        )
     }
 }
 

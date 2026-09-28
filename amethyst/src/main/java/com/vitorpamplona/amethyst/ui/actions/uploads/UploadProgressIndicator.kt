@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
 
 @Composable
 fun UploadProgressIndicator(
@@ -60,12 +62,12 @@ fun UploadProgressIndicator(
     val progressValue = orchestrator.progress.collectAsState().value
     val progressStatusValue = orchestrator.progressState.collectAsState().value
 
-    Box(
+    Column(
         modifier =
             modifier
                 .fillMaxWidth()
                 .padding(vertical = 24.dp),
-        contentAlignment = Alignment.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier.size(55.dp),
@@ -88,14 +90,14 @@ fun UploadProgressIndicator(
 
             val txt =
                 when (progressStatusValue) {
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Finished -> stringRes(Res.string.uploading_state_finished)
-                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Error -> stringRes(Res.string.uploading_state_error)
+                    is UploadingState.Ready -> stringRes(Res.string.uploading_state_ready)
+                    is UploadingState.Compressing -> stringRes(Res.string.uploading_state_compressing)
+                    is UploadingState.Uploading -> stringRes(Res.string.uploading_state_uploading)
+                    is UploadingState.ServerProcessing -> stringRes(Res.string.uploading_state_server_processing)
+                    is UploadingState.Downloading -> stringRes(Res.string.uploading_state_downloading)
+                    is UploadingState.Hashing -> stringRes(Res.string.uploading_state_hashing)
+                    is UploadingState.Finished -> stringRes(Res.string.uploading_state_finished)
+                    is UploadingState.Error -> stringRes(Res.string.uploading_state_error)
                 }
 
             Text(
@@ -103,6 +105,17 @@ fun UploadProgressIndicator(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 10.sp,
                 textAlign = TextAlign.Center,
+            )
+        }
+
+        // The badge fits one word; the reason is what the user can act on.
+        if (progressStatusValue is UploadingState.Error) {
+            Text(
+                stringRes(progressStatusValue.errorResource, *progressStatusValue.params),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp),
             )
         }
     }
