@@ -105,6 +105,44 @@ class MlsGroupNegativeTest {
         assertEquals(1, fx.alice.members().size)
     }
 
+    /**
+     * The empty-path commit also changes how the committer derives the new epoch (the commit
+     * secret is the leaf's own path secret). No remaining member re-derives it, so the check
+     * is that the group stays usable: the removed member sees the removal, and a member
+     * added afterwards exchanges messages with the committer in both directions.
+     */
+    @Test
+    fun groupKeepsWorkingAfterAnEmptyPathCommit() {
+        val fx = twoMemberGroup()
+        val removal = fx.alice.removeMember(1)
+        val parts = parseCommit(removal.framedCommitBytes)
+        fx.bob.processCommit(
+            commitBytes = parts.content,
+            senderLeafIndex = parts.senderLeafIndex,
+            confirmationTag = parts.confirmationTag,
+            signature = parts.signature,
+            wireFormat = WireFormat.PUBLIC_MESSAGE,
+        )
+        // Bob applies his own removal: the empty path does not stop the tree update.
+        assertEquals(1, fx.bob.members().size)
+
+        val daveBundle = fx.alice.createKeyPackage(identity = "dave".encodeToByteArray(), signingKey = ByteArray(32) { 3 })
+        val addDave = fx.alice.addMember(daveBundle.keyPackage.toTlsBytes())
+        val dave = MlsGroup.processWelcome(addDave.welcomeBytes!!, daveBundle)
+        assertEquals(fx.alice.epoch, dave.epoch)
+
+        val fromAlice = fx.alice.encrypt("after the removal".encodeToByteArray())
+        assertEquals("after the removal", dave.decrypt(fromAlice).content.decodeToString())
+        val fromDave = dave.encrypt("and back".encodeToByteArray())
+        assertEquals(
+            "and back",
+            fx.alice
+                .decrypt(fromDave)
+                .content
+                .decodeToString(),
+        )
+    }
+
     /** Baseline: an honest commit applies and advances Bob's epoch. */
     @Test
     fun honestCommitIsAccepted() {
