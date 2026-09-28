@@ -677,7 +677,12 @@
     <string name="account_backup_encrypted_title">Kopia chroniona hasłem</string>
     <string name="account_backup_encrypted_password">Hasło</string>
     <string name="account_backup_encrypted_body">Ncryptsec1… który działa tylko z twoim hasłem.</string>
-    <string name="account_backup_password_min_length">Co najmniej %1$d znaków</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Co najmniej %1$d znak</item>
+        <item quantity="few">Co najmniej %1$d znaki</item>
+        <item quantity="many">Co najmniej %1$d znaków</item>
+        <item quantity="other">Co najmniej %1$d znaku</item>
+    </plurals>
     <string name="account_backup_encrypted_repeat_password">Powtórz hasło</string>
     <string name="account_backup_encrypted_password_mismatch">Hasła nie są identyczne</string>
     <string name="account_backup_encrypt">Zaszyfruj klucz</string>

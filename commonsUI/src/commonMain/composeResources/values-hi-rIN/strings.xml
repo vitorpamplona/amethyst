@@ -661,7 +661,10 @@
     <string name="account_backup_encrypted_title">पारणशब्द रक्षित अनुकृति</string>
     <string name="account_backup_encrypted_password">पारणशब्द</string>
     <string name="account_backup_encrypted_body">एक ncryptsec1… जो केवल आपके पारणशब्द से कार्य करता है।</string>
-    <string name="account_backup_password_min_length">न्यूनतम %1$d अक्षर</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">न्यूनतम %1$d अक्षर</item>
+        <item quantity="other">न्यूनतम %1$d अक्षर</item>
+    </plurals>
     <string name="account_backup_encrypted_repeat_password">पारणशब्द दोहराएँ</string>
     <string name="account_backup_encrypted_password_mismatch">पारणशब्दों में मेल नहीं</string>
     <string name="account_backup_encrypt">रहस्यीकरण कुंचिका</string>

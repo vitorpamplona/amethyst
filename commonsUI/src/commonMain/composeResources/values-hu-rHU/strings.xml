@@ -661,7 +661,10 @@
     <string name="account_backup_encrypted_title">Jelszóval védett másolat</string>
     <string name="account_backup_encrypted_password">Jelszó</string>
     <string name="account_backup_encrypted_body">Egy ncryptsec1…, amely csak az Ön jelszavával működik.</string>
-    <string name="account_backup_password_min_length">Legalább %1$d karakter</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Legalább %1$d karakter</item>
+        <item quantity="other">Legalább %1$d karakter</item>
+    </plurals>
     <string name="account_backup_encrypted_repeat_password">Jelszó ismét</string>
     <string name="account_backup_encrypted_password_mismatch">A jelszavak nem egyeznek</string>
     <string name="account_backup_encrypt">Kulcs titkosítása</string>
