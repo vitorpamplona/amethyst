@@ -1863,6 +1863,9 @@
     <string name="tor_connection_failed_body">Amethyst couldn't finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We'll remember this choice for the next hour and re-try Tor after that.</string>
     <string name="tor_continue_without_for_session">Use regular connection</string>
     <string name="tor_keep_waiting">Keep waiting</string>
+    <string name="tor_splash_connecting">Connecting to Tor…</string>
+    <string name="tor_splash_error">Tor error: %1$s</string>
+    <string name="tor_splash_explainer">Amethyst uses Tor to hide your IP address from relays. Starting Tor can take a minute and needs internet access.</string>
     <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>
     <string name="notification_channel_status_on">On</string>
     <string name="notification_channel_status_silent">Silent</string>
