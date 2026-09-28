@@ -20,22 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
-import okhttp3.OkHttpClient
-
-interface IRoleBasedHttpClientBuilder {
-    fun proxyPortForVideo(url: String): Int?
-
-    fun okHttpClientForNip05(url: String): OkHttpClient
-
-    fun okHttpClientForUploads(url: String): OkHttpClient
-
-    fun okHttpClientForImage(url: String): OkHttpClient
-
-    fun okHttpClientForVideo(url: String): OkHttpClient
-
-    fun okHttpClientForMoney(url: String): OkHttpClient
-
-    fun okHttpClientForPreview(url: String): OkHttpClient
-
-    fun okHttpClientForPushRegistration(url: String): OkHttpClient
-}
+/**
+ * The app's HTTP clients, one per role (images, video, money, uploads, …), each routed the way the
+ * user's Tor settings ask for that role and URL. Opaque to common code, which only carries it to the
+ * places that make requests; on the JVM it is [RoleBasedOkHttpClients] and hands out OkHttp clients.
+ */
+expect interface IRoleBasedHttpClientBuilder
