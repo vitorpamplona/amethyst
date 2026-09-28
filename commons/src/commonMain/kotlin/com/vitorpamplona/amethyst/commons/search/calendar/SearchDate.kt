@@ -97,6 +97,8 @@ data class SearchDate(
         fun parse(text: String?): SearchDate? {
             val s = text ?: return null
             if (s.length != 10 || s[4] != '-' || s[7] != '-') return null
+            // Digits only: toIntOrNull alone would let a sign through ("2026-+1-05").
+            for (i in s.indices) if (i != 4 && i != 7 && s[i] !in '0'..'9') return null
             val year = s.substring(0, 4).toIntOrNull() ?: return null
             val month = s.substring(5, 7).toIntOrNull() ?: return null
             val day = s.substring(8, 10).toIntOrNull() ?: return null

@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip57Zaps.validate
 
 import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CompletableDeferred
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Process-wide cache of LNURL-pay endpoint metadata, keyed by the canonical
@@ -50,7 +50,7 @@ object LnurlEndpointCache {
     // what counts as "the same address", which is why they live together: a
     // flight map that keyed URLs differently would silently stop deduplicating
     // the moment this object's canonicalisation changed, and nothing would fail.
-    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<LnurlEndpointInfo?>>()
+    private val inFlight = ConcurrentMap<String, CompletableDeferred<LnurlEndpointInfo?>>()
 
     fun get(url: String): LnurlEndpointInfo? = cache.get(LnurlForm.normalizeUrl(url))
 

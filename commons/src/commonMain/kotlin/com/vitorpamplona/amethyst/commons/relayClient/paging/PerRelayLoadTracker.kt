@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.paging
 
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -31,7 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.Volatile
 
 /**
  * Tracks which relays currently have a demand-driven history page **in flight**, so a caller can show a
@@ -58,7 +61,10 @@ class PerRelayLoadTracker(
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
-    private val inFlight = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+    // Guards the advance / settle / reset transitions, as the JVM monitor behind @Synchronized did.
+    private val lock = KmpLock()
+
+    private val inFlight = ConcurrentSet<NormalizedRelayUrl>()
 
     @Volatile
     private var lastActivityMs = 0L
@@ -82,14 +88,15 @@ class PerRelayLoadTracker(
     fun count() = inFlight.size
 
     /** A relay's next page was just requested. Raises the spinner and (re)arms the silence watchdog. */
-    @Synchronized
     fun onAdvance(relay: NormalizedRelayUrl) {
-        clearJob?.cancel() // a new page is starting — keep the spinner up, no flicker
-        clearJob = null
-        inFlight.add(relay)
-        lastActivityMs = TimeUtils.nowMillis()
-        _loading.value = true
-        ensureWatchdog()
+        lock.withLock {
+            clearJob?.cancel() // a new page is starting — keep the spinner up, no flicker
+            clearJob = null
+            inFlight.add(relay)
+            lastActivityMs = TimeUtils.nowMillis()
+            _loading.value = true
+            ensureWatchdog()
+        }
     }
 
     /** A sign of life from a relay (an event). Keeps the silence watchdog from firing. */
@@ -104,10 +111,11 @@ class PerRelayLoadTracker(
      * of flickering it off for the few ms between pages. The linger is cancelled the moment a new page
      * starts ([onAdvance]).
      */
-    @Synchronized
     fun onSettled(relay: NormalizedRelayUrl) {
-        lastActivityMs = TimeUtils.nowMillis()
-        if (inFlight.remove(relay) && inFlight.isEmpty()) scheduleClear()
+        lock.withLock {
+            lastActivityMs = TimeUtils.nowMillis()
+            if (inFlight.remove(relay) && inFlight.isEmpty()) scheduleClear()
+        }
     }
 
     private fun scheduleClear() {
@@ -120,21 +128,22 @@ class PerRelayLoadTracker(
         clearJob =
             s.launch {
                 delay(LOADING_LINGER_MS)
-                synchronized(this@PerRelayLoadTracker) {
+                lock.withLock {
                     if (inFlight.isEmpty()) _loading.value = false
                 }
             }
     }
 
     /** Drops everything (e.g. the bound scope switched). */
-    @Synchronized
     fun reset() {
-        inFlight.clear()
-        clearJob?.cancel()
-        clearJob = null
-        _loading.value = false
-        watchdog?.cancel()
-        watchdog = null
+        lock.withLock {
+            inFlight.clear()
+            clearJob?.cancel()
+            clearJob = null
+            _loading.value = false
+            watchdog?.cancel()
+            watchdog = null
+        }
     }
 
     private fun ensureWatchdog() {
@@ -145,9 +154,9 @@ class PerRelayLoadTracker(
                 while (isActive) {
                     delay(WATCHDOG_TICK_MS)
                     val silenced =
-                        synchronized(this@PerRelayLoadTracker) {
-                            if (inFlight.isNotEmpty() && TimeUtils.nowMillis() - lastActivityMs > silenceMs) {
-                                val pending = inFlight.toSet()
+                        lock.withLock {
+                            if (!inFlight.isEmpty() && TimeUtils.nowMillis() - lastActivityMs > silenceMs) {
+                                val pending = inFlight.snapshot()
                                 inFlight.clear()
                                 _loading.value = false
                                 pending

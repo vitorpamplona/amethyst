@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 
 /**
  * A bounded, thread-safe cache with a **lock-free [get]**.
@@ -54,12 +56,12 @@ class ConcurrentLruCache<K : Any, V : Any>(
         require(maxSize > 0) { "maxSize must be > 0, was $maxSize" }
     }
 
-    private val map = ConcurrentHashMap<K, V>()
+    private val map = ConcurrentMap<K, V>()
 
     // Guards writes + eviction so the map and the recency order stay consistent.
     // Reads never touch it. Writes are the cold path here, so serializing them
     // is fine; the point is a lock-free [get].
-    private val writeLock = Any()
+    private val writeLock = PlatformLock()
     private val order = ArrayDeque<K>()
 
     fun get(key: K): V? = map[key]
@@ -68,9 +70,11 @@ class ConcurrentLruCache<K : Any, V : Any>(
         key: K,
         value: V,
     ) {
-        synchronized(writeLock) {
+        writeLock.withLock {
             // Re-inserting an existing key makes it the youngest again.
-            val existed = map.put(key, value) != null
+            // Check-then-set is safe: every write holds writeLock.
+            val existed = map[key] != null
+            map[key] = value
             if (existed) order.remove(key)
             order.addLast(key)
             while (order.size > maxSize) {
@@ -81,7 +85,7 @@ class ConcurrentLruCache<K : Any, V : Any>(
     }
 
     fun clear() {
-        synchronized(writeLock) {
+        writeLock.withLock {
             order.clear()
             map.clear()
         }
@@ -93,7 +97,7 @@ class ConcurrentLruCache<K : Any, V : Any>(
      * the cache; values above the current size are a no-op.
      */
     fun trimToSize(maxItems: Int) {
-        synchronized(writeLock) {
+        writeLock.withLock {
             while (order.size > maxItems) {
                 val oldest = order.removeFirstOrNull() ?: break
                 map.remove(oldest)
@@ -101,5 +105,5 @@ class ConcurrentLruCache<K : Any, V : Any>(
         }
     }
 
-    fun size(): Int = map.size
+    fun size(): Int = map.size()
 }

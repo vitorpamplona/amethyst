@@ -42,7 +42,7 @@ expect class ConcurrentSet<E : Any>() {
     /** Adds [element]; returns true if it was not already present. */
     fun add(element: E): Boolean
 
-    fun contains(element: E): Boolean
+    operator fun contains(element: E): Boolean
 
     /** Removes [element]; returns true if it was present. */
     fun remove(element: E): Boolean
@@ -50,4 +50,9 @@ expect class ConcurrentSet<E : Any>() {
     fun clear()
 
     val size: Int
+
+    fun isEmpty(): Boolean
+
+    /** A point-in-time copy — safe to iterate without a lock. */
+    fun snapshot(): Set<E>
 }

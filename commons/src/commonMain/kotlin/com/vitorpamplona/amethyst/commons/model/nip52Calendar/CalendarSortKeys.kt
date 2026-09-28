@@ -21,33 +21,23 @@
 package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
-// java.time formatters are thread-safe; the SimpleDateFormat predecessor was shared by sort
-// (background) and grouping (UI) paths and could throw under concurrent use.
-private val IsoDateParser: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+// A strict YYYY-MM-DD read (an impossible day such as 02-31 is refused, not rolled over).
+private fun parseIsoDate(date: String?): SearchDate? = if (date.isNullOrBlank()) null else SearchDate.parse(date)
 
-private fun parseIsoDate(date: String?): LocalDate? {
-    if (date.isNullOrBlank()) return null
-    return try {
-        LocalDate.parse(date, IsoDateParser)
-    } catch (_: Throwable) {
-        null
-    }
-}
+private fun localEpochDay(unixSeconds: Long): Long = LocalClock.epochDayCounter().epochDay(unixSeconds)
 
 /**
  * Calendar 31922 carries a calendar date (no instant). Anchor it at local midnight so that
  * "Jan 15" lands on Jan 15 in the user's grid and ordering reflects their local zone — UTC
  * anchoring made date-only events appear a day early west of UTC.
  */
-fun parseIsoDateToUnixSeconds(date: String?): Long? = parseIsoDate(date)?.atStartOfDay(ZoneId.systemDefault())?.toEpochSecond()
+fun parseIsoDateToUnixSeconds(date: String?): Long? = parseIsoDate(date)?.let { LocalClock.startOfDay(it) }
 
 /**
  * Unified start time as unix-seconds. For 31923 (time-slot) this is the event's instant; for
@@ -77,20 +67,13 @@ fun Note.calendarEndSeconds(): Long? =
  */
 fun Note.calendarLocalDayKey(): Long? =
     when (val e = event) {
-        is CalendarTimeSlotEvent ->
-            e.start()?.let {
-                Instant
-                    .ofEpochSecond(it)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-                    .toEpochDay()
-            }
-        is CalendarDateSlotEvent -> parseIsoDate(e.start())?.toEpochDay()
+        is CalendarTimeSlotEvent -> e.start()?.let(::localEpochDay)
+        is CalendarDateSlotEvent -> parseIsoDate(e.start())?.daysFromEpoch()
         else -> null
     }
 
 /**
- * Buckets appointments by local calendar day (returned as `LocalDate.toEpochDay`). Notes that
+ * Buckets appointments by local calendar day (days since 1970-01-01). Notes that
  * are not calendar appointments or whose start can't be parsed are dropped.
  */
 fun groupByDayKey(notes: List<Note>): Map<Long, List<Note>> {
@@ -113,15 +96,8 @@ fun Note.calendarLocalDayKeyRange(): LongRange? {
     val startKey = calendarLocalDayKey() ?: return null
     val endKey =
         when (val e = event) {
-            is CalendarTimeSlotEvent ->
-                e.end()?.let {
-                    Instant
-                        .ofEpochSecond(it)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate()
-                        .toEpochDay()
-                } ?: startKey
-            is CalendarDateSlotEvent -> parseIsoDate(e.end())?.toEpochDay() ?: startKey
+            is CalendarTimeSlotEvent -> e.end()?.let(::localEpochDay) ?: startKey
+            is CalendarDateSlotEvent -> parseIsoDate(e.end())?.daysFromEpoch() ?: startKey
             else -> startKey
         }
     val safeEnd = endKey.coerceAtLeast(startKey).coerceAtMost(startKey + 366)

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.paging
 
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -34,7 +37,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.Volatile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -81,11 +84,15 @@ class WindowLoadTracker(
 
     // Relays that have produced any signal at all (event / EOSE / CLOSED / cannot-connect). The idle
     // backstop only arms once this covers [expected], so a still-connecting relay can't be skipped.
-    private val heardFrom = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+    private val heardFrom = ConcurrentSet<NormalizedRelayUrl>()
 
     // Relays that reached a terminal signal (EOSE / CLOSED / cannot-connect). When this covers
     // [expected] the stored backfill is complete on every relay and the load is done.
-    private val settled = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+    private val settled = ConcurrentSet<NormalizedRelayUrl>()
+
+    // Guards the window state below, as the JVM monitor behind @Synchronized did. Reentrant: tick()
+    // and setExpectedRelays() call finish() while holding it.
+    private val lock = KmpLock()
 
     private var watchdog: Job? = null
 
@@ -99,66 +106,69 @@ class WindowLoadTracker(
     private var lastActivityMs = 0L
 
     /** Begins a fresh window load: clears the per-relay sets, raises [loading], and arms the watchdog. */
-    @Synchronized
     fun startLoading(scope: CoroutineScope) {
-        val gen = ++generation
-        expected = emptySet()
-        heardFrom.clear()
-        settled.clear()
-        lastActivityMs = TimeUtils.nowMillis()
-        val wasLoading = _loading.value
-        _loading.value = true
-        Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
-        watchdog?.cancel()
-        watchdog =
-            scope.launch {
-                val deadline = TimeUtils.nowMillis() + absoluteCap.inWholeMilliseconds
-                while (isActive) {
-                    delay(IDLE_CHECK_MS)
-                    if (!tick(gen, TimeUtils.nowMillis(), deadline)) break
+        lock.withLock {
+            val gen = ++generation
+            expected = emptySet()
+            heardFrom.clear()
+            settled.clear()
+            lastActivityMs = TimeUtils.nowMillis()
+            val wasLoading = _loading.value
+            _loading.value = true
+            Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
+            watchdog?.cancel()
+            watchdog =
+                scope.launch {
+                    val deadline = TimeUtils.nowMillis() + absoluteCap.inWholeMilliseconds
+                    while (isActive) {
+                        delay(IDLE_CHECK_MS)
+                        if (!tick(gen, TimeUtils.nowMillis(), deadline)) break
+                    }
                 }
-            }
+        }
     }
 
     // One watchdog poll. Returns false (stop polling) when this watchdog has been superseded by a
     // newer load, the window already finished, or a completion deadline is reached. Synchronized so
     // the generation/loading checks and the completion are atomic against startLoading/finish.
-    @Synchronized
     private fun tick(
         gen: Int,
         now: Long,
         deadline: Long,
     ): Boolean {
-        if (gen != generation || !_loading.value) return false
-        if (expected.isNotEmpty()) {
-            // Once every relay has reached a terminal signal, nothing more is coming for this round.
-            if (settled.containsAll(expected)) {
-                finish("settled")
+        lock.withLock {
+            if (gen != generation || !_loading.value) return false
+            if (expected.isNotEmpty()) {
+                // Once every relay has reached a terminal signal, nothing more is coming for this round.
+                if (expected.all { it in settled }) {
+                    finish("settled")
+                    return false
+                }
+                // Idle backstop: every relay we're still waiting on has at least streamed something (so this
+                // isn't a connection gap) and the stream has gone quiet. Settled relays don't count.
+                val stillWaiting = expected.filterNot { settled.contains(it) }
+                if (stillWaiting.all { heardFrom.contains(it) } && now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
+                    finish("idle")
+                    return false
+                }
+            }
+            if (now >= deadline) {
+                finish("cap")
                 return false
             }
-            // Idle backstop: every relay we're still waiting on has at least streamed something (so this
-            // isn't a connection gap) and the stream has gone quiet. Settled relays don't count.
-            val stillWaiting = expected.filterNot { settled.contains(it) }
-            if (stillWaiting.all { heardFrom.contains(it) } && now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
-                finish("idle")
-                return false
-            }
+            return true
         }
-        if (now >= deadline) {
-            finish("cap")
-            return false
-        }
-        return true
     }
 
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
-    @Synchronized
     fun setExpectedRelays(relays: Set<NormalizedRelayUrl>) {
-        expected = relays
-        if (relays.isEmpty()) {
-            finish("no relays")
-        } else if (settled.containsAll(relays)) {
-            finish("all relays")
+        lock.withLock {
+            expected = relays
+            if (relays.isEmpty()) {
+                finish("no relays")
+            } else if (relays.all { it in settled }) {
+                finish("all relays")
+            }
         }
     }
 
@@ -172,22 +182,24 @@ class WindowLoadTracker(
      * A terminal signal from [relay] — EOSE, CLOSED, or cannot-connect. Once every expected relay has
      * settled the stored backfill is complete and the load finishes.
      */
-    @Synchronized
     fun onRelaySettled(relay: NormalizedRelayUrl) {
-        lastActivityMs = TimeUtils.nowMillis()
-        heardFrom.add(relay)
-        settled.add(relay)
-        if (expected.isNotEmpty() && settled.containsAll(expected)) finish("all relays")
+        lock.withLock {
+            lastActivityMs = TimeUtils.nowMillis()
+            heardFrom.add(relay)
+            settled.add(relay)
+            if (expected.isNotEmpty() && expected.all { it in settled }) finish("all relays")
+        }
     }
 
     // Idempotent: only the first call after a load actually completes (and logs); later calls no-op.
-    @Synchronized
     private fun finish(reason: String) {
-        if (!_loading.value) return
-        watchdog?.cancel()
-        watchdog = null
-        Log.d(TAG) { "[$name] load done: $reason" }
-        _loading.value = false
+        lock.withLock {
+            if (!_loading.value) return
+            watchdog?.cancel()
+            watchdog = null
+            Log.d(TAG) { "[$name] load done: $reason" }
+            _loading.value = false
+        }
     }
 
     companion object {

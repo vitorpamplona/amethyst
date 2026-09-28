@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.paging
 
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -30,7 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.Volatile
 
 /**
  * Atomic snapshot of a [BackwardRelayPager]'s display state. Every field is recomputed together in one
@@ -110,7 +111,7 @@ class BackwardRelayPager(
 
     // Relays not advancing for the active scope (auth CLOSE / unreachable / silent). Transient: cleared
     // and recomputed on each [bind]; a stalled relay is kept (its sub stays open) and retried on advance.
-    private val stalledRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+    private val stalledRelays = ConcurrentSet<NormalizedRelayUrl>()
 
     /**
      * True while any relay is mid-page. Starts false (an idle engine isn't "loading"). Kept apart from

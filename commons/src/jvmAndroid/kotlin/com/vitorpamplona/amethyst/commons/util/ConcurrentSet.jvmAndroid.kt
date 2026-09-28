@@ -28,11 +28,15 @@ actual class ConcurrentSet<E : Any> {
 
     actual fun add(element: E): Boolean = set.add(element)
 
-    actual fun contains(element: E): Boolean = set.contains(element)
+    actual operator fun contains(element: E): Boolean = set.contains(element)
 
     actual fun remove(element: E): Boolean = set.remove(element)
 
     actual fun clear() = set.clear()
 
     actual val size: Int get() = set.size
+
+    actual fun isEmpty(): Boolean = set.isEmpty()
+
+    actual fun snapshot(): Set<E> = HashSet(set)
 }

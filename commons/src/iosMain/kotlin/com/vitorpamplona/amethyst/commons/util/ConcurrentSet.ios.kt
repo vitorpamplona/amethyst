@@ -29,11 +29,15 @@ actual class ConcurrentSet<E : Any> {
 
     actual fun add(element: E): Boolean = lock.withLock { set.add(element) }
 
-    actual fun contains(element: E): Boolean = lock.withLock { set.contains(element) }
+    actual operator fun contains(element: E): Boolean = lock.withLock { set.contains(element) }
 
     actual fun remove(element: E): Boolean = lock.withLock { set.remove(element) }
 
     actual fun clear() = lock.withLock { set.clear() }
 
     actual val size: Int get() = lock.withLock { set.size }
+
+    actual fun isEmpty(): Boolean = lock.withLock { set.isEmpty() }
+
+    actual fun snapshot(): Set<E> = lock.withLock { HashSet(set) }
 }
