@@ -398,3 +398,41 @@ test_33_wn_leaves_amy_admin_group() {
     record_result "$id" fail "amy never committed wn's SelfRemove; wn is still in the tree"
   fi
 }
+
+test_34_amy_removes_last_other_member() {
+  banner "Test 34 — amy removes the only other member; wn processes its own removal"
+  local id="34 amy removes wn from a 2-member group"
+
+  # Test 06 removes one of three members. Removing the only other member leaves
+  # the committer alone in the tree, which is the shape a device removal hit:
+  # White Noise never applied it and kept showing itself as a member.
+  local out gid mls_gid b_gid
+  out=$(amy_json marmot group create --name "Interop-34") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  wn_b messages send "$mls_gid" "34 before removal" >/dev/null 2>&1 || true
+  amy_json marmot await message "$gid" --match "34 before removal" --timeout 90 >/dev/null || { record_result "$id" fail "amy never got wn's message"; return; }
+
+  amy_json marmot group remove "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy remove failed"; return; }
+
+  local deadline=$(( $(date +%s) + 120 )) gone=0 view
+  while [[ $(date +%s) -lt $deadline ]]; do
+    wn_b sync >/dev/null 2>&1 || true
+    view=$(wn_b_json groups show "$mls_gid" 2>/dev/null || true)
+    if ! printf '%s' "$view" | jq -e --arg p "$B_HEX" '.result.members[]? | select((.member_id // .pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+      gone=1; break
+    fi
+    sleep 3
+  done
+  printf 'test34 wn view after removal: %s\n' "$(printf '%s' "$view" | head -c 2000)" >>"$LOG_FILE"
+  if [[ "$gone" -eq 1 ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn still lists itself as a member after amy removed it"
+  fi
+}

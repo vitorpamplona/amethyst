@@ -177,6 +177,7 @@ class MarmotGroupList(
 
     companion object {
         private const val MARMOT_INNER_KIND_DELETION = 5
+        private const val MARMOT_INNER_KIND_ADMIN_REMOVAL = 4891
         private const val MARMOT_INNER_KIND_REACTION = 7
         private const val MARMOT_INNER_KIND_EDIT = 1009
         private const val MARMOT_INNER_KIND_STREAM_START = 1200
@@ -192,6 +193,7 @@ class MarmotGroupList(
         private val NON_CHAT_INNER_KINDS =
             setOf(
                 MARMOT_INNER_KIND_DELETION,
+                MARMOT_INNER_KIND_ADMIN_REMOVAL,
                 MARMOT_INNER_KIND_REACTION,
                 MARMOT_INNER_KIND_EDIT,
                 MARMOT_INNER_KIND_STREAM_START,

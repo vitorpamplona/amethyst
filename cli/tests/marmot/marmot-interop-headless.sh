@@ -216,6 +216,7 @@ ALL_TESTS=(
   test_31_reaction_materializes_on_wn
   test_32_amy_message_after_wn_commit
   test_33_wn_leaves_amy_admin_group
+  test_34_amy_removes_last_other_member
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

@@ -1598,24 +1598,50 @@ class MarmotManager(
      * targets together, since a deletion is only authorized against the message
      * it names.
      */
-    fun deletedIds(messages: List<Event>): Set<HexKey> {
+    fun deletedIds(
+        messages: List<Event>,
+        /** The group's admins: their kind-4891 removals apply to anyone's message. */
+        admins: Set<HexKey> = emptySet(),
+    ): Set<HexKey> {
         val authorOf = HashMap<HexKey, HexKey>(messages.size)
         val claims = ArrayList<Pair<HexKey, HexKey>>()
+        val removed = HashSet<HexKey>()
         for (event in messages) {
             if (event.kind == DeletionRequestEvent.KIND) {
                 for (tag in event.tags) {
                     if (tag.size >= 2 && tag[0] == "e") claims.add(tag[1] to event.pubKey)
                 }
+            } else if (event.kind == MarmotAppEvent.KIND_REMOVE) {
+                if (event.pubKey in admins) removed.addAll(adminRemovalTargets(event))
             } else {
                 authorOf[event.id] = event.pubKey
             }
         }
-        val deleted = HashSet<HexKey>(claims.size)
+        val deleted = HashSet<HexKey>(claims.size + removed.size)
         for ((targetId, deleter) in claims) {
             if (authorOf[targetId] == deleter) deleted.add(targetId)
         }
+        deleted.addAll(removed.filter { it in authorOf })
         return deleted
     }
+
+    /**
+     * The messages a kind-4891 removal names, if its author may remove them: a current
+     * admin of [nostrGroupId]. Empty for anything else. White Noise sends 4891 instead of
+     * kind 5 whenever the deleter is an admin (their own messages included), so without
+     * this an admin's deletion from White Noise never reached us.
+     */
+    fun adminRemovalTargets(
+        nostrGroupId: HexKey,
+        event: Event,
+    ): List<HexKey> {
+        if (event.kind != MarmotAppEvent.KIND_REMOVE) return emptyList()
+        val admins = groupView(nostrGroupId)?.adminPubkeys ?: return emptyList()
+        if (event.pubKey !in admins) return emptyList()
+        return adminRemovalTargets(event)
+    }
+
+    private fun adminRemovalTargets(event: Event): List<HexKey> = event.tags.mapNotNull { tag -> if (tag.size >= 2 && tag[0] == "e") tag[1] else null }
 
     /**
      * The slice of canonical group state that kind:1210 rows are derived from,

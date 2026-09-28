@@ -298,6 +298,21 @@ class AccountMarmotActions(
         return IndexedInnerEvent(innerNote, isNew)
     }
 
+    /**
+     * Apply a kind-4891 admin removal: drop the messages it names from the conversation
+     * when its author is an admin of the group (see [MarmotManager.adminRemovalTargets]).
+     * Runs on live delivery and on the restart replay, which re-adds every stored message.
+     */
+    fun applyMarmotAdminRemoval(
+        nostrGroupId: HexKey,
+        innerEvent: Event,
+    ) {
+        val manager = account.marmotManager ?: return
+        manager.adminRemovalTargets(nostrGroupId, innerEvent).forEach { targetId ->
+            account.cache.getNoteIfExists(targetId)?.let { account.marmotGroupList.removeMessage(nostrGroupId, it) }
+        }
+    }
+
     /** [note] holds the inner event; [isNew] is true the first time this client indexed it. */
     class IndexedInnerEvent(
         val note: Note,

@@ -771,6 +771,7 @@ class GroupEventHandler(
                     // peer-sent kind:1210 is dropped inside addMessage — see
                     // `MarmotGroupList.isDisplayableFeedMessage`.
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
+                    account.marmot.applyMarmotAdminRemoval(result.groupId, innerEvent)
 
                     // Traffic is the natural clock for disappearing messages: a
                     // group being read is a group whose expired messages should

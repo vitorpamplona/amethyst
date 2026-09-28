@@ -141,6 +141,48 @@ class MarmotEditsAndSystemRowsTest {
         }
 
     @Test
+    fun `an admin's kind 4891 removal retracts a message, a non-admin's does not`() =
+        runBlocking {
+            // White Noise sends 4891 instead of kind 5 whenever the deleter is an admin,
+            // for their own messages too; missing it meant those deletions never applied.
+            val f = Fixture()
+            f.manager.createGroup(
+                nostrGroupId,
+                MarmotGroupData(
+                    nostrGroupId = nostrGroupId,
+                    name = "moderated",
+                    relays = listOf("wss://relay.invalid"),
+                    adminPubkeys = listOf(f.signer.pubKey),
+                ),
+            )
+            val target = f.manager.buildTextMessage(nostrGroupId, "moderate me")
+            val admin = f.signer.pubKey
+            val stranger = "f".repeat(64)
+
+            fun removal(by: String) =
+                MarmotAppEvent.build(
+                    pubKey = by,
+                    kind = MarmotAppEvent.KIND_REMOVE,
+                    content = """{"v":1,"action":"remove"}""",
+                    createdAt = 1_800_000_000L,
+                    tags = arrayOf(arrayOf("e", target.innerEvent.id)),
+                )
+            val byStranger = removal(stranger)
+            f.manager.persistDecryptedMessage(nostrGroupId, byStranger.toJson().dropLast(1) + ",\"sig\":\"\"}")
+            val admins = setOf(admin)
+            assertTrue(target.innerEvent.id !in f.manager.deletedIds(f.manager.storedEvents(), admins))
+            assertTrue(f.manager.adminRemovalTargets(nostrGroupId, Event.fromJson(byStranger.toJson().dropLast(1) + ",\"sig\":\"\"}")).isEmpty())
+
+            val byAdmin = removal(admin)
+            f.manager.persistDecryptedMessage(nostrGroupId, byAdmin.toJson().dropLast(1) + ",\"sig\":\"\"}")
+            assertTrue(target.innerEvent.id in f.manager.deletedIds(f.manager.storedEvents(), admins))
+            assertEquals(
+                listOf(target.innerEvent.id),
+                f.manager.adminRemovalTargets(nostrGroupId, Event.fromJson(byAdmin.toJson().dropLast(1) + ",\"sig\":\"\"}")),
+            )
+        }
+
+    @Test
     fun `one kind 5 retracts every message it names`() =
         runBlocking {
             val f = Fixture()

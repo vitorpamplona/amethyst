@@ -4048,6 +4048,7 @@ class Account(
                                 // kind:1009 edit is re-linked to its message too.
                                 val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
+                                marmot.applyMarmotAdminRemoval(groupId, innerEvent)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",

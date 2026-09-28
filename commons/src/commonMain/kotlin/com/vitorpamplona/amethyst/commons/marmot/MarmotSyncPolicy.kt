@@ -143,13 +143,24 @@ class MarmotSyncPolicy(
         }
         if (filterMap.isEmpty()) return
 
-        val events = drain(filterMap, timeoutMs)
+        // Relays answer newest-first and several relays interleave, but a kind:445 can only
+        // be opened at the epoch its predecessors built: a message sent after a commit fails
+        // (UndecryptableOuter, "no canonical epoch") if it is tried before that commit. The
+        // cursor then moves past it and it is never fetched again, which is how an offline
+        // member came back missing a rename and every message after a membership change.
+        // Welcomes first (they create the groups), then group events oldest first.
+        val events =
+            drain(filterMap, timeoutMs)
+                .distinctBy { it.second.id }
+                .sortedWith(compareBy({ if (it.second.kind == GiftWrapEvent.KIND) 0 else 1 }, { it.second.createdAt }))
 
         var maxGwSeen = gwSince ?: 0L
         val maxGroupSeen = perGroupFilters.keys.associateWith { cursors.groupSince(it) ?: 0L }.toMutableMap()
         var sawGiftWrap = false
         val sawGroupEvent = mutableSetOf<HexKey>()
         val stagedProposals = mutableSetOf<HexKey>()
+        val waitingOnEpoch = mutableListOf<Event>()
+        var advancedEpoch = false
 
         for ((relay, event) in events) {
             // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
@@ -163,6 +174,8 @@ class MarmotSyncPolicy(
                 }
             log("ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")
             if (result is MarmotIngestResult.ProposalStaged) stagedProposals.add(result.groupId)
+            if (event.kind == GroupEvent.KIND && result.couldOpenAfterACommit()) waitingOnEpoch.add(event)
+            if (result is MarmotIngestResult.Commit) advancedEpoch = true
 
             when (event.kind) {
                 GiftWrapEvent.KIND -> {
@@ -176,6 +189,22 @@ class MarmotSyncPolicy(
                     val prev = maxGroupSeen[gid] ?: 0L
                     if (event.createdAt > prev) maxGroupSeen[gid] = event.createdAt
                 }
+            }
+        }
+
+        // Same-second ties and cross-relay stragglers can still put an event ahead of the
+        // commit it needs; once a commit landed, give those another go, until a pass
+        // opens nothing new.
+        while (advancedEpoch && waitingOnEpoch.isNotEmpty()) {
+            advancedEpoch = false
+            val retry = waitingOnEpoch.toList()
+            waitingOnEpoch.clear()
+            for (event in retry) {
+                val result = marmot.ingest(event)
+                log("retry ${event.kind}/${event.id.take(8)} → ${result::class.simpleName}")
+                if (result is MarmotIngestResult.Commit) advancedEpoch = true
+                if (result is MarmotIngestResult.ProposalStaged) stagedProposals.add(result.groupId)
+                if (result.couldOpenAfterACommit()) waitingOnEpoch.add(event)
             }
         }
 
@@ -224,3 +253,8 @@ class MarmotSyncPolicy(
         const val GIFT_WRAP_LOOKBACK_SECS: Long = 2L * 24 * 60 * 60
     }
 }
+
+/** Failed only because the epoch it was sent at isn't reached yet; a later commit may open it. */
+private fun MarmotIngestResult.couldOpenAfterACommit(): Boolean =
+    this is MarmotIngestResult.UndecryptableOuter ||
+        (this is MarmotIngestResult.Failure && message.startsWith(MarmotManager.NO_CANONICAL_EPOCH_ERROR))
