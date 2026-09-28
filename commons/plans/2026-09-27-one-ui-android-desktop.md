@@ -175,6 +175,43 @@ read markers, the Clink/call/nest bridges, `ReloadMintViewModel`, …). Leaving 
 The preview helpers at the bottom of the file (`mockAccountViewModel`, `mockVitorAccountViewModel`)
 wire app classes and stay in the app, in their own file.
 
+### What that measurement missed, and where the VM lands
+
+The survey above counted any `com.vitorpamplona.amethyst.commons.*` import as shared. Two kinds
+of shared symbol are not usable from `commons/commonMain`, and it missed both:
+
+- **`commonsUI`-only symbols.** The VM toasts through compose-resources strings (`Res`, 33
+  imports), `ToastManager` and `loadStringRes`; the payment stack's error messages are `Res`
+  strings too; `NotificationSummaryState` builds a Vico chart model. By the rule in CLAUDE.md
+  ("anything that imports … `Res` belongs in `commonsUI`"), **`AccountViewModel` lands in
+  `commonsUI/commonMain`**, not `commons`. That changes nothing for its callers (all
+  composables, all moving to `commonsUI`) and only rules out the CLI, which has `Account`.
+- **`jvmAndroid`-only symbols** in commons and quartz: the relay pagers and window trackers,
+  `showAmount`, the calendar sort keys, `LnurlEndpointCache`, `OnlineChecker`,
+  `GeoRelayCsvLoader`, `IRoleBasedHttpClientBuilder`.
+
+The cuts, 2026-09-28 (each its own commit on this branch):
+
+| Cut | How |
+|---|---|
+| Android services the VM read | `AccountViewModelHost` (commons): memory pressure, Blossom-cache probe, PoW failures, relay stats, crawl socket builder, saved accounts, tray-notification dismissal, the wallet-app hand-off, the LNURL transport and money-op relay routing. `AndroidAccountViewModelHost` implements it over `AppModules`; previews pass a no-op. |
+| Android-only actions | `saveMediaToGallery`, `uploadMarmotGroupIcon`, `urlPreview`, `checkVideoIsOnline` became app-side extensions with the same call shape. |
+| `Context` threaded through payments | Never read; removed from the VM, the zap/V4V/melt handlers and the resolver. |
+| OkHttp in the zap stack | `LnurlHttpTransport` port; the resolver on kotlinx JSON with Jackson-lenient readers; a scripted-transport test. |
+| JVM collections, locks, dates, BigDecimal | commons `ConcurrentSet` (+`contains`/`isEmpty`/`snapshot`), `KmpLock`, quartz `ConcurrentMap`/`PlatformLock`, `LocalClock.epochDayCounter()`, `SearchDate`, quartz `BigDecimal.toDoubleValue()`, `expect fun showAmount` (DecimalFormat stays the JVM actual; a test pins the common port to it). |
+| App singletons | `ClinkDebitPayer` takes `MoneyOpRelayRouting`; NIP-11 reads go through `LocalCacheHost.relayInfo`; `GeohashRelays` gets its loader installed at startup; `OnlineStatusCache` split from `OnlineChecker`. |
+| `IRoleBasedHttpClientBuilder` | An `expect interface` in commonMain; the JVM actual is a typealias to the OkHttp interface, so every caller is unchanged. |
+
+**Re-measured after the cuts:** the group reachable from `AccountViewModel` is **127 files,
+22.4k lines, with no edges leaving it**. By what they import, **33 files (10.2k lines) go to
+`commonsUI`** (the VM, `AccountFeedContentStates`, the payment stack, `TopNavFilterState`,
+`NotificationSummaryState`, the account filter assemblers that hold the feed states, the nest
+assemblers) and **94 (12.2k lines) to `commons`** (feed filters, the chat/relay-group/hashtag
+assemblers, `EventSync`, …). Packages are renamed on the way:
+`ui.screen.loggedIn` → `commons.viewmodels`, `ui.screen.loggedIn.X` → `commons.X`,
+`ui.screen`/`ui.dal` → `commons.feeds`, `service.relayClient.X` → `commons.relayClient.X`,
+`service.X` → `commons.service.X`.
+
 ## Sequence
 
 1. **Docs** (this plan, and the rule changes in CLAUDE.md, both ARCHITECTURE files, three
