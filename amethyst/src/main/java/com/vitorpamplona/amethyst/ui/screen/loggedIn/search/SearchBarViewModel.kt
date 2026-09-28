@@ -55,6 +55,9 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnamePath
+import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -228,6 +231,12 @@ class SearchBarViewModel(
         searchTerm
             .debounce(400)
             .mapLatest { term ->
+                // NIP-02 petname path (`~/erin/charlie`, `~npub1…/erin`, `~name@domain/erin`),
+                // walked over the follow lists already in the cache.
+                PetnamePath.parse(term)?.let { path ->
+                    return@mapLatest resolvePetnamePath(path)
+                }
+
                 // NIP-05 resolution: user@domain or bare .bit domain
                 val nip05 =
                     if (term.contains('@')) {
@@ -292,6 +301,22 @@ class SearchBarViewModel(
                     }
                 }
             }.flowOn(Dispatchers.IO)
+
+    private suspend fun resolvePetnamePath(path: PetnamePath): User? =
+        runCatching {
+            PetnameResolver
+                .resolve(
+                    path = path,
+                    currentUser = account.userProfile().pubkeyHex,
+                    followListOf = { pubKey ->
+                        (account.cache.getAddressableNoteIfExists(ContactListEvent.createAddress(pubKey))?.event as? ContactListEvent)?.tags
+                    },
+                    resolveNip05 = { identifier ->
+                        Nip05Id.parse(identifier)?.let { nip05Client.get(it)?.pubkey }
+                    },
+                )?.let { account.cache.getOrCreateUser(it) }
+        }.onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
 
     /**
      * The routes the box opens on its own, which is now **only** an invite link.

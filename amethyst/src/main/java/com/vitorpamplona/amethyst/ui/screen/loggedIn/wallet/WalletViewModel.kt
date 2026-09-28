@@ -38,9 +38,11 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_request_timed_out
 import com.vitorpamplona.amethyst.commons.resources.wallet_request_timed_out_spoofed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_more_failed
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_not_supported
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
@@ -59,6 +61,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessRe
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
@@ -72,6 +75,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 
 sealed class SendState {
@@ -572,6 +576,17 @@ class WalletViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             _hasMoreTransactions.value = true
+            // list_transactions lives in the NWC-05 extension. Only a wallet that publishes an
+            // `extensions` tag without 05 (and without the method in its content) is skipped;
+            // legacy wallets are still asked. See NwcInfoEvent.mayUseExtensionMethod.
+            val info = withTimeoutOrNull(NwcSignerState.NIP44_NEGOTIATION_WAIT_MS) { acc.nwcInfoCache.currentOrFetch(walletUri) }
+            if (info?.mayUseExtensionMethod(NwcMethod.LIST_TRANSACTIONS) == false) {
+                allTransactions.value = emptyList()
+                _hasMoreTransactions.value = false
+                _error.value = text(Res.string.wallet_transactions_not_supported)
+                _isLoading.value = false
+                return@launch
+            }
             var requestId: HexKey? = null
             val timeoutJob = launchTimeout({ requestId }) { _isLoading.value = false }
             try {

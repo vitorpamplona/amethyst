@@ -65,7 +65,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Backs the create/edit NIP-29 group metadata screens. Holds the full editable metadata
- * (name, about, picture, and the four status flags), lets the user pick a picture from the
+ * (name, about, picture, banner, and the four status flags), lets the user pick a picture from the
  * gallery, uploads it to their configured media server on submit, then publishes the kind
  * 9007+9002 (create) or 9002 (edit) events. Mirrors [EmojiPackMetadataViewModel].
  */
@@ -103,6 +103,9 @@ class RelayGroupMetadataViewModel : ViewModel() {
     val name = mutableStateOf(TextFieldValue())
     val about = mutableStateOf(TextFieldValue())
     val picture = mutableStateOf(TextFieldValue())
+
+    /** NIP-29 `banner`: a wide header image URL for the group. */
+    val banner = mutableStateOf(TextFieldValue())
 
     /** Comma/space-separated topic hashtags; drives the discovery hashtag filter. */
     val topics = mutableStateOf(TextFieldValue())
@@ -172,6 +175,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
         name.value = TextFieldValue(event?.name() ?: "")
         about.value = TextFieldValue(event?.about() ?: "")
         picture.value = TextFieldValue(event?.picture() ?: "")
+        banner.value = TextFieldValue(event?.banner() ?: "")
         isPrivate = channel.isPrivate()
         isClosed = channel.isClosed()
         isHidden = event?.isHidden() ?: false
@@ -258,6 +262,10 @@ class RelayGroupMetadataViewModel : ViewModel() {
             picture.value.text
                 .trim()
                 .ifBlank { null }
+        val banner =
+            banner.value.text
+                .trim()
+                .ifBlank { null }
         val hashtags = parseTopics()
         val geohashes = parseGeohashes()
         val existing = channel
@@ -268,6 +276,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 name = name,
                 about = about,
                 picture = picture,
+                banner = banner,
                 isPrivate = isPrivate,
                 isClosed = isClosed,
                 isHidden = isHidden,
@@ -283,6 +292,8 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 name = name,
                 about = about,
                 picture = picture,
+                // Buzz has no banner field: keep whatever the channel carries rather than clear it.
+                banner = if (isBuzzRelay) existing.bannerPicture() else banner,
                 isPrivate = isPrivate,
                 isClosed = isClosed,
                 isHidden = isHidden,

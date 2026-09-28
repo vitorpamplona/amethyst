@@ -37,6 +37,9 @@ package com.vitorpamplona.amethyst.commons.model.payments
  * and the installed-app probe (which needs the URI before it has an authority).
  */
 object PaymentTargetTypes {
+    private const val CASHME = "cashme"
+    private const val DOLLAR = "\$"
+
     /** Lightning-family types Amethyst can pay in-app through the Send Payment screen. */
     val LIGHTNING_TYPES = setOf("lightning", "ln", "lnurl")
 
@@ -62,10 +65,14 @@ object PaymentTargetTypes {
             "doge" to "dogecoin",
             "sol" to "solana",
             "trx" to "tron",
+            "xno" to "nano",
+            // NIP-A3 names the Cash App cashtag type `cashme`; `cashapp` is what
+            // Amethyst (and others) wrote before the spec settled on it.
+            "cashapp" to "cashme",
         )
 
     /** Types whose hand-off is a web page rather than a registered URI scheme. */
-    private val WEB_TYPES = setOf("cashapp", "venmo", "paypal")
+    private val WEB_TYPES = setOf("cashme", "venmo", "paypal", "revolut")
 
     /** Types with a dedicated URI scheme, keyed by canonical name. */
     private val SCHEMES =
@@ -82,16 +89,31 @@ object PaymentTargetTypes {
             "dogecoin" to "dogecoin",
             "solana" to "solana",
             "tron" to "tron",
+            "nano" to "nano",
+        )
+
+    /**
+     * Types whose scheme carries the address in a query parameter instead of the path:
+     * a BIP-352 silent payment address goes in a BIP-321 `bitcoin:` URI's `sp` field.
+     */
+    private val QUERY_SCHEMES =
+        mapOf(
+            "bip352" to "bitcoin:?sp=",
         )
 
     private val WEB_HOSTS =
         mapOf(
-            "cashapp" to "https://cash.app/",
+            "cashme" to "https://cash.app/",
             "venmo" to "https://venmo.com/",
             "paypal" to "https://paypal.me/",
+            "revolut" to "https://revolut.me/",
         )
 
-    /** Trims, lowercases and collapses known aliases onto one family name. */
+    /**
+     * Trims, lowercases and collapses known aliases onto one family name. The result is the
+     * NIP-A3 spelling where the spec lists one (`cashapp` -> `cashme`), so it is also what a
+     * new `payto` tag should carry.
+     */
     fun canonical(rawType: String): String {
         val trimmed = rawType.trim().lowercase()
         return ALIASES[trimmed] ?: trimmed
@@ -130,6 +152,12 @@ object PaymentTargetTypes {
         val type = canonical(rawType)
         val value = authority.trim()
         SCHEMES[type]?.let { return "$it:$value" }
+        QUERY_SCHEMES[type]?.let { return "$it$value" }
+        if (type == CASHME) {
+            // cash.app/$cashtag: NIP-A3 describes the `$`-prefixed tag, but accept a bare one.
+            val cashtag = if (value.isEmpty() || value.startsWith(DOLLAR)) value else DOLLAR + value
+            return WEB_HOSTS.getValue(CASHME) + cashtag
+        }
         WEB_HOSTS[type]?.let { return "$it$value" }
         return "payto://$type/$value"
     }

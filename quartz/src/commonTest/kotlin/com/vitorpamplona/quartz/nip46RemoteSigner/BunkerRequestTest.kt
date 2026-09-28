@@ -37,6 +37,38 @@ class BunkerRequestTest {
     }
 
     @Test
+    fun testSignEventWithoutParamsIsInvalidNotThrown() {
+        val bunkerRequest = OptimizedJsonMapper.fromJsonTo<BunkerRequest>("""{"id":"x1","method":"sign_event","params":[]}""")
+        assertTrue(bunkerRequest is BunkerRequestInvalid)
+        assertEquals("x1", bunkerRequest.id)
+        assertEquals("sign_event", bunkerRequest.method)
+    }
+
+    @Test
+    fun testSignEventWithMissingParamsFieldIsInvalid() {
+        val bunkerRequest = OptimizedJsonMapper.fromJsonTo<BunkerMessage>("""{"id":"x2","method":"sign_event"}""")
+        assertTrue(bunkerRequest is BunkerRequestInvalid)
+        assertEquals("x2", bunkerRequest.id)
+    }
+
+    @Test
+    fun testSignEventWithObjectParamKeepsTheId() {
+        // Some clients send the template as an object instead of a JSON string.
+        val bunkerRequest =
+            OptimizedJsonMapper.fromJsonTo<BunkerMessage>("""{"id":"x3","method":"sign_event","params":[{"kind":1,"created_at":1,"tags":[],"content":"hi"}]}""")
+        assertTrue(bunkerRequest is BunkerRequest)
+        assertEquals("x3", bunkerRequest.id)
+    }
+
+    @Test
+    fun testUnknownMethodStaysGeneric() {
+        val bunkerRequest = OptimizedJsonMapper.fromJsonTo<BunkerMessage>("""{"id":"x4","method":"frobnicate","params":["a"]}""")
+        assertTrue(bunkerRequest is BunkerRequest)
+        assertEquals("frobnicate", bunkerRequest.method)
+        assertTrue(bunkerRequest !is BunkerRequestInvalid)
+    }
+
+    @Test
     fun testConnectWithoutMetadata() {
         val requestJson = """{"id":"1","method":"connect","params":["abc","mysecret","sign_event"]}"""
         val request = OptimizedJsonMapper.fromJsonTo<BunkerRequest>(requestJson)

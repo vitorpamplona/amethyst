@@ -33,7 +33,7 @@ class Nip44EncryptResponse {
                 }
 
                 is BunkerResponseError -> {
-                    SignerResult.RequestAddressed.Rejected()
+                    SignerResult.RequestAddressed.Rejected(response.error)
                 }
 
                 else -> {

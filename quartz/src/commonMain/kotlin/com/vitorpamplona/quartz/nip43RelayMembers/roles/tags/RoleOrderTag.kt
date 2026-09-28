@@ -18,16 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.nipA3
+package com.vitorpamplona.quartz.nip43RelayMembers.roles.tags
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
-import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-/** Changes to the NIP-A3 payment targets (the ways others can pay the user). */
-@Immutable
-class PaymentTargetsDiff(
-    val targets: ListDiff<PaymentTarget>,
-) : EventDiff {
-    override fun removesData() = targets.hasRemovals()
+/** NIP-43 kind 33534 `order` tag: a display-only integer sort key. */
+class RoleOrderTag {
+    companion object {
+        const val TAG_NAME = "order"
+
+        fun parse(tag: Array<String>): Int? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return tag[1].trim().toIntOrNull()
+        }
+
+        fun assemble(order: Int) = arrayOf(TAG_NAME, order.toString())
+    }
 }

@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip51Lists.relayLists.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
@@ -47,8 +46,6 @@ fun TagArrayBuilder<BroadcastRelayListEvent>.broadcastRelays(relays: List<Normal
 fun TagArrayBuilder<IndexerRelayListEvent>.indexerRelays(relays: List<NormalizedRelayUrl>) = addAll(relays.map { RelayTag.assemble(it) })
 
 fun TagArrayBuilder<ProxyRelayListEvent>.proxyRelays(relays: List<NormalizedRelayUrl>) = addAll(relays.map { RelayTag.assemble(it) })
-
-fun TagArrayBuilder<PrivateOutboxRelayListEvent>.privateRelays(relays: List<NormalizedRelayUrl>) = addAll(relays.map { RelayTag.assemble(it) })
 
 fun TagArrayBuilder<RelaySetEvent>.relaySet(relays: List<NormalizedRelayUrl>) = addAll(relays.map { RelayTag.assemble(it) })
 

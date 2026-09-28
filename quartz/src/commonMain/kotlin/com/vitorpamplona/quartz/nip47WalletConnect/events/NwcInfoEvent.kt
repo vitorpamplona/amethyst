@@ -43,7 +43,19 @@ class NwcInfoEvent(
 
     fun supportsMethod(method: String): Boolean = capabilities().contains(method)
 
-    fun supportsNotifications(): Boolean = capabilities().contains("notifications")
+    /**
+     * Whether the wallet sends NWC-02 notifications (kind 23197/23196).
+     *
+     * Three signals count, since wallets predate and postdate the move of
+     * notifications out of NIP-47 core into the NWC-02 extension:
+     * - legacy: the bare `notifications` token in the content;
+     * - current: `02` in the `extensions` tag;
+     * - either: a non-empty `notifications` tag listing the notification types.
+     */
+    fun supportsNotifications(): Boolean =
+        capabilities().contains(ExtensionsTag.LEGACY_NOTIFICATIONS_CAPABILITY) ||
+            supportsExtension(ExtensionsTag.NOTIFICATIONS) ||
+            notificationTypes().isNotEmpty()
 
     // NIP-47 carries the schemes/types as a single space-separated string in one
     // tag value (e.g. ["encryption", "nip44_v2 nip04"]). Split on whitespace so we
@@ -70,6 +82,32 @@ class NwcInfoEvent(
      * understand, so silence must not be read as permission.
      */
     fun supportsExtension(id: String) = extensions().contains(id)
+
+    /** Whether the wallet publishes an `extensions` tag at all (a post-extensions NIP-47 wallet). */
+    fun advertisesExtensions() = tags.any { ExtensionsTag.parse(it) != null }
+
+    /**
+     * Whether a client should send [method], a method defined by NWC extension [extension]
+     * (see [ExtensionsTag.forMethod]). Core methods (no extension) always pass.
+     *
+     * - `true` when the content lists [method] or the `extensions` tag lists [extension].
+     * - `false` only when the wallet publishes an `extensions` tag that lacks [extension]
+     *   AND the content does not list [method]: that wallet speaks the extension-aware
+     *   NIP-47 and has told us it does not implement it.
+     * - `true` otherwise: a pre-extensions wallet that simply doesn't mention the method
+     *   is given the benefit of the doubt, as clients always did, and answers with
+     *   `NOT_IMPLEMENTED` if it really can't.
+     *
+     * Unlike [supportsExtension] this errs towards sending, because the cost of a wrong
+     * guess is a clean error response rather than a changed request.
+     */
+    fun mayUseExtensionMethod(
+        method: String,
+        extension: String? = ExtensionsTag.forMethod(method),
+    ): Boolean {
+        if (extension == null || supportsMethod(method) || supportsExtension(extension)) return true
+        return !advertisesExtensions()
+    }
 
     companion object {
         const val KIND = 13194

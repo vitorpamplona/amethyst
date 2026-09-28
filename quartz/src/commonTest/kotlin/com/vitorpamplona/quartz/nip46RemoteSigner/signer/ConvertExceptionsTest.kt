@@ -53,6 +53,14 @@ class ConvertExceptionsTest {
     }
 
     @Test
+    fun rejectedCarriesTheBunkerErrorText() {
+        val result = SignerResult.RequestAddressed.Rejected<PingResult>("invalid params for sign_event: bad")
+        val ex = remote.convertExceptions("Test", result)
+        assertIs<SignerExceptions.ManuallyUnauthorizedException>(ex)
+        assertTrue(ex.message!!.contains("invalid params for sign_event: bad"), ex.message)
+    }
+
+    @Test
     fun timedOutReturnsTimedOutException() {
         val result = SignerResult.RequestAddressed.TimedOut<PingResult>()
         val ex = remote.convertExceptions("Test", result)

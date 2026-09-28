@@ -48,6 +48,12 @@ class BannedEvent(
 )
 
 @Serializable
+class AllowedEvent(
+    val id: String,
+    val reason: String? = null,
+)
+
+@Serializable
 class EventNeedingModeration(
     val id: String,
     val reason: String? = null,

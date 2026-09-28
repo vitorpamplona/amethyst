@@ -23,5 +23,8 @@ package com.vitorpamplona.quartz.nip43RelayMembers.list
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.MemberTag
+import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
 
 fun TagArrayBuilder<RelayMembershipListEvent>.members(pubKeys: List<HexKey>) = addAll(MemberTag.assemble(pubKeys))
+
+fun TagArrayBuilder<RelayMembershipListEvent>.membersWithRoles(members: List<RelayMember>) = addAll(members.map { MemberTag.assemble(it) })

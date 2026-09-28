@@ -21,6 +21,7 @@
 package com.vitorpamplona.geode.config
 
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRole
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -36,7 +37,9 @@ import java.nio.file.StandardCopyOption
  *  - the live NIP-11 info doc (so `changerelayname/description/icon`
  *    survive a restart), and
  *  - the NIP-86 ban / allow / kind lists for pubkeys, events, and
- *    kinds (NIP-86 admin RPC mutates these directly).
+ *    kinds (NIP-86 admin RPC mutates these directly), and
+ *  - the NIP-43 role definitions, role assignments and invite codes
+ *    managed through the NIP-86 role / claim methods.
  *
  * One JSON file per relay. Lives next to the SQLite event store by
  * convention, but the path is configurable independently via
@@ -133,6 +136,33 @@ data class RuntimeConfigData(
     val bannedEvents: List<BannedEntry> = emptyList(),
     val allowedKinds: List<Int> = emptyList(),
     val disallowedKinds: List<Int> = emptyList(),
+    val allowedEvents: List<BannedEntry> = emptyList(),
+    val roles: List<RoleEntry> = emptyList(),
+    val roleAssignments: List<RoleAssignmentEntry> = emptyList(),
+    val claims: List<String> = emptyList(),
+)
+
+/** A NIP-43 role definition (NIP-86 `createrole` params). */
+@Serializable
+data class RoleEntry(
+    val id: String,
+    val label: String? = null,
+    val description: String? = null,
+    val color: Int? = null,
+    val order: Int? = null,
+) {
+    fun toRole() = RelayRole(id, label, description, color, order)
+
+    companion object {
+        fun of(role: RelayRole) = RoleEntry(role.id, role.label, role.description, role.color, role.order)
+    }
+}
+
+/** The NIP-43 role ids assigned to one pubkey. */
+@Serializable
+data class RoleAssignmentEntry(
+    val pubkey: String,
+    val roles: List<String>,
 )
 
 @Serializable
@@ -149,6 +179,10 @@ fun RuntimeConfigData.seedInto(banStore: BanStore) {
         bannedEvents = bannedEvents.map { it.key to it.reason },
         allowedKinds = allowedKinds,
         disallowedKinds = disallowedKinds,
+        allowedEvents = allowedEvents.map { it.key to it.reason },
+        roles = roles.map { it.toRole() },
+        roleAssignments = roleAssignments.map { it.pubkey to it.roles },
+        claims = claims,
     )
 }
 
@@ -164,4 +198,8 @@ fun snapshotOf(
         bannedEvents = banStore.listBannedEvents().map { (k, r) -> BannedEntry(k, r) },
         allowedKinds = banStore.listAllowedKinds(),
         disallowedKinds = banStore.listDisallowedKinds(),
+        allowedEvents = banStore.listAllowedEvents().map { (k, r) -> BannedEntry(k, r) },
+        roles = banStore.listRoles().map { RoleEntry.of(it) },
+        roleAssignments = banStore.listRoleAssignments().map { (pk, ids) -> RoleAssignmentEntry(pk, ids) },
+        claims = banStore.listClaims(),
     )

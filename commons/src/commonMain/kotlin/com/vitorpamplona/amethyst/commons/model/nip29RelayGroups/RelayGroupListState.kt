@@ -156,6 +156,19 @@ class RelayGroupListState(
         )
     }
 
+    /**
+     * NIP-29 group migration: replace [from]'s entry with the same group id on [to]'s relay, in one
+     * signed version of the list (the group keeps its id; only the relay hint changes).
+     */
+    suspend fun move(
+        from: RelayGroupChannel,
+        to: RelayGroupChannel,
+    ): SimpleGroupListEvent {
+        val target = GroupTag(to.groupId.id, to.groupId.relayUrl.url, to.event?.name() ?: from.event?.name())
+        val relayGroupList = getRelayGroupList() ?: return SimpleGroupListEvent.create(publicGroups = listOf(target), signer = signer)
+        return SimpleGroupListEvent.replace(relayGroupList, from.toGroupTag(), target, signer)
+    }
+
     init {
         settings.relayGroupList()?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved relay group list")

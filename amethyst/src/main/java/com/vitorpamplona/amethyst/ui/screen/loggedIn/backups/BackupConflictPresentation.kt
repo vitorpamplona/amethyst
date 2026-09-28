@@ -118,7 +118,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsDiff
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
@@ -149,6 +148,7 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListDiff
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataDiff
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListDiff
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsDiff
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListDiff
 import org.jetbrains.compose.resources.StringResource
 

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,6 +40,9 @@ class RelayMembershipListEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun members() = tags.members()
 
+    /** Members with the role ids (NIP-43 kind 33534 `d` tags) the relay assigned to each. */
+    fun membersWithRoles() = tags.membersWithRoles()
+
     companion object {
         const val KIND = 13534
 
@@ -49,6 +53,17 @@ class RelayMembershipListEvent(
         ) = eventTemplate(KIND, "", createdAt) {
             protect()
             members(members)
+            initializer()
+        }
+
+        /** Like [build], but each member may carry its assigned role ids. */
+        fun buildWithRoles(
+            members: List<RelayMember>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<RelayMembershipListEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            protect()
+            membersWithRoles(members)
             initializer()
         }
     }

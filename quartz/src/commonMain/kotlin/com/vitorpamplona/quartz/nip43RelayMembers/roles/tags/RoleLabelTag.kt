@@ -18,9 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.nipA3
+package com.vitorpamplona.quartz.nip43RelayMembers.roles.tags
 
-data class PaymentTarget(
-    val type: String,
-    val authority: String,
-)
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
+/** NIP-43 kind 33534 `label` tag: the role's display name. */
+class RoleLabelTag {
+    companion object {
+        const val TAG_NAME = "label"
+
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(label: String) = arrayOf(TAG_NAME, label)
+    }
+}

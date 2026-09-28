@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -49,8 +50,10 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip22Comments.tags.ReplyIdentifierTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.TextQuoteSelectorTag
@@ -126,7 +129,32 @@ class HighlightEvent(
         return pHints + nip19Hints
     }
 
-    fun inUrl() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
+    /**
+     * The highlight's `r` source. NIP-84 lets it be a URL or any other text naming the source,
+     * so this is not necessarily a URL: check with [isUrlReference] before opening it. Prefers the
+     * tag marked `source` and skips `mention` ones, which quote highlights use for URLs cited in
+     * their comment.
+     */
+    fun inReference(): String? {
+        var firstUnmarked: String? = null
+        tags.forEach { tag ->
+            if (tag.size > 1 && tag[0] == ReferenceTag.TAG_NAME && tag[1].isNotBlank()) {
+                val marker = tag.getOrNull(2)
+                if (marker == SOURCE_MARKER) return tag[1]
+                if (marker != MENTION_MARKER && firstUnmarked == null) firstUnmarked = tag[1]
+            }
+        }
+        return firstUnmarked
+    }
+
+    /** The `r` source when it is a web address; see [inReference] for any text. */
+    fun inUrl(): String? = inReference()?.takeIf(::isUrlReference)
+
+    /** The NIP-73 external ids (`i` tags) the highlight was taken from: a book, paper, podcast... */
+    fun inExternalIds(): List<ExternalId> = tags.mapNotNull(ReplyIdentifierTag::parseExternalId)
+
+    /** Raw `i` tag values, including the ones no [ExternalId] parser recognizes. */
+    fun inExternalIdValues(): List<String> = tags.mapNotNull(ReplyIdentifierTag::parse)
 
     /**
      * The pubkey of the author of the highlighted content.
@@ -194,6 +222,29 @@ class HighlightEvent(
         /** NIP-84 role marker on the `p` tag that identifies the highlighted content's author. */
         private const val AUTHOR_MARKER = "author"
 
+        /** NIP-84 marker for the `r` tag naming the highlighted source in a quote highlight. */
+        const val SOURCE_MARKER = "source"
+
+        /** NIP-84 marker for `r`/`p` tags cited by a quote highlight's comment. */
+        const val MENTION_MARKER = "mention"
+
+        private val WHITESPACE = Regex("\\s")
+
+        /**
+         * Whether an `r` value reads as a web address. NIP-84 allows any text there ("Chapter 3
+         * of Dune"), which must neither be opened as a link nor get `https://` glued on.
+         */
+        fun isUrlReference(reference: String): Boolean {
+            val trimmed = reference.trim()
+            if (trimmed.isEmpty() || WHITESPACE.containsMatchIn(trimmed)) return false
+            if (trimmed.startsWith("https://", ignoreCase = true) || trimmed.startsWith("http://", ignoreCase = true)) {
+                return HttpUrlFormatter.isValidUrl(trimmed)
+            }
+            // Scheme-less host/path, as some clients write it: needs a dotted host.
+            val host = trimmed.substringBefore('/').substringBefore('?').substringBefore('#')
+            return host.contains('.') && !host.startsWith('.') && !host.endsWith('.') && HttpUrlFormatter.isValidUrl(trimmed)
+        }
+
         /** Any run of whitespace (spaces, tabs, newlines) — collapsed to a single space. */
         private val WHITESPACE_RUN = Regex("\\s+")
 
@@ -211,8 +262,10 @@ class HighlightEvent(
          * - [address] → an `a` reference to a nostr addressable source (e.g. a NIP-23 article),
          * - [event] → an `e` reference to a specific nostr event version highlighted,
          * - [author] → a `p` attribution to the highlighted content's author,
-         * - [url] → an `r` source reference (normalized by [ReferenceTag]; clean it of
-         *   trackers with [com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner] first),
+         * - [url] → an `r` source reference. A web address is normalized by [ReferenceTag] (clean
+         *   it of trackers with [com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner]
+         *   first); any other text is kept verbatim, as NIP-84 allows,
+         * - [externalIds] → `i` tags for NIP-73 sources (ISBNs, DOIs, podcast episodes...),
          * - [prefix]/[suffix] → a `textquoteselector` anchor (the `exact` field stays a
          *   placeholder since the passage already lives in `content`),
          * - [context] → the surrounding paragraph as a `context` tag,
@@ -231,9 +284,10 @@ class HighlightEvent(
             address: String? = null,
             event: String? = null,
             author: String? = null,
+            externalIds: List<ExternalId> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): HighlightEvent = signer.sign(createdAt, KIND, assembleTags(url, prefix, suffix, comment, context, address, event, author), quote)
+        ): HighlightEvent = signer.sign(createdAt, KIND, assembleTags(url, prefix, suffix, comment, context, address, event, author, externalIds), quote)
 
         /**
          * The unsigned [EventTemplate] counterpart of [create], for the app's
@@ -250,11 +304,12 @@ class HighlightEvent(
             address: String? = null,
             event: String? = null,
             author: String? = null,
+            externalIds: List<ExternalId> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<HighlightEvent>.() -> Unit = {},
         ): EventTemplate<HighlightEvent> =
             eventTemplate(KIND, quote, createdAt) {
-                addAll(assembleTags(url, prefix, suffix, comment, context, address, event, author))
+                addAll(assembleTags(url, prefix, suffix, comment, context, address, event, author, externalIds))
                 initializer()
             }
 
@@ -267,6 +322,7 @@ class HighlightEvent(
             address: String? = null,
             event: String? = null,
             author: String? = null,
+            externalIds: List<ExternalId> = emptyList(),
         ): Array<Array<String>> {
             val tags = mutableListOf<Array<String>>()
 
@@ -281,8 +337,18 @@ class HighlightEvent(
                 // carries `mention` p tags — the producer-side counterpart of that reader logic.
                 tags.add(arrayOf(PTag.TAG_NAME, author, "", AUTHOR_MARKER))
             }
+            externalIds.forEach { tags.add(ReplyIdentifierTag.assemble(it)) }
             if (!url.isNullOrBlank()) {
-                tags.add(ReferenceTag.assemble(url))
+                // `r` may be any text: only a web address gets URL-normalized. A quote highlight
+                // marks its source so the comment's own cited URLs (`mention`) can't be mistaken for it.
+                val reference = if (isUrlReference(url)) HttpUrlFormatter.normalize(url) else url.trim()
+                tags.add(
+                    if (comment.isNullOrBlank()) {
+                        arrayOf(ReferenceTag.TAG_NAME, reference)
+                    } else {
+                        arrayOf(ReferenceTag.TAG_NAME, reference, SOURCE_MARKER)
+                    },
+                )
             }
             if (!prefix.isNullOrEmpty() || !suffix.isNullOrEmpty()) {
                 tags.add(TextQuoteSelectorTag.assemble(null, prefix, suffix))

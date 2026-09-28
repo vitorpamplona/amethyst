@@ -140,6 +140,7 @@ class TopNavFilterState(
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
         followLists: List<AddressableNote>,
+        favoriteFollowSets: List<AddressableNote> = emptyList(),
     ): List<FeedDefinition> {
         val peopleListsDefs =
             peopleLists.map {
@@ -157,19 +158,36 @@ class TopNavFilterState(
                 )
             }
 
-        return (peopleListsDefs + followListsDefs).sortedBy { it.name.name() }
+        // NIP-51 kind 10021: follow sets the user favorited, including other people's. The
+        // user's own sets are already listed above, so those are not repeated.
+        val listed = peopleLists.mapTo(HashSet()) { it.address }
+        val favoriteDefs =
+            favoriteFollowSets.mapNotNull {
+                if (it.address in listed) {
+                    null
+                } else {
+                    FeedDefinition(
+                        TopFilter.PeopleList(it.address),
+                        PeopleListName(it),
+                    )
+                }
+            }
+
+        return (peopleListsDefs + followListsDefs + favoriteDefs).sortedBy { it.name.name() }
     }
 
     val livePeopleListsFlow: Flow<List<FeedDefinition>> =
         combine(
             account.followSets.peopleListNotes,
             account.starterPacks.starterPackNotes,
+            account.favoriteFollowSetsList.flowNotes,
             ::mergePeopleLists,
         ).onStart {
             emit(
                 mergePeopleLists(
                     account.followSets.peopleListNotes.value,
                     account.starterPacks.starterPackNotes.value,
+                    account.favoriteFollowSetsList.flowNotes.value,
                 ),
             )
         }

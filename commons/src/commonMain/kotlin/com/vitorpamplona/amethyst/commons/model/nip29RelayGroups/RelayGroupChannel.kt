@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -36,7 +37,10 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,10 +100,23 @@ class RelayGroupChannel(
     private var adminsUpdatedAt: Long = 0
 
     /**
-     * Relay-signed pinned message ids (kind 39005), in the relay's display order.
-     * Pinning replaces the whole list, so this is always the full current set.
+     * Relay-signed pin list (kind 39005) in the relay's display order: `e` pins (regular
+     * events, by id) and `a` pins (addressable events, by address) interleaved. Pinning
+     * replaces the whole list, so this is always the full current set — and a pin/unpin must
+     * re-submit it intact, `a` entries and their extra tag values included.
      */
+    @Volatile
+    var pins: List<GroupPin> = emptyList()
+        private set
+
+    /** Only the `e`-tagged pinned event ids of [pins], in order. */
+    @Volatile
     var pinnedEventIds: List<HexKey> = emptyList()
+        private set
+
+    /** Only the `a`-tagged pinned addresses of [pins], in order. */
+    @Volatile
+    var pinnedAddresses: List<Address> = emptyList()
         private set
     private var pinnedUpdatedAt: Long = 0
 
@@ -165,7 +182,7 @@ class RelayGroupChannel(
             members.isNotEmpty() ||
             admins.isNotEmpty() ||
             groupRoles.isNotEmpty() ||
-            pinnedEventIds.isNotEmpty()
+            pins.isNotEmpty()
 
     /** A relay group lives on exactly one relay: its host. */
     override fun relays() = setOf(groupId.relayUrl)
@@ -175,6 +192,9 @@ class RelayGroupChannel(
     fun summary(): String? = event?.about()
 
     fun profilePicture(): String? = event?.picture()
+
+    /** The NIP-29 `banner` header image, when the relay's metadata carries one. */
+    fun bannerPicture(): String? = event?.banner()
 
     fun isPrivate(): Boolean = event?.isPrivate() ?: false
 
@@ -232,7 +252,10 @@ class RelayGroupChannel(
         // Only newer lists supersede; equal-or-older is dropped so a duplicate
         // arrival isn't reprocessed (no redundant emit).
         if (event.createdAt <= pinnedUpdatedAt) return
-        pinnedEventIds = event.pinnedEventIds()
+        val newPins = event.pins()
+        pins = newPins
+        pinnedEventIds = newPins.mapNotNull { (it as? EventPin)?.eventId }
+        pinnedAddresses = newPins.mapNotNull { (it as? AddressPin)?.address }
         pinnedUpdatedAt = event.createdAt
         updateChannelInfo()
     }
@@ -245,7 +268,14 @@ class RelayGroupChannel(
         updateChannelInfo()
     }
 
-    fun isPinned(eventId: HexKey): Boolean = eventId in pinnedEventIds
+    /** Whether [ref] — an event id hex or a `kind:pubkey:d` address value — is pinned. */
+    fun isPinned(ref: String): Boolean = pins.any { it.ref == ref }
+
+    /** The current pin list with [pin] appended (unchanged if it's already pinned). */
+    fun pinsWith(pin: GroupPin): List<GroupPin> = if (isPinned(pin.ref)) pins else pins + pin
+
+    /** The current pin list without the entry for [ref], every other pin kept verbatim. */
+    fun pinsWithout(ref: String): List<GroupPin> = pins.filter { it.ref != ref }
 
     /**
      * NIP-29 timeline references (`previous` tag) for an event about to be sent to this

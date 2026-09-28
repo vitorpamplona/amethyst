@@ -24,12 +24,18 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 
 /**
  * Moderator/admin write verbs for a relay group (the relay is the final authority
@@ -38,20 +44,22 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
  */
 object RelayGroupModerationCommands {
     /**
-     * `relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--private|--public] [--closed|--open]` → 9002.
+     * `relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--picture URL] [--banner URL]
+     * [--parent GID|--root] [--private|--public] [--closed|--open]` → 9002.
      *
-     * A kind-9002 edit re-asserts the group's status flags, so sending only one
-     * axis would silently reset the other (e.g. `--closed` on a private group
-     * would drop `private` and leak it public). To avoid that we read the group's
-     * current 39000 metadata and merge: each axis keeps its current value unless
-     * the caller explicitly changes it with the flag or its counter-flag.
+     * A kind-9002 edit re-asserts the whole group metadata ("all the fields of group-metadata"), so
+     * sending only one field would silently reset the rest (e.g. `--closed` on a private group would
+     * drop `private` and leak it public; a rename would drop the picture, banner, subgroup links and
+     * any tag we don't model). To avoid that we read the group's current 39000 metadata and merge:
+     * every field keeps its current value unless the caller explicitly changes it, and unknown tags
+     * (`livekit`, `supported_kinds`, …) ride along verbatim.
      */
     suspend fun edit(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val usage = "relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--private|--public] [--closed|--open]"
+        val usage = "relaygroup edit RELAY GROUP_ID [--name N] [--about A] [--picture URL] [--banner URL] [--parent GID|--root] [--private|--public] [--closed|--open]"
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
         val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
@@ -98,9 +106,16 @@ object RelayGroupModerationCommands {
                     groupId,
                     name = args.flag("name") ?: meta?.name(),
                     about = args.flag("about") ?: meta?.about(),
-                    status = groupStatus(isPrivate, isClosed),
+                    picture = args.flag("picture") ?: meta?.picture(),
+                    banner = args.flag("banner") ?: meta?.banner(),
+                    status = groupStatus(isPrivate, isClosed) + carriedStatus(meta),
                     hashtags = meta?.hashtags() ?: emptyList(),
                     geohashes = meta?.geohashes()?.maxByOrNull { it.length }?.let { listOf(it) } ?: emptyList(),
+                    // Subgroups: a 9002 without `parent` re-roots the group and one missing a `child` is
+                    // rejected, so keep both unless the caller re-parents (--parent) or detaches (--root).
+                    parent = if (args.bool("root")) null else args.flag("parent") ?: meta?.parent(),
+                    children = meta?.children() ?: emptyList(),
+                    extraTags = meta?.unmanagedTags() ?: emptyList(),
                 )
             args.rejectUnknown()
             val signed = ctx.signer.sign(template)
@@ -117,6 +132,118 @@ object RelayGroupModerationCommands {
                 ),
             )
             return 0
+        }
+    }
+
+    /** The status flags the CLI has no switch for (`hidden`, `restricted`), carried from [meta]. */
+    private fun carriedStatus(meta: GroupMetadataEvent?): Set<GroupMetadataEvent.GroupStatus> =
+        buildSet {
+            if (meta?.isHidden() == true) add(GroupMetadataEvent.GroupStatus.HIDDEN)
+            if (meta?.isRestricted() == true) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
+        }
+
+    /**
+     * `relaygroup pin|unpin RELAY GROUP_ID REF` → 9010 update-pin-list. NIP-29 replaces the whole
+     * list, so this reads the group's current kind-39005 and re-submits it with REF added (at the
+     * end) or removed — every other pin, `e` or `a`, kept verbatim. REF is an event (`note1`,
+     * `nevent1`, 64-hex → `e`) or an addressable event (`naddr1`, `kind:pubkey:d` → `a`).
+     *
+     * The 39005 is only trusted when signed by the relay's NIP-11 `self` key, and a read that did not
+     * reach EOSE aborts instead of being taken as "no pins" — publishing a full replacement from a
+     * failed read would wipe every existing pin.
+     */
+    suspend fun pin(
+        dataDir: DataDir,
+        rest: Array<String>,
+        pin: Boolean,
+    ): Int {
+        val args = Args(rest)
+        val verb = if (pin) "pin" else "unpin"
+        val usage = "relaygroup $verb RELAY GROUP_ID REF"
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
+        val ref = args.positionalOrNull(2) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+        val target = GroupPin.fromReference(ref) ?: return Output.error("bad_args", "not an event id, nevent, naddr or kind:pubkey:d: $ref")
+        args.rejectUnknown()
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            // NIP-29: the 39005 is "signed by the relay keypair … as stated by the NIP-11 `self`".
+            // Without that key we cannot tell the real list from a forged one, so do not rewrite it.
+            val relayKey =
+                ctx.relayInfo(relay)?.self
+                    ?: return Output.error("no_relay_key", "could not read the NIP-11 self pubkey of ${relay.url}; refusing to rewrite the pin list")
+            val filter =
+                Filter(
+                    kinds = listOf(GroupPinnedEvent.KIND),
+                    authors = listOf(relayKey),
+                    tags = mapOf("d" to listOf(groupId)),
+                    limit = 1,
+                )
+            val current =
+                when (val read = readPinList(ctx.drainResult(mapOf(relay to listOf(filter)), 6_000), relay, relayKey)) {
+                    is PinListRead.Found -> read.pins
+                    is PinListRead.Failed -> return Output.error(read.code, read.detail)
+                }
+
+            val updated =
+                if (pin) {
+                    if (current.any { it.ref == target.ref }) current else current + target
+                } else {
+                    current.filter { it.ref != target.ref }
+                }
+
+            val signed = ctx.signer.sign(GroupUpdatePinListEvent.build(groupId, updated))
+            val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
+            Output.emit(
+                mapOf(
+                    "event_id" to signed.id,
+                    "group_id" to groupId,
+                    "relay" to relay.url,
+                    "pins" to updated.map { it.ref },
+                    "changed" to (updated.map { it.ref } != current.map { it.ref }),
+                    "published" to ack.values.any { it.accepted },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /** The outcome of reading a group's current kind-39005 before a read-merge-write. */
+    internal sealed interface PinListRead {
+        class Found(
+            val pins: List<GroupPin>,
+        ) : PinListRead
+
+        class Failed(
+            val code: String,
+            val detail: String,
+        ) : PinListRead
+    }
+
+    /**
+     * The latest relay-signed 39005 in [result]; an empty list only when the relay answered (EOSE)
+     * and had none. A timeout maps to `timeout` (exit 124), any other unanswered read to
+     * `fetch_failed` (exit 1).
+     */
+    internal fun readPinList(
+        result: FetchAllResult,
+        relay: NormalizedRelayUrl,
+        relayKey: HexKey,
+    ): PinListRead {
+        val latest =
+            result.events
+                .map { it.second }
+                .filterIsInstance<GroupPinnedEvent>()
+                .filter { it.pubKey == relayKey }
+                .maxByOrNull { it.createdAt }
+        return when {
+            latest != null -> PinListRead.Found(latest.pins())
+            result.anyRelayServed -> PinListRead.Found(emptyList())
+            relay in result.stalled -> PinListRead.Failed("timeout", "${relay.url} did not answer the pin-list read; refusing to overwrite pins")
+            else -> PinListRead.Failed("fetch_failed", "could not read the pin list from ${relay.url} (${result.doneReasons[relay] ?: "no answer"}); refusing to overwrite pins")
         }
     }
 

@@ -38,12 +38,14 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayListDiff
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
-import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.privateRelays
-import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
-import com.vitorpamplona.quartz.nip51Lists.splitRelayListUpdate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+/**
+ * NIP-51 / NIP-37 kind 10013, "Private relays": where the user keeps drafts and other private
+ * data. NIP-51 requires these relays to be NIP-44 encrypted, so every relay this class writes goes
+ * into the private content. [publicRelays] still reads plain tags other clients may have left.
+ */
 @Immutable
 class PrivateOutboxRelayListEvent(
     id: HexKey,
@@ -83,12 +85,10 @@ class PrivateOutboxRelayListEvent(
         ): PrivateOutboxRelayListEvent {
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
 
-            // Keeps public relays public and private relays private: rewriting them all as
-            // private tags blanks the list out for clients that only read the plain tags.
-            val split = splitRelayListUpdate(earlierVersion.tags.relays(), privateTags.relays(), relays)
-
-            val publicTags = earlierVersion.tags.remove(RelayTag::match).plus(split.publicRelays.map { RelayTag.assemble(it) })
-            val newPrivateTags = privateTags.remove(RelayTag::match).plus(split.privateRelays.map { RelayTag.assemble(it) })
+            // Unlike the other relay lists, 10013 relays MUST be private (NIP-51): plain relay
+            // tags another client left behind are moved into the encrypted content, not kept public.
+            val publicTags = earlierVersion.tags.remove(RelayTag::match)
+            val newPrivateTags = privateTags.remove(RelayTag::match).plus(relays.map { RelayTag.assemble(it) })
 
             return signer.signNip51List(createdAt, KIND, publicTags, newPrivateTags)
         }
@@ -111,19 +111,17 @@ class PrivateOutboxRelayListEvent(
             return signer.signNip51List(createdAt, KIND, emptyArray(), privateTagArray)
         }
 
+        /** Builds the list with every relay NIP-44 encrypted in the content, as NIP-51 requires. */
         suspend fun build(
-            publicRelays: List<NormalizedRelayUrl> = emptyList(),
-            privateRelays: List<NormalizedRelayUrl> = emptyList(),
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PrivateOutboxRelayListEvent>.() -> Unit = {},
         ) = eventTemplate<PrivateOutboxRelayListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(relays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            privateRelays(publicRelays)
-
             initializer()
         }
     }
