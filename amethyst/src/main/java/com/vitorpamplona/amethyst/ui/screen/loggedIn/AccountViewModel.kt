@@ -1144,7 +1144,7 @@ class AccountViewModel(
             pollOption = pollOption,
             message = message,
             showErrorIfNoLnAddress = showErrorIfNoLnAddress,
-            okHttpClient = httpClientBuilder::okHttpClientForMoney,
+            lnurl = host.lnurlTransport,
             onError = onError,
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
@@ -1250,7 +1250,7 @@ class AccountViewModel(
             zappedNote = zappedNote,
             asZap = !streaming,
             zapType = ZapReceiptEvent.ZapType.PUBLIC,
-            okHttpClient = httpClientBuilder::okHttpClientForMoney,
+            lnurl = host.lnurlTransport,
             onError = { title, message ->
                 if (!streaming) toastManager.toast(title, message)
             },
@@ -2683,7 +2683,8 @@ class AccountViewModel(
                         MeltProcessor().melt(
                             token,
                             lud16,
-                            httpClientBuilder::okHttpClientForMoney,
+                            account.cashuMintTransport,
+                            host.lnurlTransport,
                             // Mints the user deliberately added are exempt from the
                             // private-address block (self-hosted LAN mints are legit).
                             knownWalletMints =
@@ -2930,12 +2931,11 @@ class AccountViewModel(
                     }
 
                 val invoice =
-                    LightningAddressResolver().lnAddressInvoice(
+                    LightningAddressResolver(host.lnurlTransport).lnAddressInvoice(
                         lnAddress = lnAddress,
                         milliSats = milliSats,
                         message = message,
                         nostrRequest = zapRequest,
-                        okHttpClient = httpClientBuilder::okHttpClientForMoney,
                         onProgress = onProgress,
                     )
 

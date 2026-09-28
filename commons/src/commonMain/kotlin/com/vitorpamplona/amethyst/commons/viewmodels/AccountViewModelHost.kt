@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
@@ -46,6 +47,9 @@ interface AccountViewModelHost {
 
     /** Opens sockets for the throwaway clients crawls use (Event Sync, Cashu discovery). */
     val websocketBuilder: WebsocketBuilder
+
+    /** HTTP for LNURL-pay (zaps, invoices, melts), over the clients the app routes payments through. */
+    val lnurlTransport: LnurlHttpTransport
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

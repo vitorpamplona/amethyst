@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_error_title
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_not_supported
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_requires_nwc
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_no_recipients
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
@@ -53,7 +54,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.OkHttpClient
 
 /**
  * Executes a Podcasting-2.0 value-for-value (V4V) split: takes a [PodcastValue] block and a total
@@ -88,7 +88,7 @@ class V4VPaymentHandler(
         totalMilliSats: Long,
         boostagram: PodcastBoostagram,
         zappedNote: Note?,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onError: (title: String, message: String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayInvoicesViaIntent: (invoices: List<String>) -> Unit,
@@ -136,7 +136,7 @@ class V4VPaymentHandler(
                     asZap = asZap,
                     zapType = zapType,
                     zappedNote = zappedNote,
-                    okHttpClient = okHttpClient,
+                    lnurl = lnurl,
                     onError = onError,
                     onProgress = { onProgress(it * 0.6f + 0.1f) },
                 )
@@ -211,7 +211,7 @@ class V4VPaymentHandler(
         asZap: Boolean,
         zapType: ZapReceiptEvent.ZapType,
         zappedNote: Note?,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
     ): List<InvoicePayable> {
@@ -243,12 +243,11 @@ class V4VPaymentHandler(
                     }
 
                 val invoice =
-                    LightningAddressResolver().lnAddressInvoice(
+                    LightningAddressResolver(lnurl).lnAddressInvoice(
                         lnAddress = lnAddress,
                         milliSats = share.amountMilliSats,
                         message = message,
                         nostrRequest = nostrRequest,
-                        okHttpClient = okHttpClient,
                         onProgress = {},
                     )
                 progress += 1f / shares.size

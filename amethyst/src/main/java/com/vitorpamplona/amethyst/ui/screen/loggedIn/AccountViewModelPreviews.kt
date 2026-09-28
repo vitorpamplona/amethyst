@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
@@ -196,6 +197,7 @@ private object PreviewAccountViewModelHost : AccountViewModelHost {
     override val powPublishFailures: Flow<PoWJobFailure> = emptyFlow()
     override val relayStats = RelayStats(EmptyNostrClient())
     override val websocketBuilder = BasicOkHttpWebSocket.Builder { OkHttpClient() }
+    override val lnurlTransport = LnurlHttpTransport { throw IllegalStateException("Previews do not reach the network") }
     override val savedAccounts: Flow<Set<HexKey>> = flowOf(emptySet())
 
     override fun dismissNotificationFor(eventId: HexKey) = Unit

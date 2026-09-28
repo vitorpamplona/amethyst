@@ -26,13 +26,14 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
 import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url
 import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url_explainer
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintUrlException
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
-import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -60,12 +61,13 @@ class MeltProcessor {
     suspend fun melt(
         token: CashuToken,
         lud16: String,
-        okHttpClient: (String) -> OkHttpClient,
+        mintTransport: MintHttpTransport,
+        lnurl: LnurlHttpTransport,
         knownWalletMints: Set<String> = emptySet(),
     ): MeltResult {
         try {
             val isOwnMint = knownWalletMints.any { it.trim().trimEnd('/').equals(token.mint.trim().trimEnd('/'), ignoreCase = true) }
-            val ops = CashuMintOperations(MintHttpClient(token.mint, userConfigured = isOwnMint, okHttpClient = okHttpClient))
+            val ops = CashuMintOperations(MintHttpClient(token.mint, userConfigured = isOwnMint, transport = mintTransport))
             val proofs = token.proofs
 
             // A Lightning address must commit to an amount before we know the
@@ -73,11 +75,10 @@ class MeltProcessor {
             // the LN fee_reserve, then add the NUT-02 input fee the mint
             // charges on these proofs.
             val probeInvoice =
-                LightningAddressResolver().lnAddressInvoice(
+                LightningAddressResolver(lnurl).lnAddressInvoice(
                     lnAddress = lud16,
                     milliSats = token.totalAmount * 1000,
                     message = "Calculate Fees for Cashu",
-                    okHttpClient = okHttpClient,
                     onProgress = {},
                 )
             val probeQuote = ops.requestMeltQuote(probeInvoice)
@@ -98,11 +99,10 @@ class MeltProcessor {
             // requesting change — there is no wallet to hold leftover proofs,
             // so the unused fee_reserve stays with the mint.
             val invoice =
-                LightningAddressResolver().lnAddressInvoice(
+                LightningAddressResolver(lnurl).lnAddressInvoice(
                     lnAddress = lud16,
                     milliSats = sendable * 1000,
                     message = "Redeem Cashu",
-                    okHttpClient = okHttpClient,
                     onProgress = {},
                 )
             val quote = ops.requestMeltQuote(invoice)

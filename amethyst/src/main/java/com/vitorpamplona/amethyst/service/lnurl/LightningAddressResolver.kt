@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.lnurl
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user
 import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup
@@ -33,6 +32,8 @@ import com.vitorpamplona.amethyst.commons.resources.incorrect_invoice_amount_sat
 import com.vitorpamplona.amethyst.commons.resources.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct
 import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user
 import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpResponse
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -41,18 +42,20 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.coroutines.executeAsync
-import java.math.BigDecimal
-import java.math.RoundingMode
-import java.net.URLEncoder
+import com.vitorpamplona.quartz.utils.UrlEncoder
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
-class LightningAddressResolver {
+/** LNURL-pay (LUD-06/16) for zaps and payments, over whatever [transport] the platform supplies. */
+class LightningAddressResolver(
+    private val transport: LnurlHttpTransport,
+) {
     fun assembleUrl(lnAddress: String): String? {
         val parts = lnAddress.split("@")
 
@@ -72,41 +75,27 @@ class LightningAddressResolver {
         val msg: String,
     ) : Exception(msg)
 
-    private suspend fun fetchLightningAddressJson(
-        lnAddress: String,
-        okHttpClient: (String) -> OkHttpClient,
-    ): String {
+    private suspend fun fetchLightningAddressJson(lnAddress: String): String {
         val url =
             assembleUrl(lnAddress) ?: throw LightningAddressError(
                 loadStringRes(Res.string.error_unable_to_fetch_invoice),
                 loadStringRes(Res.string.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup, lnAddress),
             )
 
-        val client = okHttpClient(url)
-
         return try {
-            val request: Request =
-                Request
-                    .Builder()
-                    .url(url)
-                    .build()
-
-            client.newCall(request).executeAsync().use { response ->
-                withContext(Dispatchers.IO) {
-                    if (response.isSuccessful) {
-                        response.body.string()
-                    } else {
-                        throw LightningAddressError(
-                            loadStringRes(Res.string.error_unable_to_fetch_invoice),
-                            loadStringRes(
-                                Res.string.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
-                                url,
-                                lnAddress,
-                                errorMessage(response),
-                            ),
-                        )
-                    }
-                }
+            val response = transport.get(url)
+            if (response.isSuccessful) {
+                response.body
+            } else {
+                throw LightningAddressError(
+                    loadStringRes(Res.string.error_unable_to_fetch_invoice),
+                    loadStringRes(
+                        Res.string.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
+                        url,
+                        lnAddress,
+                        errorMessage(response),
+                    ),
+                )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -127,59 +116,43 @@ class LightningAddressResolver {
         milliSats: Long,
         message: String,
         nostrRequest: ZapRequestEvent? = null,
-        okHttpClient: (String) -> OkHttpClient,
     ): String {
-        @Suppress("BlockingMethodInNonBlockingContext") // URLEncoder.encode is CPU-only, not I/O blocking
-        val encodedMessage = URLEncoder.encode(message, "utf-8")
+        val encodedMessage = UrlEncoder.encode(message)
 
         val urlBinder = if (lnCallback.contains("?")) "&" else "?"
         var url = "$lnCallback${urlBinder}amount=$milliSats&comment=$encodedMessage"
 
         if (nostrRequest != null) {
-            @Suppress("BlockingMethodInNonBlockingContext") // URLEncoder.encode is CPU-only, not I/O blocking
-            val encodedNostrRequest = URLEncoder.encode(nostrRequest.toJson(), "utf-8")
+            val encodedNostrRequest = UrlEncoder.encode(nostrRequest.toJson())
             url += "&nostr=$encodedNostrRequest"
         }
 
-        val client = okHttpClient(url)
-
-        val request: Request =
-            Request
-                .Builder()
-                .url(url)
-                .build()
-
-        return client.newCall(request).executeAsync().use { response ->
-            withContext(Dispatchers.IO) {
-                if (response.isSuccessful) {
-                    response.body.string()
-                } else {
-                    throw LightningAddressError(
-                        loadStringRes(Res.string.error_unable_to_fetch_invoice),
-                        loadStringRes(Res.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(response)),
-                    )
-                }
-            }
+        val response = transport.get(url)
+        return if (response.isSuccessful) {
+            response.body
+        } else {
+            throw LightningAddressError(
+                loadStringRes(Res.string.error_unable_to_fetch_invoice),
+                loadStringRes(Res.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(response)),
+            )
         }
     }
 
-    suspend fun errorMessage(response: Response): String {
-        val body = response.body.string()
+    suspend fun errorMessage(response: LnurlHttpResponse): String {
+        val body = response.body
 
         val errorMessage =
-            runCatching {
-                ObjectMapper().readTree(body)
-            }.getOrNull()?.let { tree ->
-                val errorNode = tree.get("error")
-                val messageNode = tree.get("message")
-                val statusNode = tree.get("status")
+            (parseJson(body) as? JsonObject)?.let { tree ->
+                val errorNode = tree["error"]
+                val messageNode = tree["message"]
+                val statusNode = tree["status"]
 
-                if (tree.get("error") != null &&
-                    tree.get("error").isBoolean &&
+                if (errorNode != null &&
+                    errorNode.isBoolean() &&
                     messageNode != null &&
                     errorNode.asBoolean()
                 ) {
-                    return messageNode.asText()
+                    messageNode.asText()?.let { return it }
                 }
 
                 val status = statusNode?.asText()
@@ -188,7 +161,7 @@ class LightningAddressResolver {
                 if (status == "error" && message != null) {
                     message
                 } else {
-                    tree.get("error")?.get("message")?.asText()
+                    (errorNode as? JsonObject)?.get("message")?.asText()
                 }
             }
 
@@ -197,9 +170,9 @@ class LightningAddressResolver {
         }
 
         return errorMessage
-            ?: HttpStatusMessages.resourceIdFor(response.code)?.let { loadStringRes(it) }
-            ?: response.message.ifBlank { null }
-            ?: response.code.toString()
+            ?: HttpStatusMessages.resourceIdFor(response.status)?.let { loadStringRes(it) }
+            ?: response.reason.ifBlank { null }
+            ?: response.status.toString()
     }
 
     /**
@@ -214,25 +187,19 @@ class LightningAddressResolver {
         milliSats: Long,
         message: String,
         nostrRequest: ZapRequestEvent? = null,
-        okHttpClient: (String) -> OkHttpClient,
         onProgress: (percent: Float) -> Unit,
         onZapRequestSent: (ZapRequestEvent?) -> Unit = {},
     ): String {
-        val mapper = ObjectMapper()
-
         val lnurlpUrl = assembleUrl(lnAddress)
 
         val lnAddressJson =
-            fetchLightningAddressJson(
-                lnAddress,
-                okHttpClient,
-            )
+            fetchLightningAddressJson(lnAddress)
 
         onProgress(0.4f)
 
         val lnurlp =
             try {
-                mapper.readTree(lnAddressJson)
+                Json.parseToJsonElement(lnAddressJson) as? JsonObject
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 throw LightningAddressError(
@@ -256,8 +223,8 @@ class LightningAddressResolver {
             )
         }
 
-        val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false
-        val nostrPubkey = lnurlp.get("nostrPubkey")?.asText()?.ifBlank { null }
+        val allowsNostr = lnurlp["allowsNostr"]?.asBoolean() ?: false
+        val nostrPubkey = lnurlp["nostrPubkey"]?.asText()?.ifBlank { null }
 
         // Prime the receipt-validation cache so incoming zap receipts can be
         // checked against this provider's nostrPubkey (NIP-57 Appendix F)
@@ -282,14 +249,13 @@ class LightningAddressResolver {
                 milliSats = milliSats,
                 message = message,
                 nostrRequest = sentZapRequest,
-                okHttpClient = okHttpClient,
             )
 
         onProgress(0.6f)
 
         val lnInvoice =
             try {
-                mapper.readTree(invoice)
+                Json.parseToJsonElement(invoice) as? JsonObject
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 throw LightningAddressError(
@@ -328,8 +294,7 @@ class LightningAddressResolver {
         }
 
         // Forces LN Invoice amount to be the requested amount.
-        val expectedAmountInSats =
-            BigDecimal(milliSats).divide(BigDecimal(1000), RoundingMode.HALF_UP).toLong()
+        val expectedAmountInSats = roundHalfUpToSats(milliSats)
 
         val invoiceAmount = LnInvoiceUtil.getAmountInSats(pr)
 
@@ -351,3 +316,34 @@ class LightningAddressResolver {
         return pr
     }
 }
+
+/** Millisats to sats, rounding a half sat up, as `BigDecimal.divide(1000, HALF_UP)` did. */
+internal fun roundHalfUpToSats(milliSats: Long): Long = if (milliSats >= 0) (milliSats + 500) / 1000 else -((-milliSats + 500) / 1000)
+
+private fun parseJson(body: String): JsonElement? =
+    try {
+        Json.parseToJsonElement(body)
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        null
+    }
+
+// Jackson's JsonNode readers, which LNURL servers' loosely-typed replies were written against:
+// asText() gives a scalar's text and "" for a container; asBoolean() reads true, a non-zero
+// number or the text "true". JSON null reads as absent rather than as the text "null".
+
+private fun JsonElement.asText(): String? =
+    when (this) {
+        is JsonNull -> null
+        is JsonPrimitive -> content
+        else -> ""
+    }
+
+private fun JsonElement.isBoolean(): Boolean = this is JsonPrimitive && !isString && booleanOrNull != null
+
+private fun JsonElement.asBoolean(): Boolean =
+    when {
+        this !is JsonPrimitive || this is JsonNull -> false
+        isString -> content.trim() == "true"
+        else -> booleanOrNull ?: longOrNull?.let { it != 0L } ?: false
+    }

@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning
 import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
+import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
@@ -65,9 +66,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import org.jetbrains.compose.resources.StringResource
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.math.round
 
 class ZapPaymentHandler(
@@ -119,7 +121,7 @@ class ZapPaymentHandler(
         pollOption: Int?,
         message: String,
         showErrorIfNoLnAddress: Boolean,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
@@ -258,7 +260,7 @@ class ZapPaymentHandler(
                 zapType = zapType,
                 totalAmountMilliSats = amountMilliSats,
                 totalWeight = totalWeight,
-                okHttpClient = okHttpClient,
+                lnurl = lnurl,
                 onError = onError,
                 onProgress = onProgress,
                 onPayViaIntent = onPayViaIntent,
@@ -275,7 +277,7 @@ class ZapPaymentHandler(
                 totalWeight = totalWeight,
                 message = message,
                 zapType = zapType,
-                okHttpClient = okHttpClient,
+                lnurl = lnurl,
                 onError = onError,
                 onProgress = { onProgress(it * 0.25f + 0.75f) },
                 onPayViaIntent = onPayViaIntent,
@@ -299,7 +301,7 @@ class ZapPaymentHandler(
         zapType: ZapReceiptEvent.ZapType,
         totalAmountMilliSats: Long,
         totalWeight: Double,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
@@ -314,7 +316,7 @@ class ZapPaymentHandler(
                 requests = splitZapRequests,
                 totalAmountMilliSats = totalAmountMilliSats,
                 message = message,
-                okHttpClient = okHttpClient,
+                lnurl = lnurl,
                 onError = onError,
                 onProgress = { onProgress(it * 0.7f + 0.05f) },
                 totalWeight = totalWeight,
@@ -408,7 +410,7 @@ class ZapPaymentHandler(
         requests: List<ZapRequestReady>,
         totalAmountMilliSats: Long,
         message: String,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         // Shared across the lightning + BOLT12 lanes so a mixed split stays proportional.
@@ -424,7 +426,7 @@ class ZapPaymentHandler(
                     nostrZapRequest = splitZapRequestPair.zapRequest,
                     zapValue = calculateZapValue(totalAmountMilliSats, splitZapRequestPair.inputSetup.weight, totalWeight),
                     message = message,
-                    okHttpClient = okHttpClient,
+                    lnurl = lnurl,
                     onProgressStep = { percentStepForThisPayment ->
                         progressAllPayments += percentStepForThisPayment / requests.size
                         onProgress(progressAllPayments)
@@ -530,7 +532,7 @@ class ZapPaymentHandler(
         totalWeight: Double,
         message: String,
         zapType: ZapReceiptEvent.ZapType,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
@@ -567,7 +569,7 @@ class ZapPaymentHandler(
                                 zapType = zapType,
                                 totalAmountMilliSats = totalAmountMilliSats,
                                 totalWeight = totalWeight,
-                                okHttpClient = okHttpClient,
+                                lnurl = lnurl,
                                 onError = onError,
                                 // The zap's own progress finished when the BOLT12 request was
                                 // dispatched; the retry settles in the background like NWC does.
@@ -610,14 +612,15 @@ class ZapPaymentHandler(
      * The counter is atomic because `mapNotNullAsync` runs the payables concurrently and the
      * response half-step fires from an async callback, so plain `+=` would lose updates.
      */
+    @OptIn(ExperimentalAtomicApi::class)
     private class PaymentProgress(
         payableCount: Int,
         private val onProgress: (percent: Float) -> Unit,
     ) {
         private val totalSteps = (payableCount * 2).coerceAtLeast(1)
-        private val done = AtomicInteger(0)
+        private val done = AtomicInt(0)
 
-        fun step() = onProgress(done.incrementAndGet().toFloat() / totalSteps)
+        fun step() = onProgress(done.incrementAndFetch().toFloat() / totalSteps)
     }
 
     /**
@@ -666,7 +669,7 @@ class ZapPaymentHandler(
         nostrZapRequest: ZapRequestEvent?,
         zapValue: Long,
         message: String,
-        okHttpClient: (String) -> OkHttpClient,
+        lnurl: LnurlHttpTransport,
         onProgressStep: (percent: Float) -> Unit,
     ): Payable {
         var progressThisPayment = 0.00f
@@ -676,12 +679,11 @@ class ZapPaymentHandler(
         var sentZapRequest: ZapRequestEvent? = null
 
         val invoice =
-            LightningAddressResolver().lnAddressInvoice(
+            LightningAddressResolver(lnurl).lnAddressInvoice(
                 lnAddress = lud16,
                 milliSats = zapValue,
                 message = message,
                 nostrRequest = nostrZapRequest,
-                okHttpClient = okHttpClient,
                 onProgress = {
                     val step = it - progressThisPayment
                     progressThisPayment = it
