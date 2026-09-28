@@ -21,44 +21,12 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.components.InlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 
-/**
- * Strategy for rendering a note quoted inline in another note's text (a
- * `nostr:nevent1...`/`nostr:note1...` mention with preview budget left, or a
- * legacy `#[index]` event tag).
- *
- * Both rich-text paths (plain and markdown) funnel through [DisplayFullNote],
- * which reads [LocalInlineQuoteRenderer], so providing a different renderer
- * re-skins inline quotes for a whole subtree without threading a parameter
- * through the parser stack. Chat bubbles use this to keep a quoted chat
- * message in the chat reply design instead of the default quoted-note card
- * (see `chatInlineQuoteRenderer`).
- *
- * A renderer draws only the quoted note itself; any leftover characters
- * around the mention stay with the caller ([DisplayFullNote]).
- */
-fun interface InlineQuoteRenderer {
-    @Composable
-    fun Render(
-        note: Note,
-        quotesLeft: Int,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    )
-}
-
-/** The quoted-note card used everywhere outside chats. */
+/** The quoted-note card used everywhere outside chats; the app installs it in its theme root. */
 val DefaultInlineQuoteRenderer =
     InlineQuoteRenderer { note, quotesLeft, backgroundColor, accountViewModel, nav ->
         NoteCompose(
@@ -72,5 +40,3 @@ val DefaultInlineQuoteRenderer =
             nav = nav,
         )
     }
-
-val LocalInlineQuoteRenderer = compositionLocalOf { DefaultInlineQuoteRenderer }

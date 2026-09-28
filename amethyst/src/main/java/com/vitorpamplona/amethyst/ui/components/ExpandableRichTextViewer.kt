@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.show_more
 import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
+import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder

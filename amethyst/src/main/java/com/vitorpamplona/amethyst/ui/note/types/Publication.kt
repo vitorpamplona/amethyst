@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.publication_contents
 import com.vitorpamplona.amethyst.commons.resources.publication_more_sections
 import com.vitorpamplona.amethyst.commons.resources.publication_section_count
 import com.vitorpamplona.amethyst.commons.resources.publication_untitled_section
+import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent

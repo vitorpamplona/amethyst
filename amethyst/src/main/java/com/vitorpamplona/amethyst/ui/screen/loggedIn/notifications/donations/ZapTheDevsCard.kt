@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.this_version_brought_to_you_
 import com.vitorpamplona.amethyst.commons.resources.version_name
 import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_description
 import com.vitorpamplona.amethyst.commons.resources.zap_the_devs_title
+import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ReusableZapButton
 import com.vitorpamplona.amethyst.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits

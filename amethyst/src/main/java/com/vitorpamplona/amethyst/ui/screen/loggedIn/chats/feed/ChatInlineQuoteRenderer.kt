@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.components.InlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.components.DefaultInlineQuoteRenderer
-import com.vitorpamplona.amethyst.ui.components.InlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
