@@ -24,3 +24,5 @@ import java.util.Locale
 
 // The JVM exposes one default locale, not the OS's ordered preference list.
 actual fun getLanguagesSpokenByUser(): Set<String> = setOf(Locale.getDefault().language)
+
+actual fun getDefaultLanguageCode(): String = Locale.getDefault().language

@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.util
 
 import platform.Foundation.NSLocale
+import platform.Foundation.currentLocale
+import platform.Foundation.languageCode
 import platform.Foundation.preferredLanguages
 
 // preferredLanguages holds BCP 47 tags ("pt-BR", "zh-Hans-CN"); the language code is the first subtag.
@@ -29,3 +31,5 @@ actual fun getLanguagesSpokenByUser(): Set<String> =
         .mapNotNull { (it as? String)?.substringBefore('-')?.lowercase() }
         .filter { it.isNotEmpty() }
         .toSet()
+
+actual fun getDefaultLanguageCode(): String = NSLocale.currentLocale.languageCode

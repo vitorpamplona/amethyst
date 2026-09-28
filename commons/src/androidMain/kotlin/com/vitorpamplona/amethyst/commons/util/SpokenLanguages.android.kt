@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.util
 
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
+import java.util.Locale
 
 actual fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
@@ -31,3 +32,5 @@ actual fun getLanguagesSpokenByUser(): Set<String> {
     }
     return codedList
 }
+
+actual fun getDefaultLanguageCode(): String = Locale.getDefault().language

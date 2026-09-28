@@ -28,11 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The account's anonymous, per-geohash chat identities.
@@ -66,7 +66,7 @@ class GeohashChatIdentityState(
      * `synchronized`, because the store reads it protects are suspending.
      */
     private val mutex = Mutex()
-    private val cache = ConcurrentHashMap<String, KeyPair>()
+    private val cache = ConcurrentMap<String, KeyPair>()
 
     @Volatile private var loaded: GeohashIdentitySecrets? = null
 

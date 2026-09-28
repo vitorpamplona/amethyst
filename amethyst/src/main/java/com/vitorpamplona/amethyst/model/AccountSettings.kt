@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
@@ -92,6 +94,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 val DefaultSignerPermissions =
     listOf(
@@ -596,9 +600,7 @@ class AccountSettings(
                 val entry =
                     NwcWalletEntryNorm(
                         id =
-                            java.util.UUID
-                                .randomUUID()
-                                .toString(),
+                            Uuid.random().toString(),
                         name = "Wallet",
                         uri = newServer,
                     )

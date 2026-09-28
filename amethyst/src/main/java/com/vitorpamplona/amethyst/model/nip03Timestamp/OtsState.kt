@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 class OtsState(
     val signer: NostrSigner,
@@ -58,7 +58,7 @@ class OtsState(
         Log.d("Pending Attestations") { "Updating ${settings.pendingAttestations.value.size} pending attestations" }
 
         return settings.pendingAttestations.value.toList().mapNotNull { (key, value) ->
-            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver())
+            val otsState = OtsEvent.upgrade(Base64.decode(value), key, otsResolver())
 
             if (otsState != null) {
                 val hint = cache.getNoteIfExists(key)?.toEventHint<Event>()
@@ -93,7 +93,7 @@ class OtsState(
         settings.addPendingAttestation(
             id = id,
             stamp =
-                Base64.getEncoder().encodeToString(
+                Base64.encode(
                     OtsEvent.stamp(
                         id,
                         otsResolver(),

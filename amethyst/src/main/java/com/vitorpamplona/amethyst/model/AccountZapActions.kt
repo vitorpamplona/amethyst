@@ -50,9 +50,9 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"

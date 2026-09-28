@@ -25,3 +25,6 @@ package com.vitorpamplona.amethyst.commons.util
  * device, in no particular order. New accounts default to not translating from these.
  */
 expect fun getLanguagesSpokenByUser(): Set<String>
+
+/** The ISO 639 code of the device's current language, the default target for translations. */
+expect fun getDefaultLanguageCode(): String

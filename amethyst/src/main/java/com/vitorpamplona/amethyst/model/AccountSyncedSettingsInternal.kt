@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.model
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.util.getDefaultLanguageCode
 import com.vitorpamplona.amethyst.commons.util.getLanguagesSpokenByUser
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.serialization.Serializable
-import java.util.Locale
 
 val DefaultReactions =
     listOf(
@@ -204,7 +204,7 @@ class AccountZapPreferencesInternal(
 class AccountLanguagePreferencesInternal(
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
-    var translateTo: String = Locale.getDefault().language,
+    var translateTo: String = getDefaultLanguageCode(),
 )
 
 @Serializable

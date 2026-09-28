@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -70,10 +71,10 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import java.util.concurrent.ConcurrentHashMap
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
@@ -1222,7 +1223,7 @@ class AccountConcordActions(
     // Rotations we've already adopted ("communityId:epoch"), so a base-rekey wrap still buffered
     // in the pre-rebuild window (the session rebuild off `liveCommunities` is async) is not
     // adopted — and re-published — twice on successive revision ticks.
-    private val adoptedConcordRotations = java.util.Collections.synchronizedSet(HashSet<String>())
+    private val adoptedConcordRotations = ConcurrentSet<String>()
 
     /**
      * Persist a rotated access root/epoch for [entry], keeping the prior root as a
@@ -1341,7 +1342,7 @@ class AccountConcordActions(
     // Last time we re-resolved each community's invite_ref, so the recovery sweep rides the
     // Concord revision tick (which fires on every structural change) without turning it into a
     // relay-fetch loop.
-    private val lastConcordRecoveryCheck = ConcurrentHashMap<String, Long>()
+    private val lastConcordRecoveryCheck = ConcurrentMap<String, Long>()
 
     /**
      * Stranded recovery (CORD-05/06 receive path). A Refounding carries only

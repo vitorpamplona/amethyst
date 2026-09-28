@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.vitorpamplona.amethyst.model.nip51Lists.followSets
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -55,7 +57,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Maintains several stateflows for each step in processing PeopleLists
@@ -205,7 +208,7 @@ class FollowSetsState(
         isPrivate: Boolean = false,
         account: Account,
     ): String {
-        val dTag = UUID.randomUUID().toString()
+        val dTag = Uuid.random().toString()
         val newListTemplate =
             FollowSetEvent.build(
                 dTag = dTag,
@@ -253,7 +256,7 @@ class FollowSetsState(
     ) {
         val newList =
             FollowSetEvent.createListWithDescription(
-                dTag = UUID.randomUUID().toString(),
+                dTag = Uuid.random().toString(),
                 title = customCloneName ?: currentPeopleList.title,
                 description = customCloneDescription ?: currentPeopleList.description,
                 publicMembers = currentPeopleList.publicMembers.toUserTags(),
