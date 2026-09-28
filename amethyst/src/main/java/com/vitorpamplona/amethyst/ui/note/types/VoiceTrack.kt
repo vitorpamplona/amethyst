@@ -79,11 +79,8 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 
 @Composable
@@ -319,26 +316,6 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
             tint = Color.White,
         )
     }
-}
-
-/**
- * Extracts AudioMeta from an event's IMeta tags if it has audio content with waveform.
- * Returns the first audio IMeta that has a waveform, or null if none found.
- */
-fun Event.getAudioMetaWithWaveform(): AudioMeta? {
-    val audioMetas = imetas().map { AudioMeta.parse(it) }
-    return audioMetas.firstOrNull { meta ->
-        meta.waveform != null &&
-            (meta.mimeType == null || meta.mimeType?.startsWith("audio/") == true)
-    }
-}
-
-/**
- * Checks if the event content is primarily an audio attachment (content is just the audio URL).
- */
-fun Event.isAudioOnlyContent(): Boolean {
-    val audioMeta = getAudioMetaWithWaveform() ?: return false
-    return content.trim() == audioMeta.url
 }
 
 /**

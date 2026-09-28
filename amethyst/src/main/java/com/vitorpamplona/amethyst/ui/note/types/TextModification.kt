@@ -61,10 +61,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.NoteBody
 import com.vitorpamplona.amethyst.ui.note.observeEdits
+import com.vitorpamplona.amethyst.ui.note.platform.EditPostView
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import kotlinx.collections.immutable.persistentListOf
 

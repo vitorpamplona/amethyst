@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
@@ -536,3 +537,17 @@ fun EditPostView(
     accountViewModel = accountViewModel,
     nav = nav,
 )
+
+@Composable
+fun rememberUrlPreviewState(
+    url: String,
+    accountViewModel: AccountViewModel,
+): UrlPreviewState = LocalNotePlatform.current.rememberUrlPreviewState(url, accountViewModel)
+
+@Composable
+fun RenderAudioHeader(
+    note: Note,
+    contentScale: ContentScale,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = LocalNotePlatform.current.RenderAudioHeader(note, contentScale, accountViewModel, nav)

@@ -92,9 +92,9 @@ import com.vitorpamplona.amethyst.commons.util.DecimalPatternFormatter
 import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease

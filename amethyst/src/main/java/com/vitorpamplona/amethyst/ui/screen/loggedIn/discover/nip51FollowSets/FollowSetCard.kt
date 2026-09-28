@@ -58,10 +58,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.GalleryUnloaded
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
+import com.vitorpamplona.amethyst.ui.note.platform.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.platform.ZapReaction
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.collections.immutable.ImmutableList

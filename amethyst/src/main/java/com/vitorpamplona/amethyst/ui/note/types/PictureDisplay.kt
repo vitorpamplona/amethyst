@@ -47,9 +47,9 @@ import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.components.BlurhashGridBackdrop
 import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
+import com.vitorpamplona.amethyst.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.collections.immutable.toImmutableList

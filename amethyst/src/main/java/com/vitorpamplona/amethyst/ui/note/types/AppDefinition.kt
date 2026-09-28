@@ -117,7 +117,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.note.platform.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent

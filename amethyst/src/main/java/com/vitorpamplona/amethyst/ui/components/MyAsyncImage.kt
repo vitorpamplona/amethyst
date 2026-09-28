@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.ui.note.platform.GifVideoView
 
 @Composable
 fun MyAsyncImage(

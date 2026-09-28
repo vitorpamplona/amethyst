@@ -32,13 +32,13 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_text_original
 import com.vitorpamplona.amethyst.commons.resources.copy_text_translated
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.cachedTranslation
 import com.vitorpamplona.amethyst.ui.note.types.displayedNoteText
 import kotlinx.coroutines.launch
 
@@ -80,6 +80,7 @@ fun copyNoteTextAction(
     onDismiss: () -> Unit,
 ): (note: Note, versionShown: Note) -> Unit {
     val clipboardManager = LocalClipboard.current
+    val translator = LocalTranslationPlatform.current
     val scope = rememberCoroutineScope()
     val choice = remember { mutableStateOf<CopyTextChoice?>(null) }
 
@@ -113,7 +114,7 @@ fun copyNoteTextAction(
                 onDismiss()
             } else {
                 val original = displayedNoteText(note, decrypted)
-                val translated = cachedTranslation(original, accountViewModel)
+                val translated = translator.cachedTranslation(original, accountViewModel)
                 if (translated == null) {
                     copy(original)
                 } else {

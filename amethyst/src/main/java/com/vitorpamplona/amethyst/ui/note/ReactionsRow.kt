@@ -109,7 +109,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -2058,55 +2057,6 @@ private fun ActionableReactionButton(
         onLongClick = onChangeAmount,
     ) {
         RenderReaction(reactionType)
-    }
-}
-
-@Composable
-fun RenderReaction(reactionType: String) {
-    if (reactionType.startsWith(":")) {
-        val noStartColon = reactionType.removePrefix(":")
-        val url = noStartColon.substringAfter(":")
-
-        InLineIconRenderer(
-            persistentListOf(
-                CustomEmoji.ImageUrlType(url),
-            ),
-            style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
-            maxLines = 1,
-            fontSize = 22.sp,
-        )
-    } else {
-        when (reactionType) {
-            "+" -> {
-                LikedIcon(modifier = Size28Modifier)
-            }
-
-            "-" -> {
-                Text(
-                    text = "\uD83D\uDC4E",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    fontSize = 22.sp,
-                )
-            }
-
-            else -> {
-                if (EmojiCoder.isCoded(reactionType)) {
-                    AnimatedBorderTextCornerRadius(
-                        reactionType,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 20.sp,
-                    )
-                } else {
-                    Text(
-                        reactionType,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                        fontSize = 22.sp,
-                    )
-                }
-            }
-        }
     }
 }
 

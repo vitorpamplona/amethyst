@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview as AppLoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
 import com.vitorpamplona.amethyst.ui.note.LikeReaction as AppLikeReaction
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow as AppReactionsRow
 import com.vitorpamplona.amethyst.ui.note.ZapReaction as AppZapReaction
@@ -52,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppL
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRenderAudioFromIMeta
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame as AppRenderChessGame
@@ -74,6 +77,20 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack as AppRenderVoi
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
+    @Composable
+    override fun rememberUrlPreviewState(
+        url: String,
+        accountViewModel: AccountViewModel,
+    ): UrlPreviewState = AppRememberUrlPreviewState(url, accountViewModel)
+
+    @Composable
+    override fun RenderAudioHeader(
+        note: Note,
+        contentScale: ContentScale,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = AppRenderAudioHeader(note, contentScale, accountViewModel, nav)
+
     @Composable
     override fun ZoomableContentView(
         content: BaseMediaContent,

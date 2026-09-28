@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StreamingHeaderModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelInfo
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.note.platform.ZoomableContentView
 
 @Composable
 fun ShowVideoStreaming(

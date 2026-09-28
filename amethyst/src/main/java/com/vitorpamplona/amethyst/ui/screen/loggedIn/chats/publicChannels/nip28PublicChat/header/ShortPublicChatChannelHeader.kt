@@ -53,8 +53,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.platform.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.platform.ZapReaction
 
 @Composable
 fun ShortPublicChatChannelHeader(

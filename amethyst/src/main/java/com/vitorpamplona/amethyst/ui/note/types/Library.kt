@@ -80,8 +80,8 @@ import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent

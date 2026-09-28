@@ -28,9 +28,9 @@ import com.vitorpamplona.amethyst.service.lang.TranslationsCache
  * when no translation occurred (same language, undetected source, blocklisted) or none is
  * cached. Cache-only on purpose: this backs the "Copy Translated" option of the copy-text
  * menus, which only applies to text the user is looking at — and rendering it through
- * [TranslatableRichTextViewer] is what populated the cache.
+ * [MlKitTranslationPlatform] is what populated the cache.
  */
-fun cachedTranslation(
+internal fun cachedMlKitTranslation(
     content: String,
     accountViewModel: AccountViewModel,
 ): String? {

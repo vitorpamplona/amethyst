@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -111,6 +112,13 @@ interface NotePlatform {
         nav: INav?,
     ) {}
 
+    /** The OpenGraph preview of [url], starting from the platform's cache. */
+    @Composable
+    fun rememberUrlPreviewState(
+        url: String,
+        accountViewModel: AccountViewModel,
+    ): UrlPreviewState = UrlPreviewState.Loading
+
     // Places
 
     @Composable
@@ -132,6 +140,14 @@ interface NotePlatform {
     ) {}
 
     // Audio
+
+    @Composable
+    fun RenderAudioHeader(
+        note: Note,
+        contentScale: ContentScale,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {}
 
     @Composable
     fun RenderAudioTrack(

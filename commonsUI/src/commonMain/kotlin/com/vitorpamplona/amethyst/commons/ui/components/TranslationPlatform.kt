@@ -53,6 +53,16 @@ interface TranslationPlatform {
         accountViewModel: AccountViewModel,
     ): String
 
+    /**
+     * The already-computed translation of [content] under the current settings, or null when
+     * none occurred or none is cached. Cache-only: it backs "Copy Translated", which applies
+     * to text on screen, and rendering that text through [Translatable] filled the cache.
+     */
+    fun cachedTranslation(
+        content: String,
+        accountViewModel: AccountViewModel,
+    ): String? = null
+
     /** No translator: the content is always its own translation. */
     object None : TranslationPlatform {
         @Composable

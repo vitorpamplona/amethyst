@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommentScope
+import com.vitorpamplona.amethyst.ui.note.platform.RenderAudioFromIMeta
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser

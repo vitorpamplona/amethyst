@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.GeocacheFoundLogCard
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.platform.LocationPreviewMap
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent

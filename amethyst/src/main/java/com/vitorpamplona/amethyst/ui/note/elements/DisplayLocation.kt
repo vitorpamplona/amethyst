@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.note.platform.LoadCityName
 
 /**
  * Compact pill showing the geohash a note is scoped to, resolved to a city

@@ -59,6 +59,11 @@ object MlKitTranslationPlatform : TranslationPlatform {
         content: String,
         accountViewModel: AccountViewModel,
     ): String = rememberMlKitTranslation(content, accountViewModel)
+
+    override fun cachedTranslation(
+        content: String,
+        accountViewModel: AccountViewModel,
+    ): String? = cachedMlKitTranslation(content, accountViewModel)
 }
 
 val FlavorTranslationPlatform: TranslationPlatform = MlKitTranslationPlatform
