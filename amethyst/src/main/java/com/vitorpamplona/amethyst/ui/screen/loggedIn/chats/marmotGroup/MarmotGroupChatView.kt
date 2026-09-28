@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatIsOneOnOne
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
@@ -157,18 +159,23 @@ fun MarmotGroupChatView(
                     .fillMaxHeight()
                     .weight(1f, true),
         ) {
-            RefreshingChatroomFeedView(
-                feedContentState = feedViewModel.feedState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
-                onWantsToReply = { note -> newMessageModel.reply(note) },
-                onWantsToEditDraft = { },
-                // kind:1210 rows sit in the conversation in order but are
-                // group-state captions rather than messages, so they get their
-                // own centered style instead of a bubble.
-                rowRenderer = remember(accountViewModel) { MarmotSystemRowRenderer(accountViewModel) },
-            )
+            // Two members is a 1:1 chat: drop the other person's name and picture from every
+            // bubble, as a NIP-17 conversation does. Zero means not loaded yet, so keep them.
+            val memberCount by chatroom.memberCount.collectAsStateWithLifecycle()
+            CompositionLocalProvider(LocalChatIsOneOnOne provides (memberCount in 1..2)) {
+                RefreshingChatroomFeedView(
+                    feedContentState = feedViewModel.feedState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
+                    onWantsToReply = { note -> newMessageModel.reply(note) },
+                    onWantsToEditDraft = { },
+                    // kind:1210 rows sit in the conversation in order but are
+                    // group-state captions rather than messages, so they get their
+                    // own centered style instead of a bubble.
+                    rowRenderer = remember(accountViewModel) { MarmotSystemRowRenderer(accountViewModel) },
+                )
+            }
         }
 
         Spacer(modifier = DoubleVertSpacer)
