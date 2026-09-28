@@ -33,21 +33,27 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
  * One appointment and the people (already narrowed to the ones the viewer cares about) whose
  * latest RSVP to it says "going". [attendees] is newest-RSVP first, so the faces a row shows are
  * the people who decided most recently.
+ *
+ * A data class on purpose: the fold re-runs on every RSVP or appointment that lands, and value
+ * equality is what lets the StateFlow drop a fold that changed nothing and lets an unchanged row
+ * skip recomposition. [appointment] compares by identity, which is right — the cache hands out
+ * one [AddressableNote] per address.
  */
 @Immutable
-class AppointmentAttendance(
+data class AppointmentAttendance(
     val appointment: AddressableNote,
     val attendees: List<HexKey>,
 )
 
 /**
  * [upcoming] is what a "where are my follows going" list draws, soonest first. [unresolved] are
- * the appointments someone RSVP'd to that the cache has no event for yet: whether they are
- * upcoming at all is unknown until they load, so they are handed back for the caller to fetch
- * instead of being drawn as blank rows.
+ * the appointments someone RSVP'd to that the cache has no event for yet, most recently answered
+ * first: whether they are upcoming at all is unknown until they load, so they are handed back for
+ * the caller to fetch instead of being drawn as blank rows. The order matters to a caller that
+ * can only fetch a bounded number — a fresh RSVP is the one most likely to be for a future event.
  */
 @Immutable
-class FollowsGoing(
+data class FollowsGoing(
     val upcoming: List<AppointmentAttendance>,
     val unresolved: List<AddressableNote>,
 )
@@ -57,8 +63,10 @@ class FollowsGoing(
  *
  * - Only an author's **latest** RSVP to a given appointment counts. RSVPs are addressable with a
  *   free-form `d` tag, so a person who said "going" and later "can't go" may have two live events
- *   (two d-tags) or an old version still in the cache; the newest one is their answer.
+ *   (two d-tags); the newest one is their answer.
  * - [isAttendee] runs on that latest RSVP only: the follow-list / mute check belongs to the caller.
+ * - [isAppointmentVisible] runs on the appointment's address before it is resolved, so an event
+ *   hosted by someone the viewer muted is neither drawn nor fetched.
  * - An appointment counts as upcoming while it has not ended (an ongoing multi-day conference is
  *   still somewhere your friends are), matching the feed lens's upcoming/past split.
  *
@@ -69,6 +77,7 @@ fun computeFollowsGoing(
     isAttendee: (CalendarRSVPEvent) -> Boolean,
     appointmentFor: (Address) -> AddressableNote,
     nowSeconds: Long,
+    isAppointmentVisible: (Address) -> Boolean = { true },
 ): FollowsGoing {
     // (appointment, author) -> that author's newest answer to it
     val latest = HashMap<Pair<Address, HexKey>, CalendarRSVPEvent>()
@@ -77,7 +86,7 @@ fun computeFollowsGoing(
         if (target.kind != CalendarTimeSlotEvent.KIND && target.kind != CalendarDateSlotEvent.KIND) return@forEach
         val key = target to rsvp.pubKey
         val current = latest[key]
-        if (current == null || rsvp.createdAt > current.createdAt) {
+        if (current == null || rsvp.isNewerThan(current)) {
             latest[key] = rsvp
         }
     }
@@ -90,20 +99,23 @@ fun computeFollowsGoing(
     }
 
     val upcoming = ArrayList<Pair<Long, AppointmentAttendance>>()
-    val unresolved = ArrayList<AddressableNote>()
+    val unresolved = ArrayList<Pair<Long, AddressableNote>>()
 
     goingByAppointment.forEach { (address, going) ->
+        if (!isAppointmentVisible(address)) return@forEach
+
+        going.sortWith(NEWEST_FIRST)
+
         val appointment = appointmentFor(address)
         if (appointment.event == null) {
-            unresolved.add(appointment)
+            unresolved.add(going.first().createdAt to appointment)
             return@forEach
         }
         val start = appointment.calendarStartSeconds() ?: return@forEach
         val end = appointment.calendarEndSeconds() ?: start
         if (end < nowSeconds) return@forEach
 
-        val attendees = going.sortedByDescending { it.createdAt }.map { it.pubKey }
-        upcoming.add(start to AppointmentAttendance(appointment, attendees))
+        upcoming.add(start to AppointmentAttendance(appointment, going.map { it.pubKey }))
     }
 
     upcoming.sortWith(
@@ -111,6 +123,16 @@ fun computeFollowsGoing(
             .thenByDescending { it.second.attendees.size }
             .thenBy { it.second.appointment.idHex },
     )
+    unresolved.sortWith(
+        compareByDescending<Pair<Long, AddressableNote>> { it.first }
+            .thenBy { it.second.idHex },
+    )
 
-    return FollowsGoing(upcoming.map { it.second }, unresolved)
+    return FollowsGoing(upcoming.map { it.second }, unresolved.map { it.second })
 }
+
+// Newest first; the id breaks a same-second tie so the answer never depends on input order.
+private val NEWEST_FIRST =
+    compareByDescending<CalendarRSVPEvent> { it.createdAt }.thenBy { it.id }
+
+private fun CalendarRSVPEvent.isNewerThan(other: CalendarRSVPEvent) = NEWEST_FIRST.compare(this, other) < 0

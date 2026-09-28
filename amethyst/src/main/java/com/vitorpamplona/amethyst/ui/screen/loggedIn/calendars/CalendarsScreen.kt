@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
+import kotlinx.coroutines.launch
 
 @Composable
 fun CalendarsScreen(
@@ -72,6 +74,7 @@ fun CalendarsScreen(
     model.bindAttendeeFilter(accountViewModel.account.liveCalendarsFollowLists, accountViewModel.account.hiddenUsers.flow)
 
     val filterDTag by model.filterDTag.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -100,7 +103,12 @@ fun CalendarsScreen(
         bottomBar = {
             AppBottomBar(Route.Calendars, nav, accountViewModel) { route ->
                 if (route == Route.Calendars) {
-                    feedState.sendToTop()
+                    if (model.viewMode == CalendarsViewMode.FOLLOWS_GOING) {
+                        // Built from RSVPs, not the feed, so the feed's scroll signal never reaches it.
+                        scope.launch { model.followsGoingListState.animateScrollToItem(0) }
+                    } else {
+                        feedState.sendToTop()
+                    }
                 } else {
                     nav.navBottomBar(route)
                 }

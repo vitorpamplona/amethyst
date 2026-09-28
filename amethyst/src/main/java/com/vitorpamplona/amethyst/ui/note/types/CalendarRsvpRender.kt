@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -39,7 +38,7 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
  *
  * [LoadAddressableNote] creates the [com.vitorpamplona.amethyst.commons.model.AddressableNote] in
  * `LocalCache` — a shell with a null event if we have never seen the appointment — and
- * [EventFinderFilterAssemblerSubscription] then asks relays for it: `filterMissingAddressables`
+ * [WatchNoteEvent]'s event-finder subscription then asks relays for it: `filterMissingAddressables`
  * picks up exactly those addressables whose `event == null` and queries the address author's
  * outbox relays plus any stored hints.
  *
@@ -70,8 +69,9 @@ fun RenderCalendarRSVPEvent(
         if (appointment == null) {
             CalendarRsvpCard(event)
         } else {
-            EventFinderFilterAssemblerSubscription(appointment, accountViewModel)
-
+            // WatchNoteEvent subscribes the event finder only while the appointment is missing.
+            // Once it is here the card has everything it draws; a standing subscription would
+            // keep asking relays for the appointment's reactions and zaps on every RSVP in the feed.
             WatchNoteEvent(
                 baseNote = appointment,
                 onNoteEventFound = {

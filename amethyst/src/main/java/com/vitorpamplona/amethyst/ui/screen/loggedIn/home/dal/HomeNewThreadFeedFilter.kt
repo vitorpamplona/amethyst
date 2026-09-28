@@ -52,7 +52,9 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
@@ -200,7 +202,9 @@ class HomeNewThreadFeedFilter(
  * Only "going" RSVPs reach the home feed: the point is to see where your people are going.
  * Maybes and declines are still visible on the appointment itself, but as posts they are noise.
  */
-private fun Event.isGoingRsvp() =
-    this is CalendarRSVPEvent &&
-        status() == RSVPStatusTag.STATUS.ACCEPTED &&
-        calendarEventAddress() != null
+private fun Event.isGoingRsvp(): Boolean {
+    if (this !is CalendarRSVPEvent || status() != RSVPStatusTag.STATUS.ACCEPTED) return false
+    // An `a` tag at anything but an appointment has no event card to draw next to "Going".
+    val target = calendarEventAddress() ?: return false
+    return target.kind == CalendarTimeSlotEvent.KIND || target.kind == CalendarDateSlotEvent.KIND
+}

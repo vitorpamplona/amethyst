@@ -171,4 +171,51 @@ class FollowsGoingTest {
         assertTrue(result.upcoming.isEmpty())
         assertTrue(result.unresolved.isEmpty())
     }
+
+    @Test
+    fun appointmentsByAHiddenHostAreNeitherShownNorFetched() {
+        val conf = timeSlot("conf", start = now + 86_400)
+        val missing = Address(CalendarTimeSlotEvent.KIND, host, "not-loaded")
+
+        val result =
+            computeFollowsGoing(
+                rsvps = listOf(rsvp(alice, conf, "accepted", 10), rsvp(alice, missing, "accepted", 11)),
+                isAttendee = { true },
+                appointmentFor = ::appointmentFor,
+                nowSeconds = now,
+                isAppointmentVisible = { it.pubKeyHex != host },
+            )
+
+        assertTrue(result.upcoming.isEmpty())
+        assertTrue(result.unresolved.isEmpty())
+    }
+
+    @Test
+    fun unresolvedAreOrderedByTheMostRecentRsvp() {
+        val old = Address(CalendarTimeSlotEvent.KIND, host, "old")
+        val fresh = Address(CalendarTimeSlotEvent.KIND, host, "fresh")
+        val middle = Address(CalendarTimeSlotEvent.KIND, host, "middle")
+
+        val result =
+            fold(
+                listOf(
+                    rsvp(alice, old, "accepted", createdAt = 10),
+                    rsvp(alice, fresh, "accepted", createdAt = 30),
+                    rsvp(alice, middle, "accepted", createdAt = 15),
+                    // Bob's newer answer makes "middle" the most recent of all.
+                    rsvp(bob, middle, "accepted", createdAt = 40),
+                ),
+            )
+
+        assertEquals(listOf(middle, fresh, old), result.unresolved.map { it.address })
+    }
+
+    @Test
+    fun anUnchangedFoldIsEqualToThePreviousOne() {
+        val conf = timeSlot("conf", start = now + 86_400)
+        val rsvps = listOf(rsvp(alice, conf, "accepted", 10), rsvp(bob, conf, "accepted", 20))
+
+        // The view model's StateFlow relies on this to drop no-op folds.
+        assertEquals(fold(rsvps), fold(rsvps.reversed()))
+    }
 }
