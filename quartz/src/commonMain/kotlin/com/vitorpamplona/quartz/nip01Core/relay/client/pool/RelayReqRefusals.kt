@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -100,6 +101,7 @@ class RelayReqRefusals(
         reason: String,
     ): Boolean {
         learnDisallowedKinds(relay, reason)
+        learnMaxFilters(relay, reason)
         val candidate = classify(reason) ?: return false
         // NO_READS is the strictest verdict; once reached, nothing softens it.
         if (blocked[relay] == Policy.NO_READS) return false
@@ -167,6 +169,23 @@ class RelayReqRefusals(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
     ): List<Filter> {
+        val withoutRefusedKinds = stripRefusedKinds(relay, filters)
+        val cap = maxFilters[relay] ?: return withoutRefusedKinds
+        if (withoutRefusedKinds.size <= cap) return withoutRefusedKinds
+        val merged = mergeForCap(withoutRefusedKinds)
+        if (merged.size <= cap) return merged
+        // Still too many: a partial REQ the relay accepts beats a whole one it refuses.
+        val dropped = merged.drop(cap).map { it.kinds }
+        if (trimWarned.putIfAbsent("${relay.url} $dropped", Unit) == null) {
+            Log.w("RelayReqRefusals") { "${relay.url} caps REQs at $cap filters; sending $cap of ${merged.size}, dropping kinds $dropped" }
+        }
+        return merged.take(cap)
+    }
+
+    private fun stripRefusedKinds(
+        relay: NormalizedRelayUrl,
+        filters: List<Filter>,
+    ): List<Filter> {
         val refused = disallowedKinds[relay] ?: return filters
         return filters.mapNotNull { filter ->
             val kinds = filter.kinds ?: return@mapNotNull filter
@@ -177,6 +196,20 @@ class RelayReqRefusals(
                 else -> filter.copy(kinds = kept)
             }
         }
+    }
+
+    // Shapes already reported as trimmed, so a REQ re-decided on every EOSE warns once.
+    private val trimWarned = ConcurrentMap<String, Unit>()
+
+    // The most filters a relay accepts in one REQ, learned from "invalid number of filters: N".
+    private val maxFilters = ConcurrentMap<NormalizedRelayUrl, Int>()
+
+    private fun learnMaxFilters(
+        relay: NormalizedRelayUrl,
+        reason: String,
+    ) {
+        val cap = parseMaxFilters(reason) ?: return
+        maxFilters.merge(relay, cap) { old, new -> minOf(old, new) }
     }
 
     fun disallowedKinds(relay: NormalizedRelayUrl): Set<Int> = disallowedKinds[relay] ?: emptySet()
@@ -192,6 +225,81 @@ class RelayReqRefusals(
         // "kind not allowed: 21059", "kinds not allowed: 7374, 30382", "kind 21059 is not allowed"
         private val KINDS_AFTER_MARKER = Regex("""kinds? (?:is |are )?not allowed:?\s*([0-9][0-9,\s]*)""")
         private val KIND_BEFORE_MARKER = Regex("""kind ([0-9]+) (?:is )?not allowed""")
+
+        // "invalid number of filters: 4" (strfry policy) — the relay refused N, so it takes fewer.
+        private val INVALID_FILTER_COUNT = Regex("""invalid number of filters:?\s*([0-9]+)""")
+
+        fun parseMaxFilters(reason: String): Int? {
+            val refusedCount =
+                INVALID_FILTER_COUNT
+                    .find(reason.lowercase())
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toIntOrNull() ?: return null
+            return (refusedCount - 1).takeIf { it >= 1 }
+        }
+
+        /**
+         * Merges filters that ask for the same thing except for ONE set of values (the kinds,
+         * one tag's values, the authors, or the ids) into a single filter with the union of those values
+         * and the earliest `since`. The result matches a superset of what each original
+         * matched, so nothing asked for is lost; an event the union adds is one some other
+         * filter in the same REQ already wanted, or a harmless duplicate.
+         *
+         * A filter with a `limit` is never merged: a limit per filter and a limit over the
+         * union are different requests.
+         */
+        fun mergeForCap(filters: List<Filter>): List<Filter> {
+            val out = mutableListOf<Filter>()
+            val remaining = filters.toMutableList()
+            while (remaining.isNotEmpty()) {
+                val head = remaining.removeAt(0)
+                if (head.limit != null) {
+                    out.add(head)
+                    continue
+                }
+                var merged = head
+                val iterator = remaining.iterator()
+                while (iterator.hasNext()) {
+                    val candidate = iterator.next()
+                    val union = unionIfMergeable(merged, candidate) ?: continue
+                    merged = union
+                    iterator.remove()
+                }
+                out.add(merged)
+            }
+            return out
+        }
+
+        private fun unionIfMergeable(
+            a: Filter,
+            b: Filter,
+        ): Filter? {
+            if (b.limit != null) return null
+            if (a.until != b.until || a.search != b.search || a.tagsAll != b.tagsAll) return null
+            val sameKinds = a.kinds?.toSet() == b.kinds?.toSet()
+            val since = if (a.since == null || b.since == null) null else minOf(a.since, b.since)
+
+            val sameIds = a.ids?.toSet() == b.ids?.toSet()
+            val sameAuthors = a.authors?.toSet() == b.authors?.toSet()
+            val aTags = a.tags ?: emptyMap()
+            val bTags = b.tags ?: emptyMap()
+            if (aTags.keys != bTags.keys) return null
+            val differingTags = aTags.keys.filter { aTags[it]?.toSet() != bTags[it]?.toSet() }
+
+            val differences = (if (sameKinds) 0 else 1) + (if (sameIds) 0 else 1) + (if (sameAuthors) 0 else 1) + differingTags.size
+            return when {
+                differences == 0 -> a.copy(since = since)
+                differences > 1 -> null
+                !sameKinds -> if (a.kinds == null || b.kinds == null) null else a.copy(kinds = (a.kinds + b.kinds).distinct(), since = since)
+                !sameIds -> if (a.ids == null || b.ids == null) null else a.copy(ids = (a.ids + b.ids).distinct(), since = since)
+                !sameAuthors -> if (a.authors == null || b.authors == null) null else a.copy(authors = (a.authors + b.authors).distinct(), since = since)
+                else -> {
+                    val key = differingTags.single()
+                    a.copy(tags = aTags + (key to (aTags.getValue(key) + bTags.getValue(key)).distinct()), since = since)
+                }
+            }
+        }
 
         fun parseDisallowedKinds(reason: String): Set<Int> {
             val t = reason.lowercase()
