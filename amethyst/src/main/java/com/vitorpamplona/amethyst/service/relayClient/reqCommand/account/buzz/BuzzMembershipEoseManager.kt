@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.buzz.MembershipNotificationKinds
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -28,8 +29,6 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
-import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
-import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -39,13 +38,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-
-/** The relay's membership verdicts addressed to me: 44100 "you were added", 44101 "you were removed". */
-val MembershipNotificationKinds =
-    listOf(
-        MemberAddedNotificationEvent.KIND,
-        MemberRemovedNotificationEvent.KIND,
-    )
 
 /**
  * Everything the workspace relay addresses to me personally: the membership verdicts plus the kind-30622
