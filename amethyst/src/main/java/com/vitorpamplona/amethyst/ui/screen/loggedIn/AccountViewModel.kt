@@ -25,8 +25,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.LruCache
 import android.widget.Toast
+import androidx.collection.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,11 +42,15 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.CombinedZap
 import com.vitorpamplona.amethyst.commons.model.Dao
 import com.vitorpamplona.amethyst.commons.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
+import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
@@ -117,22 +121,17 @@ import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
-import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnread
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
@@ -702,7 +701,7 @@ class AccountViewModel(
         accountChoices: LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
         val isFromLoggedInFollow = note.author?.let { followUsers.contains(it.pubkeyHex) } ?: true

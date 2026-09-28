@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent

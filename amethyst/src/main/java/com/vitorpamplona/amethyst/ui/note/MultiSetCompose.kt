@@ -41,7 +41,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -67,10 +66,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.model.CombinedZap
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.authorRouteFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -115,7 +116,6 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
@@ -556,16 +556,6 @@ fun AuthorGalleryZaps(
         }
     }
 }
-
-@Immutable
-data class ZapAmountCommentNotification(
-    val user: User?,
-    val comment: String?,
-    val amount: String?,
-    // The zap receipt (kind 9735) note, when available, so the chip can offer
-    // actions that target the zap itself (e.g. replying to it).
-    val zapNote: Note? = null,
-)
 
 @Composable
 private fun ParseAuthorCommentAndAmount(

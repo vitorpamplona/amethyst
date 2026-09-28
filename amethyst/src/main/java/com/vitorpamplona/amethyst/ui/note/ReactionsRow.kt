@@ -125,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
 import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
@@ -517,11 +518,6 @@ fun LoadAndDisplayZapraiser(
         }
     }
 }
-
-@Immutable data class ZapraiserStatus(
-    val progress: Float,
-    val left: String,
-)
 
 @Composable
 fun RenderZapRaiser(

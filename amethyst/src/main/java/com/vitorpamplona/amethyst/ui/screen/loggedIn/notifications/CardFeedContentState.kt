@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.CombinedZap
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
@@ -565,16 +565,6 @@ class CardFeedContentState(
         bundlerInsert.cancel()
         bundler.cancel()
     }
-}
-
-@Immutable
-data class CombinedZap(
-    val request: Note,
-    val response: Note,
-) {
-    fun createdAt() = response.createdAt()
-
-    fun idHex() = response.idHex
 }
 
 private fun Note.isInMarmotGroup(): Boolean = inGatherers?.any { it is MarmotGroupChatroom } == true

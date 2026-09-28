@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -51,8 +52,6 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
-
-const val NOTIFICATION_LAST_READ_KEY = "Notification"
 
 @Composable
 fun NotificationScreen(

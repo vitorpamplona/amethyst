@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
-import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.amethyst.commons.util.isDebug
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountUiQueryState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
