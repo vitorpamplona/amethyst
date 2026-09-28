@@ -77,6 +77,9 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CloseIcon
+import com.vitorpamplona.amethyst.commons.ui.note.MultiSetCompose
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.notifications.OpenPollsSectionHeader
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -88,11 +91,8 @@ import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
-import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
-import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import kotlinx.coroutines.delay
 

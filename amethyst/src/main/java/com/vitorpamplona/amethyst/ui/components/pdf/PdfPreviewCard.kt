@@ -46,8 +46,10 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.core.graphics.createBitmap
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.service.pdf.PdfFetcher
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -56,8 +58,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -192,7 +192,7 @@ private fun LoadedPdfPreviewCard(
         }
 
         is PdfLoadState.Failed -> {
-            ClickableUrl(urlText = content.url, url = content.url)
+            ClickableUrlOrBlossom(urlText = content.url, url = content.url)
         }
 
         is PdfLoadState.Ready -> {

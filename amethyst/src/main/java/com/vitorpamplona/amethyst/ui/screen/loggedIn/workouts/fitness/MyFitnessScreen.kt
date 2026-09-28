@@ -97,14 +97,14 @@ import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_d
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.labelRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.health.HealthConnectRationaleActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.toNewWorkoutRoute
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
 
 /**
  * The user's own training, summarised: how much they did this week against last, what they

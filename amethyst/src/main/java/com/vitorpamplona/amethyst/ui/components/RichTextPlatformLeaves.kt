@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.CreateClickableText
 import com.vitorpamplona.amethyst.commons.ui.components.HashTag
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
@@ -189,7 +190,7 @@ fun RenderRegularPreview() {
                     // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                     // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                     is LinkSegment -> {
-                        ClickableUrl(word.segmentText, word.segmentText)
+                        ClickableUrlOrBlossom(word.segmentText, word.segmentText)
                     }
 
                     is RegularTextSegment -> {
@@ -230,7 +231,7 @@ fun RenderRegularPreview2() {
 
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+                is LinkSegment -> ClickableUrlOrBlossom(word.segmentText, word.segmentText)
 
                 is RegularTextSegment -> Text(word.segmentText)
 
@@ -303,17 +304,17 @@ private fun RenderWordWithoutPreview(
 ) {
     when (word) {
         // Don't preview Images
-        is ImageSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is ImageSegment -> ClickableUrlOrBlossom(word.segmentText, word.segmentText)
 
         // Don't preview Videos
-        is VideoSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is VideoSegment -> ClickableUrlOrBlossom(word.segmentText, word.segmentText)
 
         // Don't preview PDFs
-        is PdfSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is PdfSegment -> ClickableUrlOrBlossom(word.segmentText, word.segmentText)
 
-        is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is LinkSegment -> ClickableUrlOrBlossom(word.segmentText, word.segmentText)
 
-        is NowhereLinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        is NowhereLinkSegment -> ClickableUrlOrBlossom(word.segmentText, word.segmentText)
 
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
 
@@ -471,7 +472,7 @@ fun BlossomUriRendererNoPreview(
 
     val serverResult = serverResultState.value
     if (serverResult != null && serverResult.serverUrl.isNotBlank()) {
-        ClickableUrl(serverResult.uri.filename(), serverResult.serverUrl)
+        ClickableUrlOrBlossom(serverResult.uri.filename(), serverResult.serverUrl)
     } else {
         ClickableBlossomUri(word, accountViewModel)
     }
@@ -492,7 +493,7 @@ private fun ZoomableContentView(
 
 @Composable
 private fun NoProtocolUrlRenderer(url: String) {
-    ClickableUrl(url, "https://$url")
+    ClickableUrlOrBlossom(url, "https://$url")
 }
 
 @Composable

@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.workout_title
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.labelRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.DetectedWorkoutCarousel

@@ -37,9 +37,13 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.ZapUserSetCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.AuthorGalleryZaps
+import com.vitorpamplona.amethyst.commons.ui.note.MapZaps
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier

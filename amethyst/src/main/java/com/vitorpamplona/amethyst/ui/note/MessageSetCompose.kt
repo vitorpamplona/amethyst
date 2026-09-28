@@ -45,10 +45,12 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
+import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)

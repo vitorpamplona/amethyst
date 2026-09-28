@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.CrossfadeToDisplayAmount
+import com.vitorpamplona.amethyst.commons.ui.note.WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier

@@ -31,7 +31,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Locks in the tag shape [com.vitorpamplona.amethyst.ui.note.types.CalendarRsvpRow] assembles.
+ * Locks in the tag shape [com.vitorpamplona.amethyst.commons.ui.note.types.CalendarRsvpRow] assembles.
  *
  * The `p` count is the load-bearing assertion. Kind 31925 is in `NOTIFICATION_KINDS`, and
  * `NotificationFeedFilter.tagsAnEventByUser` returns true for it (a `BaseAddressableEvent` falls

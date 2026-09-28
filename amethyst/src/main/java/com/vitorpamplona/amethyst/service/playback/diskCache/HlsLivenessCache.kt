@@ -34,7 +34,7 @@ import androidx.collection.LruCache
  *
  * A URL is permanently one or the other, and the recorder overwrites with the latest verdict on
  * every timeline change, so a transient early value self-corrects. Backed by a bounded, thread-safe
- * [LruCache] (same convention as [com.vitorpamplona.amethyst.model.MediaAspectRatioCache]) so a long
+ * [LruCache] (same convention as [com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache]) so a long
  * feed session over many distinct URLs can't grow it without bound — an evicted entry just relearns
  * on its next play, which is one uncached play, the same negligible cost as a process restart.
  */

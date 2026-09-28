@@ -35,11 +35,15 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent as AppRenderMeetingRoomEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence as AppRenderMeetingRoomPresence
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.ui.actions.EditPostView as AppEditPostView
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
@@ -65,9 +69,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent 
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge as AppRenderLiveChessChallenge
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd as AppRenderLiveChessGameEnd
-import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent as AppRenderMeetingRoomEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomPresence as AppRenderMeetingRoomPresence
-import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack as AppRenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent as AppRenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRenderNamedSiteEvent

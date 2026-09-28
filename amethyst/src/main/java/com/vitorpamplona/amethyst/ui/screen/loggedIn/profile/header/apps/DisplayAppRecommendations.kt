@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.profile_apps_header
 import com.vitorpamplona.amethyst.commons.resources.profile_apps_header_empty
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.apps.AppRecommendationChip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 

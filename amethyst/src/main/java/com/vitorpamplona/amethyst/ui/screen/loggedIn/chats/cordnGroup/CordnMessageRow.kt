@@ -92,8 +92,10 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_reactions_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
@@ -104,8 +106,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ActionTile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.MoreActionsToggle

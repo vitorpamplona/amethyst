@@ -24,6 +24,8 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.LongPublicChatChannelHeader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.ShortPublicChatChannelHeader
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable

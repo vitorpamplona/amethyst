@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
 import com.vitorpamplona.amethyst.commons.model.relayGroupChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayNameChip
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteHasEvent
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderByParentFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -121,14 +122,17 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
@@ -140,9 +144,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
-import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
@@ -150,7 +151,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupTitle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel

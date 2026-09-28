@@ -30,6 +30,17 @@ It depends on `:commons` (and `:quartz`) as **`api`**, so a consumer that adds
 `nappletHost` and `benchmark` depend on it; `cli`, `geode`, `marmotBench`
 must never.
 
+## Platform slots
+
+Shared composables that need something only a front end can draw or do get it from a
+CompositionLocal the front end installs at its root (Android in `AmethystTheme`):
+`LocalRichTextPlatform` (rich-text leaves, markdown), `LocalInlineQuoteRenderer`,
+`LocalTranslationPlatform`, and `LocalNotePlatform` (media players, map, platform-engine note
+types, reactions/zap row, post editor; call it through the same-named shims in
+`commons.ui.note.platform`). Each default draws nothing or plain text, so previews and a front
+end still wiring its pieces never crash. Small platform verbs are expect/actuals instead:
+`rememberTextSharer`, `rememberShortNotice`, `rememberBlossomUriOpener`, `rememberViewModel`.
+
 ## Same packages as `commons`
 
 Every file keeps its `com.vitorpamplona.amethyst.commons.*` package. The split

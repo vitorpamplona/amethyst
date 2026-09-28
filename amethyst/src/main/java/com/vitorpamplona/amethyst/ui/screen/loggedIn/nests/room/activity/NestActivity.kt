@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Standalone activity that owns the lifetime of an audio-room session. The
- * lobby ([com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestJoinCard])
+ * lobby ([com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.NestJoinCard])
  * launches this activity when the user taps "Join audio room"; finishing it
  * tears down the MoQ session, the broadcaster (if any), and the foreground
  * notification.

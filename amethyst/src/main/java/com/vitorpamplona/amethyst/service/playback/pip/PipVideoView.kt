@@ -41,8 +41,8 @@ import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.state.rememberMuteButtonState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.ui.theme.VoiceHeightModifier
-import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.controls.PIP_PRESHRINK_MAX_SHORT_SIDE_PX
 import com.vitorpamplona.amethyst.service.playback.composable.controls.constrainVideoQualityToViewport

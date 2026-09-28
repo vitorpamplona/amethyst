@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.material3.MaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.components.InlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 
 /** The quoted-note card used everywhere outside chats; the app installs it in its theme root. */
 val DefaultInlineQuoteRenderer =

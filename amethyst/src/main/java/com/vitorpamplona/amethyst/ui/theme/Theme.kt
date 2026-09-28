@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
@@ -54,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.components.AndroidRichTextPlatform
 import com.vitorpamplona.amethyst.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.components.FlavorTranslationPlatform
 import com.vitorpamplona.amethyst.ui.note.platform.AndroidNotePlatform
-import com.vitorpamplona.amethyst.ui.note.platform.LocalNotePlatform
 
 val chartLightColors =
     VicoTheme(

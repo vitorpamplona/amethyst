@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -73,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
-import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser

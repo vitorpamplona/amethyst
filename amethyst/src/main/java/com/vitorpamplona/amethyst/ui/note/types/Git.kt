@@ -78,11 +78,15 @@ import com.vitorpamplona.amethyst.commons.resources.kind_git_patch
 import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
 import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
@@ -94,10 +98,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoExternalNotice
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLanguageBar
@@ -206,7 +206,7 @@ private fun LinkRow(
             modifier = Modifier.size(Size16dp),
             tint = MaterialTheme.colorScheme.grayText,
         )
-        ClickableUrl(
+        ClickableUrlOrBlossom(
             url = url,
             urlText = url.removePrefix("https://").removePrefix("http://"),
             style = style,

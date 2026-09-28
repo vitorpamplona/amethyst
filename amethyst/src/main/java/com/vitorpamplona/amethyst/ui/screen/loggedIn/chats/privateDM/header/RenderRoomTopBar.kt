@@ -58,7 +58,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensible
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
@@ -66,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.collections.immutable.toPersistentList
 

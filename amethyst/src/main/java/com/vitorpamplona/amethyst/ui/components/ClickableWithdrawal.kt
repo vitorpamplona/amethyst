@@ -35,9 +35,9 @@ import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_withdraw_er
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.lightning.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers

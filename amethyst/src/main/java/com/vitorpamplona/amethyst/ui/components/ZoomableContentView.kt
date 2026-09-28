@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_media_to_gallery
 import com.vitorpamplona.amethyst.commons.resources.copy_the_note_id_to_the_clipboard
@@ -94,14 +95,23 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
+import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
+import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
+import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
@@ -111,12 +121,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
-import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -583,7 +591,7 @@ fun UrlImageView(
                     }
 
                     is AsyncImagePainter.State.Error -> {
-                        ClickableUrl(urlText = "${content.url} ", url = content.url)
+                        ClickableUrlOrBlossom(urlText = "${content.url} ", url = content.url)
                     }
 
                     is AsyncImagePainter.State.Success -> {

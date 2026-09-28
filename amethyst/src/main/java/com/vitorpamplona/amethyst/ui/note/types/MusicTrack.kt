@@ -62,8 +62,12 @@ import com.vitorpamplona.amethyst.commons.music.formatTrackDuration
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
+import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -78,10 +82,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhe
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.syntheticWaveformFor
-import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers

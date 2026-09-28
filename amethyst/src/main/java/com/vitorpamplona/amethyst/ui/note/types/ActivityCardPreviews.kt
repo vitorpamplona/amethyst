@@ -29,6 +29,10 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzap
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOnchainZap
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReaction
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapReceiptCard
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent

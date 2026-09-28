@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
@@ -57,7 +58,6 @@ import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
 import com.vitorpamplona.amethyst.ui.components.PaymentCardDescription
-import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

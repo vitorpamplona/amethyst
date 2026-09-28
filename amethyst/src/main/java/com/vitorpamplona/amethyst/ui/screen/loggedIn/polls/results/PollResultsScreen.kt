@@ -100,10 +100,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.commons.ui.note.types.UserGallery
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -120,8 +122,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiSta
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollVoterRow
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserLine
-import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.ui.note.types.UserGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.PollResponsesFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType

@@ -1,0 +1,539 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.note.types
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.commons.ui.components.RenderUserAsClickableText
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTranslation
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
+import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayExternalId
+import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
+import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.Rfc3986
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+
+@Composable
+fun RenderHighlight(
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = note.event as? HighlightEvent ?: return
+
+    val selector = noteEvent.textQuoteSelector()
+
+    DisplayHighlight(
+        comment = noteEvent.comment(),
+        commentTags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() },
+        highlight = noteEvent.quote(),
+        context = noteEvent.contextOrReconstructed(),
+        authorHex = noteEvent.author(),
+        url = noteEvent.inReference(),
+        externalId = remember(noteEvent) { noteEvent.inExternalIds().firstOrNull() },
+        externalIdText = remember(noteEvent) { noteEvent.inExternalIdValues().firstOrNull() },
+        textFragmentPrefix = selector?.prefix,
+        textFragmentSuffix = selector?.suffix,
+        postAddress = noteEvent.inPostAddress(),
+        postVersion = noteEvent.inPostVersion(),
+        makeItShort = makeItShort,
+        canPreview = canPreview,
+        quotesLeft = quotesLeft,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+@Preview
+@Composable
+fun DisplayHighlightPreview() {
+    ThemeComparisonColumn {
+        Column {
+            DisplayHighlight(
+                comment = null,
+                highlight = "new architectures of freedom",
+                context = "He never wrote a line of cryptographic code and never lectured on Austrian economics. Yet the cultural terrain he helped seed, particularly the psychedelic, post-industrial counterculture of the 1960s and ’70s, became the moral and metaphysical groundwork from which new architectures of freedom would later emerge.",
+                authorHex = "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac",
+                url = null,
+                postAddress = Address(30023, "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac", "bitcoin-here-now"),
+                postVersion = null,
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 3,
+                backgroundColor = remember { mutableStateOf(Color.White) },
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun DisplayHighlightPreviewNewLine() {
+    ThemeComparisonColumn {
+        Column {
+            DisplayHighlight(
+                comment = null,
+                highlight = "He never wrote a line of cryptographic code and never lectured on Austrian economics.\nYet the cultural terrain he helped seed, particularly the psychedelic",
+                context = "He never wrote a line of cryptographic code and never lectured on Austrian economics.\nYet the cultural terrain he helped seed, particularly the psychedelic, post-industrial counterculture of the 1960s and ’70s, became the moral and metaphysical groundwork from which new architectures of freedom would later emerge.",
+                authorHex = "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac",
+                url = null,
+                postAddress = Address(30023, "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac", "bitcoin-here-now"),
+                postVersion = null,
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 3,
+                backgroundColor = remember { mutableStateOf(Color.White) },
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DisplayHighlight(
+    comment: String?,
+    commentTags: ImmutableListOfLists<String> = EmptyTagList,
+    highlight: String,
+    context: String?,
+    authorHex: String?,
+    url: String?,
+    textFragmentPrefix: String? = null,
+    textFragmentSuffix: String? = null,
+    postAddress: Address?,
+    postVersion: ETag?,
+    makeItShort: Boolean,
+    externalId: ExternalId? = null,
+    externalIdText: String? = null,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    comment?.let {
+        TranslatableRichTextViewer(
+            content = it,
+            canPreview = canPreview && !makeItShort,
+            quotesLeft = quotesLeft,
+            modifier = Modifier.fillMaxWidth(),
+            tags = commentTags,
+            backgroundColor = backgroundColor,
+            id = it,
+            callbackUri = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+        Spacer(Modifier.height(HighlightQuoteSpacing))
+    }
+
+    val quote =
+        remember(highlight, context, textFragmentPrefix) {
+            HighlightQuote.of(highlight, context, textFragmentPrefix)
+        }
+
+    TranslatableRichTextViewer(
+        content = quote.text,
+        id = quote.text,
+        // Indented like the attribution, so the "Auto-translated from …" line sits under the
+        // quote text rather than under the bar.
+        translationMessageModifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp, start = HighlightQuoteIndent),
+        accountViewModel = accountViewModel,
+    ) { shown ->
+        // A translation rewrites the passage, so the original offsets stop locating anything.
+        // Translate the quote too and re-find it inside the translated context — ML Kit works
+        // sentence by sentence, so a quote that is one or more whole sentences comes back the
+        // same either way. HighlightQuote.of degrades to the quote alone when the two
+        // translations don't line up, which beats marking a span the reader never highlighted.
+        val translatedQuote = rememberTranslation(highlight, accountViewModel)
+
+        val display =
+            remember(shown, translatedQuote, quote) {
+                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
+            }
+
+        HighlightedQuote(
+            text = display.text,
+            highlight = display.marked,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    Spacer(Modifier.height(HighlightQuoteSpacing))
+
+    val spaceWidth = measureSpaceWidth(textStyle = LocalTextStyle.current)
+
+    // Indented to sit under the quote text, not under the quote bar.
+    FlowRow(
+        modifier = Modifier.padding(start = HighlightQuoteIndent),
+        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        DisplayQuoteAuthor(
+            highlightQuote = highlight,
+            authorHex = authorHex,
+            baseUrl = url,
+            textFragmentPrefix = textFragmentPrefix,
+            textFragmentSuffix = textFragmentSuffix,
+            postAddress = postAddress,
+            postVersion = postVersion,
+            externalId = externalId,
+            externalIdText = externalIdText,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+private const val FRAGMENT_EDGE_WORDS = 4
+
+/**
+ * Builds a URL with a Text Fragment (`#:~:text=`) directive that scrolls the source page
+ * to the highlighted text. When a W3C `textquoteselector` supplies surrounding prefix/suffix
+ * text, a few words of each are added as `prefix-,` / `,-suffix` disambiguators so the browser
+ * lands on the correct occurrence even when the quote repeats on the page.
+ *
+ * See https://wicg.github.io/scroll-to-text-fragment/
+ */
+private fun buildTextFragmentUrl(
+    baseUrl: String,
+    exact: String,
+    prefix: String?,
+    suffix: String?,
+): String {
+    val separator = if (baseUrl.contains("#")) "&" else "#"
+
+    val prefixPart = trimToFragmentEdge(prefix, keepStart = false)?.let { "${encodeFragmentComponent(it)}-," } ?: ""
+    val suffixPart = trimToFragmentEdge(suffix, keepStart = true)?.let { ",-${encodeFragmentComponent(it)}" } ?: ""
+
+    return "$baseUrl$separator:~:text=$prefixPart${encodeFragmentComponent(exact)}$suffixPart"
+}
+
+private const val FRAGMENT_SAFE = "_-!.~'()*"
+private val HEX_DIGITS = "0123456789ABCDEF".toCharArray()
+
+/**
+ * Percent-encodes [text] as UTF-8, leaving only letters, digits and `_-!.~'()*` alone: what
+ * Android's `Uri.encode` does, so spaces become `%20` (not `+`) and `-`, `,` and `&` cannot be
+ * mistaken for text-fragment syntax.
+ */
+private fun encodeFragmentComponent(text: String): String {
+    val out = StringBuilder(text.length)
+    for (byte in text.encodeToByteArray()) {
+        val c = (byte.toInt() and 0xFF).toChar()
+        if (c < '\u0080' && (c.isLetterOrDigit() || c in FRAGMENT_SAFE)) {
+            out.append(c)
+        } else {
+            out.append('%').append(HEX_DIGITS[(byte.toInt() shr 4) and 0xF]).append(HEX_DIGITS[byte.toInt() and 0xF])
+        }
+    }
+    return out.toString()
+}
+
+/**
+ * Keeps only the [FRAGMENT_EDGE_WORDS] words nearest the highlight (the last words when
+ * [keepStart] is false, for a prefix; the first words when true, for a suffix) and collapses
+ * whitespace so newlines from the selector don't break Text Fragment matching.
+ */
+private fun trimToFragmentEdge(
+    text: String?,
+    keepStart: Boolean,
+): String? {
+    if (text == null) return null
+    val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.isEmpty()) return null
+    val slice = if (keepStart) words.take(FRAGMENT_EDGE_WORDS) else words.takeLast(FRAGMENT_EDGE_WORDS)
+    return slice.joinToString(" ")
+}
+
+@Composable
+private fun DisplayQuoteAuthor(
+    highlightQuote: String,
+    authorHex: String?,
+    baseUrl: String?,
+    textFragmentPrefix: String? = null,
+    textFragmentSuffix: String? = null,
+    postAddress: Address?,
+    postVersion: ETag?,
+    externalId: ExternalId? = null,
+    externalIdText: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var userBase by remember { mutableStateOf(authorHex?.let { LocalCache.getUserIfExists(it) }) }
+
+    if (userBase == null && authorHex != null) {
+        LaunchedEffect(authorHex) {
+            userBase = LocalCache.checkGetOrCreateUser(authorHex)
+        }
+    }
+
+    var addressable by remember {
+        mutableStateOf(postAddress?.let { LocalCache.getAddressableNoteIfExists(it) })
+    }
+
+    if (addressable == null && postAddress != null) {
+        LaunchedEffect(key1 = postAddress) {
+            val newNote =
+                withContext(Dispatchers.IO) {
+                    LocalCache.getOrCreateAddressableNote(postAddress)
+                }
+            if (addressable != newNote) {
+                addressable = newNote
+            }
+        }
+    }
+
+    var version by remember {
+        mutableStateOf(postVersion?.let { LocalCache.getNoteIfExists(it.eventId) })
+    }
+
+    if (version == null && postVersion != null) {
+        LaunchedEffect(key1 = postVersion) {
+            val newNote =
+                withContext(Dispatchers.IO) {
+                    LocalCache.getOrCreateNote(postVersion.eventId)
+                }
+            if (version != newNote) {
+                version = newNote
+            }
+        }
+    }
+
+    when {
+        addressable != null -> {
+            addressable?.let {
+                DisplayEntryForNote(it, userBase, accountViewModel, nav)
+            }
+        }
+
+        version != null -> {
+            version?.let {
+                DisplayEntryForNote(it, userBase, accountViewModel, nav)
+            }
+        }
+
+        // NIP-84: `r` may be a URL or any text naming the source; only a web address is a link.
+        baseUrl != null && HighlightEvent.isUrlReference(baseUrl) -> {
+            val url =
+                remember(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
+                    buildTextFragmentUrl(HttpUrlFormatter.addSchemeIfNeeded(baseUrl), highlightQuote, textFragmentPrefix, textFragmentSuffix)
+                }
+
+            DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
+        }
+
+        // A NIP-73 source (`i` tag): a book, paper, podcast episode...
+        externalId != null -> {
+            DisplayEntryForExternalId(externalId, userBase, accountViewModel, nav)
+        }
+
+        baseUrl != null || externalIdText != null -> {
+            DisplayEntryForText(baseUrl ?: externalIdText ?: "", userBase, accountViewModel, nav)
+        }
+
+        userBase != null -> {
+            userBase?.let {
+                DisplayEntryForUser(it, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayEntryForUser(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val userMetadata by observeUserInfo(baseUser, accountViewModel)
+
+    CreateClickableTextWithEmoji(
+        clickablePart = userMetadata?.info?.bestName() ?: baseUser.pubkeyDisplayHex(),
+        maxLines = 1,
+        route = remember(baseUser) { routeFor(baseUser) },
+        nav = nav,
+        tags = userMetadata?.tags,
+    )
+}
+
+@Composable
+fun DisplayEntryForNote(
+    note: Note,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteState by observeNote(note, accountViewModel)
+
+    val author = userBase ?: noteState.note.author
+
+    if (author != null) {
+        RenderUserAsClickableText(author, null, accountViewModel, nav)
+    }
+
+    val noteEvent = noteState.note.event as? BaseThreadedEvent ?: return
+
+    // A real title/subject from an article or wiki page describes the source well. `alt`
+    // (NIP-31) is deliberately excluded: it's accessibility fallback text, not a caption, and
+    // clients such as Jumble fill it with a generic "This event was published by …" line that
+    // has nothing to do with the highlighted passage.
+    val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject") }
+
+    Text("-", maxLines = 1)
+
+    if (description != null) {
+        ClickableTextPrimary(
+            text = description,
+            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
+        )
+    } else {
+        // No title to show — name the source by its event kind (e.g. "Note", "Blogs") rather
+        // than a raw @note1… id, and keep it clickable through to the source event.
+        val kindName = kindName(noteEvent.kind)
+        ClickableTextPrimary(
+            text = kindName,
+            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
+        )
+    }
+}
+
+@Composable
+fun DisplayEntryForExternalId(
+    externalId: ExternalId,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (userBase != null) {
+        DisplayEntryForUser(userBase, accountViewModel, nav)
+        Text("-", maxLines = 1)
+    }
+    DisplayExternalId(externalId, accountViewModel, nav)
+}
+
+/** A source named in plain text (a non-URL `r` tag, or an `i` value no NIP-73 parser knows). */
+@Composable
+fun DisplayEntryForText(
+    source: String,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (userBase != null) {
+        DisplayEntryForUser(userBase, accountViewModel, nav)
+        Text("-", maxLines = 1)
+    }
+    Text(source, maxLines = 2, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+fun DisplayEntryForAUrl(
+    url: String,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (userBase != null) {
+        DisplayEntryForUser(userBase, accountViewModel, nav)
+    }
+
+    val validatedUrl =
+        remember(url) {
+            try {
+                Rfc3986.host(url)
+            } catch (_: Exception) {
+                Log.w("Note Compose") { "Invalid URI: $url" }
+                null
+            }
+        }
+
+    validatedUrl?.let { host ->
+        if (userBase != null) {
+            Text("-", maxLines = 1)
+        }
+        ClickableUrlOrBlossom(urlText = host, url = url)
+    }
+}

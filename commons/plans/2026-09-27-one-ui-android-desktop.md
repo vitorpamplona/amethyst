@@ -316,8 +316,14 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      zoomable viewer and video/GIF players, link previews, the map and reverse geocoding,
      the note types built on a platform engine (audio players, chess, the git browser,
      meeting rooms, napplets/nsites), the reactions/zap row and the post editor. Shared
-     code calls same-named shims in `ui.note.platform`, so call sites only changed imports.
-     Each of those pieces can later get a shared implementation and leave the slot.
+     code calls same-named shims in `commons.ui.note.platform`, so call sites only changed
+     imports. Each of those pieces can later get a shared implementation and leave the slot.
+   - **`NoteCompose` moved.** Its whole closure, 176 files (the card, `ui/note/types`,
+     `elements`, `nip22Comments`, the channel/DM headers it embeds, and the slot itself),
+     is now `commonsUI/commonMain` under `commons.ui.*` / `commons.relayClient.*`, and
+     compiles for Android, Desktop and iOS. `AndroidNotePlatform` stays in the app and is
+     installed in `AmethystTheme`. What remains app-side is what the slots name: the media
+     players, the map, the platform-engine note types, the reactions/zap row and the editor.
 6. **Screens**, feature by feature, into `commonsUI`.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and

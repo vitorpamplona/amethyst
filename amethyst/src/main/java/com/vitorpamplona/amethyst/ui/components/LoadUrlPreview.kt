@@ -29,9 +29,12 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -47,7 +50,7 @@ fun LoadUrlPreview(
     nav: INav? = null,
 ) {
     if (!accountViewModel.settings.showUrlPreview()) {
-        ClickableUrl(urlText, url)
+        ClickableUrlOrBlossom(urlText, url)
     } else {
         LoadUrlPreviewDirect(url, urlText, callbackUri, accountViewModel, nav)
     }
@@ -97,7 +100,7 @@ fun LoadUrlPreviewDirect(
             }
 
             else -> {
-                ClickableUrl(urlText, url)
+                ClickableUrlOrBlossom(urlText, url)
             }
         }
     }

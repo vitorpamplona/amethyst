@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.in_the_list
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -81,7 +82,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.AnimateOnNewSearch
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import kotlinx.coroutines.Dispatchers

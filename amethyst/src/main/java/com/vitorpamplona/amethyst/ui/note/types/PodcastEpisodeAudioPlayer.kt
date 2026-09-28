@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
+import com.vitorpamplona.amethyst.commons.ui.note.types.PodcastChaptersView
+import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground

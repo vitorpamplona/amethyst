@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.share
 
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
+import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
 
 /** Which of the two payloads the QR code currently encodes. */
 enum class QrPayloadMode {

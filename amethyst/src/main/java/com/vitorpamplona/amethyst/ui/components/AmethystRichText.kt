@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.TagLink
@@ -113,7 +114,7 @@ class AmethystRichTextSegmentRenderer(
                 }
             }
         } else {
-            ClickableUrl(segment.segmentText, segment.segmentText)
+            ClickableUrlOrBlossom(segment.segmentText, segment.segmentText)
         }
     }
 
@@ -188,7 +189,7 @@ class AmethystRichTextSegmentRenderer(
         url: String,
         displayText: String,
         modifier: Modifier,
-    ) = ClickableUrl(displayText, url)
+    ) = ClickableUrlOrBlossom(displayText, url)
 
     @Composable
     override fun Email(
@@ -235,7 +236,7 @@ class AmethystRichTextSegmentRenderer(
         if (canPreview) {
             NowhereLinkCard(segment)
         } else {
-            ClickableUrl(segment.segmentText, segment.segmentText)
+            ClickableUrlOrBlossom(segment.segmentText, segment.segmentText)
         }
     }
 

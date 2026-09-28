@@ -57,22 +57,22 @@ import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
 import com.vitorpamplona.amethyst.commons.resources.git_untitled
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.CheckHiddenFeedWatchBlockAndReport
+import com.vitorpamplona.amethyst.commons.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.clickableNoteModifier
+import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
-import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
-import com.vitorpamplona.amethyst.ui.note.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
-import com.vitorpamplona.amethyst.ui.note.clickableNoteModifier
-import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -81,7 +81,7 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 /**
  * Compact feed renderer for the repository screen's Issues and Patches & PRs tabs.
  *
- * Unlike the generic [com.vitorpamplona.amethyst.ui.note.NoteCompose], which is tuned
+ * Unlike the generic [com.vitorpamplona.amethyst.commons.ui.note.NoteCompose], which is tuned
  * for items appearing inside a regular feed, this shows a simple one-line-per-item list:
  * author picture, name, NIP-05, subject, time and the shared 3-dot options. It still
  * layers the same gating NoteCompose applies — event loading ([WatchNoteEvent]),
