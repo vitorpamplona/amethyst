@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -85,6 +86,7 @@ class ThreadDualAxisChartAssemblerTest {
                 appVersion = "test",
                 encryptionKeyCache = EncryptionKeyCache(),
                 saveSettings = {},
+                marmotNotifier = { MarmotGroupNotifier.None },
             )
 
         val db =

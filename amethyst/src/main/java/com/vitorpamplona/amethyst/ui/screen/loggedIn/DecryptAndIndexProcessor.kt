@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
@@ -435,7 +434,7 @@ private suspend fun processMarmotWelcomeFlow(
             // Fire the "You've been added to <group>" notification. Welcomes
             // have no `p` tag, so the cache-observer path can't route them;
             // this is the single point where we know the recipient account.
-            Amethyst.instance.notificationDispatcher.notifyWelcome(innerEvent, account)
+            account.marmotNotifier().notifyWelcome(innerEvent, account)
         }
 
         is WelcomeResult.AlreadyJoined -> {
@@ -779,7 +778,7 @@ class GroupEventHandler(
                         // reactions, deletions, and control messages stay
                         // silent.
                         if (innerEvent is ChatEvent) {
-                            Amethyst.instance.notificationDispatcher.notifyGroupMessage(
+                            account.marmotNotifier().notifyGroupMessage(
                                 innerEvent,
                                 result.groupId,
                                 account,

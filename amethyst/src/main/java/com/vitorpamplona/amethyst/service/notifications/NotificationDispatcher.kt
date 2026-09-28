@@ -24,6 +24,7 @@ import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
@@ -96,7 +97,7 @@ class NotificationDispatcher(
     private val scope: CoroutineScope,
     /** Forwarded to [EventNotificationConsumer]: reports wakelock held-time to the resource-usage ledger. */
     onWakeLockHeld: ((heldMs: Long) -> Unit)? = null,
-) {
+) : MarmotGroupNotifier {
     companion object {
         private const val TAG = "NotificationDispatcher"
 
@@ -306,7 +307,7 @@ class NotificationDispatcher(
      * routing. Called from processMarmotWelcomeFlow once MLS group join
      * succeeds — at which point we know which account the invite was for.
      */
-    suspend fun notifyWelcome(
+    override suspend fun notifyWelcome(
         event: WelcomeEvent,
         account: Account,
     ) {
@@ -325,7 +326,7 @@ class NotificationDispatcher(
      * [com.vitorpamplona.amethyst.ui.screen.loggedIn.GroupEventHandler]
      * once the MLS-decrypted inner event has been parsed and indexed.
      */
-    suspend fun notifyGroupMessage(
+    override suspend fun notifyGroupMessage(
         innerEvent: ChatEvent,
         nostrGroupId: String,
         account: Account,

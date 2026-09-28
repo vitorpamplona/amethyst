@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -78,6 +79,8 @@ class AccountCacheState(
     val encryptionKeyCache: EncryptionKeyCache,
     /** Persists an account's settings (the app's encrypted storage). */
     val saveSettings: suspend (AccountSettings) -> Unit,
+    /** Announces Marmot Welcomes and group messages; shared by every [Account]. */
+    val marmotNotifier: () -> MarmotGroupNotifier,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
@@ -355,6 +358,7 @@ class AccountCacheState(
             appVersion = appVersion,
             encryptionKeyCache = encryptionKeyCache,
             saveSettings = saveSettings,
+            marmotNotifier = marmotNotifier,
             scope =
                 CoroutineScope(
                     Dispatchers.IO +

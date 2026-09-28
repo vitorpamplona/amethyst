@@ -1033,6 +1033,8 @@ class AppModules(
             appVersion = BuildConfig.VERSION_NAME,
             encryptionKeyCache = keyCache,
             saveSettings = { LocalPreferences.saveToEncryptedStorage(it) },
+            // A provider: notificationDispatcher is declared further down this class.
+            marmotNotifier = { notificationDispatcher },
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },

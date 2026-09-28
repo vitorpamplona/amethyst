@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.marmot.KeyPackageRelayListState
+import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountMineRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
@@ -389,6 +390,11 @@ class Account(
     val encryptionKeyCache: EncryptionKeyCache,
     /** Persists this account's settings. Called on the IO dispatcher, debounced, after changes. */
     val saveSettings: suspend (AccountSettings) -> Unit,
+    /**
+     * Where Marmot Welcomes and group messages are announced to the user (system notifications).
+     * A provider, read when a message arrives, because the app builds its notifier after its accounts.
+     */
+    val marmotNotifier: () -> MarmotGroupNotifier,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *

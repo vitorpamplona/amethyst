@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -95,6 +96,7 @@ class NotificationFeedFilterModeOverrideTest {
                 appVersion = "test",
                 encryptionKeyCache = EncryptionKeyCache(),
                 saveSettings = {},
+                marmotNotifier = { MarmotGroupNotifier.None },
             )
     }
 
