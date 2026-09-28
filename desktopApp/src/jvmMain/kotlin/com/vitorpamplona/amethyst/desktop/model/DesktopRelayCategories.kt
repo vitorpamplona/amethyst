@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.desktop.model
 
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
-import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

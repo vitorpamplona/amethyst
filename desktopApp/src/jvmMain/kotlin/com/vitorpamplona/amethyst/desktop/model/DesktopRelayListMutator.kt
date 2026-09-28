@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.model
 
-import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.relays.health.RelayListKind
 import com.vitorpamplona.amethyst.commons.relays.health.RelayListMutator
 import com.vitorpamplona.amethyst.commons.relays.health.RelayRemovalResult
