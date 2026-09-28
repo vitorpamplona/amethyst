@@ -58,7 +58,7 @@ class OtsState(
         Log.d("Pending Attestations") { "Updating ${settings.pendingAttestations.value.size} pending attestations" }
 
         return settings.pendingAttestations.value.toList().mapNotNull { (key, value) ->
-            val otsState = OtsEvent.upgrade(Base64.decode(value), key, otsResolver())
+            val otsState = OtsEvent.upgrade(lenientBase64.decode(value), key, otsResolver())
 
             if (otsState != null) {
                 val hint = cache.getNoteIfExists(key)?.toEventHint<Event>()
@@ -102,3 +102,9 @@ class OtsState(
         )
     }
 }
+
+/**
+ * Decodes with or without padding, as `java.util.Base64.getDecoder()` did before this moved to
+ * commonMain; kotlin's `Base64.Default` requires it. Encoding still pads.
+ */
+private val lenientBase64 = Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)

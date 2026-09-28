@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip01UserMetadata.AccountHomeRelayState
@@ -132,6 +133,8 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.trustedRelays.Trusted
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.commons.model.nip53NestsServers.NestsServerListState
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuMintDirectoryState
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.commons.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
@@ -877,7 +880,7 @@ class Account(
         )
 
     val cashuWalletState =
-        com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState(
+        CashuWalletState(
             pubKey = signer.pubKey,
             signer = signer,
             cache = cache,
@@ -896,7 +899,7 @@ class Account(
      * relay subscription only runs while at least one opener is active.
      */
     val cashuMintDirectoryState =
-        com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuMintDirectoryState(
+        CashuMintDirectoryState(
             cache = cache,
             scope = scope,
             assembler = cashuMintDirectoryFilterAssembler(),
@@ -939,8 +942,7 @@ class Account(
 
     override val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
     override val marmotGroupList =
-        com.vitorpamplona.amethyst.commons.model.marmotGroups
-            .MarmotGroupList(signer.pubKey)
+        MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
 
@@ -1003,15 +1005,16 @@ class Account(
      */
     val cordnRuntime: CordnRuntime? =
         cordnFilesDir?.let { dir ->
-            cordnBlobCipher?.let { cipher ->
-                CordnRuntime(
-                    accountSigner = signer,
-                    client = client,
-                    filesDir = dir,
-                    scope = scope,
-                    cipher = cipher(),
-                )
-            }
+            // Loud rather than silently cordn-less: a caller that sets the directory and forgets
+            // the cipher would otherwise just lose the user's cordn groups with no error.
+            val cipher = requireNotNull(cordnBlobCipher) { "cordnFilesDir is set but cordnBlobCipher is not" }
+            CordnRuntime(
+                accountSigner = signer,
+                client = client,
+                filesDir = dir,
+                scope = scope,
+                cipher = cipher(),
+            )
         }
 
     val marmotManager: MarmotManager? =
