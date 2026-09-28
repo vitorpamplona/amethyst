@@ -338,6 +338,8 @@ implementation('com.vitorpamplona.quartz:quartz-android:1.16.0')
 implementation('com.vitorpamplona.quartz:quartz-jvm:1.16.0')
 implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.16.0')
 implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.16.0')
+implementation('com.vitorpamplona.quartz:quartz-macosarm64:1.16.0')
+implementation('com.vitorpamplona.quartz:quartz-linuxx64:1.16.0')
 ```
 
 Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
@@ -469,27 +471,25 @@ When your app goes to the background, you can use NostrClient's `connect` and `d
 methods to stop all communication to relays. Add the `connect` to your `onResume` and `disconnect`
 to `onPause` methods.
 
-### Feature Parity Table
+### Platform Support
 
-| Feature Category         | Feature / Component            | Android / JVM Support | iOS Support | Notes                                                                  |
-|:-------------------------|:-------------------------------|:---------------------:|:-----------:|:-----------------------------------------------------------------------|
-| **Cryptography**         | Secp256k1 (Schnorr, Keys)      |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | LibSodium (ChaCha20, Poly1305) |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | AES Encryption (CBC & GCM)     |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | Hashing (SHA-256, etc.)        |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | MAC (HmacSHA256, etc.)         |        ✅ Full         |   ✅ Full    |                                                                        |
-| **Data & Serialization** | JSON Mapping (Optimized)       |        ✅ Full         |   ✅ Full    | A fully custom implementation exists in `commonMain`.                  |
-|                          | GZip Compression               |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | BitSet                         |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | LargeCache                     |        ✅ Full         |   ✅ Full    |                                                                        |
-| **NIP Support**          | NIP-96 (File Storage Info)     |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | NIP-46 (Remote Signer)         |        ✅ Full         | ⚠️ Partial  | Some methods in `NostrSignerRemote` are unimplemented in `commonMain`. |
-|                          | NIP-03 (OTS / Timestamps)      |        ✅ Full         |    ❌ No     | `BitcoinExplorer` and `RemoteCalendar` have stubs in `commonMain`.     |
-| **Utilities**            | URL Encoding / Decoding        |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | Unicode Normalization          |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | Platform Logging               |        ✅ Full         |   ✅ Full    | iOS uses `NSLog`, Android uses standard Log.                           |
-|                          | Current Time                   |        ✅ Full         |   ✅ Full    | Implemented using `NSDate` on iOS.                                     |
+Quartz is published for Android, JVM, iOS (`iosArm64`, `iosSimulatorArm64`), macOS (`macosArm64`)
+and Linux (`linuxX64`). Almost all of it lives in `commonMain` and behaves identically everywhere:
+event parsing and signing, NIP-19, NIP-04/44/49 encryption, the relay client, the SQLite event
+store, MLS/Marmot, and every event kind's builders and parsers. Platform code is limited to crypto
+primitives and the network layer; this table lists where the targets differ.
 
+| Area | Android / JVM | iOS / macOS | Linux | Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| Secp256k1 (Schnorr, ECDH, key tweaks) | ✅ | ✅ | ✅ | `secp256k1-kmp` on every target (JNI on Android/JVM). |
+| SHA-1/256/512, RIPEMD-160, HMAC, AES-CBC/GCM | ✅ | ✅ | ✅ | JCA on Android/JVM, `cryptography-kotlin` on native. |
+| XChaCha20-Poly1305, Ed25519, X25519 | ✅ | ✅ | ✅ | XChaCha20 is pure Kotlin in `commonMain`; the MLS curves have per-platform actuals. |
+| JSON (events, relay messages, NIP-46) | ✅ | ✅ | ✅ | Jackson on Android/JVM, `kotlinx.serialization` on native. |
+| Unicode NFKC normalization | ✅ | ✅ | ⚠️ No-op | Linux returns the input unchanged, so NIP-49 keys encrypted with a non-ASCII password won't interoperate. |
+| Relay WebSocket transport | ✅ `BasicOkHttpWebSocket` | ❌ Bring your own | ❌ Bring your own | Implement `WebsocketBuilder` (e.g. on Ktor) and pass it to `NostrClient`. |
+| HTTP-backed helpers | ✅ OkHttp | ❌ Bring your own | ❌ Bring your own | NIP-05, NIP-11, NIP-03 calendars/explorer, NIP-FE and NIP-BC Esplora each have a `commonMain` interface with an OkHttp implementation. The NIP-60 Cashu mint and NIP-34 git clients are JVM-only. |
+| NIP-66 TCP reachability probe | ✅ | ❌ | ❌ | `TcpProber` uses `java.net` sockets. |
+| NIP-64 chess engine | ✅ `kchesslib` | ❌ | ❌ | Chess events parse everywhere; the move-validation `ChessEngine` throws `NotImplementedError` on native. |
 
 ## Contributing
 
