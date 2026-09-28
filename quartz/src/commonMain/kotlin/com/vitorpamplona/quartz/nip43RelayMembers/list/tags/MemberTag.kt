@@ -20,10 +20,27 @@
  */
 package com.vitorpamplona.quartz.nip43RelayMembers.list.tags
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * A kind 13534 entry: the member's pubkey plus the NIP-43 role ids (kind
+ * 33534 `d` tags) assigned to them, in tag order. [roles] is empty for a
+ * member without roles, which is also what pre-roles relays publish.
+ */
+@Immutable
+data class RelayMember(
+    val pubKey: HexKey,
+    val roles: List<String> = emptyList(),
+)
+
+/**
+ * NIP-43 `["member", <pubkey>, <role-id>...]`. Role ids after the pubkey are
+ * optional: [parse] ignores them (backward compatible) and [parseMember]
+ * returns them.
+ */
 class MemberTag {
     companion object {
         const val TAG_NAME = "member"
@@ -35,7 +52,25 @@ class MemberTag {
             return tag[1]
         }
 
+        fun parseMember(tag: Array<String>): RelayMember? {
+            val pubKey = parse(tag) ?: return null
+            if (tag.size <= 2) return RelayMember(pubKey)
+            val roles = ArrayList<String>(tag.size - 2)
+            for (i in 2 until tag.size) {
+                val role = tag[i]
+                if (role.isNotEmpty() && role !in roles) roles.add(role)
+            }
+            return RelayMember(pubKey, roles)
+        }
+
         fun assemble(pubKey: HexKey) = arrayOf(TAG_NAME, pubKey)
+
+        fun assemble(
+            pubKey: HexKey,
+            roles: List<String>,
+        ): Array<String> = arrayOf(TAG_NAME, pubKey) + roles
+
+        fun assemble(member: RelayMember) = assemble(member.pubKey, member.roles)
 
         fun assemble(pubKeys: List<HexKey>) = pubKeys.map { assemble(it) }
     }

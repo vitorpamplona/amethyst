@@ -125,4 +125,63 @@ class FilterRelayGroupStateTest {
             assertNull(it.filter.tags!!["h"])
         }
     }
+
+    @Test
+    fun `address pins add a kind-author-d backfill filter`() {
+        val channel = RelayGroupChannel(groupId)
+        val author = "b".repeat(64)
+        channel.updatePinned(
+            GroupPinnedEvent(
+                id = "d".repeat(64),
+                pubKey = relaySignKey,
+                createdAt = 100L,
+                tags = arrayOf(arrayOf("d", "g1"), arrayOf("a", "30023:$author:article")),
+                content = "",
+                sig = sig,
+            ),
+        )
+
+        val filters = filterRelayGroupState(channel, since = null)
+        assertEquals(3, filters.size, "state + pins filters plus one address back-fill, no id filter")
+        assertTrue(filters.none { it.filter.ids != null })
+
+        val addressFilter = filters.first { it.filter.authors != null }
+        assertEquals(relayA, addressFilter.relay)
+        assertEquals(listOf(30023), addressFilter.filter.kinds)
+        assertEquals(listOf(author), addressFilter.filter.authors)
+        assertEquals(listOf("article"), addressFilter.filter.tags!!["d"])
+        assertNull(addressFilter.filter.since)
+    }
+
+    @Test
+    fun `address pins sharing a kind and author collapse into one filter`() {
+        val channel = RelayGroupChannel(groupId)
+        val author = "b".repeat(64)
+        val other = "e".repeat(64)
+        channel.updatePinned(
+            GroupPinnedEvent(
+                id = "d".repeat(64),
+                pubKey = relaySignKey,
+                createdAt = 100L,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "g1"),
+                        arrayOf("a", "30023:$author:one"),
+                        arrayOf("a", "30023:$author:two"),
+                        arrayOf("a", "30023:$other:three"),
+                        arrayOf("a", "30311:$author:live"),
+                    ),
+                content = "",
+                sig = sig,
+            ),
+        )
+
+        val addressFilters = filterRelayGroupState(channel, since = null).filter { it.filter.authors != null }
+        assertEquals(3, addressFilters.size, "one filter per (kind, author), not per address")
+
+        val byKey = addressFilters.associateBy { it.filter.kinds!!.single() to it.filter.authors!!.single() }
+        assertEquals(listOf("one", "two"), byKey[30023 to author]!!.filter.tags!!["d"])
+        assertEquals(listOf("three"), byKey[30023 to other]!!.filter.tags!!["d"])
+        assertEquals(listOf("live"), byKey[30311 to author]!!.filter.tags!!["d"])
+    }
 }

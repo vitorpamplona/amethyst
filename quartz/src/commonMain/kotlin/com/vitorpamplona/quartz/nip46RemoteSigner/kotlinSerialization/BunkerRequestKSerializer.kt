@@ -21,27 +21,20 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner.kotlinSerialization
 
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetRelays
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestParser
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -80,21 +73,19 @@ object BunkerRequestKSerializer : KSerializer<BunkerRequest> {
         val jsonObject = jsonDecoder.decodeJsonElement().jsonObject
         val id = jsonObject["id"]!!.jsonPrimitive.content
         val method = jsonObject["method"]!!.jsonPrimitive.content
-        val params =
-            jsonObject["params"]?.jsonArray?.map { it.jsonPrimitive.content }?.toTypedArray()
-                ?: emptyArray()
+        val params = lenientParams(jsonObject["params"])
 
-        return when (method) {
-            BunkerRequestConnect.METHOD_NAME -> BunkerRequestConnect.parse(id, params)
-            BunkerRequestGetPublicKey.METHOD_NAME -> BunkerRequestGetPublicKey.parse(id, params)
-            BunkerRequestGetRelays.METHOD_NAME -> BunkerRequestGetRelays.parse(id, params)
-            BunkerRequestNip04Decrypt.METHOD_NAME -> BunkerRequestNip04Decrypt.parse(id, params)
-            BunkerRequestNip04Encrypt.METHOD_NAME -> BunkerRequestNip04Encrypt.parse(id, params)
-            BunkerRequestNip44Decrypt.METHOD_NAME -> BunkerRequestNip44Decrypt.parse(id, params)
-            BunkerRequestNip44Encrypt.METHOD_NAME -> BunkerRequestNip44Encrypt.parse(id, params)
-            BunkerRequestPing.METHOD_NAME -> BunkerRequestPing.parse(id, params)
-            BunkerRequestSign.METHOD_NAME -> BunkerRequestSign.parse(id, params)
-            else -> BunkerRequest(id, method, params)
-        }
+        return BunkerRequestParser.parse(id, method, params)
     }
+
+    /**
+     * `params` as strings, tolerating a missing or non-array value and non-string
+     * elements (kept as their JSON text), so a malformed request still yields its id
+     * and method and can be answered with an error.
+     */
+    fun lenientParams(element: JsonElement?): Array<String> =
+        (element as? JsonArray)
+            ?.map { (it as? JsonPrimitive)?.content ?: it.toString() }
+            ?.toTypedArray()
+            ?: emptyArray()
 }

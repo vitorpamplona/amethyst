@@ -28,7 +28,14 @@ sealed interface SignerResult<T : IResult> {
             val result: T,
         ) : RequestAddressed<T>
 
-        class Rejected<T : IResult> : RequestAddressed<T>
+        /**
+         * The remote signer answered with an error. [message] is the bunker's `error`
+         * text (e.g. "unauthorized", "invalid params for sign_event: ..."), kept so the
+         * UI/logs can show why instead of a generic rejection.
+         */
+        class Rejected<T : IResult>(
+            val message: String? = null,
+        ) : RequestAddressed<T>
 
         class TimedOut<T : IResult> : RequestAddressed<T>
 

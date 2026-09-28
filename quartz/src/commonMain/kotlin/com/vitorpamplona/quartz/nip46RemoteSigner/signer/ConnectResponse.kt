@@ -29,7 +29,7 @@ class ConnectResponse {
                 return if (response.error.contains("already connected", ignoreCase = true)) {
                     SignerResult.RequestAddressed.Successful(ConnectResult.AlreadyConnected)
                 } else {
-                    SignerResult.RequestAddressed.Rejected()
+                    SignerResult.RequestAddressed.Rejected(response.error)
                 }
             }
 

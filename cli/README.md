@@ -453,8 +453,12 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy admin RELAY supported-methods` | List the NIP-86 methods the relay implements. |
 | `amy admin RELAY ban-pubkey HEX [--reason R]` / `unban-pubkey HEX` / `list-banned-pubkeys` | Pubkey ban list. |
 | `amy admin RELAY allow-pubkey HEX [--reason R]` / `unallow-pubkey HEX` / `list-allowed-pubkeys` | Pubkey allow list. |
-| `amy admin RELAY ban-event ID [--reason R]` / `allow-event ID` / `list-banned-events` / `list-needing-moderation` | Event moderation. |
-| `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` | Kind allow list. |
+| `amy admin RELAY ban-event ID [--reason R]` / `unban-event ID` / `list-banned-events` | Event ban list. `ban-event` also drops the id from the allow list; `unban-event` does not allow-list it. |
+| `amy admin RELAY allow-event ID [--reason R]` / `unallow-event ID` / `list-allowed-events` / `list-needing-moderation` | Event allow list (approve an event: it also lifts any ban) and the moderation queue. |
+| `amy admin RELAY create-role ID [--label L] [--description D] [--color HUE] [--order N]` / `edit-role ID …` / `delete-role ID` | NIP-43 member roles (kind 33534); `--color` is a hue 0–360. |
+| `amy admin RELAY assign-role HEX ROLE` / `unassign-role HEX ROLE` | Give / take a role. |
+| `amy admin RELAY create-claim CODE` / `delete-claim CODE` / `list-claims` | NIP-43 invite codes for kind 28934 join requests. The role and claim methods only exist on relays that run NIP-43 (geode: `[membership] enabled = true`, which then publishes the 13534 / 33534 events); elsewhere they fail with `method not supported`. |
+| `amy admin RELAY allow-kind N` / `disallow-kind N` / `list-allowed-kinds` / `list-disallowed-kinds` | Kind allow / deny lists. |
 | `amy admin RELAY block-ip IP [--reason R]` / `unblock-ip IP` / `list-blocked-ips` | IP block list. |
 | `amy admin RELAY change-name S` / `change-description S` / `change-icon URL` | Relay metadata. |
 
@@ -586,14 +590,16 @@ screen speaks.
 | `amy relaygroup list` | Your joined groups, from your kind:10009 list (public + private). |
 | `amy relaygroup browse RELAY` | Every group a relay hosts (its 39000-39003 directory). |
 | `amy relaygroup info RELAY GID` | A group's metadata + admin/member roster. |
-| `amy relaygroup create RELAY --name X [--about A] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. |
+| `amy relaygroup create RELAY --name X [--about A] [--picture URL] [--banner URL] [--parent GID] [--private] [--closed]` | Create a group (publishes 9007 + 9002); prints the new `group_id`. `--parent` nests it under a subgroup-capable relay's group. |
 | `amy relaygroup join RELAY GID [--code CODE]` | Request to join (9021) and add it to your kind:10009 list. |
+| `amy relaygroup join naddr1…[?invite=CODE]` | Same, from NIP-29's shareable group identifier; the `?invite=` suffix becomes the join `code`. |
 | `amy relaygroup leave RELAY GID` | Leave (9022) and drop it from your kind:10009 list. |
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
-| `amy relaygroup edit RELAY GID [--name X] [--about A] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads current visibility and changes only the axis you pass, so re-asserting one flag never resets the other. |
+| `amy relaygroup edit RELAY GID [--name X] [--about A] [--picture URL] [--banner URL] [--parent GID\|--root] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads the current 39000 and changes only what you pass: picture, banner, subgroup links, other flags and unknown tags are carried over. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
 | `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
+| `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
 
 ### Buzz workspaces (block/buzz — NIP-29 dialect)
 

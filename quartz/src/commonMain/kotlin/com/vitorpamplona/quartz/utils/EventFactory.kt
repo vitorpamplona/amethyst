@@ -149,7 +149,6 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
@@ -250,6 +249,7 @@ import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEv
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
@@ -263,6 +263,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
@@ -410,6 +411,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
@@ -701,6 +703,7 @@ class EventFactory {
                 GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapGoalEvent.KIND -> ZapGoalEvent(id, pubKey, createdAt, tags, content, sig)
                 FavoriteAlgoFeedsListEvent.KIND -> FavoriteAlgoFeedsListEvent(id, pubKey, createdAt, tags, content, sig)
+                FavoriteFollowSetsListEvent.KIND -> FavoriteFollowSetsListEvent(id, pubKey, createdAt, tags, content, sig)
                 InterestListEvent.KIND -> InterestListEvent(id, pubKey, createdAt, tags, content, sig)
                 HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
                 HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
@@ -854,6 +857,7 @@ class EventFactory {
                 RelayAddMemberEvent.KIND -> RelayAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayRemoveMemberEvent.KIND -> RelayRemoveMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayMembershipListEvent.KIND -> RelayMembershipListEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayRoleEvent.KIND -> RelayRoleEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayJoinRequestEvent.KIND -> RelayJoinRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayInviteRequestEvent.KIND -> RelayInviteRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayLeaveRequestEvent.KIND -> RelayLeaveRequestEvent(id, pubKey, createdAt, tags, content, sig)

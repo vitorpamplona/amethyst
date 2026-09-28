@@ -29,14 +29,17 @@ import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_err
 import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
 import com.vitorpamplona.amethyst.commons.resources.error_unable_to_fetch_invoice
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_error_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_not_supported
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_requires_nwc
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_no_recipients
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
@@ -50,6 +53,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 
 /**
@@ -110,7 +114,14 @@ class V4VPaymentHandler(
         // Keysend (node) recipients can only be paid over NWC.
         if (nodeShares.isNotEmpty()) {
             if (account.nip47SignerState.hasWalletConnectSetup()) {
-                payNodeSharesViaKeysend(nodeShares, boostagram, context, onError)
+                if (defaultWalletMayKeysend()) {
+                    payNodeSharesViaKeysend(nodeShares, boostagram, context, onError)
+                } else {
+                    onError(
+                        loadStringRes(Res.string.podcast_value_error_title),
+                        loadStringRes(Res.string.podcast_value_keysend_not_supported),
+                    )
+                }
             } else {
                 onError(
                     loadStringRes(Res.string.podcast_value_error_title),
@@ -138,6 +149,18 @@ class V4VPaymentHandler(
         }
 
         onProgress(1f)
+    }
+
+    /**
+     * `pay_keysend` lives in the NWC-04 extension. Only a wallet whose info event publishes an
+     * `extensions` tag without 04 (and doesn't list `pay_keysend` in its content) is skipped;
+     * a legacy wallet, or one whose info is unknown, is still asked, as before extensions
+     * existed. See [com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent.mayUseExtensionMethod].
+     */
+    private suspend fun defaultWalletMayKeysend(): Boolean {
+        val walletUri = account.nip47SignerState.defaultWalletUri.value ?: return true
+        val info = withTimeoutOrNull(NwcSignerState.NIP44_NEGOTIATION_WAIT_MS) { account.nwcInfoCache.currentOrFetch(walletUri) }
+        return info?.mayUseExtensionMethod(NwcMethod.PAY_KEYSEND) != false
     }
 
     /** Hex-encodes a TLV value string as NIP-47 `pay_keysend` requires (UTF-8 bytes → hex). */

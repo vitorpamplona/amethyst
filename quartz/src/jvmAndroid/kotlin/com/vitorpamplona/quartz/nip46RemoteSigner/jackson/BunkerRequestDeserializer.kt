@@ -26,15 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.jackson.toTypedArray
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetRelays
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestParser
 
 class BunkerRequestDeserializer : StdDeserializer<BunkerRequest>(BunkerRequest::class.java) {
     override fun deserialize(
@@ -44,19 +36,16 @@ class BunkerRequestDeserializer : StdDeserializer<BunkerRequest>(BunkerRequest::
         val jsonObject: JsonNode = jp.codec.readTree(jp)
         val id = jsonObject.get("id").asText()
         val method = jsonObject.get("method").asText()
-        val params = jsonObject.get("params")?.toTypedArray { it.asText() } ?: emptyArray()
+        // Lenient: a missing/non-array `params` or non-string element must not lose the id,
+        // so the signer can still answer with an error (see BunkerRequestParser).
+        val paramsNode = jsonObject.get("params")
+        val params =
+            if (paramsNode != null && paramsNode.isArray) {
+                paramsNode.toTypedArray { if (it.isValueNode) it.asText() else it.toString() }
+            } else {
+                emptyArray()
+            }
 
-        return when (method) {
-            BunkerRequestConnect.METHOD_NAME -> BunkerRequestConnect.parse(id, params)
-            BunkerRequestGetPublicKey.METHOD_NAME -> BunkerRequestGetPublicKey.parse(id, params)
-            BunkerRequestGetRelays.METHOD_NAME -> BunkerRequestGetRelays.parse(id, params)
-            BunkerRequestNip04Decrypt.METHOD_NAME -> BunkerRequestNip04Decrypt.parse(id, params)
-            BunkerRequestNip04Encrypt.METHOD_NAME -> BunkerRequestNip04Encrypt.parse(id, params)
-            BunkerRequestNip44Decrypt.METHOD_NAME -> BunkerRequestNip44Decrypt.parse(id, params)
-            BunkerRequestNip44Encrypt.METHOD_NAME -> BunkerRequestNip44Encrypt.parse(id, params)
-            BunkerRequestPing.METHOD_NAME -> BunkerRequestPing.parse(id, params)
-            BunkerRequestSign.METHOD_NAME -> BunkerRequestSign.parse(id, params)
-            else -> BunkerRequest(id, method, params)
-        }
+        return BunkerRequestParser.parse(id, method, params)
     }
 }

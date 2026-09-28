@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -43,6 +44,8 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -67,7 +70,10 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEv
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.serialization.encodeToString
@@ -335,6 +341,7 @@ class AccountRelayGroupActions(
         geohashes: List<String> = emptyList(),
         parent: String? = null,
         channelType: String? = null,
+        banner: String? = null,
     ): GroupId {
         // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
         // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
@@ -356,6 +363,7 @@ class AccountRelayGroupActions(
                 name = name,
                 about = about,
                 picture = picture,
+                banner = banner,
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
@@ -410,34 +418,69 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Replace the group's pinned-message list with a kind 9010 update-pin-list event
-     * (admin/moderator only). NIP-29 carries the FULL list, so the relay applies it and
-     * republishes the kind-39005 [com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent].
+     * Replace the group's pin list with a kind 9010 update-pin-list event (admin/moderator
+     * only). NIP-29 carries the FULL ordered list — `e` pins and `a` pins — so the relay applies
+     * it and republishes the kind-39005 [com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent].
      */
     suspend fun updateRelayGroupPins(
         channel: RelayGroupChannel,
-        pinnedEventIds: List<HexKey>,
+        pins: List<GroupPin>,
     ) {
-        val template = GroupUpdatePinListEvent.build(channel.groupId.id, pinnedEventIds)
+        val template = GroupUpdatePinListEvent.build(channel.groupId.id, pins)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
-    /** Pin [eventId] by appending it to the current list (no-op if already pinned). */
+    /**
+     * Pin [note] by appending it to the current list (no-op if already pinned). An addressable
+     * note is pinned by its address (`a`), so the pin follows its latest version; anything else
+     * by event id (`e`). Every existing pin — including other clients' `a` pins — is kept.
+     */
     suspend fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
-        eventId: HexKey,
+        note: Note,
     ) {
-        if (channel.isPinned(eventId)) return
-        updateRelayGroupPins(channel, channel.pinnedEventIds + eventId)
+        val pin = pinFor(note) ?: return
+        if (channel.isPinned(pin.ref)) return
+        updateRelayGroupPins(channel, channel.pinsWith(pin))
     }
 
-    /** Unpin [eventId] by removing it from the current list (no-op if not pinned). */
+    /** Unpin [note] (by address or id) from the current list, keeping every other pin intact. */
     suspend fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
-        eventId: HexKey,
+        note: Note,
     ) {
-        if (!channel.isPinned(eventId)) return
-        updateRelayGroupPins(channel, channel.pinnedEventIds - eventId)
+        val refs = pinRefsFor(note)
+        if (refs.none { channel.isPinned(it) }) return
+        updateRelayGroupPins(channel, channel.pins.filter { it.ref !in refs })
+    }
+
+    private fun addressOf(note: Note): Address? = note.address() ?: (note.event as? AddressableEvent)?.address()
+
+    private fun pinFor(note: Note): GroupPin? {
+        addressOf(note)?.let { return AddressPin(it) }
+        return EventPin(note.event?.id ?: note.idHex)
+    }
+
+    /** Both references a note can be pinned under: its address (if addressable) and its event id. */
+    private fun pinRefsFor(note: Note): Set<String> =
+        buildSet {
+            addressOf(note)?.let { add(it.toValue()) }
+            note.event?.id?.let { add(it) }
+            add(note.idHex)
+        }
+
+    /**
+     * NIP-29 group migration: the same group id now lives on [newRelay] (moved or forked). Swap this
+     * group's entry in our kind-10009 for the one on [newRelay] and return the new channel, which the
+     * caller opens so its events load from the new relay.
+     */
+    suspend fun moveRelayGroup(
+        channel: RelayGroupChannel,
+        newRelay: NormalizedRelayUrl,
+    ): RelayGroupChannel {
+        val target = LocalCache.getOrCreateRelayGroupChannel(GroupId(channel.groupId.id, newRelay))
+        account.sendMyPublicAndPrivateOutbox(account.relayGroupList.move(channel, target))
+        return target
     }
 
     /** Kick [pubkey] out of the group with a kind 9001 remove-user event (moderator only). */
@@ -505,6 +548,11 @@ class AccountRelayGroupActions(
      * re-parenting, we re-carry the group's current [parent] and full [children] list
      * from its latest known metadata to keep the tree intact across a plain name/flag
      * edit. Pass an explicit value to change them.
+     *
+     * A 9002 also carries "all the fields of group-metadata", so the current 39000's [banner]
+     * (unless replaced) and every tag this form doesn't manage (`livekit`, `supported_kinds`, a
+     * newer spec field…) ride along verbatim — otherwise a rename would erase them on a relay that
+     * rebuilds the metadata from the edit.
      */
     suspend fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
@@ -519,6 +567,7 @@ class AccountRelayGroupActions(
         geohashes: List<String> = emptyList(),
         parent: String? = channel.parentGroupId(),
         children: List<String> = channel.childGroupIds(),
+        banner: String? = channel.bannerPicture(),
     ) {
         // On a Buzz relay, visibility rides a `visibility` ("open"/"private") tag — the relay does NOT
         // read NIP-29's `private` status flag — so a Buzz channel's visibility only actually changes on
@@ -530,12 +579,16 @@ class AccountRelayGroupActions(
                 name = name,
                 about = about,
                 picture = picture,
+                banner = banner,
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
                 parent = parent,
                 children = children,
                 visibility = if (isBuzz) (if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN) else null,
+                // Buzz honours only its own subset of tags on a 9002 and stamps relay-internal ones on
+                // its 39000, so don't echo those back; a NIP-29 relay gets the unmanaged tags verbatim.
+                extraTags = if (isBuzz) emptyList() else channel.event?.unmanagedTags() ?: emptyList(),
             )
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }

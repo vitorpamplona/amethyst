@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
@@ -363,6 +364,10 @@ class AppModules(
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
     val relayGroupDeletionPrefs =
         RelayGroupDeletionStore(sharedSettingsStore, applicationIOScope)
+
+    // Restore + persist the last-known admins of joined NIP-29 groups, so the migration/fork check
+    // can read their kind-10009 lists even while a group's host relay is down.
+    val relayGroupAdminCachePrefs = RelayGroupAdminCacheStore(sharedSettingsStore, applicationIOScope)
 
     // Restore + persist which drawer section headings the user has folded away, so the side menu
     // opens the way they left it (device-global: a collapsed heading is a per-device view choice,

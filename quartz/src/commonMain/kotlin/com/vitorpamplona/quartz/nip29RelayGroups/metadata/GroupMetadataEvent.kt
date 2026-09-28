@@ -65,6 +65,18 @@ class GroupMetadataEvent(
 
     fun picture() = tags.firstTagValue("picture")
 
+    /** Wide header image for the group (NIP-29 `banner`), shown behind/above the picture. */
+    fun banner() = tags.firstTagValue("banner")
+
+    /**
+     * The tags of this metadata that a client's edit form doesn't manage — e.g. `livekit`,
+     * `supported_kinds`, or a field from a newer spec revision. A kind-9002 re-asserts the
+     * whole metadata ("all the fields of group-metadata"), so an edit should carry these over
+     * verbatim; otherwise saving a rename would silently erase them on relays that replace
+     * the metadata wholesale.
+     */
+    fun unmanagedTags(): List<Array<String>> = tags.filter { it.isNotEmpty() && it[0] !in EDIT_MANAGED_TAG_NAMES }
+
     /**
      * Buzz-only: whether the relay has marked this channel **archived** — a hide-from-the-sidebar
      * state, distinct from a delete (the channel and its history live on). The Buzz relay stamps an
@@ -176,11 +188,41 @@ class GroupMetadataEvent(
 
         const val KIND = 39000
 
+        /**
+         * Tag names a metadata edit sets explicitly from its own inputs, so [unmanagedTags]
+         * must not carry them over (they'd be duplicated or resurrect a cleared value).
+         * Includes both polarities of each status flag and the Buzz `visibility` knob.
+         */
+        val EDIT_MANAGED_TAG_NAMES =
+            setOf(
+                "d",
+                "h",
+                "name",
+                "about",
+                "picture",
+                "banner",
+                "t",
+                "g",
+                ParentTag.TAG_NAME,
+                ChildTag.TAG_NAME,
+                "previous",
+                "private",
+                "public",
+                "restricted",
+                "unrestricted",
+                "hidden",
+                "visible",
+                "closed",
+                "open",
+                "visibility",
+            )
+
         fun build(
             groupId: String,
             name: String? = null,
             about: String? = null,
             picture: String? = null,
+            banner: String? = null,
             status: Set<GroupStatus> = emptySet(),
             supportedKinds: List<Int>? = null,
             hashtags: List<String> = emptyList(),
@@ -194,6 +236,7 @@ class GroupMetadataEvent(
             name?.let { add(arrayOf("name", it)) }
             about?.let { add(arrayOf("about", it)) }
             picture?.let { add(arrayOf("picture", it)) }
+            banner?.let { add(arrayOf("banner", it)) }
             status.forEach { add(arrayOf(it.code)) }
             supportedKinds?.let { kinds ->
                 add((listOf("supported_kinds") + kinds.map { it.toString() }).toTypedArray())

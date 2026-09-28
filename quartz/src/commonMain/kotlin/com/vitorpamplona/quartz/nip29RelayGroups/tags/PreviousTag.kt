@@ -21,21 +21,37 @@
 package com.vitorpamplona.quartz.nip29RelayGroups.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * NIP-29 timeline references: a SINGLE `previous` tag carrying every referenced
+ * event-id prefix (the first 8 hex chars) as its values:
+ * ```
+ * ["previous", "eb96c864", "2db75638", "b5d1065f"]
+ * ```
+ * relay29 only reads the first `previous` tag (`Tags.GetFirst`), so the old shape — one
+ * tag per prefix — made the relay check just the first reference. Parsing still accepts
+ * that legacy multi-tag form: [parse] returns every value of one tag, and callers read
+ * all `previous` tags.
+ */
 class PreviousTag {
     companion object {
         const val TAG_NAME = "previous"
 
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
+        /** Every non-empty prefix carried by one `previous` tag, or null when [tag] isn't one. */
+        fun parse(tag: Array<String>): List<String>? {
+            if (!tag.has(1) || tag[0] != TAG_NAME) return null
+            val prefixes = ArrayList<String>(tag.size - 1)
+            for (i in 1 until tag.size) {
+                if (tag[i].isNotEmpty()) prefixes.add(tag[i])
+            }
+            return prefixes.ifEmpty { null }
         }
 
-        fun assemble(eventIdPrefix: String) = arrayOf(TAG_NAME, eventIdPrefix)
-
-        fun assemble(eventIdPrefixes: List<String>) = eventIdPrefixes.map { assemble(it) }
+        /** One `previous` tag holding all [eventIdPrefixes], or null when there are none to send. */
+        fun assemble(eventIdPrefixes: List<String>): Array<String>? {
+            val values = eventIdPrefixes.filter { it.isNotEmpty() }
+            if (values.isEmpty()) return null
+            return arrayOf(TAG_NAME, *values.toTypedArray())
+        }
     }
 }

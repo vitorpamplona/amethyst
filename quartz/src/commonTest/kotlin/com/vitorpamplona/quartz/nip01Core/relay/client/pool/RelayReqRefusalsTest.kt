@@ -104,4 +104,18 @@ class RelayReqRefusalsTest {
 
         assertFalse(refusals.shouldSuppress(relay, plain()), "no single class reached the threshold")
     }
+
+    @Test
+    fun parsesTheKindsARelaySaysItDoesNotAllow() {
+        assertEquals(setOf(21059), RelayReqRefusals.parseDisallowedKinds("ERROR: bad req: filter validation failed: kind not allowed: 21059"))
+        assertEquals(setOf(7374, 30382), RelayReqRefusals.parseDisallowedKinds("blocked: kinds not allowed: 7374, 30382"))
+        assertEquals(setOf(4), RelayReqRefusals.parseDisallowedKinds("restricted: kind 4 is not allowed"))
+    }
+
+    @Test
+    fun otherRefusalsNameNoKind() {
+        assertEquals(emptySet(), RelayReqRefusals.parseDisallowedKinds("auth-required: please authenticate"))
+        assertEquals(emptySet(), RelayReqRefusals.parseDisallowedKinds("error: search filter is required"))
+        assertEquals(emptySet(), RelayReqRefusals.parseDisallowedKinds("blocked: not allowed to read"))
+    }
 }

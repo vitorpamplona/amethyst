@@ -191,6 +191,12 @@ private fun ChannelView(
     val jumpToNoteId = remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxHeight()) {
+        RelayGroupMigrationBar(
+            channel = liveChannel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+
         RelayGroupPinnedBar(
             channel = liveChannel,
             accountViewModel = accountViewModel,

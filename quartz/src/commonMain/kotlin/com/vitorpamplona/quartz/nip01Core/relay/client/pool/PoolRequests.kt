@@ -302,6 +302,7 @@ class PoolRequests(
                 desiredSubListeners.get(msg.subId)?.onEose(
                     relay = relay.url,
                     forFilters = forFilters,
+                    hints = msg.hints,
                 )
 
                 // send a newer version when done
@@ -373,7 +374,7 @@ class PoolRequests(
         // this relay has structurally refused too many times — replaying it on
         // every reconnect is the doomed-REQ loop this guard exists to stop.
         desiredSubs.forEach { subId, perRelayFilters ->
-            val filters = perRelayFilters[relay]
+            val filters = perRelayFilters[relay]?.let { relayRefusals.narrow(relay, it) }
             if (!filters.isNullOrEmpty()) {
                 val send =
                     subState(subId).let { state ->
@@ -478,7 +479,8 @@ class PoolRequests(
         relay: NormalizedRelayUrl,
     ): Command? {
         val oldFilters = state.currentFilters(relay)
-        val newFilters = desiredSubs.get(subId)?.get(relay)
+        // As the relay will serve them: kinds it refused by name are stripped.
+        val newFilters = desiredSubs.get(subId)?.get(relay)?.let { relayRefusals.narrow(relay, it) }
 
         return when {
             newFilters.isNullOrEmpty() -> {

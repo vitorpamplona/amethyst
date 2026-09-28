@@ -51,6 +51,10 @@ class GroupEditMetadataEvent(
 
     fun about() = tags.firstTagValue("about")
 
+    fun picture() = tags.firstTagValue("picture")
+
+    fun banner() = tags.firstTagValue("banner")
+
     fun hashtags() = tags.hashtags()
 
     fun geohashes() = tags.geohashes()
@@ -84,6 +88,7 @@ class GroupEditMetadataEvent(
             name: String? = null,
             about: String? = null,
             picture: String? = null,
+            banner: String? = null,
             status: Set<GroupMetadataEvent.GroupStatus> = emptySet(),
             hashtags: List<String> = emptyList(),
             geohashes: List<String> = emptyList(),
@@ -96,6 +101,10 @@ class GroupEditMetadataEvent(
             // this tag to take. [archived] toggles the channel's archived state ("true"/"false").
             visibility: String? = null,
             archived: Boolean? = null,
+            // Metadata tags this edit doesn't set itself (e.g. `livekit`, `supported_kinds`, a newer
+            // spec field), usually GroupMetadataEvent.unmanagedTags() of the current 39000, so the
+            // edit doesn't erase them. Tags whose names this builder manages are skipped.
+            extraTags: List<Array<String>> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupEditMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -103,6 +112,7 @@ class GroupEditMetadataEvent(
             name?.let { add(arrayOf("name", it)) }
             about?.let { add(arrayOf("about", it)) }
             picture?.let { add(arrayOf("picture", it)) }
+            banner?.let { add(arrayOf("banner", it)) }
             status.forEach { add(arrayOf(it.code)) }
             visibility?.let { add(arrayOf("visibility", it)) }
             archived?.let { add(arrayOf("archived", if (it) "true" else "false")) }
@@ -112,6 +122,7 @@ class GroupEditMetadataEvent(
             parent?.let { parentGroup(it) }
             childGroups(children)
             previous(previousEvents)
+            extraTags.forEach { if (it.isNotEmpty() && it[0] !in GroupMetadataEvent.EDIT_MANAGED_TAG_NAMES) add(it) }
             initializer()
         }
     }

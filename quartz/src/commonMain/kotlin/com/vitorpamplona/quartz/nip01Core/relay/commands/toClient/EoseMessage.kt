@@ -20,10 +20,28 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
+/**
+ * `["EOSE", <subId>]`, optionally with NIP-67 completeness hints:
+ * `["EOSE", <subId>, [<hint>, ...]]`.
+ *
+ * [hints] is null when the relay sent the two-element form. Hints are only
+ * about stored events; their presence is definitive, their absence is not
+ * (see [isFinished] / [hasMore]). Unknown hint values are kept but ignored.
+ */
 class EoseMessage(
     val subId: String,
+    val hints: List<String>? = null,
 ) : Message {
     override fun label() = LABEL
+
+    /** NIP-67 `finish`: every stored match was sent; do not paginate further. */
+    fun isFinished() = hints?.contains(HINT_FINISH) == true
+
+    /** NIP-67 `more`: the relay holds more stored matches than it sent; paginate. */
+    fun hasMore() = hints?.contains(HINT_MORE) == true
+
+    /** NIP-67 `auth`: more stored matches may be available after NIP-42 AUTH. */
+    fun needsAuth() = hints?.contains(HINT_AUTH) == true
 
     /**
      * Wire form is `["EOSE","<subId>"]` — sent once per REQ, so it is on
@@ -33,7 +51,7 @@ class EoseMessage(
      * any exotic subId falls back.
      */
     override fun toJson(): String {
-        if (!isEscapeFreeAscii(subId)) return super.toJson()
+        if (hints != null || !isEscapeFreeAscii(subId)) return super.toJson()
         return buildString(subId.length + 12) {
             append("[\"EOSE\",\"")
             append(subId)
@@ -43,5 +61,10 @@ class EoseMessage(
 
     companion object {
         const val LABEL = "EOSE"
+
+        // NIP-67 hint values.
+        const val HINT_FINISH = "finish"
+        const val HINT_MORE = "more"
+        const val HINT_AUTH = "auth"
     }
 }

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -83,17 +84,23 @@ fun DisplayPeopleList(
 
     val name by remember(noteEvent) { derivedStateOf { "#${noteEvent.titleOrName() ?: noteEvent.dTag()}" } }
 
-    Text(
-        text = name,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-        textAlign = TextAlign.Center,
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = name,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(5.dp),
+            textAlign = TextAlign.Center,
+        )
+
+        (baseNote as? AddressableNote)?.let {
+            FavoriteFollowSetToggle(it, accountViewModel)
+        }
+    }
 
     LaunchedEffect(noteEvent) {
         accountViewModel.loadUsers(noteEvent.taggedUserIds()) {

@@ -24,19 +24,28 @@ import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.seedInto
 import com.vitorpamplona.geode.config.snapshotOf
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip43RelayMembers.server.RelayMembershipServer
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanListPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86Server
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -103,8 +112,36 @@ class RelayEngine(
      * owns *who* is admin; the transport owns *how* admins authenticate.
      */
     adminPubkeys: Set<HexKey> = emptySet(),
+    /**
+     * The relay's own identity. When set, the NIP-11 doc advertises its
+     * pubkey as `self` (overriding whatever the persisted doc says), and
+     * it signs the relay-authored NIP-43 events. Null (the default) leaves
+     * `self` as configured and the relay unable to sign anything.
+     */
+    relayKey: KeyPair? = null,
+    /**
+     * NIP-43 membership (see `geode/plans/2026-09-27-nip43-membership.md`).
+     * When on — requires [relayKey] — the NIP-86 pubkey allow list is the
+     * member list and gates writes even while empty, kind 28934 / 28936
+     * join and leave requests are answered by [membershipServer], the
+     * relay publishes kinds 13534 / 33534 / 8000 / 8001 (and NIP-09
+     * deletions for removed roles) signed by [relayKey], the NIP-86 role
+     * and invite-code methods are offered, and NIP-11 advertises 43. Off
+     * (the default): none of that — the role / claim RPCs are not even
+     * advertised, and NIP-43 is stripped from `supported_nips`.
+     */
+    val membership: Boolean = false,
+    /** How far a join / leave request's `created_at` may be from now. */
+    membershipRequestWindowSeconds: Long = RelayMembershipServer.DEFAULT_REQUEST_WINDOW_SECONDS,
 ) : AutoCloseable {
+    init {
+        require(!membership || relayKey != null) { "NIP-43 membership needs the relay's own key (relayKey) to sign its events" }
+    }
+
     private val boot: RuntimeConfigData = runtimeConfig.effective()
+
+    /** Signs as the relay's NIP-11 `self`; null when no [relayKey] was configured. */
+    val relaySigner: NostrSignerSync? = relayKey?.let { NostrSignerSync(it) }
 
     /**
      * Live NIP-11 doc. Mutable via [updateInfo] so NIP-86 admin RPCs
@@ -115,8 +152,34 @@ class RelayEngine(
      * empty NIP-11.
      */
     @Volatile
-    var info: RelayInfo = RelayInfo(boot.info!!)
+    var info: RelayInfo = RelayInfo(boot.info!!.advertisingIdentity())
         private set
+
+    /**
+     * Stamps the boot-time NIP-11 doc with what this engine actually runs:
+     * `self` = [relaySigner]'s pubkey, and NIP-43 in `supported_nips` iff
+     * [membership] is on — a persisted or operator-written doc may say
+     * otherwise, and clients only send join requests to relays that
+     * advertise 43.
+     */
+    private fun Nip11RelayInformation.advertisingIdentity(): Nip11RelayInformation {
+        val nips = supported_nips
+        val doc =
+            when {
+                membership && (nips == null || NIP_43 !in nips) -> {
+                    copy(supported_nips = ((nips ?: emptyList()) + NIP_43).sortedBy { it.toIntOrNull() ?: Int.MAX_VALUE })
+                }
+
+                !membership && nips != null && NIP_43 in nips -> {
+                    copy(supported_nips = nips - NIP_43)
+                }
+
+                else -> {
+                    this
+                }
+            }
+        return relaySigner?.let { doc.copy(self = it.pubKey) } ?: doc
+    }
 
     /** Mutates the live NIP-11 doc and persists the snapshot. */
     fun updateInfo(transform: (Nip11RelayInformation) -> Nip11RelayInformation) {
@@ -131,8 +194,14 @@ class RelayEngine(
      * seed on first boot) without firing the mutation hook.
      */
     val banStore: BanStore =
-        BanStore(onMutation = ::snapshot)
-            .apply { boot.seedInto(this) }
+        BanStore(
+            onMutation = {
+                snapshot()
+                // Covers mutations outside the RPC / join paths (which
+                // sync synchronously) — e.g. direct BanStore calls.
+                membershipServer?.requestSync()
+            },
+        ).apply { boot.seedInto(this) }
 
     /**
      * NIP-86 admin RPC dispatcher. Transport-agnostic — `KtorRelay`
@@ -150,6 +219,12 @@ class RelayEngine(
                 },
             onBan = { filter -> store.delete(filter) },
             allowList = adminPubkeys,
+            // Without a NIP-43 engine the role / claim methods would be
+            // silent no-ops, so they're only offered with membership on.
+            nip43Methods = membership,
+            // Republish before the RPC answers, so a client that reads the
+            // relay right after an admin change sees the new events.
+            afterMutation = { membershipServer?.sync() },
         )
 
     /**
@@ -174,12 +249,73 @@ class RelayEngine(
             // BanListPolicy alone; otherwise stack so both must accept.
             policyBuilder = {
                 val user = policyBuilder()
-                if (user === EmptyPolicy) BanListPolicy(banStore) else user + BanListPolicy(banStore)
+                val banList = BanListPolicy(banStore, membersOnly = membership)
+                if (user === EmptyPolicy) banList else user + banList
             },
             parentContext = parentContext,
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
         )
 
-    override fun close() = server.close()
+    /** Background scope for [RelayMembershipServer.requestSync]; cancelled on [close]. */
+    private val membershipScope = CoroutineScope(parentContext + SupervisorJob(parentContext[Job]))
+
+    /**
+     * The NIP-43 engine, when [membership] is on: answers join / leave
+     * requests on every connection and republishes the relay-signed
+     * membership events whenever the [banStore] changes.
+     */
+    val membershipServer: RelayMembershipServer? =
+        if (membership) {
+            RelayMembershipServer(
+                signer = relaySigner!!,
+                banStore = banStore,
+                publish = ::publishOwn,
+                load = { filter -> store.query<Event>(filter) },
+                scope = membershipScope,
+                relayName = url.url,
+                requestWindowSeconds = membershipRequestWindowSeconds,
+            )
+        } else {
+            null
+        }
+
+    init {
+        membershipServer?.let {
+            server.eventCommandHandler = it
+            // Bring the stored 13534 / 33534 in line with the boot state
+            // (first boot, a key change, a hand-edited state file).
+            it.requestSync()
+        }
+    }
+
+    /**
+     * Stores a relay-authored event: through the group-commit writer and
+     * live fan-out like any publish, but skipping the policy chain (the
+     * relay's own events aren't subject to its write rules) and signature
+     * verification (we just signed it).
+     */
+    private suspend fun publishOwn(event: Event): Boolean {
+        val outcome = CompletableDeferred<IEventStore.InsertOutcome>()
+        server.ingest(event, skipVerify = true) { outcome.complete(it) }
+        return when (val result = outcome.await()) {
+            IEventStore.InsertOutcome.Accepted -> {
+                true
+            }
+
+            else -> {
+                Log.w("RelayEngine") { "relay-signed kind ${event.kind} not stored: $result" }
+                false
+            }
+        }
+    }
+
+    override fun close() {
+        membershipScope.cancel()
+        server.close()
+    }
+
+    companion object {
+        private const val NIP_43 = "43"
+    }
 }

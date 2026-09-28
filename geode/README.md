@@ -98,7 +98,8 @@ geode --version
 Key sections: `[info]` (NIP-11 doc), `[network]` (bind + thread pools),
 `[database]` (SQLite path/tuning), `[options]` (AUTH / verify / search),
 `[authorization]` (allow/deny lists), `[[mirror]]` (upstream mirroring),
-`[http]` (NIP-FE limits) and `[admin]` (NIP-86 management). See the example
+`[http]` (NIP-FE limits), `[admin]` (NIP-86 management), `[identity]` (the
+relay's own key, NIP-11 `self`) and `[membership]` (NIP-43). See the example
 file for every knob.
 
 ### Commands over HTTP (NIP-FE)
@@ -125,6 +126,20 @@ Streamed answers are gzipped for clients that send `Accept-Encoding: gzip`
 (`curl --compressed`), sync-flushed so events still arrive as they are found;
 `[http].gzip = false` turns it off. Quartz's `HttpRelayClient` does all of this
 for clients, over OkHttp via `OkHttpRelayTransport` or any `HttpRelayTransport`.
+
+## Membership (NIP-43)
+
+With `[membership] enabled = true` geode is a members-only relay: the NIP-86
+pubkey allow list is the member list and gates writes. Admins mint invite codes
+with `createclaim` (e.g. `amy admin RELAY create-claim CODE`); a user joins by
+sending a kind 28934 request carrying one (codes stay valid until
+`deleteclaim`) and leaves with a kind 28936. The relay signs — with its
+`[identity]` key, advertised as NIP-11 `self` — and serves kind 13534 (members
+and their role ids), 33534 (roles from `createrole` / `editrole`; `deleterole`
+publishes a NIP-09 deletion) and 8000 / 8001 (member added / removed), keeping
+them in step with every join, leave and admin change. Off by default, and while
+off the role / claim RPCs aren't offered. Design notes:
+[`plans/2026-09-27-nip43-membership.md`](plans/2026-09-27-nip43-membership.md).
 
 ## Verbs
 

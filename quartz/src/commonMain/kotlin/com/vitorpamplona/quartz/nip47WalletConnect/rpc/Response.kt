@@ -155,9 +155,12 @@ class GetInfoSuccessResponse(
         val block_height: Long? = null,
         val block_hash: String? = null,
         val methods: List<String>? = null,
+        // NWC-02: notification types authorized for this connection.
         val notifications: List<String>? = null,
         val metadata: Map<String, Any?>? = null,
         val lud16: String? = null,
+        // NIP-47: optional NWC extension specs supported by this connection (eg. ["02", "05"]).
+        val extensions: List<String>? = null,
     )
 }
 

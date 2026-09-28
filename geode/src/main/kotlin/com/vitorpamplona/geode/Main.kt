@@ -22,6 +22,7 @@ package com.vitorpamplona.geode
 
 import com.vitorpamplona.geode.config.BannedEntry
 import com.vitorpamplona.geode.config.MirrorFilterValidator
+import com.vitorpamplona.geode.config.RelayIdentity
 import com.vitorpamplona.geode.config.RuntimeConfig
 import com.vitorpamplona.geode.config.RuntimeConfigData
 import com.vitorpamplona.geode.config.StaticConfig
@@ -83,8 +84,9 @@ import java.io.File
  *
  * Every section is enforced: `[info]` populates the NIP-11 doc,
  * `[network]` controls the bind, `[database]` chooses the SQLite path,
- * `[options]` toggles AUTH/verify/future-skew, and `[authorization]`
- * seeds the runtime
+ * `[options]` toggles AUTH/verify/future-skew, `[identity]` holds the
+ * relay's own key (NIP-11 `self`), `[membership]` turns on NIP-43, and
+ * `[authorization]` seeds the runtime
  * [com.vitorpamplona.quartz.nip86RelayManagement.server.BanStore] on
  * first boot (see [com.vitorpamplona.geode.config.RuntimeConfig]).
  *
@@ -335,6 +337,14 @@ private fun serve(args: Array<String>) {
             maxSyncEvents = config.negentropy.max_sync_events,
             maxSessionsPerConnection = config.negentropy.max_sessions_per_connection,
         )
+    // The relay's own key (NIP-11 `self`): explicit config, else generated
+    // next to the admin state file when NIP-43 membership needs one.
+    val relayKey =
+        RelayIdentity.resolve(
+            identity = config.identity,
+            needed = config.membership.enabled,
+            stateFile = config.admin.state_file,
+        )
     val relay =
         RelayEngine(
             advertisedUrl,
@@ -344,6 +354,9 @@ private fun serve(args: Array<String>) {
             parallelVerify = parallelVerify,
             negentropySettings = negentropySettings,
             adminPubkeys = config.admin.pubkeys.toSet(),
+            relayKey = relayKey,
+            membership = config.membership.enabled,
+            membershipRequestWindowSeconds = config.membership.request_window_seconds,
         )
     val server =
         KtorRelay(
@@ -497,6 +510,10 @@ private fun serve(args: Array<String>) {
 
     println("geode listening on ${server.url}")
     println("NIP-11 info doc: curl -H 'Accept: application/nostr+json' http://$advertisedHost:$port$path")
+    relay.relaySigner?.let { println("relay identity (NIP-11 self): ${it.pubKey}") }
+    if (relay.membership) {
+        println("NIP-43 membership on: members-only writes; join with a kind 28934 request carrying an invite code (NIP-86 createclaim)")
+    }
     if (upstreams.isNotEmpty()) {
         val trusted = upstreams.count { it.trusted }
         println("mirroring ${upstreams.size} upstream relay(s), $trusted trusted (signature verification skipped)")

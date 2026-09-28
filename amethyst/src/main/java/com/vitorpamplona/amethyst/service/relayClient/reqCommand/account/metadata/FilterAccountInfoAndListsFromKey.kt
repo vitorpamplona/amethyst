@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -36,6 +35,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestList.InterestListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 
@@ -85,6 +86,8 @@ val AccountInfoAndListsFromKeyKinds2 =
         Bolt12OfferListEvent.KIND,
         FavoriteRelayListEvent.KIND,
         InterestSetEvent.KIND,
+        // NIP-51 kind 10021: follow sets (anyone's) pinned as feeds in the top-nav picker.
+        FavoriteFollowSetsListEvent.KIND,
         // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups + servers.
         // Loaded up-front so "My Groups" and group memberships resolve immediately at login,
         // without waiting for the groups screen to mount its own subscription.

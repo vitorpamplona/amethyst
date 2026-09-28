@@ -70,7 +70,7 @@ fun ChannelFilterAssemblerSubscription(
             .flow()
             .metadata.stateFlow
             .collectAsStateWithLifecycle()
-        val pinnedIds = (metadataState.channel as? RelayGroupChannel)?.pinnedEventIds ?: channel.pinnedEventIds
+        val pinnedIds = (metadataState.channel as? RelayGroupChannel)?.pins ?: channel.pins
         LaunchedEffect(pinnedIds) {
             dataSource.invalidateFilters()
         }

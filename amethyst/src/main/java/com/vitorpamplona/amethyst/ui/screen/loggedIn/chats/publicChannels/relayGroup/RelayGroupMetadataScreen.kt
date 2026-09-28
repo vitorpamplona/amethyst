@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_change_photo
 import com.vitorpamplona.amethyst.commons.resources.relay_group_create_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_edit_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_about
+import com.vitorpamplona.amethyst.commons.resources.relay_group_field_banner
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_geohash
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_geohash_hint
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_name
@@ -212,6 +213,16 @@ private fun RelayGroupMetadataScaffold(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
+    // NIP-29 §Subgroups relay support detection: `"nip29": { "subgroups": true }` in the NIP-11.
+    val subgroupsSupported by produceState(initialValue = false, viewModel.relay) {
+        val relay = viewModel.relay ?: return@produceState
+        Amethyst.instance.nip11Cache.loadRelayInfo(
+            relay = relay,
+            onInfo = { info -> value = info.nip29?.subgroups == true },
+            onError = { _, _, _ -> value = false },
+        )
+    }
+
     var wantsToPickImage by remember { mutableStateOf(false) }
     if (wantsToPickImage) {
         GallerySelectSingle(
@@ -281,8 +292,11 @@ private fun RelayGroupMetadataScaffold(
 
                 GroupMetadataFields(viewModel)
 
-                // Sub-groups are a NIP-29 relation; Buzz has no parent channel.
-                if (!viewModel.isBuzzRelay) {
+                // Sub-groups are a NIP-29 relation; Buzz has no parent channel. Offer the parent picker
+                // only when the relay advertises `nip29: { subgroups: true }` in its NIP-11 (otherwise
+                // it'd reject the `parent` tag), or when this group already has a parent so an admin
+                // can still detach it.
+                if (!viewModel.isBuzzRelay && (subgroupsSupported || viewModel.parentGroupId != null)) {
                     Spacer(Modifier.height(16.dp))
                     ParentGroupSection(viewModel, accountViewModel)
                 }
@@ -403,10 +417,22 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
     )
 
     // Everything below is NIP-29 vocabulary. A Buzz relay stores only `name`, `about` and a
-    // two-valued `visibility` (its 9002 handler accepts nothing else), so offering hashtags, a
-    // geohash, or the invite-only/restricted/hidden flags there would be four controls that look
-    // like they configure the channel and are silently dropped by the relay.
+    // two-valued `visibility` (its 9002 handler accepts nothing else), so offering a banner, hashtags,
+    // a geohash, or the invite-only/restricted/hidden flags there would be controls that look like
+    // they configure the channel and are silently dropped by the relay.
     if (!viewModel.isBuzzRelay) {
+        OutlinedTextField(
+            value = viewModel.banner.value,
+            onValueChange = {
+                viewModel.banner.value = it
+                viewModel.markTouched()
+            },
+            singleLine = true,
+            label = { Text(stringRes(Res.string.relay_group_field_banner)) },
+            placeholder = { Text("https://…") },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+
         Spacer(Modifier.height(12.dp))
         Text(
             text = stringRes(Res.string.relay_group_section_discovery),

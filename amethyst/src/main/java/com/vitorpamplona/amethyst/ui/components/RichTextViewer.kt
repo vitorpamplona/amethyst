@@ -124,8 +124,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
@@ -982,7 +982,7 @@ private fun DisplayUserFromTag(
     nav: INav,
 ) {
     val meta by observeUserInfo(baseUser, accountViewModel)
-    val nickname by observeUserNickname(baseUser, accountViewModel)
+    val nickname by observeUserDisplayNickname(baseUser, accountViewModel)
     val petName = nickname?.petName
 
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag") {

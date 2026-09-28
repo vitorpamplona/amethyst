@@ -30,6 +30,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
  * non-empty pubkey allow list, or kind disallowed / not in the kind
  * allow list.
  *
+ * An event id on the NIP-86 event allow list (`allowevent`) is an
+ * explicit, per-event operator approval, so it is accepted without
+ * consulting the pubkey and kind rules — the most specific decision
+ * wins, the same way `banevent` rejects an event from an otherwise
+ * allowed author. The event allow list never restricts anything: with
+ * it empty (the default) this policy behaves exactly as before. It only
+ * short-circuits this policy; other policies stacked next to it still
+ * apply.
+ *
  * Functionally equivalent to (and a superset of) the static
  * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy] +
  * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy].
@@ -38,19 +47,33 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
  * static policies would silently diverge after the first admin call.
  * Geode seeds the [BanStore] from `[authorization]` at first boot
  * instead — see `com.vitorpamplona.geode.config.RuntimeConfig`.
+ *
+ * [membersOnly] is the NIP-43 members-only mode: the pubkey allow list
+ * *is* the relay's member list, so it gates writes even while it is
+ * empty (a fresh members-only relay is closed, not open, until someone
+ * joins). Off by default, which keeps the NIP-86 reading: an empty allow
+ * list restricts nothing.
  */
 class BanListPolicy(
     val banStore: BanStore,
+    val membersOnly: Boolean = false,
 ) : PassThroughPolicy() {
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
         val ev = cmd.event
         if (banStore.isBannedEvent(ev.id)) {
             return PolicyResult.Rejected("blocked: event id is banned")
         }
+        if (banStore.isAllowedEvent(ev.id)) {
+            return PolicyResult.Accepted(cmd)
+        }
         if (banStore.isBanned(ev.pubKey)) {
             return PolicyResult.Rejected("blocked: pubkey is banned")
         }
-        if (banStore.hasAllowList() && !banStore.isAllowedPubkey(ev.pubKey)) {
+        if (membersOnly) {
+            if (!banStore.isAllowedPubkey(ev.pubKey)) {
+                return PolicyResult.Rejected("restricted: only members can write to this relay; request access with a NIP-43 join request")
+            }
+        } else if (banStore.hasAllowList() && !banStore.isAllowedPubkey(ev.pubKey)) {
             return PolicyResult.Rejected("blocked: pubkey is not on the allow list")
         }
         if (!banStore.isKindAllowed(ev.kind)) {

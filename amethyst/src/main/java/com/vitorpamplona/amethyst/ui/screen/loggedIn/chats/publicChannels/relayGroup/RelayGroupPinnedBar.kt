@@ -54,11 +54,13 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 
 /**
  * Self-hiding NIP-29 pinned-message bar shown under the group's top bar. Renders
  * nothing when the group has no pins (kind-39005 empty), so it never obstructs a
- * normal chat. When there are pins it shows a single-line preview of the current
+ * normal chat. When there are pins (`e` ids or `a` addresses) it shows a single-line preview of the current
  * one; tapping [onJumpToNote] scrolls the feed to that message and, if the group
  * has more than one pin, advances to the next for the following tap (Telegram-style
  * cycling) rather than piling every pin on screen at once.
@@ -69,15 +71,23 @@ fun RelayGroupPinnedBar(
     accountViewModel: AccountViewModel,
     onJumpToNote: (Note) -> Unit,
 ) {
-    val pinnedIds = channel.pinnedEventIds
+    // The full pin list: `e` pins (regular events) and `a` pins (addressable events) interleaved.
+    val pinnedIds = channel.pins
     if (pinnedIds.isEmpty()) return
 
     // Newest pin (last in the relay's display order) surfaced first; reset when the list changes.
     var index by remember(pinnedIds) { mutableIntStateOf(pinnedIds.lastIndex) }
     val safeIndex = index.coerceIn(0, pinnedIds.lastIndex)
-    val currentId = pinnedIds[safeIndex]
+    val currentPin = pinnedIds[safeIndex]
 
-    val note = remember(currentId) { LocalCache.checkGetOrCreateNote(currentId) } ?: return
+    // An `a` pin resolves to the addressable note, whose latest version loads by address.
+    val note =
+        remember(currentPin) {
+            when (currentPin) {
+                is AddressPin -> LocalCache.getOrCreateAddressableNote(currentPin.address)
+                is EventPin -> LocalCache.checkGetOrCreateNote(currentPin.eventId)
+            }
+        } ?: return
 
     // Fetch + observe the pinned message so its author and content fill in once it loads.
     val noteState by observeNote(note, accountViewModel)

@@ -55,10 +55,11 @@ class WebBookmarkEvent(
         visitor.visit(description())
     }
 
-    fun url(): String {
-        val dTagValue = dTag()
-        return if (dTagValue.isNotEmpty()) "https://$dTagValue" else ""
-    }
+    /**
+     * The bookmarked URI. NIP-B0 only drops the scheme for `https`, so a d tag without a scheme
+     * is an https URL and anything else (`http://`, `gemini://`, `magnet:`...) is already complete.
+     */
+    fun url(): String = dTagToUrl(dTag())
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -71,23 +72,73 @@ class WebBookmarkEvent(
     companion object {
         const val KIND = 39701
 
-        fun urlToDTag(url: String): String =
-            url
-                .removePrefix("https://")
-                .removePrefix("http://")
-                .trimEnd('/')
+        private const val HTTPS_PREFIX = "https://"
 
+        // RFC 3986: scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) followed by ":"
+        private val SCHEME = Regex("^([A-Za-z][A-Za-z0-9+.\\-]*):(.*)$")
+
+        // What follows "host:" when the colon introduces a port rather than ending a scheme.
+        private val PORT = Regex("^[0-9]{1,5}([/?#].*)?$")
+
+        /**
+         * True when [uri] starts with a scheme (`http://`, `mailto:`, `magnet:`) rather than a
+         * `host[:port]` of a scheme-less https d tag. `://` always means a scheme; otherwise a
+         * dotted or `localhost` prefix, or a numeric port after the colon, means a host.
+         */
+        fun hasScheme(uri: String): Boolean {
+            val match = SCHEME.find(uri) ?: return false
+            val candidate = match.groupValues[1]
+            val rest = match.groupValues[2]
+            if (rest.startsWith("//")) return true
+            if (candidate.contains('.') || candidate.equals("localhost", ignoreCase = true)) return false
+            return !PORT.matches(rest)
+        }
+
+        /**
+         * NIP-B0 d tag: the URI itself, except that for `https` everything before the hostname
+         * (scheme, `//` and any userinfo) is omitted. Other schemes, `http` included, are kept.
+         *
+         * The spec says nothing about trailing slashes or case; this keeps the long-standing
+         * trailing-slash trim (so re-saving an old bookmark lands on the same address) and does
+         * not change case.
+         */
+        fun urlToDTag(url: String): String {
+            val trimmed = url.trim()
+            val uri =
+                if (trimmed.startsWith(HTTPS_PREFIX, ignoreCase = true)) {
+                    val afterScheme = trimmed.substring(HTTPS_PREFIX.length)
+                    val authorityEnd = afterScheme.indexOfAny(charArrayOf('/', '?', '#')).let { if (it < 0) afterScheme.length else it }
+                    val userInfoEnd = afterScheme.lastIndexOf('@', authorityEnd - 1)
+                    if (userInfoEnd >= 0) afterScheme.substring(userInfoEnd + 1) else afterScheme
+                } else {
+                    trimmed
+                }
+            return uri.trimEnd('/')
+        }
+
+        fun dTagToUrl(dTag: String): String =
+            when {
+                dTag.isEmpty() -> ""
+                hasScheme(dTag) -> dTag
+                else -> HTTPS_PREFIX + dTag
+            }
+
+        /**
+         * @param firstPublishedAt when the bookmark was first published; pass the original value when
+         * editing so it survives the replacement.
+         */
         fun build(
             url: String,
             bookmarkTitle: String?,
             description: String,
             tags: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
+            firstPublishedAt: Long = createdAt,
             initializer: TagArrayBuilder<WebBookmarkEvent>.() -> Unit = {},
         ) = eventTemplate<WebBookmarkEvent>(KIND, description, createdAt) {
             dTag(urlToDTag(url))
             bookmarkTitle?.let { title(it) }
-            publishedAt(createdAt)
+            publishedAt(firstPublishedAt)
             hashtags(tags)
             initializer()
         }

@@ -33,7 +33,7 @@ class PubKeyResponse {
                 }
 
                 is BunkerResponseError -> {
-                    SignerResult.RequestAddressed.Rejected()
+                    SignerResult.RequestAddressed.Rejected(response.error)
                 }
 
                 else -> {

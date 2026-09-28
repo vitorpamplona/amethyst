@@ -1751,6 +1751,14 @@
     <string name="relay_group_field_name">Name</string>
     <string name="relay_group_field_about">Description</string>
     <string name="relay_group_field_picture">Group picture</string>
+    <string name="relay_group_field_banner">Banner image URL</string>
+    <string name="relay_group_migration_moved_title">This group may have moved</string>
+    <string name="relay_group_migration_fork_title">This group may have a fork</string>
+    <string name="relay_group_migration_by_admins">Its admins now list it on %1$s</string>
+    <string name="relay_group_migration_by_friends">People you follow now list it on %1$s</string>
+    <string name="relay_group_migration_open">Open there</string>
+    <string name="relay_group_migration_move">Move</string>
+    <string name="relay_group_migration_dismiss">Dismiss</string>
     <string name="relay_group_add_photo">Add photo</string>
     <string name="relay_group_change_photo">Change photo</string>
     <string name="relay_group_section_discovery">Discovery</string>
@@ -2488,6 +2496,8 @@
     <string name="select_list_to_filter">Select an option to filter the feed</string>
     <string name="add_dvm_to_favorites">Add feed algorithm to favorites</string>
     <string name="remove_dvm_from_favorites">Remove from favorites</string>
+    <string name="add_follow_set_to_favorites">Add follow set to favorite feeds</string>
+    <string name="remove_follow_set_from_favorites">Remove follow set from favorite feeds</string>
     <string name="favorite_dvms_explainer">Feed algorithms you star appear here and as filter chips on the Home feed.</string>
     <string name="favorite_dvms_empty_headline">Pin your favorite algorithms</string>
     <string name="favorite_dvms_empty_step1">Tap "%1$s" below to browse algorithms.</string>
@@ -2833,8 +2843,13 @@
     <string name="relay_management_no_moderation_events">No events needing moderation</string>
     <string name="relay_management_banned_events">Banned Events</string>
     <string name="relay_management_no_banned_events">No banned events</string>
+    <string name="relay_management_allowed_events">Allowed Events</string>
+    <string name="relay_management_no_allowed_events">No allowed events</string>
+    <string name="relay_management_allow_event">Allow Event</string>
     <string name="relay_management_allowed_kinds">Allowed Kinds</string>
     <string name="relay_management_no_allowed_kinds">No allowed kinds</string>
+    <string name="relay_management_disallowed_kinds">Disallowed Kinds</string>
+    <string name="relay_management_no_disallowed_kinds">No disallowed kinds</string>
     <string name="relay_management_blocked_ips">Blocked IPs</string>
     <string name="relay_management_no_blocked_ips">No blocked IPs</string>
     <string name="relay_management_add">Add</string>
@@ -2867,6 +2882,9 @@
     <string name="relay_members_join_sent">Join request sent</string>
     <string name="relay_members_leave_sent">Leave request sent</string>
     <string name="relay_members_you_are_member">You are a member</string>
+    <string name="relay_members_invite_code">Invite code</string>
+    <string name="relay_members_invite_code_hint">This relay admits members with an invite code from its operator</string>
+    <string name="relay_members_unverifiable">This relay does not publish its identity key (NIP-11 self), so its member list cannot be verified</string>
     <string name="relay_membership_list">Relay membership list</string>
     <string name="relay_member_added">Member added to relay</string>
     <string name="relay_members_added">%1$d members added to relay</string>
@@ -4642,6 +4660,7 @@
     <string name="podcast_trailer_upload_hint">Short audio or video preview</string>
     <string name="podcast_value_error_title">Value-for-Value error</string>
     <string name="podcast_value_keysend_requires_nwc">Connect a Nostr Wallet Connect wallet to send to keysend (node) recipients.</string>
+    <string name="podcast_value_keysend_not_supported">Your wallet does not support keysend, so node recipients were skipped.</string>
     <string name="podcast_value_no_recipients">This podcast has no payable value recipients.</string>
     <string name="podcast_value_stream_requires_wallet">Connect a Nostr Wallet Connect or debit wallet to stream sats while listening.</string>
     <string name="podcast_value_user_no_lnaddress">This user has no Lightning address</string>
@@ -5290,6 +5309,7 @@
     </plurals>
     <string name="wallet_transactions_load_failed">Could not load transactions</string>
     <string name="wallet_transactions_load_more_failed">Could not load more transactions</string>
+    <string name="wallet_transactions_not_supported">Your wallet does not offer transaction history</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts or profiles have reports from your follows</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
     <string name="web_bookmark_add_title">Add Web Bookmark</string>

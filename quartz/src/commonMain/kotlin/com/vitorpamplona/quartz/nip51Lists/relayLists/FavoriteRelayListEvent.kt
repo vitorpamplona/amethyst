@@ -34,10 +34,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relayFeeds
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relaySetPointers
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.splitRelayListUpdate
@@ -63,6 +65,13 @@ class FavoriteRelayListEvent(
     suspend fun decryptPrivateRelays(signer: NostrSigner) = privateTags(signer)?.relays()
 
     suspend fun decryptRelays(signer: NostrSigner): List<NormalizedRelayUrl> = publicRelays() + (decryptPrivateRelays(signer) ?: emptyList())
+
+    /** NIP-51: besides relays, kind 10012 can point (`a`) to kind:30002 relay sets. */
+    fun publicRelaySets(): List<AddressBookmark> = tags.relaySetPointers()
+
+    suspend fun decryptPrivateRelaySets(signer: NostrSigner) = privateTags(signer)?.relaySetPointers()
+
+    suspend fun decryptRelaySets(signer: NostrSigner): List<AddressBookmark> = publicRelaySets() + (decryptPrivateRelaySets(signer) ?: emptyList())
 
     companion object {
         const val KIND = 10012

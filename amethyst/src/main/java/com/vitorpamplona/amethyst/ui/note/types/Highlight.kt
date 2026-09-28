@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -67,13 +68,16 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.ui.components.rememberTranslation
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +104,9 @@ fun RenderHighlight(
         highlight = noteEvent.quote(),
         context = noteEvent.contextOrReconstructed(),
         authorHex = noteEvent.author(),
-        url = noteEvent.inUrl(),
+        url = noteEvent.inReference(),
+        externalId = remember(noteEvent) { noteEvent.inExternalIds().firstOrNull() },
+        externalIdText = remember(noteEvent) { noteEvent.inExternalIdValues().firstOrNull() },
         textFragmentPrefix = selector?.prefix,
         textFragmentSuffix = selector?.suffix,
         postAddress = noteEvent.inPostAddress(),
@@ -176,6 +182,8 @@ fun DisplayHighlight(
     postAddress: Address?,
     postVersion: ETag?,
     makeItShort: Boolean,
+    externalId: ExternalId? = null,
+    externalIdText: String? = null,
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
@@ -251,6 +259,8 @@ fun DisplayHighlight(
             textFragmentSuffix = textFragmentSuffix,
             postAddress = postAddress,
             postVersion = postVersion,
+            externalId = externalId,
+            externalIdText = externalIdText,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -306,6 +316,8 @@ private fun DisplayQuoteAuthor(
     textFragmentSuffix: String? = null,
     postAddress: Address?,
     postVersion: ETag?,
+    externalId: ExternalId? = null,
+    externalIdText: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -362,13 +374,23 @@ private fun DisplayQuoteAuthor(
             }
         }
 
-        baseUrl != null -> {
+        // NIP-84: `r` may be a URL or any text naming the source; only a web address is a link.
+        baseUrl != null && HighlightEvent.isUrlReference(baseUrl) -> {
             val url =
                 remember(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
-                    buildTextFragmentUrl(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix)
+                    buildTextFragmentUrl(HttpUrlFormatter.addSchemeIfNeeded(baseUrl), highlightQuote, textFragmentPrefix, textFragmentSuffix)
                 }
 
             DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
+        }
+
+        // A NIP-73 source (`i` tag): a book, paper, podcast episode...
+        externalId != null -> {
+            DisplayEntryForExternalId(externalId, userBase, accountViewModel, nav)
+        }
+
+        baseUrl != null || externalIdText != null -> {
+            DisplayEntryForText(baseUrl ?: externalIdText ?: "", userBase, accountViewModel, nav)
         }
 
         userBase != null -> {
@@ -435,6 +457,35 @@ fun DisplayEntryForNote(
             onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
         )
     }
+}
+
+@Composable
+fun DisplayEntryForExternalId(
+    externalId: ExternalId,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (userBase != null) {
+        DisplayEntryForUser(userBase, accountViewModel, nav)
+        Text("-", maxLines = 1)
+    }
+    DisplayExternalId(externalId, accountViewModel, nav)
+}
+
+/** A source named in plain text (a non-URL `r` tag, or an `i` value no NIP-73 parser knows). */
+@Composable
+fun DisplayEntryForText(
+    source: String,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (userBase != null) {
+        DisplayEntryForUser(userBase, accountViewModel, nav)
+        Text("-", maxLines = 1)
+    }
+    Text(source, maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
