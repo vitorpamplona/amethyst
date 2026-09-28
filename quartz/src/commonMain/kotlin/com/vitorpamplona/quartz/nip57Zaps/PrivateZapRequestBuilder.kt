@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 
@@ -125,20 +126,46 @@ class PrivateZapRequestBuilder {
         return privateEvent
     }
 
+    /**
+     * Decrypts a private zap addressed to [signer]'s user using only `nip04Decrypt`, so it works
+     * for signers that don't hold the private key (NIP-46). Only the recipient can do this: the
+     * sender's side needs the raw key to re-derive the per-zap key.
+     */
+    suspend fun decryptReceivedZapEvent(
+        event: ZapRequestEvent,
+        signer: NostrSigner,
+    ): PrivateZapEvent {
+        val payload =
+            try {
+                PrivateZapEncryption.privateZapMessageToNip04(event.getAnonTag())
+            } catch (e: Exception) {
+                throw IllegalStateException("Could not decrypt private zap. ${e.message}")
+            }
+        return parsePrivateZap(signer.nip04Decrypt(payload, event.pubKey))
+    }
+
     fun decryptAnonTag(
         encNote: String,
         privateKey: ByteArray,
         pubKey: HexKey,
     ): PrivateZapEvent =
         try {
-            val note = PrivateZapEncryption.decryptPrivateZapMessage(encNote, privateKey, pubKey.hexToByteArray())
-            val decryptedEvent = fromJson(note)
-            if (decryptedEvent.kind == 9733) {
-                decryptedEvent as PrivateZapEvent
-            } else {
-                throw IllegalStateException("The decrypted event is not a private zap.")
-            }
+            parsePrivateZap(PrivateZapEncryption.decryptPrivateZapMessage(encNote, privateKey, pubKey.hexToByteArray()))
         } catch (e: Exception) {
             throw IllegalStateException("Could not decrypt private zap. ${e.message}")
         }
+
+    private fun parsePrivateZap(json: String): PrivateZapEvent {
+        val decryptedEvent =
+            try {
+                fromJson(json)
+            } catch (e: Exception) {
+                throw IllegalStateException("Could not decrypt private zap. ${e.message}")
+            }
+        if (decryptedEvent.kind == PrivateZapEvent.KIND) {
+            return decryptedEvent as PrivateZapEvent
+        } else {
+            throw IllegalStateException("The decrypted event is not a private zap.")
+        }
+    }
 }

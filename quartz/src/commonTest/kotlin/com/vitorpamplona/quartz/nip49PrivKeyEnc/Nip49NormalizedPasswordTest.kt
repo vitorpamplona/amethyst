@@ -18,11 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
-import com.vitorpamplona.quartz.utils.unicode.NfkcNormalizer
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-// Linux native has no platform normalizer (no ICU), so it uses Quartz's pure-Kotlin one.
-actual class UnicodeNormalizer {
-    actual fun normalizeNFKC(input: String): String = NfkcNormalizer.normalize(input)
+/**
+ * Opens a key another client encrypted under an un-normalized password, on every target.
+ * Only passes where the platform NFKC-normalizes the password the same way the producer did.
+ */
+class Nip49NormalizedPasswordTest {
+    @Test
+    fun decryptsForeignKeyTypedWithUnnormalizedPassword() {
+        // Produced by nostr-tools 2.25.2 (see jvmTest Nip49InteropTest).
+        val ncryptsec =
+            "ncryptsec1qgggze6805h7slevp5evyekxhh42fl2qk8hlla2uej8934l0f65v7xfhd2njmtdnm2ws9grf6tuzeugj59hctn3rg8dp03s8e62vycvynmf9ymcxp9sczvhx7mntl8wm8gujg00vx9rjvxxt4s8nq893"
+
+        assertEquals(
+            "3501454135014541350145413501453fefb02227e449e57cf4d3a3ce05378683",
+            Nip49().decrypt(ncryptsec, "ÅΩẛ̣"),
+        )
+    }
 }
