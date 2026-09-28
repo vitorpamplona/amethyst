@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.GroupDiscoveryC
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.toGroupConstraints
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer

@@ -18,12 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.geohash
+package com.vitorpamplona.amethyst.commons.service.georelay
 
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
-import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.concurrent.Volatile
 
 /**
  * Process-wide geohash → relay directory, shared by everything that routes
@@ -38,12 +36,17 @@ object GeohashRelays {
 
     @Volatile private var refreshed = false
 
+    /**
+     * Fetches the live directory. The app installs one at startup over its own HTTP clients, so
+     * the fetch honours the user's Tor settings; until then [ensureLoaded] keeps the fallback.
+     */
+    @Volatile var liveRelayLoader: (suspend () -> List<GeoRelay>)? = null
+
     /** Fetches the live directory once. Safe to call repeatedly; subsequent calls are no-ops. */
     suspend fun ensureLoaded(): Boolean {
         if (refreshed) return false
-        runCatching {
-            GeoRelayCsvLoader { Amethyst.instance.okHttpClients.getHttpClient(false) }.refresh(directory)
-        }
+        val loader = liveRelayLoader ?: return false
+        directory.setRelays(runCatching { loader() }.getOrDefault(emptyList()))
         val loaded = directory.size > GeoRelayDirectory.FALLBACK.size
         refreshed = loaded
         return loaded

@@ -40,7 +40,7 @@ class TorRelayState(
     val okHttpClient: DualHttpClientManager,
     val torSettingsFlow: TorSettingsFlow,
     val scope: CoroutineScope,
-) {
+) : MoneyOpRelayRouting {
     val dmRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val trustedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
 
@@ -72,7 +72,7 @@ class TorRelayState(
      * Used by the CLINK offer/debit payers so a one-off payment relay honors the money-operations
      * Tor preference instead of being treated as a generic "new" relay.
      */
-    fun registerMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
+    override fun registerMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
         if (relays.isEmpty()) return
         adHocMoneyOpCounts.update { current ->
             current.toMutableMap().apply {
@@ -81,7 +81,7 @@ class TorRelayState(
         }
     }
 
-    fun unregisterMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
+    override fun unregisterMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
         if (relays.isEmpty()) return
         adHocMoneyOpCounts.update { current ->
             current.toMutableMap().apply {

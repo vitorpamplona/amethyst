@@ -375,7 +375,7 @@ class WalletViewModel : ViewModel() {
             // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
             val response =
                 try {
-                    ClinkDebitPayer.requestBudget(acc, pointer, amountSats, frequency)
+                    ClinkDebitPayer.requestBudget(acc, Amethyst.instance.torEvaluatorFlow, pointer, amountSats, frequency)
                 } catch (_: IllegalArgumentException) {
                     null
                 }

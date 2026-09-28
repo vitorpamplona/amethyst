@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
@@ -56,6 +57,8 @@ class AndroidAccountViewModelHost(
     override val websocketBuilder: WebsocketBuilder get() = modules.websocketBuilder
 
     override val lnurlTransport: LnurlHttpTransport by lazy { OkHttpLnurlTransport(modules.roleBasedHttpClientBuilder::okHttpClientForMoney) }
+
+    override val moneyOpRelays: MoneyOpRelayRouting get() = modules.torEvaluatorFlow
 
     override val savedAccounts: Flow<Set<HexKey>> =
         LocalPreferences

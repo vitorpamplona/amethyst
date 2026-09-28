@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 
@@ -31,8 +32,7 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
  * or the fetch failed), so it never triggers the warning.
  *
  * Takes the resolved document rather than a relay URL, which is what makes it shared: the cache
- * lookup that produces one is the front end's business, the rule applied to it is not. The
- * convenience forms that read Amethyst's in-memory cache stay in the app.
+ * lookup that produces one is the front end's business, the rule applied to it is not.
  */
 fun looksLikeNonNip29Relay(relayInfo: Nip11RelayInformation): Boolean = relayInfo.supported_nips?.none { it == "29" } == true && relayInfo.self == null
 
@@ -59,3 +59,6 @@ fun isRelaySignedRelayGroup(
         relayInfo.supported_nips?.any { it == "29" } == true
     }
 }
+
+/** [isRelaySignedRelayGroup] against whatever NIP-11 document the shell has cached for the host relay. */
+fun isRelaySignedRelayGroup(channel: RelayGroupChannel): Boolean = LocalCache.appHost.relayInfo(channel.groupId.relayUrl)?.let { isRelaySignedRelayGroup(channel, it) } == true

@@ -1122,7 +1122,7 @@ class AccountViewModel(
                 requestedType
             }
 
-        ZapPaymentHandler(account).zap(
+        ZapPaymentHandler(account, host.moneyOpRelays).zap(
             note = note,
             amountMilliSats = amountInMillisats,
             pollOption = pollOption,
@@ -1227,7 +1227,7 @@ class AccountViewModel(
         val noWalletFoundStr = loadStringRes(Res.string.no_wallet_found)
         val zapErrorTitle = loadStringRes(Res.string.error_dialog_zap_error)
 
-        V4VPaymentHandler(account).pay(
+        V4VPaymentHandler(account, host.moneyOpRelays).pay(
             value = value,
             totalMilliSats = totalMilliSats,
             boostagram = boostagram,
@@ -2864,7 +2864,7 @@ class AccountViewModel(
         bolt11: String,
         onResult: (DebitResponse?) -> Unit,
     ) = launchSigner {
-        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        val response = ClinkDebitPayer.payInvoice(account, host.moneyOpRelays, pointer, bolt11)
         withContext(Dispatchers.Main) { onResult(response) }
     }
 

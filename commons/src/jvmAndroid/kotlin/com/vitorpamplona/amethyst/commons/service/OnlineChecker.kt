@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service
 
-import androidx.collection.LruCache
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.TimeUtils
 import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -33,45 +30,22 @@ import okhttp3.coroutines.executeAsync
 import okio.ByteString.Companion.toByteString
 import kotlin.coroutines.cancellation.CancellationException
 
-@Immutable data class OnlineCheckResult(
-    val timeInSecs: Long,
-    val online: Boolean,
-)
-
+/** Checks whether a stream URL answers, over OkHttp, recording the result in [OnlineStatusCache]. */
 object OnlineChecker {
-    val checkOnlineCache = LruCache<String, OnlineCheckResult>(100)
+    val checkOnlineCache get() = OnlineStatusCache.cache
 
-    fun isCachedAndOffline(url: String?): Boolean {
-        if (url.isNullOrBlank()) return false
-        val cached = checkOnlineCache.get(url)
-        return cached != null && !cached.online && cached.timeInSecs > TimeUtils.fiveMinutesAgo()
-    }
+    fun isCachedAndOffline(url: String?): Boolean = OnlineStatusCache.isCachedAndOffline(url)
 
-    fun isOnlineCached(url: String?): Boolean {
-        if (url.isNullOrBlank()) return false
-        val cached = checkOnlineCache.get(url)
-        if (cached != null && cached.timeInSecs > TimeUtils.fiveMinutesAgo()) {
-            return cached.online
-        }
-        return false
-    }
+    fun isOnlineCached(url: String?): Boolean = OnlineStatusCache.isOnlineCached(url)
 
-    fun resetIfOfflineToRetry(url: String) {
-        val cached = checkOnlineCache.get(url)
-        if (cached != null && !cached.online) {
-            checkOnlineCache.remove(url)
-        }
-    }
+    fun resetIfOfflineToRetry(url: String) = OnlineStatusCache.resetIfOfflineToRetry(url)
 
     suspend fun isOnline(
         url: String?,
         okHttpClient: (String) -> OkHttpClient,
     ): Boolean {
         if (url.isNullOrBlank()) return false
-        val cached = checkOnlineCache.get(url)
-        if (cached != null && cached.timeInSecs > TimeUtils.fiveMinutesAgo()) {
-            return cached.online
-        }
+        OnlineStatusCache.fresh(url)?.let { return it.online }
 
         return try {
             val result =
@@ -109,11 +83,11 @@ object OnlineChecker {
                     }
                 }
 
-            checkOnlineCache.put(url, OnlineCheckResult(TimeUtils.now(), result))
+            OnlineStatusCache.record(url, result)
             result
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            checkOnlineCache.put(url, OnlineCheckResult(TimeUtils.now(), false))
+            OnlineStatusCache.record(url, false)
             Log.e("LiveActivities", "Failed to check streaming url $url", e)
             false
         }

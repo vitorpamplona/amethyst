@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_not_su
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_requires_nwc
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_no_recipients
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
+import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
@@ -76,6 +77,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class V4VPaymentHandler(
     val account: Account,
+    private val moneyOpRelays: MoneyOpRelayRouting,
 ) {
     /** A resolved lnaddress share ready to pay: the share plus the BOLT-11 fetched for it. */
     class InvoicePayable(
@@ -304,7 +306,7 @@ class V4VPaymentHandler(
             is PaymentSource.ClinkDebit -> {
                 var done = 0
                 payables.forEach { payable ->
-                    val response = ClinkDebitPayer.payInvoice(account, source.wallet.pointer, payable.invoice)
+                    val response = ClinkDebitPayer.payInvoice(account, moneyOpRelays, source.wallet.pointer, payable.invoice)
                     if (response?.isOk() != true) {
                         onError(
                             loadStringRes(Res.string.error_dialog_pay_invoice_error),

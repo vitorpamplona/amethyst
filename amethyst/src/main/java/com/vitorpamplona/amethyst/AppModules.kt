@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
+import com.vitorpamplona.amethyst.commons.service.georelay.GeohashRelays
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
@@ -778,6 +780,8 @@ class AppModules(
     // event, which is why this sits next to the cache rather than in a later init block.
     init {
         cache.appHost = AmethystLocalCacheHost(this, isDebug)
+        // Geohash chats route through the live georelays directory, fetched over this app's clients.
+        GeohashRelays.liveRelayLoader = { GeoRelayCsvLoader { okHttpClients.getHttpClient(false) }.fetch() }
     }
 
     // NIP-BC onchain zap verification backend. Wired up once at app init so

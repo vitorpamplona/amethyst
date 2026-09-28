@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.quartz.experimental.clink.client.DebitClient
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
@@ -60,6 +60,7 @@ object ClinkDebitPayer {
      */
     suspend fun payInvoice(
         account: Account,
+        moneyOpRelays: MoneyOpRelayRouting,
         pointer: NDebit,
         bolt11: String,
         amountSats: Long? = null,
@@ -69,7 +70,7 @@ object ClinkDebitPayer {
         // this from Compose (Main) scopes (offer card, lightning-address row). See ClinkOfferPayer.
         withContext(Dispatchers.IO) {
             val client = clientFor(pointer, account) ?: return@withContext null
-            sendAndAwait(account, client, client.payInvoice(bolt11, amountSats), timeoutMs)
+            sendAndAwait(account, moneyOpRelays, client, client.payInvoice(bolt11, amountSats), timeoutMs)
         }
 
     /**
@@ -78,6 +79,7 @@ object ClinkDebitPayer {
      */
     suspend fun requestBudget(
         account: Account,
+        moneyOpRelays: MoneyOpRelayRouting,
         pointer: NDebit,
         amountSats: Long,
         frequency: DebitFrequency? = null,
@@ -85,7 +87,7 @@ object ClinkDebitPayer {
     ): DebitResponse? =
         withContext(Dispatchers.IO) {
             val client = clientFor(pointer, account) ?: return@withContext null
-            sendAndAwait(account, client, client.requestBudget(amountSats, frequency), timeoutMs)
+            sendAndAwait(account, moneyOpRelays, client, client.requestBudget(amountSats, frequency), timeoutMs)
         }
 
     // Debits sign with the persistent account identity (unlike offer requests, which use a
@@ -99,6 +101,7 @@ object ClinkDebitPayer {
     /** Publishes [request] to the pointer's relays and awaits the matching kind-21002 reply. */
     private suspend fun sendAndAwait(
         account: Account,
+        moneyOpRelays: MoneyOpRelayRouting,
         client: DebitClient,
         request: DebitEvent,
         timeoutMs: Long,
@@ -129,8 +132,7 @@ object ClinkDebitPayer {
         // but register here too so a freshly-added wallet paid before that flow propagates — and any
         // non-saved debit pointer — still routes under the money-operations Tor preference rather than
         // the generic `newRelaysViaTor` policy.
-        val torState = Amethyst.instance.torEvaluatorFlow
-        torState.registerMoneyOpRelays(relays)
+        moneyOpRelays.registerMoneyOpRelays(relays)
         account.client.subscribe(subId, filters, listener)
         return try {
             account.client.publish(request, relays)
@@ -146,7 +148,7 @@ object ClinkDebitPayer {
             }
         } finally {
             account.client.unsubscribe(subId)
-            torState.unregisterMoneyOpRelays(relays)
+            moneyOpRelays.unregisterMoneyOpRelays(relays)
         }
     }
 }

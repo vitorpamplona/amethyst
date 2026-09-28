@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -50,6 +51,9 @@ interface AccountViewModelHost {
 
     /** HTTP for LNURL-pay (zaps, invoices, melts), over the clients the app routes payments through. */
     val lnurlTransport: LnurlHttpTransport
+
+    /** Routes a payment's relays under the money-operations Tor preference while it runs. */
+    val moneyOpRelays: MoneyOpRelayRouting
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

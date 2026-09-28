@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightni
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
+import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
@@ -74,6 +75,7 @@ import kotlin.math.round
 
 class ZapPaymentHandler(
     val account: Account,
+    private val moneyOpRelays: MoneyOpRelayRouting,
 ) {
     @Immutable
     data class Payable(
@@ -644,7 +646,7 @@ class ZapPaymentHandler(
             items = payables,
             runRequestFor = { payable: Payable ->
                 account.scope.launch {
-                    val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
+                    val response = ClinkDebitPayer.payInvoice(account, moneyOpRelays, pointer, payable.invoice)
                     progress.step()
                     if (response?.isOk() != true) {
                         onError(

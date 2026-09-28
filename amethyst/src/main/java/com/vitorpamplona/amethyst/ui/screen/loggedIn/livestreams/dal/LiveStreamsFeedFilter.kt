@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
-import com.vitorpamplona.amethyst.commons.service.OnlineChecker
+import com.vitorpamplona.amethyst.commons.service.OnlineStatusCache
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -107,7 +107,7 @@ class LiveStreamsFeedFilter(
             items.associate { it to counter.countFollowsThatParticipateOn(it, null) }
 
         // Snapshots the status order once per item. convertStatusToOrder reads the
-        // OnlineChecker cache and the moving five-minute window, both of which can change
+        // OnlineStatusCache and the moving five-minute window, both of which can change
         // mid-sort (a background online check can update the cache). Reading it lazily inside
         // the comparator makes the ordering unstable and TimSort throws
         // "Comparison method violates its general contract!".
@@ -138,7 +138,7 @@ class LiveStreamsFeedFilter(
                 val url = event.streaming() ?: return 0
                 when (event.status()) {
                     StatusTag.STATUS.LIVE -> {
-                        if (OnlineChecker.isCachedAndOffline(url)) 0 else 2
+                        if (OnlineStatusCache.isCachedAndOffline(url)) 0 else 2
                     }
 
                     StatusTag.STATUS.PLANNED -> {

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.cache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,13 @@ interface LocalCacheHost {
      * relay-signed NIP-29 group metadata. `null` means unknown, which accepts the event.
      */
     fun relaySelfPubKey(relay: NormalizedRelayUrl): HexKey? = null
+
+    /**
+     * The relay's NIP-11 document as far as the shell has it in memory. Never fetches: `null`
+     * (or a document with nothing in it) means "not loaded yet", which callers must treat as
+     * unknown rather than as "unsupported".
+     */
+    fun relayInfo(relay: NormalizedRelayUrl): Nip11RelayInformation? = null
 
     /**
      * LNURL-pay endpoint metadata the shell has already resolved for [lnurlpUrl], used to

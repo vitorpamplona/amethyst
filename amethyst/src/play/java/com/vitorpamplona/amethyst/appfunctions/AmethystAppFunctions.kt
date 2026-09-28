@@ -1731,7 +1731,7 @@ class AmethystAppFunctions {
         pointer: NDebit,
         bolt11: String,
     ): PayOutcome {
-        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        val response = ClinkDebitPayer.payInvoice(account, Amethyst.instance.torEvaluatorFlow, pointer, bolt11)
         return when {
             response == null ->
                 PayOutcome(false, null, "CLINK debit wallet didn't respond within ${ClinkDebitPayer.DEFAULT_TIMEOUT_MS / 1000}s")
