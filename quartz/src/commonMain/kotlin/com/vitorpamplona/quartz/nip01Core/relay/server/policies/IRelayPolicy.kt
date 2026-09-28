@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 
 /**
  * Defines custom behavior for this relay.
@@ -70,6 +71,34 @@ interface IRelayPolicy {
      * @return [PolicyResult.Accepted] to allow counting, or [PolicyResult.Rejected] with a reason.
      */
     fun accept(cmd: CountCmd): PolicyResult<CountCmd>
+
+    /**
+     * Evaluates a NIP-77 NEG-OPEN, optionally rewriting its filter.
+     *
+     * By default a reconcile answers to the REQ rules: it reads the same events a REQ with its
+     * filter would, so a relay that requires AUTH, or keeps kind/pubkey allow-deny lists, applies
+     * them here without writing a second hook. Override it where the two must differ — as
+     * [LimitsPolicy] does: a REQ's `default_limit` / `max_limit` are page sizes, and a reconcile
+     * is not a page. Its bound is [com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings.maxSyncEvents],
+     * which refuses an oversized set with NEG-ERR instead of silently reconciling a truncated one.
+     *
+     * A REQ-rule rewrite into anything but ONE filter is refused: NIP-77 reconciles exactly one.
+     */
+    fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> =
+        when (val asReq = accept(ReqCmd(cmd.subId, listOf(cmd.filter)))) {
+            is PolicyResult.Rejected -> {
+                PolicyResult.Rejected(asReq.reason)
+            }
+
+            is PolicyResult.Accepted -> {
+                val filter = asReq.cmd.filters.singleOrNull()
+                when {
+                    filter == null -> PolicyResult.Rejected("error: a NEG-OPEN reconciles exactly one filter")
+                    filter === cmd.filter -> PolicyResult.Accepted(cmd)
+                    else -> PolicyResult.Accepted(NegOpenCmd(cmd.subId, filter, cmd.initialMessage))
+                }
+            }
+        }
 
     /**
      * Evaluates whether an incoming AUTH command should be accepted.

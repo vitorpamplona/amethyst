@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 
 /**
  * Enforces the per-command fields of a [RelayLimits]: rejects EVENTs whose
@@ -81,6 +82,19 @@ class LimitsPolicy(
         val clamped = capLimits(cmd.filters)
         return PolicyResult.Accepted(if (clamped === cmd.filters) cmd else CountCmd(cmd.queryId, clamped))
     }
+
+    /**
+     * A NEG-OPEN keeps the sub-id cap and never receives [RelayLimits.defaultLimit] or
+     * [RelayLimits.maxLimit]: those size a REQ's PAGE, and a reconcile is not one. It walks the
+     * filter's whole set, bounded by `NegentropySettings.maxSyncEvents` (strfry's 1,000,000 by
+     * default), which answers an oversized set with NEG-ERR `blocked: too many query results`.
+     *
+     * Clamped like a REQ, a reconcile silently covered only the newest `default_limit` events of
+     * its filter — 500 on a typical relay — and reported that as the whole set, so a mirror that
+     * trusted it believed it was in sync with a fraction of the corpus. A limit the CLIENT names
+     * is its own business and passes through.
+     */
+    override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = subscriptionRejection(cmd.subId, listOf(cmd.filter))?.let { PolicyResult.Rejected(it) } ?: PolicyResult.Accepted(cmd)
 
     /** The reason an EVENT violates a limit, or null when it's within bounds. */
     private fun eventRejection(event: Event): String? {

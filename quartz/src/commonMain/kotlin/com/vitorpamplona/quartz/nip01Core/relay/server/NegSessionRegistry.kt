@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
@@ -62,9 +61,12 @@ class NegSessionRegistry(
      * during the sync are not surfaced; clients re-open if they want
      * fresh state.
      *
-     * Access control reuses the REQ policy hook: a relay that requires
-     * AUTH or has kind/pubkey allow-deny lists applies the same rules
-     * to NEG-OPEN as it does to subscription REQs.
+     * Access control is the policy's NEG-OPEN hook, which by default runs
+     * the REQ rules: a relay that requires AUTH or has kind/pubkey
+     * allow-deny lists applies the same rules to NEG-OPEN as it does to
+     * subscription REQs. Page limits are the exception — see
+     * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy] — since the
+     * snapshot cap below bounds a reconcile.
      *
      * Two strfry-parity protections fire here:
      *  - **Per-connection session cap.** If an OPEN would push the
@@ -80,12 +82,12 @@ class NegSessionRegistry(
         cmd: NegOpenCmd,
         policy: IRelayPolicy,
     ) {
-        val gate = policy.accept(ReqCmd(cmd.subId, listOf(cmd.filter)))
+        val gate = policy.accept(cmd)
         if (gate is PolicyResult.Rejected) {
             send(NegErrMessage(cmd.subId, gate.reason))
             return
         }
-        val filters = (gate as PolicyResult.Accepted).cmd.filters
+        val filters = listOf((gate as PolicyResult.Accepted).cmd.filter)
 
         // Per-connection cap. Only fires when this is a NEW subId —
         // a same-subId re-open replaces the prior session 1-for-1.

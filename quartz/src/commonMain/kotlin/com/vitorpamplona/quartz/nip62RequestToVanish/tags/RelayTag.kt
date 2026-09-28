@@ -37,10 +37,23 @@ class RelayTag {
 
         fun shouldVanishFromEverywhere(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == EVERYWHERE
 
+        /**
+         * Whether this tag asks [relay] to vanish the author. The tag carries whatever url the
+         * client typed, so it is compared as a [NormalizedRelayUrl], not as a string: a
+         * `wss://relay.example` tag must reach the relay whose normalized url is
+         * `wss://relay.example/`. A raw string match quietly accepted the request and deleted
+         * nothing.
+         */
         fun shouldVanishFrom(
             tag: Array<String>,
             relay: NormalizedRelayUrl,
-        ) = tag.has(1) && tag[0] == TAG_NAME && (tag[1] == relay.url || tag[1] == EVERYWHERE)
+        ): Boolean {
+            if (!tag.has(1) || tag[0] != TAG_NAME) return false
+            val value = tag[1]
+            // Fast paths first: the everywhere marker, and a tag already in normalized form.
+            if (value == EVERYWHERE || value == relay.url) return true
+            return RelayUrlNormalizer.normalizeOrNull(value) == relay
+        }
 
         fun parse(tag: Array<String>): NormalizedRelayUrl? {
             ensure(tag.has(1)) { return null }
