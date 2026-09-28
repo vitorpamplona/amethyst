@@ -253,7 +253,8 @@ fun ChatMessageActionSheet(
             isPrivateBookmarkNote = false,
             isPublicBookmarkNote = false,
             isPinnedNote = false,
-            isLoggedUser = false,
+            // Seeded from the note so the first frame doesn't flash author actions on your own message.
+            isLoggedUser = accountViewModel.isLoggedUser(note.author),
             isSensitive = false,
             showSensitiveContent = null,
         ),
