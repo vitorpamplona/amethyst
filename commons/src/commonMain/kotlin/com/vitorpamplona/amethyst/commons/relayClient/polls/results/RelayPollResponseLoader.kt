@@ -76,7 +76,7 @@ class RelayPollResponseLoader(
 
     /**
      * Where a poll's votes live: the relays the poll itself nominates (NIP-88 tells respondents to
-     * publish there, and [com.vitorpamplona.amethyst.model.EventBroadcaster] obeys it), plus the
+     * publish there, and [com.vitorpamplona.amethyst.commons.model.EventBroadcaster] obeys it), plus the
      * relays we would look at for any other engagement. Same set the subscription asks.
      */
     private fun responseRelays(poll: PollEvent): Set<NormalizedRelayUrl> = (poll.relays() + pollNote.relayUrlsForReactions()).toSet()

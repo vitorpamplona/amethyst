@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
 /**
  * In-memory, warm-cached view over one account's [RelayAuthPermissionStore] (a per-account file —
  * see the Android `DataStoreRelayAuthPermissionStore` built from `accounts/<pubkey>/`). Held on the
- * [com.vitorpamplona.amethyst.model.Account] like the other state caches.
+ * [com.vitorpamplona.amethyst.commons.model.Account] like the other state caches.
  *
  * The ALLOW/DENY overrides are the only thing read on the hot NIP-42 decision path
  * ([RelayAuthPermissionLedger.decide]). They are snapshotted into memory once, right after the

@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 
 class UserProfilePinnedNotesFeedFilter(

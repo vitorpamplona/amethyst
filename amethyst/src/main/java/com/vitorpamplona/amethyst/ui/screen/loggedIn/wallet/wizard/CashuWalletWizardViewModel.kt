@@ -24,8 +24,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletDiscovery
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
@@ -198,9 +198,11 @@ class CashuWalletWizardViewModel : ViewModel() {
                         found += FoundWallet(evt, evt.createdAt, emptyList(), false, null, emptyMap(), 0L)
                         continue
                     }
+                    // A local, so the null check smart-casts: the config type now lives in commons.
+                    val privkeyHex = config.privkeyHex
                     val recoverable =
-                        if (config.privkeyHex != null && config.mints.isNotEmpty()) {
-                            state.probeRecoverableFromSeed(config.privkeyHex, config.mints)
+                        if (privkeyHex != null && config.mints.isNotEmpty()) {
+                            state.probeRecoverableFromSeed(privkeyHex, config.mints)
                         } else {
                             emptyMap()
                         }

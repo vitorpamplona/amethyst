@@ -67,6 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.DEFAULT_ONCHAIN_ZAP_SATS
+import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.onchain.DustRecipientException
@@ -121,8 +123,6 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.util.showAmount
-import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList

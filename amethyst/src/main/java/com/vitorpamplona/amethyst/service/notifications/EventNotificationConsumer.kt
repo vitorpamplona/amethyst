@@ -30,6 +30,7 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
@@ -40,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_challenge_accepted
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_your_turn
 import com.vitorpamplona.amethyst.commons.resources.app_notification_poll_channel_message
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.BadgeNotification

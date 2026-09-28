@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener

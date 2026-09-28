@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
@@ -34,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEo
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription

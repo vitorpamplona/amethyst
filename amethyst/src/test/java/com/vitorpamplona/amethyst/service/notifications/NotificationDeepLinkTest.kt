@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.chatroomRoute
 import com.vitorpamplona.amethyst.ui.isChatroomRoute
 import com.vitorpamplona.amethyst.ui.isPrivateNoteRoute

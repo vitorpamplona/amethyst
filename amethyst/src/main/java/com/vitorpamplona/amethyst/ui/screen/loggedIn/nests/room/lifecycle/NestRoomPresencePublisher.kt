@@ -25,9 +25,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import kotlinx.coroutines.DelicateCoroutinesApi

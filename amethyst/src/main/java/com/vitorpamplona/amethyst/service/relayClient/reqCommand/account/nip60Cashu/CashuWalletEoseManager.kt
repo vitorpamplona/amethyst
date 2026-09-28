@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
  *
  * This used to run from a collector inside `CashuWalletState`, on the account's own scope, which made
  * the wallet the only account-level subscription whose lifetime was decided by the model rather than
- * by a mount. It ran for every [com.vitorpamplona.amethyst.model.Account] object that happened to be
+ * by a mount. It ran for every [com.vitorpamplona.amethyst.commons.model.Account] object that happened to be
  * resident — including accounts loaded purely so pushed gift wraps could be decrypted, which have no
  * wallet anyone is looking at — and the attempt to fix that bolted a "is this pubkey subscribed
  * anywhere" flow onto the model, so a model object was reading the relay layer's bookkeeping to

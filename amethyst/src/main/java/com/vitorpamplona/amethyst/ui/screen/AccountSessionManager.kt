@@ -25,9 +25,9 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.service.notifications.ConversationShortcuts

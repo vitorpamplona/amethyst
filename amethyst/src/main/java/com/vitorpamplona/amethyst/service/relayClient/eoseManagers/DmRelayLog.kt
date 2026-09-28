@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 

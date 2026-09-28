@@ -24,7 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag

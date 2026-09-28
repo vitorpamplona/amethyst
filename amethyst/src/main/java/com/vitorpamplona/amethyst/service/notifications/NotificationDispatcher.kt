@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
@@ -323,7 +323,7 @@ class NotificationDispatcher(
      * Direct-invocation entry point for Marmot kind:445 group messages.
      * Bypasses the cache-observer path because GroupEvents are routed by
      * the `h` tag (nostr_group_id), not by `p` tag. Called from
-     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.GroupEventHandler]
+     * [com.vitorpamplona.amethyst.commons.model.GroupEventHandler]
      * once the MLS-decrypted inner event has been parsed and indexed.
      */
     override suspend fun notifyGroupMessage(

@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.AccountZapPreferencesInternal
+import com.vitorpamplona.amethyst.commons.model.DefaultOnchainZapAmounts
+import com.vitorpamplona.amethyst.commons.model.DefaultZapAmounts
+import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
+import com.vitorpamplona.amethyst.commons.model.mergeZapAmounts
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

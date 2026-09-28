@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
-import com.vitorpamplona.amethyst.model.Account
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

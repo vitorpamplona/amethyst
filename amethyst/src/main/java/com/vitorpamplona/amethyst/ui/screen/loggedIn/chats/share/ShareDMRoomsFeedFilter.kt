@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share
 
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 
 /**

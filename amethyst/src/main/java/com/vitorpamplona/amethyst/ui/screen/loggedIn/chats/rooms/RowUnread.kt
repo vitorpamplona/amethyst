@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.chats.RelayGroupServerRoomNote
@@ -32,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.publicChatChannelIdOf
 import com.vitorpamplona.amethyst.commons.model.relayGroupChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.unreadPrivateChatRoute
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordCommunityHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent

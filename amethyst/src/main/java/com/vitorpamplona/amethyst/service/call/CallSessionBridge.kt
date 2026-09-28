@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**

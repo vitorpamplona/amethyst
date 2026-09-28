@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

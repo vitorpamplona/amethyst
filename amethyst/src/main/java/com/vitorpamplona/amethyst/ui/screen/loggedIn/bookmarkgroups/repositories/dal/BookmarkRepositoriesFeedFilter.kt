@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.repositories.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.model.Account
 
 /**
  * The user's bookmarked (starred) git repositories — the public NIP-51 kind 10018

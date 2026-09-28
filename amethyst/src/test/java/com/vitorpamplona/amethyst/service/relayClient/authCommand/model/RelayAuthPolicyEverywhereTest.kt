@@ -149,7 +149,7 @@ class RelayAuthPolicyEverywhereTest {
     }
 
     /**
-     * Why the coordinator routes this through [com.vitorpamplona.amethyst.model.Account], which drops
+     * Why the coordinator routes this through [com.vitorpamplona.amethyst.commons.model.Account], which drops
      * the session grants with the flip: a grant left behind outranks the policy, so "never log in"
      * would keep authenticating exactly the relays the user had just answered "log in" for.
      */

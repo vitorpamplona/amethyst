@@ -81,7 +81,7 @@ import kotlinx.serialization.json.Json
  * Stateless w.r.t. wallet contents — each call receives the current state
  * from `CashuWalletState`. Signing and broadcast are abstracted behind the
  * [signer] + [publish] callbacks so the ops layer can be unit-tested without
- * a full [com.vitorpamplona.amethyst.model.Account] graph.
+ * a full [com.vitorpamplona.amethyst.commons.model.Account] graph.
  *
  * Per-mint [CashuMintOperations] instances are cached so repeated calls
  * against the same mint reuse the same `MintHttpClient` and avoid re-

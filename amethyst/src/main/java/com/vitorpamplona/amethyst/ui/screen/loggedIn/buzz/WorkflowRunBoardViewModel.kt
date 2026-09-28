@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRun
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent

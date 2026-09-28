@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
@@ -34,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor

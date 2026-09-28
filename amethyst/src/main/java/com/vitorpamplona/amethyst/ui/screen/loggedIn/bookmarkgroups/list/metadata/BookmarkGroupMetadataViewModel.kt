@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.bookmarkSets.BookmarkSet
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -40,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor

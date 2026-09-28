@@ -25,9 +25,9 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomPaymentHandler
 import com.vitorpamplona.amethyst.service.uploads.blossom.PaymentPromptLedger

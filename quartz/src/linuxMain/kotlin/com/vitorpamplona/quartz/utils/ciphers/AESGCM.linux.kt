@@ -39,7 +39,7 @@ actual class AESGCM actual constructor(
 
     private fun cipher() = keyDecoder.cipher()
 
-    actual override fun name(): String = "aes-gcm"
+    actual override fun name(): String = AES_GCM_NAME
 
     @OptIn(DelicateCryptographyApi::class)
     actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =

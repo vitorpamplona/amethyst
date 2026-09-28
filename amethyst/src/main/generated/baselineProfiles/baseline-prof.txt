@@ -23113,8 +23113,8 @@ SPLcom/vitorpamplona/amethyst/commons/model/AccentColorType;-><clinit>()V
 SPLcom/vitorpamplona/amethyst/commons/model/AccentColorType;-><init>(Ljava/lang/String;III)V
 SPLcom/vitorpamplona/amethyst/commons/model/AccentColorType;->valueOf(Ljava/lang/String;)Lcom/vitorpamplona/amethyst/commons/model/AccentColorType;
 SPLcom/vitorpamplona/amethyst/commons/model/AccentColorType;->values()[Lcom/vitorpamplona/amethyst/commons/model/AccentColorType;
-Lcom/vitorpamplona/amethyst/model/Account;
-Lcom/vitorpamplona/amethyst/model/AccountSettings;
+Lcom/vitorpamplona/amethyst/commons/model/Account;
+Lcom/vitorpamplona/amethyst/commons/model/AccountSettings;
 Lcom/vitorpamplona/amethyst/model/AntiSpamFilter;
 SPLcom/vitorpamplona/amethyst/model/AntiSpamFilter;-><clinit>()V
 SPLcom/vitorpamplona/amethyst/model/AntiSpamFilter;-><init>()V
@@ -23944,7 +23944,7 @@ SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatche
 Lcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1;
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1;-><init>(Lcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher;Lkotlin/coroutines/Continuation;)V
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1;->create(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
-SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1;->invokeSuspend$lambda$0(Lcom/vitorpamplona/amethyst/model/Account;Lcom/vitorpamplona/amethyst/model/Account;)Z
+SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1;->invokeSuspend$lambda$0(Lcom/vitorpamplona/amethyst/commons/model/Account;Lcom/vitorpamplona/amethyst/commons/model/Account;)Z
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$$ExternalSyntheticLambda0;
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$$ExternalSyntheticLambda0;-><init>()V
@@ -23952,7 +23952,7 @@ SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatche
 Lcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;-><init>(Lcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher;Lkotlin/coroutines/Continuation;)V
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;->create(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
-SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;->invoke(Lcom/vitorpamplona/amethyst/model/Account;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;->invoke(Lcom/vitorpamplona/amethyst/commons/model/Account;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;->invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 SPLcom/vitorpamplona/amethyst/service/notifications/NwcPaymentNotificationWatcher$start$1$2;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/vitorpamplona/amethyst/service/notifications/PokeyReceiver;
@@ -24802,7 +24802,7 @@ Lcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;
 SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;-><clinit>()V
 SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;-><init>(Lcom/vitorpamplona/amethyst/model/accountsCache/AccountCacheState;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lcom/vitorpamplona/amethyst/LocalPreferences;Lkotlinx/coroutines/CoroutineScope;)V
 SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;->getAccountContent()Lkotlinx/coroutines/flow/StateFlow;
-SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;->loggedInAccount()Lcom/vitorpamplona/amethyst/model/Account;
+SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;->loggedInAccount()Lcom/vitorpamplona/amethyst/commons/model/Account;
 SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;->loginWithDefaultAccount$default(Lcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;->loginWithDefaultAccount(Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 SPLcom/vitorpamplona/amethyst/ui/screen/AccountSessionManager;->loginWithDefaultAccountIfLoggedOff()V

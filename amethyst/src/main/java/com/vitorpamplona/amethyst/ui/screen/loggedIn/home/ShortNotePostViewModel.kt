@@ -35,6 +35,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -78,7 +79,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.location.LocationState

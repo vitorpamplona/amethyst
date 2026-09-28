@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
-import com.vitorpamplona.amethyst.model.CallTurnServer
+import com.vitorpamplona.amethyst.commons.model.CallTurnServer
 import org.webrtc.PeerConnection
 
 object IceServerConfig {

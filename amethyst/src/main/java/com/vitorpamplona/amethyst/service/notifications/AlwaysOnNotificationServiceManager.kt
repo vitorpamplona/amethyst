@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -58,9 +58,9 @@ import kotlinx.coroutines.launch
  *   and expects the one they land on to be current, so all of them keep their own notifications,
  *   DMs and gift wraps live. This costs nothing once the app is away — it ends with the screen.
  * - **While the app is away: only the accounts that opted in**, via
- *   [com.vitorpamplona.amethyst.model.AccountSettings.alwaysOnNotificationService] ("Keep this
+ *   [com.vitorpamplona.amethyst.commons.model.AccountSettings.alwaysOnNotificationService] ("Keep this
  *   account active in the background") or their NIP-46 signer toggle
- *   ([com.vitorpamplona.amethyst.model.AccountSettings.nip46SignerEnabled]).
+ *   ([com.vitorpamplona.amethyst.commons.model.AccountSettings.nip46SignerEnabled]).
  *
  * That is what the setting's name promises, and for a while it did not hold: participation gated
  * subscriptions everywhere, so an account you had not opted in for showed no notifications even

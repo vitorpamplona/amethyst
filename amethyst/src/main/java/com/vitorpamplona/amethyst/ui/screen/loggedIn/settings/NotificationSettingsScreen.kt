@@ -63,6 +63,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.battery_optimization_description
 import com.vitorpamplona.amethyst.commons.resources.battery_optimization_fix_now
@@ -89,7 +90,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile

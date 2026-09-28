@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
@@ -28,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.GroupDiscoveryC
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.toGroupConstraints
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

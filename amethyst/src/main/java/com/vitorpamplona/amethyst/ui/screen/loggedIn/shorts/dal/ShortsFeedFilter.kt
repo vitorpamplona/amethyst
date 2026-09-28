@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.feeds.SupportedContent
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -30,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.video.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent

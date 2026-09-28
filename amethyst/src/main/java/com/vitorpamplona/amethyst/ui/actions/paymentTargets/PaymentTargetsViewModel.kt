@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.actions.paymentTargets
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import kotlinx.coroutines.flow.MutableStateFlow

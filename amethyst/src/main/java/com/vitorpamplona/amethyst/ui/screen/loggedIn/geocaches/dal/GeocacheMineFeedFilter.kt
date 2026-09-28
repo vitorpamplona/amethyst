@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.relayClient.geocaches.GeocacheListingKinds
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 
 /**

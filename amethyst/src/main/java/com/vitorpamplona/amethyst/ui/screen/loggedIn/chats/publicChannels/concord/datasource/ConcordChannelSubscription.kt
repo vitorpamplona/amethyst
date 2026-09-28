@@ -120,7 +120,7 @@ fun ConcordChannelPreload(accountViewModel: AccountViewModel) {
  * ([ConcordChannelFilterAssembler]) carries brand-new editions in real time, but it advances a
  * `since` cursor and rides the relay's per-filter cap, so it can miss an edition below the high-water
  * mark or a cropped initial page — either of which folds a partial channel list / stale roster.
- * [com.vitorpamplona.amethyst.model.Account.syncConcordControlPlanes] closes both by re-fetching the
+ * [com.vitorpamplona.amethyst.commons.model.Account.syncConcordControlPlanes] closes both by re-fetching the
  * whole plane with no `since`, paging past the cap.
  *
  * It fires only on the **events** that can create a gap — never on a wall-clock poll, because a

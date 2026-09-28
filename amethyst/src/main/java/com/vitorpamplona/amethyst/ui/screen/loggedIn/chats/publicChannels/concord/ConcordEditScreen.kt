@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 /**
  * Edit a Concord community's metadata (name / description / icon). Reuses the shared
  * [ConcordMetadataFields] hero + fields, prefilled from the folded Control Plane, and
- * saves a new metadata edition via [com.vitorpamplona.amethyst.model.Account.editConcordMetadata]
+ * saves a new metadata edition via [com.vitorpamplona.amethyst.commons.model.Account.editConcordMetadata]
  * — honored on fold only when this account holds MANAGE_METADATA (or is the owner).
  */
 @OptIn(ExperimentalMaterial3Api::class)

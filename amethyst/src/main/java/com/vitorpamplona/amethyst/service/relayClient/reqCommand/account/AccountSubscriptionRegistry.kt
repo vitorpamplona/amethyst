@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 

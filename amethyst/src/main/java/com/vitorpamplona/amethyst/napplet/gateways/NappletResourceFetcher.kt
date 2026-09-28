@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.napplet.gateways
 
 import android.util.Base64
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceResult
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event

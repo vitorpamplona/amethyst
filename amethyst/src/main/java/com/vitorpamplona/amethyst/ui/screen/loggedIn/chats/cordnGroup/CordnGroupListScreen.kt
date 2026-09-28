@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.ui.CoordinatorHealthRow
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

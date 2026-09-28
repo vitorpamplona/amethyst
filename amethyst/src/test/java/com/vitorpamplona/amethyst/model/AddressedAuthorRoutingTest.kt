@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.EventBroadcaster
+import com.vitorpamplona.amethyst.commons.model.addressedAuthors
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.junit.Assert.assertEquals

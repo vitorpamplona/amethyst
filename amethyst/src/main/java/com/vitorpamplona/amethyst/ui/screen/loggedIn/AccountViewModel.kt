@@ -42,8 +42,12 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Dao
+import com.vitorpamplona.amethyst.commons.model.InMemoryGeohashIdentityStore
+import com.vitorpamplona.amethyst.commons.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -54,11 +58,13 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
@@ -117,14 +123,8 @@ import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.InMemoryGeohashIdentityStore
-import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
-import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
-import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
@@ -2042,7 +2042,7 @@ class AccountViewModel(
 
     fun reactionRowItemsFlow() = account.settings.syncedSettings.reactions.reactionRowItems
 
-    fun changeReactionRowItems(items: List<com.vitorpamplona.amethyst.model.ReactionRowItem>) =
+    fun changeReactionRowItems(items: List<com.vitorpamplona.amethyst.commons.model.ReactionRowItem>) =
         launchSigner {
             account.changeReactionRowItems(items)
         }
@@ -2055,7 +2055,7 @@ class AccountViewModel(
         viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
     }
 
-    fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.model.VideoPlayerButtonItem>) =
+    fun changeVideoPlayerButtonItems(items: List<com.vitorpamplona.amethyst.commons.model.VideoPlayerButtonItem>) =
         launchSigner {
             account.changeVideoPlayerButtonItems(items)
         }
@@ -2119,7 +2119,7 @@ class AccountViewModel(
     /**
      * Publish any pending picker edits now. Called when a picker screen leaves the composition or the
      * app stops, so an edit is never left sitting only in memory: synced settings have no local copy
-     * of their own — [com.vitorpamplona.amethyst.model.AccountSettings.backupAppSpecificData], written
+     * of their own — [com.vitorpamplona.amethyst.commons.model.AccountSettings.backupAppSpecificData], written
      * when the published event comes back through the collector, *is* the local copy.
      */
     fun flushPickerPublish() = pickerPublisher.flush()

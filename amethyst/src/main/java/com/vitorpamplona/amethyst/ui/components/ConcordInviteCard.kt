@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
  * NIP-29's `RelayGroupCard`. Tapping the card opens the redeem/join flow
  * ([Route.ConcordInvite], which keeps the full URL so the fragment token
  * survives). It fetches + unlocks the kind-33301 bundle in the background (via
- * [com.vitorpamplona.amethyst.model.Account.peekConcordInvite]) to fill in the
+ * [com.vitorpamplona.amethyst.commons.model.Account.peekConcordInvite]) to fill in the
  * community name; until then it shows a stable placeholder so layout never jumps.
  *
  * Degrades to [ClickableConcordInviteLink] (a plain link) if the URL doesn't parse.

@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_settings_video_quality
 import com.vitorpamplona.amethyst.commons.resources.download_to_phone
@@ -59,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.VolumeBottomIconSize
-import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 

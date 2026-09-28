@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState

@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -44,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity

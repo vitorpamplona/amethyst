@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.content.Context
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Bolt12ZapFailure
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -42,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightni
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage

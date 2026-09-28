@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLink
 import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorLinkFactory
 import com.vitorpamplona.amethyst.commons.cordn.CordnHandedOffException
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
-import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.AvailableKeyPackage
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ConsumedJoinRequestRef

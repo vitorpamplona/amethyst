@@ -97,7 +97,7 @@ private sealed interface RedeemState {
  * the user's own identity to those relays, and writes the community into the user's
  * private kind-13302 list. Doing that on arrival turned any link into a one-click
  * deanonymize-and-enroll primitive, so the screen now opens on a local-only preview
- * and only calls [com.vitorpamplona.amethyst.model.Account.joinConcordViaInvite] from
+ * and only calls [com.vitorpamplona.amethyst.commons.model.Account.joinConcordViaInvite] from
  * the Join button.
  *
  * Everything shown before that tap comes from decoding the URL itself

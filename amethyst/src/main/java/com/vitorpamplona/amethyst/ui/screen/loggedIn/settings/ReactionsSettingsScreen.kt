@@ -60,6 +60,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
+import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings
 import com.vitorpamplona.amethyst.commons.resources.reactions_settings_boost
@@ -84,8 +86,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.model.ReactionRowAction
-import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 

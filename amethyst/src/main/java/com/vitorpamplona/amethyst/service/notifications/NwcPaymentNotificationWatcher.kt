@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.service.notifications.renderers.NwcPaymentNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

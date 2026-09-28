@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo

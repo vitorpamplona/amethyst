@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.VideoButtonLocation
+import com.vitorpamplona.amethyst.commons.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.captions_turn_off
 import com.vitorpamplona.amethyst.commons.resources.captions_turn_on
@@ -70,8 +72,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.model.VideoButtonLocation
-import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.cast.resolveCastLiveness

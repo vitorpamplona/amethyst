@@ -86,7 +86,7 @@ class CallSession(
     private val publishWrap: suspend (EphemeralGiftWrapEvent) -> Unit,
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
     localPubKey: HexKey,
-    private val settingsProvider: () -> com.vitorpamplona.amethyst.model.AccountSettings,
+    private val settingsProvider: () -> com.vitorpamplona.amethyst.commons.model.AccountSettings,
 ) : AutoCloseable {
     private var peerSessionMgr = PeerSessionManager(localPubKey)
 

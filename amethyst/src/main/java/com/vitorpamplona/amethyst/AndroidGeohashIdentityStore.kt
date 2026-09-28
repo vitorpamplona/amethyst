@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst
 
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.model.GeohashIdentityStore
 import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
-import com.vitorpamplona.amethyst.model.GeohashIdentityStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub

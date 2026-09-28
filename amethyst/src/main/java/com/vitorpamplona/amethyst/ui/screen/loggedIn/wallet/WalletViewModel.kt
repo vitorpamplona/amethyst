@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.send_payment_failed
@@ -41,8 +43,6 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_mor
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_not_supported
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency

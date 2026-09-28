@@ -33,7 +33,7 @@ import kotlinx.coroutines.delay
  *
  * Not a live subscription: it drains one `limit:1` REQ per channel once (the wraps ingest through the
  * normal cache path and the always-on plane subscription keeps them fresh afterward — see
- * [com.vitorpamplona.amethyst.model.Account.warmConcordChannelPreviews]). It re-runs when a fold
+ * [com.vitorpamplona.amethyst.commons.model.Account.warmConcordChannelPreviews]). It re-runs when a fold
  * changes the channel set, debounced so the cold-boot burst of fold revisions coalesces into one warm.
  */
 @Composable
@@ -59,7 +59,7 @@ fun ConcordChannelPreviewLoader(
  * high in the logged-in tree from `ConcordChannelPreload`. This is why the Messages inbox shows a last
  * message for channels the user never opened — one drain covers all joined communities at once.
  *
- * A single [com.vitorpamplona.amethyst.model.Account.warmConcordChannelPreviews] call groups every
+ * A single [com.vitorpamplona.amethyst.commons.model.Account.warmConcordChannelPreviews] call groups every
  * community's per-channel `limit:1` filters by relay, so there is one REQ per relay (not one live
  * subscription per community). Debounced on the fold revision so the cold-boot burst warms once.
  */

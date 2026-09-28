@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnKeyPackageRow
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_none
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
@@ -73,8 +75,6 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_keypackages_withdraw_o
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.model.cordn.CordnKeyPackageRow
-import com.vitorpamplona.amethyst.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection

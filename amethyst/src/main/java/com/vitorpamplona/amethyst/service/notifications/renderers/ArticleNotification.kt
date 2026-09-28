@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_message
 import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_message_highlight
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher

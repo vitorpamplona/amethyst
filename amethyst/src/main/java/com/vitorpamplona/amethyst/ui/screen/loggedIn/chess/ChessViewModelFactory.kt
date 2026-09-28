@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStore
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
-import com.vitorpamplona.amethyst.model.Account
 
 /**
  * Factory for the shared [ChessViewModel], wired with the Android adapters.

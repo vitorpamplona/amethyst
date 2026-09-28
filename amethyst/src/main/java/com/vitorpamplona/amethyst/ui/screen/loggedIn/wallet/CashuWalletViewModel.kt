@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeRedeemError
 import com.vitorpamplona.amethyst.commons.cashu.ops.requireP2pkRedeemable
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto

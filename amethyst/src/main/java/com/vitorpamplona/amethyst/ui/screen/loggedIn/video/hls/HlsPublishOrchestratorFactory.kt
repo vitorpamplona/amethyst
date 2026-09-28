@@ -26,8 +26,8 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.davotoula.lightcompressor.hls.HlsContentTypes
 import com.davotoula.lightcompressor.hls.HlsUploadHelper
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.service.upload.HlsPublishState
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.getThumbnail

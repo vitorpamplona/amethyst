@@ -623,7 +623,7 @@ private fun CashuHistoryFooter(
 /**
  * Banner that surfaces unfinished mint quotes — tappable to resume the
  * receive flow with the stored invoice. Driven by
- * [com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState.pendingQuotes].
+ * [com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState.pendingQuotes].
  *
  * Replaces the earlier auto-popup behaviour which re-surfaced the Receive
  * dialog on every entry to the screen.

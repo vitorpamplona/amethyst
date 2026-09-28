@@ -61,6 +61,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.VideoButtonLocation
+import com.vitorpamplona.amethyst.commons.model.VideoPlayerAction
+import com.vitorpamplona.amethyst.commons.model.VideoPlayerButtonItem
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_captions
@@ -89,9 +92,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.model.VideoButtonLocation
-import com.vitorpamplona.amethyst.model.VideoPlayerAction
-import com.vitorpamplona.amethyst.model.VideoPlayerButtonItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 

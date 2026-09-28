@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnCoverage
+import com.vitorpamplona.amethyst.commons.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -119,8 +121,6 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
-import com.vitorpamplona.amethyst.model.cordn.CordnCoverage
-import com.vitorpamplona.amethyst.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

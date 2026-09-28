@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_banner
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_banner_dismiss
@@ -58,7 +59,6 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_rejecte
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_success
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

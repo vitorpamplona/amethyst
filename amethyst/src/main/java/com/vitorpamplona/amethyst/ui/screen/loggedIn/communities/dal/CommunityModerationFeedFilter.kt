@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.latestCommunityRules
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.violatesCommunityRules
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.navigation.routes.THREAD_VIEW_KINDS
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer

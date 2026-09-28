@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.nwc
 
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_no_response_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 

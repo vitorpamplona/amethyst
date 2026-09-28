@@ -44,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.DEFAULT_ONCHAIN_ZAP_SATS
+import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
@@ -97,8 +99,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.showAmount
-import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo

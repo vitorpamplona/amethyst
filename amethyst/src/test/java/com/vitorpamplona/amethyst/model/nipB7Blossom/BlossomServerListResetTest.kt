@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nipB7Blossom
 
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.resetTargetOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

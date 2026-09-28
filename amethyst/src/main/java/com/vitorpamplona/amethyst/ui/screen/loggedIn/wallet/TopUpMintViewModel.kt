@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod

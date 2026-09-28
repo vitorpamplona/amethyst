@@ -26,12 +26,12 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_decrypt_failed
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.napplet.label
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
