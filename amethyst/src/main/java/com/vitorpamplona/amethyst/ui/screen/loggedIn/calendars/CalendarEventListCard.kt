@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarAppointmentView
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -75,6 +76,8 @@ fun CalendarEventListCard(
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
+    // Drawn inside the card under the appointment, for lenses that annotate it (who's going).
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val view = note.appointmentView() ?: return
     val context = LocalContext.current
@@ -118,51 +121,7 @@ fun CalendarEventListCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                view.title?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                range?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                relative?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                view.location?.let {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            symbol = MaterialSymbols.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.size(4.dp))
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                CalendarAppointmentLines(view, range, relative)
                 val image = view.image
                 val summary = view.summary
                 if (!image.isNullOrBlank()) {
@@ -189,11 +148,71 @@ fun CalendarEventListCard(
                 }
             }
         }
+
+        footer?.invoke()
+    }
+}
+
+/**
+ * Title, time range, relative time and location of an appointment — the text half of every
+ * calendar row. Shared by the calendar list card and the feed's RSVP card so the two cannot
+ * disagree about how an event reads. Pass a null [relative] where the caller shows it elsewhere.
+ */
+@Composable
+internal fun CalendarAppointmentLines(
+    view: CalendarAppointmentView,
+    range: String?,
+    relative: String?,
+) {
+    view.title?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    range?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    relative?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    view.location?.let {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                symbol = MaterialSymbols.LocationOn,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.size(4.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
 @Composable
-private fun CalendarDateBadge(startSeconds: Long?) {
+internal fun CalendarDateBadge(startSeconds: Long?) {
     if (startSeconds == null) {
         Box(
             modifier = Modifier.size(width = 52.dp, height = 60.dp),

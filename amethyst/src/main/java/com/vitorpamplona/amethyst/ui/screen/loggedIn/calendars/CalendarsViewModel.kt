@@ -31,31 +31,49 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.FollowsGoing
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeFollowsGoing
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavFilter
 import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarsViewMode
+import com.vitorpamplona.amethyst.commons.relayClient.calendars.CalendarAppointmentKinds
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Everything the calendar screen is *looking at*: which lens is open, which calendar the feed is
@@ -261,6 +279,122 @@ class CalendarsViewModel : ViewModel() {
             )
 
     // ------------------------------------------------------------------------------------------
+    // Where the people in the selected list are going
+    // ------------------------------------------------------------------------------------------
+
+    /**
+     * What decides whose RSVPs count: the screen's top-nav list and the account's mute state,
+     * handed over as the account's own flows so a list switch or a new mute re-runs the fold.
+     */
+    private data class AttendeeInputs(
+        val lists: StateFlow<IFeedTopNavFilter>,
+        val hidden: StateFlow<LiveHiddenUsers>,
+    )
+
+    private val attendeeInputs = MutableStateFlow<AttendeeInputs?>(null)
+
+    /**
+     * Every kind-31925 note seen while this screen lives, held strongly.
+     *
+     * `LocalCache.addressables` keeps its values by weak reference, and nothing else in the app
+     * references an RSVP by someone else: the calendar feed lists appointments, not answers. So
+     * the RSVPs the screen's subscription pulls in while the user is on another lens could be
+     * collected before they ever open "Friends going" — and the subscription's EOSE cursor has
+     * already moved past them, so they would not be asked for again. Pinning them here, from the
+     * moment the screen binds, is what lets the lens be opened later and still see them. They
+     * are released with the screen's back-stack entry. Kind-31925 events are a few hundred bytes.
+     */
+    private val heldRsvps: MutableSet<AddressableNote> = ConcurrentHashMap.newKeySet()
+
+    private var rsvpPinner: Job? = null
+
+    /** Idempotent — the screen calls it on every composition. */
+    fun bindAttendeeFilter(
+        lists: StateFlow<IFeedTopNavFilter>,
+        hidden: StateFlow<LiveHiddenUsers>,
+    ) {
+        val bound = AttendeeInputs(lists, hidden)
+        if (attendeeInputs.value != bound) attendeeInputs.value = bound
+
+        if (rsvpPinner == null) {
+            rsvpPinner =
+                viewModelScope.launch(Dispatchers.Default) {
+                    heldRsvps.addAll(LocalCache.addressables.filterIntoSet(CalendarRSVPEvent.KIND))
+                    LocalCache
+                        .observeNewEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
+                        .collect { rsvp -> LocalCache.getAddressableNoteIfExists(rsvp.address())?.let(heldRsvps::add) }
+                }
+        }
+    }
+
+    /**
+     * The upcoming appointments the people in the selected list said they're going to, soonest
+     * first, plus the appointments they RSVP'd to that are not in the cache yet (for the lens to
+     * fetch). Null until the first fold lands, so the lens can tell "loading" from "nobody".
+     *
+     * Wakes on one cache observer covering both kinds it reads: RSVPs, and appointments, because
+     * an RSVP usually lands before the appointment it answers — the host is often someone the
+     * viewer does not follow — and the row can only be placed once the appointment's date is
+     * known. The observer is only a wake-up signal; each fold re-reads the RSVPs from the
+     * addressable cache's kind index, which holds exactly the latest version of each one.
+     *
+     * That replaced `observeEvents`, whose seed walks every regular note in the cache (its
+     * `filter()` scans `notes` whatever the kinds) and which then copies its whole list and id
+     * set on every insert — quadratic on the burst of RSVPs a list switch pulls in, each copy
+     * followed by a full re-fold. Here the cheap part (combining the signal with the list and
+     * mute state) runs per event, and [conflate] lets the fold skip every signal that arrived
+     * while the previous fold was running.
+     *
+     * `now` is read on each fold rather than ticking on a timer: an event that ends while the lens
+     * is open lingers until the next RSVP or appointment arrives, which is harmless.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val followsGoing: StateFlow<FollowsGoing?> =
+        attendeeInputs
+            .filterNotNull()
+            .flatMapLatest { (lists, hidden) ->
+                combine(
+                    LocalCache
+                        .observeNewEvents<Event>(Filter(kinds = FOLLOWS_GOING_KINDS))
+                        .conflate()
+                        .map { }
+                        .onStart { emit(Unit) },
+                    lists,
+                    hidden,
+                ) { _, list, hiddenUsers ->
+                    FilterByListParams.create(list, hiddenUsers)
+                }.conflate()
+                    .map(::foldFollowsGoing)
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    private fun foldFollowsGoing(params: FilterByListParams): FollowsGoing {
+        // The index scan sees an RSVP the pinner has not reached yet; the pin set holds the rest.
+        val rsvpNotes = LocalCache.addressables.filterIntoSet(CalendarRSVPEvent.KIND)
+        heldRsvps.addAll(rsvpNotes)
+        val rsvps = rsvpNotes.mapNotNull { it.event as? CalendarRSVPEvent }
+
+        // Relays only matter to a relay-scoped list, so the others skip the lookup.
+        val relaysOf: (CalendarRSVPEvent) -> List<NormalizedRelayUrl> =
+            if (params.followLists is RelayTopNavFilter) {
+                val byId = rsvpNotes.associateBy({ it.event?.id }, { it.relays })
+                ({ byId[it.id] ?: emptyList() })
+            } else {
+                ({ emptyList() })
+            }
+
+        return computeFollowsGoing(
+            rsvps = rsvps,
+            isAttendee = { params.match(it, relaysOf(it)) },
+            appointmentFor = LocalCache::getOrCreateAddressableNote,
+            nowSeconds = TimeUtils.now(),
+            isAppointmentVisible = { params.isHiddenList || params.isNotHidden(it.pubKeyHex) },
+        )
+    }
+
+    val followsGoingListState = LazyListState()
+
+    // ------------------------------------------------------------------------------------------
     // Paging
     // ------------------------------------------------------------------------------------------
 
@@ -304,6 +438,8 @@ class CalendarsViewModel : ViewModel() {
          * list, short enough that a backgrounded screen stops holding observers open.
          */
         private const val STOP_TIMEOUT_MS = 5_000L
+
+        private val FOLLOWS_GOING_KINDS = CalendarAppointmentKinds + CalendarRSVPEvent.KIND
     }
 }
 
