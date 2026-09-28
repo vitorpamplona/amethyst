@@ -158,6 +158,23 @@ redesign.
 `AccountViewModel` moves after the `Account` group, into `commons/viewmodels` (jvmAndroid
 first).
 
+### Re-measured 2026-09-28, after `Account` moved
+
+With `Account` in commons, `AccountViewModel` (3,334 lines) sits on a headless group of **64
+app files, 11,322 lines** (the relay-subscription coordinator and its assemblers, the chat-room
+read markers, the Clink/call/nest bridges, `ReloadMintViewModel`, …). Leaving that group are
+**25 edges**, in four kinds:
+
+| Kind | Edges | Cut |
+|---|---|---|
+| A type or constant borrowed from a composable or Android file | `NOTIFICATION_LAST_READ_KEY` (NotificationScreen), `ZapAmountCommentNotification` (MultiSetCompose), `ZapraiserStatus` (ReactionsRow), `CombinedZap` (CardFeedContentState), `sats` (ReloadMintScreen) | move the declaration to commons |
+| A JVM-only file that is otherwise headless | `NwcNotificationsEoseManager`, `FollowingGeohashChatSubAssembler`, `CardFeedContentState`, `EventSync`, `AccountFeedContentStates` (a `ComponentCallbacks2` level constant) | KMP swaps, then it joins the group |
+| An Android service it calls | `ZapPaymentHandler`, `V4VPaymentHandler`, `MeltProcessor`, `LightningAddressResolver`, `payViaIntent`, `dismissNotificationForEvent`, `MediaSaverToDisk`, `MarmotGroupIconUploader`, `UrlCachedPreviewer`, `powKindLabelRes`, `LocalPreferences`/`AccountInfo`, `Amethyst.instance` (6 reads in the VM, 1 in `ClinkDebitPayer`), `isDebug`, `checkNotInMainThread` | ports / constructor parameters, as for `Account` |
+| Its own Android calls | `Context` parameters (payments, media save, NWC setup), `Toast` + `Handler(Looper)`, `Uri`, `android.util.LruCache` (5), `NotificationManager` via `ContextCompat` | `androidx.collection.LruCache`; the rest behind the same ports |
+
+The preview helpers at the bottom of the file (`mockAccountViewModel`, `mockVitorAccountViewModel`)
+wire app classes and stay in the app, in their own file.
+
 ## Sequence
 
 1. **Docs** (this plan, and the rule changes in CLAUDE.md, both ARCHITECTURE files, three
