@@ -35,3 +35,6 @@ operator fun BigDecimal.minus(other: BigDecimal): BigDecimal = subtract(other)
  * the platform compilations and breaks `compileCommonMainKotlinMetadata`.
  */
 expect fun BigDecimal.toLongValue(): Long
+
+/** The nearest Double, as Number.toDouble() gives on every platform. An expect for [toLongValue]'s reason. */
+expect fun BigDecimal.toDoubleValue(): Double

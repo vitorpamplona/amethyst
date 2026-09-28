@@ -21,3 +21,5 @@
 package com.vitorpamplona.quartz.utils
 
 actual fun BigDecimal.toLongValue(): Long = toLong()
+
+actual fun BigDecimal.toDoubleValue(): Double = toDouble()

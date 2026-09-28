@@ -44,7 +44,7 @@ private val dfN =
         override fun initialValue() = DecimalFormat("#")
     }
 
-fun showAmountInteger(amount: BigDecimal?): String {
+actual fun showAmountInteger(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < MinDisplayableAmount) return ""
     if (amount < TenKilo) return dfN.get()?.format(amount) ?: ""

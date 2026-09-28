@@ -18,8 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.amethyst.commons.util
 
-actual fun BigDecimal.toLongValue(): Long = toLong()
+import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.toDoubleValue
+import platform.Foundation.NSLocale
+import platform.Foundation.currentLocale
+import platform.Foundation.decimalSeparator
 
-actual fun BigDecimal.toDoubleValue(): Double = toDouble()
+private fun localDecimalSeparator(): Char = NSLocale.currentLocale.decimalSeparator.firstOrNull() ?: '.'
+
+actual fun showAmount(amount: BigDecimal?): String = amount?.let { compactAmount(it.toDoubleValue(), withDecimal = true, localDecimalSeparator()) } ?: ""
+
+actual fun showAmountInteger(amount: BigDecimal?): String = amount?.let { compactAmount(it.toDoubleValue(), withDecimal = false, localDecimalSeparator()) } ?: ""

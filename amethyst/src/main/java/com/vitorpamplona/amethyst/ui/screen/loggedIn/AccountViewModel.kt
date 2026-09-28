@@ -179,9 +179,12 @@ import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 import com.vitorpamplona.quartz.podcasts.PodcastShow
 import com.vitorpamplona.quartz.podcasts.PodcastValue
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
+import com.vitorpamplona.quartz.utils.plus
+import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -814,10 +817,10 @@ class AccountViewModel(
         return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 val nwc = account.zaps.calculateZappedAmount(zappedNote)
-                showAmount(nwc + java.math.BigDecimal(ownPendingOnchain))
+                showAmount(nwc + BigDecimal(ownPendingOnchain))
             }
         } else {
-            showAmount(zappedNote.zapsAmount + java.math.BigDecimal(ownPendingOnchain))
+            showAmount(zappedNote.zapsAmount + BigDecimal(ownPendingOnchain))
         }
     }
 
@@ -825,40 +828,21 @@ class AccountViewModel(
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
         return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val newZapAmount = account.zaps.calculateZappedAmount(zappedNote)
-                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
-
-                if (percentage > 1) {
-                    percentage = 1f
-                }
-
-                val newZapraiserProgress = percentage
-                val newZapraiserLeft =
-                    if (percentage > 0.99) {
-                        "0"
-                    } else {
-                        showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
-                    }
-
-                ZapraiserStatus(newZapraiserProgress, newZapraiserLeft)
+                zapraiserStatus(account.zaps.calculateZappedAmount(zappedNote), zapraiserAmount)
             }
         } else {
-            var percentage = zappedNote.zapsAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
-
-            if (percentage > 1) {
-                percentage = 1f
-            }
-
-            val newZapraiserProgress = percentage
-            val newZapraiserLeft =
-                if (percentage > 0.99) {
-                    "0"
-                } else {
-                    showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
-                }
-
-            ZapraiserStatus(newZapraiserProgress, newZapraiserLeft)
+            zapraiserStatus(zappedNote.zapsAmount, zapraiserAmount)
         }
+    }
+
+    private fun zapraiserStatus(
+        zapped: BigDecimal,
+        goal: Long,
+    ): ZapraiserStatus {
+        // A goal of zero is met by definition (the BigDecimal division this replaces threw on it).
+        val percentage = if (goal > 0) (zapped.toDoubleValue() / goal).toFloat().coerceAtMost(1f) else 1f
+        val left = if (percentage > 0.99) "0" else showAmount(BigDecimal((goal * (1 - percentage)).toString()))
+        return ZapraiserStatus(percentage, left)
     }
 
     class DecryptedInfo(
