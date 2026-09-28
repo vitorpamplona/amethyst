@@ -2065,6 +2065,30 @@ class MarmotManager(
     }
 
     /**
+     * Commit a staged departure when this account may: the step [commitPendingProposals]
+     * describes, driven from ingest.
+     *
+     * Nothing called it, so when a White Noise member left a group whose only admin was
+     * this account, the SelfRemove sat in the pool forever: the leaver stayed in the tree
+     * (still able to decrypt the group), and both apps kept listing them. Only admins
+     * commit here, the authority MIP-03 gives; another admin committing the same
+     * proposal at the same time is an ordinary fork that convergence settles. A failure
+     * is logged, not thrown: it is follow-up work, and the proposal stays staged for the
+     * next attempt.
+     */
+    suspend fun commitStagedProposalsIfAdmin(nostrGroupId: HexKey): OutboundGroupEvent? {
+        val view = groupView(nostrGroupId) ?: return null
+        if (signer.pubKey !in view.adminPubkeys) return null
+        return try {
+            commitPendingProposals(nostrGroupId)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotManager") { "could not commit staged proposals for ${nostrGroupId.take(8)}…: ${e.message}" }
+            null
+        }
+    }
+
+    /**
      * Disband the group: write `marmot.group.lifecycle.v1` (`0x800c`) as
      * `disbanded` in a Commit every member replays.
      *

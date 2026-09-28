@@ -875,6 +875,14 @@ class GroupEventHandler(
                     Log.d("MarmotDbg") {
                         "GroupEventHandler.add: ProposalStaged group=${result.groupId.take(8)}… senderLeaf=${result.senderLeafIndex}"
                     }
+                    // A departure only takes effect once an admin commits it; if that is us, do it.
+                    val groupId = result.groupId
+                    account.scope.launch(Dispatchers.IO) {
+                        if (manager.commitStagedProposalsIfAdmin(groupId) != null) {
+                            manager.syncMetadataTo(groupId, account.marmotGroupList.getOrCreateGroup(groupId))
+                            account.marmotGroupList.notifyGroupChanged(groupId)
+                        }
+                    }
                 }
 
                 is GroupEventResult.AppMessageOnCandidateBranch -> {

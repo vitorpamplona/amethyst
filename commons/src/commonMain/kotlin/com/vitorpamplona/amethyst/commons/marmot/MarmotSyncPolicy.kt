@@ -149,6 +149,7 @@ class MarmotSyncPolicy(
         val maxGroupSeen = perGroupFilters.keys.associateWith { cursors.groupSince(it) ?: 0L }.toMutableMap()
         var sawGiftWrap = false
         val sawGroupEvent = mutableSetOf<HexKey>()
+        val stagedProposals = mutableSetOf<HexKey>()
 
         for ((relay, event) in events) {
             // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
@@ -161,6 +162,7 @@ class MarmotSyncPolicy(
                     else -> ""
                 }
             log("ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")
+            if (result is MarmotIngestResult.ProposalStaged) stagedProposals.add(result.groupId)
 
             when (event.kind) {
                 GiftWrapEvent.KIND -> {
@@ -175,6 +177,11 @@ class MarmotSyncPolicy(
                     if (event.createdAt > prev) maxGroupSeen[gid] = event.createdAt
                 }
             }
+        }
+
+        // A member's SelfRemove only takes effect once an admin commits it.
+        for (gid in stagedProposals) {
+            marmot.commitStagedProposalsIfAdmin(gid)?.let { log("committed staged proposals for ${gid.take(8)} → ${it.signedEvent.id.take(8)}") }
         }
 
         if (sawGiftWrap && maxGwSeen > 0) {
