@@ -289,7 +289,15 @@ fun ChatMessageActionSheet(
                     note.event is ChatEvent &&
                     isMine &&
                     note.inGatherers?.any { it is ConcordChannel } == true
-            if (canEditBuzz || canEditConcord) {
+            // Marmot: my own text message in a group -> a kind-1009 edit inside the group. A
+            // media message's content is its locator, so editing it would break the attachment.
+            val canEditMarmot =
+                onWantsToEditChatMessage != null &&
+                    note.event is ChatEvent &&
+                    isMine &&
+                    note.event?.tags?.none { it.isNotEmpty() && it[0] == "imeta" } == true &&
+                    accountViewModel.account.marmot.marmotGroupOf(note) != null
+            if (canEditBuzz || canEditConcord || canEditMarmot) {
                 SectionDivider()
                 TileRow {
                     val label = if (canEditBuzz) Res.string.buzz_edit_message else Res.string.edit_message

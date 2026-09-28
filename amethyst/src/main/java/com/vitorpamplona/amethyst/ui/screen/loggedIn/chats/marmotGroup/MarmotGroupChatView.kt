@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
@@ -170,6 +171,7 @@ fun MarmotGroupChatView(
                     routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
                     onWantsToReply = { note -> newMessageModel.reply(note) },
                     onWantsToEditDraft = { },
+                    onWantsToEditChatMessage = { note -> newMessageModel.editMarmotMessage(note) },
                     // kind:1210 rows sit in the conversation in order but are
                     // group-state captions rather than messages, so they get their
                     // own centered style instead of a bubble.
@@ -240,6 +242,10 @@ fun MarmotGroupMessageComposer(
         DisplayReplyingToNote(it, accountViewModel, nav) {
             newMessageModel.clearReply()
         }
+    }
+
+    newMessageModel.editingMessage.value?.let {
+        EditingMessageBanner(onCancel = { newMessageModel.cancelEdit() })
     }
 
     Column(modifier = EditFieldModifier) {

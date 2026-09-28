@@ -65,9 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
-import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
-import com.vitorpamplona.amethyst.commons.resources.concord_editing_banner
 import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
@@ -108,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.Ch
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
@@ -455,30 +454,7 @@ private fun ConcordMessageComposer(
     // Edit mode: a banner reminding the user the next send replaces this message (a kind-1010
     // edit on the channel plane), with an X to abandon the edit and clear the field.
     newMessageModel.editingMessage.value?.let {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SymbolIcon(
-                symbol = MaterialSymbols.Edit,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = stringRes(Res.string.concord_editing_banner),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f).padding(start = 8.dp),
-            )
-            IconButton(onClick = { newMessageModel.cancelEdit() }) {
-                SymbolIcon(
-                    symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(Res.string.cancel),
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-        }
+        EditingMessageBanner(onCancel = { newMessageModel.cancelEdit() })
     }
 
     Column(modifier = EditFieldModifier) {

@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.latestMarmotEdit
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -59,6 +60,9 @@ open class MarmotNewMessageViewModel : ViewModel() {
     val message = TextFieldState()
     val replyTo = mutableStateOf<Note?>(null)
 
+    // My own message being replaced; the next send publishes a kind:1009 edit of it.
+    val editingMessage = mutableStateOf<Note?>(null)
+
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
     var userSuggestions: UserSuggestionState? = null
 
@@ -83,11 +87,26 @@ open class MarmotNewMessageViewModel : ViewModel() {
             this.chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
             this.message.clearText()
             this.replyTo.value = null
+            this.editingMessage.value = null
         }
     }
 
     fun reply(note: Note) {
         replyTo.value = note
+        editingMessage.value = null
+    }
+
+    /** Enter edit mode for my own [note], prefilled with the text it currently shows. */
+    fun editMarmotMessage(note: Note) {
+        replyTo.value = null
+        editingMessage.value = note
+        val current = note.latestMarmotEdit()?.event?.content ?: note.event?.content ?: ""
+        message.setTextAndPlaceCursorAtEnd(current)
+    }
+
+    fun cancelEdit() {
+        editingMessage.value = null
+        message.clearText()
     }
 
     fun clearReply() {
@@ -136,6 +155,15 @@ open class MarmotNewMessageViewModel : ViewModel() {
         val groupId = nostrGroupId ?: return
         val text = message.text.toString().trim()
         if (text.isEmpty()) return
+
+        val editing = editingMessage.value
+        if (editing != null) {
+            accountViewModel.sendMarmotGroupMessageEdit(groupId, editing, text)
+            editingMessage.value = null
+            onUiThread { message.clearText() }
+            userSuggestions?.reset()
+            return
+        }
 
         // Capture id+pubKey snapshot before suspending so a slow send
         // doesn't race a user-cleared reply state.

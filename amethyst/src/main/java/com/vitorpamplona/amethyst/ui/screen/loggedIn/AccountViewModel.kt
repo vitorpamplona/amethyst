@@ -2474,6 +2474,23 @@ class AccountViewModel(
     }
 
     /**
+     * Replace the text of my own Marmot message [target] with a kind:1009 edit. The edit
+     * overlays the original everywhere it is shown (here, and in White Noise), and goes
+     * through the same show-then-publish path as a new message, so a failed send shows on
+     * the edit's delivery state rather than silently.
+     */
+    suspend fun sendMarmotGroupMessageEdit(
+        nostrGroupId: String,
+        target: Note,
+        text: String,
+    ) {
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
+        val manager = account.marmotManager ?: return
+        deliverMarmotGroupMessage(nostrGroupId, manager.buildMessageEditRumor(target.idHex, tagger.message))
+    }
+
+    /**
      * Show [innerEvent] in the group's chat now and publish it on the account
      * scope. Shared by every Marmot send that originates in the UI.
      */

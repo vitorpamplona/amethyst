@@ -82,6 +82,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
@@ -744,6 +745,21 @@ class MarmotManager(
     fun currentEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 
     /**
+     * The kind:1009 edit rumor alone, for a caller that sends it through its own
+     * show-then-publish path (the app's composer) rather than [buildMessageEdit].
+     */
+    fun buildMessageEditRumor(
+        targetEventId: HexKey,
+        replacement: String,
+    ): Event {
+        val template =
+            eventTemplate<Event>(kind = MarmotAppEvent.KIND_EDIT, description = replacement) {
+                addUnique(arrayOf("e", targetEventId))
+            }
+        return RumorAssembler.assembleRumor(signer.pubKey, template)
+    }
+
+    /**
      * Build a kind:1009 edit that replaces the text of a prior message.
      *
      * An edit is not chat and must never render as its own row: the
@@ -762,14 +778,7 @@ class MarmotManager(
         replacement: String,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
-        val template =
-            com.vitorpamplona.quartz.nip01Core.signers
-                .eventTemplate<Event>(kind = MarmotAppEvent.KIND_EDIT, description = replacement) {
-                    addUnique(arrayOf("e", targetEventId))
-                }
-        val innerEvent =
-            com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-                .assembleRumor<Event>(signer.pubKey, template)
+        val innerEvent = buildMessageEditRumor(targetEventId, replacement)
         val outbound = buildGroupMessage(nostrGroupId, innerEvent)
         if (persistOwn) persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
         return TextMessageBundle(outbound = outbound, innerEvent = innerEvent)
