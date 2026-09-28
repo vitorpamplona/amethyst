@@ -20,21 +20,43 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarEventListCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarAppointmentLines
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarDateBadge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detailRouteFor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 
 /**
  * Entry for a NIP-52 calendar RSVP: decodes the [Note], makes sure the appointment it answers is
- * in the cache, and renders the shared commons [CalendarRsvpCard] with that appointment inside it
- * — "going" is only interesting next to *what* — falling back to the bare address until it loads.
+ * in the cache, and renders the shared commons [CalendarRsvpCard] with that appointment merged
+ * into its frame — "going" is only interesting next to *what*. Until the appointment loads the
+ * card shows its status strip over a "loading" line.
  *
  * [LoadAddressableNote] creates the [com.vitorpamplona.amethyst.commons.model.AddressableNote] in
  * `LocalCache` — a shell with a null event if we have never seen the appointment — and
@@ -74,14 +96,69 @@ fun RenderCalendarRSVPEvent(
             // keep asking relays for the appointment's reactions and zaps on every RSVP in the feed.
             WatchNoteEvent(
                 baseNote = appointment,
-                onNoteEventFound = {
-                    CalendarRsvpCard(event) {
-                        CalendarEventListCard(appointment, accountViewModel, nav)
-                    }
-                },
+                onNoteEventFound = { RsvpWithAppointment(event, appointment, accountViewModel, nav) },
                 onBlank = { CalendarRsvpCard(event) },
                 accountViewModel = accountViewModel,
             )
         }
     }
 }
+
+/**
+ * The appointment drawn *inside* the RSVP's frame, under its status strip: cover image full
+ * width, then the same date badge and text lines the calendar list uses. No author header — the
+ * post already says who answered — and no card of its own, so there is one frame, not two.
+ * "In 3 days" moves up into the strip, next to the answer it qualifies.
+ */
+@Composable
+private fun RsvpWithAppointment(
+    event: CalendarRSVPEvent,
+    appointment: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val view = appointment.appointmentView()
+    if (view == null) {
+        CalendarRsvpCard(event)
+        return
+    }
+
+    val context = LocalContext.current
+    val appointmentEvent = appointment.event
+    val range = remember(appointmentEvent) { formatCalendarRange(appointment, context) }
+    val relative = rememberRelativeTimeLabel(view, appointmentEvent?.id)
+    val route = remember(appointment) { detailRouteFor(appointment) }
+
+    CalendarRsvpCard(
+        event = event,
+        statusDetail = relative,
+        onClick = { nav.nav(route) },
+    ) {
+        val image = view.image
+        if (!image.isNullOrBlank()) {
+            MyAsyncImage(
+                imageUrl = image,
+                contentDescription = view.title,
+                contentScale = ContentScale.Crop,
+                mainImageModifier = CoverImageModifier,
+                loadedImageModifier = Modifier,
+                accountViewModel = accountViewModel,
+                onLoadingBackground = { Box(CoverImageModifier) },
+                onError = null,
+            )
+        }
+
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            CalendarDateBadge(view.startSeconds)
+            Spacer(modifier = Modifier.size(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                CalendarAppointmentLines(view, range, relative = null)
+            }
+        }
+    }
+}
+
+private val CoverImageModifier = Modifier.fillMaxWidth().aspectRatio(2f)

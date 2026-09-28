@@ -340,6 +340,7 @@
     <string name="relay_discovery_geohash">Location</string>
     <string name="calendar_rsvp_going">Going</string>
     <string name="calendar_rsvp_maybe">Maybe</string>
+    <string name="calendar_rsvp_loading_event">Loading event…</string>
     <string name="calendar_rsvp_not_going">Can't go</string>
     <plurals name="calendar_collection_count">
         <item quantity="one">%1$d event</item>
