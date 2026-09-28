@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.model.nip51Lists
 
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
@@ -83,7 +83,7 @@ class HiddenUsersState(
             settings.syncedSettings.security.showSensitiveContent,
             settings.syncedSettings.security.maxHashtagLimit,
         ) { blockList, muteList, transientHiddenUsers, showSensitiveContent, maxHashtagLimit ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(assembleLiveHiddenUsers(blockList, muteList, transientHiddenUsers, showSensitiveContent, maxHashtagLimit))
         }.onStart {
             emit(
