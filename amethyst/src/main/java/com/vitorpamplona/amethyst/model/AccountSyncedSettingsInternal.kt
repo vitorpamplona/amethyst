@@ -20,11 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.content.res.Resources
-import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.util.getLanguagesSpokenByUser
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -142,15 +141,6 @@ fun mergeWithDefaultVideoPlayerButtons(saved: List<VideoPlayerButtonItem>): List
     val knownActions = saved.mapTo(mutableSetOf()) { it.action }
     val missing = DefaultVideoPlayerButtonItems.filter { it.action !in knownActions }
     return if (missing.isEmpty()) saved else saved + missing
-}
-
-fun getLanguagesSpokenByUser(): Set<String> {
-    val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
-    val codedList = mutableSetOf<String>()
-    for (i in 0 until languageList.size()) {
-        languageList.get(i)?.let { codedList.add(it.language) }
-    }
-    return codedList
 }
 
 @Serializable
