@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
@@ -88,6 +90,18 @@ class AccountMarmotActions(
 ) {
     /** Last (timestamp, answer) from [latestKeyPackageOwner], for passive callers. */
     private var lastOwnerCheck: Pair<Long, LatestKeyPackageOwner>? = null
+
+    // Welcome rumor ids with a retry already scheduled, so a relay re-delivering the same
+    // wrap while one waits does not start a second chain of retries.
+    private val welcomeRetries = mutableSetOf<HexKey>()
+    private val welcomeRetriesLock = KmpLock()
+
+    /** True when [welcomeId] had no retry pending and now has one. */
+    fun claimWelcomeRetry(welcomeId: HexKey): Boolean = welcomeRetriesLock.withLock { welcomeRetries.add(welcomeId) }
+
+    fun releaseWelcomeRetry(welcomeId: HexKey) {
+        welcomeRetriesLock.withLock { welcomeRetries.remove(welcomeId) }
+    }
 
     /**
      * Resolve the relay set for a Marmot group. Prefer the relays carried in
