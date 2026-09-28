@@ -47,11 +47,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.connect_via_tor2
 import com.vitorpamplona.amethyst.commons.resources.tor_continue_without_for_session
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_error
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_explainer
-import com.vitorpamplona.amethyst.commons.resources.tor_splash_settings
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import kotlinx.coroutines.delay
@@ -112,7 +113,7 @@ fun TorConnectingSplash(
             Spacer(Modifier.height(24.dp))
             Icon(
                 painter = IconResources.rawBitmapPainter,
-                contentDescription = "Amethyst",
+                contentDescription = stringResource(Res.string.app_logo),
                 modifier = Modifier.size(96.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -120,7 +121,7 @@ fun TorConnectingSplash(
                 Spacer(Modifier.height(24.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(onClick = onOpenTorSettings) {
-                        Text(stringResource(Res.string.tor_splash_settings))
+                        Text(stringResource(Res.string.connect_via_tor2))
                     }
                     Button(onClick = onContinueWithoutTor) {
                         Text(stringResource(Res.string.tor_continue_without_for_session))

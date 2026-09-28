@@ -347,14 +347,11 @@ fun main(args: Array<String>) {
         val feedSearchActiveState = remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
-        var torSettings by remember {
-            mutableStateOf(
-                com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                    .load(),
-            )
-        }
+        val torSettings = remember { DesktopTorPreferences.load() }
         val torTypeFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.torType) }
         val externalPortFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.externalSocksPort) }
+        // "Use regular connection" on the Tor splash: Tor off for this run only, never saved.
+        val torSessionBypassFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
         val windowScope = rememberCoroutineScope()
         val torManager =
             remember {
@@ -739,6 +736,7 @@ fun main(args: Array<String>) {
                             torManager = torManager,
                             torTypeFlow = torTypeFlow,
                             externalPortFlow = externalPortFlow,
+                            torSessionBypassFlow = torSessionBypassFlow,
                             initialTorSettings = torSettings,
                             onNavigateToScreen = { navigateToScreen = it },
                         )
@@ -775,6 +773,7 @@ fun App(
     torManager: com.vitorpamplona.amethyst.commons.tor.ITorManager,
     torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
+    torSessionBypassFlow: kotlinx.coroutines.flow.MutableStateFlow<Boolean>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
     onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit = {},
     testOverrides: LaunchTestOverrides? = null,
@@ -831,6 +830,7 @@ fun App(
             torManager = torManager,
             torTypeFlow = torTypeFlow,
             externalPortFlow = externalPortFlow,
+            torSessionBypassFlow = torSessionBypassFlow,
             initialTorSettings = initialTorSettings,
             onNavigateToScreen = onNavigateToScreen,
             testOverrides = testOverrides,
@@ -866,6 +866,7 @@ private fun AppInner(
     torManager: com.vitorpamplona.amethyst.commons.tor.ITorManager,
     torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
+    torSessionBypassFlow: kotlinx.coroutines.flow.MutableStateFlow<Boolean>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
     onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit,
     testOverrides: LaunchTestOverrides?,
@@ -878,28 +879,26 @@ private fun AppInner(
     }
 
     // Always reload from prefs — after key() rebuild, prefs have the latest saved settings.
-    // The mode comes from the window-level torTypeFlow instead, so a session-only "continue
-    // without Tor" (which never touches prefs) survives the rebuild.
     // Tests can short-circuit the prefs read via `testOverrides.torSettingsOverride` so the
     // Tor splash gate (below) does not block them behind a real kmp-tor runtime.
+    // torSettings is the user's saved choice (what the settings UI shows and saves);
+    // effectiveTorSettings is what this session actually routes by.
     var torSettings by remember {
-        mutableStateOf(
-            testOverrides?.torSettingsOverride
-                ?: DesktopTorPreferences.load().copy(torType = torTypeFlow.value),
-        )
+        mutableStateOf(testOverrides?.torSettingsOverride ?: DesktopTorPreferences.load())
     }
+    val torSessionBypass by torSessionBypassFlow.collectAsState()
+    val effectiveTorSettings = if (torSessionBypass) torSettings.copy(torType = TorType.OFF) else torSettings
 
     // Gate: block EVERYTHING until Tor proxy is ready (when Tor expected)
     // This must be before any OkHttpClient/Coil/relay creation
     val torStatus by torManager.status.collectAsState()
-    val isTorExpected = torSettings.torType != TorType.OFF
+    val isTorExpected = effectiveTorSettings.torType != TorType.OFF
     if (isTorExpected && torStatus !is TorServiceStatus.Active) {
         var showTorSettings by remember { mutableStateOf(false) }
         TorConnectingSplash(
             status = torStatus,
             onContinueWithoutTor = {
-                // Session only: prefs keep the user's Tor choice for the next launch.
-                torSettings = torSettings.copy(torType = TorType.OFF)
+                torSessionBypassFlow.value = true
                 torTypeFlow.value = TorType.OFF
             },
             onOpenTorSettings = { showTorSettings = true },
@@ -909,11 +908,12 @@ private fun AppInner(
                 currentSettings = torSettings,
                 torStatus = torStatus,
                 onSettingsChanged = { newSettings ->
+                    // No onRestartApp(): nothing below the gate has been built yet, and a
+                    // rebuild would only restart the splash (and its escape timer).
                     torSettings = newSettings
                     DesktopTorPreferences.save(newSettings)
                     torTypeFlow.value = newSettings.torType
                     externalPortFlow.value = newSettings.externalSocksPort
-                    onRestartApp()
                 },
                 onDismiss = { showTorSettings = false },
             )
@@ -977,15 +977,15 @@ private fun AppInner(
 
     // Build TorRelayEvaluation for per-relay routing
     val torRelayEvaluation =
-        remember(torSettings) {
+        remember(effectiveTorSettings) {
             com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation(
                 torSettings =
                     com.vitorpamplona.amethyst.commons.tor.TorRelaySettings(
-                        torType = torSettings.torType,
-                        onionRelaysViaTor = torSettings.onionRelaysViaTor,
-                        dmRelaysViaTor = torSettings.dmRelaysViaTor,
-                        newRelaysViaTor = torSettings.newRelaysViaTor,
-                        trustedRelaysViaTor = torSettings.trustedRelaysViaTor,
+                        torType = effectiveTorSettings.torType,
+                        onionRelaysViaTor = effectiveTorSettings.onionRelaysViaTor,
+                        dmRelaysViaTor = effectiveTorSettings.dmRelaysViaTor,
+                        newRelaysViaTor = effectiveTorSettings.newRelaysViaTor,
+                        trustedRelaysViaTor = effectiveTorSettings.trustedRelaysViaTor,
                     ),
                 // TODO: populate from account relay lists
                 classification =
@@ -1491,9 +1491,11 @@ private fun AppInner(
                                             status = currentTorStatus,
                                             settings = torSettings,
                                             onSettingsChanged = { newSettings ->
+                                                // Saving re-applies the saved choice, ending a
+                                                // session bypass from the splash.
+                                                torSessionBypassFlow.value = false
                                                 torSettings = newSettings
-                                                com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                                                    .save(newSettings)
+                                                DesktopTorPreferences.save(newSettings)
                                                 torTypeFlow.value = newSettings.torType
                                                 externalPortFlow.value = newSettings.externalSocksPort
                                                 // Rebuild app to apply Tor changes
