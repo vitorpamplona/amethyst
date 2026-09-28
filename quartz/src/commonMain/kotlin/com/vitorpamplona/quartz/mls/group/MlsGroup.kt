@@ -782,8 +782,14 @@ class MlsGroup private constructor(
         // Without this ordering the committer uses the PRE-commit context and
         // every strict-validating member derives a different AEAD key, turning
         // the decryption into `UpdatePathError(UnableToDecrypt)`.
+        // A required path is sent even when the proposals leave this leaf alone in the tree
+        // (a disband, or removing the last other member): the direct path is then empty, and
+        // the UpdatePath carries just the new leaf. RFC 9420 §12.4.1 makes the path mandatory
+        // for any Remove regardless of the tree's size, and openmls/MDK reject a Remove commit
+        // without one as `RequiredPathNotFound` — so every such commit we sent was dropped by
+        // White Noise, and the member we removed kept a live copy of the group.
         val updatePath: UpdatePath? =
-            if (needsPath && pathSecrets.isNotEmpty()) {
+            if (needsPath) {
                 // RFC 9420 §7.9: UpdatePath carries one node per entry in the
                 // **filtered** direct path — parents whose copath subtree has
                 // empty resolution are omitted (encrypting to them is
@@ -949,11 +955,18 @@ class MlsGroup private constructor(
         // else can reach, and every member rejects the commit with a
         // confirmation-tag mismatch. A SelfRemove-only commit — a departing
         // member's eviction — is precisely the case that omits the path.
+        //
+        // A path over an EMPTY direct path (this leaf alone in the tree) derives no node
+        // secrets, and openmls's `derive_path` then returns the starting path secret itself
+        // as the commit secret — zero derivation steps. Nobody else can decrypt that epoch
+        // anyway; it only has to be what openmls would compute.
         val commitSecret =
-            if (updatePath != null && pathSecrets.isNotEmpty()) {
-                MlsCryptoProvider.deriveSecret(pathSecrets.last().pathSecret, "path")
-            } else {
+            if (updatePath == null) {
                 ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            } else if (pathSecrets.isEmpty()) {
+                leafSecret
+            } else {
+                MlsCryptoProvider.deriveSecret(pathSecrets.last().pathSecret, "path")
             }
 
         val newTreeHash = tree.treeHash()

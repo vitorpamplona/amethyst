@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.mls.framing.PublicMessage
 import com.vitorpamplona.quartz.mls.framing.WireFormat
+import com.vitorpamplona.quartz.mls.messages.Commit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -85,6 +86,23 @@ class MlsGroupNegativeTest {
             signature = pub.signature,
             pubMsg = pub,
         )
+    }
+
+    /**
+     * Removing the last other member leaves the committer alone, so its direct path is
+     * empty — but RFC 9420 §12.4.1 still requires an UpdatePath for any Remove. We used to
+     * omit it, and openmls/MDK dropped the commit (`RequiredPathNotFound`): White Noise never
+     * learned it had been removed or that the group was disbanded.
+     */
+    @Test
+    fun removingTheLastOtherMemberStillCarriesAnUpdatePath() {
+        val fx = twoMemberGroup()
+        val result = fx.alice.removeMember(1)
+        val commit = Commit.decodeTls(TlsReader(result.commitBytes))
+        val path = commit.updatePath
+        assertTrue(path != null, "a Remove commit must carry an UpdatePath even with no path nodes")
+        assertEquals(0, path.nodes.size, "a one-leaf tree has an empty direct path")
+        assertEquals(1, fx.alice.members().size)
     }
 
     /** Baseline: an honest commit applies and advances Bob's epoch. */

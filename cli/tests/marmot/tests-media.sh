@@ -707,7 +707,7 @@ test_29_disband_amy_to_wn() {
     wn_b sync >/dev/null 2>&1 || true
     sleep 5
   done
-  printf 'disband29 wn view: %s\n' "$(wn_b_json groups show "$mls_gid" 2>&1 | head -c 3000)" >>"$LOG_FILE"
+  wn_b_json groups show "$mls_gid" >"$STATE_DIR/disband29-wn-view.json" 2>&1 || true
   printf 'disband29 epoch %s -> %s (amy now %s), wn at %s\n' \
     "$before_epoch" "$after_epoch" "${amy_now:-?}" "${saw:-<none>}" >>"$LOG_FILE"
 

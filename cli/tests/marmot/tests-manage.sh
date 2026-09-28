@@ -423,13 +423,17 @@ test_34_amy_removes_last_other_member() {
   local deadline=$(( $(date +%s) + 120 )) gone=0 view
   while [[ $(date +%s) -lt $deadline ]]; do
     wn_b sync >/dev/null 2>&1 || true
+    # `groups members`, as test 06 reads it: `groups show` carries no member list, and
+    # reading one there made this pass before wn had processed anything.
     view=$(wn_b_json groups show "$mls_gid" 2>/dev/null || true)
-    if ! printf '%s' "$view" | jq -e --arg p "$B_HEX" '.result.members[]? | select((.member_id // .pubkey // .public_key) == $p)' >/dev/null 2>&1; then
+    if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
+         | jq_list members | jq -e --arg p "$B_HEX" \
+             'select((.member_id // .pubkey // .public_key) == $p)' >/dev/null 2>&1; then
       gone=1; break
     fi
     sleep 3
   done
-  printf 'test34 wn view after removal: %s\n' "$(printf '%s' "$view" | head -c 2000)" >>"$LOG_FILE"
+  printf '%s' "$view" >"$STATE_DIR/test34-wn-view.json"
   if [[ "$gone" -eq 1 ]]; then
     record_result "$id" pass
   else
