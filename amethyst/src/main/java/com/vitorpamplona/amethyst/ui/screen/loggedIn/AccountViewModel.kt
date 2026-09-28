@@ -2715,6 +2715,9 @@ class AccountViewModel(
                     relays.toList(),
                 )
         }
+        // The commits are canonical once published. Surface them now: a freshly created
+        // group otherwise sat at "0 members" with no name until our own echo or a restart.
+        account.marmot.syncAndNotify(nostrGroupId)
     }
 
     override fun onCleared() {

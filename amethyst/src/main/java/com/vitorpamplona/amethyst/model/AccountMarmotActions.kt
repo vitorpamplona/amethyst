@@ -769,6 +769,18 @@ class AccountMarmotActions(
         // Creator owns the group — mark it as "known" immediately so it
         // doesn't appear under "New Requests" before the first message.
         account.marmotGroupList.markAsKnown(nostrGroupId)
+        syncAndNotify(nostrGroupId)
+    }
+
+    /**
+     * Copy the group's current MLS state (name, admins, members, relays) into its
+     * chatroom and tell the list to re-render it. For actions that commit outside the
+     * paths here which already sync.
+     */
+    fun syncAndNotify(nostrGroupId: HexKey) {
+        val manager = account.marmotManager ?: return
+        manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
+        account.marmotGroupList.notifyGroupChanged(nostrGroupId)
     }
 
     /**
