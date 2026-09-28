@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip46Signer
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
@@ -31,9 +31,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_fo
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_decrypt_failed
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
+import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.napplet.label
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -53,7 +51,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Runs only in the main process (the signer never runs in `:napplet`), so [Amethyst.instance] is set;
  * the coordinators launch their Activity from the application context.
  */
-object Nip46ConsentBridge {
+object Nip46ConsentBridge : Nip46ConsentPrompter {
     /**
      * Upper bound on how long a consent prompt may block the signer's single-consumer loop. A user who
      * ignores the dialog eventually fails the request closed (deny / declined) instead of wedging the
@@ -62,7 +60,7 @@ object Nip46ConsentBridge {
     private const val CONSENT_TIMEOUT_MS = 120_000L
 
     /** First-connect consent: show the app's self-declared identity and let the user pick a trust level. */
-    suspend fun requestConnect(
+    override suspend fun requestConnect(
         coordinate: String,
         clientPubKey: HexKey,
         request: BunkerRequestConnect,
@@ -96,7 +94,7 @@ object Nip46ConsentBridge {
      * [requestedOps] so the user gives informed consent before those ops are pre-granted. Returns the
      * user's [AppConnectResult] (or [AppConnectResult.Cancelled] if the prompt is never answered).
      */
-    suspend fun requestNostrConnectConsent(
+    override suspend fun requestNostrConnectConsent(
         coordinate: String,
         name: String?,
         url: String?,
@@ -133,7 +131,7 @@ object Nip46ConsentBridge {
      * user approves — and it is bounded by [Nip46ConsentInfoBuilder.DECRYPT_PREVIEW_TIMEOUT_MS] so a slow or failing signer
      * degrades to an explanatory message instead of hanging or blanking the prompt.
      */
-    suspend fun requestOp(
+    override suspend fun requestOp(
         coordinate: String,
         clientPubKey: HexKey,
         op: NostrSignerOp,

@@ -122,6 +122,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
@@ -3238,6 +3239,7 @@ fun mockAccountViewModel(): AccountViewModel {
             encryptionKeyCache = EncryptionKeyCache(),
             saveSettings = {},
             marmotNotifier = { MarmotGroupNotifier.None },
+            nip46Consent = Nip46ConsentPrompter.Unanswered,
         )
 
     return AccountViewModel(
@@ -3298,6 +3300,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             encryptionKeyCache = EncryptionKeyCache(),
             saveSettings = {},
             marmotNotifier = { MarmotGroupNotifier.None },
+            nip46Consent = Nip46ConsentPrompter.Unanswered,
         )
 
     return AccountViewModel(

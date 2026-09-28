@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip46Signer
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest

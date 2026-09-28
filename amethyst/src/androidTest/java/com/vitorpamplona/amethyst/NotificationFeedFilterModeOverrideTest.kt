@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -97,6 +98,7 @@ class NotificationFeedFilterModeOverrideTest {
                 encryptionKeyCache = EncryptionKeyCache(),
                 saveSettings = {},
                 marmotNotifier = { MarmotGroupNotifier.None },
+                nip46Consent = Nip46ConsentPrompter.Unanswered,
             )
     }
 

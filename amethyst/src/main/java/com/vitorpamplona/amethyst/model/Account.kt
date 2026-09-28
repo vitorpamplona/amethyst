@@ -143,6 +143,7 @@ import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
+import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
@@ -395,6 +396,8 @@ class Account(
      * A provider, read when a message arrives, because the app builds its notifier after its accounts.
      */
     val marmotNotifier: () -> MarmotGroupNotifier,
+    /** Asks the user to approve NIP-46 client connections and operations (the app's signer dialogs). */
+    val nip46Consent: Nip46ConsentPrompter,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -630,6 +633,7 @@ class Account(
             inboxRelays = nip65RelayList.inboxFlow,
             scope = scope,
             settings = settings,
+            consent = nip46Consent,
         )
 
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)

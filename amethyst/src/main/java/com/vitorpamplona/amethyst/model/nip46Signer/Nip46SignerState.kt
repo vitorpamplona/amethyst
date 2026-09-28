@@ -100,6 +100,8 @@ class Nip46SignerState(
     val inboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val scope: CoroutineScope,
     val settings: AccountSettings,
+    /** Asks the user when the ledger says ASK (the app's signer dialogs). */
+    val consent: Nip46ConsentPrompter,
 ) {
     /** Relays contributed by pasted `nostrconnect://` offers this session, unioned with the inbox set. */
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
@@ -171,12 +173,12 @@ class Nip46SignerState(
             // Interactive consent through the shared signer dialogs: a trust-level picker on first
             // connect, and an allow/deny prompt whenever the ledger says ASK (dangerous kinds,
             // decryption, DMs, or a PARANOID app). Same surface + ledger as napplet/browser signing.
-            connectConsent = Nip46ConsentBridge::requestConnect,
+            connectConsent = consent::requestConnect,
             // The account's own signer goes to the bridge so a decrypt request can be decrypted
             // BEFORE the prompt — the dialog shows the actual plaintext instead of an opaque
             // "wants to read your private messages". Local only; nothing is disclosed until approval.
             opConsent = { coordinate, clientPubKey, op, request ->
-                Nip46ConsentBridge.requestOp(coordinate, clientPubKey, op, request, signer)
+                consent.requestOp(coordinate, clientPubKey, op, request, signer)
             },
         )
 
@@ -340,7 +342,7 @@ class Nip46SignerState(
         // per-op decisions the user may have since changed (e.g. an op set to DENY), so it skips the prompt.
         val grantedPolicy: AppSignerPolicy? =
             if (firstContact) {
-                when (val result = Nip46ConsentBridge.requestNostrConnectConsent(coordinate, offer.name, offer.url, offer.image, requestedOps)) {
+                when (val result = consent.requestNostrConnectConsent(coordinate, offer.name, offer.url, offer.image, requestedOps)) {
                     is AppConnectResult.Connected -> result.policy
                     AppConnectResult.Blocked, AppConnectResult.Cancelled -> return ConnectResult.Declined
                 }

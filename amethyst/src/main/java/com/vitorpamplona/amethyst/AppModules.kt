@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
@@ -1035,6 +1036,7 @@ class AppModules(
             saveSettings = { LocalPreferences.saveToEncryptedStorage(it) },
             // A provider: notificationDispatcher is declared further down this class.
             marmotNotifier = { notificationDispatcher },
+            nip46Consent = Nip46ConsentBridge,
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
