@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
@@ -188,7 +189,7 @@ open class NewProductViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -357,7 +358,7 @@ open class NewProductViewModel :
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
-        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
@@ -604,7 +605,7 @@ open class NewProductViewModel :
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

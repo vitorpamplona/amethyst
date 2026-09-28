@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
 import android.location.Location
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -164,7 +165,7 @@ class LocationStateTest {
             advanceUntilIdle()
 
             val fixWhileForeground = state.geohashStateFlow.value
-            assertTrue("expected a Success, got $fixWhileForeground", fixWhileForeground is LocationState.LocationResult.Success)
+            assertTrue("expected a Success, got $fixWhileForeground", fixWhileForeground is LocationResult.Success)
 
             foreground.value = false
             // Real grace-period wait, not a test artefact: `settledForeground`
@@ -210,7 +211,7 @@ class LocationStateTest {
             val state = stateWith(backgroundScope, foreground, probe)
             state.setLocationPermission(true)
 
-            val seen = mutableListOf<LocationState.LocationResult>()
+            val seen = mutableListOf<LocationResult>()
             backgroundScope.launch { state.geohashStateFlow.collect { seen.add(it) } }
             advanceUntilIdle()
 
@@ -227,7 +228,7 @@ class LocationStateTest {
 
             assertTrue(
                 "returning to foreground must not flash Loading — AroundMeFeedFlow renders an empty feed for it. Saw: ${seen.drop(afterBackground)}",
-                seen.drop(afterBackground).none { it is LocationState.LocationResult.Loading },
+                seen.drop(afterBackground).none { it is LocationResult.Loading },
             )
         }
 
@@ -253,11 +254,11 @@ class LocationStateTest {
             val state = stateWith(backgroundScope, foreground, probe)
             state.setLocationPermission(true)
 
-            val seen = mutableListOf<LocationState.LocationResult>()
+            val seen = mutableListOf<LocationResult>()
             backgroundScope.launch { state.geohashStateFlow.collect { seen.add(it) } }
             advanceUntilIdle()
 
-            assertTrue("expected Loading, saw $seen", seen.any { it is LocationState.LocationResult.Loading })
+            assertTrue("expected Loading, saw $seen", seen.any { it is LocationResult.Loading })
         }
 
     @Test
@@ -271,7 +272,7 @@ class LocationStateTest {
             backgroundScope.launch { state.geohashStateFlow.collect { } }
             advanceUntilIdle()
 
-            assertEquals(LocationState.LocationResult.LackPermission, state.geohashStateFlow.value)
+            assertEquals(LocationResult.LackPermission, state.geohashStateFlow.value)
             assertEquals(0, probe.subscriptions)
         }
 

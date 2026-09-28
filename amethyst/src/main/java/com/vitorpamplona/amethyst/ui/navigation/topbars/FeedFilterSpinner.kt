@@ -70,6 +70,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline
@@ -99,7 +100,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
@@ -236,7 +236,7 @@ fun FeedFilterSpinner(
                                 .collectAsStateWithLifecycle()
 
                             when (val myLocation = location) {
-                                is LocationState.LocationResult.Success -> {
+                                is LocationResult.Success -> {
                                     LoadCityName(
                                         geohashStr = myLocation.geoHash.toString(),
                                         onLoading = {
@@ -263,7 +263,7 @@ fun FeedFilterSpinner(
                                     }
                                 }
 
-                                LocationState.LocationResult.LackPermission -> {
+                                LocationResult.LackPermission -> {
                                     Text(
                                         text = stringRes(Res.string.lack_location_permissions),
                                         fontSize = Font12SP,
@@ -273,7 +273,7 @@ fun FeedFilterSpinner(
                                     )
                                 }
 
-                                LocationState.LocationResult.Loading -> {
+                                LocationResult.Loading -> {
                                     Text(
                                         text = stringRes(Res.string.loading_location),
                                         fontSize = Font12SP,

@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service.location
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -98,16 +98,6 @@ class LocationState(
          * registration either.
          */
         const val SUBSCRIPTION_STOP_TIMEOUT_MS: Long = 5_000L
-    }
-
-    sealed class LocationResult {
-        data class Success(
-            val geoHash: GeoHash,
-        ) : LocationResult()
-
-        object LackPermission : LocationResult()
-
-        object Loading : LocationResult()
     }
 
     private enum class Gate { NoPermission, Paused, Listen }

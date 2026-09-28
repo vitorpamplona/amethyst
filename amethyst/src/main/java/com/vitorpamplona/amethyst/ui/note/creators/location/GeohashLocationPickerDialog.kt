@@ -85,6 +85,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.clear
@@ -284,8 +285,8 @@ fun GeohashLocationPickerContent(
             // forever (permission granted yet location off, indoors, emulator with no fix…).
             val fix =
                 withTimeoutOrNull(GPS_FIX_TIMEOUT_MS) {
-                    locationManager.preciseGeohashStateFlow.first { it is LocationState.LocationResult.Success }
-                } as? LocationState.LocationResult.Success
+                    locationManager.preciseGeohashStateFlow.first { it is LocationResult.Success }
+                } as? LocationResult.Success
             if (fix != null) {
                 recenter = GeoPoint(fix.geoHash.centerLat, fix.geoHash.centerLon)
                 pickedLat = fix.geoHash.centerLat

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
@@ -41,7 +42,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFoll
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.AllFavoriteAlgoFeedsFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedFlow
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
@@ -62,7 +62,7 @@ class FeedTopNavFilterState(
     val feedFilterListName: MutableStateFlow<TopFilter>,
     val kind3Follows: StateFlow<Kind3FollowListState.Kind3Follows>,
     val allFollows: StateFlow<MergedFollowListsState.AllFollows>,
-    val locationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val locationFlow: () -> StateFlow<LocationResult>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,

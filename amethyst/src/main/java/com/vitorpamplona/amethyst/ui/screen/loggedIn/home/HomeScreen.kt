@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
@@ -97,7 +98,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -341,13 +341,13 @@ fun HomeScreenFloatingButton(
                 .collectAsStateWithLifecycle()
 
             when (val myLocation = location) {
-                is LocationState.LocationResult.Success -> {
+                is LocationResult.Success -> {
                     NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
                 }
 
-                is LocationState.LocationResult.LackPermission -> { }
+                is LocationResult.LackPermission -> { }
 
-                is LocationState.LocationResult.Loading -> { }
+                is LocationResult.Loading -> { }
             }
         }
 

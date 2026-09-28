@@ -18,21 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.location
+package com.vitorpamplona.amethyst.commons.model.location
 
-import com.vitorpamplona.amethyst.commons.model.location.LocationResult
-import com.vitorpamplona.amethyst.service.location.LocationState
-import kotlinx.coroutines.flow.StateFlow
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 
-interface ILocationGrabber {
-    fun locationManager(): LocationState
+/**
+ * Where the device is, as far as location-scoped feeds (Around Me, geohash chats) need to know: a
+ * geohash once a fix arrives, a missing permission, or still waiting. Each platform's location
+ * service produces these; the account and its feeds only read them.
+ */
+sealed class LocationResult {
+    data class Success(
+        val geoHash: GeoHash,
+    ) : LocationResult()
 
-    fun locationFlow(): StateFlow<LocationResult>
+    object LackPermission : LocationResult()
 
-    /**
-     * A geohash the user picked on the map (via [GeohashLocationPickerDialog]), which
-     * overrides the live GPS location at build time. Null means "use my current GPS
-     * location" — the default behavior. Implementers back this with a Compose state.
-     */
-    var pickedGeoHash: String?
+    object Loading : LocationResult()
 }

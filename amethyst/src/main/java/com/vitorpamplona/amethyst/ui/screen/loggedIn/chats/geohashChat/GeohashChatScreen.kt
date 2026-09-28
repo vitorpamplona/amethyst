@@ -63,6 +63,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SearchTopBarAction
@@ -170,7 +170,7 @@ private fun GeohashChatRoom(
     val isTeleported =
         remember(deviceLocation, geohash, teleported) {
             when (val loc = deviceLocation) {
-                is LocationState.LocationResult.Success -> {
+                is LocationResult.Success -> {
                     // Compare on the common prefix: the device fix is fixed-precision (8 chars), so a
                     // finer (longer) cell can never be a prefix of it — treat a shared prefix as "here".
                     val device = loc.geoHash.toString()

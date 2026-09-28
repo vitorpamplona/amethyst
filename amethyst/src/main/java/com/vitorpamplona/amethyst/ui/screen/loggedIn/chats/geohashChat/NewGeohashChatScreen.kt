@@ -62,11 +62,11 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
@@ -309,7 +309,7 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
         val location by Amethyst.instance.locationManager.preciseGeohashStateFlow
             .collectAsStateWithLifecycle()
         when (val loc = location) {
-            is LocationState.LocationResult.Success -> {
+            is LocationResult.Success -> {
                 val fix = loc.geoHash.toString()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GeohashChannelLevel.ordered.forEach { level ->
@@ -324,10 +324,10 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
                 }
             }
 
-            LocationState.LocationResult.Loading ->
+            LocationResult.Loading ->
                 Text("Locating…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-            LocationState.LocationResult.LackPermission ->
+            LocationResult.LackPermission ->
                 Text("Location unavailable.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

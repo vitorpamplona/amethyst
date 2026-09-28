@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListDec
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
@@ -173,7 +174,6 @@ import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithSearc
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
@@ -369,7 +369,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as gallery
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
-    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,

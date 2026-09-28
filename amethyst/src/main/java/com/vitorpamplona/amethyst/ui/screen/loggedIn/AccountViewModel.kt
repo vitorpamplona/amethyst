@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -126,7 +127,6 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -3221,7 +3221,7 @@ fun mockAccountViewModel(): AccountViewModel {
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
-            geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+            geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
             cashuMintDirectoryFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
@@ -3278,7 +3278,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
-            geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+            geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
             cashuMintDirectoryFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers

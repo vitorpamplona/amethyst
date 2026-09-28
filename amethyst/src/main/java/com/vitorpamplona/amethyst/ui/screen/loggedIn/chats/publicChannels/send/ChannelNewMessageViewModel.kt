@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
@@ -222,7 +223,7 @@ open class ChannelNewMessageViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     // Geohash location chat (Bitchat interop): messages are signed with an anonymous per-cell
     // identity (unless posting as self) and carry a small NIP-13 PoW + the n/t tags.
@@ -625,7 +626,7 @@ open class ChannelNewMessageViewModel :
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
 
         val channelRelays = channel.relays()
-        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
@@ -1039,7 +1040,7 @@ open class ChannelNewMessageViewModel :
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

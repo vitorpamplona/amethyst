@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
@@ -365,7 +366,7 @@ open class ShortNotePostViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var wantsExclusiveGeoPost by mutableStateOf(false)
@@ -1382,7 +1383,7 @@ open class ShortNotePostViewModel :
         val geoHash =
             if (wantsToAddGeoHash) {
                 // A map-picked geohash wins over the live GPS fix.
-                pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+                pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()
             } else {
                 null
             }
@@ -2001,7 +2002,7 @@ open class ShortNotePostViewModel :
         }
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

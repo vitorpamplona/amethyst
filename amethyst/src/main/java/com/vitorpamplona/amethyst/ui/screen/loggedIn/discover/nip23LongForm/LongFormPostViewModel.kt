@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
@@ -215,7 +216,7 @@ class LongFormPostViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
     var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
@@ -431,7 +432,7 @@ class LongFormPostViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
@@ -751,7 +752,7 @@ class LongFormPostViewModel :
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

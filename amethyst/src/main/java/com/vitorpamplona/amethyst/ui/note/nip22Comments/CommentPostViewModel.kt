@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
@@ -275,7 +276,7 @@ open class CommentPostViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -687,7 +688,7 @@ open class CommentPostViewModel :
             )
         tagger.run()
 
-        val geoHash = (if (wantsToAddGeoHash) pickedGeoHash else null) ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = (if (wantsToAddGeoHash) pickedGeoHash else null) ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
@@ -1067,7 +1068,7 @@ open class CommentPostViewModel :
         draftTag.newVersion()
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_nearby
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
@@ -97,7 +98,7 @@ fun distanceToCache(
     noteEvent: GeocacheListingEvent,
     accountViewModel: AccountViewModel,
 ): String? {
-    val here = accountViewModel.account.geolocationFlow().value as? LocationState.LocationResult.Success ?: return null
+    val here = accountViewModel.account.geolocationFlow().value as? LocationResult.Success ?: return null
 
     val nearby = stringRes(Res.string.geocache_nearby)
 

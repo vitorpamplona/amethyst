@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.DraftTagState
 import com.vitorpamplona.amethyst.commons.model.composer.IExpiration
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -183,7 +184,7 @@ open class NestNewMessageViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -437,7 +438,7 @@ open class NestNewMessageViewModel :
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
 
-        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
@@ -595,7 +596,7 @@ open class NestNewMessageViewModel :
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

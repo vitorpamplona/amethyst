@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
 import com.vitorpamplona.amethyst.commons.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
@@ -40,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermission
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -63,7 +63,7 @@ import okio.Path.Companion.toOkioPath
 import java.io.File
 
 class AccountCacheState(
-    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
