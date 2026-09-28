@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
@@ -39,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
 import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -294,7 +294,7 @@ class TopNavFilterState(
             livePeopleListsFlow,
             liveInterestFlows,
         ) { peopleLists, interests ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
@@ -307,7 +307,7 @@ class TopNavFilterState(
 
     private val _badgeRoutes =
         livePeopleListsFlow.transform { peopleLists ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
@@ -319,7 +319,7 @@ class TopNavFilterState(
 
     private val _communityRoutes =
         livePeopleListsFlow.transform { peopleLists ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
@@ -334,7 +334,7 @@ class TopNavFilterState(
             livePeopleListsFlow,
             liveInterestFlows,
         ) { peopleLists, interests ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
@@ -352,7 +352,7 @@ class TopNavFilterState(
             livePeopleListsFlow,
             liveInterestFlows,
         ) { peopleLists, interests ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     // Git repository announcements can be narrowed by author, hashtag and geohash,
@@ -370,7 +370,7 @@ class TopNavFilterState(
             livePeopleListsFlow,
             liveInterestFlows,
         ) { peopleLists, interests ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     // Workout records can be narrowed by author, hashtag and geohash, so this
@@ -388,7 +388,7 @@ class TopNavFilterState(
             livePeopleListsFlow,
             liveInterestFlows,
         ) { peopleLists, interests ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     // Highlights can be narrowed by author, hashtag and geohash, so this mirrors
@@ -407,7 +407,7 @@ class TopNavFilterState(
             liveInterestFlows,
             account.relayGroupList.liveRelayGroupServers,
         ) { peopleLists, interests, joinedServers ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             // A relay chip per host relay of every group the user joined (kind-10009), so they can
             // browse the OTHER groups on those relays without first having to Favorite them. Deduped
             // against relays that are already chips because they were favorited (kind-10012, already
@@ -441,7 +441,7 @@ class TopNavFilterState(
             livePeopleListsFlow,
             liveInterestFlows,
         ) { peopleLists, interests ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
@@ -456,7 +456,7 @@ class TopNavFilterState(
 
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
@@ -472,7 +472,7 @@ class TopNavFilterState(
     // and AroundMe — none of which can match a tag-less manifest — are deliberately left out.
     private val _authorOnlyRoutes =
         livePeopleListsFlow.transform { peopleLists ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
@@ -484,7 +484,7 @@ class TopNavFilterState(
 
     private val _notificationLists =
         livePeopleListsFlow.transform { peopleLists ->
-            checkNotInMainThread()
+            LocalCache.appHost.assertNotMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, selectedFollow, globalFollow),
