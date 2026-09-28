@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import kotlinx.coroutines.launch
 

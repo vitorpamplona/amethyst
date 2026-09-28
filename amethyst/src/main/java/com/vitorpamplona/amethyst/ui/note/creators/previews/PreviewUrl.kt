@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 
 @Composable
 fun PreviewUrl(

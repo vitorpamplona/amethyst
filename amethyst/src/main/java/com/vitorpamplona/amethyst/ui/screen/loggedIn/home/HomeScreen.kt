@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.checkVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription

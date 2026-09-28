@@ -69,19 +69,17 @@ fun LoggedInPage(
     accountSessionManager: AccountSessionManager,
 ) {
     val accountViewModel: AccountViewModel =
-        viewModel(
-            key = "AccountViewModel",
-            factory =
-                AccountViewModel.Factory(
-                    account = account,
-                    settings = Amethyst.instance.uiState,
-                    torSettings = Amethyst.instance.torPrefs.value,
-                    dataSources = Amethyst.instance.sources,
-                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder,
-                    nip05ClientBuilder = { Amethyst.instance.nip05Client },
-                    host = AndroidAccountViewModelHost(Amethyst.instance),
-                ),
-        )
+        viewModel(key = "AccountViewModel") {
+            AccountViewModel(
+                account = account,
+                settings = Amethyst.instance.uiState,
+                torSettings = Amethyst.instance.torPrefs.value,
+                dataSources = Amethyst.instance.sources,
+                httpClientBuilder = Amethyst.instance.roleBasedHttpClientBuilder,
+                nip05ClientBuilder = { Amethyst.instance.nip05Client },
+                host = AndroidAccountViewModelHost(Amethyst.instance),
+            )
+        }
 
     LaunchedEffect(Unit) {
         accountViewModel.firstRoute = route

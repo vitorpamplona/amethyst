@@ -25,12 +25,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.CombinedZap
@@ -88,13 +88,12 @@ import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_d
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
-import com.vitorpamplona.amethyst.commons.service.OnlineChecker
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
@@ -104,16 +103,12 @@ import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
-import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -143,7 +138,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
@@ -2156,15 +2150,6 @@ class AccountViewModel(
             account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
         }
 
-    fun urlPreview(
-        url: String,
-        onResult: suspend (UrlPreviewState) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
-        }
-    }
-
     fun loadReactionTo(note: Note?): String? {
         if (note == null) return null
 
@@ -2262,11 +2247,6 @@ class AccountViewModel(
             .mapNotNull { hex -> checkGetOrCreateUser(hex) }
             .sortedByDescending { account.isKnown(it) }
 
-    suspend fun checkVideoIsOnline(videoUrl: String): Boolean =
-        withContext(Dispatchers.IO) {
-            OnlineChecker.isOnline(videoUrl, httpClientBuilder::okHttpClientForVideo)
-        }
-
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
@@ -2311,28 +2291,6 @@ class AccountViewModel(
                 }
             }
         }
-    }
-
-    class Factory(
-        val account: Account,
-        val settings: UiSettingsState,
-        val torSettings: TorSettingsFlow,
-        val dataSources: RelaySubscriptionsCoordinator,
-        val okHttpClient: RoleBasedHttpClientBuilder,
-        val nip05ClientBuilder: () -> Nip05Client,
-        val host: AccountViewModelHost,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            AccountViewModel(
-                account,
-                settings,
-                torSettings,
-                dataSources,
-                okHttpClient,
-                nip05ClientBuilder,
-                host,
-            ) as T
     }
 
     init {

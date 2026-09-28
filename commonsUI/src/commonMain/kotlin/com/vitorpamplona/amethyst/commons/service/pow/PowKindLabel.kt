@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.pow
+package com.vitorpamplona.amethyst.commons.service.pow
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.boost
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.pow_kind_chat_message
@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.resources.private_message
 import com.vitorpamplona.amethyst.commons.resources.reaction
 import com.vitorpamplona.amethyst.commons.resources.voice_post
 import com.vitorpamplona.amethyst.commons.resources.voice_reply
-import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -39,22 +38,21 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import org.jetbrains.compose.resources.StringResource
 
 /**
- * Android-resource twin of [powKindLabelRes], for [com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService].
- *
- * A foreground-service notification is built inside Android's startForeground()
- * timeout, so its text has to resolve synchronously - the Compose catalog only
- * offers a composable and a suspend accessor, neither of which can run there.
+ * The one user-facing label for "what is being mined": shared by the
+ * broadcast banner, the mining foreground notification, and failure toasts
+ * so a job is described the same way everywhere it appears.
  */
-fun powKindLabelResId(kind: Int): Int =
+fun powKindLabelRes(kind: Int): StringResource =
     when (kind) {
-        ReactionEvent.KIND -> R.string.reaction
-        RepostEvent.KIND, GenericRepostEvent.KIND -> R.string.boost
-        VoiceEvent.KIND -> R.string.voice_post
-        VoiceReplyEvent.KIND -> R.string.voice_reply
-        ReportEvent.KIND -> R.string.pow_kind_report
-        GiftWrapEvent.KIND -> R.string.private_message
-        ChannelMessageEvent.KIND, LiveActivitiesChatMessageEvent.KIND -> R.string.pow_kind_chat_message
-        else -> R.string.post
+        ReactionEvent.KIND -> Res.string.reaction
+        RepostEvent.KIND, GenericRepostEvent.KIND -> Res.string.boost
+        VoiceEvent.KIND -> Res.string.voice_post
+        VoiceReplyEvent.KIND -> Res.string.voice_reply
+        ReportEvent.KIND -> Res.string.pow_kind_report
+        GiftWrapEvent.KIND -> Res.string.private_message
+        ChannelMessageEvent.KIND, LiveActivitiesChatMessageEvent.KIND -> Res.string.pow_kind_chat_message
+        else -> Res.string.post
     }

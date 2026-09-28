@@ -27,17 +27,36 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
+import com.vitorpamplona.amethyst.commons.service.OnlineChecker
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-// Account actions that read a content Uri or write to the device's media store, which only the
-// Android app can do. They stay out of AccountViewModel so the view model does not need Android.
+// Account actions that need Android (a content Uri, the media store) or the JVM HTTP stack the
+// app's OkHttp clients come from. They stay out of AccountViewModel so the view model needs neither.
+
+fun AccountViewModel.urlPreview(
+    url: String,
+    onResult: suspend (UrlPreviewState) -> Unit,
+) {
+    viewModelScope.launch(Dispatchers.IO) {
+        UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
+    }
+}
+
+suspend fun AccountViewModel.checkVideoIsOnline(videoUrl: String): Boolean =
+    withContext(Dispatchers.IO) {
+        OnlineChecker.isOnline(videoUrl, httpClientBuilder::okHttpClientForVideo)
+    }
 
 /**
  * Encrypt + upload a picked image as a group avatar (canonical `marmot-group-image-v1` scheme).
