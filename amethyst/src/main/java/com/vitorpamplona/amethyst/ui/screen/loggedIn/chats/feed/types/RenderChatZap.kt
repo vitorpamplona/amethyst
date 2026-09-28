@@ -44,6 +44,8 @@ import com.vitorpamplona.amethyst.commons.resources.chat_zap_amount_suffix
 import com.vitorpamplona.amethyst.commons.resources.chat_zap_anonymous
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
@@ -53,8 +55,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
-import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 
 private const val BIG_ZAP_THRESHOLD_SATS = 50_000L

@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEventAndMapNotNull
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.collections.immutable.toImmutableList

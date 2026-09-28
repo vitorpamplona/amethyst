@@ -18,23 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.ui.note.produceStateIfNotNull
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import coil3.Image
 
 @Composable
-fun LoadRelayGroupChannel(
-    id: GroupId,
-    content: @Composable (RelayGroupChannel) -> Unit,
+internal actual fun AnimatedImageAutoPlay(
+    image: Image?,
+    autoPlay: Boolean,
 ) {
-    val channel =
-        produceStateIfNotNull(LocalCache.getRelayGroupChannelIfExists(id), id) {
-            value = LocalCache.getOrCreateRelayGroupChannel(id)
-        }
-
-    channel.value?.let { content(it) }
+    // Nothing drives animated-image playback on iOS yet, so autoPlay has no effect here.
 }

@@ -18,23 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
+package com.vitorpamplona.amethyst.commons.service.http
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.ui.note.produceStateIfNotNull
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-
-@Composable
-fun LoadRelayGroupChannel(
-    id: GroupId,
-    content: @Composable (RelayGroupChannel) -> Unit,
-) {
-    val channel =
-        produceStateIfNotNull(LocalCache.getRelayGroupChannelIfExists(id), id) {
-            value = LocalCache.getOrCreateRelayGroupChannel(id)
-        }
-
-    channel.value?.let { content(it) }
+/**
+ * The request marker the local Blossom cache bridge keys on. It lives apart from the OkHttp
+ * interceptor that strips it so image requests built in common code can set it.
+ */
+object LocalBlossomCacheHeaders {
+    /** Marks a request as a media download the local cache may serve. Stripped before sending. */
+    const val MEDIA_HEADER = "X-Amethyst-Local-Blossom"
+    const val MEDIA = "media"
+    const val PROFILE_PICTURE = "profile-picture"
 }

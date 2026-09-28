@@ -69,12 +69,12 @@ import com.vitorpamplona.amethyst.commons.resources.send_payment_method_lightnin
 import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.rememberProfileClinkOffer
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer

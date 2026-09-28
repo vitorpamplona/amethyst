@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
+package com.vitorpamplona.amethyst.commons.relayClient.user
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
@@ -44,6 +43,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
@@ -309,7 +309,7 @@ fun observeUserIsFollowing(
     )
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingHashtag(
@@ -331,7 +331,7 @@ fun observeUserIsFollowingHashtag(
     return flow.collectAsStateWithLifecycle(hashtag in accountViewModel.account.interestList.flow.value)
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsMutingHashtag(
@@ -358,7 +358,7 @@ fun observeUserIsMutingHashtag(
     )
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingGeohash(
@@ -379,7 +379,7 @@ fun observeUserIsFollowingGeohash(
     return flow.collectAsStateWithLifecycle(geohash in accountViewModel.account.geohashList.flow.value)
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingRelay(
@@ -422,7 +422,7 @@ fun observeUserIsFollowingChannel(
                 .flowOn(Dispatchers.IO)
         }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
+    @Suppress("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(channel.idHex in account.publicChatList.flowSet.value)
 }
 
@@ -448,7 +448,7 @@ fun observeUserIsFollowingChannel(
                 .flowOn(Dispatchers.IO)
         }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
+    @Suppress("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(channel.roomId in account.ephemeralChatList.liveEphemeralChatList.value)
 }
 
@@ -506,7 +506,7 @@ fun observeUserStatuses(
                 }.flowOn(Dispatchers.IO)
         }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
+    @Suppress("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(user.statusState().statuses.value)
 }
 
@@ -526,6 +526,6 @@ fun observeUserRelayIntoList(
                 .flowOn(Dispatchers.IO)
         }
 
-    @SuppressLint("StateFlowValueCalledInComposition")
+    @Suppress("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.trustedRelays.flow.value)
 }

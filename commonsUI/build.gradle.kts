@@ -116,6 +116,9 @@ kotlin {
                 // JVM-only and lives in jvmAndroid; iOS will pull coil-ktor
                 // when that target wires its actual.
                 implementation(libs.coil.compose)
+                // NetworkHeaders on avatar requests (the local Blossom cache marker). Multiplatform,
+                // Apache-2.0; already on the JVM classpath through coil-network-okhttp.
+                implementation(libs.coil.network.core)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)

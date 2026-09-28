@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
 import com.vitorpamplona.amethyst.commons.profile.ui.ListButton
 import com.vitorpamplona.amethyst.commons.profile.ui.UnfollowButton
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAboutMe
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
@@ -47,13 +49,13 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 
 @Composable
 fun UserCompose(

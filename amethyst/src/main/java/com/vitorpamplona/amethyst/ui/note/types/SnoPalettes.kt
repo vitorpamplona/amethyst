@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPalette
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteEventReader
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteRef

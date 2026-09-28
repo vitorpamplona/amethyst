@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
-import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheHeaders
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.onBackgroundColorFilter
 import coil3.Image as CoilImage
@@ -221,7 +221,7 @@ fun GifProfilePicture(
                     .httpHeaders(
                         NetworkHeaders
                             .Builder()
-                            .set(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER, LocalBlossomCacheRedirectInterceptor.PROFILE_PICTURE)
+                            .set(LocalBlossomCacheHeaders.MEDIA_HEADER, LocalBlossomCacheHeaders.PROFILE_PICTURE)
                             .build(),
                     ).build()
             } else {

@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
 import com.vitorpamplona.amethyst.commons.profile.ui.UnfollowButton
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsFollowingHashtag
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsMutingHashtag
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_hide_word
@@ -63,8 +65,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensible
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsMutingHashtag
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.dal.HashtagFeedViewModel

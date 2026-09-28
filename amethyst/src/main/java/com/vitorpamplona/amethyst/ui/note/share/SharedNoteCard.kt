@@ -55,10 +55,10 @@ import com.vitorpamplona.amethyst.commons.resources.share_as_qr_thumbnail_hidden
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.GalleryThumbnail
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent

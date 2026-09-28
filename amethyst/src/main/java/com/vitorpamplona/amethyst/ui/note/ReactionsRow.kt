@@ -138,6 +138,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteRepostCou
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReposts
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.boost
 import com.vitorpamplona.amethyst.commons.resources.close_all_reactions_to_this_post
@@ -179,6 +180,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ExpandLessIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.OutlinedZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RepostIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
@@ -231,7 +233,6 @@ import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet

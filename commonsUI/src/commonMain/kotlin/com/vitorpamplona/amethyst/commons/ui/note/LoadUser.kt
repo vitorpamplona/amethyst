@@ -18,23 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.ui.note.produceStateIfNotNull
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
+/** The cached [User] for [baseUserHex], creating it off the first frame when it isn't cached yet. */
 @Composable
-fun LoadRelayGroupChannel(
-    id: GroupId,
-    content: @Composable (RelayGroupChannel) -> Unit,
+fun LoadUser(
+    baseUserHex: String,
+    content: @Composable (User?) -> Unit,
 ) {
-    val channel =
-        produceStateIfNotNull(LocalCache.getRelayGroupChannelIfExists(id), id) {
-            value = LocalCache.getOrCreateRelayGroupChannel(id)
-        }
+    var user by
+        remember(baseUserHex) { mutableStateOf(LocalCache.getUserIfExists(baseUserHex)) }
 
-    channel.value?.let { content(it) }
+    if (user == null) {
+        LaunchedEffect(key1 = baseUserHex) {
+            user = LocalCache.checkGetOrCreateUser(baseUserHex)
+        }
+    }
+
+    content(user)
 }

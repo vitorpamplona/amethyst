@@ -18,33 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import android.content.Context
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.commons.ui.note.PlayIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserNameText
-import com.vitorpamplona.amethyst.commons.ui.theme.StdButtonSizeModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserDisplayNickname
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
-import com.vitorpamplona.quartz.utils.Log
 
 @Composable
 fun NoteUsernameDisplay(
@@ -119,31 +108,4 @@ fun UsernameDisplay(
             textAlign = textAlign,
         )
     }
-}
-
-@Composable
-fun DrawPlayName(name: String) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    IconButton(onClick = { speak(name, context, lifecycleOwner) }, modifier = StdButtonSizeModifier) {
-        PlayIcon(
-            modifier = StdButtonSizeModifier,
-            tint = MaterialTheme.colorScheme.placeholderText,
-        )
-    }
-}
-
-private fun speak(
-    message: String,
-    context: Context,
-    owner: LifecycleOwner,
-) {
-    TextToSpeechHelper
-        .getInstance(context)
-        .registerLifecycle(owner)
-        .speak(message)
-        .highlight()
-        .onDone { Log.d("TextToSpeak", "speak: done") }
-        .onError { Log.d("TextToSpeak") { "speak error: $it" } }
 }

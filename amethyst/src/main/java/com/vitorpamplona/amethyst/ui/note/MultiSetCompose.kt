@@ -76,6 +76,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.authorRouteFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.notifications.MultiSetCard
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsScore
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.commons.resources.profile_image
@@ -84,10 +87,13 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ScoreTagSmall
+import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthorWithBlank
+import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -110,9 +116,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsScore
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
