@@ -85,5 +85,11 @@ internal object ZoneMath {
     fun dayAt(
         epochSeconds: Long,
         offsets: ZoneOffsets,
-    ): SearchDate = SearchDate.civilFromDays((epochSeconds + offsets.at(epochSeconds)).floorDiv(SECONDS_PER_DAY))
+    ): SearchDate = SearchDate.civilFromDays(epochDayAt(epochSeconds, offsets))
+
+    /** The local day [epochSeconds] falls on, counted in days since 1970-01-01. */
+    fun epochDayAt(
+        epochSeconds: Long,
+        offsets: ZoneOffsets,
+    ): Long = (epochSeconds + offsets.at(epochSeconds)).floorDiv(SECONDS_PER_DAY)
 }

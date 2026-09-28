@@ -35,13 +35,15 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.getNoteIfExists
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.util.logTime
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedOrderCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -65,8 +67,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 
 @Stable
 class CardFeedContentState(
@@ -116,9 +116,13 @@ class CardFeedContentState(
         viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
-    @Synchronized
-    private fun refreshSuspended() {
-        checkNotInMainThread()
+    // Refreshes can arrive from several IO coroutines at once; they must not interleave.
+    private val refreshLock = KmpLock()
+
+    private fun refreshSuspended() = refreshLock.withLock { refreshLocked() }
+
+    private fun refreshLocked() {
+        LocalCache.appHost.assertNotMainThread()
 
         try {
             isRefreshing.value = true
@@ -165,7 +169,7 @@ class CardFeedContentState(
     }
 
     private fun convertToCard(notes: Collection<Note>): List<Card> {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
@@ -274,14 +278,9 @@ class CardFeedContentState(
         // gives identical buckets and chronological ordering while avoiding a
         // DateTimeFormatter + ZonedDateTime + String allocation for every single
         // reaction/zap/repost — a meaningful GC saving on full feed conversions.
-        val zone = ZoneId.systemDefault()
+        val dayCounter = LocalClock.epochDayCounter()
 
-        fun epochDay(createdAt: Long?): Long =
-            Instant
-                .ofEpochSecond(createdAt ?: 0L)
-                .atZone(zone)
-                .toLocalDate()
-                .toEpochDay()
+        fun epochDay(createdAt: Long?): Long = dayCounter.epochDay(createdAt ?: 0L)
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys + nutzapsPerEvent.keys
         val multiCards =
@@ -544,7 +543,7 @@ class CardFeedContentState(
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
             invalidateInsertData(newNotes)

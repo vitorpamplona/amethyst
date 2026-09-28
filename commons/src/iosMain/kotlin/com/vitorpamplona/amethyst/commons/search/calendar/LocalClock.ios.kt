@@ -67,6 +67,8 @@ actual object LocalClock {
 
     actual fun today(): SearchDate = ZoneMath.dayAt(currentTimeSeconds(), localZone)
 
+    actual fun epochDayCounter(): EpochDayCounter = EpochDayCounter { ZoneMath.epochDayAt(it, localZone) }
+
     /**
      * Which weekday a week starts on here, 0 = Sunday. `firstWeekday` follows the reader's own
      * region setting — Sunday across most of the Americas and East Asia, Monday across Europe,
