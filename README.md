@@ -338,6 +338,8 @@ implementation('com.vitorpamplona.quartz:quartz-android:1.16.0')
 implementation('com.vitorpamplona.quartz:quartz-jvm:1.16.0')
 implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.16.0')
 implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.16.0')
+implementation('com.vitorpamplona.quartz:quartz-macosarm64:1.16.0')
+implementation('com.vitorpamplona.quartz:quartz-linuxx64:1.16.0')
 ```
 
 Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
@@ -468,28 +470,6 @@ without deleting it.
 When your app goes to the background, you can use NostrClient's `connect` and `disconnect`
 methods to stop all communication to relays. Add the `connect` to your `onResume` and `disconnect`
 to `onPause` methods.
-
-### Feature Parity Table
-
-| Feature Category         | Feature / Component            | Android / JVM Support | iOS Support | Notes                                                                  |
-|:-------------------------|:-------------------------------|:---------------------:|:-----------:|:-----------------------------------------------------------------------|
-| **Cryptography**         | Secp256k1 (Schnorr, Keys)      |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | LibSodium (ChaCha20, Poly1305) |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | AES Encryption (CBC & GCM)     |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | Hashing (SHA-256, etc.)        |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | MAC (HmacSHA256, etc.)         |        ✅ Full         |   ✅ Full    |                                                                        |
-| **Data & Serialization** | JSON Mapping (Optimized)       |        ✅ Full         |   ✅ Full    | A fully custom implementation exists in `commonMain`.                  |
-|                          | GZip Compression               |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | BitSet                         |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | LargeCache                     |        ✅ Full         |   ✅ Full    |                                                                        |
-| **NIP Support**          | NIP-96 (File Storage Info)     |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | NIP-46 (Remote Signer)         |        ✅ Full         | ⚠️ Partial  | Some methods in `NostrSignerRemote` are unimplemented in `commonMain`. |
-|                          | NIP-03 (OTS / Timestamps)      |        ✅ Full         |    ❌ No     | `BitcoinExplorer` and `RemoteCalendar` have stubs in `commonMain`.     |
-| **Utilities**            | URL Encoding / Decoding        |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | Unicode Normalization          |        ✅ Full         |   ✅ Full    |                                                                        |
-|                          | Platform Logging               |        ✅ Full         |   ✅ Full    | iOS uses `NSLog`, Android uses standard Log.                           |
-|                          | Current Time                   |        ✅ Full         |   ✅ Full    | Implemented using `NSDate` on iOS.                                     |
-
 
 ## Contributing
 

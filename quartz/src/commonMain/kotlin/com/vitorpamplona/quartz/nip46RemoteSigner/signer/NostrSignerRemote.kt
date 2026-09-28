@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -325,13 +326,27 @@ class NostrSignerRemote(
         throw convertExceptions("Could not get public key", result)
     }
 
+    /**
+     * NIP-46 has no private-zap command, but a private zap's payload is NIP-04-compatible, so the
+     * recipient can open it with the bunker's `nip04_decrypt`. The sender's copy is keyed by a
+     * hash of their raw private key, which a bunker never reveals, so that side can't be decrypted.
+     */
     override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent {
-        TODO("Not yet implemented")
+        if (event.zappedAuthor().firstOrNull() != pubKey) {
+            throw SignerExceptions.CouldNotPerformException(
+                "Remote (NIP-46) signers can only decrypt private zaps sent to this user",
+            )
+        }
+        return PrivateZapRequestBuilder().decryptReceivedZapEvent(event, this)
     }
 
-    override suspend fun deriveKey(nonce: HexKey): HexKey {
-        TODO("Not yet implemented")
-    }
+    /**
+     * Key derivation needs the raw private key, and NIP-46 has no command for it.
+     */
+    override suspend fun deriveKey(nonce: HexKey): HexKey =
+        throw SignerExceptions.UnsupportedMethodException(
+            "Remote (NIP-46) signers do not support key derivation",
+        )
 
     /**
      * NIP-BC `sign_psbt` over NIP-46. The bunker-side command is not yet
