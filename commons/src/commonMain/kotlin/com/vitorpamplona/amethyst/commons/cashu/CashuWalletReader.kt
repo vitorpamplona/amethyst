@@ -89,10 +89,10 @@ class CashuWalletReader(
                     if (walletEvent == null || event.createdAt > walletEvent.createdAt) walletEvent = event
                 is NutzapInfoEvent ->
                     if (nutzapInfoEvent == null || event.createdAt > nutzapInfoEvent.createdAt) nutzapInfoEvent = event
-                is CashuTokenEvent -> tokenEvents.putIfAbsent(event.id, event)
-                is CashuSpendingHistoryEvent -> historyEvents.putIfAbsent(event.id, event)
-                is CashuMintQuoteEvent -> quoteEvents.putIfAbsent(event.id, event)
-                is NutzapEvent -> nutzapEvents.putIfAbsent(event.id, event)
+                is CashuTokenEvent -> tokenEvents.getOrPut(event.id) { event }
+                is CashuSpendingHistoryEvent -> historyEvents.getOrPut(event.id) { event }
+                is CashuMintQuoteEvent -> quoteEvents.getOrPut(event.id) { event }
+                is NutzapEvent -> nutzapEvents.getOrPut(event.id) { event }
                 is MintRecommendationEvent -> {
                     val key = event.dTag() ?: event.id
                     val current = recommendationEvents[key]
