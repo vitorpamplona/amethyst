@@ -62,9 +62,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
@@ -76,8 +74,6 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
@@ -96,17 +92,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-
-val DefaultSignerPermissions =
-    listOf(
-        Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
-        Permission(CommandType.SIGN_EVENT, DraftWrapEvent.KIND),
-        Permission(CommandType.NIP04_ENCRYPT),
-        Permission(CommandType.NIP04_DECRYPT),
-        Permission(CommandType.NIP44_DECRYPT),
-        Permission(CommandType.NIP44_DECRYPT),
-        Permission(CommandType.DECRYPT_ZAP_EVENT),
-    )
 
 @Stable
 class AccountSettings(
