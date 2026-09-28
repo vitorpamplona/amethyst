@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_management_add
@@ -134,6 +135,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.AnimateOnNewSearch
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -144,9 +147,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.AnimateOnNewSearch
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

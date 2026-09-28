@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ConcordInviteCard
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.TagLink

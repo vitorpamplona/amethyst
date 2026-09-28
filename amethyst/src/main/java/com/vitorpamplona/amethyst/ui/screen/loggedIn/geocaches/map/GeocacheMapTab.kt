@@ -65,10 +65,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.rememberMyFoundCacheIds
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.creators.location.roadEventPinBitmap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.rememberMyFoundCacheIds
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheGeohash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent

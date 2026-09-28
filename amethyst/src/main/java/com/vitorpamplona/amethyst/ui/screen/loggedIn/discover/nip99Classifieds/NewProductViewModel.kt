@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent

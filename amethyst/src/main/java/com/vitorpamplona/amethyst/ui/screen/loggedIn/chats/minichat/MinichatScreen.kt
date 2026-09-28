@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_open_channel
 import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
@@ -82,7 +83,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageC
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalSuppressReplyToNoteId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta

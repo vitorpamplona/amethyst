@@ -73,13 +73,13 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_user_no_lnaddr
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_weight
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 
 /**
  * Editor for a Podcasting-2.0 value-for-value split. Recipients are added the Amethyst-native way —

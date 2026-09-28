@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceB
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
@@ -138,7 +139,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePick
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow

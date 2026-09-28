@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer_description
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
@@ -54,7 +55,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload

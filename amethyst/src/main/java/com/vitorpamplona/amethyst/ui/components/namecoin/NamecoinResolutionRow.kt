@@ -101,7 +101,7 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
 /**
  * Lightweight syntactic check: does this look like something we should
  * route to Namecoin? Mirrors [com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver.isNamecoinIdentifier]
- * but tolerates a leading `@` (matches the dropdown's [com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState.userSearchTermOrNull]).
+ * but tolerates a leading `@` (matches the dropdown's [com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState.userSearchTermOrNull]).
  *
  * Accepted shapes:
  *  - `host.bit` and `user@host.bit` (domain namespace)

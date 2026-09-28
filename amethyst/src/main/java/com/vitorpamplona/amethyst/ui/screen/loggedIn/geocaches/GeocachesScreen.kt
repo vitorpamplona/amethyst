@@ -54,11 +54,11 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map.GeocacheMapTab
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource

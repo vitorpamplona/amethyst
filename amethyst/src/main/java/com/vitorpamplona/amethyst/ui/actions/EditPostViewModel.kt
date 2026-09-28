@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent

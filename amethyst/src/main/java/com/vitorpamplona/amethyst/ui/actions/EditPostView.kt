@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.AddLnInvoiceButton
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
@@ -106,7 +107,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

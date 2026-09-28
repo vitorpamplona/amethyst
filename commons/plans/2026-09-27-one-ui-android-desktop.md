@@ -325,6 +325,21 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      installed in `AmethystTheme`. What remains app-side is what the slots name: the media
      players, the map, the platform-engine note types, the reactions/zap row and the editor.
 6. **Screens**, feature by feature, into `commonsUI`.
+
+   **Measured 2026-09-28** (after NoteCompose moved), with the same closure method: of 252
+   `*Screen.kt` files, 23 had no Android-only exit, 45 had one. The exits most screens share:
+   `Amethyst.instance` (109 screens), `LoadRelayInfo`/`Nip11CachedRetriever` (73),
+   `NappletFavoriteIcon` (65), `ConcordCommunityImage` (64), `PrefetchFeedMedia` (48), the
+   gallery picker (38), the app's `StringResourceCache` (35), `FeedFilterSpinner` (32) and
+   direct `ReactionsRow` imports (30). Most `Amethyst.instance` reads already have an
+   `AccountViewModel` equivalent (`httpClientBuilder`, `account.encryptionKeyCache`,
+   `host.relayStats`, `account.client`, `LocalCache`); the rest need an app-services port.
+   - **Wave 1 moved:** the 23 zero-exit screens with their closures, 43 files: buzz forum/
+     persona/new-DM, contact lists, emoji-pack selection, interest sets, geocache hunts,
+     Concord invite/members, relay-group threads, the import-follow-list flow, poll results,
+     badges, podcast authoring and four settings screens. `viewModel()` became the shared
+     `rememberViewModel` (with a factory overload).
+   - **Next:** cut the shared exits above, largest first, then re-measure and move again.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.

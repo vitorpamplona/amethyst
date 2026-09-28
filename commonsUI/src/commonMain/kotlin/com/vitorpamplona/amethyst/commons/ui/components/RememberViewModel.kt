@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import kotlin.reflect.KClass
 
 /**
@@ -35,6 +36,20 @@ expect fun <VM : ViewModel> rememberViewModel(
     key: String?,
     factory: () -> VM,
 ): VM
+
+/** [rememberViewModel] built through an existing [ViewModelProvider.Factory]. */
+@Composable
+expect fun <VM : ViewModel> rememberViewModel(
+    modelClass: KClass<VM>,
+    key: String?,
+    factory: ViewModelProvider.Factory,
+): VM
+
+@Composable
+inline fun <reified VM : ViewModel> rememberViewModel(
+    key: String? = null,
+    factory: ViewModelProvider.Factory,
+): VM = rememberViewModel(VM::class, key, factory)
 
 @Composable
 inline fun <reified VM : ViewModel> rememberViewModel(

@@ -78,10 +78,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import kotlinx.coroutines.flow.combine

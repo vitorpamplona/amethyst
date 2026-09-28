@@ -125,6 +125,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
 import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
@@ -144,8 +146,6 @@ import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

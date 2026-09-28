@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ConcordInviteCard
 import com.vitorpamplona.amethyst.commons.ui.components.CreateClickableText
 import com.vitorpamplona.amethyst.commons.ui.components.HashTag
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard

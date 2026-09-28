@@ -23,7 +23,16 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.MutableCreationExtras
 import kotlin.reflect.KClass
+
+@Composable
+actual fun <VM : ViewModel> rememberViewModel(
+    modelClass: KClass<VM>,
+    key: String?,
+    factory: ViewModelProvider.Factory,
+): VM = remember(modelClass, key) { factory.create(modelClass, MutableCreationExtras()) }
 
 @Composable
 actual fun <VM : ViewModel> rememberViewModel(

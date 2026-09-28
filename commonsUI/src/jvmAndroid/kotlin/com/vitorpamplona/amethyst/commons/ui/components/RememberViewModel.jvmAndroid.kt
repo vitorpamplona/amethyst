@@ -31,6 +31,13 @@ import kotlin.reflect.KClass
 actual fun <VM : ViewModel> rememberViewModel(
     modelClass: KClass<VM>,
     key: String?,
+    factory: ViewModelProvider.Factory,
+): VM = viewModel(modelClass = modelClass, key = key, factory = factory)
+
+@Composable
+actual fun <VM : ViewModel> rememberViewModel(
+    modelClass: KClass<VM>,
+    key: String?,
     factory: () -> VM,
 ): VM =
     viewModel(

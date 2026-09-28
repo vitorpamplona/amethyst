@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.topNavFeedQueryState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.topNavFeedQueryState
 
 @Composable
 fun NappletsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {

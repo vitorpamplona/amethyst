@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.BuzzPinDropdownItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
