@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -63,6 +64,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -70,7 +72,7 @@ class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
-    val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
+    val okHttpClientForMoney: (String) -> OkHttpClient,
     val contentResolverFn: () -> ContentResolver,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
@@ -357,7 +359,7 @@ class AccountCacheState(
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
             cashuMintDirectoryFilterAssembler = cashuMintDirectoryFilterAssembler,
-            okHttpClientForMoney = okHttpClientForMoney,
+            cashuMintTransport = OkHttpMintTransport(okHttpClientForMoney),
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,

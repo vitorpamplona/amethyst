@@ -18,24 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
-actual class ConcurrentSet<E : Any> {
-    // No lock-free set in the K/N standard library — guard a plain set with the
-    // same reentrant lock KmpLock uses. Same behaviour as the previous
-    // KmpLock-wrapped sets; the lock-striped win only exists on JVM/Android.
-    private val lock = KmpLock()
-    private val set = HashSet<E>()
+/**
+ * The HTTP a [MintHttpClient] needs: a GET, and a POST of a JSON body, each returning the status and
+ * the body as text. Each platform supplies one (OkHttp on Android and the JVM). Implementations
+ * pick the per-URL client themselves (Tor, proxies), run off the main thread, and throw on a
+ * transport failure; an HTTP error status is a [MintHttpResponse], not an exception.
+ */
+interface MintHttpTransport {
+    suspend fun get(url: String): MintHttpResponse
 
-    actual fun add(element: E): Boolean = lock.withLock { set.add(element) }
+    suspend fun postJson(
+        url: String,
+        json: String,
+    ): MintHttpResponse
+}
 
-    actual fun contains(element: E): Boolean = lock.withLock { set.contains(element) }
-
-    actual fun remove(element: E): Boolean = lock.withLock { set.remove(element) }
-
-    actual fun clear() = lock.withLock { set.clear() }
-
-    actual val size: Int get() = lock.withLock { set.size }
-
-    actual fun snapshot(): Set<E> = lock.withLock { set.toHashSet() }
+/** One mint response. */
+class MintHttpResponse(
+    val status: Int,
+    val body: String,
+) {
+    val isSuccessful: Boolean get() = status in 200..299
 }

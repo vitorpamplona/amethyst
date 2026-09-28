@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import junit.framework.TestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +81,7 @@ class ThreadDualAxisChartAssemblerTest {
                 geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
                 cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
-                okHttpClientForMoney = { OkHttpClient() },
+                cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
                 cache = LocalCache,
                 client = client,

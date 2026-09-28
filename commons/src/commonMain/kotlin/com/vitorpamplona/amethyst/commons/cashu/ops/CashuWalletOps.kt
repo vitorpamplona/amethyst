@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.DleqProofDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintProtocolException
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
@@ -61,6 +62,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.redemption.notifySender
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -70,8 +72,6 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Wallet-level operations that combine the [CashuMintOperations] HTTP layer
@@ -90,7 +90,8 @@ import java.util.concurrent.ConcurrentHashMap
 class CashuWalletOps(
     private val signer: NostrSigner,
     private val publish: suspend (Event) -> Unit,
-    private val okHttpClient: (String) -> OkHttpClient,
+    /** How mint requests go out (OkHttp on Android and the JVM, picking Tor or a proxy per URL). */
+    private val mintTransport: MintHttpTransport,
     /**
      * NUT-13 secret strategy. Defaults to random for backwards
      * compatibility with tests that don't carry a seed. The wallet state
@@ -129,13 +130,13 @@ class CashuWalletOps(
      */
     private val reserveCashuCounters: suspend (keysetId: String, count: Int) -> Long = { _, _ -> 0L },
 ) {
-    private val opsCache = ConcurrentHashMap<String, CashuMintOperations>()
+    private val opsCache = ConcurrentMap<String, CashuMintOperations>()
 
     private fun ops(mintUrl: String): CashuMintOperations =
         opsCache.getOrPut(mintUrl.trimEnd('/')) {
             // userConfigured: these are the mints of the user's own NIP-60 wallet,
             // added deliberately, so a self-hosted mint on the LAN stays usable.
-            CashuMintOperations(MintHttpClient(mintUrl, userConfigured = true, okHttpClient = okHttpClient), secretFactory)
+            CashuMintOperations(MintHttpClient(mintUrl, userConfigured = true, transport = mintTransport), secretFactory)
         }
 
     /**
@@ -960,7 +961,7 @@ class CashuWalletOps(
      * `userConfigured = true`: the URL was typed by the user into the Add-Mint UI,
      * so a self-hosted mint on the LAN is a legitimate target here.
      */
-    suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, userConfigured = true, okHttpClient = okHttpClient).info().name
+    suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, userConfigured = true, transport = mintTransport).info().name
 
     /**
      * Fetch the currently-active keyset id for [mintUrl]. Cheap wrapper

@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,7 +91,7 @@ class NotificationFeedFilterModeOverrideTest {
                 geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
                 cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
-                okHttpClientForMoney = { OkHttpClient() },
+                cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
                 cache = LocalCache,
                 client = client,

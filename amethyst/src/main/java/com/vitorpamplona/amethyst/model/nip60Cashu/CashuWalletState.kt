@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -45,6 +46,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -54,6 +56,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,8 +75,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.OkHttpClient
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Account-scoped state holder for the NIP-60 Cashu wallet + NIP-61 nutzaps.
@@ -110,13 +111,13 @@ class CashuWalletState(
     private val inboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val dmRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val settings: AccountSettings,
-    okHttpClient: (String) -> OkHttpClient,
+    mintTransport: MintHttpTransport,
 ) {
     val ops: CashuWalletOps =
         CashuWalletOps(
             signer = signer,
             publish = ::publishEvent,
-            okHttpClient = okHttpClient,
+            mintTransport = mintTransport,
             // NUT-13 wiring: the factory closure reads the cached seed at
             // mint-op time. cachedSeed is populated by ensureSeed() —
             // CashuWalletOps' seedWarmer below calls it before any blind
@@ -152,10 +153,10 @@ class CashuWalletState(
     // ============================================================
     private var walletEventInternal: CashuWalletEvent? = null
     private var nutzapInfoEventInternal: NutzapInfoEvent? = null
-    private val tokenEvents = ConcurrentHashMap<HexKey, CashuTokenEvent>()
-    private val historyEvents = ConcurrentHashMap<HexKey, CashuSpendingHistoryEvent>()
-    private val quoteEvents = ConcurrentHashMap<HexKey, CashuMintQuoteEvent>()
-    private val nutzapEvents = ConcurrentHashMap<HexKey, NutzapEvent>()
+    private val tokenEvents = ConcurrentMap<HexKey, CashuTokenEvent>()
+    private val historyEvents = ConcurrentMap<HexKey, CashuSpendingHistoryEvent>()
+    private val quoteEvents = ConcurrentMap<HexKey, CashuMintQuoteEvent>()
+    private val nutzapEvents = ConcurrentMap<HexKey, NutzapEvent>()
 
     /**
      * NIP-87 cashu mint recommendations published by this account. Keyed by
@@ -164,10 +165,10 @@ class CashuWalletState(
      * mint replaces the older one and we don't show duplicates in the
      * Settings screen list.
      */
-    private val recommendationEvents = ConcurrentHashMap<String, MintRecommendationEvent>()
+    private val recommendationEvents = ConcurrentMap<String, MintRecommendationEvent>()
 
     /** NIP-44 decryption cache for token contents, keyed by event id. */
-    private val tokenContents = ConcurrentHashMap<HexKey, TokenContent>()
+    private val tokenContents = ConcurrentMap<HexKey, TokenContent>()
     private val redeemMutex = Mutex()
 
     /**
@@ -180,7 +181,7 @@ class CashuWalletState(
      * double-redeem race. The set is process-local; on next launch the
      * persisted kind:7376 events rebuild equivalent state.
      */
-    private val sessionRedeemedNutzaps = ConcurrentHashMap.newKeySet<HexKey>()
+    private val sessionRedeemedNutzaps = ConcurrentSet<HexKey>()
 
     /**
      * Nutzap event ids that failed redemption with a deterministic
@@ -193,7 +194,7 @@ class CashuWalletState(
      * process-local — if the user rotates their P2PK key, restarting
      * gives the redeem another shot.
      */
-    private val sessionUnredeemableNutzaps = ConcurrentHashMap.newKeySet<HexKey>()
+    private val sessionUnredeemableNutzaps = ConcurrentSet<HexKey>()
 
     // ============================================================
     // Public flows
@@ -624,7 +625,7 @@ class CashuWalletState(
             val filters = cashuProofBackfillFilters(pubKey)
             // The callback runs on the relay reader thread and must not suspend,
             // so collect first and index after the walk.
-            val collected = ConcurrentHashMap<HexKey, CashuTokenEvent>()
+            val collected = ConcurrentMap<HexKey, CashuTokenEvent>()
             runCatching {
                 client.fetchAllPagesFromPool(
                     filters = relays.associateWith { filters },
@@ -645,9 +646,9 @@ class CashuWalletState(
                 proofBackfillDone = true
             }
 
-            val fresh = collected.values.filter { !tokenEvents.containsKey(it.id) }
+            val fresh = collected.snapshot().values.filter { tokenEvents[it.id] == null }
             Log.i("CashuWallet") {
-                "Proof backfill over ${relays.size} relay(s): ${collected.size} kind:7375 seen, ${fresh.size} new"
+                "Proof backfill over ${relays.size} relay(s): ${collected.size()} kind:7375 seen, ${fresh.size} new"
             }
 
             if (fresh.isNotEmpty()) {
@@ -720,16 +721,16 @@ class CashuWalletState(
                     }
                 }
                 is CashuTokenEvent -> {
-                    if (tokenEvents.put(event.id, event) == null) dirtyTokens = true
+                    if (tokenEvents.putIfAbsent(event.id, event) == null) dirtyTokens = true
                 }
                 is CashuSpendingHistoryEvent -> {
-                    if (historyEvents.put(event.id, event) == null) dirtyHistory = true
+                    if (historyEvents.putIfAbsent(event.id, event) == null) dirtyHistory = true
                 }
                 is CashuMintQuoteEvent -> {
-                    if (quoteEvents.put(event.id, event) == null) dirtyQuotes = true
+                    if (quoteEvents.putIfAbsent(event.id, event) == null) dirtyQuotes = true
                 }
                 is NutzapEvent -> {
-                    if (nutzapEvents.put(event.id, event) == null) dirtyNutzaps = true
+                    if (nutzapEvents.putIfAbsent(event.id, event) == null) dirtyNutzaps = true
                 }
                 is MintRecommendationEvent -> {
                     // kind:38000 is parameterized-replaceable — keep only the
@@ -776,7 +777,7 @@ class CashuWalletState(
         }
         if (dirtyTokens) recomputeUnspent()
         if (dirtyHistory) {
-            _history.value = historyEvents.values.sortedByDescending { it.createdAt }
+            _history.value = historyEvents.snapshot().values.sortedByDescending { it.createdAt }
         }
         if (dirtyQuotes || dirtyHistory) {
             // History gains might mark quotes as fulfilled (via the "destroyed"
@@ -787,7 +788,7 @@ class CashuWalletState(
             triggerAutoRedeem()
         }
         if (dirtyRecommendations) {
-            _ownRecommendations.value = recommendationEvents.values.sortedByDescending { it.createdAt }
+            _ownRecommendations.value = recommendationEvents.snapshot().values.sortedByDescending { it.createdAt }
         }
     }
 
@@ -819,7 +820,11 @@ class CashuWalletState(
             // Recommendations are indexed by dTag, not event id — find by
             // matching event.id and drop the entry.
             val recoKey =
-                recommendationEvents.entries.firstOrNull { it.value.id == id }?.key
+                recommendationEvents
+                    .snapshot()
+                    .entries
+                    .firstOrNull { it.value.id == id }
+                    ?.key
             if (recoKey != null) {
                 recommendationEvents.remove(recoKey)
                 dirtyRecommendations = true
@@ -840,26 +845,26 @@ class CashuWalletState(
             settings.clearNutzapInfo()
         }
         if (dirtyTokens) recomputeUnspent()
-        if (dirtyHistory) _history.value = historyEvents.values.sortedByDescending { it.createdAt }
+        if (dirtyHistory) _history.value = historyEvents.snapshot().values.sortedByDescending { it.createdAt }
         if (dirtyQuotes || dirtyHistory) recomputePending()
         // dirtyNutzaps would trigger UI surfacing for inbound nutzaps; auto-
         // redeem already fires from the live-event observer, so no extra
         // signal is needed here.
         if (dirtyNutzaps) Unit
         if (dirtyRecommendations) {
-            _ownRecommendations.value = recommendationEvents.values.sortedByDescending { it.createdAt }
+            _ownRecommendations.value = recommendationEvents.snapshot().values.sortedByDescending { it.createdAt }
         }
     }
 
     private suspend fun recomputeUnspent() {
-        val all = tokenEvents.values.toList()
+        val all = tokenEvents.snapshot().values.toList()
         // Decrypt anything we haven't seen before; reuse cached TokenContent
         // for events we've already decrypted. Only successes are cached, so a
         // failure is retried on the next recompute rather than being pinned as
         // "empty" for the session.
         var undecryptable = 0
         all.forEach { evt ->
-            if (!tokenContents.containsKey(evt.id)) {
+            if (tokenContents[evt.id] == null) {
                 val content =
                     runCatching { evt.tokenContent(signer) }
                         .onFailure {
@@ -884,15 +889,18 @@ class CashuWalletState(
         }
 
         // Shared del-rollover + sort with the headless reader.
-        _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents)
+        _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents.snapshot())
     }
 
     /** Token events we hold but have never managed to decrypt. See [recomputeUnspent]. */
-    private fun undecryptedTokenCount(): Int = tokenEvents.keys.count { it !in tokenContents.keys }
+    private fun undecryptedTokenCount(): Int {
+        val decrypted = tokenContents.snapshot()
+        return tokenEvents.snapshot().keys.count { it !in decrypted }
+    }
 
     private fun recomputePending() {
         // Shared destroyed/expired filter with the headless reader.
-        _pendingQuotes.value = CashuWalletReader.computePending(quoteEvents.values, historyEvents.values)
+        _pendingQuotes.value = CashuWalletReader.computePending(quoteEvents.snapshot().values, historyEvents.snapshot().values)
     }
 
     private fun scanCacheForOwnEvents(): List<Event> {
@@ -921,15 +929,15 @@ class CashuWalletState(
             // (Amber even prompts on some configurations), paid on every bundle
             // by a wallet whose nutzaps were all redeemed months ago. Nothing
             // above the candidate filter needs a key, so hoist the filter.
-            if (nutzapEvents.isEmpty()) return
+            if (nutzapEvents.size() == 0) return
             val skipIds = HashSet<HexKey>()
-            historyEvents.values.forEach { h ->
+            historyEvents.snapshot().values.forEach { h ->
                 h.redeemedReferences().forEach { skipIds.add(it.eventId) }
             }
-            skipIds.addAll(sessionRedeemedNutzaps)
-            skipIds.addAll(sessionUnredeemableNutzaps)
+            skipIds.addAll(sessionRedeemedNutzaps.snapshot())
+            skipIds.addAll(sessionUnredeemableNutzaps.snapshot())
 
-            val candidates = nutzapEvents.values.filter { it.id !in skipIds }
+            val candidates = nutzapEvents.snapshot().values.filter { it.id !in skipIds }
             if (candidates.isEmpty()) return
 
             val privkey = walletPrivkeyHex() ?: return

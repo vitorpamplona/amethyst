@@ -299,6 +299,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -375,7 +376,8 @@ class Account(
     val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
-    val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
+    /** How Cashu mint requests go out (the app's money-role HTTP: Tor or proxy per URL). */
+    val cashuMintTransport: MintHttpTransport,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
@@ -876,7 +878,7 @@ class Account(
             inboxRelaysFlow = notificationRelays.flow,
             dmRelaysFlow = dmRelays.flow,
             settings = settings,
-            okHttpClient = okHttpClientForMoney,
+            mintTransport = cashuMintTransport,
         )
 
     /**

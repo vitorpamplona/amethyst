@@ -20,14 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.coroutines.executeAsync
+import kotlin.concurrent.Volatile
 
 /**
  * Thrown when the mint returns a non-2xx response or an HTTP error.
@@ -53,7 +52,7 @@ class MintProtocolException(
 ) : RuntimeException(message)
 
 /**
- * OkHttp-backed Cashu v1 mint client implementing NUT-00..06 endpoints.
+ * Cashu v1 mint client implementing NUT-00..06 endpoints, over a [MintHttpTransport].
  *
  * Each instance is bound to a single mint URL (e.g. `https://mint.example.com`).
  * Trailing slashes are stripped on construction.
@@ -70,7 +69,7 @@ class MintProtocolException(
 class MintHttpClient(
     mintUrl: String,
     userConfigured: Boolean = false,
-    private val okHttpClient: (String) -> OkHttpClient,
+    private val transport: MintHttpTransport,
 ) {
     private val baseUrl: String = CashuMintUrlValidator.validatedBaseUrl(mintUrl, userConfigured)
 
@@ -92,13 +91,13 @@ class MintHttpClient(
     suspend fun info(force: Boolean = false): MintInfoDto {
         if (!force) {
             cachedInfo?.let { (info, at) ->
-                if (System.currentTimeMillis() - at < INFO_CACHE_TTL_MS) {
+                if (TimeUtils.nowMillis() - at < INFO_CACHE_TTL_MS) {
                     return info
                 }
             }
         }
         val fresh = get<MintInfoDto>("/v1/info")
-        cachedInfo = fresh to System.currentTimeMillis()
+        cachedInfo = fresh to TimeUtils.nowMillis()
         return fresh
     }
 
@@ -128,41 +127,20 @@ class MintHttpClient(
 
     private suspend inline fun <reified R> get(path: String): R =
         withContext(Dispatchers.IO) {
-            val url = baseUrl + path
-            val client = okHttpClient(url)
-            val req =
-                Request
-                    .Builder()
-                    .url(url)
-                    .get()
-                    .build()
-            client.newCall(req).executeAsync().use { resp ->
-                val body = resp.body.string()
-                if (!resp.isSuccessful) throw decodeError(resp.code, body)
-                json.decodeFromString<R>(body)
-            }
+            val resp = transport.get(baseUrl + path)
+            if (!resp.isSuccessful) throw decodeError(resp.status, resp.body)
+            json.decodeFromString<R>(resp.body)
         }
 
     private suspend inline fun <T, reified R> post(
         path: String,
         body: T,
-        serializer: kotlinx.serialization.KSerializer<T>,
+        serializer: KSerializer<T>,
     ): R =
         withContext(Dispatchers.IO) {
-            val url = baseUrl + path
-            val client = okHttpClient(url)
-            val bodyJson = json.encodeToString(serializer, body)
-            val req =
-                Request
-                    .Builder()
-                    .url(url)
-                    .post(bodyJson.toRequestBody(jsonMediaType))
-                    .build()
-            client.newCall(req).executeAsync().use { resp ->
-                val text = resp.body.string()
-                if (!resp.isSuccessful) throw decodeError(resp.code, text)
-                json.decodeFromString<R>(text)
-            }
+            val resp = transport.postJson(baseUrl + path, json.encodeToString(serializer, body))
+            if (!resp.isSuccessful) throw decodeError(resp.status, resp.body)
+            json.decodeFromString<R>(resp.body)
         }
 
     private fun decodeError(
@@ -186,8 +164,6 @@ class MintHttpClient(
                 encodeDefaults = true
                 explicitNulls = false
             }
-
-        private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
         /**
          * Mint info TTL. /v1/info typically changes on the order of

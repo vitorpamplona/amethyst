@@ -35,4 +35,7 @@ actual class ConcurrentSet<E : Any> {
     actual fun clear() = set.clear()
 
     actual val size: Int get() = set.size
+
+    // The key-set view iterates weakly consistently, so copying it never throws while others write.
+    actual fun snapshot(): Set<E> = set.toHashSet()
 }

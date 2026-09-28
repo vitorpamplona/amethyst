@@ -215,6 +215,7 @@ import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.imeta
@@ -253,6 +254,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 /**
  * How long the navigation pickers wait for the toggles to stop before publishing. Long enough that a
@@ -3241,7 +3243,7 @@ fun mockAccountViewModel(): AccountViewModel {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuMintDirectoryFilterAssembler(client)
             },
-            okHttpClientForMoney = { okhttp3.OkHttpClient() },
+            cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = client,
@@ -3303,7 +3305,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuMintDirectoryFilterAssembler(client)
             },
-            okHttpClientForMoney = { okhttp3.OkHttpClient() },
+            cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = EmptyNostrClient(),
