@@ -107,7 +107,7 @@ Each leaving edge is a seam to cut before the group can move.
 | File | Blocker | Proposed cut |
 |---|---|---|
 | `Account.kt` | `BuildConfig.VERSION_NAME` (donation prompt, 3 sites) | constructor parameter `appVersion: String`. **Done 2026-09-27**: `AccountCacheState` takes it too and `AppModules` passes `BuildConfig.VERSION_NAME`. |
-| `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry` |
+| `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry`. **Defaults done 2026-09-28**: `DefaultBottomBarItems` + `DefaultBottomBarEntries` are in `commons/…/model/navigation/DefaultBottomBar.kt`; the language list is still open. |
 | `GeohashChatIdentityState.kt` | `androidx.core.content.edit`, `LegacySharedPreferences`, `LocalPreferences.LEGACY_WRITES_RETIRED`, `Amethyst.instance.encryptedStorage` | the legacy-prefs read/write is a migration path; put it behind a `GeohashIdentityLegacyStore` port, implemented in the app |
 | `AccountZapActions.kt` | `onError: (StringResource, String?)` with `Res.string.bolt12_*` (compose resources, which `commons` cannot see) | a typed error (sealed class) that the UI maps to a string |
 | `nip46Signer/Nip46ConsentBridge.kt` | `Res` + `loadStringRes`; `Amethyst.instance.appContext`; the app's `SignerConnectCoordinator` / `SignerConsentCoordinator` / napplet op labels | it is the Android consent-dialog bridge: leave it in the app and inject it into `Account` through an interface |
@@ -123,7 +123,7 @@ Each leaving edge is a seam to cut before the group can move.
 | `service/location/LocationState.kt` | the `LocationResult` type in `geolocationFlow` and the around-me feed | move the result type to `commons`; the `LocationManager` half stays |
 | `service/uploads/FileHeader.kt` | the `FileHeader` data type in three send methods | split: the data class to `commons`, the `MediaMetadataRetriever` reader stays |
 | `service/relayClient/…/BuzzMembershipEoseManager.kt` | the `MembershipNotificationKinds` constant | move the constant to `commons/model/buzz` |
-| `ui/navigation/bottombars/NavBarItem.kt` | `DefaultBottomBarEntries` | see the table above |
+| `ui/navigation/bottombars/NavBarItem.kt` | `DefaultBottomBarEntries` | moved to `commons` (done 2026-09-28) |
 | `ui/screen/loggedIn/DecryptAndIndexProcessor.kt` | `EventProcessor`, built by `Account` | moves with the group (see above) |
 | `AccountSecretsStore.kt`, `LegacySharedPreferences.kt` | Geohash identity storage | behind the Geohash port above |
 | `connectedApps/consent/*Coordinator.kt`, `napplet/NostrSignerOpLabels.kt` | Nip46 consent bridge | stay in the app with the bridge |
@@ -165,7 +165,7 @@ first).
 2. **Cut the `Account` group's seams**, one small PR each, in the app, with no move yet. Every
    cut is a behaviour-preserving refactor that compiles and tests on its own:
    - the `BuildConfig` parameter (done);
-   - `DefaultBottomBarEntries`;
+   - `DefaultBottomBarEntries` (done);
    - `MembershipNotificationKinds`;
    - `logTime`;
    - `checkNotInMainThread`;

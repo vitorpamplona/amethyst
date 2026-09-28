@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.serialization.Serializable
 import java.util.Locale

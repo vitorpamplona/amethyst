@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -487,18 +486,6 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 resolveRoute = { Route.AllSettings },
             ),
     )
-
-val DefaultBottomBarItems: List<NavBarItem> =
-    listOf(
-        NavBarItem.HOME,
-        NavBarItem.MESSAGES,
-        NavBarItem.WALLET,
-        NavBarItem.BROWSER,
-        NavBarItem.NOTIFICATIONS,
-    )
-
-/** The default bottom bar as unified entries (all built-in; favorites are added by the user). */
-val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { BottomBarEntry.BuiltIn(it) }
 
 /**
  * A titled, collapsible group of selectable destinations in the bottom-bar settings picker. The
