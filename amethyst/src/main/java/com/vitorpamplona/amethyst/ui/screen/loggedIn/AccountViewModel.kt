@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.InMemoryGeohashIdentityStore
 import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
@@ -3240,6 +3241,7 @@ fun mockAccountViewModel(): AccountViewModel {
             saveSettings = {},
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
+            geohashIdentityStore = InMemoryGeohashIdentityStore(),
         )
 
     return AccountViewModel(
@@ -3301,6 +3303,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             saveSettings = {},
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
+            geohashIdentityStore = InMemoryGeohashIdentityStore(),
         )
 
     return AccountViewModel(

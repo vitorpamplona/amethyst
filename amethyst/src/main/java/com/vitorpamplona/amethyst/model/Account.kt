@@ -398,6 +398,8 @@ class Account(
     val marmotNotifier: () -> MarmotGroupNotifier,
     /** Asks the user to approve NIP-46 client connections and operations (the app's signer dialogs). */
     val nip46Consent: Nip46ConsentPrompter,
+    /** Where this account's geohash-chat seed and nickname are kept (the app's encrypted storage). */
+    val geohashIdentityStore: GeohashIdentityStore,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -789,7 +791,7 @@ class Account(
     val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
 
     // Anonymous, per-geohash throwaway identities for Bitchat-interoperable location chats.
-    val geohashIdentity = GeohashChatIdentityState(signer, scope)
+    val geohashIdentity = GeohashChatIdentityState(signer, scope, geohashIdentityStore)
 
     val muteListDecryptionCache = MuteListDecryptionCache(signer)
     val muteList = MuteListState(signer, cache, muteListDecryptionCache, scope, settings)

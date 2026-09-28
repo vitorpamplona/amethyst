@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.InMemoryGeohashIdentityStore
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -89,6 +90,7 @@ class ThreadDualAxisChartAssemblerTest {
                 saveSettings = {},
                 marmotNotifier = { MarmotGroupNotifier.None },
                 nip46Consent = Nip46ConsentPrompter.Unanswered,
+                geohashIdentityStore = InMemoryGeohashIdentityStore(),
             )
 
         val db =

@@ -1037,6 +1037,7 @@ class AppModules(
             // A provider: notificationDispatcher is declared further down this class.
             marmotNotifier = { notificationDispatcher },
             nip46Consent = Nip46ConsentBridge,
+            geohashIdentityStore = { AndroidGeohashIdentityStore(it) },
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },

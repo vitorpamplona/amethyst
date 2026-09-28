@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.GeohashIdentityStore
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -84,6 +85,8 @@ class AccountCacheState(
     val marmotNotifier: () -> MarmotGroupNotifier,
     /** The NIP-46 consent dialogs, shared by every [Account]. */
     val nip46Consent: Nip46ConsentPrompter,
+    /** Builds the store for one account's geohash-chat identity, keyed by its pubkey. */
+    val geohashIdentityStore: (HexKey) -> GeohashIdentityStore,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
@@ -363,6 +366,7 @@ class AccountCacheState(
             saveSettings = saveSettings,
             marmotNotifier = marmotNotifier,
             nip46Consent = nip46Consent,
+            geohashIdentityStore = geohashIdentityStore(signer.pubKey),
             scope =
                 CoroutineScope(
                     Dispatchers.IO +

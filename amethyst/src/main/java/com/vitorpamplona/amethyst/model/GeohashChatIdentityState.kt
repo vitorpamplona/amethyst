@@ -20,20 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import androidx.core.content.edit
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.LegacySharedPreferences
-import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.accountSecretsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
-import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
 import com.vitorpamplona.quartz.experimental.bitchat.identity.GeohashKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -64,6 +57,7 @@ import java.util.concurrent.ConcurrentHashMap
 class GeohashChatIdentityState(
     private val signer: NostrSigner,
     private val scope: CoroutineScope,
+    private val store: GeohashIdentityStore,
 ) {
     /**
      * Guards seed creation as well as the key cache: two callers racing into
@@ -74,43 +68,23 @@ class GeohashChatIdentityState(
     private val mutex = Mutex()
     private val cache = ConcurrentHashMap<String, KeyPair>()
 
-    /**
-     * The npub the current store is keyed by.
-     *
-     * The legacy file is keyed by the pubkey *hex* — the old code passed
-     * `signer.pubKey` where every other caller passes an npub, so the identity
-     * lived in `secret_keeper_<hex>`, a different file from the account's own
-     * `secret_keeper_<npub>`. The copy below reads that file and writes the
-     * npub-keyed store, which is what folds this orphan back in with the rest.
-     */
-    private val npub by lazy { signer.pubKey.hexToByteArray().toNpub() }
-
     @Volatile private var loaded: GeohashIdentitySecrets? = null
 
     /**
-     * What `secret_keeper_<pubkey hex>` holds.
-     *
-     * Only called when the store has nothing yet: opening this file creates it,
-     * so reading it unconditionally would resurrect it after the cleanup has
-     * deleted it. Touches disk; callers are off the main thread.
-     */
-    private fun legacy(): GeohashIdentitySecrets = readLegacyGeohashIdentity(LegacySharedPreferences(Amethyst.instance.encryptedStorage(signer.pubKey)))
-
-    /**
-     * The stored identity, copying it out of the legacy file the first time.
+     * The stored identity, read once from [store].
      *
      * **Call under [mutex].** Not self-locking, because [keyPair] already holds
      * the lock when it reaches here and [Mutex] is not reentrant.
      */
     private suspend fun current(): GeohashIdentitySecrets {
         loaded?.let { return it }
-        return accountSecretsStore.readGeohashIdentity(npub) { legacy() }.also { loaded = it }
+        return store.read().also { loaded = it }
     }
 
     /** Call under [mutex], for the reason [current] gives. */
     private suspend fun persist(value: GeohashIdentitySecrets) {
         loaded = value
-        accountSecretsStore.mirrorGeohashIdentity(npub, value)
+        store.write(value)
     }
 
     /**
@@ -138,13 +112,7 @@ class GeohashChatIdentityState(
             // session would be unreproducible on the next launch.
             mutex.withLock {
                 persist(current().copy(nickname = trimmed))
-                // Mirrored, not moved: the legacy file stays readable until the
-                // legacy writes are retired app-wide, so a rollback keeps the handle.
-                // Gated on the same switch as every other mirror — otherwise flipping
-                // it would retire the documented four and leave this one writing.
-                if (!LocalPreferences.LEGACY_WRITES_RETIRED) {
-                    Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_NICKNAME, trimmed) }
-                }
+                store.mirrorLegacyNickname(trimmed)
             }
         }
     }
@@ -175,14 +143,7 @@ class GeohashChatIdentityState(
 
         val fresh = RandomInstance.bytes(GeohashKeyDerivation.SEED_SIZE)
         persist(current().copy(deviceSeed = fresh.toHexKey()))
-        if (!LocalPreferences.LEGACY_WRITES_RETIRED) {
-            Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_KEY, fresh.toHexKey()) }
-        }
+        store.mirrorLegacyDeviceSeed(fresh.toHexKey())
         return fresh
-    }
-
-    companion object {
-        private const val PREF_KEY = "geohash_chat_device_seed"
-        private const val PREF_NICKNAME = "geohash_chat_nickname"
     }
 }
