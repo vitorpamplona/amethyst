@@ -595,7 +595,6 @@ fun ZapVote(
                                 accountViewModel.zapAmountChoices().first() * 1000,
                                 poolOption.option,
                                 "",
-                                context,
                                 onError = { title, message, user ->
                                     zappingProgress = 0f
                                     showErrorMessageDialog = StringToastMsg(title, message)
@@ -729,8 +728,6 @@ fun FilteredZapAmountChoicePopup(
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
-    val context = LocalContext.current
-
     // TODO: Move this to the viewModel
     val zapPaymentChoices by accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
         .collectAsStateWithLifecycle()
@@ -758,7 +755,6 @@ fun FilteredZapAmountChoicePopup(
                             amountInSats * 1000,
                             pollOption,
                             zapMessage,
-                            context,
                             true,
                             onError,
                             onProgress,
@@ -785,7 +781,6 @@ fun FilteredZapAmountChoicePopup(
                                         amountInSats * 1000,
                                         pollOption,
                                         zapMessage,
-                                        context,
                                         true,
                                         onError,
                                         onProgress,

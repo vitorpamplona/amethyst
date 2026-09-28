@@ -1319,7 +1319,6 @@ fun ZapReaction(
                         zapClick(
                             baseNote,
                             accountViewModel,
-                            context,
                             onZapStarts = { zapStartingTime = TimeUtils.now() },
                             onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
                             onMultipleChoices = {
@@ -1479,7 +1478,6 @@ fun ZapReaction(
 fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    context: Context,
     onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
@@ -1527,7 +1525,6 @@ fun zapClick(
                     choices.first() * 1000,
                     null,
                     "",
-                    context,
                     onError = onError,
                     onProgress = { onZappingProgress(it) },
                     onPayViaIntent = onPayViaIntent,
@@ -2320,7 +2317,6 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onReloadNutzap: (Long) -> Unit = {},
 ) {
-    val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
 
     Popup(
@@ -2344,7 +2340,6 @@ fun ZapAmountChoicePopup(
                         amountInSats * 1000,
                         null,
                         "",
-                        context,
                         true,
                         onError,
                         onProgress,

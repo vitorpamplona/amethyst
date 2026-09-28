@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.uploadMarmotGroupIcon
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers

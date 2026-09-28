@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -138,7 +137,6 @@ fun ReusableZapButton(
             handleZapClick(
                 baseNote = baseNote,
                 accountViewModel = accountViewModel,
-                context = context,
                 zapAmountChoices = config.zapAmountChoices,
                 onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onZappingProgress = { progress ->
@@ -310,7 +308,6 @@ fun ReusableZapButton(
 private fun handleZapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    context: Context,
     zapAmountChoices: List<Long>?,
     onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
@@ -353,7 +350,6 @@ private fun handleZapClick(
                     amount * 1000,
                     null,
                     "",
-                    context,
                     showErrorIfNoLnAddress = false,
                     onError = onError,
                     onProgress = { onZappingProgress(it) },

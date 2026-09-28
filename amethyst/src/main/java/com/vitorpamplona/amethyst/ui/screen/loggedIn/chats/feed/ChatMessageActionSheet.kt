@@ -669,7 +669,6 @@ private fun QuickZapAmountRow(
                     amountInSats * 1000,
                     null,
                     "",
-                    context,
                     true,
                     onError,
                     { },

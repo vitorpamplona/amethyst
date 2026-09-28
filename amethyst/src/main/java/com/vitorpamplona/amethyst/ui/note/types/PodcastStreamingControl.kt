@@ -145,7 +145,6 @@ fun PodcastStreamingControl(
                             podcastName = podcastName,
                             episodeName = episodeName,
                             zappedNote = note,
-                            context = context,
                             streaming = true,
                         )
                     }

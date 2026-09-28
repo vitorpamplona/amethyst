@@ -34,21 +34,29 @@ import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import okhttp3.OkHttpClient
 
 var mockedCache: AccountViewModel? = null
@@ -111,6 +119,7 @@ fun mockAccountViewModel(): AccountViewModel {
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
         nip05ClientBuilder = { EmptyNip05Client() },
+        host = PreviewAccountViewModelHost,
     ).also {
         mockedCache = it
     }
@@ -174,7 +183,22 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
         nip05ClientBuilder = { EmptyNip05Client() },
+        host = PreviewAccountViewModelHost,
     ).also {
         vitorCache = it
     }
+}
+
+/** Nothing to probe, dismiss or pay from inside a preview. */
+private object PreviewAccountViewModelHost : AccountViewModelHost {
+    override val memoryPressure: Flow<Unit> = emptyFlow()
+    override val localBlossomCacheAvailable: Flow<Boolean> = flowOf(false)
+    override val powPublishFailures: Flow<PoWJobFailure> = emptyFlow()
+    override val relayStats = RelayStats(EmptyNostrClient())
+    override val websocketBuilder = BasicOkHttpWebSocket.Builder { OkHttpClient() }
+    override val savedAccounts: Flow<Set<HexKey>> = flowOf(emptySet())
+
+    override fun dismissNotificationFor(eventId: HexKey) = Unit
+
+    override fun openLightningWallet(invoice: String) = false
 }

@@ -479,7 +479,6 @@ private fun SendPaymentLoaded(
             onNewInvoice = { invoice -> scope.launch { payBolt11(invoice) } },
             onError = { _, msg -> scope.launch { postStage(PaymentFlowStage.Failure(msg)) } },
             onProgress = {},
-            context = context,
             zapType = zapType,
         )
     }

@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 

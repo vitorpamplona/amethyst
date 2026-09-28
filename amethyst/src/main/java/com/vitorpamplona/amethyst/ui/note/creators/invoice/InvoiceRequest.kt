@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,8 +72,6 @@ fun InvoiceRequest(
     onNewInvoice: (String) -> Unit,
     onError: (String, String) -> Unit,
 ) {
-    val context = LocalContext.current
-
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -155,7 +152,6 @@ fun InvoiceRequest(
                     onNewInvoice = onNewInvoice,
                     onError = onError,
                     onProgress = {},
-                    context = context,
                 )
             },
             shape = QuoteBorder,

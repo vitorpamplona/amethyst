@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject

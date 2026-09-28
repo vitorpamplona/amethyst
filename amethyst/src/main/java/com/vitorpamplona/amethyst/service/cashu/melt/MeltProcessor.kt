@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.cashu.melt
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.cashu.melt.MeltResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
@@ -62,7 +61,6 @@ class MeltProcessor {
         token: CashuToken,
         lud16: String,
         okHttpClient: (String) -> OkHttpClient,
-        context: Context,
         knownWalletMints: Set<String> = emptySet(),
     ): MeltResult {
         try {
@@ -81,7 +79,6 @@ class MeltProcessor {
                     message = "Calculate Fees for Cashu",
                     okHttpClient = okHttpClient,
                     onProgress = {},
-                    context = context,
                 )
             val probeQuote = ops.requestMeltQuote(probeInvoice)
             val fees = probeQuote.feeReserve + ops.inputFeeFor(proofs)
@@ -107,7 +104,6 @@ class MeltProcessor {
                     message = "Redeem Cashu",
                     okHttpClient = okHttpClient,
                     onProgress = {},
-                    context = context,
                 )
             val quote = ops.requestMeltQuote(invoice)
             ops.meltProofs(quote, proofs, requestChange = false)

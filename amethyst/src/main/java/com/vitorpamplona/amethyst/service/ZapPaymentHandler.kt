@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Bolt12ZapFailure
@@ -119,7 +118,6 @@ class ZapPaymentHandler(
         amountMilliSats: Long,
         pollOption: Int?,
         message: String,
-        context: Context,
         showErrorIfNoLnAddress: Boolean,
         okHttpClient: (String) -> OkHttpClient,
         onError: (String, String, User?) -> Unit,
@@ -264,7 +262,6 @@ class ZapPaymentHandler(
                 onError = onError,
                 onProgress = onProgress,
                 onPayViaIntent = onPayViaIntent,
-                context = context,
             )
         }
 
@@ -282,7 +279,6 @@ class ZapPaymentHandler(
                 onError = onError,
                 onProgress = { onProgress(it * 0.25f + 0.75f) },
                 onPayViaIntent = onPayViaIntent,
-                context = context,
             )
         }
 
@@ -307,7 +303,6 @@ class ZapPaymentHandler(
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
-        context: Context,
     ) {
         val splitZapRequests = signAllZapRequests(note, pollOption, message, zapType, zapsToSend, totalAmountMilliSats, totalWeight)
         if (splitZapRequests.isEmpty()) return
@@ -322,7 +317,6 @@ class ZapPaymentHandler(
                 okHttpClient = okHttpClient,
                 onError = onError,
                 onProgress = { onProgress(it * 0.7f + 0.05f) },
-                context = context,
                 totalWeight = totalWeight,
             )
         if (payables.isEmpty()) return
@@ -336,13 +330,13 @@ class ZapPaymentHandler(
             is PaymentSource.ClinkDebit -> {
                 payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = {
                     onProgress(it * 0.25f + 0.75f)
-                }, context)
+                })
             }
 
             is PaymentSource.Nwc -> {
                 payViaNWC(payables, note, onError = onError, onProgress = {
                     onProgress(it * 0.25f + 0.75f) // keeps within range.
-                }, context)
+                })
             }
 
             null -> {
@@ -417,7 +411,6 @@ class ZapPaymentHandler(
         okHttpClient: (String) -> OkHttpClient,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        context: Context,
         // Shared across the lightning + BOLT12 lanes so a mixed split stays proportional.
         totalWeight: Double = requests.sumOf { it.inputSetup.weight },
     ): List<Payable> {
@@ -436,7 +429,6 @@ class ZapPaymentHandler(
                         progressAllPayments += percentStepForThisPayment / requests.size
                         onProgress(progressAllPayments)
                     },
-                    context = context,
                 )
             } catch (e: LightningAddressResolver.LightningAddressError) {
                 onError(e.title, e.msg, splitZapRequestPair.inputSetup.user)
@@ -468,7 +460,6 @@ class ZapPaymentHandler(
         note: Note,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        context: Context,
     ): List<Paid> {
         val progress = PaymentProgress(payables.size, onProgress)
 
@@ -543,7 +534,6 @@ class ZapPaymentHandler(
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
-        context: Context,
     ) {
         val progress = PaymentProgress(recipients.size, onProgress)
 
@@ -583,7 +573,6 @@ class ZapPaymentHandler(
                                 // dispatched; the retry settles in the background like NWC does.
                                 onProgress = {},
                                 onPayViaIntent = onPayViaIntent,
-                                context = context,
                             )
                         } catch (e: CancellationException) {
                             throw e
@@ -645,7 +634,6 @@ class ZapPaymentHandler(
         pointer: NDebit,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        context: Context,
     ): List<Paid> {
         val progress = PaymentProgress(payables.size, onProgress)
 
@@ -680,7 +668,6 @@ class ZapPaymentHandler(
         message: String,
         okHttpClient: (String) -> OkHttpClient,
         onProgressStep: (percent: Float) -> Unit,
-        context: Context,
     ): Payable {
         var progressThisPayment = 0.00f
 
@@ -700,7 +687,6 @@ class ZapPaymentHandler(
                     progressThisPayment = it
                     onProgressStep(step)
                 },
-                context = context,
                 onZapRequestSent = { sentZapRequest = it },
             )
 

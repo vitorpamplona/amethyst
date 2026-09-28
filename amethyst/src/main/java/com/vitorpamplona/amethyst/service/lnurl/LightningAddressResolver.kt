@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.lnurl
 
-import android.content.Context
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user
@@ -76,7 +75,6 @@ class LightningAddressResolver {
     private suspend fun fetchLightningAddressJson(
         lnAddress: String,
         okHttpClient: (String) -> OkHttpClient,
-        context: Context,
     ): String {
         val url =
             assembleUrl(lnAddress) ?: throw LightningAddressError(
@@ -104,7 +102,7 @@ class LightningAddressResolver {
                                 Res.string.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
                                 url,
                                 lnAddress,
-                                errorMessage(response, context),
+                                errorMessage(response),
                             ),
                         )
                     }
@@ -130,7 +128,6 @@ class LightningAddressResolver {
         message: String,
         nostrRequest: ZapRequestEvent? = null,
         okHttpClient: (String) -> OkHttpClient,
-        context: Context,
     ): String {
         @Suppress("BlockingMethodInNonBlockingContext") // URLEncoder.encode is CPU-only, not I/O blocking
         val encodedMessage = URLEncoder.encode(message, "utf-8")
@@ -159,17 +156,14 @@ class LightningAddressResolver {
                 } else {
                     throw LightningAddressError(
                         loadStringRes(Res.string.error_unable_to_fetch_invoice),
-                        loadStringRes(Res.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(response, context)),
+                        loadStringRes(Res.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(response)),
                     )
                 }
             }
         }
     }
 
-    suspend fun errorMessage(
-        response: Response,
-        context: Context,
-    ): String {
+    suspend fun errorMessage(response: Response): String {
         val body = response.body.string()
 
         val errorMessage =
@@ -222,7 +216,6 @@ class LightningAddressResolver {
         nostrRequest: ZapRequestEvent? = null,
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percent: Float) -> Unit,
-        context: Context,
         onZapRequestSent: (ZapRequestEvent?) -> Unit = {},
     ): String {
         val mapper = ObjectMapper()
@@ -233,7 +226,6 @@ class LightningAddressResolver {
             fetchLightningAddressJson(
                 lnAddress,
                 okHttpClient,
-                context,
             )
 
         onProgress(0.4f)
@@ -291,7 +283,6 @@ class LightningAddressResolver {
                 message = message,
                 nostrRequest = sentZapRequest,
                 okHttpClient = okHttpClient,
-                context = context,
             )
 
         onProgress(0.6f)

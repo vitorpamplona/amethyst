@@ -152,7 +152,6 @@ fun ZapCustomDialog(
     accountViewModel: AccountViewModel,
     baseNote: Note,
 ) {
-    val context = LocalContext.current
     val postViewModel: ZapOptionViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) { postViewModel.load(accountViewModel.account) }
@@ -372,7 +371,6 @@ fun ZapCustomDialog(
                         postViewModel.value()!! * 1000L,
                         null,
                         postViewModel.customMessage.text,
-                        context,
                         onError = onError,
                         onProgress = onProgress,
                         onPayViaIntent = onPayViaIntent,

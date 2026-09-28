@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
@@ -89,7 +88,6 @@ class V4VPaymentHandler(
         totalMilliSats: Long,
         boostagram: PodcastBoostagram,
         zappedNote: Note?,
-        context: Context,
         okHttpClient: (String) -> OkHttpClient,
         onError: (title: String, message: String) -> Unit,
         onProgress: (percent: Float) -> Unit,
@@ -115,7 +113,7 @@ class V4VPaymentHandler(
         if (nodeShares.isNotEmpty()) {
             if (account.nip47SignerState.hasWalletConnectSetup()) {
                 if (defaultWalletMayKeysend()) {
-                    payNodeSharesViaKeysend(nodeShares, boostagram, context, onError)
+                    payNodeSharesViaKeysend(nodeShares, boostagram, onError)
                 } else {
                     onError(
                         loadStringRes(Res.string.podcast_value_error_title),
@@ -139,11 +137,10 @@ class V4VPaymentHandler(
                     zapType = zapType,
                     zappedNote = zappedNote,
                     okHttpClient = okHttpClient,
-                    context = context,
                     onError = onError,
                     onProgress = { onProgress(it * 0.6f + 0.1f) },
                 )
-            payInvoices(payables, zappedNote, context, onError, onPayInvoicesViaIntent) {
+            payInvoices(payables, zappedNote, onError, onPayInvoicesViaIntent) {
                 onProgress(it * 0.25f + 0.7f)
             }
         }
@@ -169,7 +166,6 @@ class V4VPaymentHandler(
     private suspend fun payNodeSharesViaKeysend(
         shares: List<PodcastValueShare>,
         boostagram: PodcastBoostagram,
-        context: Context,
         onError: (String, String) -> Unit,
     ) {
         val metadataTlv = TlvRecord(PodcastValue.PODCAST_TLV_RECORD, hexTlv(boostagram.toJson()))
@@ -216,7 +212,6 @@ class V4VPaymentHandler(
         zapType: ZapReceiptEvent.ZapType,
         zappedNote: Note?,
         okHttpClient: (String) -> OkHttpClient,
-        context: Context,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
     ): List<InvoicePayable> {
@@ -255,7 +250,6 @@ class V4VPaymentHandler(
                         nostrRequest = nostrRequest,
                         okHttpClient = okHttpClient,
                         onProgress = {},
-                        context = context,
                     )
                 progress += 1f / shares.size
                 onProgress(progress)
@@ -277,7 +271,6 @@ class V4VPaymentHandler(
     private suspend fun payInvoices(
         payables: List<InvoicePayable>,
         zappedNote: Note?,
-        context: Context,
         onError: (String, String) -> Unit,
         onPayInvoicesViaIntent: (List<String>) -> Unit,
         onProgress: (percent: Float) -> Unit,

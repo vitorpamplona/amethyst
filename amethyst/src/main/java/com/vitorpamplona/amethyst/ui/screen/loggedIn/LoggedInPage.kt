@@ -79,6 +79,7 @@ fun LoggedInPage(
                     dataSources = Amethyst.instance.sources,
                     okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder,
                     nip05ClientBuilder = { Amethyst.instance.nip05Client },
+                    host = AndroidAccountViewModelHost(Amethyst.instance),
                 ),
         )
 

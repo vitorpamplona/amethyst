@@ -20,26 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.app.NotificationManager
-import android.content.Context
-import android.net.Uri
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import androidx.collection.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -79,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
 import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
-import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
@@ -99,7 +88,6 @@ import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_d
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
-import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.OnlineChecker
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
@@ -115,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
@@ -122,14 +111,9 @@ import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
-import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -145,7 +129,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -167,7 +150,6 @@ import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -247,31 +229,28 @@ class AccountViewModel(
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
     val nip05ClientBuilder: () -> INip05Client,
+    val host: AccountViewModelHost,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
-    val feedStates = AccountFeedContentStates(account, viewModelScope, Amethyst.instance.memoryPressureEvents)
+    val feedStates = AccountFeedContentStates(account, viewModelScope, host.memoryPressure)
 
     /**
      * `true` when the local Blossom cache is enabled and the probe sees it up. Only drives the
      * "detected" chip in settings: the routing itself happens in LocalBlossomCacheRedirectInterceptor.
      */
     val localBlossomCacheDetected: StateFlow<Boolean> =
-        try {
-            combine(
-                account.settings.useLocalBlossomCache,
-                Amethyst.instance.localBlossomCacheProbe.available,
-            ) { toggle, probeUp -> toggle && probeUp }.stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                false,
-            )
-        } catch (e: UninitializedPropertyAccessException) {
-            MutableStateFlow(false)
-        }
+        combine(
+            account.settings.useLocalBlossomCache,
+            host.localBlossomCacheAvailable,
+        ) { toggle, probeUp -> toggle && probeUp }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            false,
+        )
 
     /**
      * The account's call state machine. Owned by [Account], not by this ViewModel: a call must
@@ -288,7 +267,7 @@ class AccountViewModel(
         // A mined post that fails to sign or broadcast would otherwise die
         // silently — the composer already returned when it was enqueued.
         viewModelScope.launch {
-            Amethyst.instance.powPublishQueue.failures.collect { failure ->
+            host.powPublishFailures.collect { failure ->
                 val kindLabel = loadStringRes(powKindLabelRes(failure.kind))
                 if (failure.willRetryOnRestart) {
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed_retry, kindLabel)
@@ -305,7 +284,7 @@ class AccountViewModel(
      * never tried, ordered busiest-first so the most fruitful are queried first.
      */
     fun crawlRelayDb(): List<NormalizedRelayUrl> {
-        val stats = Amethyst.instance.relayStats.snapshot()
+        val stats = host.relayStats.snapshot()
 
         val relays =
             account.cache.relayHints.relayDB
@@ -341,7 +320,7 @@ class AccountViewModel(
         // account's NIP-51 kind:10006 blocked relays either.
         val newClient =
             BlockedRelayFilteringClient(
-                NostrClient(Amethyst.instance.websocketBuilder, customScope, CachingEventDecoder()),
+                NostrClient(host.websocketBuilder, customScope, CachingEventDecoder()),
                 blockedRelays = { account.blockedRelayList.flow.value },
             )
 
@@ -1127,7 +1106,6 @@ class AccountViewModel(
         amountInMillisats: Long,
         pollOption: Int?,
         message: String,
-        context: Context,
         showErrorIfNoLnAddress: Boolean = true,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
@@ -1148,7 +1126,6 @@ class AccountViewModel(
                 podcastName = (note.event as? PodcastShow)?.showTitle(),
                 episodeName = (note.event as? PodcastEpisode)?.episodeTitle(),
                 zappedNote = note,
-                context = context,
                 streaming = false,
                 onProgress = onProgress,
             )
@@ -1172,7 +1149,6 @@ class AccountViewModel(
             amountMilliSats = amountInMillisats,
             pollOption = pollOption,
             message = message,
-            context = context,
             showErrorIfNoLnAddress = showErrorIfNoLnAddress,
             okHttpClient = httpClientBuilder::okHttpClientForMoney,
             onError = onError,
@@ -1227,7 +1203,6 @@ class AccountViewModel(
         podcastName: String?,
         episodeName: String?,
         zappedNote: Note?,
-        context: Context,
         streaming: Boolean = false,
         onProgress: (Float) -> Unit = {},
     ) = launchSigner {
@@ -1237,7 +1212,6 @@ class AccountViewModel(
             podcastName = podcastName,
             episodeName = episodeName,
             zappedNote = zappedNote,
-            context = context,
             streaming = streaming,
             onProgress = onProgress,
         )
@@ -1257,7 +1231,6 @@ class AccountViewModel(
         podcastName: String?,
         episodeName: String?,
         zappedNote: Note?,
-        context: Context,
         streaming: Boolean,
         onProgress: (Float) -> Unit,
     ) {
@@ -1281,7 +1254,6 @@ class AccountViewModel(
             totalMilliSats = totalMilliSats,
             boostagram = boostagram,
             zappedNote = zappedNote,
-            context = context,
             asZap = !streaming,
             zapType = ZapReceiptEvent.ZapType.PUBLIC,
             okHttpClient = httpClientBuilder::okHttpClientForMoney,
@@ -1292,9 +1264,7 @@ class AccountViewModel(
             onPayInvoicesViaIntent = { invoices ->
                 if (!streaming) {
                     invoices.forEach { invoice ->
-                        payViaIntent(invoice, context, noWalletFoundStr, onPaid = {}, onError = {
-                            toastManager.toast(zapErrorTitle, it)
-                        })
+                        if (!host.openLightningWallet(invoice)) toastManager.toast(zapErrorTitle, noWalletFoundStr)
                     }
                 }
             },
@@ -2320,11 +2290,7 @@ class AccountViewModel(
         return onIsNew
     }
 
-    private fun dismissTrayNotificationFor(eventId: HexKey) {
-        ContextCompat
-            .getSystemService(Amethyst.instance.appContext, NotificationManager::class.java)
-            ?.dismissNotificationForEvent(eventId)
-    }
+    private fun dismissTrayNotificationFor(eventId: HexKey) = host.dismissNotificationFor(eventId)
 
     fun markAllChatNotesAsRead(notes: List<Note>) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -2354,6 +2320,7 @@ class AccountViewModel(
         val dataSources: RelaySubscriptionsCoordinator,
         val okHttpClient: RoleBasedHttpClientBuilder,
         val nip05ClientBuilder: () -> Nip05Client,
+        val host: AccountViewModelHost,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -2364,6 +2331,7 @@ class AccountViewModel(
                 dataSources,
                 okHttpClient,
                 nip05ClientBuilder,
+                host,
             ) as T
     }
 
@@ -2643,19 +2611,6 @@ class AccountViewModel(
         account.marmot.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
-    /**
-     * Encrypt + upload a picked image as a group avatar (canonical
-     * `marmot-group-image-v1` scheme). The returned handle is later passed to
-     * [updateMarmotGroupMetadata] as [MarmotGroupIconChange.Set] to commit it into
-     * the group's metadata. Uploading is separated from the metadata commit so the
-     * (slow) Blossom upload can show its own progress before the commit is signed.
-     */
-    suspend fun uploadMarmotGroupIcon(
-        uri: Uri,
-        mimeType: String?,
-        context: Context,
-    ): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, context)
-
     suspend fun updateMarmotGroupMetadata(
         nostrGroupId: String,
         name: String,
@@ -2753,7 +2708,6 @@ class AccountViewModel(
 
     fun meltCashu(
         token: CashuToken,
-        context: Context,
         onDone: (String, String) -> Unit,
     ) {
         val lud16 =
@@ -2772,7 +2726,6 @@ class AccountViewModel(
                             token,
                             lud16,
                             httpClientBuilder::okHttpClientForMoney,
-                            context,
                             // Mints the user deliberately added are exempt from the
                             // private-address block (self-hosted LAN mints are legit).
                             knownWalletMints =
@@ -2998,7 +2951,6 @@ class AccountViewModel(
         onNewInvoice: (String) -> Unit,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
-        context: Context,
         zapType: ZapReceiptEvent.ZapType? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -3027,7 +2979,6 @@ class AccountViewModel(
                         nostrRequest = zapRequest,
                         okHttpClient = httpClientBuilder::okHttpClientForMoney,
                         onProgress = onProgress,
-                        context = context,
                     )
 
                 // Delivered on Main: every composer's onNewInvoice writes the invoice into
@@ -3043,61 +2994,12 @@ class AccountViewModel(
         }
     }
 
-    fun saveMediaToGallery(
-        videoUri: String?,
-        mimeType: String?,
-        localContext: Context,
-    ) {
-        viewModelScope.launch {
-            // onSuccess is a plain callback, so the text is resolved here first.
-            val savedText = loadStringRes(Res.string.video_saved_to_the_gallery)
-            MediaSaverToDisk.saveDownloadingIfNeeded(
-                videoUri = videoUri,
-                okHttpClient = httpClientBuilder::okHttpClientForVideo,
-                mimeType = mimeType,
-                localContext = localContext,
-                resolveBlossom = {
-                    Amethyst.instance.blossomResolver
-                        .findServers(it)
-                        ?.serverUrl
-                },
-                onSuccess = {
-                    Handler(Looper.getMainLooper()).post {
-                        Toast
-                            .makeText(localContext.applicationContext, savedText, Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                },
-                onError = {
-                    toastManager.toast(Res.string.failed_to_save_the_video, null, it)
-                },
-            )
-        }
-    }
-
-    fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> =
-        loggedInAccounts
-            ?.mapNotNull {
-                try {
-                    it.npub.bechToBytes().toHexKey()
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    null
-                }
-            }?.toSet() ?: emptySet()
-
     val trustedAccounts: StateFlow<Set<HexKey>> =
-        LocalPreferences
-            .accountsFlow()
-            .map { loggedInAccounts ->
-                convertAccounts(loggedInAccounts)
-            }.onStart {
-                emit(convertAccounts(LocalPreferences.allSavedAccounts()))
-            }.stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptySet(),
-            )
+        host.savedAccounts.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptySet(),
+        )
 
     val draftNoteCache = CachedDraftNotes(this)
 

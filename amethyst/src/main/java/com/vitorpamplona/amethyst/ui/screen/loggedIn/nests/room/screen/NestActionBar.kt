@@ -492,7 +492,6 @@ private fun NestZapButton(
                 zapClick(
                     baseNote = roomNote,
                     accountViewModel = accountViewModel,
-                    context = context,
                     onZapStarts = {},
                     onZappingProgress = { progress -> scope.launch { zappingProgress = progress } },
                     onMultipleChoices = { scope.launch { wantsToZap = true } },
