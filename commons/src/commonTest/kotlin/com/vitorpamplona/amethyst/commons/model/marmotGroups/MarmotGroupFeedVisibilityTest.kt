@@ -105,4 +105,12 @@ class MarmotGroupFeedVisibilityTest {
         assertTrue(list.getOrCreateGroup(groupId).messages.size == 0, "a payload cannot vouch for itself")
         assertFalse(list.groupIdForNote(forged.idHex) == groupId)
     }
+
+    @Test
+    fun `a note with no event never becomes a row`() {
+        // Our own push-token answers (448) were indexed with a bare justConsume, which
+        // does not dispatch that kind, so their notes stayed eventless — and an eventless
+        // note skipped the kind rules above and rendered "Event is loading or can't be found".
+        assertEquals(0, visibleCount(list(), Note("d".repeat(64))))
+    }
 }

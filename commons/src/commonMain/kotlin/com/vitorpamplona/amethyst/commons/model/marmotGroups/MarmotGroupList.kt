@@ -146,7 +146,9 @@ class MarmotGroupList(
      * authorship rule below.
      */
     private fun isDisplayableFeedMessage(msg: Note): Boolean {
-        val kind = msg.event?.kind ?: return true
+        // Every path here indexes the decrypted inner event onto its note first, so a note
+        // without one can't be classified and would only render as a "can't be found" row.
+        val kind = msg.event?.kind ?: return false
         if (kind == MARMOT_INNER_KIND_SYSTEM_ROW) return isOwnDerivedSystemRow(msg)
         return kind !in NON_CHAT_INNER_KINDS
     }

@@ -128,12 +128,11 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         innerEvent: Event,
     ) {
-        // wasVerified=true: MIP-03 inner events are unsigned rumors, so
-        // Schnorr verification would reject every one. This one we built
-        // ourselves, which is as authenticated as it gets.
-        val isNew = account.cache.justConsume(innerEvent, null, true)
-        val innerNote = account.cache.getOrCreateNote(innerEvent.id)
-        if (isNew) innerNote.event = innerEvent
+        // The same indexing as a received message. A bare justConsume returns false for a kind
+        // LocalCache does not dispatch (push-token lists 447-449, edits, stream starts), which
+        // left our own copy an EVENTLESS note in the conversation: an "Event is loading or can't
+        // be found" row for every push-token answer we sent.
+        val innerNote = indexMarmotInnerEvent(innerEvent).note
         account.marmotGroupList.addMessage(nostrGroupId, innerNote)
         // Sending a message moves the group out of "New Requests" into
         // "Known" — do this eagerly before the relay round-trip so the UI
