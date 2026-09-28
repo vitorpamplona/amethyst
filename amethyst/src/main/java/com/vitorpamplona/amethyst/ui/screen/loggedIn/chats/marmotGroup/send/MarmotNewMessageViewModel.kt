@@ -93,7 +93,9 @@ open class MarmotNewMessageViewModel : ViewModel() {
 
     fun reply(note: Note) {
         replyTo.value = note
-        editingMessage.value = null
+        // Leaving edit mode drops the edited message's prefilled text too; kept, Send would
+        // post it again as a new reply.
+        if (editingMessage.value != null) cancelEdit()
     }
 
     /** Enter edit mode for my own [note], prefilled with the text it currently shows. */
