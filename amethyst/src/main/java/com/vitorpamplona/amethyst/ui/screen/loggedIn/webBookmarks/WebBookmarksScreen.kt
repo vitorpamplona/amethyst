@@ -323,7 +323,7 @@ private fun WebBookmarkCard(
                 )
 
                 Text(
-                    text = previewInfo?.verifiedUrl?.host ?: event.url(),
+                    text = previewInfo?.verifiedHost ?: event.url(),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     maxLines = 1,

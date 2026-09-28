@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.commons.viewmodels
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -31,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
@@ -41,9 +41,6 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
-import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
@@ -62,11 +59,11 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import okhttp3.OkHttpClient
 
-var mockedCache: AccountViewModel? = null
+private var mockedCache: AccountViewModel? = null
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Composable
-fun mockAccountViewModel(): AccountViewModel {
+actual fun mockAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
     val scope = rememberCoroutineScope()
@@ -97,10 +94,7 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
-            cashuMintDirectoryFilterAssembler = {
-                com.vitorpamplona.amethyst.commons.relayClient.assemblers
-                    .CashuMintDirectoryFilterAssembler(client)
-            },
+            cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
             cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
@@ -112,7 +106,7 @@ fun mockAccountViewModel(): AccountViewModel {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
+            marmotStreamTransportFactory = { error("Previews do not stream") },
         )
 
     return AccountViewModel(
@@ -128,11 +122,11 @@ fun mockAccountViewModel(): AccountViewModel {
     }
 }
 
-var vitorCache: AccountViewModel? = null
+private var vitorCache: AccountViewModel? = null
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Composable
-fun mockVitorAccountViewModel(): AccountViewModel {
+actual fun mockVitorAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
     val scope = rememberCoroutineScope()
@@ -161,10 +155,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
-            cashuMintDirectoryFilterAssembler = {
-                com.vitorpamplona.amethyst.commons.relayClient.assemblers
-                    .CashuMintDirectoryFilterAssembler(client)
-            },
+            cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
             cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
@@ -176,7 +167,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
+            marmotStreamTransportFactory = { error("Previews do not stream") },
         )
 
     return AccountViewModel(

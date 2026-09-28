@@ -28,13 +28,13 @@ import com.vitorpamplona.amethyst.commons.resources.ots_info_description
 import com.vitorpamplona.amethyst.commons.resources.ots_info_pending_description
 import com.vitorpamplona.amethyst.commons.resources.ots_info_title
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending_short
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.note.LoadOts
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
 
 /**
  * Compact pill showing the note's NIP-03 OpenTimestamps proof: how long ago
@@ -60,7 +60,7 @@ fun DisplayOts(
                     accountViewModel.toastManager.toast(
                         Res.string.ots_info_title,
                         Res.string.ots_info_description,
-                        SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000)),
+                        formatDateTime(unixtimestamp * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.MEDIUM),
                     )
                 },
             )

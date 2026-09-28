@@ -21,18 +21,16 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import java.io.File
+import okio.Path
 
-// Locally-cached media content. Lives in jvmAndroid because java.io.File is
-// JVM-only; iOS support will arrive when we either swap to okio.Path or pull
-// these classes back into commonMain behind an expect/actual File abstraction.
-// URL-based media classes (MediaUrlImage, MediaUrlVideo, …) remain in
-// commonMain in MediaContentModels.kt.
+// Locally-cached media content: a file on this device (a NIP-95 blob) rather than a URL.
+// URL-based media classes (MediaUrlImage, MediaUrlVideo, …) are in MediaContentModels.kt.
 
 @Immutable
 abstract class MediaPreloadedContent(
-    val localFile: File?,
+    val localFile: Path?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
@@ -42,12 +40,12 @@ abstract class MediaPreloadedContent(
     val id: String? = null,
     thumbhash: String? = null,
 ) : BaseMediaContent(description, dim, blurhash, thumbhash) {
-    fun localFileExists() = localFile != null && localFile.exists()
+    fun localFileExists() = localFile != null && platformFileSystem.exists(localFile)
 }
 
 @Immutable
 class MediaLocalImage(
-    localFile: File?,
+    localFile: Path?,
     mimeType: String? = null,
     description: String? = null,
     dim: DimensionTag? = null,
@@ -59,7 +57,7 @@ class MediaLocalImage(
 
 @Immutable
 class MediaLocalVideo(
-    localFile: File?,
+    localFile: Path?,
     mimeType: String? = null,
     description: String? = null,
     dim: DimensionTag? = null,

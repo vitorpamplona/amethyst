@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
@@ -424,7 +425,7 @@ internal suspend fun saveMediaToGallery(
             },
         )
     } else if (content is MediaPreloadedContent) {
-        content.localFile?.let {
+        content.localJavaFile?.let {
             MediaSaverToDisk.save(
                 it,
                 content.mimeType,
@@ -566,7 +567,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                content.localFile?.let {
+                content.localJavaFile?.let {
                     val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(it.toUri().toString())
 
                     val modifier =

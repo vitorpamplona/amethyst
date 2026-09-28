@@ -273,4 +273,14 @@ object AndroidRichTextPlatform : RichTextPlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
+
+    @Composable
+    override fun SecretMessage(
+        content: RichTextViewerState,
+        callbackUri: String?,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = CoreSecretMessage(content, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
 }

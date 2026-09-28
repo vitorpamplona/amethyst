@@ -38,3 +38,12 @@ expect fun BigDecimal.toLongValue(): Long
 
 /** The nearest Double, as Number.toDouble() gives on every platform. An expect for [toLongValue]'s reason. */
 expect fun BigDecimal.toDoubleValue(): Double
+
+private val PLAIN_DECIMAL = Regex("[+-]?(\\d+\\.?\\d*|\\.\\d+)")
+
+/**
+ * Parses a plain decimal ("12", "-0.5", ".5") into a [BigDecimal], or null for anything else,
+ * exponents included. The platform constructors disagree on bad input (the JVM throws, the others
+ * do not), so the check happens here, before any of them sees the text.
+ */
+fun parseBigDecimalOrNull(text: String): BigDecimal? = if (PLAIN_DECIMAL.matches(text)) BigDecimal(text) else null

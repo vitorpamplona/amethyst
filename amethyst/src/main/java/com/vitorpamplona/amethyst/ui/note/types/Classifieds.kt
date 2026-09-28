@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -137,7 +138,7 @@ fun RenderClassifieds(
                     val priceTag =
                         remember(noteEvent) {
                             val newAmount =
-                                price.amount.toBigDecimalOrNull()?.let { showAmount(it) }
+                                parseBigDecimalOrNull(price.amount)?.let { showAmount(it) }
                                     ?: price.amount
 
                             if (price.frequency != null && price.currency != null) {

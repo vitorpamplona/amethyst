@@ -18,29 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
+package com.vitorpamplona.amethyst.commons.util
 
-import android.content.Context
-import android.content.Intent
-import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.no_blossom_apps_found_description
-import com.vitorpamplona.amethyst.commons.resources.no_blossom_apps_found_title
-import org.jetbrains.compose.resources.StringResource
-import kotlin.coroutines.cancellation.CancellationException
+import platform.Foundation.NSLocale
+import platform.Foundation.countryCode
+import platform.Foundation.currentLocale
 
-fun openBlossomUriAsIntent(
-    context: Context,
-    blossomUri: String,
-    onError: (StringResource, StringResource) -> Unit,
-) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, blossomUri.toUri())
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        onError(Res.string.no_blossom_apps_found_title, Res.string.no_blossom_apps_found_description)
-    }
-}
+/** By country, as on the other platforms: iOS reports the UK as metric, but its roads use miles. */
+actual fun phonePrefersMiles(): Boolean = NSLocale.currentLocale.countryCode?.uppercase() in MILES_COUNTRIES

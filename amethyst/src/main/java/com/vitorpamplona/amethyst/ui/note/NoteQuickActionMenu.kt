@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,14 +53,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -102,6 +97,8 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_unfollow
 import com.vitorpamplona.amethyst.commons.resources.quick_action_unmute_thread
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_block_hide_user_btn
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_blocking_a_user
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -114,7 +111,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -122,17 +118,38 @@ import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
+import kotlin.math.abs
 
+/** [color] with its HSL lightness raised by [amount], opaque, as `ColorUtils` computed it. */
 private fun lightenColor(
     color: Color,
     amount: Float,
 ): Color {
-    var argb = color.toArgb()
-    val hslOut = floatArrayOf(0f, 0f, 0f)
-    ColorUtils.colorToHSL(argb, hslOut)
-    hslOut[2] += amount
-    argb = ColorUtils.HSLToColor(hslOut)
-    return Color(argb)
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val delta = max - min
+    val lightness = (max + min) / 2f
+
+    var hue = 0f
+    var saturation = 0f
+    if (delta != 0f) {
+        hue =
+            when (max) {
+                r -> ((g - b) / delta).mod(6f)
+                g -> (b - r) / delta + 2f
+                else -> (r - g) / delta + 4f
+            } * 60f
+        saturation = delta / (1f - abs(2f * lightness - 1f))
+    }
+
+    return Color.hsl(
+        hue = hue.mod(360f),
+        saturation = saturation.coerceIn(0f, 1f),
+        lightness = (lightness + amount).coerceIn(0f, 1f),
+    )
 }
 
 val externalLinkForUser = { user: User ->
@@ -289,19 +306,15 @@ fun CardBody(
 ) {
     val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
     val quickActionShareStr = stringRes(Res.string.quick_action_share)
-    val context = LocalContext.current
+    val notice = rememberShortNotice()
+    val sharer = rememberTextSharer()
     val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
     val showToast = { stringRes: StringResource ->
         scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    loadStringRes(stringRes),
-                    Toast.LENGTH_SHORT,
-                ).show()
+            notice.show(loadStringRes(stringRes))
         }
     }
 
@@ -492,26 +505,7 @@ fun CardBody(
                     icon = MaterialSymbols.Share,
                     label = stringRes(Res.string.quick_action_share),
                 ) {
-                    val sendIntent =
-                        Intent().apply {
-                            action = Intent.ACTION_SEND
-                            type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                externalLinkForNote(note),
-                            )
-                            putExtra(
-                                Intent.EXTRA_TITLE,
-                                quickActionShareBrowserLinkStr,
-                            )
-                        }
-
-                    val shareIntent =
-                        Intent.createChooser(
-                            sendIntent,
-                            quickActionShareStr,
-                        )
-                    context.startActivity(shareIntent)
+                    sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
                     onDismiss()
                 }
             }
@@ -679,35 +673,6 @@ fun QuickActionAlertDialog(
 fun QuickActionAlertDialog(
     title: String,
     textContent: String,
-    buttonIconResource: Int,
-    buttonIconReference: Int,
-    buttonText: String,
-    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-    onClickDoOnce: () -> Unit,
-    onClickDontShowAgain: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    QuickActionAlertDialog(
-        title = title,
-        textContent = textContent,
-        icon = {
-            Icon(
-                painter = painterRes(buttonIconResource, buttonIconReference),
-                contentDescription = null,
-            )
-        },
-        buttonText = buttonText,
-        buttonColors = buttonColors,
-        onClickDoOnce = onClickDoOnce,
-        onClickDontShowAgain = onClickDontShowAgain,
-        onDismiss = onDismiss,
-    )
-}
-
-@Composable
-fun QuickActionAlertDialog(
-    title: String,
-    textContent: String,
     icon: @Composable () -> Unit,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
@@ -764,33 +729,6 @@ fun QuickActionAlertDialogOneButton(
         icon = {
             Icon(
                 symbol = buttonIcon,
-                contentDescription = null,
-            )
-        },
-        buttonText = buttonText,
-        buttonColors = buttonColors,
-        onClickDoOnce = onClickDoOnce,
-        onDismiss = onDismiss,
-    )
-}
-
-@Composable
-fun QuickActionAlertDialogOneButton(
-    title: String,
-    textContent: String,
-    buttonIconResource: Int,
-    buttonIconReference: Int,
-    buttonText: String,
-    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-    onClickDoOnce: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    QuickActionAlertDialogOneButton(
-        title = title,
-        textContent = textContent,
-        icon = {
-            Icon(
-                painter = painterRes(buttonIconResource, buttonIconReference),
                 contentDescription = null,
             )
         },

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -66,11 +65,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.rememberTranslation
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
@@ -80,9 +79,9 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
 
 @Composable
 fun RenderHighlight(
@@ -285,10 +284,31 @@ private fun buildTextFragmentUrl(
 ): String {
     val separator = if (baseUrl.contains("#")) "&" else "#"
 
-    val prefixPart = trimToFragmentEdge(prefix, keepStart = false)?.let { "${Uri.encode(it)}-," } ?: ""
-    val suffixPart = trimToFragmentEdge(suffix, keepStart = true)?.let { ",-${Uri.encode(it)}" } ?: ""
+    val prefixPart = trimToFragmentEdge(prefix, keepStart = false)?.let { "${encodeFragmentComponent(it)}-," } ?: ""
+    val suffixPart = trimToFragmentEdge(suffix, keepStart = true)?.let { ",-${encodeFragmentComponent(it)}" } ?: ""
 
-    return "$baseUrl$separator:~:text=$prefixPart${Uri.encode(exact)}$suffixPart"
+    return "$baseUrl$separator:~:text=$prefixPart${encodeFragmentComponent(exact)}$suffixPart"
+}
+
+private const val FRAGMENT_SAFE = "_-!.~'()*"
+private val HEX_DIGITS = "0123456789ABCDEF".toCharArray()
+
+/**
+ * Percent-encodes [text] as UTF-8, leaving only letters, digits and `_-!.~'()*` alone: what
+ * Android's `Uri.encode` does, so spaces become `%20` (not `+`) and `-`, `,` and `&` cannot be
+ * mistaken for text-fragment syntax.
+ */
+private fun encodeFragmentComponent(text: String): String {
+    val out = StringBuilder(text.length)
+    for (byte in text.encodeToByteArray()) {
+        val c = (byte.toInt() and 0xFF).toChar()
+        if (c < '\u0080' && (c.isLetterOrDigit() || c in FRAGMENT_SAFE)) {
+            out.append(c)
+        } else {
+            out.append('%').append(HEX_DIGITS[(byte.toInt() shr 4) and 0xF]).append(HEX_DIGITS[byte.toInt() and 0xF])
+        }
+    }
+    return out.toString()
 }
 
 /**
@@ -502,14 +522,14 @@ fun DisplayEntryForAUrl(
     val validatedUrl =
         remember(url) {
             try {
-                URL(url)
+                Rfc3986.host(url)
             } catch (_: Exception) {
                 Log.w("Note Compose") { "Invalid URI: $url" }
                 null
             }
         }
 
-    validatedUrl?.host?.let { host ->
+    validatedUrl?.let { host ->
         if (userBase != null) {
             Text("-", maxLines = 1)
         }

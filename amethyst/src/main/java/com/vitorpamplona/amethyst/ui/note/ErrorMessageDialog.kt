@@ -39,17 +39,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_talk_to_user
+import com.vitorpamplona.amethyst.commons.resources.ic_dm
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.painterRes
 
 @Composable
 @Preview
@@ -84,7 +84,7 @@ fun ErrorMessageDialog(
                 onClickStartMessage?.let {
                     TextButton(onClick = onClickStartMessage) {
                         Icon(
-                            painter = painterRes(R.drawable.ic_dm, 3),
+                            painter = painterRes(Res.drawable.ic_dm, 3),
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)

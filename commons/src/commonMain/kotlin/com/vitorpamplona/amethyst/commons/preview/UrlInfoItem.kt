@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.commons.preview
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import java.net.URI
+import com.vitorpamplona.amethyst.commons.util.absoluteUrlHost
+import com.vitorpamplona.amethyst.commons.util.resolveHttpUrl
 
 @Immutable
 class UrlInfoItem(
@@ -43,7 +44,8 @@ class UrlInfoItem(
     /** `og:type` — what the page says it is, e.g. `music.song`, `video.other`, `article`. */
     val type: String = "",
 ) {
-    val verifiedUrl = runCatching { URI(url).toURL() }.getOrNull()
+    /** The page's host, or null when [url] is not an absolute URL. */
+    val verifiedHost = absoluteUrlHost(url)
 
     /**
      * Resolves an OpenGraph URL against the page's own address, or null when it cannot be made
@@ -57,17 +59,7 @@ class UrlInfoItem(
      */
     private fun resolve(path: String): String? {
         if (path.isBlank()) return null
-        return runCatching {
-            val base = verifiedUrl?.toURI()
-            val resolved = if (base != null) base.resolve(path) else URI(path)
-            if (!resolved.scheme.equals("http", ignoreCase = true) &&
-                !resolved.scheme.equals("https", ignoreCase = true)
-            ) {
-                null
-            } else {
-                resolved.toURL().toString()
-            }
-        }.getOrNull()
+        return resolveHttpUrl(url.takeIf { verifiedHost != null }, path)
     }
 
     // Falls back to the raw value so an unresolvable image degrades to "the loader shows nothing",

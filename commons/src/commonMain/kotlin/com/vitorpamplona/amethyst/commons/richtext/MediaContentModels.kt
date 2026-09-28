@@ -26,10 +26,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-// URL-based media content models (KMP). The locally-cached variants
-// (MediaPreloadedContent, MediaLocalImage, MediaLocalVideo) live in
-// MediaLocalContent.kt under the jvmAndroid source set because they depend
-// on java.io.File.
+// URL-based media content models. The locally-cached variants
+// (MediaPreloadedContent, MediaLocalImage, MediaLocalVideo) are in MediaLocalContent.kt.
 
 @Immutable
 abstract class BaseMediaContent(

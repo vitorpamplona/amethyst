@@ -27,6 +27,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -64,6 +65,20 @@ interface RichTextPlatform {
         nav: INav,
     )
 
+    /**
+     * Renders a decoded secret message (text hidden in an emoji's variation selectors) with the
+     * platform's leaves, the way the viewer renders a note body.
+     */
+    @Composable
+    fun SecretMessage(
+        content: RichTextViewerState,
+        callbackUri: String?,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    )
+
     /** Text for every platform segment, and markdown shown as its source. */
     object Plain : RichTextPlatform {
         override fun segmentRenderer(
@@ -85,6 +100,16 @@ interface RichTextPlatform {
             accountViewModel: AccountViewModel,
             nav: INav,
         ) = Text(content)
+
+        @Composable
+        override fun SecretMessage(
+            content: RichTextViewerState,
+            callbackUri: String?,
+            quotesLeft: Int,
+            backgroundColor: MutableState<Color>,
+            accountViewModel: AccountViewModel,
+            nav: INav,
+        ) = Text(content.paragraphs.joinToString("\n") { paragraph -> paragraph.words.joinToString(" ") { it.segmentText } })
     }
 }
 

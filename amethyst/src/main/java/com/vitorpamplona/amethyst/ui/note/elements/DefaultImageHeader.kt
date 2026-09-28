@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserBanner
@@ -37,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SimpleHeaderImage
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.authorNotePictureForImageHeader
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.painterRes
 
 @Composable
 fun DefaultImageHeader(
@@ -145,7 +144,7 @@ fun DefaultProfileBanner(
     sizeReference: Int,
 ) {
     Image(
-        painter = painterRes(R.drawable.profile_banner, sizeReference),
+        painter = painterRes(Res.drawable.profile_banner, sizeReference),
         contentDescription = stringRes(Res.string.profile_banner),
         contentScale = ContentScale.Crop,
         modifier = modifier,

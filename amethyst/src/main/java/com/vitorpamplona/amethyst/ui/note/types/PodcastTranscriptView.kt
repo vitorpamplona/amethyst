@@ -40,7 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.podcasts.PodcastRemoteContent
+import com.vitorpamplona.amethyst.commons.podcasts.fetchPreviewText
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_transcript
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -58,8 +58,7 @@ fun PodcastTranscriptView(
     accountViewModel: AccountViewModel,
 ) {
     val transcript by produceState(initialValue = null as String?, transcriptUrl) {
-        val client = accountViewModel.httpClientBuilder.okHttpClientForPreview(transcriptUrl)
-        val body = PodcastRemoteContent.fetchText(transcriptUrl, client)
+        val body = accountViewModel.httpClientBuilder.fetchPreviewText(transcriptUrl)
         value = body?.let { cleanTranscript(it) }?.takeIf { it.isNotBlank() }
     }
 

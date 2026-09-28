@@ -33,10 +33,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import com.google.common.math.IntMath.sqrt
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
-import java.math.RoundingMode
 import kotlin.math.ceil
+import kotlin.math.sqrt
 
 @Composable
 fun GridPreviewTemplate(count: Int) {
@@ -93,7 +92,7 @@ fun AutoNonlazyGrid(
     content: @Composable (Int) -> Unit,
 ) {
     if (itemCount > 0) {
-        NonlazyGrid(sqrt(itemCount, RoundingMode.UP), itemCount, modifier, content)
+        NonlazyGrid(ceil(sqrt(itemCount.toDouble())).toInt(), itemCount, modifier, content)
     }
 }
 

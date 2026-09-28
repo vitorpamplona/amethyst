@@ -31,9 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.createBitmap
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.service.image.argbPixelsToImageBitmap
 import com.vitorpamplona.amethyst.commons.ui.note.Ps1SaveCard
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
@@ -92,9 +91,7 @@ private fun Ps1SaveIconImage(icon: Ps1SaveIcon) {
     val frames =
         remember(icon) {
             icon.frames.map { pixels ->
-                createBitmap(Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE)
-                    .apply { setPixels(pixels, 0, Ps1SaveIcon.SIZE, 0, 0, Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE) }
-                    .asImageBitmap()
+                argbPixelsToImageBitmap(pixels, Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE)
             }
         }
 

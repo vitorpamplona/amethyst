@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.podcasts.fetchPreviewText
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_chapters
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -50,13 +51,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.podcasts.PodcastChapter
 import com.vitorpamplona.quartz.podcasts.PodcastChapters
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.coroutines.executeAsync
 
 private sealed interface ChaptersUiState {
     data object Loading : ChaptersUiState
@@ -79,8 +73,7 @@ fun PodcastChaptersSection(
     accountViewModel: AccountViewModel,
 ) {
     val state by produceState<ChaptersUiState>(ChaptersUiState.Loading, chaptersUrl) {
-        val client = accountViewModel.httpClientBuilder.okHttpClientForPreview(chaptersUrl)
-        val parsed = loadChapters(chaptersUrl, client)
+        val parsed = accountViewModel.httpClientBuilder.fetchPreviewText(chaptersUrl)?.let { PodcastChapters.parse(it) }
         value = if (parsed != null) ChaptersUiState.Loaded(parsed.chapters) else ChaptersUiState.Failed
     }
 
@@ -133,30 +126,13 @@ fun PodcastChaptersSection(
     }
 }
 
-private suspend fun loadChapters(
-    url: String,
-    client: OkHttpClient,
-): PodcastChapters? =
-    withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder().url(url).build()
-            client.newCall(request).executeAsync().use { response ->
-                if (response.isSuccessful) PodcastChapters.parse(response.body.string()) else null
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("PodcastChapters", "Failed to load chapters from $url", e)
-            null
-        }
-    }
-
 private fun formatTimestamp(seconds: Long): String {
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
     val secs = seconds % 60
     return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, secs)
+        "$hours:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
     } else {
-        "%d:%02d".format(minutes, secs)
+        "$minutes:${secs.toString().padStart(2, '0')}"
     }
 }

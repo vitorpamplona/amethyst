@@ -105,26 +105,6 @@ fun timeAgo(
     }
 }
 
-fun timeDiffAgoLong(timeDifference: Int): String =
-    when {
-        timeDifference > TimeUtils.ONE_YEAR -> (timeDifference / TimeUtils.ONE_YEAR).toString() + " years"
-        timeDifference > TimeUtils.ONE_MONTH -> (timeDifference / TimeUtils.ONE_MONTH).toString() + " months"
-        timeDifference > TimeUtils.ONE_DAY -> (timeDifference / TimeUtils.ONE_DAY).toString() + " days"
-        timeDifference > TimeUtils.ONE_HOUR -> (timeDifference / TimeUtils.ONE_HOUR).toString() + " hours"
-        timeDifference > TimeUtils.ONE_MINUTE -> (timeDifference / TimeUtils.ONE_MINUTE).toString() + " minutes"
-        else -> "now"
-    }
-
-fun timeDiffAgoShortish(timeDifference: Int): String =
-    when {
-        timeDifference > TimeUtils.ONE_YEAR -> (timeDifference / TimeUtils.ONE_YEAR).toString() + " yrs"
-        timeDifference > TimeUtils.ONE_MONTH -> (timeDifference / TimeUtils.ONE_MONTH).toString() + " mos"
-        timeDifference > TimeUtils.ONE_DAY -> (timeDifference / TimeUtils.ONE_DAY).toString() + " days"
-        timeDifference > TimeUtils.ONE_HOUR -> (timeDifference / TimeUtils.ONE_HOUR).toString() + " hrs"
-        timeDifference > TimeUtils.ONE_MINUTE -> (timeDifference / TimeUtils.ONE_MINUTE).toString() + " mins"
-        else -> "now"
-    }
-
 /**
  * Formats a Unix timestamp as a date string.
  * For recent dates (< 1 day), returns the provided today string.

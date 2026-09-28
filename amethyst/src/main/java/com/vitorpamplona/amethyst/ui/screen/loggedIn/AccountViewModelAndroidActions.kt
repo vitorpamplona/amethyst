@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
-import com.vitorpamplona.amethyst.commons.service.OnlineChecker
+import com.vitorpamplona.amethyst.commons.service.isVideoOnline
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // Account actions that need Android (a content Uri, the media store) or the JVM HTTP stack the
 // app's OkHttp clients come from. They stay out of AccountViewModel so the view model needs neither.
@@ -54,10 +53,7 @@ fun AccountViewModel.urlPreview(
     }
 }
 
-suspend fun AccountViewModel.checkVideoIsOnline(videoUrl: String): Boolean =
-    withContext(Dispatchers.IO) {
-        OnlineChecker.isOnline(videoUrl, httpClientBuilder::okHttpClientForVideo)
-    }
+suspend fun AccountViewModel.checkVideoIsOnline(videoUrl: String): Boolean = httpClientBuilder.isVideoOnline(videoUrl)
 
 /**
  * Encrypt + upload a picked image as a group avatar (canonical `marmot-group-image-v1` scheme).

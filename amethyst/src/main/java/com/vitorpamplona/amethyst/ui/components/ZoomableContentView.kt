@@ -24,14 +24,10 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -39,7 +35,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -59,15 +54,8 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
-import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
@@ -105,7 +93,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
-import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
+import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
@@ -116,8 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
@@ -128,7 +114,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -153,7 +138,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import okio.sink
-import org.jetbrains.compose.resources.StringResource
 import java.io.File
 import java.io.IOException
 
@@ -291,7 +275,7 @@ fun ZoomableContentView(
 
         is MediaLocalImage -> {
             if (content.isAnimatedMedia()) {
-                content.localFile?.let {
+                content.localJavaFile?.let {
                     GifVideoView(
                         videoUri = it.toUri().toString(),
                         contentDescription = content.description,
@@ -319,7 +303,7 @@ fun ZoomableContentView(
         }
 
         is MediaLocalVideo -> {
-            content.localFile?.let {
+            content.localJavaFile?.let {
                 Box(
                     modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
                     contentAlignment = Alignment.Center,
@@ -401,19 +385,19 @@ fun LocalImageView(
                 )
             }
 
-        val ratio = remember(content) { content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
+        val ratio = remember(content) { content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.localJavaFile.toString()) }
         val context = LocalContext.current
         val imageModel =
             if (fullResolution) {
-                remember(content.localFile, context) {
+                remember(content.localJavaFile, context) {
                     ImageRequest
                         .Builder(context)
-                        .data(content.localFile)
+                        .data(content.localJavaFile)
                         .size(Size.ORIGINAL)
                         .build()
                 }
             } else {
-                content.localFile
+                content.localJavaFile
             }
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center) { imageVisible ->
             if (imageVisible) {
@@ -467,7 +451,7 @@ fun LocalImageView(
 
                             SideEffect {
                                 val drawable = (state as AsyncImagePainter.State.Success).result.image
-                                MediaAspectRatioCache.add(content.localFile.toString(), drawable.width, drawable.height)
+                                MediaAspectRatioCache.add(content.localJavaFile.toString(), drawable.width, drawable.height)
                             }
 
                             content.isVerified?.let {
@@ -646,71 +630,6 @@ fun UrlImageView(
 }
 
 @Composable
-fun ImageUrlWithDownloadButton(
-    url: String,
-    showImage: MutableState<Boolean>,
-) {
-    val uri = LocalUriHandler.current
-
-    val primary = MaterialTheme.colorScheme.primary
-    val background = MaterialTheme.colorScheme.onBackground
-
-    val regularText = remember { SpanStyle(color = background) }
-    val clickableTextStyle = remember { SpanStyle(color = primary) }
-
-    val annotatedTermsString =
-        remember {
-            buildAnnotatedString {
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("routeToImage", "")
-                    append("$url ")
-                    pop()
-                }
-
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("routeToImage", "")
-                    pop()
-                }
-
-                withStyle(regularText) { append(" ") }
-            }
-        }
-
-    val pressIndicator =
-        remember {
-            Modifier
-                .fillMaxWidth()
-                .clickable { runCatching { uri.openUri(url) } }
-        }
-
-    Row(
-        modifier =
-            Modifier
-                .width(IntrinsicSize.Max),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = annotatedTermsString,
-            modifier =
-                pressIndicator
-                    .weight(1f, fill = false),
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 1,
-        )
-        InlineDownloadIcon(showImage)
-    }
-}
-
-@Composable
-private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
-    IconButton(
-        modifier = Modifier.size(Size20dp),
-        onClick = { showImage.value = true },
-    ) {
-        DownloadForOfflineIcon(Size24dp)
-    }
-
-@Composable
 fun ShowHashAnimated(
     content: MediaUrlImage,
     controllerVisible: MutableState<Boolean>,
@@ -762,161 +681,6 @@ fun BaseMediaContent.isAnimatedMedia(): Boolean =
     }
 
 @Composable
-fun WaitAndDisplay(content: @Composable (AnimatedVisibilityScope.() -> Unit)) {
-    val visible = remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        delay(200)
-        visible.value = true
-    }
-
-    AnimatedVisibility(
-        visible = visible.value,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        content = content,
-    )
-}
-
-@Composable
-fun DisplayUrlWithLoadingSymbol(
-    content: BaseMediaContent,
-    onError: (StringResource, StringResource) -> Unit = { _, _ -> },
-) {
-    val uri = LocalUriHandler.current
-
-    val primary = MaterialTheme.colorScheme.primary
-    val background = MaterialTheme.colorScheme.onBackground
-
-    val regularText = remember { SpanStyle(color = background) }
-    val clickableTextStyle = remember { SpanStyle(color = primary) }
-
-    val context = LocalContext.current
-
-    val annotatedTermsString =
-        remember {
-            buildAnnotatedString {
-                if (content is MediaUrlContent) {
-                    withStyle(clickableTextStyle) {
-                        pushStringAnnotation("routeToImage", "")
-                        append(content.url + " ")
-                        pop()
-                    }
-                } else {
-                    withStyle(regularText) { append("Loading content...") }
-                }
-
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("routeToImage", "")
-                    pop()
-                }
-
-                withStyle(regularText) { append(" ") }
-            }
-        }
-
-    val pressIndicator =
-        remember {
-            if (content is MediaUrlContent) {
-                Modifier.clickable {
-                    if (content.url.startsWith("blossom:")) {
-                        openBlossomUriAsIntent(context, content.url, onError)
-                    } else {
-                        runCatching { uri.openUri(content.url) }
-                    }
-                }
-            } else {
-                Modifier
-            }
-        }
-
-    Row(
-        modifier =
-            Modifier
-                .width(IntrinsicSize.Max),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = annotatedTermsString,
-            modifier = pressIndicator.weight(1f, fill = false),
-            overflow = TextOverflow.MiddleEllipsis,
-            maxLines = 1,
-        )
-        InlineLoadingIcon()
-    }
-}
-
-@Composable
-fun DisplayUrlWithLoadingSymbol(
-    url: String,
-    onError: (StringResource, StringResource) -> Unit = { _, _ -> },
-) {
-    val uri = LocalUriHandler.current
-
-    val primary = MaterialTheme.colorScheme.primary
-    val annotatedTermsString =
-        remember {
-            buildAnnotatedString {
-                withStyle(SpanStyle(color = primary)) {
-                    pushStringAnnotation("routeToImage", "")
-                    append("$url ")
-                    pop()
-                }
-            }
-        }
-
-    val context = LocalContext.current
-
-    val pressIndicator =
-        remember {
-            Modifier.clickable {
-                if (url.startsWith("blossom:")) {
-                    openBlossomUriAsIntent(context, url, onError)
-                } else {
-                    runCatching {
-                        uri.openUri(url)
-                    }
-                }
-            }
-        }
-
-    Row(
-        modifier = Modifier.width(IntrinsicSize.Max),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = annotatedTermsString,
-            modifier = pressIndicator.weight(1f, fill = false),
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 1,
-        )
-        InlineLoadingIcon()
-    }
-}
-
-@Composable
-private fun InlineLoadingIcon() = LoadingAnimation()
-
-@Composable
-fun DisplayBlurHash(
-    blurhash: String?,
-    description: String?,
-    contentScale: ContentScale,
-    modifier: Modifier,
-    thumbhash: String? = null,
-) {
-    val model =
-        placeholderModel(thumbhash, blurhash) ?: return
-
-    AsyncImage(
-        model = model,
-        contentDescription = description,
-        contentScale = contentScale,
-        modifier = modifier,
-    )
-}
-
-@Composable
 fun ShareMediaAction(
     accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
@@ -939,7 +703,7 @@ fun ShareMediaAction(
     } else if (content is MediaPreloadedContent) {
         ShareMediaAction(
             popupExpanded = popupExpanded,
-            videoUri = content.localFile?.toUri().toString(),
+            videoUri = content.localJavaFile?.toUri().toString(),
             postNostrUri = content.uri,
             blurhash = content.blurhash,
             dim = content.dim,
@@ -1083,7 +847,7 @@ fun ShareMediaAction(
                         }
 
                         is MediaLocalVideo -> {
-                            content.localFile?.let { localFile ->
+                            content.localJavaFile?.let { localFile ->
                                 M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.share_video)) {
                                     accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()

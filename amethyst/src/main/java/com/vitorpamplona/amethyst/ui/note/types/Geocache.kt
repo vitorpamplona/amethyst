@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.GeocacheFoundLogCard
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
@@ -117,7 +116,7 @@ fun distanceToCache(
 /**
  * A distance formatted no finer than its source can support.
  *
- * The reader's position comes from [LocationState.geohashStateFlow], which is a **5-character
+ * The reader's position comes from `LocationState.geohashStateFlow`, which is a **5-character
  * geohash** — a 4.89km × 4.89km cell — so the centroid this measures from can be ~3.5km from
  * where the reader is standing. Printing metres off that would be fiction: someone standing at
  * the cache would read "3 km", and a cache 2km away could read "120 m". Anything inside one

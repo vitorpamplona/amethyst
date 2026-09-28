@@ -60,7 +60,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -110,9 +109,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.mockVitorAccountViewModel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockVitorAccountViewModel
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -544,7 +543,6 @@ fun ZapVote(
 
     var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     nonClickablePrepend()
@@ -603,9 +601,9 @@ fun ZapVote(
                                 onPayViaIntent = {
                                     if (it.size == 1) {
                                         val payable = it.first()
-                                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
+                                        if (!accountViewModel.host.openLightningWallet(payable.invoice)) {
                                             zappingProgress = 0f
-                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, error)
+                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, noWalletFoundStr)
                                         }
                                     } else {
                                         val uid = Uuid.random().toString()
@@ -624,7 +622,6 @@ fun ZapVote(
             ),
     ) {
         if (wantsToZap) {
-            val context = LocalContext.current
             FilteredZapAmountChoicePopup(
                 baseNote,
                 accountViewModel,
@@ -644,9 +641,9 @@ fun ZapVote(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
+                        if (!accountViewModel.host.openLightningWallet(payable.invoice)) {
                             zappingProgress = 0f
-                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, error)
+                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, noWalletFoundStr)
                         }
                     } else {
                         val uid = Uuid.random().toString()

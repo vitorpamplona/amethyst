@@ -61,8 +61,9 @@ import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.math.BigDecimal
+import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlin.math.roundToInt
 
 @Composable
@@ -149,12 +150,12 @@ fun GoalProgressBar(
     val zapsState by observeNoteZaps(note, accountViewModel)
 
     var zapraiserStatus by
-        remember { mutableStateOf(ZapraiserStatus(0F, showAmount(goalAmountSats.toBigDecimal()))) }
+        remember { mutableStateOf(ZapraiserStatus(0F, showAmount(BigDecimal(goalAmountSats)))) }
 
     LaunchedEffect(key1 = zapsState) {
         zapsState?.note?.let {
             val newZapAmount = accountViewModel.account.zaps.calculateZappedAmount(note)
-            var percentage = newZapAmount.div(goalAmountSats.toBigDecimal()).toFloat()
+            var percentage = (newZapAmount.toDoubleValue() / goalAmountSats).toFloat()
             if (percentage > 1) percentage = 1f
 
             val left =
@@ -162,7 +163,7 @@ fun GoalProgressBar(
                     "0"
                 } else {
                     showAmount(
-                        goalAmountSats.toBigDecimal() * BigDecimal(1.0 - percentage),
+                        BigDecimal(goalAmountSats * (1.0 - percentage)),
                     )
                 }
             zapraiserStatus = ZapraiserStatus(percentage, left)
@@ -193,7 +194,7 @@ fun GoalProgressBar(
                     stringRes(
                         Res.string.goal_progress,
                         totalPercentage,
-                        showAmount(goalAmountSats.toBigDecimal()),
+                        showAmount(BigDecimal(goalAmountSats)),
                     ),
                 fontSize = Font14SP,
                 maxLines = 1,

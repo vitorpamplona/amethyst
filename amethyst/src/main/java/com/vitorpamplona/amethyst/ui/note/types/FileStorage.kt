@@ -25,8 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
-import java.io.File
 
 @Composable
 fun FileStorageHeaderDisplay(
@@ -74,7 +73,7 @@ private fun ObserverAndRenderNIP95(
             // Creates a new object when the event arrives to force an update of the image.
             val note = noteState.note
             val uri = header.toNostrUri()
-            val localDir = note.idHex.let { File(Amethyst.instance.nip95cache, it) }
+            val localDir = LocalCache.appHost.nip95Blobs?.path(note.idHex)
             val blurHash = eventHeader.blurhash()
             val thumbHash = eventHeader.thumbhash()
             val dimensions = eventHeader.dimensions()

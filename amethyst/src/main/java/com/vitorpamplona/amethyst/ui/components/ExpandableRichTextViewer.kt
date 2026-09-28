@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

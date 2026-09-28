@@ -22,11 +22,10 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
+import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
 import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl as SharedClickableUrl
 
@@ -44,13 +43,13 @@ fun ClickableUrl(
     onError: (StringResource, StringResource) -> Unit = { _, _ -> },
 ) {
     if (url.startsWith("blossom:")) {
-        val context = LocalContext.current
+        val blossomOpener = rememberBlossomUriOpener()
         ClickableTextPrimary(
             text = urlText,
             style = style,
             maxLines = 1,
             overflow = TextOverflow.MiddleEllipsis,
-            onClick = { openBlossomUriAsIntent(context, url, onError) },
+            onClick = { blossomOpener.open(url, onError) },
         )
     } else {
         SharedClickableUrl(url = url, displayText = urlText, style = style)

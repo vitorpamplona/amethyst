@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.compose.runtime.Immutable
 import androidx.media3.common.MediaItem
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

@@ -74,11 +74,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
+import com.vitorpamplona.amethyst.commons.util.toPrettyJson
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.ui.note.copyNoteTextAction
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -210,7 +210,7 @@ fun noteActionSections(
                     val event = note.event
                     if (event != null) {
                         scope.launch {
-                            val json = withContext(Dispatchers.Default) { JacksonMapper.toJsonPretty(event) }
+                            val json = withContext(Dispatchers.Default) { event.toPrettyJson() }
                             clipboardManager.setText(json)
                             handlers.onDismiss()
                         }

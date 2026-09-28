@@ -44,9 +44,9 @@ import androidx.media3.common.Tracks
 import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.delayedByFrames
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.playerPool.PcmTapRegistry
 import kotlinx.coroutines.flow.emptyFlow
 

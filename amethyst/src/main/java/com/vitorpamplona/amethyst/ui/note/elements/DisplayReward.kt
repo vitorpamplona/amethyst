@@ -68,9 +68,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 
 @Stable data class Reward(
     val amount: BigDecimal,
@@ -150,7 +151,7 @@ class AddBountyAmountViewModel : ViewModel() {
     }
 
     fun sendPost() {
-        val newValue = nextAmount.text.trim().toBigDecimalOrNull()
+        val newValue = parseBigDecimalOrNull(nextAmount.text.trim())
 
         if (newValue != null) {
             viewModelScope.launch(Dispatchers.IO) {

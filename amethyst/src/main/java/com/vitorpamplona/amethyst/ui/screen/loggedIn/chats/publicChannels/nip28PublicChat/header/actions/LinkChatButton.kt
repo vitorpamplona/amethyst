@@ -20,21 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
-import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.quick_action_copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -49,7 +48,8 @@ fun LinkChatButton(
 ) {
     val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
     val quickActionCopyNoteIdStr = stringRes(Res.string.quick_action_copy_note_id)
-    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val sharer = rememberTextSharer()
 
     FilledTonalButton(
         modifier =
@@ -57,26 +57,9 @@ fun LinkChatButton(
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            val intent = Intent(Intent.ACTION_VIEW, channel.toNostrUri().toUri())
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            runCatching { uriHandler.openUri(channel.toNostrUri()) }
 
-            context.startActivity(intent)
-
-            val sendIntent =
-                Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, channel.toNostrUri())
-                    putExtra(Intent.EXTRA_TITLE, quickActionShareBrowserLinkStr)
-                }
-
-            val shareIntent =
-                Intent.createChooser(
-                    sendIntent,
-                    quickActionCopyNoteIdStr,
-                )
-
-            context.startActivity(shareIntent)
+            sharer.share(channel.toNostrUri(), quickActionShareBrowserLinkStr, quickActionCopyNoteIdStr)
         },
         contentPadding = ZeroPadding,
     ) {

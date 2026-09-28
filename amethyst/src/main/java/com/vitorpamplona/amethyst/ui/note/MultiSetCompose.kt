@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthorWithBlank
 import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
@@ -116,13 +117,13 @@ import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -393,7 +394,7 @@ fun DisplaySecretEmojiAsReaction(
         ) {
             Surface(Modifier.padding(10.dp)) {
                 val color = remember { mutableStateOf(Color.Transparent) }
-                CoreSecretMessage(localSecretContent, null, 3, color, accountViewModel, nav)
+                LocalRichTextPlatform.current.SecretMessage(localSecretContent, null, 3, color, accountViewModel, nav)
             }
         }
     }
@@ -456,7 +457,7 @@ fun RenderNutzapGallery(
                     ZapAmountCommentNotification(
                         user = note.author,
                         comment = event?.content?.ifBlank { null },
-                        amount = showAmount(java.math.BigDecimal(sats)),
+                        amount = showAmount(BigDecimal(sats)),
                         zapNote = note,
                     )
                 }.toImmutableList()

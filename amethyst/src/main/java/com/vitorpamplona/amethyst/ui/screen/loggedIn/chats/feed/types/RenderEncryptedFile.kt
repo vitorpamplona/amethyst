@@ -28,7 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform
@@ -64,7 +63,7 @@ fun RenderEncryptedFile(
     val mimeType = noteEvent.mimeType()
 
     if (algo == AESGCM.NAME && key != null && nonce != null) {
-        Amethyst.instance.keyCache.add(noteEvent.content, AESGCM(key, nonce), mimeType)
+        accountViewModel.account.encryptionKeyCache.add(noteEvent.content, AESGCM(key, nonce), mimeType)
 
         // Audio is neither an image nor a video, and the image-or-video split
         // below would hand it to the video player: a picture-less surface where

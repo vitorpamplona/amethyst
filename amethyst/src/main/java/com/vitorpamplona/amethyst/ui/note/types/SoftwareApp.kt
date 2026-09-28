@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.commons.util.DecimalPatternFormatter
 import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
@@ -758,9 +759,9 @@ fun RenderSoftwareAsset(
 internal fun formatBytes(bytes: Long): String {
     if (bytes < 1024L) return "$bytes B"
     val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
+    if (kb < 1024) return "${DecimalPatternFormatter("0.0").format(kb)} KB"
     val mb = kb / 1024
-    if (mb < 1024) return "%.1f MB".format(mb)
+    if (mb < 1024) return "${DecimalPatternFormatter("0.0").format(mb)} MB"
     val gb = mb / 1024
-    return "%.2f GB".format(gb)
+    return "${DecimalPatternFormatter("0.00").format(gb)} GB"
 }

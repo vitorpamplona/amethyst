@@ -32,17 +32,21 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.plus
+import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
-import java.math.RoundingMode
+import kotlin.math.roundToLong
+
+private val ZERO = BigDecimal(0)
 
 @Stable
 data class PollOption(
     val option: Int,
     val descriptor: String,
-    var zappedValue: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
+    var zappedValue: MutableState<BigDecimal> = mutableStateOf(ZERO),
     var tally: MutableState<Float> = mutableFloatStateOf(0f),
     var consensusThreadhold: MutableState<Boolean> = mutableStateOf(false),
     var zappedByLoggedIn: MutableState<Boolean> = mutableStateOf(false),
@@ -57,13 +61,11 @@ class PollNoteViewModel : ViewModel() {
     private var pollOptions: Map<Int, String>? = null
     private var valueMaximum: Long? = null
     private var valueMinimum: Long? = null
-    private var valueMaximumBD: BigDecimal? = null
-    private var valueMinimumBD: BigDecimal? = null
 
     private var closedAt: Long? = null
-    private var consensusThreshold: BigDecimal? = null
+    private var consensusThreshold: Double? = null
 
-    private var totalZapped: BigDecimal = BigDecimal.ZERO
+    private var totalZapped: BigDecimal = ZERO
     private var wasZappedByLoggedInAccount: Boolean = false
 
     var canZap = mutableStateOf(false)
@@ -80,12 +82,10 @@ class PollNoteViewModel : ViewModel() {
             pollOptions = pollEvent?.pollOptions()
             valueMaximum = pollEvent?.maxAmount()
             valueMinimum = pollEvent?.minAmount()
-            valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
-            valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
-            consensusThreshold = pollEvent?.consensusThreshold()?.toBigDecimal()
+            consensusThreshold = pollEvent?.consensusThreshold()
             closedAt = pollEvent?.closedAt()
 
-            totalZapped = BigDecimal.ZERO
+            totalZapped = ZERO
             wasZappedByLoggedInAccount = false
 
             canZap.value = checkIfCanZap()
@@ -108,16 +108,18 @@ class PollNoteViewModel : ViewModel() {
 
             tallies.forEach {
                 val zappedValue = zappedPollOptionAmount(it.option)
+                val total = totalZapped.toDoubleValue()
+                // The share, rounded to two decimals.
                 val tallyValue =
-                    if (totalZapped > BigDecimal.ZERO) {
-                        zappedValue.divide(totalZapped, 2, RoundingMode.HALF_UP)
+                    if (total > 0) {
+                        (zappedValue.toDoubleValue() / total * 100).roundToLong() / 100.0
                     } else {
-                        BigDecimal.ZERO
+                        0.0
                     }
 
                 it.zappedValue.value = zappedValue
                 it.tally.value = tallyValue.toFloat()
-                it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
+                it.consensusThreadhold.value = consensusThreshold?.let { threshold -> tallyValue >= threshold } == true
                 it.zappedByLoggedIn.value = account.userProfile().let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) }
             }
         }
@@ -157,36 +159,16 @@ class PollNoteViewModel : ViewModel() {
         }
 
     fun isValidInputVoteAmount(amount: BigDecimal?): Boolean {
-        when {
-            amount == null -> {
-                return false
-            }
-
-            valueMinimum == null && valueMaximum == null -> {
-                if (amount > BigDecimal.ZERO) {
-                    return true
-                }
-            }
-
-            valueMinimum == null -> {
-                if (amount > BigDecimal.ZERO && amount <= valueMaximumBD!!) {
-                    return true
-                }
-            }
-
-            valueMaximum == null -> {
-                if (amount >= valueMinimumBD!!) {
-                    return true
-                }
-            }
-
-            else -> {
-                if ((valueMinimumBD!! <= amount) && (amount <= valueMaximumBD!!)) {
-                    return true
-                }
-            }
+        if (amount == null) return false
+        val sats = amount.toDoubleValue()
+        val min = valueMinimum
+        val max = valueMaximum
+        return when {
+            min == null && max == null -> sats > 0
+            min == null -> sats > 0 && sats <= max!!
+            max == null -> sats >= min
+            else -> min <= sats && sats <= max
         }
-        return false
     }
 
     fun isValidInputVoteAmount(amount: Long?): Boolean {
@@ -243,32 +225,32 @@ class PollNoteViewModel : ViewModel() {
         }
 
     private fun zappedPollOptionAmount(option: Int): BigDecimal =
-        pollNote?.zaps?.values?.sumOf {
+        pollNote?.zaps?.values?.fold(ZERO) { acc, it ->
             val event = it?.event as? ZapReceiptEvent
-            val zapAmount = event?.amount ?: BigDecimal.ZERO
+            val zapAmount = event?.amount ?: ZERO
             val isValidAmount = isValidInputVoteAmount(event?.amount)
 
             if (isValidAmount && event?.zappedPollOption() == option) {
-                zapAmount
+                acc + zapAmount
             } else {
-                BigDecimal.ZERO
+                acc
             }
         }
-            ?: BigDecimal.ZERO
+            ?: ZERO
 
     private fun totalZapped(): BigDecimal =
-        pollNote?.zaps?.values?.sumOf {
+        pollNote?.zaps?.values?.fold(ZERO) { acc, it ->
             val zapEvent = (it?.event as? ZapReceiptEvent)
-            val zapAmount = zapEvent?.amount ?: BigDecimal.ZERO
+            val zapAmount = zapEvent?.amount ?: ZERO
             val isValidAmount = isValidInputVoteAmount(zapEvent?.amount)
 
             if (isValidAmount && zapEvent?.zappedPollOption() != null) {
-                zapAmount
+                acc + zapAmount
             } else {
-                BigDecimal.ZERO
+                acc
             }
         }
-            ?: BigDecimal.ZERO
+            ?: ZERO
 
     fun createZapOptionsThatMatchThePollingParameters(zapPaymentChoices: List<Long>): List<Long> {
         val options =

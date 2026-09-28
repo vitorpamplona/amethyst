@@ -133,7 +133,7 @@ fun UrlPreviewCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+                text = previewInfo.verifiedHost ?: previewInfo.url,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f, fill = false),
                 color = Color.Gray,

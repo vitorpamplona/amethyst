@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
-import java.math.BigDecimal
+import com.vitorpamplona.quartz.utils.BigDecimal
 
 /**
  * Renders a NIP-61 nutzap (kind 9321) as an activity card, like lightning zaps.

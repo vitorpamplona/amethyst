@@ -18,22 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import java.util.Locale
+import android.widget.Toast
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 
-/**
- * Formats seconds into a human-readable time string (M:SS or MM:SS format).
- *
- * @param seconds The number of seconds to format
- * @return Formatted time string (e.g., "0:05", "1:23", "12:45")
- */
-fun formatSecondsToTime(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return if (minutes > 0) {
-        String.format(Locale.getDefault(), "%d:%02d", minutes, secs)
-    } else {
-        String.format(Locale.getDefault(), "0:%02d", secs)
-    }
+@Composable
+actual fun rememberShortNotice(): ShortNotice {
+    val context = LocalContext.current
+    return remember(context) { ShortNotice { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() } }
 }

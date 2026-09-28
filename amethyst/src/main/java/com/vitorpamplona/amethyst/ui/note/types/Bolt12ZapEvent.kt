@@ -38,10 +38,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
-import java.text.NumberFormat
 
 /**
  * Standalone card for a NIP-B1 BOLT12 zap (kind 9736), styled like the NIP-57
@@ -91,7 +91,7 @@ fun RenderBolt12Zap(
 
         RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
 
-        amountSats?.let { ActivityAmountRow(NumberFormat.getNumberInstance().format(it), orange) }
+        amountSats?.let { ActivityAmountRow(PlatformNumberFormatter().format(it), orange) }
 
         comment?.let {
             CrossfadeToDisplayComment(it, cardBackground, nav, accountViewModel)

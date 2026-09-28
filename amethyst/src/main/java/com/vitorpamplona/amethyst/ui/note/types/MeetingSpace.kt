@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +42,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -68,11 +69,14 @@ import com.vitorpamplona.amethyst.commons.resources.nest_presence_listening
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_on_stage
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_raised_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_speaking
+import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
@@ -80,11 +84,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag as MeetingSpaceStatusTag
@@ -213,17 +217,10 @@ private fun ListenToRecordingButton(
     url: String,
     accountViewModel: AccountViewModel,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val noAppMessage = stringRes(Res.string.nest_no_app_to_open_link)
-    androidx.compose.material3.OutlinedButton(onClick = {
-        val launched =
-            runCatching {
-                context.startActivity(
-                    android.content
-                        .Intent(android.content.Intent.ACTION_VIEW, url.toUri())
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }.isSuccess
+    OutlinedButton(onClick = {
+        val launched = runCatching { uriHandler.openUri(url) }.isSuccess
         if (!launched) {
             accountViewModel.toastManager.toast(
                 Res.string.nest_chat_send_failed_title,
@@ -564,13 +561,11 @@ fun MeetingSpacePlannedFlag(
                         .padding(horizontal = 5.dp)
                 },
         )
-        val now = System.currentTimeMillis() / 1000L
+        val now = TimeUtils.now()
         if (startsUnixSec != null && startsUnixSec > now) {
             val pretty =
                 remember(startsUnixSec) {
-                    java.text.DateFormat
-                        .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                        .format(java.util.Date(startsUnixSec * 1000L))
+                    formatDateTime(startsUnixSec * 1000L, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
                 }
             Text(
                 text = stringRes(Res.string.meeting_space_planned_starts_at, pretty),

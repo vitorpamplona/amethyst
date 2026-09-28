@@ -296,6 +296,28 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      root (and later the Desktop one) for the media and intents, plus KMP swaps for the
      formatting. RichTextViewer's own closure is 32 files with 41 exits; NoteCompose's is
      144 files with 81.
+
+   **Progress 2026-09-28, later.** The shape held: slots at the root, KMP swaps below them.
+   - **`RichTextViewer` moved** over `RichTextPlatform` (`LocalRichTextPlatform`): the
+     platform's segment renderer, its markdown renderer, and the secret-message body. The
+     quoted-note card is `LocalInlineQuoteRenderer`.
+   - **Translation** is `TranslationPlatform` (`LocalTranslationPlatform`, commonsUI). The
+     shared `TranslatableRichTextViewer` asks it; Play installs ML Kit and F-Droid the no-op.
+   - **Platform verbs** became small commonsUI expect/actuals instead of Android calls in
+     note code: `rememberTextSharer()` (the `ACTION_SEND` chooser), `rememberShortNotice()`
+     (a toast), `rememberBlossomUriOpener()` (on `LocalUriHandler`),
+     `argbPixelsToImageBitmap`. Plain `VIEW` intents became `LocalUriHandler.openUri`.
+   - **Formatting:** `formatDateTime(epochMillis, DateTimeStyle, DateTimeStyle)`,
+     `DecimalPatternFormatter`, `PlatformNumberFormatter`, `phonePrefersMiles()` and the
+     quartz `BigDecimal` (+ `parseBigDecimalOrNull`) replace `java.text` / `java.math` in
+     the note types. `UrlInfoItem` resolves OpenGraph URLs through `resolveHttpUrl`, and
+     NIP-95 local media is an okio `Path` served by `Nip95BlobStore.path(id)`.
+   - **The rest of the note card** goes through `NotePlatform` (`LocalNotePlatform`): the
+     zoomable viewer and video/GIF players, link previews, the map and reverse geocoding,
+     the note types built on a platform engine (audio players, chess, the git browser,
+     meeting rooms, napplets/nsites), the reactions/zap row and the post editor. Shared
+     code calls same-named shims in `ui.note.platform`, so call sites only changed imports.
+     Each of those pieces can later get a shared implementation and leave the slot.
 6. **Screens**, feature by feature, into `commonsUI`.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and

@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
-import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -34,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share_browser_link
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -49,7 +48,7 @@ fun ShareChatButton(
 ) {
     val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
     val quickActionShareStr = stringRes(Res.string.quick_action_share)
-    val context = LocalContext.current
+    val sharer = rememberTextSharer()
 
     FilledTonalButton(
         modifier =
@@ -57,21 +56,7 @@ fun ShareChatButton(
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            val sendIntent =
-                Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, njumpLink(channel.toNEvent()))
-                    putExtra(Intent.EXTRA_TITLE, quickActionShareBrowserLinkStr)
-                }
-
-            val shareIntent =
-                Intent.createChooser(
-                    sendIntent,
-                    quickActionShareStr,
-                )
-
-            context.startActivity(shareIntent)
+            sharer.share(njumpLink(channel.toNEvent()), quickActionShareBrowserLinkStr, quickActionShareStr)
         },
         contentPadding = ZeroPadding,
     ) {

@@ -22,11 +22,10 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -44,19 +43,27 @@ fun TranslatableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
-) = ExpandableRichTextViewer(
-    content,
-    canPreview,
-    quotesLeft,
-    modifier,
-    tags,
-    backgroundColor,
-    id,
-    callbackUri,
-    authorPubKey,
-    accountViewModel,
-    nav,
-)
+) {
+    TranslatableRichTextViewer(
+        content = content,
+        id = id,
+        accountViewModel = accountViewModel,
+    ) {
+        ExpandableRichTextViewer(
+            it,
+            canPreview,
+            quotesLeft,
+            modifier,
+            tags,
+            backgroundColor,
+            id,
+            callbackUri,
+            authorPubKey,
+            accountViewModel,
+            nav,
+        )
+    }
+}
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -65,11 +72,17 @@ fun TranslatableRichTextViewer(
     translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
-) = displayText(content)
+) = LocalTranslationPlatform.current.Translatable(content, id, translationMessageModifier, accountViewModel, displayText)
 
-/** No translation service in this flavor, so the content is always its own "translation". */
+/**
+ * The translation of [content] under the current language settings, or [content] unchanged when
+ * no translation applies. Same machinery and cache as [TranslatableRichTextViewer] but without
+ * the status bar, for callers that already render one and need a second string translated in
+ * step with it — e.g. a NIP-84 highlight, which must translate the quoted passage alongside the
+ * context in order to keep locating the passage inside it.
+ */
 @Composable
 fun rememberTranslation(
     content: String,
     accountViewModel: AccountViewModel,
-): String = content
+): String = LocalTranslationPlatform.current.rememberTranslation(content, accountViewModel)

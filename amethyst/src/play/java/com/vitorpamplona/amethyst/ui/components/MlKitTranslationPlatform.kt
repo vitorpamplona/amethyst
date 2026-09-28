@@ -23,17 +23,14 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.TranslationConfig
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.components.TranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
@@ -46,46 +43,31 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
-@Composable
-fun TranslatableRichTextViewer(
-    content: String,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    modifier: Modifier = Modifier,
-    tags: ImmutableListOfLists<String>,
-    backgroundColor: MutableState<Color>,
-    id: String,
-    callbackUri: String? = null,
-    authorPubKey: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    TranslatableRichTextViewer(
-        content = content,
-        id = id,
-        accountViewModel = accountViewModel,
-    ) {
-        ExpandableRichTextViewer(
-            it,
-            canPreview,
-            quotesLeft,
-            modifier,
-            tags,
-            backgroundColor,
-            id,
-            callbackUri,
-            authorPubKey,
-            accountViewModel,
-            nav,
-        )
-    }
+/** ML Kit's on-device translator, which only the Play build ships. */
+object MlKitTranslationPlatform : TranslationPlatform {
+    @Composable
+    override fun Translatable(
+        content: String,
+        id: String,
+        translationMessageModifier: Modifier,
+        accountViewModel: AccountViewModel,
+        displayText: @Composable (String) -> Unit,
+    ) = MlKitTranslatable(content, id, translationMessageModifier, accountViewModel, displayText)
+
+    @Composable
+    override fun rememberTranslation(
+        content: String,
+        accountViewModel: AccountViewModel,
+    ): String = rememberMlKitTranslation(content, accountViewModel)
 }
 
+val FlavorTranslationPlatform: TranslationPlatform = MlKitTranslationPlatform
+
 @Composable
-fun TranslatableRichTextViewer(
+private fun MlKitTranslatable(
     content: String,
     id: String,
-    translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
+    translationMessageModifier: Modifier,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) {
@@ -131,13 +113,13 @@ fun TranslatableRichTextViewer(
 
 /**
  * The translation of [content] under the current language settings, or [content] unchanged when
- * no translation applies. Same machinery and cache as [TranslatableRichTextViewer] but without
+ * no translation applies. Same machinery and cache as [MlKitTranslatable] but without
  * the status bar, for callers that already render one and need a second string translated in
  * step with it — e.g. a NIP-84 highlight, which must translate the quoted passage alongside the
  * context in order to keep locating the passage inside it.
  */
 @Composable
-fun rememberTranslation(
+private fun rememberMlKitTranslation(
     content: String,
     accountViewModel: AccountViewModel,
 ): String {

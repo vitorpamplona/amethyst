@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -94,15 +93,15 @@ import com.vitorpamplona.amethyst.commons.ui.components.RenderRegular
 import com.vitorpamplona.amethyst.commons.ui.components.RenderTextParagraph
 import com.vitorpamplona.amethyst.commons.ui.components.TagLink
 import com.vitorpamplona.amethyst.commons.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
+import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -444,13 +443,13 @@ fun ClickableBlossomUri(
     blossomUri: String,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current
+    val blossomOpener = rememberBlossomUriOpener()
 
     ClickableTextPrimary(
         text = remember { BlossomUri.parse(blossomUri)?.filename() ?: blossomUri },
         maxLines = 1,
         overflow = TextOverflow.MiddleEllipsis,
-        onClick = { openBlossomUriAsIntent(context, blossomUri, accountViewModel.toastManager::toast) },
+        onClick = { blossomOpener.open(blossomUri) { title, message -> accountViewModel.toastManager.toast(title, message) } },
     )
 }
 

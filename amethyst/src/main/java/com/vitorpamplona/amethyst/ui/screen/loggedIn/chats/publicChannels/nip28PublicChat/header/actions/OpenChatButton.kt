@@ -20,15 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
-import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -46,7 +44,7 @@ fun OpenChatButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
 
     FilledTonalButton(
         modifier =
@@ -54,10 +52,7 @@ fun OpenChatButton(
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            val intent = Intent(Intent.ACTION_VIEW, channel.toNostrUri().toUri())
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-            context.startActivity(intent)
+            runCatching { uriHandler.openUri(channel.toNostrUri()) }
         },
         contentPadding = ZeroPadding,
     ) {

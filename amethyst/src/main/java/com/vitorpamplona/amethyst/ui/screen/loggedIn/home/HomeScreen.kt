@@ -52,7 +52,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -77,8 +76,6 @@ import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
 import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.refresh
-import com.vitorpamplona.amethyst.commons.service.OnlineChecker
-import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
@@ -105,7 +102,6 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.checkVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
@@ -591,51 +587,6 @@ fun HomeFeedEmpty(onRefresh: () -> Unit) {
         Text(stringRes(Res.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringRes(Res.string.refresh)) }
-    }
-}
-
-@Composable
-fun CheckIfVideoIsOnline(
-    url: String,
-    accountViewModel: AccountViewModel,
-    whenOnline: @Composable (Boolean) -> Unit,
-) {
-    val online by produceState(
-        initialValue = OnlineChecker.isOnlineCached(url),
-        key1 = url,
-    ) {
-        val isOnline = accountViewModel.checkVideoIsOnline(url)
-        if (value != isOnline) {
-            value = isOnline
-        }
-    }
-
-    whenOnline(online)
-}
-
-@Composable
-fun CrossfadeCheckIfVideoIsOnline(
-    url: String,
-    accountViewModel: AccountViewModel,
-    whenOnline: @Composable () -> Unit,
-) {
-    val online by produceState(
-        initialValue = OnlineChecker.isOnlineCached(url),
-        key1 = url,
-    ) {
-        val isOnline = accountViewModel.checkVideoIsOnline(url)
-        if (value != isOnline) {
-            value = isOnline
-        }
-    }
-
-    CrossfadeIfEnabled(
-        targetState = online,
-        label = "CheckIfUrlIsOnline",
-    ) {
-        if (it) {
-            whenOnline()
-        }
     }
 }
 

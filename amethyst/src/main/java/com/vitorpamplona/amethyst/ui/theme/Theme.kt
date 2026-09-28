@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
@@ -51,6 +52,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
 import com.vitorpamplona.amethyst.ui.components.AndroidRichTextPlatform
 import com.vitorpamplona.amethyst.ui.components.DefaultInlineQuoteRenderer
+import com.vitorpamplona.amethyst.ui.components.FlavorTranslationPlatform
+import com.vitorpamplona.amethyst.ui.note.platform.AndroidNotePlatform
+import com.vitorpamplona.amethyst.ui.note.platform.LocalNotePlatform
 
 val chartLightColors =
     VicoTheme(
@@ -127,10 +131,13 @@ fun AmethystTheme(
         colors = colors,
     ) {
         // The platform halves of the shared note and rich-text renderers: media, LaTeX, payments,
-        // link previews, and the quoted-note card. Every Activity root goes through this theme.
+        // link previews, the quoted-note card, the note types built on platform engines and the
+        // flavour's translator. Every Activity root goes through this theme.
         CompositionLocalProvider(
             LocalRichTextPlatform provides AndroidRichTextPlatform,
             LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
+            LocalTranslationPlatform provides FlavorTranslationPlatform,
+            LocalNotePlatform provides AndroidNotePlatform,
             content = content,
         )
     }

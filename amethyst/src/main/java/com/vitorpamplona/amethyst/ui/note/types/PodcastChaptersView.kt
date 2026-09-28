@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.podcasts.PodcastRemoteContent
+import com.vitorpamplona.amethyst.commons.podcasts.fetchPreviewText
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_chapters_count
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
@@ -67,8 +67,7 @@ fun PodcastChaptersView(
     accountViewModel: AccountViewModel,
 ) {
     val chapters by produceState(initialValue = emptyList<PodcastChapter>(), chaptersUrl) {
-        val client = accountViewModel.httpClientBuilder.okHttpClientForPreview(chaptersUrl)
-        val body = PodcastRemoteContent.fetchText(chaptersUrl, client)
+        val body = accountViewModel.httpClientBuilder.fetchPreviewText(chaptersUrl)
         value = body?.let { PodcastChapters.parse(it)?.chapters }?.filter { it.title?.isNotBlank() == true } ?: emptyList()
     }
 

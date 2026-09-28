@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.util.DecimalPatternFormatter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -63,9 +64,6 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.DecimalFormat
-import java.text.NumberFormat
-import java.util.Locale
 import kotlin.math.abs
 
 @Preview
@@ -258,7 +256,7 @@ fun RenderEyeGlassesPrescription(
         visionPrescription.status?.let {
             Text(
                 text = "Status: ${it.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                    if (it.isLowerCase()) it.titlecase() else it.toString()
                 }}",
                 modifier = Modifier.padding(4.dp).fillMaxWidth(),
             )
@@ -350,9 +348,9 @@ fun RenderEyeGlassesPrescriptionHeaderRow() {
 
 @Composable
 fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
-    val numberFormat = DecimalFormat("##.00")
-    val pdFormat = DecimalFormat("##.0")
-    val integerFormat = DecimalFormat("###")
+    val numberFormat = DecimalPatternFormatter("##.00")
+    val pdFormat = DecimalPatternFormatter("##.0")
+    val integerFormat = DecimalPatternFormatter("###")
 
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -362,7 +360,7 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
         Text(
             text =
                 data.eye?.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                    if (it.isLowerCase()) it.titlecase() else it.toString()
                 } ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
@@ -510,8 +508,8 @@ fun RenderEyeContactsPrescriptionHeaderRow() {
 
 @Composable
 fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
-    val numberFormat = DecimalFormat("##.00")
-    val integerFormat = DecimalFormat("###")
+    val numberFormat = DecimalPatternFormatter("##.00")
+    val integerFormat = DecimalPatternFormatter("###")
 
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -521,7 +519,7 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
         Text(
             text =
                 data.eye?.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                    if (it.isLowerCase()) it.titlecase() else it.toString()
                 } ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
@@ -626,7 +624,7 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
 
 fun formatOrBlank(
     amount: Double?,
-    numberFormat: NumberFormat,
+    numberFormat: DecimalPatternFormatter,
 ): String {
     if (amount == null) return ""
     if (abs(amount) < 0.01) return ""
