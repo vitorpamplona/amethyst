@@ -168,6 +168,10 @@ class BuzzWorkspaceChannelTest {
             // overlay its message — it is anchored on the message note, independent of any relay.
             val channelId = newChannelId()
             val original = streamMessage(channelId, "original")
+            // Taken before consuming and held: with no relay the message joins no channel
+            // timeline, so nothing else holds its note in LocalCache's weak store, and a GC
+            // before the read-back would drop it along with its edit overlay.
+            val target = LocalCache.getOrCreateNote(original.id)
             LocalCache.checkDeletionAndConsume(original, null, true)
 
             val edit =
@@ -176,7 +180,6 @@ class BuzzWorkspaceChannelTest {
                 )
             LocalCache.checkDeletionAndConsume(edit, null, true)
 
-            val target = LocalCache.getNoteIfExists(original.id)!!
             val newest = target.edits.filter { it.event is StreamMessageEditEvent }.maxByOrNull { it.createdAt() ?: 0L }
             assertEquals("edited offline", newest?.event?.content)
         }

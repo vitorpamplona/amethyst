@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.junit.Assert.assertFalse
@@ -33,9 +35,22 @@ import org.junit.Test
  * chain may cancel itself. Getting it wrong in either direction is a bug:
  * a false "could fire" keeps waking the process forever; a false "can't fire"
  * silently kills a reminder the user RSVP'd to.
+ *
+ * Events go in through [consumePinned], which takes each event's note from the cache *before*
+ * consuming it and keeps it for the test's lifetime. `LocalCache` holds notes weakly
+ * (LargeSoftCache) and the worker finds RSVPs and their time slots by reading the cache, so a
+ * GC before that read would lose them — a lost slot reads as "not fetched yet" and flips
+ * `couldStillFire` to true.
  */
 class CalendarReminderCandidatesTest {
     private val now = 2_000_000_000L
+
+    private val pinned = mutableListOf<Note>()
+
+    private fun consumePinned(event: Event) {
+        pinned.add(LocalCache.getOrCreateNote(event))
+        LocalCache.justConsume(event, null, true)
+    }
 
     // Unique per-test-class identities so the shared LocalCache singleton
     // doesn't collide with other suites running in the same JVM.
@@ -85,8 +100,8 @@ class CalendarReminderCandidatesTest {
     fun acceptedRsvpsInCache_returnsAcceptedAndSkipsDeclined() {
         val accepted = rsvp("cand-accepted", "cand-target-1")
         val declined = rsvp("cand-declined", "cand-target-2", status = "declined")
-        LocalCache.justConsume(accepted, null, true)
-        LocalCache.justConsume(declined, null, true)
+        consumePinned(accepted)
+        consumePinned(declined)
 
         val found = CalendarReminderWorker.acceptedRsvpsInCache()
         assertTrue("accepted RSVP must be found", found.any { it.dTag() == "cand-accepted" })
@@ -97,8 +112,8 @@ class CalendarReminderCandidatesTest {
     fun futureTarget_couldStillFire() {
         val slot = timeSlot("cand-future", startSeconds = now + 3600)
         val r = rsvp("cand-rsvp-future", "cand-future")
-        LocalCache.justConsume(slot, null, true)
-        LocalCache.justConsume(r, null, true)
+        consumePinned(slot)
+        consumePinned(r)
 
         assertTrue(CalendarReminderWorker.couldStillFire(listOf(r), now))
     }
@@ -107,8 +122,8 @@ class CalendarReminderCandidatesTest {
     fun pastTarget_cannotFireAnymore() {
         val slot = timeSlot("cand-past", startSeconds = now - 3600)
         val r = rsvp("cand-rsvp-past", "cand-past")
-        LocalCache.justConsume(slot, null, true)
-        LocalCache.justConsume(r, null, true)
+        consumePinned(slot)
+        consumePinned(r)
 
         assertFalse(CalendarReminderWorker.couldStillFire(listOf(r), now))
     }
@@ -118,7 +133,7 @@ class CalendarReminderCandidatesTest {
         // The RSVP points at an event the cache hasn't fetched yet: the start
         // is unknown, so the worker must NOT cancel its chain.
         val r = rsvp("cand-rsvp-unresolved", "cand-never-fetched")
-        LocalCache.justConsume(r, null, true)
+        consumePinned(r)
 
         assertTrue(CalendarReminderWorker.couldStillFire(listOf(r), now))
     }
@@ -128,8 +143,8 @@ class CalendarReminderCandidatesTest {
         // Target resolved but carries no start tag: still unknown, keep alive.
         val slot = timeSlot("cand-no-start", startSeconds = null)
         val r = rsvp("cand-rsvp-no-start", "cand-no-start")
-        LocalCache.justConsume(slot, null, true)
-        LocalCache.justConsume(r, null, true)
+        consumePinned(slot)
+        consumePinned(r)
 
         assertTrue(CalendarReminderWorker.couldStillFire(listOf(r), now))
     }
@@ -137,7 +152,7 @@ class CalendarReminderCandidatesTest {
     @Test
     fun rsvpWithoutTargetAddress_doesNotKeepTheChainAlive() {
         val r = rsvp("cand-rsvp-no-a-tag", targetDTag = null)
-        LocalCache.justConsume(r, null, true)
+        consumePinned(r)
 
         assertFalse(CalendarReminderWorker.couldStillFire(listOf(r), now))
     }

@@ -40,10 +40,13 @@ class FindUsersTest {
      * and `findUsersStartingWith` could collect them and make the search return fewer results
      * (flaky failure at line 115). Every test keeps its users in a strong-reference list that
      * stays reachable through the assertions to pin them in the cache.
+     *
+     * The pin must be taken BEFORE `consumeMetadata`: pinning afterwards leaves the window
+     * between the consume and the pin open, and a GC there drops the user with its metadata.
      */
-    private val retained = mutableListOf<User?>()
+    private val retained = mutableListOf<User>()
 
-    private fun DesktopLocalCache.retainUser(pubkey: String): User? = getUserIfExists(pubkey).also { retained.add(it) }
+    private fun DesktopLocalCache.pinUser(pubkey: String): User = getOrCreateUser(pubkey).also { retained.add(it) }
 
     private fun fakeMetadata(
         pubKey: String,
@@ -64,7 +67,7 @@ class FindUsersTest {
         val cache = createCache()
         val pubkey = KeyPair().pubKey.toHexKey()
 
-        retained.add(cache.getOrCreateUser(pubkey))
+        cache.pinUser(pubkey)
 
         val results = cache.findUsersStartingWith("test", 10)
         assertTrue(results.isEmpty(), "User without metadata should not match name search")
@@ -75,8 +78,8 @@ class FindUsersTest {
         val cache = createCache()
         val pubkey = KeyPair().pubKey.toHexKey()
 
+        cache.pinUser(pubkey)
         cache.consumeMetadata(fakeMetadata(pubkey, "vitor", "Vitor Pamplona"))
-        cache.retainUser(pubkey)
 
         val results = cache.findUsersStartingWith("Vitor", 10)
         assertEquals(1, results.size, "Should find user by display name")
@@ -88,8 +91,8 @@ class FindUsersTest {
         val cache = createCache()
         val pubkey = KeyPair().pubKey.toHexKey()
 
+        cache.pinUser(pubkey)
         cache.consumeMetadata(fakeMetadata(pubkey, "vitor"))
-        cache.retainUser(pubkey)
 
         val results = cache.findUsersStartingWith("vit", 10)
         assertEquals(1, results.size, "Should find user by name prefix")
@@ -100,8 +103,8 @@ class FindUsersTest {
         val cache = createCache()
         val pubkey = KeyPair().pubKey.toHexKey()
 
+        cache.pinUser(pubkey)
         cache.consumeMetadata(fakeMetadata(pubkey, "Vitor", "Vitor Pamplona"))
-        cache.retainUser(pubkey)
 
         val lower = cache.findUsersStartingWith("vitor", 10)
         assertEquals(1, lower.size, "Should find case-insensitively (lowercase)")
@@ -115,7 +118,7 @@ class FindUsersTest {
         val cache = createCache()
         val pubkey = KeyPair().pubKey.toHexKey()
 
-        retained.add(cache.getOrCreateUser(pubkey))
+        cache.pinUser(pubkey)
 
         val results = cache.findUsersStartingWith(pubkey.take(8), 10)
         assertEquals(1, results.size, "Should find user by pubkey prefix")
@@ -127,8 +130,8 @@ class FindUsersTest {
 
         listOf("alice", "bob", "alex").forEach { name ->
             val pubkey = KeyPair().pubKey.toHexKey()
+            cache.pinUser(pubkey)
             cache.consumeMetadata(fakeMetadata(pubkey, name))
-            cache.retainUser(pubkey)
         }
 
         val results = cache.findUsersStartingWith("al", 10)
@@ -140,7 +143,7 @@ class FindUsersTest {
         val cache = createCache()
 
         // Simulate users created from kind 1 notes (no metadata)
-        repeat(10) { retained.add(cache.getOrCreateUser(KeyPair().pubKey.toHexKey())) }
+        repeat(10) { cache.pinUser(KeyPair().pubKey.toHexKey()) }
 
         assertEquals(10, cache.userCount())
 
@@ -153,10 +156,10 @@ class FindUsersTest {
         val cache = createCache()
         val pubkey = KeyPair().pubKey.toHexKey()
 
+        val user = cache.pinUser(pubkey)
         cache.consumeMetadata(fakeMetadata(pubkey, "testuser", "Test User"))
 
-        val user = cache.retainUser(pubkey)
-        val metadata = user?.metadataOrNull()
+        val metadata = user.metadataOrNull()
 
         assertNotNull(metadata, "Metadata should exist after consumeMetadata")
         assertTrue(

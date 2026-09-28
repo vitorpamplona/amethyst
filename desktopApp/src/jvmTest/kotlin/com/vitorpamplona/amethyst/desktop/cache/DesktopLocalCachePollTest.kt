@@ -33,6 +33,12 @@ import kotlin.test.assertTrue
  * NIP-88 poll consumption: a kind-1068 poll becomes a renderable Note, and a kind-1018
  * response is linked into that poll Note's `pollState()` tally. Second identical response
  * (a relay echo) must not double-count.
+ *
+ * Each test takes the poll [com.vitorpamplona.amethyst.commons.model.Note] from the cache
+ * *before* consuming and keeps it. [DesktopLocalCache] holds notes weakly (LargeSoftCache),
+ * so a poll note nothing references can be collected between the poll's consume and the
+ * response's — the response would then tally into a fresh, empty note — or before the
+ * read-back. In the app the screen showing the poll is that strong referent.
  */
 class DesktopLocalCachePollTest {
     private val relayUrl = NormalizedRelayUrl("wss://relay.test/")
@@ -77,13 +83,13 @@ class DesktopLocalCachePollTest {
         val voter = NostrSignerSync(KeyPair())
 
         val poll = signedPoll(author, createdAt = 1_700_000_000)
+        val pollNote = cache.getOrCreateNote(poll.id)
         assertTrue(cache.consume(poll, relayUrl, wasVerified = true), "poll should be consumed")
 
         val response = signedResponse(voter, poll.id, option = "0", createdAt = 1_700_000_100)
         assertTrue(cache.consume(response, relayUrl, wasVerified = true), "response should be consumed")
 
-        val pollNote = cache.getNoteIfExists(poll.id)
-        assertTrue(pollNote != null, "poll note must exist")
+        assertTrue(pollNote.event is PollEvent, "poll note must hold the poll")
         val tally = pollNote.pollState().responses.value
         assertEquals(1, tally.totalVoters())
         assertEquals("0", tally.winning())
@@ -96,6 +102,7 @@ class DesktopLocalCachePollTest {
         val voter = NostrSignerSync(KeyPair())
 
         val poll = signedPoll(author, createdAt = 1_700_000_000)
+        val pollNote = cache.getOrCreateNote(poll.id)
         cache.consume(poll, relayUrl, wasVerified = true)
 
         val response = signedResponse(voter, poll.id, option = "1", createdAt = 1_700_000_100)
@@ -103,11 +110,7 @@ class DesktopLocalCachePollTest {
         // Same signed event echoed back by another relay — id-dedup must reject it.
         assertTrue(!cache.consume(response, relayUrl, wasVerified = true))
 
-        val tally =
-            cache
-                .getNoteIfExists(poll.id)!!
-                .pollState()
-                .responses.value
+        val tally = pollNote.pollState().responses.value
         assertEquals(1, tally.totalVoters())
     }
 }
