@@ -101,7 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_title
 import com.vitorpamplona.amethyst.commons.resources.cashu_wizard_use_wallet
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import java.text.NumberFormat
 
 /**

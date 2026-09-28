@@ -54,8 +54,8 @@ class LiveActivitiesChannel(
      * iterating it just to find presence is wasteful. Feeds that need
      * "is anyone live on stage in this room?" iterate this index
      * directly. See
-     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter]
-     * and [com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter].
+     * [com.vitorpamplona.amethyst.commons.nests.dal.NestsFeedFilter]
+     * and [com.vitorpamplona.amethyst.commons.home.dal.HomeLiveFilter].
      */
     val presenceNotes = LargeCache<HexKey, Note>()
 

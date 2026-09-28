@@ -25,7 +25,7 @@ import androidx.compose.runtime.State
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus as sharedObserveCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote as sharedObserveNote

@@ -31,8 +31,8 @@ import com.vitorpamplona.amethyst.commons.resources.timestamp_pending_short
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.LoadOts
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 

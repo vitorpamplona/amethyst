@@ -296,7 +296,7 @@ class BuzzDmListViewModel : ViewModel() {
      *
      * The 44100/30622 stream itself is **not** subscribed here. `bind` marks this community's relay a
      * joined workspace, which is exactly what
-     * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
+     * [com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
      * keys its always-on `#p=me` subscription on — so opening this screen used to put a second, identical
      * REQ on the same relay. Observing [LocalCache] instead means the screen sees the same events at the
      * same time for free, and the relay sees one subscription.

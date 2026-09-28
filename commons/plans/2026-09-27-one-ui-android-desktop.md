@@ -255,6 +255,13 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
    The app's `model/` keeps 13 Android-bound files (`AccountCacheState`, preferences, Tor, …).
    `IAccount` and `DesktopIAccount` are unchanged.
 4. **`AccountViewModel`**: the same recipe, using the dependency list above.
+
+   **Done 2026-09-28**, after the cuts listed under "What that measurement missed": the VM
+   and 32 files that need compose resources, Vico or commonsUI symbols went to
+   `commonsUI/commonMain`, the other 94 to `commons/commonMain`, with the package renames
+   given there. The app keeps `AndroidAccountViewModelHost`, the Android-only extensions in
+   `AccountViewModelAndroidActions.kt`, and the previews. iOS compiles are unverified in this
+   container (unrelated pre-existing failures); CI checks them.
 5. **The shared composables and their helpers** (sized in the tracker's 2026-09-27 section):
    - `RouteMaker`;
    - drop the `accountViewModel` overloads of the `observe*` helpers;

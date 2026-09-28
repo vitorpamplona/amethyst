@@ -41,10 +41,10 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_request_timed_out_spo
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_more_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_not_supported
+import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.ClinkDebitPayer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser

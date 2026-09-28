@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Wallet-type chooser. Each card routes to a dedicated setup screen for the

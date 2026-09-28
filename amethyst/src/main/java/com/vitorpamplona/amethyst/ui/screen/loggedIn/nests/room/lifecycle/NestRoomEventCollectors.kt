@@ -47,7 +47,7 @@ import kotlinx.coroutines.isActive
  * VM through six LaunchedEffects.
  *
  * The wire subscription that populates LocalCache is
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFilterAssemblerSubscription];
+ * [com.vitorpamplona.amethyst.commons.nests.datasource.NestRoomFilterAssemblerSubscription];
  * this composable is purely the read side — observing what's
  * already in cache, not opening relay REQs of its own.
  */

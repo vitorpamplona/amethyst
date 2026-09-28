@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
 fun RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel: AccountViewModel) {

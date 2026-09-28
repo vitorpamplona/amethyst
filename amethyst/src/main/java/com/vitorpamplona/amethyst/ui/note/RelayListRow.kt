@@ -72,8 +72,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.commons.ui.theme.relayIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.launch
 

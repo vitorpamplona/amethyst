@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.WarmNip11
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -98,8 +100,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -110,7 +110,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 /**
  * Discover NIP-29 groups across the relay set the top-bar filter resolves to. Built on the shared
  * feed stack exactly like the Git-repositories screen: a [FeedContentState]
- * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates.relayGroupsDiscoveryFeed])
+ * ([com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates.relayGroupsDiscoveryFeed])
  * fed by the per-type datasource, a [FeedFilterSpinner] persisting the selection to
  * `defaultRelayGroupsDiscoveryFollowList`, and a [RefresheableBox] + [RenderFeedContentState]. Rows
  * are the relay-signed 39000 metadata notes, rendered as joinable group cards.

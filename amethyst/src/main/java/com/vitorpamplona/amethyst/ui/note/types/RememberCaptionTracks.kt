@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.model.nip71Video.captionTracks
 import com.vitorpamplona.amethyst.commons.model.nip71Video.mergeCaptionTracks
 import com.vitorpamplona.amethyst.commons.model.nip71Video.toCaptionTrack
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import kotlinx.collections.immutable.ImmutableList

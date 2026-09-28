@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzPinDropdownItem
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayGroupMessagesDropdownItem
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**

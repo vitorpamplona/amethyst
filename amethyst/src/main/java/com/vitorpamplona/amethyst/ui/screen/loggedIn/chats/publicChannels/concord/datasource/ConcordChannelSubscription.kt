@@ -26,10 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelFilterAssembler
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelQueryState
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -185,7 +187,7 @@ private const val RECONNECT_RESWEEP_MIN_INTERVAL_MS = 60_000L
 /**
  * Fetch the private kind-13302 list of any Concord community pinned to the bottom bar whose list we
  * don't already have, from the relays saved on its tab (see
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel.importConcordCommunities]). Runs
+ * [com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel.importConcordCommunities]). Runs
  * app-wide as part of [ConcordChannelPreload], so a pinned community loads without the user ever
  * opening the Concord hub (which has its own import). Keyed on the exact set of missing communities,
  * so the (slow, stock-relay) fetch runs when a new gap appears — a freshly pinned community we can't

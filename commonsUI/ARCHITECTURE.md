@@ -20,8 +20,10 @@ therefore useless to the headless `cli`:
 Its end state is **the whole app UI**: every screen, the navigation host and the
 navigation chrome for every window size (bottom bar, rail, permanent drawer), with
 `amethyst` and a new JVM `desktopApp` as thin shims around it. Screens still in
-`amethyst/` are waiting on `AccountViewModel` and the app root, not staying there
-by design. See `commons/plans/2026-09-27-one-ui-android-desktop.md`.
+`amethyst/` are waiting on their own app-only helpers and the app root, not staying
+there by design. `AccountViewModel` lives here (`commons.viewmodels`) rather than in
+`commons` because it toasts through compose-resources strings; it reaches the
+platform through `AccountViewModelHost`. See `commons/plans/2026-09-27-one-ui-android-desktop.md`.
 
 It depends on `:commons` (and `:quartz`) as **`api`**, so a consumer that adds
 `:commonsUI` sees the headless layer transitively. `amethyst`, `desktopApp`,

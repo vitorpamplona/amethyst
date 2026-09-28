@@ -366,12 +366,12 @@ class AccountSessionManager(
         // through a process-singleton bridge. Drop the previous user's
         // ref before swapping so a stale ref can't survive into the new
         // session — see [NestBridge].
-        com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+        com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
             .clear()
         // A call belongs to the account that placed it, so end it before swapping users — see
         // [CallSessionBridge]. This is the real "account switch" hook; MainActivity being
         // destroyed is not.
-        com.vitorpamplona.amethyst.service.call.CallSessionBridge
+        com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
             .clear()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(routeBuilder)
@@ -414,10 +414,10 @@ class AccountSessionManager(
                 // Drop the Nest bridge ref before tearing down the
                 // current account so the audio-room activity can't
                 // pick up a stale AccountViewModel — see [NestBridge].
-                com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
+                com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
                     .clear()
                 // End any call this account had running before its state is torn down.
-                com.vitorpamplona.amethyst.service.call.CallSessionBridge
+                com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
                     .clear()
                 // log off and relogin with the 0 account
                 localPreferences.deleteAccount(accountInfo)

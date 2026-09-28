@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
 fun RefresheableFeedContentStateView(

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * No translation service in this flavor, so no note is ever translated and the copy-text

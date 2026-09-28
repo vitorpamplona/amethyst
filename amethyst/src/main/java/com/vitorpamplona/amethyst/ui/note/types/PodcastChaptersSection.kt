@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_chapters
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.podcasts.PodcastChapter
 import com.vitorpamplona.quartz.podcasts.PodcastChapters
 import com.vitorpamplona.quartz.utils.Log

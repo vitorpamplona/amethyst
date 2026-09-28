@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryRelayDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.historySubtitle
 import com.vitorpamplona.amethyst.commons.ui.feeds.incompleteSubtitle
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.ShareToDMNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.ChatroomListFeedView
 
 @OptIn(ExperimentalMaterial3Api::class)

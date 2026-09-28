@@ -32,9 +32,9 @@ import com.vitorpamplona.amethyst.commons.nip56Reports.ui.reportTypeLabel
 import com.vitorpamplona.amethyst.commons.nip56Reports.ui.reportTypeLabels
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
 @Composable

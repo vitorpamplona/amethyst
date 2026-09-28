@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.Card
+import com.vitorpamplona.amethyst.commons.feeds.DefaultFeedOrderCard
+import com.vitorpamplona.amethyst.commons.feeds.NotificationFeedOrderCard
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ChannelInviteCard
+import com.vitorpamplona.amethyst.commons.notifications.ChannelInviteCard
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import org.junit.Assert.assertEquals
 import org.junit.Test

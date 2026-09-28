@@ -99,8 +99,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.showAmount
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wallet.ReloadMintRequest
+import com.vitorpamplona.amethyst.commons.wallet.ReloadMintViewModel
+import com.vitorpamplona.amethyst.commons.wallet.ReloadSource
+import com.vitorpamplona.amethyst.commons.wallet.ReloadStatus
 import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.launch
 import java.util.UUID
 import androidx.compose.material3.Icon as Material3Icon

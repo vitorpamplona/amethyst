@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayLeaveRequest
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayMembershipListCard
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRemoveMemberCard
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent

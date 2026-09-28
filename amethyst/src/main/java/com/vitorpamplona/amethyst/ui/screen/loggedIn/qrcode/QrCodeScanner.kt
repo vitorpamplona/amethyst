@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScanOutcome
 import com.vitorpamplona.amethyst.ui.uriToRoute

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.lang.TranslationsCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
  * The already-computed translation of [content] under the current language settings, or null

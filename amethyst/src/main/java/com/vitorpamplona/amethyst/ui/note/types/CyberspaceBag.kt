@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectUnreadableCard
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagContents
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagItem

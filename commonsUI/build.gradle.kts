@@ -120,8 +120,16 @@ kotlin {
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 
+                // Charts (Vico 3, Compose Multiplatform, Apache-2.0): the notification
+                // summary builds its chart model off the main thread. `api` because the
+                // model is part of that state holder's public surface.
+                api(libs.vico.charts.compose)
+
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
+
+                // JSON trees for the LNURL-pay replies the payment stack reads.
+                implementation(libs.kotlinx.serialization.json)
 
                 // Compose Multiplatform Resources (strings, fonts, napplet shell files)
                 implementation(libs.jetbrains.compose.components.resources)

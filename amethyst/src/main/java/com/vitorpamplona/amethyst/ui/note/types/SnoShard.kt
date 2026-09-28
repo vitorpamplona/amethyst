@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.commons.resources.sno_shard_ideaspace
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectUnreadableCard
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
 import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteRef

@@ -48,8 +48,8 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.getGradient
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 object ShowFullTextCache {
     val cache = LruCache<String, Boolean>(10)

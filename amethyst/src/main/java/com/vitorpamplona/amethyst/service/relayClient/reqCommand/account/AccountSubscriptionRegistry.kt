@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 

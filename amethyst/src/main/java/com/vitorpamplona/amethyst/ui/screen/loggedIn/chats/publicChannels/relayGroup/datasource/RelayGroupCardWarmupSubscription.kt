@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_WARMUP_LIMIT
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupFilterAssembler
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupQueryState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Mount on a group card to warm its recent content ahead of a tap. [contentOnly] drops the

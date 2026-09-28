@@ -46,6 +46,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMe
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.rememberIsAudioTrack
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 internal const val SKIP_SECONDS = 10
 internal const val SKIP_MILLIS = SKIP_SECONDS * 1000L

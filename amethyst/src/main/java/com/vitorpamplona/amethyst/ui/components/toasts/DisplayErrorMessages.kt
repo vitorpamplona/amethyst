@@ -32,8 +32,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiUserErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun DisplayErrorMessages(

@@ -28,7 +28,7 @@ import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 
 /**
  * Provides a [androidx.lifecycle.ViewModelStoreOwner] scoped to the currently logged-in account so
- * that every ViewModel created under it (the [com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel]
+ * that every ViewModel created under it (the [com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel]
  * and all of its children) lives and dies with that account.
  *
  * The owner is keyed by the account's public key via [key]. While the same account stays logged in,

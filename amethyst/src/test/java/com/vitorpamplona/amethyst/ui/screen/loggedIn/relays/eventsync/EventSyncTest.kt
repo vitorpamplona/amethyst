@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
+import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync
 import com.vitorpamplona.geode.InProcessRelays
 import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.geode.testing.RelayClientTest

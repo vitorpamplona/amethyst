@@ -58,8 +58,8 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_job_result
 import com.vitorpamplona.amethyst.commons.resources.buzz_message_edited
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent

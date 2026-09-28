@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoAvatarCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoAvatarDefaultCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoAvatarUnpaidCard
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPaletteRef
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoPayload

@@ -55,6 +55,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.Card
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
+import com.vitorpamplona.amethyst.commons.notifications.BadgeCard
+import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
+import com.vitorpamplona.amethyst.commons.notifications.ChannelInviteCard
+import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
+import com.vitorpamplona.amethyst.commons.notifications.MultiSetCard
+import com.vitorpamplona.amethyst.commons.notifications.NoteCard
+import com.vitorpamplona.amethyst.commons.notifications.NutzapUserSetCard
+import com.vitorpamplona.amethyst.commons.notifications.OpenPollsState
+import com.vitorpamplona.amethyst.commons.notifications.ZapUserSetCard
+import com.vitorpamplona.amethyst.commons.notifications.containsEventId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.notification_feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.refresh
@@ -75,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.util.logTime
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
@@ -82,7 +93,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import kotlinx.coroutines.delay
 

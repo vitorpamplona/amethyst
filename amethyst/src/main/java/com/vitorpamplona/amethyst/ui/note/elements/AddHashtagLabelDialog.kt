@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip32Labeling.ui.HashtagLabelDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * NIP-32: lets the user tag any post with a hashtag by publishing a kind 1985 label

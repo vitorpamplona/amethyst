@@ -36,8 +36,8 @@ import com.vitorpamplona.amethyst.commons.resources.new_badge
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.post.NewBadgeDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.post.NewBadgeModel
 

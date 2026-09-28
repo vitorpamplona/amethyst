@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensible
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.PopupUpEffect
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelaySuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.ShowRelaySuggestionList
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer

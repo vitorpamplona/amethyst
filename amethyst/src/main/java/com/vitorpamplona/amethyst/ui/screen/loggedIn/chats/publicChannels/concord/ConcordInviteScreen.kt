@@ -60,8 +60,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_redeeming_invite
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.ConcordInvitePreviewRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
 import org.jetbrains.compose.resources.StringResource
 

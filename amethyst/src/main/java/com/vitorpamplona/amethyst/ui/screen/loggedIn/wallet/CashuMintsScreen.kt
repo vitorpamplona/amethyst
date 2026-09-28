@@ -87,7 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_edit_cashu_title
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Manages the mints a Cashu wallet uses (and creates the wallet on the first

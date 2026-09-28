@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SquaredQuoteBorderModifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
 fun DisplayPreviews(

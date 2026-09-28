@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.remove_follow_set_from_favor
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 
 /**

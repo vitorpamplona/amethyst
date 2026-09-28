@@ -56,7 +56,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * events authored by the account.
  *
  * Modeled on
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync]:
+ * [com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync]:
  *  - queries up to [MAX_CONCURRENT_RELAYS] relays concurrently via a sliding
  *    [Semaphore] window inside a [supervisorScope];
  *  - paginates each relay individually through Quartz's [fetchAllPages];

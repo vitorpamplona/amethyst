@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.relayClient.polls.results.PollResponsesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.polls.results.PollResponsesQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /** Subscribes to a poll's votes for as long as its results screen is composed. */
