@@ -56,13 +56,13 @@ import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.EndedFlag
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.LiveFlag
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.OfflineFlag
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.ScheduledFlag
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel

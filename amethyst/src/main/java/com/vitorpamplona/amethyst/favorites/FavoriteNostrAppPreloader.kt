@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  *
  * This subscribes each favorited coordinate to the shared
  * [EventFinder][com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler]
- * — the same lifecycle-aware loader [observeNote][com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote]
+ * — the same lifecycle-aware loader [observeNote][com.vitorpamplona.amethyst.commons.relayClient.event.observeNote]
  * uses — so the manifests fetch (via the author's outbox relays) as soon as the launcher opens and are
  * already in [LocalCache] by the time the user taps. The loader drops each coordinate from its filter
  * once the event arrives, so this is a one-shot fetch, not a standing feed.

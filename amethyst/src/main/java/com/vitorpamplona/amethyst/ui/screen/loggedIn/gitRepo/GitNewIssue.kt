@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels_hint
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_subject
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_title
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifie
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.LiveFlag
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.ScheduledFlag
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space
 import com.vitorpamplona.amethyst.commons.resources.meeting_room_in_space_unknown
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_presence_raised_hand
 import com.vitorpamplona.amethyst.commons.resources.nest_presence_speaking
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
@@ -76,8 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
@@ -354,7 +354,7 @@ private fun ParentMeetingSpaceLink(
                     .fillMaxWidth()
                     .clickable {
                         nav.nav {
-                            com.vitorpamplona.amethyst.ui.navigation.routes.routeFor(
+                            com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor(
                                 spaceNote,
                                 accountViewModel.account,
                             )

@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui
+package com.vitorpamplona.amethyst.commons.ui.navigation.routes
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.routes.THREAD_VIEW_KINDS
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeForPointer
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.THREAD_VIEW_KINDS
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeForPointer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -39,9 +39,9 @@ import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import io.mockk.mockk
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * A notification tap on a cold process finds nothing in LocalCache, so the only thing left
@@ -97,11 +97,11 @@ class RouteForPointerTest {
                 EventFactory.create(id, "b".repeat(64), 1, kind, emptyArray(), "", "c".repeat(128))
 
             assertEquals(
-                "kind $kind (${event::class.simpleName}) disagrees with routeFor",
                 routeFor(event, account),
                 routeForPointer(kind, id),
+                "kind $kind (${event::class.simpleName}) disagrees with routeFor",
             )
-            assertEquals("kind $kind must resolve to the thread view", Route.Note(id), routeForPointer(kind, id))
+            assertEquals(Route.Note(id), routeForPointer(kind, id), "kind $kind must resolve to the thread view")
         }
     }
 

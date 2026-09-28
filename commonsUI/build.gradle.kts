@@ -154,6 +154,8 @@ kotlin {
                 // artifact jvmMain already uses, and it rasterises in software,
                 // so it needs no display.
                 implementation(compose.desktop.currentOs)
+                // RouteForPointerTest stubs an Account (already the app's and androidHostTest's mock lib).
+                implementation(libs.mockk)
             }
         }
 
