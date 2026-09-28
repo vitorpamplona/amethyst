@@ -21,8 +21,7 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import android.media.MediaDataSource
-import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
-import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
+import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
@@ -31,58 +30,45 @@ import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
 import java.io.IOException
 
-class FileHeader(
-    val mimeType: String?,
-    val hash: String,
-    val size: Int,
-    val dim: DimensionTag?,
-    val blurHash: BlurhashWrapper?,
-    val thumbHash: ThumbhashWrapper? = null,
-) {
-    class UnableToDownload(
-        val fileUrl: String,
-    ) : Exception()
+/** Downloads [fileUrl] and computes its [FileHeader] with [prepare]. */
+suspend fun FileHeader.Companion.prepare(
+    fileUrl: String,
+    mimeType: String?,
+    dimPrecomputed: DimensionTag?,
+    okHttpClient: (String) -> OkHttpClient,
+): Result<FileHeader> =
+    try {
+        val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(fileUrl, okHttpClient)
 
-    companion object {
-        suspend fun prepare(
-            fileUrl: String,
-            mimeType: String?,
-            dimPrecomputed: DimensionTag?,
-            okHttpClient: (String) -> OkHttpClient,
-        ): Result<FileHeader> =
-            try {
-                val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(fileUrl, okHttpClient)
-
-                if (imageData != null) {
-                    prepare(imageData.bytes, mimeType ?: imageData.contentType, dimPrecomputed)
-                } else {
-                    Result.failure(UnableToDownload(fileUrl))
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("ImageDownload") { "Couldn't download image from server: ${e.message}" }
-                Result.failure(e)
-            }
-
-        fun prepare(
-            data: ByteArray,
-            mimeType: String?,
-            dimPrecomputed: DimensionTag?,
-        ): Result<FileHeader> =
-            try {
-                val hash = sha256(data).toHexKey()
-                val size = data.size
-
-                val preview = PreviewMetadataCalculator.computeFromBytes(data, mimeType, dimPrecomputed)
-
-                Result.success(FileHeader(mimeType, hash, size, preview.dim, preview.blurhash, preview.thumbhash))
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("ImageDownload") { "Couldn't convert image in to File Header: ${e.message}" }
-                Result.failure(e)
-            }
+        if (imageData != null) {
+            prepare(imageData.bytes, mimeType ?: imageData.contentType, dimPrecomputed)
+        } else {
+            Result.failure(FileHeader.UnableToDownload(fileUrl))
+        }
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        Log.e("ImageDownload") { "Couldn't download image from server: ${e.message}" }
+        Result.failure(e)
     }
-}
+
+/** Hashes [data] and decodes its dimensions and preview hashes (Android media APIs). */
+fun FileHeader.Companion.prepare(
+    data: ByteArray,
+    mimeType: String?,
+    dimPrecomputed: DimensionTag?,
+): Result<FileHeader> =
+    try {
+        val hash = sha256(data).toHexKey()
+        val size = data.size
+
+        val preview = PreviewMetadataCalculator.computeFromBytes(data, mimeType, dimPrecomputed)
+
+        Result.success(FileHeader(mimeType, hash, size, preview.dim, preview.blurhash, preview.thumbhash))
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        Log.e("ImageDownload") { "Couldn't convert image in to File Header: ${e.message}" }
+        Result.failure(e)
+    }
 
 class ByteArrayMediaDataSource(
     var imageData: ByteArray,

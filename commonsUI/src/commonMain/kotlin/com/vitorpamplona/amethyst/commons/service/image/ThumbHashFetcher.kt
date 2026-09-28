@@ -30,10 +30,6 @@ import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.thumbhash.ThumbHashDecoder
 
-data class ThumbhashWrapper(
-    val thumbhash: String,
-)
-
 @Stable
 class ThumbHashFetcher(
     private val options: Options,
