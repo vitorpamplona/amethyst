@@ -34,7 +34,7 @@ class UploadFallbackTest {
     }
 
     @Test
-    fun `a server is never tried twice, even under another spelling`() {
+    fun `a server is never tried twice even under another spelling`() {
         val primalAgain = ServerName("primal", "https://BLOSSOM.PRIMAL.NET")
         assertEquals(listOf(primal, band), blossomUploadOrder(primal, listOf(primalAgain, band, band)))
     }
