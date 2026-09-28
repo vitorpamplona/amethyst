@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.utils.Log
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Content-extraction helpers shared by the per-kind notification renderers:
@@ -176,15 +178,24 @@ object NotificationContent {
         return RenderedText(text, resolved.citedUsers, imageUrl)
     }
 
+    /**
+     * A private zap request is signed by a one-time key; the real zapper and message are encrypted
+     * for the zapped author. Decrypts them when [signer] is that recipient, otherwise (or when the
+     * signer can't) returns the request as-is.
+     */
     suspend fun decryptZapContentAuthor(
         event: ZapRequestEvent,
         signer: NostrSigner,
-    ): Event? =
-        if (event.isPrivateZap() && event.zappedAuthor().contains(event.pubKey)) {
+    ): Event? {
+        if (!event.isPrivateZap() || signer.pubKey !in event.zappedAuthor()) return event
+        return try {
             signer.decryptZapEvent(event)
-        } else {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("NotificationContent", "Could not decrypt private zap ${event.id}", e)
             event
         }
+    }
 
     suspend fun decryptContent(
         note: Note,
