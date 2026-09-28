@@ -66,4 +66,6 @@ actual class ConcurrentMap<K : Any, V : Any> {
     actual fun size(): Int = map.size
 
     actual fun snapshot(): Map<K, V> = HashMap(map)
+
+    actual fun asMap(): Map<K, V> = map
 }

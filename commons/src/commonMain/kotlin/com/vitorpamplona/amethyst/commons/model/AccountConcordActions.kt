@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
-import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -72,6 +71,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

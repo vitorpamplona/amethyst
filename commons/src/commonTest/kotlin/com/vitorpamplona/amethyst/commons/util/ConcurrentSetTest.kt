@@ -60,16 +60,4 @@ class ConcurrentSetTest {
         assertEquals(0, set.size)
         assertFalse(set.contains("a"))
     }
-
-    @Test
-    fun `snapshot is a copy that later writes do not change`() {
-        val set = ConcurrentSet<String>()
-        set.add("a")
-        set.add("b")
-        val snapshot = set.snapshot()
-        set.add("c")
-        set.remove("a")
-        assertEquals(setOf("a", "b"), snapshot)
-        assertEquals(setOf("b", "c"), set.snapshot())
-    }
 }

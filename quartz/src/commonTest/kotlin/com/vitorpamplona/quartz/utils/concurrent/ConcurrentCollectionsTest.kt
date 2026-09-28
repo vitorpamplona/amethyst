@@ -119,6 +119,20 @@ class ConcurrentCollectionsTest {
     }
 
     @Test
+    fun mapAsMapSeesEarlierWritesAndSurvivesLaterOnes() {
+        val map = ConcurrentMap<String, Int>()
+        map["a"] = 1
+        map["b"] = 2
+        val view = map.asMap()
+        assertEquals(mapOf("a" to 1, "b" to 2), view.toMap())
+        // Writing while iterating must not throw on any target. One fixed key, so a view that
+        // does see the new entry (JVM may) still ends.
+        for (key in view.keys) map["written-during-iteration"] = 0
+        assertEquals(0, map["written-during-iteration"])
+        assertEquals(1, map["a"])
+    }
+
+    @Test
     fun setAddContainsSize() {
         val s = ConcurrentSet<String>()
         assertFalse("x" in s)

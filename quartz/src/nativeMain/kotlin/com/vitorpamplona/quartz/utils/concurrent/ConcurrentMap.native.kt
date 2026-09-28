@@ -119,4 +119,7 @@ actual class ConcurrentMap<K : Any, V : Any> {
     actual fun size(): Int = ref.load().size
 
     actual fun snapshot(): Map<K, V> = HashMap(ref.load())
+
+    // The published map is never mutated after the CAS that installed it, so it is its own view.
+    actual fun asMap(): Map<K, V> = ref.load()
 }

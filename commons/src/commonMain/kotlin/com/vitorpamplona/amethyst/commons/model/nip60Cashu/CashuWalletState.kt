@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
-import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -57,6 +56,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -648,7 +648,7 @@ class CashuWalletState(
                 proofBackfillDone = true
             }
 
-            val fresh = collected.snapshot().values.filter { tokenEvents[it.id] == null }
+            val fresh = collected.asMap().values.filter { tokenEvents[it.id] == null }
             Log.i("CashuWallet") {
                 "Proof backfill over ${relays.size} relay(s): ${collected.size()} kind:7375 seen, ${fresh.size} new"
             }
@@ -779,7 +779,7 @@ class CashuWalletState(
         }
         if (dirtyTokens) recomputeUnspent()
         if (dirtyHistory) {
-            _history.value = historyEvents.snapshot().values.sortedByDescending { it.createdAt }
+            _history.value = historyEvents.asMap().values.sortedByDescending { it.createdAt }
         }
         if (dirtyQuotes || dirtyHistory) {
             // History gains might mark quotes as fulfilled (via the "destroyed"
@@ -790,7 +790,7 @@ class CashuWalletState(
             triggerAutoRedeem()
         }
         if (dirtyRecommendations) {
-            _ownRecommendations.value = recommendationEvents.snapshot().values.sortedByDescending { it.createdAt }
+            _ownRecommendations.value = recommendationEvents.asMap().values.sortedByDescending { it.createdAt }
         }
     }
 
@@ -823,7 +823,7 @@ class CashuWalletState(
             // matching event.id and drop the entry.
             val recoKey =
                 recommendationEvents
-                    .snapshot()
+                    .asMap()
                     .entries
                     .firstOrNull { it.value.id == id }
                     ?.key
@@ -847,19 +847,19 @@ class CashuWalletState(
             settings.clearNutzapInfo()
         }
         if (dirtyTokens) recomputeUnspent()
-        if (dirtyHistory) _history.value = historyEvents.snapshot().values.sortedByDescending { it.createdAt }
+        if (dirtyHistory) _history.value = historyEvents.asMap().values.sortedByDescending { it.createdAt }
         if (dirtyQuotes || dirtyHistory) recomputePending()
         // dirtyNutzaps would trigger UI surfacing for inbound nutzaps; auto-
         // redeem already fires from the live-event observer, so no extra
         // signal is needed here.
         if (dirtyNutzaps) Unit
         if (dirtyRecommendations) {
-            _ownRecommendations.value = recommendationEvents.snapshot().values.sortedByDescending { it.createdAt }
+            _ownRecommendations.value = recommendationEvents.asMap().values.sortedByDescending { it.createdAt }
         }
     }
 
     private suspend fun recomputeUnspent() {
-        val all = tokenEvents.snapshot().values.toList()
+        val all = tokenEvents.asMap().values.toList()
         // Decrypt anything we haven't seen before; reuse cached TokenContent
         // for events we've already decrypted. Only successes are cached, so a
         // failure is retried on the next recompute rather than being pinned as
@@ -891,18 +891,18 @@ class CashuWalletState(
         }
 
         // Shared del-rollover + sort with the headless reader.
-        _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents.snapshot())
+        _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents.asMap())
     }
 
     /** Token events we hold but have never managed to decrypt. See [recomputeUnspent]. */
     private fun undecryptedTokenCount(): Int {
-        val decrypted = tokenContents.snapshot()
-        return tokenEvents.snapshot().keys.count { it !in decrypted }
+        val decrypted = tokenContents.asMap()
+        return tokenEvents.asMap().keys.count { it !in decrypted }
     }
 
     private fun recomputePending() {
         // Shared destroyed/expired filter with the headless reader.
-        _pendingQuotes.value = CashuWalletReader.computePending(quoteEvents.snapshot().values, historyEvents.snapshot().values)
+        _pendingQuotes.value = CashuWalletReader.computePending(quoteEvents.asMap().values, historyEvents.asMap().values)
     }
 
     private fun scanCacheForOwnEvents(): List<Event> {
@@ -933,13 +933,13 @@ class CashuWalletState(
             // above the candidate filter needs a key, so hoist the filter.
             if (nutzapEvents.size() == 0) return
             val skipIds = HashSet<HexKey>()
-            historyEvents.snapshot().values.forEach { h ->
+            historyEvents.asMap().values.forEach { h ->
                 h.redeemedReferences().forEach { skipIds.add(it.eventId) }
             }
             skipIds.addAll(sessionRedeemedNutzaps.snapshot())
             skipIds.addAll(sessionUnredeemableNutzaps.snapshot())
 
-            val candidates = nutzapEvents.snapshot().values.filter { it.id !in skipIds }
+            val candidates = nutzapEvents.asMap().values.filter { it.id !in skipIds }
             if (candidates.isEmpty()) return
 
             val privkey = walletPrivkeyHex() ?: return

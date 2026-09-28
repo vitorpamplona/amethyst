@@ -50,7 +50,4 @@ expect class ConcurrentSet<E : Any>() {
     fun clear()
 
     val size: Int
-
-    /** A point-in-time copy of the elements — safe to iterate while others add and remove. */
-    fun snapshot(): Set<E>
 }

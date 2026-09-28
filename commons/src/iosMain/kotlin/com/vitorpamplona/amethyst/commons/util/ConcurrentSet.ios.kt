@@ -36,6 +36,4 @@ actual class ConcurrentSet<E : Any> {
     actual fun clear() = lock.withLock { set.clear() }
 
     actual val size: Int get() = lock.withLock { set.size }
-
-    actual fun snapshot(): Set<E> = lock.withLock { set.toHashSet() }
 }

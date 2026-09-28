@@ -217,8 +217,10 @@ class CashuMintDirectoryState(
     // ============================================================
     private fun rebuildEntries() {
         // 1. Group announcements by mint URL — most recent wins for display.
+        // One copy for both passes, so byUrl and urlByDTag describe the same set of announcements.
+        val announced = announcements.snapshot().values
         val byUrl: MutableMap<String, CashuMintEvent> = HashMap()
-        announcements.snapshot().values.forEach { e ->
+        announced.forEach { e ->
             val url = e.mintUrl() ?: return@forEach
             val existing = byUrl[url]
             if (existing == null || e.createdAt > existing.createdAt) byUrl[url] = e
@@ -230,7 +232,7 @@ class CashuMintDirectoryState(
         //    clients also store the mint URL in the `u` tag of the
         //    recommendation, so we accept both.
         val urlByDTag: MutableMap<String, String> = HashMap()
-        announcements.snapshot().values.forEach { e ->
+        announced.forEach { e ->
             val d = e.dTag()
             val url = e.mintUrl()
             if (d != null && url != null) urlByDTag[d] = url
@@ -241,7 +243,7 @@ class CashuMintDirectoryState(
         val perUrlFollows: MutableMap<String, MutableSet<HexKey>> = HashMap()
         val followSet = currentFollowSnapshot()
 
-        recommendations.snapshot().values.forEach { rec ->
+        recommendations.asMap().values.forEach { rec ->
             // Mints recommended via `u` tag(s) — directly carry the URL.
             val urlsFromU = rec.mintUrls()
             // Mints recommended via `a` tag(s) — look up the URL by mint d-tag.
