@@ -3979,9 +3979,9 @@ class Account(
             // assertion by its sender and is dropped at ingest — so these are
             // safe to render with attribution.
             marmotManager.onSystemRowDerived = { groupId, row ->
-                cache.justConsume(row, null, true)
-                val note = cache.getOrCreateNote(row.id)
-                note.event = row
+                // Indexed like any inner event: a bare `note.event = row` left the row with no
+                // author, which the Messages tab read as "No messages yet".
+                val note = marmot.indexMarmotInnerEvent(row).note
                 marmotGroupList.addMessage(groupId, note)
             }
 

@@ -99,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_chat
 import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.resources.marmot_group
-import com.vitorpamplona.amethyst.commons.resources.marmot_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.mute_notifications
 import com.vitorpamplona.amethyst.commons.resources.muted_chat_content_description
 import com.vitorpamplona.amethyst.commons.resources.pin_conversation
@@ -144,6 +143,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupPreviewText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
@@ -515,8 +515,6 @@ private fun MarmotGroupRoomCompose(
     val relays by chatroom.relays.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
-    val author = lastMessage.author
-    val noteEvent = lastMessage.event
     val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
 
     // Prefer the group's own avatar — the plain https link first, then the
@@ -529,13 +527,8 @@ private fun MarmotGroupRoomCompose(
             loadMarmotRelayIcon(relays)
         }
 
-    val lastContent =
-        if (author != null && noteEvent != null) {
-            val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
-        } else {
-            stringRes(Res.string.marmot_group_no_messages_yet)
-        }
+    // The row is handed the group's placeholder note when it has no messages.
+    val lastContent = marmotGroupPreviewText(lastMessage.takeIf { it.event != null }, accountViewModel)
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
 
