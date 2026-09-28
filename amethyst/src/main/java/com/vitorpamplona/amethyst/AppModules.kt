@@ -1031,6 +1031,8 @@ class AppModules(
             cache = cache,
             client = client,
             appVersion = BuildConfig.VERSION_NAME,
+            encryptionKeyCache = keyCache,
+            saveSettings = { LocalPreferences.saveToEncryptedStorage(it) },
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },

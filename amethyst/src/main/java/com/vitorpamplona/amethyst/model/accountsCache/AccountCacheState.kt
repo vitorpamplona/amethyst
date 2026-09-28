@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -73,6 +74,10 @@ class AccountCacheState(
     val client: INostrClient,
     /** The running app's version name, handed to every [Account] it builds. */
     val appVersion: String,
+    /** App-wide media decryption keys, shared by every [Account]. */
+    val encryptionKeyCache: EncryptionKeyCache,
+    /** Persists an account's settings (the app's encrypted storage). */
+    val saveSettings: suspend (AccountSettings) -> Unit,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
@@ -348,6 +353,8 @@ class AccountCacheState(
             cache = cache,
             client = client,
             appVersion = appVersion,
+            encryptionKeyCache = encryptionKeyCache,
+            saveSettings = saveSettings,
             scope =
                 CoroutineScope(
                     Dispatchers.IO +

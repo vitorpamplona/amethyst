@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.OnlineChecker
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
@@ -3233,6 +3234,8 @@ fun mockAccountViewModel(): AccountViewModel {
             client = client,
             scope = scope,
             appVersion = "preview",
+            encryptionKeyCache = EncryptionKeyCache(),
+            saveSettings = {},
         )
 
     return AccountViewModel(
@@ -3290,6 +3293,8 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             client = EmptyNostrClient(),
             scope = scope,
             appVersion = "preview",
+            encryptionKeyCache = EncryptionKeyCache(),
+            saveSettings = {},
         )
 
     return AccountViewModel(

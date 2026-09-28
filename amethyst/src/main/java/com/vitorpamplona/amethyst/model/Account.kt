@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -112,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
@@ -383,6 +382,13 @@ class Account(
      * app's `BuildConfig`, which a shared module can't see.
      */
     val appVersion: String,
+    /**
+     * The app-wide store of media decryption keys. Encrypted attachments (Concord images, NIP-17
+     * files) register their key here by URL, and the HTTP layer decrypts the blob on fetch.
+     */
+    val encryptionKeyCache: EncryptionKeyCache,
+    /** Persists this account's settings. Called on the IO dispatcher, debounced, after changes. */
+    val saveSettings: suspend (AccountSettings) -> Unit,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -710,17 +716,16 @@ class Account(
     /**
      * Register any encrypted image attachments on a Concord message ([ChannelChat.encryptedImagesOf])
      * so the shared media pipeline can display them: the ciphertext blob's AES-256-GCM key/nonce go
-     * into [com.vitorpamplona.amethyst.AppModules.keyCache], and the OkHttp EncryptedBlobInterceptor
+     * into [encryptionKeyCache], and the OkHttp EncryptedBlobInterceptor
      * decrypts the blob transparently on fetch (keyed by URL) — the same path NIP-17 encrypted media
      * uses. Runs for both inbound wraps and our own local echo, so a sent image renders immediately.
      */
     private fun registerConcordEncryptedImages(rumor: Event) {
         val images = ChannelChat.encryptedImagesOf(rumor)
         if (images.isEmpty()) return
-        val keyCache = Amethyst.instance.keyCache
         images.forEach { img ->
             if (img.algo == AESGCM.NAME) {
-                keyCache.add(img.url, AESGCM(img.key, img.nonce), img.mimeType)
+                encryptionKeyCache.add(img.url, AESGCM(img.key, img.nonce), img.mimeType)
             }
         }
     }
@@ -4106,7 +4111,7 @@ class Account(
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
-                    LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    saveSettings(it.accountSettings)
                 }
             }
         }
