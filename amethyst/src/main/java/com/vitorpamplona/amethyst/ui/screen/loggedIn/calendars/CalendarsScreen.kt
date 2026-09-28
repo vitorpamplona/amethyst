@@ -69,6 +69,7 @@ fun CalendarsScreen(
     // itself goes. See [CalendarsViewModel].
     val model: CalendarsViewModel = viewModel()
     model.init(accountViewModel.userProfile().pubkeyHex, feedState)
+    model.bindAttendeeFilter(accountViewModel.account.liveCalendarsFollowLists, accountViewModel.account.hiddenUsers.flow)
 
     val filterDTag by model.filterDTag.collectAsStateWithLifecycle()
 
@@ -80,13 +81,20 @@ fun CalendarsScreen(
                 onViewModeChange = { model.viewMode = it },
                 accountViewModel = accountViewModel,
                 nav = nav,
-                trailing = {
-                    CalendarFilterChip(
-                        selectedDTag = filterDTag,
-                        onSelect = model::selectCalendar,
-                        model = model,
-                    )
-                },
+                // The membership filter narrows the viewer's own calendars; the follows lens is
+                // built from other people's RSVPs, so the chip would claim a filter it ignores.
+                trailing =
+                    if (model.viewMode == CalendarsViewMode.FOLLOWS_GOING) {
+                        null
+                    } else {
+                        {
+                            CalendarFilterChip(
+                                selectedDTag = filterDTag,
+                                onSelect = model::selectCalendar,
+                                model = model,
+                            )
+                        }
+                    },
             )
         },
         bottomBar = {
@@ -109,6 +117,7 @@ fun CalendarsScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 when (model.viewMode) {
                     CalendarsViewMode.FEED -> CalendarFeedView(feedState, model, accountViewModel, nav)
+                    CalendarsViewMode.FOLLOWS_GOING -> CalendarFollowsGoingView(model, accountViewModel, nav)
                     CalendarsViewMode.MONTH -> CalendarMonthView(model, accountViewModel, nav)
                     CalendarsViewMode.WEEK -> CalendarWeekView(model, accountViewModel, nav)
                     CalendarsViewMode.DAY -> CalendarDayView(model, accountViewModel, nav)

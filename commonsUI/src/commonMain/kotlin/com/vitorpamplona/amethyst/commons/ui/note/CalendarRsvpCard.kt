@@ -47,9 +47,17 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.jetbrains.compose.resources.stringResource
 
-/** Card for a NIP-52 calendar RSVP (kind 31925): the going/maybe/not-going status, note, and target. */
+/**
+ * Card for a NIP-52 calendar RSVP (kind 31925): the going/maybe/not-going status, note, and target.
+ *
+ * [target] draws the appointment being answered once the front end has it; until then (or when
+ * it is null) the card falls back to printing the appointment's address.
+ */
 @Composable
-fun CalendarRsvpCard(event: CalendarRSVPEvent) {
+fun CalendarRsvpCard(
+    event: CalendarRSVPEvent,
+    target: (@Composable () -> Unit)? = null,
+) {
     val status = remember(event) { event.status() }
     val targetAddress = remember(event) { event.calendarEventAddress() }
     val freebusy = remember(event) { event.freebusy() }
@@ -100,14 +108,19 @@ fun CalendarRsvpCard(event: CalendarRSVPEvent) {
             )
         }
 
-        targetAddress?.let { addr ->
+        if (target != null) {
             Spacer(modifier = StdVertSpacer)
-            Text(
-                text = "→ ${addr.toValue()}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 12.dp),
-            )
+            target()
+        } else {
+            targetAddress?.let { addr ->
+                Spacer(modifier = StdVertSpacer)
+                Text(
+                    text = "→ ${addr.toValue()}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 12.dp),
+                )
+            }
         }
 
         if (freebusy != null) {

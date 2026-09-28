@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
@@ -79,6 +80,9 @@ val HomePostsNewThreadKinds1 =
         VideoShortEvent.KIND,
         AddressableNormalVideoEvent.KIND,
         AddressableShortVideoEvent.KIND,
+        // "Going to <event>" from people you follow. Low-volume per author, so it rides the main
+        // leg instead of the 5-item rare-kinds leg below, where it would be starved by the others.
+        CalendarRSVPEvent.KIND,
     )
 
 val HomePostsNewThreadKinds2 =

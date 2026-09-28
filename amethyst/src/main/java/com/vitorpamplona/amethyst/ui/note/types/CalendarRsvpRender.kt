@@ -27,29 +27,15 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarEventListCard
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 
 /**
  * Entry for a NIP-52 calendar RSVP: decodes the [Note], makes sure the appointment it answers is
- * in the cache, and renders the shared commons [CalendarRsvpCard].
- */
-@Composable
-fun RenderCalendarRSVPEvent(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val event = note.event as? CalendarRSVPEvent ?: return
-
-    LoadAppointmentBehind(event, accountViewModel)
-
-    CalendarRsvpCard(event)
-}
-
-/**
- * Resolves the appointment this RSVP answers, from the `a` tag that is the only thing tying the
- * two together.
+ * in the cache, and renders the shared commons [CalendarRsvpCard] with that appointment inside it
+ * — "going" is only interesting next to *what* — falling back to the bare address until it loads.
  *
  * [LoadAddressableNote] creates the [com.vitorpamplona.amethyst.commons.model.AddressableNote] in
  * `LocalCache` — a shell with a null event if we have never seen the appointment — and
@@ -67,15 +53,35 @@ fun RenderCalendarRSVPEvent(
  * scrolls away or the app backgrounds.
  */
 @Composable
-private fun LoadAppointmentBehind(
-    event: CalendarRSVPEvent,
+fun RenderCalendarRSVPEvent(
+    note: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    val address = remember(event) { event.calendarEventAddress() } ?: return
+    val event = note.event as? CalendarRSVPEvent ?: return
+    val address = remember(event) { event.calendarEventAddress() }
+
+    if (address == null) {
+        CalendarRsvpCard(event)
+        return
+    }
 
     LoadAddressableNote(address) { appointment ->
-        if (appointment != null) {
+        if (appointment == null) {
+            CalendarRsvpCard(event)
+        } else {
             EventFinderFilterAssemblerSubscription(appointment, accountViewModel)
+
+            WatchNoteEvent(
+                baseNote = appointment,
+                onNoteEventFound = {
+                    CalendarRsvpCard(event) {
+                        CalendarEventListCard(appointment, accountViewModel, nav)
+                    }
+                },
+                onBlank = { CalendarRsvpCard(event) },
+                accountViewModel = accountViewModel,
+            )
         }
     }
 }

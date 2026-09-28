@@ -3458,6 +3458,13 @@
     <string name="calendar_reminder_settings_title">Calendar reminders</string>
     <string name="calendar_view_day">Day</string>
     <string name="calendar_view_feed">Feed</string>
+    <string name="calendar_view_follows_going">Friends going</string>
+    <string name="calendar_follows_going_empty_title">No plans yet</string>
+    <string name="calendar_follows_going_empty_subtitle">When people in this list RSVP “Going” to an upcoming event, it shows up here.</string>
+    <plurals name="calendar_follows_going_count">
+        <item quantity="one">%1$d going</item>
+        <item quantity="other">%1$d going</item>
+    </plurals>
     <string name="calendar_view_month">Month</string>
     <string name="calendar_view_week">Week</string>
     <string name="call_accept">Accept</string>
@@ -3905,6 +3912,7 @@
     <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_polls">Polls</string>
     <string name="home_content_type_ratings">Ratings and reviews</string>
+    <string name="home_content_type_calendar_rsvps">Event RSVPs</string>
     <string name="home_content_type_reposts">Reposts</string>
     <string name="home_content_type_shorts">Shorts</string>
     <string name="home_content_type_text_notes">Text notes</string>

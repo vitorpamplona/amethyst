@@ -75,6 +75,8 @@ fun CalendarEventListCard(
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
+    // Drawn inside the card under the appointment, for lenses that annotate it (who's going).
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val view = note.appointmentView() ?: return
     val context = LocalContext.current
@@ -189,6 +191,8 @@ fun CalendarEventListCard(
                 }
             }
         }
+
+        footer?.invoke()
     }
 }
 

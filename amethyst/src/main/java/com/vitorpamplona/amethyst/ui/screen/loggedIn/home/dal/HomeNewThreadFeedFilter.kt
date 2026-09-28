@@ -45,12 +45,15 @@ import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -87,6 +90,7 @@ class HomeNewThreadFeedFilter(
                 AddressableNormalVideoEvent.KIND,
                 AddressableShortVideoEvent.KIND,
                 EntityRatingEvent.KIND,
+                CalendarRSVPEvent.KIND,
             )
     }
 
@@ -174,7 +178,8 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AttestorRecommendationEvent ||
                 noteEvent is AttestorProficiencyEvent ||
                 // A rating with nothing to point at cannot be rendered.
-                (noteEvent is EntityRatingEvent && noteEvent.hasTarget())
+                (noteEvent is EntityRatingEvent && noteEvent.hasTarget()) ||
+                noteEvent.isGoingRsvp()
         ) &&
             filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()
@@ -190,3 +195,12 @@ class HomeNewThreadFeedFilter(
                 }
             }.sortedByDefaultFeedOrder()
 }
+
+/**
+ * Only "going" RSVPs reach the home feed: the point is to see where your people are going.
+ * Maybes and declines are still visible on the appointment itself, but as posts they are noise.
+ */
+private fun Event.isGoingRsvp() =
+    this is CalendarRSVPEvent &&
+        status() == RSVPStatusTag.STATUS.ACCEPTED &&
+        calendarEventAddress() != null

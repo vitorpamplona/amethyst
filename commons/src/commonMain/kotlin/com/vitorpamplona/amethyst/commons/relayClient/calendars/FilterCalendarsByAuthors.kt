@@ -42,7 +42,21 @@ fun filterCalendarsByAuthors(
                 ExplainedFilter(
                     purpose = SubPurpose.TOPIC_FEED,
                     authors = authorList,
-                    kinds = AllCalendarKinds,
+                    kinds = CalendarOwnKinds,
+                    limit = 500,
+                    since = since,
+                ),
+        ),
+        // RSVPs get their own limit: they are what the "follows going" lens is built from, and
+        // sharing one 500-event window with every appointment and calendar these authors ever
+        // published let a busy organizer starve out everyone else's answers.
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.TOPIC_FEED,
+                    authors = authorList,
+                    kinds = CalendarRsvpKinds,
                     limit = 500,
                     since = since,
                 ),

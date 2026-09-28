@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
@@ -108,6 +109,7 @@ enum class HomeFeedType(
     PODCASTS("podcasts", listOf(PodcastEpisodeEvent.KIND, PodcastMetadataEvent.KIND)),
     FUNDRAISERS("fundraisers", listOf(FundraiserEvent.KIND)),
     RATINGS("ratings", listOf(EntityRatingEvent.KIND)),
+    CALENDAR_RSVPS("calendar_rsvps", listOf(CalendarRSVPEvent.KIND)),
     ;
 
     companion object {
