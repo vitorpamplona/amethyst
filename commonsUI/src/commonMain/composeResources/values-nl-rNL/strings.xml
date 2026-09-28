@@ -163,7 +163,7 @@
     <string name="road_event_unknown">Weggebeurtenis</string>
     <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
     <string name="podcast_value_zap_split_hint">Zaps hiervoor worden verdeeld over:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">Openen</string>
     <string name="relay_monitor_rtt_read">Lezen</string>
@@ -2615,7 +2615,7 @@
         <item quantity="other">%1$d relays</item>
     </plurals>
     <string name="active_subs_search_keywords">abonnementen filters relays verzoeken reqs verbindingen waarom diagnostiek</string>
-    <string name="active_subs_share">%1$d%% van alles</string>
+    <string name="active_subs_share">%1$d% van alles</string>
     <string name="active_subs_title">Actieve relay-abonnementen</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d filter is nog niet toegewezen</item>
@@ -4567,7 +4567,7 @@
     <string name="upload_error_voice_message_exception">Spraakbericht uploaden mislukt: %1$s</string>
     <string name="upload_error_voice_message_failed">Spraakbericht uploaden mislukt</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wordt nog niet ondersteund voor spraakberichten</string>
-    <string name="uptime">%1$d%% uptime</string>
+    <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Interne Tor-engine gebruiken</string>
     <string name="use_internal_tor_explainer">Gebruik de ingebouwde versie van Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Deze gebruiker heeft geen Lightning-adres ingesteld om sats te ontvangen</string>

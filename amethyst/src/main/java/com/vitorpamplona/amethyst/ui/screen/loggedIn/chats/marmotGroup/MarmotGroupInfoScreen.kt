@@ -102,7 +102,6 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_privilege
 import com.vitorpamplona.amethyst.commons.resources.marmot_grant_admin_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_disbanded_toast
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_disbanding_toast
-import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_info_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_required
 import com.vitorpamplona.amethyst.commons.resources.marmot_leave_group
@@ -272,7 +271,13 @@ fun MarmotGroupInfoScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = displayName ?: stringRes(Res.string.marmot_group_fallback_name, nostrGroupId.take(8)),
+                            text =
+                                marmotGroupTitle(
+                                    displayName,
+                                    remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) },
+                                    nostrGroupId,
+                                    accountViewModel,
+                                ),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                         )

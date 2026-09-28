@@ -2877,7 +2877,7 @@
     <string name="upload_error_voice_message_exception">Ääniviesti epäonnistui: %1$s</string>
     <string name="upload_error_voice_message_failed">Ääniviesti epäonnistui ladata</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ei tue ääniviestiä vielä</string>
-    <string name="uptime">%1$d%% käytettävyys</string>
+    <string name="uptime">%1$d% käytettävyys</string>
     <string name="use_internal_tor">Aktiivinen Tor-moottori</string>
     <string name="use_internal_tor_explainer">Käytä sisäistä versiota tai Orbotia</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Käyttäjällä ei ole asetettuna Lightning-osoitetta satsien vastaanottamiseksi</string>

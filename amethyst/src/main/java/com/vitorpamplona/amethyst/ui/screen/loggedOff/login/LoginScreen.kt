@@ -274,9 +274,14 @@ private fun PasswordField(loginViewModel: LoginViewModel) {
             onGo = loginViewModel::login,
         )
 
-        LaunchedEffect(Unit) {
-            delay(300)
-            passwordFocusRequester.requestFocus()
+        // Only once the key is complete: a pasted ncryptsec jumps straight to the password,
+        // one being typed keeps its focus until the last character.
+        val keyComplete = loginViewModel.isCompleteNcryptsec
+        LaunchedEffect(keyComplete) {
+            if (keyComplete) {
+                delay(300)
+                passwordFocusRequester.requestFocus()
+            }
         }
     }
 }

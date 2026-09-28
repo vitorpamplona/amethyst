@@ -78,7 +78,10 @@ class ChatFileUploadState(
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        multiOrchestrator?.remove(selected)
+        val orchestrator = multiOrchestrator ?: return
+        orchestrator.remove(selected)
+        // An empty orchestrator still renders the gallery, which reads its first item.
+        if (orchestrator.size() == 0) multiOrchestrator = null
     }
 
     /**

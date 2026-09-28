@@ -190,6 +190,10 @@ Where:
 | `<arch>` | `x64`, `arm64`                                        |
 | `<ext>` | `dmg`, `msi`, `zip`, `deb`, `rpm`, `AppImage`, `flatpak`, `tar.gz` |
 
+The AppImage is the exception: `amethyst-desktop-<version>-<x86_64|aarch64>.AppImage`.
+AppImageHub flags `linux` in an AppImage name (every AppImage is for Linux) and
+expects the AppImage arch names.
+
 Single source of truth: [`scripts/asset-name.sh`](scripts/asset-name.sh).
 Package manager manifests (Homebrew cask, Winget) depend on this exact scheme —
 any change is a breaking contract.
@@ -199,7 +203,7 @@ Examples:
 - `amethyst-desktop-1.12.1-macos-x64.dmg`
 - `amethyst-desktop-1.12.1-macos-arm64.dmg`
 - `amethyst-desktop-1.12.1-windows-x64.msi`
-- `amethyst-desktop-1.12.1-linux-x64.AppImage`
+- `amethyst-desktop-1.12.1-x86_64.AppImage`
 - `amethyst-desktop-1.12.1-linux-x64.flatpak`
 
 ---

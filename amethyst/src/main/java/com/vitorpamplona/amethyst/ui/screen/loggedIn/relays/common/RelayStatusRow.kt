@@ -185,9 +185,9 @@ fun RelayStatusRow(
                 stringRes(Res.string.errors),
                 modifier = Size15Modifier,
                 tint =
-                    if (successRate < 0.1) {
+                    if (successRate < 10) {
                         MaterialTheme.colorScheme.redColorOnSecondSurface
-                    } else if (successRate < 0.60) {
+                    } else if (successRate < 60) {
                         MaterialTheme.colorScheme.warningColor
                     } else {
                         MaterialTheme.colorScheme.allGoodColor

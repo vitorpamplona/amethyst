@@ -2909,7 +2909,7 @@
     <string name="upload_error_voice_message_exception">آپلود صوتی ناموفق بود: %1$s</string>
     <string name="upload_error_voice_message_failed">آپلود پیام صوتی ناموفق بود</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 هنوز برای پیام‌های صوتی پشتیبانی نمی‌شود</string>
-    <string name="uptime">%1$d%% زمان فعالیت</string>
+    <string name="uptime">%1$d% زمان فعالیت</string>
     <string name="use_internal_tor">موتور فعال تور</string>
     <string name="use_internal_tor_explainer">استفاده از نسخه درونی یا Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>

@@ -326,7 +326,7 @@
     <string name="geocache_hunt_needs_caches">Add at least one cache.</string>
     <string name="geocache_publish_failed">Could not publish. Check your relay connection and try again.</string>
     <string name="podcast_value_zap_split_hint">Zaps to this are split between:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">Open</string>
     <string name="relay_monitor_rtt_read">Read</string>
@@ -721,6 +721,8 @@
     <string name="quick_action_request_deletion_gallery_alert_body_v2">Remove this media from your Gallery.</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
+    <string name="quick_action_request_deletion_alert_body_group">Amethyst will ask everyone in this encrypted group to delete this message. Their apps should remove it, but there is no guarantee that every member will delete their copy.</string>
+    <string name="quick_action_request_deletion_alert_body_private">Amethyst will send an encrypted deletion request to the people in this conversation. Their apps should remove the message, but there is no guarantee that every copy will be deleted.</string>
     <string name="quick_action_block_dialog_btn">Block</string>
     <string name="quick_action_delete_dialog_btn">Delete</string>
     <string name="quick_action_block">Block</string>
@@ -1863,6 +1865,9 @@
     <string name="tor_connection_failed_body">Amethyst couldn't finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We'll remember this choice for the next hour and re-try Tor after that.</string>
     <string name="tor_continue_without_for_session">Use regular connection</string>
     <string name="tor_keep_waiting">Keep waiting</string>
+    <string name="tor_splash_connecting">Connecting to Tor…</string>
+    <string name="tor_splash_error">Tor error: %1$s</string>
+    <string name="tor_splash_explainer">Amethyst uses Tor to hide your IP address from relays. Starting Tor can take a minute and needs internet access.</string>
     <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>
     <string name="notification_channel_status_on">On</string>
     <string name="notification_channel_status_silent">Silent</string>
@@ -3156,7 +3161,7 @@
         <item quantity="other">%1$d relays</item>
     </plurals>
     <string name="active_subs_search_keywords">subscriptions filters relays requests reqs connections why diagnostics</string>
-    <string name="active_subs_share">%1$d%% of all</string>
+    <string name="active_subs_share">%1$d% of all</string>
     <string name="active_subs_title">Active Relay Subscriptions</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d filter is not attributed yet</item>
@@ -4170,6 +4175,11 @@
     <string name="marmot_admin_granted">Admin privileges granted</string>
     <string name="marmot_admin_revoked">Admin privileges revoked</string>
     <string name="marmot_change_photo">Change photo</string>
+    <string name="marmot_out_of_sync_body">Messages from the other members can't be read on this device anymore. Reset your copy of the group, then ask an admin to remove you and add you back.</string>
+    <string name="marmot_out_of_sync_reset">Reset</string>
+    <string name="marmot_out_of_sync_confirm_title">Reset this group?</string>
+    <string name="marmot_out_of_sync_confirm_body">This device stops being a member until an admin adds you back. The messages you already have stay here.</string>
+    <string name="marmot_awaiting_reinvite">Waiting to be added back. Ask an admin to remove you and add you again.</string>
     <string name="marmot_enable_encrypted_media_needs_server">Add a Blossom media server in Settings first — the group needs somewhere to upload attachments to.</string>
     <string name="marmot_encrypted_media_enabled_toast">This group now uses encrypted attachments</string>
     <string name="marmot_failed_to_add_user">Failed to add %1$s: %2$s</string>
@@ -5254,7 +5264,7 @@
     <string name="upload_error_voice_message_exception">Voice upload failed: %1$s</string>
     <string name="upload_error_voice_message_failed">Failed to upload voice message</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 is not supported for voice messages yet</string>
-    <string name="uptime">%1$d%% uptime</string>
+    <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Active Tor Engine</string>
     <string name="use_internal_tor_explainer">Use the internal version or Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>

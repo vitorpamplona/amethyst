@@ -2952,7 +2952,7 @@
     <string name="upload_error_voice_message_exception">Spraakbericht uploaden mislukt: %1$s</string>
     <string name="upload_error_voice_message_failed">Spraakbericht uploaden mislukt</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wordt nog niet ondersteund voor spraakberichten</string>
-    <string name="uptime">%1$d%% uptime</string>
+    <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Actieve Tor Engine</string>
     <string name="use_internal_tor_explainer">Gebruik de interne versie van Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker heeft geen Lightning Adress ingesteld om sats te ontvangen</string>

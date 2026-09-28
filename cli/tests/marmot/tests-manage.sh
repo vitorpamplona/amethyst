@@ -27,10 +27,7 @@ test_06_member_removal() {
   # C should no longer see the group on its own member view.
   local deadline=$(( $(date +%s) + 120 )) removed=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    if ! wn_c --json groups members "$mls_gid" 2>/dev/null \
-         | jq_list members | jq -e --arg p "$C_HEX" \
-             'select((.member_id // .pubkey // .public_key) == $p)' \
-         >/dev/null 2>&1; then
+    if wn_self_removed c "$mls_gid"; then
       removed=1; break
     fi
     sleep 3
@@ -180,10 +177,9 @@ test_11_leave_group() {
 
   local deadline=$(( $(date +%s) + 120 )) gone=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-         | jq_list admins | jq -e --arg p "$A_HEX" \
-             'select((.admin_id // .pubkey // .public_key) == $p)' \
-         >/dev/null 2>&1; then
+    local rc=0
+    wn_lists b "$mls_gid" admins "$A_HEX" || rc=$?
+    if [[ "$rc" -eq 1 ]]; then
       gone=1; break
     fi
     sleep 3
@@ -222,10 +218,9 @@ test_17_group_image_commit() {
 
   # Skip cleanly if A is no longer a member of GROUP_02 (a later test may have removed
   # A) — this test only makes sense while A can still commit to the group.
-  if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
-        | jq_list members | jq -e --arg p "$A_HEX" \
-            'select((.member_id // .pubkey // .public_key) == $p)' \
-        >/dev/null 2>&1; then
+  local listed=0
+  wn_lists b "$mls_gid" members "$A_HEX" || listed=$?
+  if [[ "$listed" -eq 1 ]]; then
     record_result "$id" skip "A not in GROUP_02"; return
   fi
 
@@ -336,4 +331,105 @@ test_31_reaction_materializes_on_wn() {
   done
   printf '%s\n' "$tl" >> "$LOG_FILE"
   record_result "$id" fail "wn's timeline never showed amy's reaction (timeline JSON in the log)"
+}
+
+# The other direction of test 30. After wn commits (a rename carries an
+# UpdatePath), both sides reached the same epoch and wn's messages kept
+# decrypting on amy, yet wn never showed another amy message.
+test_32_amy_message_after_wn_commit() {
+  banner "Test 32 — amy's message after wn's commit reaches wn"
+  local id="32 amy after wn commit"
+
+  local out gid mls_gid b_gid
+  out=$(amy_json marmot group create --name "Interop-32") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  amy_json marmot group promote "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy promote failed"; return; }
+  sleep 5
+  wn_b groups rename "$mls_gid" "Interop-32-by-wn" >/dev/null 2>&1 || true
+  amy_json marmot await rename "$gid" --name "Interop-32-by-wn" --timeout 120 >/dev/null || { record_result "$id" fail "amy did not apply wn's rename"; return; }
+
+  amy_json marmot message send "$gid" "32 from amy after wn commit" >/dev/null || { record_result "$id" fail "amy send failed"; return; }
+  if wait_for_message B "$mls_gid" "32 from amy after wn commit" 90; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn never received amy's message sent after wn's commit"
+  fi
+}
+
+test_33_wn_leaves_amy_admin_group() {
+  banner "Test 33 — wn leaves a group amy administers; amy commits the departure"
+  local id="33 wn leaves amy's group"
+
+  # Leaving is a SelfRemove proposal that only an admin can commit. Test 15
+  # covers a wn admin committing it; here amy is the only admin, so the
+  # departure takes effect only if amy commits it during sync.
+  local out gid mls_gid b_gid
+  out=$(amy_json marmot group create --name "Interop-33") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  wn_b groups leave "$mls_gid" >/dev/null 2>&1 || { record_result "$id" fail "wn leave failed"; return; }
+
+  local deadline=$(( $(date +%s) + 120 )) show b_still=1
+  while [[ $(date +%s) -lt $deadline ]]; do
+    show=$(amy_json marmot group show "$gid" 2>/dev/null) || { sleep 3; continue; }
+    b_still=$(printf '%s' "$show" | jq --arg p "$B_HEX" '[.members[]? | select((.pubkey // .member_id) == $p)] | length')
+    [[ "$b_still" == "0" ]] && break
+    sleep 3
+  done
+  if [[ "$b_still" == "0" ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "amy never committed wn's SelfRemove; wn is still in the tree"
+  fi
+}
+
+test_34_amy_removes_last_other_member() {
+  banner "Test 34 — amy removes the only other member; wn processes its own removal"
+  local id="34 amy removes wn from a 2-member group"
+
+  # Test 06 removes one of three members. Removing the only other member leaves
+  # the committer alone in the tree, which is the shape a device removal hit:
+  # White Noise never applied it and kept showing itself as a member.
+  local out gid mls_gid b_gid
+  out=$(amy_json marmot group create --name "Interop-34") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  wn_b messages send "$mls_gid" "34 before removal" >/dev/null 2>&1 || true
+  amy_json marmot await message "$gid" --match "34 before removal" --timeout 90 >/dev/null || { record_result "$id" fail "amy never got wn's message"; return; }
+
+  amy_json marmot group remove "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy remove failed"; return; }
+
+  local deadline=$(( $(date +%s) + 120 )) gone=0 view
+  while [[ $(date +%s) -lt $deadline ]]; do
+    wn_b sync >/dev/null 2>&1 || true
+    # A positive signal: wn marks its own copy removed once it applied the commit. Reading
+    # "B is not in the member list" instead passed whenever the query itself failed.
+    view=$(wn_b_json groups show "$mls_gid" 2>/dev/null || true)
+    if wn_self_removed b "$mls_gid"; then
+      gone=1; break
+    fi
+    sleep 3
+  done
+  printf '%s' "$view" >"$STATE_DIR/test34-wn-view.json"
+  if [[ "$gone" -eq 1 ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn still lists itself as a member after amy removed it"
+  fi
 }

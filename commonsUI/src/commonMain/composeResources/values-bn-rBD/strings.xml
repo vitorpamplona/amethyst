@@ -2897,7 +2897,7 @@
     <string name="upload_error_voice_message_exception">ভয়েস আপলোড ব্যর্থ হয়েছে: %1$s</string>
     <string name="upload_error_voice_message_failed">ভয়েস বার্তা আপলোড করতে ব্যর্থ হয়েছে</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 এখনও ভয়েস বার্তার জন্য সমর্থিত নয়</string>
-    <string name="uptime">%1$d%% আপটাইম</string>
+    <string name="uptime">%1$d% আপটাইম</string>
     <string name="use_internal_tor">সক্রিয় Tor ইঞ্জিন</string>
     <string name="use_internal_tor_explainer">অভ্যন্তরীণ সংস্করণ বা Orbot ব্যবহার করুন</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">স্যাট গ্রহণের জন্য ব্যবহারকারীর কোনো বিজলি-ঠিকানা দেওয়া নেই</string>

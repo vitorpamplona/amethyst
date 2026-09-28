@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.note_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
-import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.ui.note.deletionRequestBody
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
@@ -163,20 +163,12 @@ fun NoteDropDownMenu(
         )
     }
 
-    // Own private rumors (NIP-17 DMs) must be retracted with a gift-wrapped
-    // deletion — a public NIP-09 would e-tag the rumor id onto public relays.
-    val performDelete = {
-        if (note.isPrivateRumor()) {
-            accountViewModel.deletePrivately(note)
-        } else {
-            accountViewModel.delete(note)
-        }
-    }
+    val performDelete = { accountViewModel.deleteOwn(note) }
 
     if (deleteConfirmationShowing) {
         QuickActionAlertDialog(
             title = stringRes(Res.string.quick_action_request_deletion_alert_title),
-            textContent = stringRes(Res.string.quick_action_request_deletion_alert_body),
+            textContent = stringRes(deletionRequestBody(note, accountViewModel)),
             buttonIcon = MaterialSymbols.Delete,
             buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
             onClickDoOnce = {

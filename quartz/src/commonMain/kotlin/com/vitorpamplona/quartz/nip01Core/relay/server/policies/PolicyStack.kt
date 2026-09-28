@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 
 class PolicyStack(
     vararg policies: IRelayPolicy,
@@ -48,6 +49,9 @@ class PolicyStack(
     override fun accept(cmd: ReqCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
 
     override fun accept(cmd: CountCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
+
+    /** Each member's OWN NEG-OPEN rule — not the stack's REQ rules, which would clamp a reconcile like a page. */
+    override fun accept(cmd: NegOpenCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
 
     override fun accept(cmd: AuthCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
 

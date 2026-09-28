@@ -439,8 +439,15 @@ test_27_deletion_wn_to_amy() {
     record_result "$id" fail "amy has no event id for wn's message"; return
   fi
 
-  if ! wn_b messages delete "$mls_gid" "$target" >/dev/null 2>&1; then
+  # Keep wn's answer: "the command ran" and "the tombstone reached a relay" are
+  # different, and only the second one can reach amy.
+  local del
+  del=$(wn_b --json messages delete "$mls_gid" "$target" 2>>"$LOG_FILE") || {
     record_result "$id" fail "wn messages delete failed"; return
+  }
+  printf 'wn messages delete %s -> %s\n' "$target" "$del" >>"$LOG_FILE"
+  if ! printf '%s' "$del" | jq -e '(.result.published // 0) > 0' >/dev/null 2>&1; then
+    record_result "$id" fail "wn did not publish the delete tombstone: $del"; return
   fi
 
   # The row stays, blanked and flagged: "retracted" and "never arrived" are
@@ -460,7 +467,12 @@ test_27_deletion_wn_to_amy() {
   done
 
   if [[ "$gone" -ne 1 ]]; then
-    record_result "$id" fail "amy never marked wn's message deleted"; return
+    # Tell a lost tombstone from a split group: if the two sides sit on different
+    # epochs, the delete was sent where amy cannot follow.
+    local wn_epoch amy_epoch
+    wn_epoch=$(wn_b_json groups show "$mls_gid" 2>/dev/null | jq -r '.result.mls.epoch // "?"')
+    amy_epoch=$(amy_json marmot group show "$gid" 2>/dev/null | jq -r '.epoch // "?"')
+    record_result "$id" fail "amy never marked wn's message deleted (wn epoch $wn_epoch, amy epoch $amy_epoch)"; return
   fi
   if [[ -n "$body" ]]; then
     record_result "$id" fail "amy flagged the message deleted but still shows '$body'"; return
@@ -695,6 +707,7 @@ test_29_disband_amy_to_wn() {
     wn_b sync >/dev/null 2>&1 || true
     sleep 5
   done
+  wn_b_json groups show "$mls_gid" >"$STATE_DIR/disband29-wn-view.json" 2>&1 || true
   printf 'disband29 epoch %s -> %s (amy now %s), wn at %s\n' \
     "$before_epoch" "$after_epoch" "${amy_now:-?}" "${saw:-<none>}" >>"$LOG_FILE"
 

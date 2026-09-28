@@ -313,7 +313,7 @@
     <string name="geocache_hunt_needs_caches">Lägg till minst en cache.</string>
     <string name="geocache_publish_failed">Kunde inte publicera. Kontrollera reläanslutningen och försök igen.</string>
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Värde -för-värde</string>
     <string name="relay_monitor_rtt_open">Öppna</string>
     <string name="relay_monitor_rtt_read">Läs</string>
@@ -3088,7 +3088,7 @@
         <item quantity="other">%1$d reläer</item>
     </plurals>
     <string name="active_subs_search_keywords">prenumerationer subscriptions filter reläer relay förfrågningar reqs anslutningar varför diagnostik</string>
-    <string name="active_subs_share">%1$d %% av alla</string>
+    <string name="active_subs_share">%1$d % av alla</string>
     <string name="active_subs_title">Aktiva reläprenumerationer</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d filter är inte kopplat ännu</item>
@@ -5134,7 +5134,7 @@
     <string name="upload_error_voice_message_exception">Uppladdning av röst misslyckades: %1$s</string>
     <string name="upload_error_voice_message_failed">Misslyckades med att ladda upp röstmeddelandet</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 stöds ännu inte för röstmeddelanden</string>
-    <string name="uptime">%1$d%% drifttid</string>
+    <string name="uptime">%1$d% drifttid</string>
     <string name="use_internal_tor">Aktiv Tor Engine</string>
     <string name="use_internal_tor_explainer">Använd den interna versionen eller Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren har inte en Lightningadressinställning för att ta emot sats</string>

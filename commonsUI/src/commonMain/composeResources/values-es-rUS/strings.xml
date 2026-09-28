@@ -2908,7 +2908,7 @@
     <string name="upload_error_voice_message_exception">Error al cargar voz: %1$s</string>
     <string name="upload_error_voice_message_failed">Error al cargar el mensaje de voz</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 aún no es compatible con mensajes de voz</string>
-    <string name="uptime">%1$d%% de disponibilidad</string>
+    <string name="uptime">%1$d% de disponibilidad</string>
     <string name="use_internal_tor">Motor de Tor activo</string>
     <string name="use_internal_tor_explainer">Usar la versión interna u Orbot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">El usuario no tiene configurada una dirección de Lightning para recibir sats</string>

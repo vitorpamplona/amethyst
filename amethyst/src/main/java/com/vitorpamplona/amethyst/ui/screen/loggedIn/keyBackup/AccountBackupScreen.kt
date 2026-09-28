@@ -401,11 +401,16 @@ private fun EncryptedKeyCard(
     var encrypted by remember { mutableStateOf<String?>(null) }
     var showQr by remember { mutableStateOf(false) }
 
-    // Drop the result while in the background. A password not yet used is kept so switching to
-    // a password manager to fetch it doesn't wipe the fields; a used one is cleared on success.
+    // Drop the result and the typed password while in the background, so neither sits in memory
+    // (or on the recents thumbnail, with the password shown) behind another app. The cost: leaving
+    // to copy a password out of a password manager app clears what was typed; autofill, which
+    // fills in place without stopping this activity, is unaffected.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         encrypted = null
         showQr = false
+        password = ""
+        repeated = ""
+        showPassword = false
     }
 
     // A typo in the password makes the backup permanently useless, so it must be typed twice.
@@ -415,9 +420,11 @@ private fun EncryptedKeyCard(
 
     fun encrypt() {
         if (!canEncrypt) return
+        // Read before the gate: a device-credential prompt is its own activity, so it stops this
+        // one and the ON_STOP above clears the fields before the unlock callback runs.
+        val currentPassword = password
         gate.withAccess {
             val privKey = accountViewModel.account.settings.keyPair.privKey ?: return@withAccess
-            val currentPassword = password
             working = true
             // NIP-49 runs scrypt, which takes a noticeable moment: keep it off the main thread.
             scope.launch {

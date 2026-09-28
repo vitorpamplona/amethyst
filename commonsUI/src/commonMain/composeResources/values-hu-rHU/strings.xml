@@ -313,7 +313,7 @@
     <string name="geocache_hunt_needs_caches">Adjon hozzá legalább egy ládát.</string>
     <string name="geocache_publish_failed">Nem sikerült közzétenni. Ellenőrizze a kapcsolatot az átjátszóval, és próbálja újra.</string>
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
     <string name="relay_monitor_rtt_open">Megnyitás</string>
     <string name="relay_monitor_rtt_read">Olvasás</string>
@@ -653,6 +653,24 @@
     <string name="mark_all_known_as_read">Az összes ismert megjelölése olvasottként</string>
     <string name="mark_all_new_as_read">Az összes új üzenet megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
+    <string name="account_backup_headline">A titkos kulcsa maga a fiókja</string>
+    <string name="account_backup_intro">Bárki, aki rendelkezik vele, Önként tehet közzé bejegyzéseket. Ha elveszíti, senki sem tudja helyreállítani, még az Amethyst sem.</string>
+    <string name="account_backup_tap_to_reveal">Koppintson a felfedéshez</string>
+    <string name="account_backup_write_down_hint">Írja le ebben a sorrendben. A kis- és nagybetű egyaránt működik.</string>
+    <string name="account_backup_qr_code">QR-kód</string>
+    <string name="account_backup_encrypted_title">Jelszóval védett másolat</string>
+    <string name="account_backup_encrypted_password">Jelszó</string>
+    <string name="account_backup_encrypted_body">Egy ncryptsec1…, amely csak az Ön jelszavával működik.</string>
+    <string name="account_backup_password_min_length">Legalább %1$d karakter</string>
+    <string name="account_backup_encrypted_repeat_password">Jelszó ismét</string>
+    <string name="account_backup_encrypted_password_mismatch">A jelszavak nem egyeznek</string>
+    <string name="account_backup_encrypt">Kulcs titkosítása</string>
+    <string name="account_backup_encrypting">Titkosítás…</string>
+    <string name="account_backup_encrypted_saved_hint">Nyugodtan tárolhatja jelszókezelőben vagy felhőjegyzetekben: jelszó nélkül nem nyitható meg, és az elfelejtett jelszó nem állítható helyre.</string>
+    <string name="account_backup_encrypt_again">Másik jelszó használata</string>
+    <string name="account_backup_tip_storage">Tartsa a papírt olyan helyen, ahol csak Ön találhatja meg, vagy mentse a kulcsot jelszókezelőbe.</string>
+    <string name="account_backup_tip_trust">Soha ne illessze be a kulcsát olyan weboldalakba vagy alkalmazásokba, amelyekben nem bízik meg.</string>
+    <string name="account_backup_tip_developers">Az Amethyst fejlesztői soha nem kérik el a kulcsát.</string>
     <string name="backup_keys_nudge_title">Biztonsági mentés készítése a kulcsokról</string>
     <string name="backup_keys_nudge_body">A titkos kulcs megadása az egyetlen módja a fiók elérésének. Ha elveszíti, akkor soha nem tudja helyrehozni. Mentse el biztonságos helyre most.</string>
     <string name="backup_keys_nudge_backup_now">Biztonsági mentés most</string>
@@ -1716,6 +1734,14 @@
     <string name="relay_group_field_name">Név</string>
     <string name="relay_group_field_about">Leírás</string>
     <string name="relay_group_field_picture">Csoport képe</string>
+    <string name="relay_group_field_banner">Borítókép webcíme</string>
+    <string name="relay_group_migration_moved_title">Ez a csoport lehet, hogy átköltözött</string>
+    <string name="relay_group_migration_fork_title">Ennek a csoportnak lehet, hogy elágazása van</string>
+    <string name="relay_group_migration_by_admins">Az adminisztrátorai most a(z) %1$s helyen listázzák</string>
+    <string name="relay_group_migration_by_friends">Az Ön által követett emberek most a(z) %1$s helyen listázzák</string>
+    <string name="relay_group_migration_open">Megnyitás ott</string>
+    <string name="relay_group_migration_move">Áthelyezés</string>
+    <string name="relay_group_migration_dismiss">Eltüntetés</string>
     <string name="relay_group_add_photo">Fénykép hozzáadása</string>
     <string name="relay_group_change_photo">Fénykép módosítása</string>
     <string name="relay_group_section_discovery">Felfedezés</string>
@@ -2452,6 +2478,8 @@
     <string name="select_list_to_filter">Szempont kiválasztása a hírfolyam szűréséhez</string>
     <string name="add_dvm_to_favorites">Hírfolyam-algoritmus hozzáadása a kedvencekhez</string>
     <string name="remove_dvm_from_favorites">Eltávolítás a kedvencekből</string>
+    <string name="add_follow_set_to_favorites">Követési készlet hozzáadása a kedvenc hírfolyamokhoz</string>
+    <string name="remove_follow_set_from_favorites">Követési készlet eltávolítása a kedvenc hírfolyamokból</string>
     <string name="favorite_dvms_explainer">A kedvencnek jelölt algoritmusok itt jelennek meg, valamint szűrőelemként a Főoldal hírfolyamában.</string>
     <string name="favorite_dvms_empty_headline">Kedvenc algoritmus kitűzése</string>
     <string name="favorite_dvms_empty_step1">Koppintson az alábbi „%1$s” gombra az algoritmusok böngészéséhez.</string>
@@ -2672,6 +2700,20 @@
     <string name="nickname_private">Csak az Ön számára látható</string>
     <string name="cast_to_device_dialog_title">Közvetítés…</string>
     <string name="cast_searching_for_devices">Eszközök keresése a Wi-Fi hálózaton…</string>
+    <string name="cast_local_network_permission_title">Engedély szükséges</string>
+    <string name="cast_local_network_permission_message">Az Amethystnek helyi hálózati hozzáférésre van szüksége, hogy megtalálja a Cast eszközöket a Wi-Fi-hálózatán. Engedélyezze az alkalmazás beállításaiban.</string>
+    <string name="cast_local_network_permission_open_settings">Beállítások megnyitása</string>
+    <string name="cast_generic_receiver">A Cast eszköz</string>
+    <string name="cast_error_unsupported_media">A(z) %1$s nem tudja lejátszani az ilyen formátumú videókat</string>
+    <string name="cast_error_playback_failed">%1$s nem tudta lejátszani ezt a videót</string>
+    <string name="cast_error_receiver_not_responding">%1$s nem válaszol. Az eszköz újraindítása megoldhatja a problémát.</string>
+    <string name="cast_error_connect_failed">Nem sikerült kapcsolódni a(z) %1$s eszközhöz. Az eszköz újraindítása általában megoldja.</string>
+    <string name="cast_error_device_offline">%1$s offline állapotba került</string>
+    <string name="cast_error_load_failed">Nem sikerült betölteni ezt a videót a(z) %1$s eszközön</string>
+    <string name="cast_error_play_services_unavailable">A Cast funkcióhoz Google Play szolgáltatásokra van szükség, amelyek nem érhetők el ezen az eszközön</string>
+    <string name="cast_error_unsupported_media_detail">A(z) %1$s nem tudja lejátszani az ilyen formátumú videókat (%2$s)</string>
+    <string name="cast_error_playback_failed_detail">%1$s nem tudta lejátszani ezt a videót (%2$s)</string>
+    <string name="cast_error_receiver_not_responding_detail">%1$s soha nem kezdte el lejátszani ezt a videót (%2$s). Lehet, hogy nem támogatja a formátumot. Az eszköz újraindítása megoldhatja ezt a problémát.</string>
     <string name="hls_pick_video_primary">Videó kiválasztása</string>
     <string name="hls_pick_video_helper">A videó több felbontásba lesz átkódolva, így a nézők bármilyen internet-kapcsolaton zökkenőmentes lejátszást kapnak.</string>
     <string name="hls_change_video">Módosítás</string>
@@ -2783,8 +2825,13 @@
     <string name="relay_management_no_moderation_events">Nincsenek moderálandó események</string>
     <string name="relay_management_banned_events">Letiltott események</string>
     <string name="relay_management_no_banned_events">Nincsenek letiltott események</string>
+    <string name="relay_management_allowed_events">Engedélyezett események</string>
+    <string name="relay_management_no_allowed_events">Nincsenek engedélyezett események</string>
+    <string name="relay_management_allow_event">Esemény engedélyezése</string>
     <string name="relay_management_allowed_kinds">Engedélyezett típusok</string>
     <string name="relay_management_no_allowed_kinds">Nincsenek engedélyezett típusok</string>
+    <string name="relay_management_disallowed_kinds">Tiltott típusok</string>
+    <string name="relay_management_no_disallowed_kinds">Nincsenek tiltott típusok</string>
     <string name="relay_management_blocked_ips">Letiltott IP-címek</string>
     <string name="relay_management_no_blocked_ips">Nincsenek letiltott IP-címek</string>
     <string name="relay_management_add">Hozzáadás</string>
@@ -2817,6 +2864,9 @@
     <string name="relay_members_join_sent">Csatlakozási kérés elküldve</string>
     <string name="relay_members_leave_sent">Elhagyási kérés elküldve</string>
     <string name="relay_members_you_are_member">Ön tagja az átjátszónak</string>
+    <string name="relay_members_invite_code">Meghívókód</string>
+    <string name="relay_members_invite_code_hint">Ez az átjátszó az üzemeltetőjétől származó meghívókóddal vesz fel tagokat</string>
+    <string name="relay_members_unverifiable">Ez az átjátszó nem teszi közzé az azonosítókulcsát (NIP-11 self), így a taglistája nem ellenőrizhető</string>
     <string name="relay_membership_list">Átjátszó tagsági listája</string>
     <string name="relay_member_added">A tag hozzá lett adva az átjátszóhoz</string>
     <string name="relay_members_added">%1$d tag hozzáadva az átjátszóhoz</string>
@@ -3088,7 +3138,7 @@
         <item quantity="other">%1$d átjátszó</item>
     </plurals>
     <string name="active_subs_search_keywords">előfizetések, szűrők, átjátszók, kérések, kapcsolatok, miért diagnosztika</string>
-    <string name="active_subs_share">%1$d%% az összesből</string>
+    <string name="active_subs_share">%1$d% az összesből</string>
     <string name="active_subs_title">Aktív átjátszó-előfizetések</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d szűrő még nincs hozzárendelve</item>
@@ -4556,6 +4606,7 @@
     <string name="podcast_trailer_upload_hint">Rövid hang vagy -videó előnézete</string>
     <string name="podcast_value_error_title">Értéket az értékért hiba</string>
     <string name="podcast_value_keysend_requires_nwc">Párosítson egy Nostr Wallet Connect pénztárcát a keysend (csomópont) címzetteknek való küldéshez.</string>
+    <string name="podcast_value_keysend_not_supported">A saját pénztárcája nem támogatja a keysendet, így a csomópont-címzettek kimaradtak.</string>
     <string name="podcast_value_no_recipients">Ez a hangműsor nem rendelkezik fizethető kedvezményezettel.</string>
     <string name="podcast_value_stream_requires_wallet">Párosítson egy Nostr Wallet Connect vagy debit pénztárcát a satok közvetítéséhez hallgatás közben.</string>
     <string name="podcast_value_user_no_lnaddress">Ennek a felhasználónak nincs lightning-címe</string>
@@ -5134,7 +5185,7 @@
     <string name="upload_error_voice_message_exception">Nem sikerült feltölteni a hangüzenetet: %1$s</string>
     <string name="upload_error_voice_message_failed">Nem sikerült feltölteni a hangüzenetet</string>
     <string name="upload_error_voice_message_nip95_not_supported">A NIP-95 még nem támogatja a hangüzeneteket</string>
-    <string name="uptime">Üzemidő: %1$d%%</string>
+    <string name="uptime">Üzemidő: %1$d%</string>
     <string name="use_internal_tor">Aktív Tor-motor</string>
     <string name="use_internal_tor_explainer">Használja a beépített verziót vagy az Orbotot</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>
@@ -5187,6 +5238,7 @@
     </plurals>
     <string name="wallet_transactions_load_failed">Nem sikerült betölteni a tranzakciót</string>
     <string name="wallet_transactions_load_more_failed">Nem sikerült betölteni további tranzakciókat</string>
+    <string name="wallet_transactions_not_supported">A saját pénztárcája nem kínál tranzakció-előzményeket</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenetet jelenít meg, ha az Ön követői bejelentést tettek bejegyzésekről vagy profilokról</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
     <string name="web_bookmark_add_title">Webes könyvjelző hozzáadása</string>
@@ -5248,6 +5300,10 @@
     <string name="cordn_health_unknown">Még nem jött létra a kapcsolat</string>
     <string name="cordn_health_ok">Válaszol</string>
     <string name="cordn_health_down">Nem válaszol</string>
+    <plurals name="cordn_health_failures">
+        <item quantity="one">%1$d sikertelen kísérlet egymás után</item>
+        <item quantity="other">%1$d sikertelen kísérlet egymás után</item>
+    </plurals>
     <string name="cordn_link_explainer">Illesszen be egy Önnel megosztott cordn1… hivatkozást, hogy lássa, melyik koordinátor továbbítja azt a csoportot, és mit tudna meg az az üzemeltető Önről, ha csatlakozna.</string>
     <string name="cordn_link_field">cordn1…</string>
     <string name="cordn_link_inspect">Vizsgálat</string>
@@ -5336,6 +5392,10 @@
     <string name="cordn_migrate_import">Csoportok átköltöztetése ide</string>
     <string name="cordn_migrate_importing">Lekérés…</string>
     <string name="cordn_migrate_replaces_warning">Ez lecseréli az eszközön már meglévő cordn csoportokat. Ezek nem olvaszthatók egybe.</string>
+    <plurals name="cordn_migrate_done">
+        <item quantity="one">%1$d csoport áthelyezve</item>
+        <item quantity="other">%1$d csoport áthelyezve</item>
+    </plurals>
     <string name="cordn_migrate_no_groups">Nincsenek átköltöztethető cordn csoportok ezen az eszközön.</string>
     <string name="cordn_migrate_no_server">Először állítson be médiakiszolgálót, a titkosított dokumentumoknak valahol lenniük kell, amíg a másik telefon le nem kéri őket.</string>
     <string name="cordn_migrate_exposure_title">Mi hagyja el ezt az eszközt</string>
@@ -5856,7 +5916,15 @@
     <string name="cordn_coordinators_discover_none">Senki sem jelentkezik be az átjátszóin.</string>
     <string name="cordn_coordinators_discover_seen">Bejelentve ennyi ideje: %1$s</string>
     <string name="cordn_coordinators_discover_seen_on">Utoljára bejelentve: %1$s</string>
+    <plurals name="cordn_coordinators_discover_unheard">
+        <item quantity="one">Semmi sem található, és az átjátszói közül %1$d nem válaszolt.</item>
+        <item quantity="other">Semmi sem található, és az átjátszói közül %1$d nem válaszolt.</item>
+    </plurals>
     <string name="cordn_coordinators_explainer">Egy koordinátor egy csoport üzeneteit rendezi sorba, és ez az egyetlen, ami ezt megteheti. Ha elvész, a sorrend is elvész, és egy második nem tükrözi az elsőt; így ezek névvel ellátott dolgok, amelyeket Ön választ, nem pedig felcserélhető átjátszók.</string>
+    <plurals name="cordn_coordinators_health_down">
+        <item quantity="one">Nem válaszol – %1$d sikertelen hívás egymás után. A rajta lévő csoportok nem szinkronizálódnak.</item>
+        <item quantity="other">Nem válaszol – %1$d hívás egymás után sikertelen. A rajta lévő csoportok nem szinkronizálódnak.</item>
+    </plurals>
     <string name="cordn_coordinators_health_ok">Válaszol.</string>
     <string name="cordn_coordinators_health_retrying">Egy hívás sikertelen volt; újrapróbálkozás.</string>
     <string name="cordn_coordinators_health_unknown">Még semmit sem kérdeztek tőle.</string>
@@ -5880,6 +5948,10 @@
     <string name="cordn_coordinators_server_silent">Válaszolt, de semmit sem nevezett meg.</string>
     <string name="cordn_coordinators_show_all">Mind a(z) %1$d megjelenítése</string>
     <string name="cordn_coordinators_show_fewer">Kevesebb megjelenítése</string>
+    <plurals name="cordn_coordinators_show_older">
+        <item quantity="one">%1$d bejelentést abbahagyó megjelenítése</item>
+        <item quantity="other">%1$d bejelentést abbahagyó megjelenítése</item>
+    </plurals>
     <string name="cordn_coordinators_stale_note">Ezek több mint egy hónapja nem jelentkeztek be. A csoport létrehozása egy eltűnt koordinátoron sikertelen lesz.</string>
     <string name="cordn_create_action">Csoport létrehozása</string>
     <plurals name="cordn_create_action_invite">
@@ -5901,6 +5973,10 @@
     <string name="cordn_create_coordinator_new">Egy másik koordinátor</string>
     <string name="cordn_create_coordinator_pubkey">Koordinátor nyilvános kulcsa (hex vagy npub)</string>
     <string name="cordn_create_coordinator_relays">Átjátszók, amelyeken válaszol, soronként egy</string>
+    <plurals name="cordn_create_coverage_all">
+        <item quantity="one">Elér %1$d embert</item>
+        <item quantity="other">Elér %1$d embert</item>
+    </plurals>
     <string name="cordn_create_coverage_partial">%2$d / %1$d embert érne el, a többi kimaradna</string>
     <string name="cordn_create_coverage_unknown">Nincs ellenőrizve; a rendszer rá fog kérdezni a kiválasztására</string>
     <string name="cordn_create_description">Leírás (nem kötelező)</string>

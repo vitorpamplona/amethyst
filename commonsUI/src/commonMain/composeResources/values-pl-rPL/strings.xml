@@ -325,7 +325,7 @@
     <string name="geocache_hunt_needs_caches">Dodaj co najmniej jedną skrzynkę.</string>
     <string name="geocache_publish_failed">Nie można opublikować. Sprawdź połączenie z transmiterem i spróbuj ponownie.</string>
     <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Wartość-za-wartość</string>
     <string name="relay_monitor_rtt_open">Otwórz</string>
     <string name="relay_monitor_rtt_read">Odczyt</string>
@@ -3144,7 +3144,7 @@
         <item quantity="other">%1$d transmitery</item>
     </plurals>
     <string name="active_subs_search_keywords">subskrypcje filtry przekaźniki, żądania (reqs) połączenia dlaczego diagnostyka</string>
-    <string name="active_subs_share">%1$d%% z wszystkich</string>
+    <string name="active_subs_share">%1$d% z wszystkich</string>
     <string name="active_subs_title">Aktywne subskrypcje transmitera</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d filtr nie został jeszcze przypisany</item>
@@ -5382,7 +5382,7 @@
     <string name="upload_error_voice_message_exception">Nie udało się przesłać głosu: %1$s</string>
     <string name="upload_error_voice_message_failed">Nie udało się przesłać wiadomości głosowej</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 nie jest jeszcze dostępny dla wiadomości głosowych</string>
-    <string name="uptime">Czas działania %1$d%%</string>
+    <string name="uptime">Czas działania %1$d%</string>
     <string name="use_internal_tor">Aktywny silnik Tor</string>
     <string name="use_internal_tor_explainer">Użyj wersji wewnętrznej lub Orbota</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać satosze</string>

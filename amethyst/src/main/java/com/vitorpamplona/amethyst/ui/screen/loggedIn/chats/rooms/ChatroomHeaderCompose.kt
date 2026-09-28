@@ -103,7 +103,6 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_chat
 import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.resources.marmot_group
-import com.vitorpamplona.amethyst.commons.resources.marmot_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.resources.mute_notifications
 import com.vitorpamplona.amethyst.commons.resources.muted_chat_content_description
 import com.vitorpamplona.amethyst.commons.resources.pin_conversation
@@ -147,6 +146,9 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupPreviewText
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupTitle
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
@@ -516,29 +518,40 @@ private fun MarmotGroupRoomCompose(
     val relays by chatroom.relays.collectAsStateWithLifecycle()
     val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
-    val author = lastMessage.author
-    val noteEvent = lastMessage.event
-    val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+    val members by chatroom.members.collectAsStateWithLifecycle()
+    val otherMembers = remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) }
+    val groupName = marmotGroupTitle(displayName, otherMembers, chatroom.nostrGroupId, accountViewModel)
+
+    // The row is handed the group's placeholder note when it has no messages.
+    val lastContent = marmotGroupPreviewText(lastMessage.takeIf { it.event != null }, accountViewModel)
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
+
+    val hasGroupFace = avatarUrl != null || image != null || !displayName.isNullOrBlank()
+    if (!hasGroupFace && otherMembers.isNotEmpty()) {
+        // An unnamed group without an avatar (White Noise's 1:1 chats) is about its people:
+        // show them, as a NIP-17 room does, instead of a relay icon.
+        ChannelName(
+            channelPicture = { NonClickableUserPictures(userHexList = otherMembers, size = Size55dp, accountViewModel = accountViewModel) },
+            channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, Res.string.marmot_group, modifier) },
+            channelLastTime = lastMessage.createdAt(),
+            channelLastContent = lastContent,
+            hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+            onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
+        )
+        return
+    }
 
     // Prefer the group's own avatar — the plain https link first, then the
     // encrypted Blossom blob; when it has neither, fall back to the NIP-11 icon
-    // of one of the group's relays (fetched on a cache miss).
+    // of one of the group's relays (fetched on a cache miss). Resolved only here: a row that
+    // shows its members' faces above never draws it, and the relay icon is a NIP-11 fetch.
     val channelPicture =
         if (avatarUrl != null || image != null) {
             rememberMarmotGroupAvatarUrl(avatarUrl, image, accountViewModel, adminPubkeys)
         } else {
             loadMarmotRelayIcon(relays)
         }
-
-    val lastContent =
-        if (author != null && noteEvent != null) {
-            val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
-        } else {
-            stringRes(Res.string.marmot_group_no_messages_yet)
-        }
-
-    val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,

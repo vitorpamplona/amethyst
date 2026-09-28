@@ -129,6 +129,7 @@ class AppStateMachineTest {
                     torManager = torManager,
                     torTypeFlow = MutableStateFlow(TorType.OFF),
                     externalPortFlow = MutableStateFlow(9050),
+                    torSessionBypassFlow = MutableStateFlow(false),
                     initialTorSettings = OFF_TOR_SETTINGS,
                     testOverrides =
                         LaunchTestOverrides(
@@ -190,6 +191,7 @@ class AppStateMachineTest {
                     torManager = torManager,
                     torTypeFlow = MutableStateFlow(TorType.OFF),
                     externalPortFlow = MutableStateFlow(9050),
+                    torSessionBypassFlow = MutableStateFlow(false),
                     initialTorSettings = OFF_TOR_SETTINGS,
                     testOverrides =
                         LaunchTestOverrides(
@@ -266,6 +268,7 @@ class AppStateMachineTest {
                     torManager = torManager,
                     torTypeFlow = MutableStateFlow(TorType.OFF),
                     externalPortFlow = MutableStateFlow(9050),
+                    torSessionBypassFlow = MutableStateFlow(false),
                     initialTorSettings = OFF_TOR_SETTINGS,
                     testOverrides =
                         LaunchTestOverrides(
@@ -342,6 +345,7 @@ class AppStateMachineTest {
                     torManager = torManager,
                     torTypeFlow = MutableStateFlow(TorType.OFF),
                     externalPortFlow = MutableStateFlow(9050),
+                    torSessionBypassFlow = MutableStateFlow(false),
                     initialTorSettings = OFF_TOR_SETTINGS,
                     testOverrides =
                         LaunchTestOverrides(

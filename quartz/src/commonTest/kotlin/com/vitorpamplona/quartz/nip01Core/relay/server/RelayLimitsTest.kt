@@ -26,8 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyStack
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -189,6 +192,78 @@ class RelayLimitsTest {
                 .single()
                 .limit,
         )
+    }
+
+    // -- LimitsPolicy: NEG-OPEN ------------------------------------------------
+
+    private fun negOpen(filter: Filter) = NegOpenCmd("n", filter, "6100")
+
+    @Test
+    fun negOpenNeverGetsTheDefaultLimit() {
+        // default_limit sizes a REQ's page. Stamped on a reconcile it made the
+        // relay answer "in sync" over its newest 500 events only.
+        val policy = LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100))
+        val neg = negOpen(Filter(kinds = listOf(1)))
+        val result = policy.accept(neg) as PolicyResult.Accepted
+        assertTrue(result.cmd === neg)
+        assertNull(result.cmd.filter.limit)
+    }
+
+    @Test
+    fun negOpenIsNotClampedToMaxLimit() {
+        // A reconcile's bound is NegentropySettings.maxSyncEvents, which refuses
+        // with NEG-ERR rather than truncating; max_limit is a page size.
+        val policy = LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100))
+        val result = policy.accept(negOpen(Filter(kinds = listOf(1), limit = 250_000))) as PolicyResult.Accepted
+        assertEquals(250_000, result.cmd.filter.limit)
+    }
+
+    @Test
+    fun negOpenKeepsTheSubscriptionIdCap() {
+        val policy = LimitsPolicy(RelayLimits(maxSubidLength = 4))
+        val result = policy.accept(NegOpenCmd("way-too-long", Filter(kinds = listOf(1)), "6100"))
+        assertTrue(result is PolicyResult.Rejected)
+    }
+
+    @Test
+    fun aStackRunsEachMembersOwnNegOpenRule() {
+        // The stack must not route NEG-OPEN through ITS OWN accept(ReqCmd): that
+        // would run LimitsPolicy's REQ clamp and bring the truncation back.
+        val stack = PolicyStack(LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100)), PassThroughPolicy())
+        val result = stack.accept(negOpen(Filter(kinds = listOf(1)))) as PolicyResult.Accepted
+        assertNull(result.cmd.filter.limit)
+    }
+
+    @Test
+    fun aPolicyWithOnlyReqRulesStillGovernsNegOpen() {
+        // Access rules written for REQ apply to a reconcile by default: a
+        // kind denied for reading is denied for reconciling too.
+        val noDms =
+            object : PassThroughPolicy() {
+                override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> = if (cmd.filters.any { it.kinds?.contains(4) == true }) PolicyResult.Rejected("restricted: no DMs") else PolicyResult.Accepted(cmd)
+            }
+        val stack = PolicyStack(LimitsPolicy(RelayLimits(defaultLimit = 50)), noDms)
+        assertTrue(stack.accept(negOpen(Filter(kinds = listOf(4)))) is PolicyResult.Rejected)
+        assertTrue(stack.accept(negOpen(Filter(kinds = listOf(1)))) is PolicyResult.Accepted)
+    }
+
+    @Test
+    fun aReqRuleRewriteReachesTheNegOpenFilter() {
+        val narrowing =
+            object : PassThroughPolicy() {
+                override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> = PolicyResult.Accepted(ReqCmd(cmd.subId, cmd.filters.map { it.copy(kinds = listOf(1)) }))
+            }
+        val result = narrowing.accept(negOpen(Filter())) as PolicyResult.Accepted
+        assertEquals(listOf(1), result.cmd.filter.kinds)
+    }
+
+    @Test
+    fun aReqRuleThatSplitsTheFilterIsRefusedForNegOpen() {
+        val splitting =
+            object : PassThroughPolicy() {
+                override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> = PolicyResult.Accepted(ReqCmd(cmd.subId, cmd.filters + cmd.filters))
+            }
+        assertTrue(splitting.accept(negOpen(Filter())) is PolicyResult.Rejected)
     }
 
     @Test

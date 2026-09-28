@@ -241,15 +241,19 @@ fun NormalChatNote(
     // A geohash chat asks own messages to still show the author line (which identity posted), so the
     // usual "hide the name on my own bubbles" shortcut is opt-out there.
     val showSelfAuthorName = LocalChatShowSelfAuthorName.current
+    val isOneOnOne = LocalChatIsOneOnOne.current
 
     val drawAuthorInfo by
-        remember(note, isLoggedInUser, showSelfAuthorName) {
+        remember(note, isLoggedInUser, showSelfAuthorName, isOneOnOne) {
             derivedStateOf {
                 val noteEvent = note.event
                 when {
                     // Own messages: normally no name; in a multi-identity chat, show it (unless a DM,
                     // which never draws the user's own author info).
                     isLoggedInUser -> showSelfAuthorName && noteEvent !is EncryptedDmEvent
+
+                    // The screen knows it's just the two of you.
+                    isOneOnOne -> false
 
                     // never shows the user's pictures
                     noteEvent is EncryptedDmEvent -> false
@@ -504,6 +508,14 @@ val LocalChatDisplayNameResolver = compositionLocalOf<((Note) -> String?)?> { nu
  * bubble shows which name/nickname each message went out under.
  */
 val LocalChatShowSelfAuthorName = compositionLocalOf { false }
+
+/**
+ * Whether the conversation is known to be one-on-one even though its messages don't say so.
+ * A NIP-17 message carries its participants ([ChatroomKeyable]) and hides the other person's
+ * name and picture when there is only one; a Marmot group's inner kind:9 carries nothing, so the
+ * screen, which knows the member count, says it here.
+ */
+val LocalChatIsOneOnOne = compositionLocalOf { false }
 
 /**
  * The geohash of the location room currently open, or null outside one. Every message in that room

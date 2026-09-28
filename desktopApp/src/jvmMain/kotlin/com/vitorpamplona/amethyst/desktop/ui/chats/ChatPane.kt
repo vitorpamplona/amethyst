@@ -1410,7 +1410,7 @@ private suspend fun sendEncryptedFiles(
         // unsupported file can't abort the whole send.
         val fileQuality = if (file.extension.lowercase() in IMAGE_EXTENSIONS) quality else null
         val result =
-            orchestrator.uploadEncrypted(file, cipher, server, account.signer, stripExif, fileQuality, declareRealMimeType)
+            orchestrator.uploadEncrypted(file, cipher, server, account.signer, stripExif, fileQuality, declareRealMimeType, fallbackServerBaseUrls = blossomServers?.value.orEmpty())
         val url = result.blossom.url ?: continue
 
         val template =

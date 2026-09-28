@@ -2846,7 +2846,7 @@
     <string name="upload_error_voice_message_exception">음성 업로드 실패: %1$s</string>
     <string name="upload_error_voice_message_failed">음성 메시지 업로드에 실패했습니다</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95는 아직 음성 메시지를 지원하지 않습니다</string>
-    <string name="uptime">%1$d%% 업타임</string>
+    <string name="uptime">%1$d% 업타임</string>
     <string name="use_internal_tor">내장 Tor 엔진</string>
     <string name="use_internal_tor_explainer">내장 버전 또는 Orbot을 사용하세요</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">이 사용자는 sats를 받을 Lightning 주소가 설정되어 있지 않습니다</string>

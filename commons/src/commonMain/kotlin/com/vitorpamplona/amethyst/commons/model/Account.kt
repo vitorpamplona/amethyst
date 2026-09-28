@@ -1752,7 +1752,15 @@ class Account(
             marmot.deleteMarmotMessages(groupId, groupNotes)
         }
 
-        val myNotes = otherNotes.filter { it.author == userProfile() && it.event != null }
+        val (myRumors, myNotes) =
+            otherNotes
+                .filter { it.author == userProfile() && it.event != null }
+                .partition { it.isPrivateRumor() }
+
+        // Private rumors (NIP-17 DMs, private reactions) are retracted inside their own
+        // conversation for the same reason, whichever caller asked for a plain delete.
+        myRumors.forEach { deletePrivately(listOf(it), it) }
+
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNotes.chunked(200).forEach { chunkedList ->
@@ -4012,9 +4020,9 @@ class Account(
             // assertion by its sender and is dropped at ingest — so these are
             // safe to render with attribution.
             marmotManager.onSystemRowDerived = { groupId, row ->
-                cache.justConsume(row, null, true)
-                val note = cache.getOrCreateNote(row.id)
-                note.event = row
+                // Indexed like any inner event: a bare `note.event = row` left the row with no
+                // author, which the Messages tab read as "No messages yet".
+                val note = marmot.indexMarmotInnerEvent(row).note
                 marmotGroupList.addMessage(groupId, note)
             }
 
@@ -4081,6 +4089,7 @@ class Account(
                                 // kind:1009 edit is re-linked to its message too.
                                 val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
+                                marmot.applyMarmotAdminRemoval(groupId, innerEvent)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",

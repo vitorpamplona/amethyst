@@ -427,7 +427,7 @@ fun ImageVideoDescription(
                 }
             }
 
-            if (uris.first().media.isVideo() == true && mediaQualitySlider != 3) {
+            if (uris.hasVideo() && mediaQualitySlider != 3) {
                 SettingSwitchItem(
                     title = Res.string.video_codec_h265_label,
                     description = Res.string.video_codec_h265_description,

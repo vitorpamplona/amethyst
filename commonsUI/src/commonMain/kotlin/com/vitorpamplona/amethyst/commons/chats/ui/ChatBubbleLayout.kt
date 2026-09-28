@@ -300,8 +300,11 @@ fun ChatBubbleLayout(
                 Modifier
             }
 
+        // A top-level bubble's row spans the screen so the bubble can sit on its side. A quoted
+        // reply is drawn INSIDE another bubble, where filling the width pushed that bubble out to
+        // its maximum: a one-word answer to a one-word message stretched across the screen.
         Row(
-            modifier = Modifier.fillMaxWidth().then(swipeModifier),
+            modifier = (if (innerQuote) Modifier else Modifier.fillMaxWidth()).then(swipeModifier),
             horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
         ) {
             InnerChatBubble(

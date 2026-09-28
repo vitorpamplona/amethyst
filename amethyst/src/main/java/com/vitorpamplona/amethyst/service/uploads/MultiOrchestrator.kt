@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -37,7 +40,9 @@ import kotlinx.coroutines.launch
 class MultiOrchestrator(
     uris: List<SelectedMedia>,
 ) {
-    private var list: List<SelectedMediaProcessing> = uris.map { SelectedMediaProcessing(it) }
+    // Snapshot state so a removal recomposes the gallery that draws it; as a plain var the
+    // Remove on a failed upload dropped the item from the upload but left it on screen.
+    private var list: List<SelectedMediaProcessing> by mutableStateOf(uris.map { SelectedMediaProcessing(it) })
 
     @Stable
     class Result(
