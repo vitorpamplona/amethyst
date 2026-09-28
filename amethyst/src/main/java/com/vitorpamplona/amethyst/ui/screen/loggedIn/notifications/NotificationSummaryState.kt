@@ -29,10 +29,11 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.note.showCount
+import com.vitorpamplona.amethyst.commons.util.showCount
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -42,17 +43,15 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.plus
+import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import java.math.BigDecimal
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 val ShowDecimals = ExtraStore.Key<Boolean>()
 val BottomAxisLabelKey = ExtraStore.Key<List<String>>()
@@ -72,22 +71,19 @@ class NotificationSummaryState(
     val chartModel = _chartModel.asStateFlow()
 
     private var takenIntoAccount = setOf<HexKey>()
-    private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
     val todaysReplyCount = replies.map { showCount(it[today()]) }.distinctUntilChanged()
     val todaysBoostCount = boosts.map { showCount(it[today()]) }.distinctUntilChanged()
     val todaysReactionCount = reactions.map { showCount(it[today()]) }.distinctUntilChanged()
     val todaysZapAmount = zaps.map { showAmountInteger(it[today()]) }.distinctUntilChanged()
 
-    fun formatDate(createAt: Long): String =
-        sdf.format(
-            Instant.ofEpochSecond(createAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
-        )
+    // Buckets are local calendar days, keyed yyyy-MM-dd.
+    fun formatDate(createAt: Long): String = SearchDate.civilFromDays(LocalClock.epochDayCounter().epochDay(createAt)).ymd()
 
-    fun today(): String = sdf.format(LocalDateTime.now())
+    fun today(): String = LocalClock.today().ymd()
 
     suspend fun initializeSuspend() {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         val currentUser = user.pubkeyHex
 
@@ -121,7 +117,7 @@ class NotificationSummaryState(
                         // the user might be sending his own receipts noteEvent.pubKey != currentUser
                         if (noteEvent.isTaggedUser(currentUser)) {
                             val netDate = formatDate(noteEvent.createdAt)
-                            zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                            zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + (noteEvent.amount ?: BigDecimal(0))
                             takenIntoAccount.add(noteEvent.id)
                         }
                     }
@@ -131,7 +127,7 @@ class NotificationSummaryState(
                             val amount = noteEvent.claimedAmountInSats()
                             if (amount != null) {
                                 val netDate = formatDate(noteEvent.createdAt)
-                                zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount)
+                                zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount)
                                 takenIntoAccount.add(noteEvent.id)
                             }
                         }
@@ -142,7 +138,7 @@ class NotificationSummaryState(
                             val amount = noteEvent.amount()
                             if (amount != null) {
                                 val netDate = formatDate(noteEvent.createdAt)
-                                zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount / 1000)
+                                zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount / 1000)
                                 takenIntoAccount.add(noteEvent.id)
                             }
                         }
@@ -178,7 +174,7 @@ class NotificationSummaryState(
     }
 
     suspend fun addToStatsSuspend(newBlockNotes: Set<Set<Note>>) {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         val currentUser = user.pubkeyHex
 
@@ -216,7 +212,7 @@ class NotificationSummaryState(
                             if (noteEvent.isTaggedUser(currentUser)) {
                                 //  && noteEvent.pubKey != currentUser User might be sending his own receipts
                                 val netDate = formatDate(noteEvent.createdAt)
-                                zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                                zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + (noteEvent.amount ?: BigDecimal(0))
                                 takenIntoAccount.add(noteEvent.id)
                                 hasNewElements = true
                             }
@@ -227,7 +223,7 @@ class NotificationSummaryState(
                                 val amount = noteEvent.claimedAmountInSats()
                                 if (amount != null) {
                                     val netDate = formatDate(noteEvent.createdAt)
-                                    zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount)
+                                    zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount)
                                     takenIntoAccount.add(noteEvent.id)
                                     hasNewElements = true
                                 }
@@ -239,7 +235,7 @@ class NotificationSummaryState(
                                 val amount = noteEvent.amount()
                                 if (amount != null) {
                                     val netDate = formatDate(noteEvent.createdAt)
-                                    zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount / 1000)
+                                    zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + BigDecimal(amount / 1000)
                                     takenIntoAccount.add(noteEvent.id)
                                     hasNewElements = true
                                 }
@@ -280,12 +276,12 @@ class NotificationSummaryState(
     }
 
     private suspend fun refreshChartModel() {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
-        val now = LocalDateTime.now()
+        val today = LocalClock.today()
 
         val dataAxisLabelIndexes = listOf(-6, -5, -4, -3, -2, -1, 0)
-        val dataAxisLabels = dataAxisLabelIndexes.map { sdf.format(now.plusDays(it.toLong())) }
+        val dataAxisLabels = dataAxisLabelIndexes.map { today.plusDays(it).ymd() }
 
         val chart1 =
             LineCartesianLayerModel.build {
@@ -296,7 +292,7 @@ class NotificationSummaryState(
 
         val chart2 =
             LineCartesianLayerModel.build {
-                series(dataAxisLabelIndexes, dataAxisLabels.map { zaps.value[it]?.toFloat() ?: 0f })
+                series(dataAxisLabelIndexes, dataAxisLabels.map { zaps.value[it]?.toDoubleValue()?.toFloat() ?: 0f })
             }
 
         val model = CartesianChartModel(chart1, chart2)
@@ -315,9 +311,9 @@ class NotificationSummaryState(
     ): Boolean {
         val step = (max - min) / 8
 
-        var previous = showAmountInteger(min.toBigDecimal())
+        var previous = showAmountInteger(BigDecimal(min.toString()))
         for (i in 1..7) {
-            val current = showAmountInteger((min + (i * step)).toBigDecimal())
+            val current = showAmountInteger(BigDecimal((min + (i * step)).toString()))
             if (previous == current) {
                 return true
             }
@@ -335,6 +331,6 @@ class NotificationSummaryState(
 
     fun destroy() {
         bundlerInsert.cancel()
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
     }
 }

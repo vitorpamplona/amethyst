@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
@@ -373,7 +372,7 @@ class AccountFeedContentStates(
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
@@ -447,7 +446,7 @@ class AccountFeedContentStates(
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
-        checkNotInMainThread()
+        LocalCache.appHost.assertNotMainThread()
 
         homeLive.deleteFromFeed(newNotes)
         homeNewThreads.deleteFromFeed(newNotes)

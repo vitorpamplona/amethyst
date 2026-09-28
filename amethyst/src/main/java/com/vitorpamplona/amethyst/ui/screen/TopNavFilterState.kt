@@ -555,7 +555,7 @@ class TopNavFilterState(
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
 
     fun destroy() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
     }
 }
 

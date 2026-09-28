@@ -212,6 +212,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
+import com.vitorpamplona.amethyst.commons.util.showCount
 import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
@@ -2898,16 +2899,4 @@ private fun ZapChipPreviewRow(
         onReloadNutzap = {},
         onChangeAmount = {},
     )
-}
-
-fun showCount(count: Int?): String {
-    if (count == null) return ""
-    if (count == 0) return ""
-
-    return when {
-        count >= 1000000000 -> "${(count / 1000000000f).roundToInt()}G"
-        count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
-        count >= 10000 -> "${(count / 1000f).roundToInt()}k"
-        else -> "$count"
-    }
 }

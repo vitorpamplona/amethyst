@@ -501,7 +501,7 @@ class CardFeedContentState(
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
-            logTime("${this.javaClass.simpleName} Card update") { refreshSuspended() }
+            logTime("${this::class.simpleName} Card update") { refreshSuspended() }
         }
     }
 
@@ -510,7 +510,7 @@ class CardFeedContentState(
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
-            logTime("${this.javaClass.simpleName} Card update") {
+            logTime("${this::class.simpleName} Card update") {
                 refreshSuspended()
                 sendToTop()
             }
@@ -523,7 +523,7 @@ class CardFeedContentState(
             bundler.invalidate(false) {
                 // adds the time to perform the refresh into this delay
                 // holding off new updates in case of heavy refresh routines.
-                logTime("${this.javaClass.simpleName} Card update: checkKeysInvalidateDataAndSendToTop") {
+                logTime("${this::class.simpleName} Card update: checkKeysInvalidateDataAndSendToTop") {
                     refreshSuspended()
                     sendToTop()
                 }
@@ -534,7 +534,7 @@ class CardFeedContentState(
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
             val newObjects = it.flattenToSet()
-            logTime("${this.javaClass.simpleName} Card additive receiving ${newObjects.size} items into ${it.size} items") {
+            logTime("${this::class.simpleName} Card additive receiving ${newObjects.size} items into ${it.size} items") {
                 if (newObjects.isNotEmpty()) {
                     refreshFromOldState(newObjects)
                 }
@@ -559,7 +559,7 @@ class CardFeedContentState(
     }
 
     fun destroy() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
         clear()
         bundlerInsert.cancel()
         bundler.cancel()
