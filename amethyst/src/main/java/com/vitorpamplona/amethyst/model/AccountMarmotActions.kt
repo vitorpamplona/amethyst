@@ -606,6 +606,21 @@ class AccountMarmotActions(
     }
 
     /**
+     * Drop this device's copy of a group it has fallen out of sync with, and make sure a
+     * fresh KeyPackage is out there for the admin's re-invite. See
+     * [MarmotManager.resetOutOfSyncGroup].
+     */
+    suspend fun resetOutOfSyncMarmotGroup(nostrGroupId: HexKey) {
+        val manager = account.marmotManager ?: return
+        manager.resetOutOfSyncGroup(nostrGroupId)
+        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+        chatroom.isOutOfSync.value = false
+        chatroom.awaitingReinvite.value = true
+        account.marmotGroupList.notifyGroupChanged(nostrGroupId)
+        ensureMarmotKeyPackagePublished()
+    }
+
+    /**
      * Ensure the local user has at least one active KeyPackage bundle and
      * a published KeyPackage event on relays. Called from [init] after
      * Marmot state has been restored from disk.

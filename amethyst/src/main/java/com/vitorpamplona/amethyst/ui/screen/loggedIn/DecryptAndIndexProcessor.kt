@@ -421,6 +421,7 @@ private suspend fun processMarmotWelcomeFlow(
 
             // Sync MIP-01 metadata from group extensions to chatroom
             val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
+            chatroom.awaitingReinvite.value = false
             manager.syncMetadataTo(result.nostrGroupId, chatroom)
             Log.d("MarmotDbg") {
                 "processMarmotWelcomeFlow: synced metadata name=${chatroom.displayName.value} " +
@@ -690,6 +691,10 @@ class GroupEventHandler(
 
             when (result) {
                 is GroupEventResult.ApplicationMessage -> {
+                    // A message that decrypts means this device is back in step.
+                    account.marmotGroupList
+                        .getOrCreateGroup(result.groupId)
+                        .isOutOfSync.value = false
                     // Parse the inner event JSON and index it
                     val innerEvent = Event.fromJson(result.innerEventJson)
                     Log.d("MarmotDbg") {
@@ -896,7 +901,12 @@ class GroupEventHandler(
                 }
 
                 is GroupEventResult.Error -> {
-                    Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR ${result.message}" }
+                    Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR group=${result.groupId?.take(8)} ${result.message}" }
+                    result.groupId?.let { groupId ->
+                        val outOfSync = manager.isOutOfSync(groupId)
+                        val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
+                        if (chatroom.isOutOfSync.value != outOfSync) chatroom.isOutOfSync.value = outOfSync
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
@@ -280,6 +281,38 @@ class MarmotDisbandTest {
 
             assertTrue(alicesRoom.isKnown(emptySet()), "the creator's own group")
             assertTrue(!bobsRoom.isKnown(emptySet()), "an invitation from someone we don't follow")
+        }
+
+    @Test
+    fun `a member reset after falling out of sync is back in once re-added`() =
+        runBlocking {
+            // The recovery for a device stuck on a dead epoch: it drops its copy without
+            // publishing anything, an admin removes and re-adds it, and the new Welcome
+            // joins instead of being taken for a replay of a group it still holds.
+            val alice = Fixture()
+            val bob = Fixture()
+            alice.createCurrentProfile()
+            val kp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, welcome) = alice.manager.addMember(nostrGroupId, kp, emptyList())
+            bob.manager.ingest(welcome!!.giftWrapEvent)
+
+            bob.manager.resetOutOfSyncGroup(nostrGroupId)
+            assertNull(bob.manager.groupState(nostrGroupId), "the stale copy is gone")
+
+            val bobLeaf =
+                alice.manager
+                    .memberPubkeys(nostrGroupId)
+                    .first { it.pubkey == bob.signer.pubKey }
+                    .leafIndex
+            alice.manager.removeMember(nostrGroupId, bobLeaf)
+            val freshKp = bob.manager.generateKeyPackageEvent(relays = emptyList())
+            val (_, reinvite) = alice.manager.addMember(nostrGroupId, freshKp, emptyList())
+            val joined = bob.manager.ingest(reinvite!!.giftWrapEvent)
+            assertTrue(joined is MarmotIngestResult.JoinedGroup, "re-invite joins, got $joined")
+
+            val hello = alice.manager.buildTextMessage(nostrGroupId, "welcome back")
+            val received = bob.manager.processGroupEvent(hello.outbound.signedEvent)
+            assertTrue(received is GroupEventResult.ApplicationMessage, "and reads the group again, got $received")
         }
 
     @Test

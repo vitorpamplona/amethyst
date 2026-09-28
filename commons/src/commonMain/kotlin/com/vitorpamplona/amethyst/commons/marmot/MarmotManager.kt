@@ -178,6 +178,8 @@ class MarmotManager(
      * Restore all Marmot state from persistent storage.
      * Call once during Account initialization.
      */
+    private val desync = MarmotDesyncDetector()
+
     suspend fun restoreAll() {
         Log.d("MarmotManager") { "restoreAll(): begin for ${signer.pubKey.take(8)}…" }
         try {
@@ -187,8 +189,13 @@ class MarmotManager(
             // syncWithGroupManager fills in default (since = null) entries,
             // so even the first filter set sent to relays skips the
             // already-processed kind:445 backlog.
-            subscriptionSinceFromStoredMessages(activeIds).forEach { (groupId, since) ->
-                subscriptionManager.subscribeGroup(groupId, since)
+            newestStoredMessageTimes(activeIds).forEach { (groupId, newest) ->
+                // The newest event this group decrypted before the restart is where "behind"
+                // starts counting (see MarmotDesyncDetector).
+                desync.seed(groupId, newest)
+                if (newest > GROUP_EVENT_REFETCH_OVERLAP_SEC) {
+                    subscriptionManager.subscribeGroup(groupId, newest - GROUP_EVENT_REFETCH_OVERLAP_SEC)
+                }
             }
             subscriptionManager.syncWithGroupManager(activeIds)
             // Seed convergence with each restored state. A commit that arrives
@@ -392,7 +399,7 @@ class MarmotManager(
      * are still fetched; replays inside the window are deduplicated by the
      * message store and by note identity in the chatroom.
      */
-    private suspend fun subscriptionSinceFromStoredMessages(groupIds: Set<HexKey>): Map<HexKey, Long> {
+    private suspend fun newestStoredMessageTimes(groupIds: Set<HexKey>): Map<HexKey, Long> {
         if (messageStore == null) return emptyMap()
         val result = mutableMapOf<HexKey, Long>()
         for (groupId in groupIds) {
@@ -409,10 +416,7 @@ class MarmotManager(
             // and a single future-dated message must not push `since` past
             // the present — that would skip genuinely new events on every
             // restart until a fresher message arrives.
-            val newest = minOf(newestStored, TimeUtils.now())
-            if (newest > GROUP_EVENT_REFETCH_OVERLAP_SEC) {
-                result[groupId] = newest - GROUP_EVENT_REFETCH_OVERLAP_SEC
-            }
+            result[groupId] = minOf(newestStored, TimeUtils.now())
         }
         return result
     }
@@ -443,14 +447,17 @@ class MarmotManager(
         when (result) {
             is GroupEventResult.ApplicationMessage -> {
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+                desync.onDecrypted(result.groupId, groupEvent.createdAt)
             }
 
             is GroupEventResult.CommitProcessed -> {
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+                desync.onDecrypted(result.groupId, groupEvent.createdAt)
             }
 
             is GroupEventResult.ProposalStaged -> {
                 subscriptionManager.updateGroupSince(result.groupId, groupEvent.createdAt)
+                desync.onDecrypted(result.groupId, groupEvent.createdAt)
             }
 
             is GroupEventResult.CommitPending,
@@ -458,11 +465,41 @@ class MarmotManager(
             is GroupEventResult.UndecryptableOuterLayer,
             is GroupEventResult.AppMessageOnCandidateBranch,
             is GroupEventResult.RefusedByLifecycle,
-            is GroupEventResult.Error,
             -> {}
+
+            is GroupEventResult.Error -> {
+                val groupId = result.groupId
+                if (groupId != null && result.message.startsWith(NO_CANONICAL_EPOCH_ERROR)) {
+                    if (desync.onUndecryptable(groupId, groupEvent.id, groupEvent.createdAt)) {
+                        Log.w("MarmotManager") { "group ${groupId.take(8)}… is out of sync: newer peer messages decrypt on no epoch here" }
+                    }
+                }
+            }
         }
 
         return result
+    }
+
+    /** Whether the other members of [nostrGroupId] have moved on to epochs this device can't follow. */
+    fun isOutOfSync(nostrGroupId: HexKey): Boolean = desync.isDesynced(nostrGroupId)
+
+    /**
+     * Drop this device's copy of a group it has fallen out of sync with, so it can be
+     * invited back.
+     *
+     * A fork cannot be repaired from this side: the peers hold no copy of our epoch and
+     * we cannot apply theirs, and an external join needs a GroupInfo nobody publishes.
+     * What does work is the ordinary invite path. With the MLS state gone, a new Welcome
+     * is not "already a member" and joins; an admin removes this member and adds it back.
+     * Nothing is published: a SelfRemove at our stale epoch would decrypt for no one.
+     * The decrypted history stays on disk, so it is back when the group is.
+     */
+    suspend fun resetOutOfSyncGroup(nostrGroupId: HexKey) {
+        subscriptionManager.unsubscribeGroup(nostrGroupId)
+        publishGate.forget(nostrGroupId)
+        groupManager.removeGroupState(nostrGroupId)
+        desync.forget(nostrGroupId)
+        Log.w("MarmotManager") { "reset out-of-sync group ${nostrGroupId.take(8)}…; waiting for a new Welcome" }
     }
 
     /**
@@ -479,6 +516,8 @@ class MarmotManager(
         val result = inboundProcessor.processWelcome(welcomeEvent, hintNostrGroupId)
 
         if (result is WelcomeResult.Joined) {
+            // Joined now: only what is sent from here on has to decrypt.
+            desync.seed(result.nostrGroupId, TimeUtils.now())
             // An authenticated re-join is what clears a departure gate — the
             // rule `LocalOutboundGate.REMOVED` states, and `LEAVING` needs it
             // just as much: a member who left and was invited back holds a gate
@@ -1072,6 +1111,7 @@ class MarmotManager(
         publishGate.satisfyEmptyObligation(nostrGroupId)
         recordRetentionForCurrentEpoch(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
+        desync.seed(nostrGroupId, TimeUtils.now())
         subscriptionManager.subscribeGroup(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
@@ -1114,6 +1154,7 @@ class MarmotManager(
         publishGate.satisfyEmptyObligation(nostrGroupId)
         recordRetentionForCurrentEpoch(nostrGroupId)
         inboundProcessor.trackGroup(nostrGroupId)
+        desync.seed(nostrGroupId, TimeUtils.now())
         subscriptionManager.subscribeGroup(nostrGroupId)
         return nostrGroupId
     }
@@ -2685,6 +2726,7 @@ class MarmotManager(
         // events the UI never sees directly — a disband request resolving, a
         // removal being realized.
         chatroom.outboundGate.value = publishGate.outboundGateNow(nostrGroupId)
+        chatroom.isOutOfSync.value = desync.isDesynced(nostrGroupId)
         // A group we created is ours: keep it out of "New Requests" across restarts.
         // `markAsKnown` at creation is in-memory only, and a creator who has not posted
         // yet has nothing else that says so. The creator holds leaf 0 (RFC 9420 adds a
@@ -2710,6 +2752,9 @@ class MarmotManager(
          * absorb relay/system clock skew and out-of-order publishes.
          */
         internal val GROUP_EVENT_REFETCH_OVERLAP_SEC: Long = TimeUtils.ONE_DAY.toLong()
+
+        /** Prefix of the inbound error for an app message no epoch here can open. */
+        internal const val NO_CANONICAL_EPOCH_ERROR = "Application message decrypts on no canonical epoch"
 
         /**
          * How often the settler re-checks an open pass.

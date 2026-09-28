@@ -4172,6 +4172,11 @@
     <string name="marmot_admin_granted">Admin privileges granted</string>
     <string name="marmot_admin_revoked">Admin privileges revoked</string>
     <string name="marmot_change_photo">Change photo</string>
+    <string name="marmot_out_of_sync_body">Messages from the other members can't be read on this device anymore. Reset your copy of the group, then ask an admin to remove you and add you back.</string>
+    <string name="marmot_out_of_sync_reset">Reset</string>
+    <string name="marmot_out_of_sync_confirm_title">Reset this group?</string>
+    <string name="marmot_out_of_sync_confirm_body">This device stops being a member until an admin adds you back. The messages you already have stay here.</string>
+    <string name="marmot_awaiting_reinvite">Waiting to be added back. Ask an admin to remove you and add you again.</string>
     <string name="marmot_enable_encrypted_media_needs_server">Add a Blossom media server in Settings first — the group needs somewhere to upload attachments to.</string>
     <string name="marmot_encrypted_media_enabled_toast">This group now uses encrypted attachments</string>
     <string name="marmot_failed_to_add_user">Failed to add %1$s: %2$s</string>
