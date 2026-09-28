@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.Bolt12ZapFailure
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -28,9 +29,6 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_invalid_receipt
-import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_paid_no_receipt
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -54,7 +52,6 @@ import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -187,7 +184,7 @@ class AccountZapActions(
      * validates — builds, self-consumes, and publishes the kind 9736 zap. Validation
      * is the fail-safe: a wallet that drops or misroutes the note yields a proof that
      * fails the binding check, so no invalid receipt is ever published (the payment
-     * still happened; [onError] reports "paid, no receipt"). [zappedEvent] is null for
+     * still happened; [onError] reports [Bolt12ZapFailure.InvalidReceipt]). [zappedEvent] is null for
      * a profile zap. Requires an NWC wallet (see [hasNwcWallet]); BOLT12 zaps have no
      * external-wallet or LNURL fallback because only NWC returns the proof.
      *
@@ -206,8 +203,8 @@ class AccountZapActions(
         amountMillisats: Long,
         message: String,
         zapType: ZapReceiptEvent.ZapType,
-        // (messageResId, detail) — the caller localizes; detail carries a wallet error, if any.
-        onError: (StringResource, String?) -> Unit,
+        // Paid, but no receipt came of it; the caller words it.
+        onError: (Bolt12ZapFailure) -> Unit,
         // (code, detail) — the wallet refused or failed the payment; no funds moved.
         onNotPaid: suspend (NwcErrorCode?, String?) -> Unit,
         onTimeout: () -> Unit,
@@ -253,27 +250,27 @@ class AccountZapActions(
                         is PaySuccessResponse -> {
                             val proof = response.result?.payer_proof
                             if (proof.isNullOrBlank()) {
-                                onError(Res.string.bolt12_zap_paid_no_receipt, null)
+                                onError(Bolt12ZapFailure.PaidNoReceipt)
                             } else {
                                 val zap = Bolt12ZapBuilder.buildZap(zapSigner, intent, proof, anonymous)
                                 if (account.cache.bolt12ZapValidator.validate(zap, verifyEventSignature = false) is Bolt12ZapValidation.Valid) {
                                     account.cache.justConsumeMyOwnEvent(zap)
                                     account.client.publish(zap, account.broadcaster.computeRelayListToBroadcast(zap))
                                 } else {
-                                    onError(Res.string.bolt12_zap_invalid_receipt, null)
+                                    onError(Bolt12ZapFailure.InvalidReceipt)
                                 }
                             }
                         }
 
                         is IErrorResponseLike -> onNotPaid(response.nwcErrorCode(), response.errorMessage())
 
-                        else -> onError(Res.string.bolt12_zap_paid_no_receipt, null)
+                        else -> onError(Bolt12ZapFailure.PaidNoReceipt)
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Log.w("Account", "BOLT12 zap receipt assembly failed after payment", e)
-                    onError(Res.string.bolt12_zap_paid_no_receipt, null)
+                    onError(Bolt12ZapFailure.PaidNoReceipt)
                 } finally {
                     onProcessed()
                 }

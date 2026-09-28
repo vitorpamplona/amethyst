@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.content.Context
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.Bolt12ZapFailure
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -29,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_failed
 import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_error
+import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_invalid_receipt
+import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_paid_no_receipt
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
@@ -560,7 +563,7 @@ class ZapPaymentHandler(
                 amountMillisats = calculateZapValue(totalAmountMilliSats, recipient.weight, totalWeight),
                 message = message,
                 zapType = zapType,
-                onError = { msgRes, detail -> account.scope.launch { reportBolt12Error(msgRes, detail) } },
+                onError = { failure -> account.scope.launch { reportBolt12Error(failure.messageRes(), null) } },
                 onNotPaid = { code, detail ->
                     val lnAddress = recipient.lnAddress
                     if (lnAddress != null && Bolt12LightningFallback.shouldRetry(code)) {
@@ -712,3 +715,9 @@ class ZapPaymentHandler(
         )
     }
 }
+
+private fun Bolt12ZapFailure.messageRes(): StringResource =
+    when (this) {
+        Bolt12ZapFailure.PaidNoReceipt -> Res.string.bolt12_zap_paid_no_receipt
+        Bolt12ZapFailure.InvalidReceipt -> Res.string.bolt12_zap_invalid_receipt
+    }
