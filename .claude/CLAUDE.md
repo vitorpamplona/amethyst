@@ -221,9 +221,10 @@ etc. instead of re-implementing them.
   system integrations (notifications, file pickers, share sheets, camera,
   media3, WebView, keyring/Keystore), and the platform `actual`s or port
   implementations the shared UI calls. A new screen goes in `commonsUI` when
-  its dependencies allow. While `AccountViewModel` is still app-side, one that
-  needs it may live in `amethyst/`, but keep Android APIs out of it (behind a
-  port or slot) so it can move later. Don't add screens to today's `desktopApp`
+  its dependencies allow — `AccountViewModel` itself is in `commonsUI`
+  (`commons.viewmodels`), reaching Android through `AccountViewModelHost`. A
+  screen that still needs an app-only helper may live in `amethyst/`, but keep
+  Android APIs out of it (behind a port or slot) so it can move later. Don't add screens to today's `desktopApp`
   that the shared UI will have to re-create.
 
 When extracting a composable: move it to `commonsUI/commonMain/` (see
