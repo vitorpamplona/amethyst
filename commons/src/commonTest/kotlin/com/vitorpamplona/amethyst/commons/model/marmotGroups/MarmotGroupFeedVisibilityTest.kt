@@ -113,4 +113,30 @@ class MarmotGroupFeedVisibilityTest {
         // note skipped the kind rules above and rendered "Event is loading or can't be found".
         assertEquals(0, visibleCount(list(), Note("d".repeat(64))))
     }
+
+    @Test
+    fun `an admin removal that arrives before its target still removes it`() {
+        // A catch-up returns newest first, so the kind-4891 can decrypt before the message.
+        val list = list()
+        val target = note(9, peer, content = "spam")
+        list.applyAdminRemoval(groupId, target.idHex, null)
+        assertEquals(0, visibleCount(list, target))
+    }
+
+    @Test
+    fun `an admin removal in one group does not hide the same id in another`() {
+        val list = list()
+        val target = note(9, peer, content = "hello")
+        list.applyAdminRemoval("e".repeat(64), target.idHex, null)
+        assertEquals(1, visibleCount(list, target))
+    }
+
+    @Test
+    fun `an admin removal drops a message already shown`() {
+        val list = list()
+        val target = note(9, peer, content = "spam")
+        assertEquals(1, visibleCount(list, target))
+        list.applyAdminRemoval(groupId, target.idHex, target)
+        assertEquals(0, list.getOrCreateGroup(groupId).messages.size)
+    }
 }

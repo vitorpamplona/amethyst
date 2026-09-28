@@ -38,6 +38,12 @@ class MarmotGroupList(
 
     private val noteToGroupIndex = LargeCache<HexKey, HexKey>()
 
+    // Message id -> group, for every message a group admin removed (kind 4891). A removal can
+    // decrypt before its target: a catch-up returns newest first, and both sit in one epoch.
+    // Unlike a kind-5 there is no LocalCache deletion index behind it, so without this record a
+    // target arriving second would be added and stay, restarts included.
+    private val adminRemovedIds = LargeCache<HexKey, HexKey>()
+
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
 
@@ -48,6 +54,7 @@ class MarmotGroupList(
         msg: Note,
     ) {
         if (!isDisplayableFeedMessage(msg)) return
+        if (adminRemovedIds.get(msg.idHex) == nostrGroupId) return
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.addMessageSync(msg)) {
             noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
@@ -97,6 +104,19 @@ class MarmotGroupList(
         if (chatroom.removeMessageSync(msg)) {
             _groupListChanges.tryEmit(nostrGroupId)
         }
+    }
+
+    /**
+     * Applies an admin removal of [targetId] in [nostrGroupId]: drops [target] if it is already
+     * shown, and keeps the removal so the message is refused if it arrives later.
+     */
+    fun applyAdminRemoval(
+        nostrGroupId: HexKey,
+        targetId: HexKey,
+        target: Note?,
+    ) {
+        adminRemovedIds.put(targetId, nostrGroupId)
+        if (target != null) removeMessage(nostrGroupId, target)
     }
 
     /**

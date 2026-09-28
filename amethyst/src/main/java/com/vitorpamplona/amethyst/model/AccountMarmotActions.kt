@@ -309,7 +309,7 @@ class AccountMarmotActions(
     ) {
         val manager = account.marmotManager ?: return
         manager.adminRemovalTargets(nostrGroupId, innerEvent).forEach { targetId ->
-            account.cache.getNoteIfExists(targetId)?.let { account.marmotGroupList.removeMessage(nostrGroupId, it) }
+            account.marmotGroupList.applyAdminRemoval(nostrGroupId, targetId, account.cache.getNoteIfExists(targetId))
         }
     }
 
