@@ -24,6 +24,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.commons.feeds.Card
+import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.feeds.LoadedFeedState
@@ -38,8 +40,6 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
-import com.vitorpamplona.amethyst.commons.ui.notifications.Card
-import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.util.logTime

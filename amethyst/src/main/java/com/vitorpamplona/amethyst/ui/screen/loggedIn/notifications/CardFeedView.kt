@@ -52,6 +52,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.feeds.Card
+import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.notification_feed_is_empty
@@ -65,8 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CloseIcon
-import com.vitorpamplona.amethyst.commons.ui.notifications.Card
-import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.OpenPollsSectionHeader
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness

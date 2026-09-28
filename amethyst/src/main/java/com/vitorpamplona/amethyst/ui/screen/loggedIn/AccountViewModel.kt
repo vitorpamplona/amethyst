@@ -29,6 +29,7 @@ import android.widget.Toast
 import androidx.collection.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
