@@ -339,7 +339,27 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      Concord invite/members, relay-group threads, the import-follow-list flow, poll results,
      badges, podcast authoring and four settings screens. `viewModel()` became the shared
      `rememberViewModel` (with a factory overload).
-   - **Next:** cut the shared exits above, largest first, then re-measure and move again.
+   - **Wave 2 cuts:**
+     - The NIP-11 cache is now commonMain behind a `Nip11Fetcher`, served by
+       `LocalCacheHost.nip11Cache`.
+     - `Amethyst.instance` reads that have an `AccountViewModel` equivalent now use it.
+     - More files use the shared `stringRes`/`painterRes`, and six drawables are Compose
+       resources.
+     - `PrefetchFeedMedia` is common: Coil's `SingletonImageLoader`, `ConcurrentSet`, and
+       link previews warmed through `NotePlatform.warmUrlPreview`.
+     - The shared date formatter replaced `LocalizedDateTimeFormat` in four screens.
+     - An `AppPlatform` slot (`LocalAppPlatform`) holds the bottom bar, the "around me"
+       location label and the geohash location picker. `AndroidAppPlatform` is installed in
+       the theme.
+   - **Wave 2 moved:** 37 more screens with their closures, 105 files. That covers the
+     bookmark, pinned-note, draft, people-list, emoji-pack and interest-set lists; the Cashu
+     mint screens; relay and relay-group members; communities; Event Sync; the vanish
+     screens; and the feed filter spinner with the feed views they share. `ViewModelProvider.Factory`
+     implementations now override the multiplatform `create(KClass, CreationExtras)`.
+   - **Next:** re-measure; the exits now in front are the upload/gallery stack, the
+     Android-only `AccountViewModel` actions (`urlPreview`, media saving), `LoadCityName`,
+     `ReactionsRow` imports, the remaining `Amethyst.instance` reads (location, favorites,
+     Tor, browser icons, scheduled posts) and `AppSettingsScreen`.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.

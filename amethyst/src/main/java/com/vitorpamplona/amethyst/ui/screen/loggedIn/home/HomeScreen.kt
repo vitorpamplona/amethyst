@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarP
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -98,9 +101,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton

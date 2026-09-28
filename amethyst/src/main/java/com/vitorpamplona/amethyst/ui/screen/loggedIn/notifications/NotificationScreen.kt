@@ -48,12 +48,12 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import kotlinx.coroutines.launch
 
 @Composable

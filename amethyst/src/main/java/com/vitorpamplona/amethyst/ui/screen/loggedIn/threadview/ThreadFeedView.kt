@@ -233,6 +233,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutDisplay
@@ -273,7 +274,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
-import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent

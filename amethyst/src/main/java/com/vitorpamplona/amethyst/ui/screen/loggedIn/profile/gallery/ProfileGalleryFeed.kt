@@ -38,11 +38,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.commons.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
-import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
 
 @Composable
 fun RenderGalleryFeed(

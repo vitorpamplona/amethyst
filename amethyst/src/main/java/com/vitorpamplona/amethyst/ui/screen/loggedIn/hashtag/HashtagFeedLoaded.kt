@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.hashtag_label_added_by
+import com.vitorpamplona.amethyst.commons.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
@@ -55,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.feeds.PrefetchLoadedFeedMedia
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 
 /**

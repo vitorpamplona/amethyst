@@ -24,7 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
 
 @Stable
 class OldBookmarkPublicFeedViewModel(

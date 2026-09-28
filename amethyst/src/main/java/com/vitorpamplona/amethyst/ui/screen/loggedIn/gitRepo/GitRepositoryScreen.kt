@@ -90,10 +90,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifie
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitCodeTab
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitReadmeSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel

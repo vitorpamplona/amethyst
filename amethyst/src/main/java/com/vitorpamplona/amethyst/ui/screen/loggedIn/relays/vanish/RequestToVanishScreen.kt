@@ -93,13 +93,14 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
@@ -308,7 +309,7 @@ fun RequestToVanishScreen(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = formatMediumDateTime(vanishDate, context),
+                        text = formatDateTime(vanishDate * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

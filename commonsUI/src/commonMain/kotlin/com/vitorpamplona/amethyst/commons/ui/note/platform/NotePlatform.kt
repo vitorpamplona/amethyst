@@ -119,6 +119,15 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ): UrlPreviewState = UrlPreviewState.Loading
 
+    /**
+     * Starts loading the OpenGraph preview of [url] into the platform's cache ahead of display,
+     * unless it is already there. Not composable: feed prefetchers call it from a coroutine.
+     */
+    fun warmUrlPreview(
+        url: String,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     // Places
 
     @Composable

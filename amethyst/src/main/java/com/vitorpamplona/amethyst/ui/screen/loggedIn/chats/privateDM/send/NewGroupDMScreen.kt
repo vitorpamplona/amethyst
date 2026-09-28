@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
@@ -626,7 +625,7 @@ fun ShowImageUploadGallery(
     val isImage = data.result.mimeTypeBeforeEncryption?.startsWith("image/") == true || RichTextParser.isImageUrl(data.result.url)
 
     if (data.cipher != null) {
-        Amethyst.instance.keyCache.add(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
+        accountViewModel.account.encryptionKeyCache.add(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
     }
 
     val content by remember(data) {

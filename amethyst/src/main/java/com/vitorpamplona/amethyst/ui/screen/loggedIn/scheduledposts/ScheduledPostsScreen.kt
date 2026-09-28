@@ -131,11 +131,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant

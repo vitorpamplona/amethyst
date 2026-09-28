@@ -41,7 +41,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -84,7 +83,7 @@ fun BuzzAddPeopleDialog(
     var query by remember { mutableStateOf("") }
     val userSuggestions =
         remember(accountViewModel) {
-            UserSuggestionState(accountViewModel.account, Amethyst.instance.nip05Client)
+            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
         }
     val focusRequester = remember { FocusRequester() }
 

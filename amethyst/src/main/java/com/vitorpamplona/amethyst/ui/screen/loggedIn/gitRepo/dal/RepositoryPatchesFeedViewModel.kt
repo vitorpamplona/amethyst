@@ -26,7 +26,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.npub_hex_username
@@ -127,6 +128,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
 import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
@@ -141,11 +143,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl

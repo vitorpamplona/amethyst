@@ -83,6 +83,8 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -90,9 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImage35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import kotlinx.coroutines.launch
 
 private const val STAR_INLINE_ID = "star"

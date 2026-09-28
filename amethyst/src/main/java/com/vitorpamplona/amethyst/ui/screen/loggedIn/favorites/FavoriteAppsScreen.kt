@@ -72,12 +72,12 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps_empty
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 
 /**
  * The Favorite Apps grid: the user's pinned web clients / nsites / napplets as big launch buttons.

@@ -60,10 +60,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -96,7 +96,7 @@ fun RelayStatusBar(
     val isConnected by remember(relay) { derivedStateOf { relay in connectedState.value } }
     val phase by remember(relay) { derivedStateOf { authState.value[relay]?.phase ?: RelayAuthSnapshot.Phase.IDLE } }
     val isBuzz by remember(relay) { derivedStateOf { relay in buzzState.value } }
-    val stat = remember(relay, isConnected) { Amethyst.instance.relayStats.get(relay) }
+    val stat = remember(relay, isConnected) { accountViewModel.host.relayStats.get(relay) }
 
     val (dotColor, statusLabel) = health(isConnected, phase)
     var expanded by remember { mutableStateOf(false) }

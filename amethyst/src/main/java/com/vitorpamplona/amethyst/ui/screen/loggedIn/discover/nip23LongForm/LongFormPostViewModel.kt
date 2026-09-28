@@ -503,7 +503,7 @@ class LongFormPostViewModel :
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -516,7 +516,7 @@ class LongFormPostViewModel :
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )
@@ -730,7 +730,7 @@ class LongFormPostViewModel :
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(item.link) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
+                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 

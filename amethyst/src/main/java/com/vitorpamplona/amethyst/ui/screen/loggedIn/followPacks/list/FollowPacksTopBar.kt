@@ -32,10 +32,10 @@ import com.vitorpamplona.amethyst.commons.resources.select_list_to_filter
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
-import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 @Composable

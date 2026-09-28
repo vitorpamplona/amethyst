@@ -39,8 +39,8 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.dal.SingleRelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

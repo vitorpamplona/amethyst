@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
@@ -132,7 +133,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
@@ -143,9 +146,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupPreviewText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupTitle
@@ -155,7 +156,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.repo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent

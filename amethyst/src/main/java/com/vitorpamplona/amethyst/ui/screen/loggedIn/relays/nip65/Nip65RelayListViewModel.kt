@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
@@ -130,7 +129,7 @@ class Nip65RelayListViewModel : ViewModel() {
         _homeCountResults.value = emptyMap()
         _notifCountResults.value = emptyMap()
 
-        val client = Amethyst.instance.client
+        val client = accountViewModel.account.client
 
         _homeRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {

@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_title
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

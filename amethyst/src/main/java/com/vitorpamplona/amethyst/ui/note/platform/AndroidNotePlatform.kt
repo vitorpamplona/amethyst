@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
@@ -78,6 +80,13 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack as AppRenderVoi
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
+    override fun warmUrlPreview(
+        url: String,
+        accountViewModel: AccountViewModel,
+    ) {
+        if (UrlCachedPreviewer.cache.get(url) == null) accountViewModel.urlPreview(url) {}
+    }
+
     @Composable
     override fun rememberUrlPreviewState(
         url: String,

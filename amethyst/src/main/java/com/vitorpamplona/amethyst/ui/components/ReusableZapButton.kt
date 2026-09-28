@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBas
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList

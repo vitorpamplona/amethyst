@@ -68,7 +68,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.chats.ui.AutoScrollToNewest
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
@@ -111,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -123,7 +123,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
@@ -1170,7 +1169,7 @@ internal fun CordnAttachment(
     }
 
     val cipher = remember(attachment, mediaKey) { CordnMediaCipher(mediaKey, attachment) }
-    Amethyst.instance.keyCache.add(attachment.url, cipher, attachment.mimeType)
+    accountViewModel.account.encryptionKeyCache.add(attachment.url, cipher, attachment.mimeType)
 
     // A voice note is audio, and audio has no picture: sent down the video
     // branch below it plays on a blank video surface. The Note-free player is

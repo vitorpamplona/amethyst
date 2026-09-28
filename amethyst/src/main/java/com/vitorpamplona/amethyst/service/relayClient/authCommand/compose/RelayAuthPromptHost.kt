@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPrompt
 import com.vitorpamplona.amethyst.commons.relayClient.auth.UserAuthChoice
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
@@ -106,7 +107,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -128,7 +127,7 @@ fun RenderEncryptedMediaV2(
     }
 
     val cipher = remember(reference, mediaSecret) { EncryptedMediaV2Cipher(mediaSecret, reference) }
-    Amethyst.instance.keyCache.add(url, cipher, reference.mediaType)
+    accountViewModel.account.encryptionKeyCache.add(url, cipher, reference.mediaType)
 
     val description = event.alt()
 
@@ -252,7 +251,7 @@ private fun RenderMip04Content(
                 filename = meta.filename,
             )
         }
-    Amethyst.instance.keyCache.add(meta.url, cipher, meta.mimeType)
+    accountViewModel.account.encryptionKeyCache.add(meta.url, cipher, meta.mimeType)
 
     val description = note.event?.alt()
 

@@ -578,7 +578,7 @@ open class NewProductViewModel :
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaDescription.downloadAndPrepare(item.link) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
+                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 

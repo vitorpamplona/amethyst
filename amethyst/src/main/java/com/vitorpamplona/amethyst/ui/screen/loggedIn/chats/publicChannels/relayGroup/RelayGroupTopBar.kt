@@ -87,12 +87,12 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.BuzzPinDropdownItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

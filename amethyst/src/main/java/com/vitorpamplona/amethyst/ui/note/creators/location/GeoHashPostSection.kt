@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_title
 import com.vitorpamplona.amethyst.commons.resources.location_change_place
 import com.vitorpamplona.amethyst.commons.resources.location_pick_on_map
 import com.vitorpamplona.amethyst.commons.resources.remove_location
+import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 

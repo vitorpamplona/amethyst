@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_clear
@@ -102,14 +103,14 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -199,10 +200,10 @@ private fun BrowserLauncher(
     NappletsFilterAssemblerSubscription(accountViewModel)
 
     val nsiteNotes by remember {
-        Amethyst.instance.cache.observeNotes(Filter(kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND)))
+        LocalCache.observeNotes(Filter(kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND)))
     }.collectAsStateWithLifecycle(emptyList())
     val nappletNotes by remember {
-        Amethyst.instance.cache.observeNotes(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)))
+        LocalCache.observeNotes(Filter(kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND)))
     }.collectAsStateWithLifecycle(emptyList())
 
     val nsiteFollows by accountViewModel.account.liveNsitesFollowLists.collectAsStateWithLifecycle()

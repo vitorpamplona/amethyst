@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
@@ -251,7 +250,7 @@ class ChannelMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -264,7 +263,7 @@ class ChannelMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )

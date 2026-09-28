@@ -35,10 +35,10 @@ import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.search.asSearchQuery
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
-import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable

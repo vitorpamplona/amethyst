@@ -72,12 +72,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accepts_up_to
 import com.vitorpamplona.amethyst.commons.resources.access_control
@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -181,8 +182,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -262,7 +261,7 @@ fun RelayInformationScreen(
 
         val messages =
             remember(relay) {
-                Amethyst.instance.relayStats
+                accountViewModel.host.relayStats
                     .get(url = relay)
                     .messages
                     .snapshot()
@@ -271,7 +270,7 @@ fun RelayInformationScreen(
                     .toImmutableList()
             }
 
-        RelayInformationBody(relay, relayInfo, discoveryEvents, Amethyst.instance.relayStats.get(relay), messages, pad, accountViewModel, nav)
+        RelayInformationBody(relay, relayInfo, discoveryEvents, accountViewModel.host.relayStats.get(relay), messages, pad, accountViewModel, nav)
     }
 }
 

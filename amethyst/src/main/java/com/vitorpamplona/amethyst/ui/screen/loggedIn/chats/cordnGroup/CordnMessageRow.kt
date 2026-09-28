@@ -99,6 +99,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
@@ -115,8 +117,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChipView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.SectionDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.TileRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.authorNameColorFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage

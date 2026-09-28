@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.followSets.PeopleList
@@ -182,7 +181,7 @@ class PeopleListMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -195,7 +194,7 @@ class PeopleListMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )

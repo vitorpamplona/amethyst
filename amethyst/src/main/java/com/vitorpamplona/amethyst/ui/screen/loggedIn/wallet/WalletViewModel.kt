@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_not_supp
 import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse

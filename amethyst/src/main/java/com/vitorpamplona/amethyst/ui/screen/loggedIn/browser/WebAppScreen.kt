@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
@@ -82,7 +83,6 @@ import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.napplethost.BrowserWebTools
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost

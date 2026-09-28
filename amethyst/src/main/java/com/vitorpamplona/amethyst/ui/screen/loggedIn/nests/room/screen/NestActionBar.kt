@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.zap_description
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.ui.note.ZapCustomDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.zapClick
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPopup
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi

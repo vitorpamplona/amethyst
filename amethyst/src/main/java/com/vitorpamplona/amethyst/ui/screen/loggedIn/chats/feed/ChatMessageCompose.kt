@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
@@ -69,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzz
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzEditedNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzForumVote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
