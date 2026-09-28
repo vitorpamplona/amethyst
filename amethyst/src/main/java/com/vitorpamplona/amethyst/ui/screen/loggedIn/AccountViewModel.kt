@@ -597,6 +597,15 @@ class AccountViewModel(
     }
 
     /**
+     * Retracts one of your own notes the way its transport requires. Private rumors (NIP-17 DMs,
+     * Marmot group messages) take a private deletion; a public NIP-09 would e-tag the rumor id
+     * onto public relays.
+     */
+    fun deleteOwn(note: Note) {
+        if (note.isPrivateRumor()) deletePrivately(note) else delete(note)
+    }
+
+    /**
      * Retracts the user's own private rumor (e.g. a NIP-17 DM message) with a
      * gift-wrapped NIP-09 deletion to the same participants. A public deletion
      * would e-tag the private rumor id onto public relays.

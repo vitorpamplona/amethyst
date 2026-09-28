@@ -721,6 +721,8 @@
     <string name="quick_action_request_deletion_gallery_alert_body_v2">Remove this media from your Gallery.</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
+    <string name="quick_action_request_deletion_alert_body_group">Amethyst will ask everyone in this encrypted group to delete this message. Their apps should remove it, but there is no guarantee that every member will delete their copy.</string>
+    <string name="quick_action_request_deletion_alert_body_private">Amethyst will send an encrypted deletion request to the people in this conversation. Their apps should remove the message, but there is no guarantee that every copy will be deleted.</string>
     <string name="quick_action_block_dialog_btn">Block</string>
     <string name="quick_action_delete_dialog_btn">Delete</string>
     <string name="quick_action_block">Block</string>

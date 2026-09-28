@@ -72,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
-import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
@@ -94,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
+import com.vitorpamplona.amethyst.ui.note.deletionRequestBody
 import com.vitorpamplona.amethyst.ui.note.elements.AddHashtagLabelDialog
 import com.vitorpamplona.amethyst.ui.note.elements.ConcordBanConfirmationDialog
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
@@ -146,20 +146,12 @@ fun ChatMessageActionSheet(
     var concordBanConfirming by remember { mutableStateOf(false) }
     var showDeliveryDialog by remember { mutableStateOf(false) }
 
-    // Own private rumors (NIP-17 DMs) must be retracted with a gift-wrapped
-    // deletion — a public NIP-09 would e-tag the rumor id onto public relays.
-    val performDelete = {
-        if (note.isPrivateRumor()) {
-            accountViewModel.deletePrivately(note)
-        } else {
-            accountViewModel.delete(note)
-        }
-    }
+    val performDelete = { accountViewModel.deleteOwn(note) }
 
     if (deleteConfirmationShowing) {
         QuickActionAlertDialog(
             title = stringRes(Res.string.quick_action_request_deletion_alert_title),
-            textContent = stringRes(Res.string.quick_action_request_deletion_alert_body),
+            textContent = stringRes(deletionRequestBody(note, accountViewModel)),
             buttonIcon = MaterialSymbols.Delete,
             buttonText = stringRes(Res.string.quick_action_delete_dialog_btn),
             onClickDoOnce = {
