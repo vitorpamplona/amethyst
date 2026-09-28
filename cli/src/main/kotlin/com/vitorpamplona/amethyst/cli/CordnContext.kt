@@ -32,7 +32,8 @@ import com.vitorpamplona.amethyst.commons.cordn.KeyedCordnBlobCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import java.io.File
+import okio.Path
+import okio.Path.Companion.toOkioPath
 
 /**
  * cordn wiring for the CLI, split out of [Context] the way [CashuContext] is
@@ -72,7 +73,7 @@ class CordnContext(
             accountPubKey = accountPubKey,
             scopes =
                 FileBackedCordnScopeFactory(
-                    root = ctx.dataDir.root,
+                    root = migrationRoot,
                     cipher = cipher,
                     links = CordnLinks.over(ctx.signer, ctx.client),
                 ),
@@ -81,7 +82,7 @@ class CordnContext(
 
     private val coordinatorStore by lazy {
         FileCordnCoordinatorStore(
-            CordnStorageLayout.accountDirectoryFor(ctx.dataDir.root, accountPubKey),
+            CordnStorageLayout.accountDirectoryFor(migrationRoot, accountPubKey),
             cipher,
         )
     }
@@ -117,8 +118,8 @@ class CordnContext(
             it.keyPackages.restore()
         }
 
-    /** Where the cordn tree lives, for the migration verbs. */
-    val migrationRoot: File get() = ctx.dataDir.root
+    /** The root the cordn tree is laid out under, for the stores and the migration verbs. */
+    val migrationRoot: Path get() = ctx.dataDir.root.toOkioPath()
 
     /** The at-rest cipher, so a migration can read and write the same blobs. */
     val blobCipher: CordnBlobCipher get() = cipher

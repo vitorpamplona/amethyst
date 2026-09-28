@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import java.io.File
+import okio.FileSystem
+import okio.Path
 
 /**
  * The production [CordnCoordinatorScopeFactory]: encrypted files on disk, plus
@@ -38,9 +40,10 @@ import java.io.File
  *   `<root>/cordn/<account>/<coordinator>`; see [CordnStorageLayout].
  */
 class FileBackedCordnScopeFactory(
-    private val root: File,
+    private val root: Path,
     private val cipher: CordnBlobCipher,
     private val links: CordnCoordinatorLinkFactory,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : CordnCoordinatorScopeFactory {
     override suspend fun open(
         accountPubKey: HexKey,
@@ -54,8 +57,8 @@ class FileBackedCordnScopeFactory(
 
             override suspend fun serverInfo() = link.serverInfo()
 
-            override val groupStore = FileCordnGroupStore(dir, cipher)
-            override val keyPackageStore = FileCordnKeyPackageStore(dir, cipher)
+            override val groupStore = FileCordnGroupStore(dir, cipher, fileSystem)
+            override val keyPackageStore = FileCordnKeyPackageStore(dir, cipher, fileSystem)
 
             // Only the transport closes. The files outlive the session by
             // design — closing a coordinator is not leaving its groups, and

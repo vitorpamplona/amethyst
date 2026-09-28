@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
+import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
@@ -71,7 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
+import okio.Path
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -98,7 +100,7 @@ import kotlin.uuid.Uuid
 class CordnRuntime(
     private val accountSigner: NostrSigner,
     private val client: INostrClient,
-    private val filesDir: File,
+    private val filesDir: Path,
     private val scope: CoroutineScope,
     private val cipher: CordnBlobCipher = KeyStoreCordnBlobCipher(),
     /**
@@ -696,7 +698,7 @@ class CordnRuntime(
         forget(coordinatorPubKey)
         groups.forgetCoordinator(coordinatorPubKey)
         withContext(Dispatchers.IO) {
-            CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, coordinatorPubKey).deleteRecursively()
+            platformFileSystem.deleteRecursivelyQuietly(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, coordinatorPubKey))
         }
     }
 
@@ -841,7 +843,7 @@ class CordnRuntime(
             // The old state goes first. Leaving it would merge two devices'
             // histories for any gid present in both, which is the one outcome
             // this must never produce.
-            File(filesDir, "cordn/${accountSigner.pubKey}").deleteRecursively()
+            platformFileSystem.deleteRecursivelyQuietly(filesDir / "cordn" / accountSigner.pubKey)
 
             archive.groups.forEach { group ->
                 val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, group.coordinatorPubKey), cipher)

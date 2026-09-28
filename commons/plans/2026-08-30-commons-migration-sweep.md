@@ -1773,3 +1773,29 @@ first. None of the findings below came from the move; all are on `main`.
   drops it, so a refresh only spins for a second.
 - `ScheduledFlag` still reads `TimeUtils.now()` once, so a card composed before the start
   time keeps the date after it passes.
+
+## 2026-09-28 — cordn file stores and `EncryptedAppendLog` to `commonMain`
+
+`cordn/FileCordnStores.kt` (`CordnStorageLayout` and the group, key-package,
+coordinator and handoff stores), `cordn/FileBackedCordnScopeFactory.kt`,
+`cordn/CordnMigrationStores.kt` and `storage/EncryptedAppendLog.kt` moved from
+jvmAndroid to commonMain. They take an okio `Path` plus a `FileSystem`
+(default `platformFileSystem`), the `ScheduledPostStore` shape.
+
+These files hold encrypted MLS group state that cannot be re-derived, so the
+format is pinned first: `CordnStorageFormatGoldenTest` was committed against the
+`java.io` implementation, asserting the exact tree of paths and the exact bytes
+of every file, and passes unchanged on the okio one. Notes on the port:
+
+- `ByteBuffer` framing (the cursor file) is okio `Buffer.writeLong`/`readLong`;
+  both are big-endian.
+- `java.util.Base64` in the migration snapshot is `kotlin.io.encoding.Base64.Default`
+  with `PaddingOption.PRESENT_OPTIONAL`, the same shape as the napplet move.
+- `File.delete()`/`deleteRecursively()` returned false instead of throwing, and
+  `renameTo` fell back to copy-and-delete. okio throws; the File behaviour is kept
+  by `deleteQuietly`, `deleteRecursivelyQuietly` and `moveOrCopy` in
+  `commons/util/FileSystemExt.kt`. One deliberate difference: the recursive delete
+  removes symlinks instead of following them.
+- The log's `fsync`s are `FileHandle.flush()`, which is `FileDescriptor.sync()`
+  on the JVM and Android.
+- `EncryptedMarmotMessageStore` stays in jvmAndroid and passes `toOkioPath()` to the log.

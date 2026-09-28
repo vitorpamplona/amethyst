@@ -59,6 +59,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -180,7 +181,7 @@ class CordnRuntimeTest {
     ) = CordnRuntime(
         accountSigner = signer,
         client = client,
-        filesDir = root,
+        filesDir = root.toOkioPath(),
         scope = scope,
         cipher = XorCipher(),
         links = links,
@@ -443,8 +444,8 @@ class CordnRuntimeTest {
             // A gid is unique only within one coordinator, so both hold
             // "shared-gid" as unrelated groups. Deleting a level too high takes
             // both, and the only visible symptom is a room that vanished.
-            assertFalse(CordnStorageLayout.directoryFor(root, account, keyA).exists())
-            assertTrue(CordnStorageLayout.directoryFor(root, account, keyB).exists())
+            assertFalse(CordnStorageLayout.directoryFor(root.toOkioPath(), account, keyA).toFile().exists())
+            assertTrue(CordnStorageLayout.directoryFor(root.toOkioPath(), account, keyB).toFile().exists())
             assertEquals(
                 listOf(keyB),
                 runtime.groups.all.value
@@ -466,7 +467,7 @@ class CordnRuntimeTest {
                 CordnRuntime(
                     accountSigner = NostrSignerInternal(KeyPair()),
                     client = EmptyNostrClient(),
-                    filesDir = root,
+                    filesDir = root.toOkioPath(),
                     scope = runtimeScope(),
                     cipher = XorCipher(),
                     links = links,

@@ -21,6 +21,11 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
+import com.vitorpamplona.amethyst.commons.util.moveOrCopy
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.sibling
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.EchoState
@@ -28,11 +33,13 @@ import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.nio.ByteBuffer
+import okio.Buffer
+import okio.FileSystem
+import okio.Path
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -56,13 +63,13 @@ object CordnStorageLayout {
      * a caller could smuggle `..` into a directory name.
      */
     fun directoryFor(
-        root: File,
+        root: Path,
         accountPubKey: HexKey,
         coordinatorPubKey: HexKey,
-    ): File {
+    ): Path {
         require(accountPubKey.matches(HEX)) { "account pubkey must be hex" }
         require(coordinatorPubKey.matches(HEX)) { "coordinator pubkey must be hex" }
-        return File(root, "cordn/$accountPubKey/$coordinatorPubKey")
+        return root / "cordn" / accountPubKey / coordinatorPubKey
     }
 
     /**
@@ -74,11 +81,11 @@ object CordnStorageLayout {
      * make that coordinator's removal delete the record of the others.
      */
     fun accountDirectoryFor(
-        root: File,
+        root: Path,
         accountPubKey: HexKey,
-    ): File {
+    ): Path {
         require(accountPubKey.matches(HEX)) { "account pubkey must be hex" }
-        return File(root, "cordn/$accountPubKey")
+        return root / "cordn" / accountPubKey
     }
 
     /**
@@ -126,18 +133,21 @@ private const val TAG = "CordnStores"
  * is not a stale group, it is an unreadable one, and the group cannot be
  * re-derived from anywhere else on this device.
  */
-private fun atomicWrite(
-    file: File,
+private fun FileSystem.atomicWrite(
+    file: Path,
     data: ByteArray,
 ) {
-    file.parentFile?.mkdirs()
-    val temp = File(file.parentFile, "${file.name}.tmp")
-    temp.writeBytes(data)
-    if (!temp.renameTo(file)) {
-        temp.copyTo(file, overwrite = true)
-        temp.delete()
-    }
+    file.parent?.let { createDirectories(it) }
+    val temp = file.sibling("${file.name}.tmp")
+    write(temp) { write(data) }
+    moveOrCopy(temp, file)
 }
+
+private fun FileSystem.readBytes(file: Path): ByteArray = read(file) { readByteArray() }
+
+private fun FileSystem.isDirectory(path: Path): Boolean = metadataOrNull(path)?.isDirectory == true
+
+private fun FileSystem.isRegularFile(path: Path): Boolean = metadataOrNull(path)?.isRegularFile == true
 
 /**
  * A [CordnGroupStore] on the filesystem, encrypted through [cipher].
@@ -158,29 +168,30 @@ private fun atomicWrite(
  * that both encrypt blobs, which is not an abstraction worth having.
  */
 class FileCordnGroupStore(
-    private val dir: File,
+    private val dir: Path,
     private val cipher: CordnBlobCipher,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : CordnGroupStore {
-    private fun groupDir(gid: String) = File(dir, "groups/${CordnStorageLayout.encodeKey(gid)}")
+    private fun groupDir(gid: String) = dir / "groups" / CordnStorageLayout.encodeKey(gid)
 
-    private fun stateFile(gid: String) = File(groupDir(gid), "state")
+    private fun stateFile(gid: String) = groupDir(gid) / "state"
 
-    private fun cursorFile(gid: String) = File(groupDir(gid), "cursor")
+    private fun cursorFile(gid: String) = groupDir(gid) / "cursor"
 
-    private fun joinOriginFile(gid: String) = File(groupDir(gid), "via-request")
+    private fun joinOriginFile(gid: String) = groupDir(gid) / "via-request"
 
-    private fun roomStateFile(gid: String) = File(groupDir(gid), "room")
+    private fun roomStateFile(gid: String) = groupDir(gid) / "room"
 
-    private fun echoStateFile(gid: String) = File(groupDir(gid), "echoes")
+    private fun echoStateFile(gid: String) = groupDir(gid) / "echoes"
 
     /**
      * Inside [groupDir] so [deleteGroup]'s recursive delete already covers it:
      * a group that left its history behind would keep the plaintext of an
      * end-to-end encrypted conversation after the key that read it was gone.
      */
-    private fun messagesFile(gid: String) = File(groupDir(gid), "messages")
+    private fun messagesFile(gid: String) = groupDir(gid) / "messages"
 
-    private fun summaryFile(gid: String) = File(groupDir(gid), "newest")
+    private fun summaryFile(gid: String) = groupDir(gid) / "newest"
 
     /**
      * Appending a segment rather than rewriting the conversation, so the cost
@@ -192,6 +203,7 @@ class FileCordnGroupStore(
             // The log treats null as "this segment is unreadable" and carries on
             // with the rest, which is what one corrupt segment should cost.
             decrypt = { runCatching { cipher.decrypt(it) }.getOrNull() },
+            fileSystem = fileSystem,
         )
 
     private val messageLock = Mutex()
@@ -217,13 +229,13 @@ class FileCordnGroupStore(
         gid: String,
         state: ByteArray,
     ) = withContext(Dispatchers.IO) {
-        atomicWrite(stateFile(gid), cipher.encrypt(state))
+        fileSystem.atomicWrite(stateFile(gid), cipher.encrypt(state))
     }
 
     override suspend fun loadGroup(gid: String): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = stateFile(gid)
-            if (!file.exists()) null else cipher.decrypt(file.readBytes())
+            if (!fileSystem.exists(file)) null else cipher.decrypt(fileSystem.readBytes(file))
         }
 
     override suspend fun deleteGroup(gid: String) {
@@ -238,35 +250,39 @@ class FileCordnGroupStore(
             // The cursor goes with it. Leaving one behind would mean a later
             // re-join of the same gid resumes from a cursor belonging to a
             // group it is no longer in, skipping everything before it.
-            groupDir(gid).deleteRecursively()
+            fileSystem.deleteRecursivelyQuietly(groupDir(gid))
         }
     }
 
     override suspend fun listGroups(): List<String> =
         withContext(Dispatchers.IO) {
-            File(dir, "groups")
-                .listFiles()
+            fileSystem
+                .listOrNull(dir / "groups")
                 .orEmpty()
-                .filter { it.isDirectory && File(it, "state").exists() }
+                .filter { fileSystem.isDirectory(it) && fileSystem.exists(it / "state") }
                 .mapNotNull { CordnStorageLayout.decodeKey(it.name) }
         }
 
+    // Two big-endian int64s, which is what ByteBuffer wrote: its default order
+    // is BIG_ENDIAN, and so is okio's Buffer.
     override suspend fun saveCursor(
         gid: String,
         cursor: GroupCursor,
     ) = withContext(Dispatchers.IO) {
-        val buffer = ByteBuffer.allocate(16).putLong(cursor.fetchCursor).putLong(cursor.lastCursor)
-        atomicWrite(cursorFile(gid), cipher.encrypt(buffer.array()))
+        val bytes = Buffer().writeLong(cursor.fetchCursor).writeLong(cursor.lastCursor).readByteArray()
+        fileSystem.atomicWrite(cursorFile(gid), cipher.encrypt(bytes))
     }
 
     override suspend fun loadCursor(gid: String): GroupCursor? =
         withContext(Dispatchers.IO) {
             val file = cursorFile(gid)
-            if (!file.exists()) return@withContext null
-            val bytes = cipher.decrypt(file.readBytes())
+            if (!fileSystem.exists(file)) return@withContext null
+            val bytes = cipher.decrypt(fileSystem.readBytes(file))
             if (bytes.size < 16) return@withContext null
-            val buffer = ByteBuffer.wrap(bytes)
-            GroupCursor(fetchCursor = buffer.long, lastCursor = buffer.long)
+            // Only the first 16 bytes are read, as ByteBuffer.wrap did; a longer
+            // blob's tail is ignored rather than refused.
+            val buffer = Buffer().write(bytes, 0, 16)
+            GroupCursor(fetchCursor = buffer.readLong(), lastCursor = buffer.readLong())
         }
 
     // Existence IS the flag, so there is nothing to encrypt and nothing to
@@ -275,11 +291,11 @@ class FileCordnGroupStore(
     // later re-join of the same gid is a different admission.
     override suspend fun saveJoinedViaRequest(gid: String) {
         withContext(Dispatchers.IO) {
-            atomicWrite(joinOriginFile(gid), ByteArray(0))
+            fileSystem.atomicWrite(joinOriginFile(gid), ByteArray(0))
         }
     }
 
-    override suspend fun loadJoinedViaRequest(gid: String): Boolean = withContext(Dispatchers.IO) { joinOriginFile(gid).exists() }
+    override suspend fun loadJoinedViaRequest(gid: String): Boolean = withContext(Dispatchers.IO) { fileSystem.exists(joinOriginFile(gid)) }
 
     override suspend fun saveRoomState(
         gid: String,
@@ -288,18 +304,18 @@ class FileCordnGroupStore(
         // Deleted rather than blanked when there is nothing to remember, so an
         // emptied draft leaves no plaintext behind in an old file.
         if (state.isBlank) {
-            roomStateFile(gid).delete()
+            fileSystem.deleteQuietly(roomStateFile(gid))
             return@withContext
         }
-        atomicWrite(roomStateFile(gid), cipher.encrypt(CordnRoomStateCodec.encode(state)))
+        fileSystem.atomicWrite(roomStateFile(gid), cipher.encrypt(CordnRoomStateCodec.encode(state)))
     }
 
     override suspend fun loadRoomState(gid: String): CordnRoomState =
         withContext(Dispatchers.IO) {
             val file = roomStateFile(gid)
-            if (!file.exists()) return@withContext CordnRoomState()
+            if (!fileSystem.exists(file)) return@withContext CordnRoomState()
             try {
-                CordnRoomStateCodec.decode(cipher.decrypt(file.readBytes()))
+                CordnRoomStateCodec.decode(cipher.decrypt(fileSystem.readBytes(file)))
             } catch (e: Exception) {
                 CordnRoomState()
             }
@@ -316,12 +332,12 @@ class FileCordnGroupStore(
             // this check that makes re-delivery free rather than duplicating.
             if (!ids.add(message.envelope.id)) return@withContext
 
-            groupDir(gid).mkdirs()
+            fileSystem.createDirectories(groupDir(gid))
             messageLog.append(messagesFile(gid), CordnDeliveredMessageCodec.encode(message))
             // Written on the same beat, so the inbox preview cannot disagree
             // with the room. Whole-blob rather than appended: it is one entry
             // that is always overwritten.
-            atomicWrite(summaryFile(gid), cipher.encrypt(CordnMessageSummaryCodec.encode(message, ids.size)))
+            fileSystem.atomicWrite(summaryFile(gid), cipher.encrypt(CordnMessageSummaryCodec.encode(message, ids.size)))
         }
     }
 
@@ -337,9 +353,9 @@ class FileCordnGroupStore(
     override suspend fun loadMessageSummary(gid: String): CordnMessageSummary? =
         withContext(Dispatchers.IO) {
             val file = summaryFile(gid)
-            if (!file.exists()) return@withContext null
+            if (!fileSystem.exists(file)) return@withContext null
             try {
-                CordnMessageSummaryCodec.decode(cipher.decrypt(file.readBytes()))
+                CordnMessageSummaryCodec.decode(cipher.decrypt(fileSystem.readBytes(file)))
             } catch (e: Exception) {
                 // A summary is a derived convenience; losing one costs a preview
                 // line until the next message, not the history it summarises.
@@ -355,18 +371,18 @@ class FileCordnGroupStore(
         // Deleted when there is nothing pending, so the common steady state is
         // no file rather than an empty one.
         if (state.isEmpty) {
-            echoStateFile(gid).delete()
+            fileSystem.deleteQuietly(echoStateFile(gid))
             return@withContext
         }
-        atomicWrite(echoStateFile(gid), cipher.encrypt(EchoStateCodec.encode(state)))
+        fileSystem.atomicWrite(echoStateFile(gid), cipher.encrypt(EchoStateCodec.encode(state)))
     }
 
     override suspend fun loadEchoState(gid: String): EchoState =
         withContext(Dispatchers.IO) {
             val file = echoStateFile(gid)
-            if (!file.exists()) return@withContext EchoState()
+            if (!fileSystem.exists(file)) return@withContext EchoState()
             try {
-                EchoStateCodec.decode(cipher.decrypt(file.readBytes()))
+                EchoStateCodec.decode(cipher.decrypt(fileSystem.readBytes(file)))
             } catch (e: Exception) {
                 EchoState()
             }
@@ -385,36 +401,37 @@ class FileCordnGroupStore(
  * publishes different ones to different coordinators.
  */
 class FileCordnKeyPackageStore(
-    private val dir: File,
+    private val dir: Path,
     private val cipher: CordnBlobCipher,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : CordnKeyPackageStore {
-    private fun bundleFile(keyPackageRef: String) = File(dir, "keypackages/${CordnStorageLayout.encodeKey(keyPackageRef)}")
+    private fun bundleFile(keyPackageRef: String) = dir / "keypackages" / CordnStorageLayout.encodeKey(keyPackageRef)
 
     override suspend fun save(
         keyPackageRef: String,
         bundle: ByteArray,
     ) = withContext(Dispatchers.IO) {
-        atomicWrite(bundleFile(keyPackageRef), cipher.encrypt(bundle))
+        fileSystem.atomicWrite(bundleFile(keyPackageRef), cipher.encrypt(bundle))
     }
 
     override suspend fun load(keyPackageRef: String): ByteArray? =
         withContext(Dispatchers.IO) {
             val file = bundleFile(keyPackageRef)
-            if (!file.exists()) null else cipher.decrypt(file.readBytes())
+            if (!fileSystem.exists(file)) null else cipher.decrypt(fileSystem.readBytes(file))
         }
 
     override suspend fun delete(keyPackageRef: String) {
         withContext(Dispatchers.IO) {
-            bundleFile(keyPackageRef).delete()
+            fileSystem.deleteQuietly(bundleFile(keyPackageRef))
         }
     }
 
     override suspend fun list(): List<String> =
         withContext(Dispatchers.IO) {
-            File(dir, "keypackages")
-                .listFiles()
+            fileSystem
+                .listOrNull(dir / "keypackages")
                 .orEmpty()
-                .filter { it.isFile }
+                .filter { fileSystem.isRegularFile(it) }
                 // No explicit ".tmp" exclusion, because the encoding already
                 // is one: '.' is not in the base64url alphabet, so a temp file
                 // left behind by a crashed write cannot decode to a ref and
@@ -435,22 +452,23 @@ class FileCordnKeyPackageStore(
  * account, sitting above the per-coordinator directories it names.
  */
 class FileCordnCoordinatorStore(
-    private val dir: File,
+    private val dir: Path,
     private val cipher: CordnBlobCipher,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : CordnCoordinatorStore {
-    private val file get() = File(dir, "coordinators")
+    private val file get() = dir / "coordinators"
 
     override suspend fun save(configs: List<CoordinatorConfig>) =
         withContext(Dispatchers.IO) {
-            atomicWrite(file, cipher.encrypt(CoordinatorListCodec.encode(configs)))
+            fileSystem.atomicWrite(file, cipher.encrypt(CoordinatorListCodec.encode(configs)))
         }
 
     override suspend fun load(): List<CoordinatorConfig> =
         withContext(Dispatchers.IO) {
             val stored = file
-            if (!stored.exists()) return@withContext emptyList()
+            if (!fileSystem.exists(stored)) return@withContext emptyList()
             try {
-                CoordinatorListCodec.decode(cipher.decrypt(stored.readBytes()))
+                CoordinatorListCodec.decode(cipher.decrypt(fileSystem.readBytes(stored)))
             } catch (e: Exception) {
                 // A list written by a future build, or one the keystore can no
                 // longer decrypt. Returning nothing loses the coordinators but
@@ -463,7 +481,8 @@ class FileCordnCoordinatorStore(
                 // the rooms are gone from the inbox and the invitations screen
                 // says there is nowhere to look. One line is the difference
                 // between a diagnosable fault and a mystery.
-                Log.w(TAG, "could not read ${stored.length()} bytes of coordinators, losing them: ${e.message}", e)
+                val size = fileSystem.metadataOrNull(stored)?.size ?: 0L
+                Log.w(TAG, "could not read $size bytes of coordinators, losing them: ${e.message}", e)
                 emptyList()
             }
         }
@@ -478,19 +497,20 @@ class FileCordnCoordinatorStore(
  * groups to another one, the exact fork the flag exists to prevent.
  */
 class FileCordnHandoffStore(
-    private val accountDir: File,
+    private val accountDir: Path,
+    private val fileSystem: FileSystem = platformFileSystem,
 ) : CordnHandoffStore {
-    override suspend fun load(): Boolean = marker().exists()
+    override suspend fun load(): Boolean = fileSystem.exists(marker())
 
     override suspend fun save(handedOff: Boolean) {
         val file = marker()
         if (handedOff) {
-            file.parentFile?.mkdirs()
-            file.writeBytes(ByteArray(0))
+            file.parent?.let { fileSystem.createDirectories(it) }
+            fileSystem.write(file) { }
         } else {
-            file.delete()
+            fileSystem.deleteQuietly(file)
         }
     }
 
-    private fun marker() = File(accountDir, "handed-off")
+    private fun marker() = accountDir / "handed-off"
 }

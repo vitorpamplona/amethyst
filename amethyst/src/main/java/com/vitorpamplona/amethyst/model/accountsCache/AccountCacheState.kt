@@ -380,7 +380,7 @@ class AccountCacheState(
             // The same per-account directory the Marmot stores use. cordn
             // scopes itself further by coordinator underneath it, because a
             // gid is unique only within one (spec/00.md §4).
-            cordnFilesDir = accountDir,
+            cordnFilesDir = accountDir.toOkioPath(),
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.cordn.sync.PendingEpochOperation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.test.runTest
+import okio.Path.Companion.toOkioPath
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Base64
@@ -92,13 +93,15 @@ class CordnStorageFormatGoldenTest {
 
     // ---- Construction glue: the only part of this file that follows the stores' API. ----
 
-    private fun groupStore(coordinator: HexKey) = FileCordnGroupStore(CordnStorageLayout.directoryFor(rootFile, account, coordinator), cipher)
+    private val root = rootFile.toOkioPath()
 
-    private fun keyPackageStore(coordinator: HexKey) = FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(rootFile, account, coordinator), cipher)
+    private fun groupStore(coordinator: HexKey) = FileCordnGroupStore(CordnStorageLayout.directoryFor(root, account, coordinator), cipher)
 
-    private fun coordinatorStore() = FileCordnCoordinatorStore(CordnStorageLayout.accountDirectoryFor(rootFile, account), cipher)
+    private fun keyPackageStore(coordinator: HexKey) = FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(root, account, coordinator), cipher)
 
-    private fun handoffStore(owner: HexKey) = FileCordnHandoffStore(CordnStorageLayout.accountDirectoryFor(rootFile, owner))
+    private fun coordinatorStore() = FileCordnCoordinatorStore(CordnStorageLayout.accountDirectoryFor(root, account), cipher)
+
+    private fun handoffStore(owner: HexKey) = FileCordnHandoffStore(CordnStorageLayout.accountDirectoryFor(root, owner))
 
     private fun appendLog(compactAfterSegments: Int) =
         EncryptedAppendLog(
@@ -107,11 +110,11 @@ class CordnStorageFormatGoldenTest {
             compactAfterSegments = compactAfterSegments,
         )
 
-    private fun logFile(name: String) = File(rootFile, "logs/$name")
+    private fun logFile(name: String) = root / "logs" / name
 
-    private suspend fun migrationWrite(snapshot: CordnMigrationSnapshot) = CordnMigrationStores.write(rootFile, migratedAccount, cipher, snapshot)
+    private suspend fun migrationWrite(snapshot: CordnMigrationSnapshot) = CordnMigrationStores.write(root, migratedAccount, cipher, snapshot)
 
-    private suspend fun migrationRead(configs: List<CoordinatorConfig>) = CordnMigrationStores.read(rootFile, migratedAccount, cipher, configs)
+    private suspend fun migrationRead(configs: List<CoordinatorConfig>) = CordnMigrationStores.read(root, migratedAccount, cipher, configs)
 
     // ---- End of construction glue. ----
 

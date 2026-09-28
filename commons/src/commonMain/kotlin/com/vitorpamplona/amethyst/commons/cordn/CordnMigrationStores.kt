@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import java.io.File
-import java.util.Base64
+import okio.FileSystem
+import okio.Path
+import kotlin.io.encoding.Base64
 
 /**
  * Reading a handoff snapshot off the cordn stores, and writing one back.
@@ -46,18 +49,19 @@ object CordnMigrationStores {
      * precisely when it matters.
      */
     suspend fun read(
-        root: File,
+        root: Path,
         accountPubKey: HexKey,
         cipher: CordnBlobCipher,
         configs: List<CoordinatorConfig>,
+        fileSystem: FileSystem = platformFileSystem,
     ): CordnMigrationSnapshot {
         val groups = mutableListOf<CordnMigrationGroup>()
         val keyPackages = mutableListOf<CordnCarriedKeyPackage>()
 
         configs.forEach { config ->
             val dir = CordnStorageLayout.directoryFor(root, accountPubKey, config.pubKey)
-            val groupStore = FileCordnGroupStore(dir, cipher)
-            val keyPackageStore = FileCordnKeyPackageStore(dir, cipher)
+            val groupStore = FileCordnGroupStore(dir, cipher, fileSystem)
+            val keyPackageStore = FileCordnKeyPackageStore(dir, cipher, fileSystem)
 
             groupStore.listGroups().forEach { gid ->
                 val state = groupStore.loadGroup(gid) ?: return@forEach
@@ -127,19 +131,20 @@ object CordnMigrationStores {
      * `gid` present in both cannot end up half from each.
      */
     suspend fun write(
-        root: File,
+        root: Path,
         accountPubKey: HexKey,
         cipher: CordnBlobCipher,
         snapshot: CordnMigrationSnapshot,
+        fileSystem: FileSystem = platformFileSystem,
     ): List<CoordinatorConfig> {
         require(snapshot.accountPubKey == accountPubKey) {
             "this migration belongs to a different account"
         }
 
-        File(root, "cordn/$accountPubKey").deleteRecursively()
+        fileSystem.deleteRecursivelyQuietly(root / "cordn" / accountPubKey)
 
         snapshot.groups.forEach { group ->
-            val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(root, accountPubKey, group.coordinatorPubKey), cipher)
+            val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(root, accountPubKey, group.coordinatorPubKey), cipher, fileSystem)
             store.saveGroup(group.gid, group.clientStateBase64.fromBase64())
             // Before the cursor, for the same reason the live path writes them in
             // that order: a seeding that wrote the cursor and then failed would
@@ -158,7 +163,7 @@ object CordnMigrationStores {
         }
 
         snapshot.keyPackages.forEach { keyPackage ->
-            FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(root, accountPubKey, keyPackage.coordinatorPubKey), cipher)
+            FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(root, accountPubKey, keyPackage.coordinatorPubKey), cipher, fileSystem)
                 .save(keyPackage.keyPackageRef, keyPackage.bundle.fromBase64())
         }
 
@@ -176,7 +181,15 @@ object CordnMigrationStores {
             }
     }
 
-    private fun ByteArray.toBase64() = Base64.getEncoder().encodeToString(this)
+    /**
+     * Standard alphabet, padded on the way out and optional on the way in,
+     * which is what `java.util.Base64`'s basic encoder and decoder did — so a
+     * snapshot written by an older build still reads, and one written here
+     * reads on an older build.
+     */
+    private val base64 = Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
 
-    private fun String.fromBase64(): ByteArray = Base64.getDecoder().decode(this)
+    private fun ByteArray.toBase64() = base64.encode(this)
+
+    private fun String.fromBase64(): ByteArray = base64.decode(this)
 }

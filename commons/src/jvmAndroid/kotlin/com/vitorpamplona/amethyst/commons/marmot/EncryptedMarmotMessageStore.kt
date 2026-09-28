@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 /**
@@ -72,13 +73,13 @@ class EncryptedMarmotMessageStore(
         logMutex.withLock {
             try {
                 val file = messagesFile(nostrGroupId)
-                if (log.contains(file, innerEventJson)) {
+                if (log.contains(file.toOkioPath(), innerEventJson)) {
                     Log.d(TAG) { "appendMessage($nostrGroupId): duplicate entry skipped" }
                     return@withLock
                 }
-                log.append(file, innerEventJson)
+                log.append(file.toOkioPath(), innerEventJson)
                 Log.d(TAG) {
-                    "appendMessage($nostrGroupId): now ${log.readAll(file).size} message(s) persisted"
+                    "appendMessage($nostrGroupId): now ${log.readAll(file.toOkioPath()).size} message(s) persisted"
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "appendMessage($nostrGroupId) FAILED: ${e.message}", e)
@@ -105,7 +106,7 @@ class EncryptedMarmotMessageStore(
         withContext(Dispatchers.IO) {
             logMutex.withLock {
                 for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId))) {
-                    log.forget(file)
+                    log.forget(file.toOkioPath())
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
                     }
@@ -340,7 +341,7 @@ class EncryptedMarmotMessageStore(
 
     private fun readAll(nostrGroupId: String): List<String> = readAllFrom(messagesFile(nostrGroupId))
 
-    private fun readAllFrom(file: File): List<String> = log.readAll(file)
+    private fun readAllFrom(file: File): List<String> = log.readAll(file.toOkioPath())
 
     private fun writeAll(
         nostrGroupId: String,
@@ -350,7 +351,7 @@ class EncryptedMarmotMessageStore(
     private fun writeAllTo(
         file: File,
         messages: List<String>,
-    ) = log.rewrite(file, messages)
+    ) = log.rewrite(file.toOkioPath(), messages)
 
     companion object {
         private const val TAG = "EncryptedMarmotMessageStore"

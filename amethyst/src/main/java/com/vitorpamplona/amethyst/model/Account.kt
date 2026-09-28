@@ -364,6 +364,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okio.Path
 import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
@@ -412,7 +413,7 @@ class Account(
      * Nothing about it is shared with Marmot's stores above — cordn has its
      * own, by the §3.1 rule in `amethyst/plans/2026-09-19-cordn-ui.md`.
      */
-    val cordnFilesDir: java.io.File? = null,
+    val cordnFilesDir: Path? = null,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
