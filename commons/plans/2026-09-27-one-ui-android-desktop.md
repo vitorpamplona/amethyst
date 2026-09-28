@@ -108,15 +108,15 @@ Each leaving edge is a seam to cut before the group can move.
 |---|---|---|
 | `Account.kt` | `BuildConfig.VERSION_NAME` (donation prompt, 3 sites) | constructor parameter `appVersion: String`. **Done 2026-09-27**: `AccountCacheState` takes it too and `AppModules` passes `BuildConfig.VERSION_NAME`. |
 | `AccountSyncedSettingsInternal.kt` | `Resources.getSystem()` + `ConfigurationCompat` for the system language list; `DefaultBottomBarEntries` from `ui/navigation/bottombars/NavBarItem.kt` | languages: an injected `() -> List<String>` or a small expect/actual; defaults: move the default entry list to `commons/model/navigation`, beside `BottomBarEntry`. **Defaults done 2026-09-28**: `DefaultBottomBarItems` + `DefaultBottomBarEntries` are in `commons/…/model/navigation/DefaultBottomBar.kt`. **Languages done 2026-09-28**: an `expect fun getLanguagesSpokenByUser()` in `commons/util/SpokenLanguages.kt` (it is a `@Serializable` default, so it could not be injected). |
-| `GeohashChatIdentityState.kt` | `androidx.core.content.edit`, `LegacySharedPreferences`, `LocalPreferences.LEGACY_WRITES_RETIRED`, `Amethyst.instance.encryptedStorage` | the legacy-prefs read/write is a migration path; put it behind a `GeohashIdentityLegacyStore` port, implemented in the app |
+| `GeohashChatIdentityState.kt` | `androidx.core.content.edit`, `LegacySharedPreferences`, `LocalPreferences.LEGACY_WRITES_RETIRED`, `Amethyst.instance.encryptedStorage` | the legacy-prefs read/write is a migration path; put it behind a `GeohashIdentityLegacyStore` port, implemented in the app. **Done 2026-09-28** as `GeohashIdentityStore` (model/), implemented by `AndroidGeohashIdentityStore` (app root). |
 | `AccountZapActions.kt` | `onError: (StringResource, String?)` with `Res.string.bolt12_*` (compose resources, which `commons` cannot see) | a typed error (sealed class) that the UI maps to a string. **Done 2026-09-28**: `Bolt12ZapFailure` (commons/model); `ZapPaymentHandler` maps it to the same strings. |
-| `nip46Signer/Nip46ConsentBridge.kt` | `Res` + `loadStringRes`; `Amethyst.instance.appContext`; the app's `SignerConnectCoordinator` / `SignerConsentCoordinator` / napplet op labels | it is the Android consent-dialog bridge: leave it in the app and inject it into `Account` through an interface |
+| `nip46Signer/Nip46ConsentBridge.kt` | `Res` + `loadStringRes`; `Amethyst.instance.appContext`; the app's `SignerConnectCoordinator` / `SignerConsentCoordinator` / napplet op labels | it is the Android consent-dialog bridge: leave it in the app and inject it into `Account` through an interface. **Done 2026-09-28**: `Nip46ConsentPrompter` (model/nip46Signer); the bridge and `Nip46ConsentInfoBuilder` moved to `connectedApps/consent`. |
 
 ### Edges that leave the group (14 targets)
 
 | Target | Used for | Proposed cut |
 |---|---|---|
-| `Amethyst.kt` | `keyCache` (Account), `encryptedStorage` (Geohash), `appContext` (Nip46 bridge), `notificationDispatcher` (EventProcessor) | constructor parameters / ports; the notification dispatcher gets an interface. **`keyCache` done 2026-09-28** (`Account.encryptionKeyCache`). |
+| `Amethyst.kt` | `keyCache` (Account), `encryptedStorage` (Geohash), `appContext` (Nip46 bridge), `notificationDispatcher` (EventProcessor) | constructor parameters / ports; the notification dispatcher gets an interface. **Done 2026-09-28**: `keyCache` → `Account.encryptionKeyCache`; the notifications → `MarmotGroupNotifier`, which `NotificationDispatcher` implements; `encryptedStorage` and `appContext` left with the Geohash and Nip46 cuts. |
 | `LocalPreferences.kt` | `saveToEncryptedStorage(accountSettings)` on settings change | **Done 2026-09-28** as a constructor lambda, `Account.saveSettings: suspend (AccountSettings) -> Unit`, rather than a named port. |
 | `DebugUtils.kt` | `logTime` (2 sites) | **Done 2026-09-28.** `commons/util` already had an identical `logTime`; its Android `isDebug` was hard-coded `false`, so it now reads `AndroidDebugFlag.enabled`, which `Amethyst.onCreate` sets. The app copy is gone. |
 | `service/MainThreadChecker.kt` | `checkNotInMainThread` (HiddenUsersState) | **Done 2026-09-28**: `LocalCache.appHost.assertNotMainThread()`, which the app host delegates to the same check. |
@@ -173,8 +173,11 @@ first).
    - the settings saver and the media key cache (done, as constructor parameters);
    - the typed zap error (done);
    - the language list (done);
-   - **still open:** the Geohash legacy-store, Nip46-bridge and notification-dispatcher
-     ports.
+   - the Geohash identity store, the Nip46 consent prompter and the Marmot notifier (done).
+
+   **Result, re-measured 2026-09-28:** the group reachable from `Account.kt` inside `model/`
+   (plus `EventProcessor`) is 77 files, 23,474 lines, with **no hard blockers, no edges leaving
+   it and no `commonsUI`-only symbols**. It is ready for step 3.
 3. **Move the group** (77 files) to `commons/jvmAndroid` in one PR. Desktop keeps its
    `DesktopIAccount` until the old app is retired; `IAccount` stays as the port it already is.
 4. **`AccountViewModel`**: the same recipe, using the dependency list above.
