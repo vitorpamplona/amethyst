@@ -110,6 +110,8 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -121,11 +123,9 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaCipher

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11Fetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -64,6 +66,12 @@ interface LocalCacheHost {
      */
     val nip95Blobs: Nip95BlobStore?
 
+    /**
+     * Relays' NIP-11 documents, shared by the cache (relay `self` keys) and the screens that show
+     * relay details. The default fetches nothing.
+     */
+    val nip11Cache: Nip11CachedRetriever get() = OfflineNip11Cache
+
     /** Per-relay counters the anti-spam filter reports duplicate events to. */
     val relayStats: RelayStats?
 
@@ -104,3 +112,5 @@ interface LocalCacheHost {
         override val relayStats: RelayStats? = null
     }
 }
+
+private val OfflineNip11Cache = Nip11CachedRetriever(Nip11Fetcher.Offline)

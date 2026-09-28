@@ -63,7 +63,6 @@ import coil3.request.ImageRequest
 import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.media_added
 import com.vitorpamplona.amethyst.commons.resources.media_added_to_profile_gallery
 import com.vitorpamplona.amethyst.commons.resources.media_download_has_started_toast
+import com.vitorpamplona.amethyst.commons.resources.original
 import com.vitorpamplona.amethyst.commons.resources.share_image
 import com.vitorpamplona.amethyst.commons.resources.share_video
 import com.vitorpamplona.amethyst.commons.resources.unable_to_share_image
@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
@@ -125,7 +126,6 @@ import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -1066,7 +1066,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
             },
         ) {
             Icon(
-                painter = painterRes(R.drawable.original, 1),
+                painter = painterRes(Res.drawable.original, 1),
                 contentDescription = stringRes(id = Res.string.hash_verification_passed),
                 modifier = Size30Modifier,
                 tint = MaterialTheme.colorScheme.primary,

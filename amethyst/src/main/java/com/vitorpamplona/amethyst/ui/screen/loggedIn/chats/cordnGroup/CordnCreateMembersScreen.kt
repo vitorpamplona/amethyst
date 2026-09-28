@@ -80,12 +80,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.CordnGroupDraft
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**

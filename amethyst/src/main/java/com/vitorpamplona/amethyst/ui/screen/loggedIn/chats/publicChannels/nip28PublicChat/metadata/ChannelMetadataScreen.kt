@@ -45,7 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -238,7 +238,7 @@ private fun ChannelMetadataScaffold(
                 BasicRelaySetupInfoDialog(
                     item,
                     onDelete = { postViewModel.deleteHomeRelay(item) },
-                    nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                    nip11CachedRetriever = LocalCache.appHost.nip11Cache,
                     modifier = HorzHalfVertPadding,
                     accountViewModel = accountViewModel,
                     nav = nav,

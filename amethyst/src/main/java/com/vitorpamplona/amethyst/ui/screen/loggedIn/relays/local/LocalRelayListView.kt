@@ -30,7 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayDragState
 import com.vitorpamplona.amethyst.commons.relays.ui.rememberRelayDragState
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -86,7 +86,7 @@ fun LazyListScope.renderLocalItems(
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
-            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            nip11CachedRetriever = LocalCache.appHost.nip11Cache,
             modifier = HorzHalfVertPadding,
             index = index,
             dragState = dragState,

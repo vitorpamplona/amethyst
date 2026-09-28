@@ -42,15 +42,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.VideoPostKind
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_compose
 import com.vitorpamplona.amethyst.commons.resources.new_long_video
 import com.vitorpamplona.amethyst.commons.resources.record_a_video
 import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
-import com.vitorpamplona.amethyst.ui.painterRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -193,7 +193,7 @@ fun NewLongVideoButton(
                 exit = fadeOut(),
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_compose, 5),
+                    painter = painterRes(Res.drawable.ic_compose, 5),
                     contentDescription = stringRes(id = Res.string.new_long_video),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,

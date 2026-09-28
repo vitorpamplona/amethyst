@@ -77,11 +77,11 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_via
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 

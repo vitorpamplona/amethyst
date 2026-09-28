@@ -29,7 +29,7 @@ sealed class RetrieveResult(
 ) {
     class Error(
         data: Nip11RelayInformation,
-        val error: Nip11Retriever.ErrorCode,
+        val error: Nip11ErrorCode,
         val msg: String? = null,
     ) : RetrieveResult(data, TimeUtils.now())
 

@@ -33,12 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
@@ -47,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.note.TextCount
-import com.vitorpamplona.amethyst.ui.painterRes
 
 @Composable
 @Preview
@@ -60,7 +60,7 @@ fun LeftPictureLayoutPreviewCard() {
     LeftPictureLayout(
         onImage = {
             Image(
-                painter = painterRes(R.drawable.github, 3),
+                painter = painterRes(Res.drawable.github, 3),
                 contentDescription = stringRes(id = Res.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxSize().clip(QuoteBorder),

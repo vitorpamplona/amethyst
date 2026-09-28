@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_nprofile_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.github
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.mastodon
 import com.vitorpamplona.amethyst.commons.resources.show_nprofile_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.telegram
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextView
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.commons.ui.note.lastSeenSentence
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
@@ -213,7 +215,7 @@ fun DrawAdditionalInfo(
                 onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 1),
+                    painter = painterRes(Res.drawable.ic_qrcode, 1),
                     contentDescription = stringRes(id = Res.string.show_nprofile_as_a_qr_code),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,

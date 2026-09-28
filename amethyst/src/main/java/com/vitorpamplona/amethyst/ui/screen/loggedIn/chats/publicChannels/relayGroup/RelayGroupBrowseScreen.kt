@@ -47,7 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_browse_description
@@ -170,7 +170,7 @@ fun RelayGroupBrowseScreen(
                         relaySuggestions = relaySuggestions,
                         onSelect = { relay -> open(relay.url) },
                         modifier = HalfHorzPadding,
-                        nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                        nip11CachedRetriever = LocalCache.appHost.nip11Cache,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

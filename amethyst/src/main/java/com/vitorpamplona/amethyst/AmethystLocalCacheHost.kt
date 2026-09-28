@@ -59,6 +59,8 @@ class AmethystLocalCacheHost(
 
     override fun relayInfo(relay: NormalizedRelayUrl): Nip11RelayInformation = modules.nip11Cache.getFromCache(relay)
 
+    override val nip11Cache get() = modules.nip11Cache
+
     // The zap path's LNURL cache is a quartz-side singleton the outbound-zap resolver fills.
     override fun lnurlEndpoint(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.get(lnurlpUrl)
 

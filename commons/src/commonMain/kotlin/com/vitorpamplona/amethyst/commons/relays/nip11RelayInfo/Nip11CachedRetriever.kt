@@ -26,11 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import okhttp3.OkHttpClient
 
+/** NIP-11 documents per relay, cached for an hour (errors too), with placeholders while loading. */
 @Stable
 class Nip11CachedRetriever(
-    val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
+    private val retriever: Nip11Fetcher,
 ) {
     private val relayInformationEmptyCache = LruCache<NormalizedRelayUrl, Nip11RelayInformation>(1000)
 
@@ -39,7 +39,6 @@ class Nip11CachedRetriever(
     // the nullable argument compiled but never meant anything — get() returns null on a miss either
     // way, which is what the readers below already branch on.
     private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult>(1000)
-    private val retriever = Nip11Retriever(okHttpClient)
 
     /**
      * Drops any cached NIP-11 document (including a cached *error*) for [relay], so the next
@@ -94,7 +93,7 @@ class Nip11CachedRetriever(
     suspend fun loadRelayInfo(
         relay: NormalizedRelayUrl,
         onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
+        onError: (NormalizedRelayUrl, Nip11ErrorCode, String?) -> Unit,
     ) {
         val doc = relayInformationDocumentCache.get(relay)
         if (doc != null) {
@@ -136,7 +135,7 @@ class Nip11CachedRetriever(
     private suspend fun retrieve(
         relay: NormalizedRelayUrl,
         onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
+        onError: (NormalizedRelayUrl, Nip11ErrorCode, String?) -> Unit,
     ) {
         relayInformationDocumentCache.put(relay, RetrieveResult.Loading(getEmpty(relay)))
         retriever.loadRelayInfo(

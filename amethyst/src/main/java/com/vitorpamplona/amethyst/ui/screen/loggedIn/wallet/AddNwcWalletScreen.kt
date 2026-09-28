@@ -52,7 +52,6 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.accessibility_scan_qr_code
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets
 import com.vitorpamplona.amethyst.commons.resources.couldnt_find_nwc_wallets_description
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.paste_from_clipboard
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_connect_app
@@ -70,12 +70,12 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_save
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47DeepLink
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -198,7 +198,7 @@ fun AddNwcWalletScreen(
                 // QR code scanner
                 IconButton(onClick = { qrScanning = true }) {
                     Icon(
-                        painter = painterRes(R.drawable.ic_qrcode, 3),
+                        painter = painterRes(Res.drawable.ic_qrcode, 3),
                         contentDescription = stringRes(id = Res.string.accessibility_scan_qr_code),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,

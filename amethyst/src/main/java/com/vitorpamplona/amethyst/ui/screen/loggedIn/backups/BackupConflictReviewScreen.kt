@@ -100,11 +100,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff

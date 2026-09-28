@@ -44,7 +44,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add
@@ -137,7 +137,7 @@ fun RelayUrlEditField(
 ) {
     RelayUrlEditField(
         onNewRelay = onNewRelay,
-        nip11CachedRetriever = Amethyst.instance.nip11Cache,
+        nip11CachedRetriever = LocalCache.appHost.nip11Cache,
         modifier = modifier,
         accountViewModel = accountViewModel,
         nav = nav,

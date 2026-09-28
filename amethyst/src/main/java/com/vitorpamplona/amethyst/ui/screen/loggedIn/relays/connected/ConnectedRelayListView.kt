@@ -36,7 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.active_subs_title
@@ -98,7 +98,7 @@ fun LazyListScope.renderConnectedItems(
         BasicRelaySetupInfoDialog(
             item,
             onDelete = null,
-            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            nip11CachedRetriever = LocalCache.appHost.nip11Cache,
             modifier = HorzHalfVertPadding,
             accountViewModel = accountViewModel,
             nav = nav,

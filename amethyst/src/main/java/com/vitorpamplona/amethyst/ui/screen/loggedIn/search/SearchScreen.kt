@@ -826,7 +826,7 @@ private fun DisplaySearchResults(
                 loadRobohash = LocalDisplaySettings.current.loadRobohash,
                 onClick = { nav.nav(Route.RelayInfo(relayInfo.relay.url)) },
                 onDelete = null,
-                nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                nip11CachedRetriever = LocalCache.appHost.nip11Cache,
                 modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
                 accountViewModel = accountViewModel,
                 nav = nav,

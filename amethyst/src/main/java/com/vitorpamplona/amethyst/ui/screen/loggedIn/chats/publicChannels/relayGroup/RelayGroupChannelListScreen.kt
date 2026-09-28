@@ -201,7 +201,7 @@ fun RelayGroupChannelListScreen(
     // Warm the relay's NIP-11 so we can tell its genuine (relay-signed) groups from stray
     // user-published 39000s that a non-NIP-29 relay may also be storing. Re-keyed on trust so a move
     // to clearnet re-fetches over the new transport instead of serving the cached over-Tor failure.
-    val nip11Cache = Amethyst.instance.nip11Cache
+    val nip11Cache = LocalCache.appHost.nip11Cache
     val relayInfo by produceState(nip11Cache.getFromCache(relay), relay, isTrusted) {
         if (isTrusted) nip11Cache.invalidate(relay)
         nip11Cache.loadRelayInfo(relay, onInfo = { value = it }, onError = { _, _, _ -> })

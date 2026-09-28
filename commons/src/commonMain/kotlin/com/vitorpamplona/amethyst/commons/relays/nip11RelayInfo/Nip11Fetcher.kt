@@ -21,32 +21,30 @@
 package com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
-import org.junit.Test
-import java.net.ConnectException
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 
-class Nip11RetrieverTest {
-    @Test
-    fun unreachableServerReportsFailToReachServer() =
-        runBlocking {
-            // Inject a fake client that simulates connection refused without building
-            // a real OkHttpClient (which fails in amethyst JVM unit tests because
-            // the Android OkHttp variant tries to detect Android via android.util.Log).
-            val retriever =
-                Nip11Retriever { _ ->
-                    throw ConnectException("Connection refused")
-                }
-            val relay = NormalizedRelayUrl("ws://127.0.0.1:14591/")
+/** Why a NIP-11 document could not be had. */
+enum class Nip11ErrorCode {
+    FAIL_TO_ASSEMBLE_URL,
+    FAIL_TO_REACH_SERVER,
+    FAIL_TO_PARSE_RESULT,
+    FAIL_WITH_HTTP_STATUS,
+}
 
-            var errorCode: Nip11ErrorCode? = null
-            retriever.loadRelayInfo(
-                relay = relay,
-                onInfo = { fail("Expected an error, got relay info") },
-                onError = { _, code, _ -> errorCode = code },
-            )
+/** Fetches a relay's NIP-11 document over whatever HTTP stack the platform has. */
+interface Nip11Fetcher {
+    suspend fun loadRelayInfo(
+        relay: NormalizedRelayUrl,
+        onInfo: (Nip11RelayInformation) -> Unit,
+        onError: (NormalizedRelayUrl, Nip11ErrorCode, String?) -> Unit,
+    )
 
-            assertEquals(Nip11ErrorCode.FAIL_TO_REACH_SERVER, errorCode)
-        }
+    /** No network: every fetch fails as unreachable. For hosts that provide no fetcher. */
+    object Offline : Nip11Fetcher {
+        override suspend fun loadRelayInfo(
+            relay: NormalizedRelayUrl,
+            onInfo: (Nip11RelayInformation) -> Unit,
+            onError: (NormalizedRelayUrl, Nip11ErrorCode, String?) -> Unit,
+        ) = onError(relay, Nip11ErrorCode.FAIL_TO_REACH_SERVER, null)
+    }
 }

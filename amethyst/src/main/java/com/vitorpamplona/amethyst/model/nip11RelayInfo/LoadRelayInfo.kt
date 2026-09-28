@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
@@ -33,7 +33,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun loadRelayInfo(relay: NormalizedRelayUrl): State<Nip11RelayInformation> = loadRelayInfo(relay, Amethyst.instance.nip11Cache)
+fun loadRelayInfo(relay: NormalizedRelayUrl): State<Nip11RelayInformation> = loadRelayInfo(relay, LocalCache.appHost.nip11Cache)
 
 /**
  * Eagerly warms the NIP-11 cache for a whole set of [relays] **in parallel** (each fetch on its own
@@ -48,7 +48,7 @@ fun WarmNip11(
     relays: Collection<NormalizedRelayUrl>,
     onEachLoaded: () -> Unit = {},
 ) {
-    val cache = Amethyst.instance.nip11Cache
+    val cache = LocalCache.appHost.nip11Cache
     LaunchedEffect(relays) {
         coroutineScope {
             relays.forEach { relay ->

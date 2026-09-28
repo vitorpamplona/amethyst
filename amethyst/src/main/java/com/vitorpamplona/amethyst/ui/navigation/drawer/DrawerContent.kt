@@ -90,7 +90,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -113,12 +112,14 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.longs
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.relay_setup
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
@@ -1006,7 +1007,7 @@ fun IconRowRelays(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterRes(R.drawable.relays, 4),
+            painter = painterRes(Res.drawable.relays, 4),
             contentDescription = stringRes(Res.string.relay_setup),
             modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurface,
@@ -1103,7 +1104,7 @@ fun BottomContent(
                 },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 2),
+                    painter = painterRes(Res.drawable.ic_qrcode, 2),
                     contentDescription = stringRes(id = Res.string.show_npub_as_a_qr_code),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,

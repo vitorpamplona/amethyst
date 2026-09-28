@@ -59,9 +59,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRoleChips
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_members_count
@@ -124,7 +124,7 @@ fun RelayMembersScreen(
     LaunchedEffect(normalizedRelayUrl) {
         launch(Dispatchers.IO) {
             var relaySelf: HexKey? = null
-            Amethyst.instance.nip11Cache.loadRelayInfo(
+            LocalCache.appHost.nip11Cache.loadRelayInfo(
                 relay = normalizedRelayUrl,
                 onInfo = { relaySelf = it.self },
                 onError = { _, _, _ -> },
