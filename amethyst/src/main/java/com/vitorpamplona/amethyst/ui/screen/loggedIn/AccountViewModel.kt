@@ -2556,7 +2556,14 @@ class AccountViewModel(
     /** True when this account has somewhere to upload a group's encrypted media. */
     fun hasBlossomServers(): Boolean = account.marmot.marmotMediaPolicyServers().isNotEmpty()
 
-    suspend fun resetOutOfSyncMarmotGroup(nostrGroupId: String) = account.marmot.resetOutOfSyncMarmotGroup(nostrGroupId)
+    /**
+     * On the account scope, not the screen's: the reset drops local state, flags the group as
+     * awaiting a re-invite and publishes a KeyPackage, and leaving the chat mid-way must not
+     * stop it between those steps.
+     */
+    fun resetOutOfSyncMarmotGroup(nostrGroupId: String) {
+        account.scope.launch(Dispatchers.IO) { account.marmot.resetOutOfSyncMarmotGroup(nostrGroupId) }
+    }
 
     suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: String) {
         account.marmot.enableMarmotEncryptedMediaV2(nostrGroupId)

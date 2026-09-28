@@ -416,7 +416,6 @@ private fun MarmotOutOfSyncBanner(
     nostrGroupId: HexKey,
     accountViewModel: AccountViewModel,
 ) {
-    val scope = rememberCoroutineScope()
     var confirming by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -439,7 +438,7 @@ private fun MarmotOutOfSyncBanner(
                 TextButton(
                     onClick = {
                         confirming = false
-                        scope.launch(Dispatchers.IO) { accountViewModel.resetOutOfSyncMarmotGroup(nostrGroupId) }
+                        accountViewModel.resetOutOfSyncMarmotGroup(nostrGroupId)
                     },
                 ) { Text(stringRes(Res.string.marmot_out_of_sync_reset)) }
             },
