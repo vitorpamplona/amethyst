@@ -438,7 +438,7 @@ fun CardBody(
                     stringRes(Res.string.quick_action_delete),
                 ) {
                     if (accountViewModel.account.settings.hideDeleteRequestDialog) {
-                        accountViewModel.delete(note)
+                        accountViewModel.deleteOwn(note)
                         onDismiss()
                     } else {
                         showDeleteAlertDialog.value = true

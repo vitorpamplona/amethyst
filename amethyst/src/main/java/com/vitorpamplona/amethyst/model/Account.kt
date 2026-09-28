@@ -1721,7 +1721,15 @@ class Account(
             marmot.deleteMarmotMessages(groupId, groupNotes)
         }
 
-        val myNotes = otherNotes.filter { it.author == userProfile() && it.event != null }
+        val (myRumors, myNotes) =
+            otherNotes
+                .filter { it.author == userProfile() && it.event != null }
+                .partition { it.isPrivateRumor() }
+
+        // Private rumors (NIP-17 DMs, private reactions) are retracted inside their own
+        // conversation for the same reason, whichever caller asked for a plain delete.
+        myRumors.forEach { deletePrivately(listOf(it), it) }
+
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNotes.chunked(200).forEach { chunkedList ->
