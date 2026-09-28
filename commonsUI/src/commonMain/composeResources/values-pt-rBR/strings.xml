@@ -6085,4 +6085,8 @@
     <string name="cordn_voice_play">Reproduzir mensagem de voz</string>
     <string name="cordn_voice_record">Gravar uma mensagem de voz</string>
     <string name="cordn_voice_stop">Parar e enviar</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Pelo menos %1$d caractere</item>
+        <item quantity="other">Pelo menos %1$d caracteres</item>
+    </plurals>
 </resources>

@@ -6087,4 +6087,8 @@
     <string name="cordn_voice_play">Sprachnachricht abspielen</string>
     <string name="cordn_voice_record">Sprachnachricht aufnehmen</string>
     <string name="cordn_voice_stop">Stoppen und senden</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Mindestens %1$d Zeichen</item>
+        <item quantity="other">Mindestens %1$d Zeichen</item>
+    </plurals>
 </resources>

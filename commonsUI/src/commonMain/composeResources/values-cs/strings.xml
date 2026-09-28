@@ -6419,4 +6419,10 @@
     <string name="cordn_voice_play">Přehrát hlasovou zprávu</string>
     <string name="cordn_voice_record">Nahrát hlasovou zprávu</string>
     <string name="cordn_voice_stop">Zastavit a odeslat</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Alespoň %1$d znak</item>
+        <item quantity="few">Alespoň %1$d znaky</item>
+        <item quantity="many">Alespoň %1$d znaku</item>
+        <item quantity="other">Alespoň %1$d znaků</item>
+    </plurals>
 </resources>

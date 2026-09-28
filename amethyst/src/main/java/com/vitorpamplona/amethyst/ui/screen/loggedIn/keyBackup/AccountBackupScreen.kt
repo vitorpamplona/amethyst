@@ -135,6 +135,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.note.authenticate
@@ -498,7 +499,7 @@ private fun EncryptedKeyCard(
                             label = { Text(stringRes(Res.string.account_backup_encrypted_password)) },
                             supportingText = {
                                 Text(
-                                    text = stringRes(Res.string.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH),
+                                    text = pluralStringRes(Res.plurals.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH, Nip49.MIN_PASSWORD_LENGTH),
                                     color = if (longEnough) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             },

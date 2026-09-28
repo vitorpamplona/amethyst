@@ -6085,4 +6085,8 @@
     <string name="cordn_voice_play">Spela upp röstmeddelande</string>
     <string name="cordn_voice_record">Spela in ett röstmeddelande</string>
     <string name="cordn_voice_stop">Stoppa och skicka</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Minst %1$d tecken</item>
+        <item quantity="other">Minst %1$d tecken</item>
+    </plurals>
 </resources>
