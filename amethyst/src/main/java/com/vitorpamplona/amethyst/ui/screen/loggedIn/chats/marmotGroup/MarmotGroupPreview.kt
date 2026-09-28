@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_preview_with_sender
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.observeChatEdit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
@@ -58,6 +59,10 @@ fun marmotGroupPreviewText(
     // to render as a blank second line under the group name.
     val myPubKey = accountViewModel.account.signer.pubKey
     val previewEvent = newestMessage?.event
+    // An edited last message previews its new text, as its bubble does. Observed rather than
+    // read once so an edit arriving while the list is open updates the row.
+    val editedContent = newestMessage?.let { observeChatEdit(it) }?.event?.content
+    val shownText = editedContent ?: previewEvent?.content.orEmpty()
     val previewBody =
         when {
             newestMessage == null -> stringRes(Res.string.marmot_no_messages_yet)
@@ -66,7 +71,7 @@ fun marmotGroupPreviewText(
             // Text first: an attachment usually carries a caption, and showing
             // "Attachment" over the words the sender actually wrote would be a
             // step back from the raw `content` this replaced.
-            previewEvent.content.isNotBlank() -> previewEvent.content
+            shownText.isNotBlank() -> shownText
             hasMip04Media(previewEvent) || hasEncryptedMediaV2(previewEvent) -> stringRes(Res.string.marmot_preview_media)
             else -> stringRes(Res.string.marmot_preview_no_text)
         }
