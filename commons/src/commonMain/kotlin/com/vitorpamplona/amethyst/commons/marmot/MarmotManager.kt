@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
@@ -212,7 +214,8 @@ class MarmotManager(
             keyPackageRotationManager.restoreFromStore()
             ingestDedupStore?.loadAll()?.let { marks ->
                 terminallyIngestedMutex.withLock { terminallyIngested.addAll(marks) }
-                Unit
+                val created = activeIds.filter { createdLocallyMarker(it) in marks }
+                createdLocallyLock.withLock { createdLocally.addAll(created) }
             }
             retryPendingPublishObligations()
             Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
@@ -228,6 +231,23 @@ class MarmotManager(
      */
     private val terminallyIngested = mutableSetOf<HexKey>()
     private val terminallyIngestedMutex = Mutex()
+
+    // Groups this device created. Holding leaf 0 is not proof: a commit that removes leaf 0
+    // and adds someone in the same epoch places the invitee there, which let a crafted
+    // invite skip New Requests. So creation leaves a durable marker, stored with the ingest
+    // markers (hashed, so it cannot collide with an event id) and read back on restore.
+    private val createdLocally = mutableSetOf<HexKey>()
+    private val createdLocallyLock = KmpLock()
+
+    private fun createdLocallyMarker(nostrGroupId: HexKey): HexKey = sha256("amethyst:marmot:created-locally:$nostrGroupId".encodeToByteArray()).toHexKey()
+
+    private suspend fun markCreatedLocally(nostrGroupId: HexKey) {
+        createdLocallyLock.withLock { createdLocally.add(nostrGroupId) }
+        markTerminallyIngested(createdLocallyMarker(nostrGroupId))
+    }
+
+    /** Whether this device created [nostrGroupId]. */
+    fun isCreatedLocally(nostrGroupId: HexKey): Boolean = createdLocallyLock.withLock { nostrGroupId in createdLocally }
 
     suspend fun isTerminallyIngested(eventId: HexKey): Boolean = terminallyIngestedMutex.withLock { eventId in terminallyIngested }
 
@@ -1113,6 +1133,7 @@ class MarmotManager(
         inboundProcessor.trackGroup(nostrGroupId)
         desync.seed(nostrGroupId, TimeUtils.now())
         subscriptionManager.subscribeGroup(nostrGroupId)
+        markCreatedLocally(nostrGroupId)
         Log.d("MarmotManager") { "createGroup($nostrGroupId): persisted and subscribed" }
         return nostrGroupId
     }
@@ -1156,6 +1177,7 @@ class MarmotManager(
         inboundProcessor.trackGroup(nostrGroupId)
         desync.seed(nostrGroupId, TimeUtils.now())
         subscriptionManager.subscribeGroup(nostrGroupId)
+        markCreatedLocally(nostrGroupId)
         return nostrGroupId
     }
 
@@ -2779,10 +2801,9 @@ class MarmotManager(
         chatroom.isOutOfSync.value = desync.isDesynced(nostrGroupId)
         // A group we created is ours: keep it out of "New Requests" across restarts.
         // `markAsKnown` at creation is in-memory only, and a creator who has not posted
-        // yet has nothing else that says so. The creator holds leaf 0 (RFC 9420 adds a
-        // joiner at the leftmost BLANK leaf, and leaf 0 is never blank while its creator
-        // is in the group), so an invitee only lands there after the creator has left.
-        if (groupManager.getGroup(nostrGroupId)?.leafIndex == 0) chatroom.ownerSentMessage = true
+        // yet has nothing else that says so. See [isCreatedLocally] for why this is not
+        // read off the tree.
+        if (isCreatedLocally(nostrGroupId)) chatroom.ownerSentMessage = true
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)
         chatroom.members.value = members

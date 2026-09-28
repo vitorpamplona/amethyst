@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.quartz.marmot.GroupEventResult
+import com.vitorpamplona.quartz.marmot.InMemoryIngestDedupStore
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
@@ -313,6 +314,27 @@ class MarmotDisbandTest {
             val hello = alice.manager.buildTextMessage(nostrGroupId, "welcome back")
             val received = bob.manager.processGroupEvent(hello.outbound.signedEvent)
             assertTrue(received is GroupEventResult.ApplicationMessage, "and reads the group again, got $received")
+        }
+
+    @Test
+    fun `a group we created is still ours after a restart`() =
+        runBlocking {
+            // The marker is what survives, not the tree position: a fresh manager on the same
+            // stores has to find it on restore.
+            val signer = NostrSignerInternal(KeyPair())
+            val states = SnapshotStateStore()
+            val messages = SnapshotMessageStore()
+            val bundles = SnapshotBundleStore()
+            val markers = InMemoryIngestDedupStore()
+            val before = MarmotManager(signer, states, messages, bundles, publisher = ACCEPTING_RELAY, ingestDedupStore = markers)
+            before.createCurrentProfileGroup(nostrGroupId, listOf("wss://relay.invalid"), GroupProfileV1("mine", ""))
+
+            val after = MarmotManager(signer, states, messages, bundles, publisher = ACCEPTING_RELAY, ingestDedupStore = markers)
+            after.restoreAll()
+            val room = MarmotGroupChatroom(nostrGroupId)
+            after.syncMetadataTo(nostrGroupId, room)
+
+            assertTrue(room.isKnown(emptySet()), "the creator's own group, after a restart")
         }
 
     @Test
