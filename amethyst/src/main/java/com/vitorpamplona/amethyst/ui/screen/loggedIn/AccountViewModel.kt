@@ -107,7 +107,7 @@ import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnread
@@ -2683,7 +2683,7 @@ class AccountViewModel(
                             meltResult.fees.toString(),
                         ),
                     )
-                } catch (e: LightningAddressResolver.LightningAddressError) {
+                } catch (e: LightningInvoiceResolver.LightningAddressError) {
                     onDone(e.title, e.msg)
                 } catch (e: Exception) {
                     if (e is kotlin.coroutines.cancellation.CancellationException) throw e
@@ -2915,7 +2915,7 @@ class AccountViewModel(
                     }
 
                 val invoice =
-                    LightningAddressResolver(host.lnurlTransport).lnAddressInvoice(
+                    LightningInvoiceResolver(host.lnurlTransport).lnAddressInvoice(
                         lnAddress = lnAddress,
                         milliSats = milliSats,
                         message = message,
@@ -2927,7 +2927,7 @@ class AccountViewModel(
                 // its message TextFieldState, which is UI-thread confined (see the KDoc on
                 // commons' `onUiThread`). This whole block runs on Dispatchers.IO.
                 withContext(Dispatchers.Main) { onNewInvoice(invoice) }
-            } catch (e: LightningAddressResolver.LightningAddressError) {
+            } catch (e: LightningInvoiceResolver.LightningAddressError) {
                 onError(e.title, e.msg)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

@@ -53,7 +53,7 @@ import kotlinx.serialization.json.longOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 /** LNURL-pay (LUD-06/16) for zaps and payments, over whatever [transport] the platform supplies. */
-class LightningAddressResolver(
+class LightningInvoiceResolver(
     private val transport: LnurlHttpTransport,
 ) {
     fun assembleUrl(lnAddress: String): String? {
@@ -166,7 +166,7 @@ class LightningAddressResolver(
             }
 
         if (errorMessage == null) {
-            Log.d("LightningAddressResolver") { "Error parsing LNResponse: $body" }
+            Log.d("LightningInvoiceResolver") { "Error parsing LNResponse: $body" }
         }
 
         return errorMessage

@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_e
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
@@ -434,7 +434,7 @@ class ZapPaymentHandler(
                         onProgress(progressAllPayments)
                     },
                 )
-            } catch (e: LightningAddressResolver.LightningAddressError) {
+            } catch (e: LightningInvoiceResolver.LightningAddressError) {
                 onError(e.title, e.msg, splitZapRequestPair.inputSetup.user)
                 null
             } catch (e: Exception) {
@@ -681,7 +681,7 @@ class ZapPaymentHandler(
         var sentZapRequest: ZapRequestEvent? = null
 
         val invoice =
-            LightningAddressResolver(lnurl).lnAddressInvoice(
+            LightningInvoiceResolver(lnurl).lnAddressInvoice(
                 lnAddress = lud16,
                 milliSats = zapValue,
                 message = message,

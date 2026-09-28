@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url
 import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url_explainer
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpTransport
@@ -75,7 +75,7 @@ class MeltProcessor {
             // the LN fee_reserve, then add the NUT-02 input fee the mint
             // charges on these proofs.
             val probeInvoice =
-                LightningAddressResolver(lnurl).lnAddressInvoice(
+                LightningInvoiceResolver(lnurl).lnAddressInvoice(
                     lnAddress = lud16,
                     milliSats = token.totalAmount * 1000,
                     message = "Calculate Fees for Cashu",
@@ -86,7 +86,7 @@ class MeltProcessor {
 
             val sendable = token.totalAmount - fees
             if (sendable <= 0) {
-                throw LightningAddressResolver.LightningAddressError(
+                throw LightningInvoiceResolver.LightningAddressError(
                     loadStringRes(Res.string.cashu_failed_redemption),
                     loadStringRes(
                         Res.string.cashu_failed_redemption_explainer_error_msg,
@@ -99,7 +99,7 @@ class MeltProcessor {
             // requesting change — there is no wallet to hold leftover proofs,
             // so the unused fee_reserve stays with the mint.
             val invoice =
-                LightningAddressResolver(lnurl).lnAddressInvoice(
+                LightningInvoiceResolver(lnurl).lnAddressInvoice(
                     lnAddress = lud16,
                     milliSats = sendable * 1000,
                     message = "Redeem Cashu",
@@ -115,16 +115,16 @@ class MeltProcessor {
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            if (e is LightningAddressResolver.LightningAddressError) throw e
+            if (e is LightningInvoiceResolver.LightningAddressError) throw e
             // The mint URL was refused before any request went out: this is OUR
             // message, not the mint's, so don't dress it up as "the mint said".
             if (e is MintUrlException) {
-                throw LightningAddressResolver.LightningAddressError(
+                throw LightningInvoiceResolver.LightningAddressError(
                     loadStringRes(Res.string.cashu_unsafe_mint_url),
                     loadStringRes(Res.string.cashu_unsafe_mint_url_explainer, e.message),
                 )
             }
-            throw LightningAddressResolver.LightningAddressError(
+            throw LightningInvoiceResolver.LightningAddressError(
                 loadStringRes(Res.string.cashu_failed_redemption),
                 loadStringRes(Res.string.cashu_failed_redemption_explainer_error_msg, e.message),
             )

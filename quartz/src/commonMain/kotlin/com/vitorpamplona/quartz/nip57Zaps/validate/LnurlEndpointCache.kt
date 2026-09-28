@@ -32,7 +32,7 @@ import kotlinx.coroutines.CompletableDeferred
  * recipient's LNURL provider's `nostrPubkey` to validate the signer (NIP-57
  * Appendix F). Without a cache, we'd re-fetch the same lnurlp endpoint for
  * every zap from every popular author. Outbound zaps populate the cache as a
- * side effect when [com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver]
+ * side effect when Amethyst's `LightningInvoiceResolver`
  * fetches the recipient's metadata.
  *
  * Keys are URLs (not lud16 forms) so callers can convert lud16 / bech32 LNURL

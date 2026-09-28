@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_value_no_recipients
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -245,7 +245,7 @@ class V4VPaymentHandler(
                     }
 
                 val invoice =
-                    LightningAddressResolver(lnurl).lnAddressInvoice(
+                    LightningInvoiceResolver(lnurl).lnAddressInvoice(
                         lnAddress = lnAddress,
                         milliSats = share.amountMilliSats,
                         message = message,
@@ -255,7 +255,7 @@ class V4VPaymentHandler(
                 progress += 1f / shares.size
                 onProgress(progress)
                 InvoicePayable(share, invoice)
-            } catch (e: LightningAddressResolver.LightningAddressError) {
+            } catch (e: LightningInvoiceResolver.LightningAddressError) {
                 onError(e.title, e.msg)
                 null
             } catch (e: Exception) {

@@ -28,11 +28,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * [LightningAddressResolver] over a scripted transport. The replies use the loose typing real
+ * [LightningInvoiceResolver] over a scripted transport. The replies use the loose typing real
  * LNURL servers send (a boolean as text, a number for a flag), which the resolver was written to
  * read through Jackson's lenient readers.
  */
-class LightningAddressResolverTest {
+class LightningInvoiceResolverTest {
     // A 1 mBTC (100,000 sat) BOLT-11.
     private val invoice100kSats = "lnbc1m1pjt9u0qsp553q90pj5mafzv20w45eqavned9tgwhl4q99n9s5ppcw24nzw3zeqpp5002kd3ktym67du86kj665fgaev7ka8ys7j5yz5fg686lr5e2gfkshp5dkk27nnuax05az3pk2r6ytxtvwn5j4xzsq9ajprhc7crjkmgvr3qxqyjw5qcqpjrzjqtzxvfsuxe4l92pf97tt4rcgpy2xalkmlwexh899wqxf83l8nwv4xzh0gvqq89qqqqqqqqlgqqqqq0gqvs9qxpqysgqx5mz04wd7kqu5zhhel9enr036hjrp4gga0nz084p2asjl36a0zmrk6mhqa249zsgqref2rlvhffm73u7rxgr47gden6rugup4ksvpzsqvds4pz"
 
@@ -51,7 +51,7 @@ class LightningAddressResolverTest {
     private fun resolverFor(
         lnurlp: String,
         invoiceReply: String = """{"pr":"$invoice100kSats","routes":[]}""",
-    ): Pair<LightningAddressResolver, ScriptedTransport> {
+    ): Pair<LightningInvoiceResolver, ScriptedTransport> {
         val transport =
             ScriptedTransport(
                 mapOf(
@@ -59,7 +59,7 @@ class LightningAddressResolverTest {
                     "https://example.com/callback" to invoiceReply,
                 ),
             )
-        return LightningAddressResolver(transport) to transport
+        return LightningInvoiceResolver(transport) to transport
     }
 
     @Test
