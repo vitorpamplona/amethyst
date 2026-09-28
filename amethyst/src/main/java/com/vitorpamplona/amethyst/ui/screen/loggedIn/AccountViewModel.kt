@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Context
 import android.net.Uri
@@ -28,7 +27,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
 import android.widget.Toast
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,34 +41,27 @@ import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Dao
-import com.vitorpamplona.amethyst.commons.model.InMemoryGeohashIdentityStore
 import com.vitorpamplona.amethyst.commons.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.model.location.LocationResult
-import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
-import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_failed
@@ -106,13 +97,10 @@ import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_light
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.OnlineChecker
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
-import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -124,7 +112,6 @@ import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
@@ -160,26 +147,19 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -216,7 +196,6 @@ import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.imeta
@@ -225,7 +204,6 @@ import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 import com.vitorpamplona.quartz.podcasts.PodcastShow
 import com.vitorpamplona.quartz.podcasts.PodcastValue
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
@@ -255,7 +233,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 
 /**
  * How long the navigation pickers wait for the toggles to stop before publishing. Long enough that a
@@ -3204,131 +3181,3 @@ class AccountViewModel(
     val baseNote: Note?,
     val nip19: Nip19Parser.ParseReturn,
 )
-
-var mockedCache: AccountViewModel? = null
-
-@SuppressLint("ViewModelConstructorInComposable")
-@Composable
-fun mockAccountViewModel(): AccountViewModel {
-    mockedCache?.let { return it }
-
-    val scope = rememberCoroutineScope()
-
-    val uiState =
-        UiSettingsState(
-            uiSettingsFlow = UiSettingsFlow(),
-            isMobileOrMeteredConnection = MutableStateFlow(false),
-            scope = scope,
-        )
-
-    val keyPair =
-        KeyPair(
-            privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
-            pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-            forceReplacePubkey = false,
-        )
-
-    val client = EmptyNostrClient()
-    val authenticator = EmptyIAuthStatus
-
-    val nwcFilters = NWCPaymentFilterAssembler(client)
-    val failureTracker = RelayOfflineTracker(client)
-
-    val account =
-        Account(
-            settings = AccountSettings(keyPair),
-            signer = NostrSignerInternal(keyPair),
-            geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
-            nwcFilterAssembler = { nwcFilters },
-            cashuMintDirectoryFilterAssembler = {
-                com.vitorpamplona.amethyst.commons.relayClient.assemblers
-                    .CashuMintDirectoryFilterAssembler(client)
-            },
-            cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
-            otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
-            cache = LocalCache,
-            client = client,
-            scope = scope,
-            appVersion = "preview",
-            encryptionKeyCache = EncryptionKeyCache(),
-            saveSettings = {},
-            marmotNotifier = { MarmotGroupNotifier.None },
-            nip46Consent = Nip46ConsentPrompter.Unanswered,
-            geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
-        )
-
-    return AccountViewModel(
-        account = account,
-        settings = uiState,
-        torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
-        httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
-        nip05ClientBuilder = { EmptyNip05Client() },
-    ).also {
-        mockedCache = it
-    }
-}
-
-var vitorCache: AccountViewModel? = null
-
-@SuppressLint("ViewModelConstructorInComposable")
-@Composable
-fun mockVitorAccountViewModel(): AccountViewModel {
-    mockedCache?.let { return it }
-
-    val scope = rememberCoroutineScope()
-
-    val uiState =
-        UiSettingsState(
-            uiSettingsFlow = UiSettingsFlow(),
-            isMobileOrMeteredConnection = MutableStateFlow(false),
-            scope = scope,
-        )
-
-    val keyPair =
-        KeyPair(
-            pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-        )
-
-    val client = EmptyNostrClient()
-    val authenticator = EmptyIAuthStatus
-
-    val nwcFilters = NWCPaymentFilterAssembler(client)
-    val failureTracker = RelayOfflineTracker(client)
-
-    val account =
-        Account(
-            settings = AccountSettings(keyPair),
-            signer = NostrSignerInternal(keyPair),
-            geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
-            nwcFilterAssembler = { nwcFilters },
-            cashuMintDirectoryFilterAssembler = {
-                com.vitorpamplona.amethyst.commons.relayClient.assemblers
-                    .CashuMintDirectoryFilterAssembler(client)
-            },
-            cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
-            otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
-            cache = LocalCache,
-            client = EmptyNostrClient(),
-            scope = scope,
-            appVersion = "preview",
-            encryptionKeyCache = EncryptionKeyCache(),
-            saveSettings = {},
-            marmotNotifier = { MarmotGroupNotifier.None },
-            nip46Consent = Nip46ConsentPrompter.Unanswered,
-            geohashIdentityStore = InMemoryGeohashIdentityStore(),
-            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
-        )
-
-    return AccountViewModel(
-        account = account,
-        settings = uiState,
-        torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
-        httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
-        nip05ClientBuilder = { EmptyNip05Client() },
-    ).also {
-        vitorCache = it
-    }
-}
