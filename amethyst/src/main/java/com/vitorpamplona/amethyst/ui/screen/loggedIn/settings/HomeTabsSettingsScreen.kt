@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.conversations
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_articles
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_attestations
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_birds
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_calendar_rsvps
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_chess
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_classifieds
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_comments
@@ -55,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.resources.home_content_type_nips
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_pictures
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_podcasts
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_polls
-import com.vitorpamplona.amethyst.commons.resources.home_content_type_calendar_rsvps
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_ratings
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_reposts
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_shorts
