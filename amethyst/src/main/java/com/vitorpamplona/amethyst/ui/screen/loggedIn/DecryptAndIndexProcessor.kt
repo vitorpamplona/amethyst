@@ -406,6 +406,8 @@ private suspend fun processMarmotWelcomeFlow(
     // A Welcome that already joined (or never can) is done. Replays of its wrap are routine:
     // every re-subscription re-delivers the last two days of gift wraps.
     if (manager.isTerminallyIngested(innerEvent.id)) return
+    // Out of retries this session: a re-delivered wrap waits for the next app start.
+    if (attempt == 0 && account.marmot.welcomeRetriesExhausted(innerEvent.id)) return
 
     // "h" tag is optional per MIP-02 — some senders (e.g. whitenoise-rs) omit it.
     // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension instead.
@@ -480,7 +482,10 @@ private fun scheduleWelcomeRetry(
     account: Account,
     attempt: Int,
 ) {
-    if (attempt >= WELCOME_RETRY_DELAYS_MS.size) return
+    if (attempt >= WELCOME_RETRY_DELAYS_MS.size) {
+        account.marmot.markWelcomeRetriesExhausted(welcome.id)
+        return
+    }
     if (!account.marmot.claimWelcomeRetry(welcome.id)) return
     account.scope.launch(Dispatchers.IO) {
         delay(WELCOME_RETRY_DELAYS_MS[attempt])

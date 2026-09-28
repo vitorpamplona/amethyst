@@ -94,10 +94,25 @@ class AccountMarmotActions(
     // Welcome rumor ids with a retry already scheduled, so a relay re-delivering the same
     // wrap while one waits does not start a second chain of retries.
     private val welcomeRetries = mutableSetOf<HexKey>()
+
+    // Welcome rumor ids whose retries ran out this session. Relays re-deliver two days of gift
+    // wraps on every re-subscription, and each delivery used to start a fresh chain, so a
+    // Welcome that can never apply was re-run through MLS for as long as relays kept it.
+    // In memory on purpose: the next app start still gives it one more try.
+    private val welcomeRetriesExhausted = mutableSetOf<HexKey>()
     private val welcomeRetriesLock = KmpLock()
 
-    /** True when [welcomeId] had no retry pending and now has one. */
-    fun claimWelcomeRetry(welcomeId: HexKey): Boolean = welcomeRetriesLock.withLock { welcomeRetries.add(welcomeId) }
+    /** True when [welcomeId] had no retry pending, has retries left, and now has one pending. */
+    fun claimWelcomeRetry(welcomeId: HexKey): Boolean =
+        welcomeRetriesLock.withLock {
+            welcomeId !in welcomeRetriesExhausted && welcomeRetries.add(welcomeId)
+        }
+
+    fun markWelcomeRetriesExhausted(welcomeId: HexKey) {
+        welcomeRetriesLock.withLock { welcomeRetriesExhausted.add(welcomeId) }
+    }
+
+    fun welcomeRetriesExhausted(welcomeId: HexKey): Boolean = welcomeRetriesLock.withLock { welcomeId in welcomeRetriesExhausted }
 
     fun releaseWelcomeRetry(welcomeId: HexKey) {
         welcomeRetriesLock.withLock { welcomeRetries.remove(welcomeId) }
