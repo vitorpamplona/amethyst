@@ -1018,6 +1018,9 @@ class AccountMarmotActions(
         if (view.adminPubkeys.contains(targetPubKey)) return
 
         manager.setGroupAdmins(nostrGroupId, view.adminPubkeys + targetPubKey, groupRelays.toList())
+        // The commit is canonical once published; without this the roster and the
+        // admin badges keep the pre-commit admin list until our own echo or a restart.
+        manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
     }
 
     /**
@@ -1042,5 +1045,8 @@ class AccountMarmotActions(
         }
 
         manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
+        // The commit is canonical once published; without this the roster and the
+        // admin badges keep the pre-commit admin list until our own echo or a restart.
+        manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
     }
 }
