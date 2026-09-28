@@ -145,7 +145,7 @@ class MarmotSyncPolicy(
 
         // Relays answer newest-first and several relays interleave, but a kind:445 can only
         // be opened at the epoch its predecessors built: a message sent after a commit fails
-        // (UndecryptableOuter, "no canonical epoch") if it is tried before that commit. The
+        // (UndecryptableOuter) if it is tried before that commit. The
         // cursor then moves past it and it is never fetched again, which is how an offline
         // member came back missing a rename and every message after a membership change.
         // Welcomes first (they create the groups), then group events oldest first.
@@ -254,7 +254,10 @@ class MarmotSyncPolicy(
     }
 }
 
-/** Failed only because the epoch it was sent at isn't reached yet; a later commit may open it. */
-private fun MarmotIngestResult.couldOpenAfterACommit(): Boolean =
-    this is MarmotIngestResult.UndecryptableOuter ||
-        (this is MarmotIngestResult.Failure && message.startsWith(MarmotManager.NO_CANONICAL_EPOCH_ERROR))
+/**
+ * Failed only because the epoch it was sent at isn't reached yet; a later commit may open it.
+ * Only an undecryptable outer layer qualifies. A "no canonical epoch" failure already opened
+ * its outer layer on an epoch we hold, so no commit can help it, and the inbound processor
+ * remembers its id: a retry would only come back as a duplicate.
+ */
+private fun MarmotIngestResult.couldOpenAfterACommit(): Boolean = this is MarmotIngestResult.UndecryptableOuter
