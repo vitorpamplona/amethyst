@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
@@ -962,13 +963,40 @@ class AccountMarmotActions(
      *
      * The endpoints come from the account's own Blossom server list, because a
      * policy naming servers the uploader does not use would describe a group
-     * nobody can actually post media to.
+     * nobody can actually post media to. An account without one uploads to the
+     * default list (the same one the upload picker offers and falls back
+     * through), so that is what its policy names.
      */
+    fun marmotMediaPolicyServers(): List<String> =
+        account.blossomServers.flow.value
+            .ifEmpty {
+                account.blossomServers.hostNameFlow.value
+                    .filter { it.type == ServerType.Blossom }
+                    .map { it.baseUrl }
+            }.mapNotNull { normalizedPolicyBaseUrl(it) }
+            .distinct()
+            .take(EncryptedMediaPolicyV2.MAX_ENTRIES)
+
+    /**
+     * [url] in the byte-exact form the media policy requires, or null when it has none.
+     * The component rejects a base URL that isn't its own WHATWG serialization, so the
+     * everyday spelling without a trailing slash (`https://cdn.nostrcheck.me`) failed the
+     * whole commit.
+     */
+    private fun normalizedPolicyBaseUrl(url: String): String? =
+        try {
+            MarmotWebUrl.normalize(url, allowHttp = true, label = "base_url").also {
+                EncryptedMediaPolicyV2.requireNormalizedBaseUrl(it)
+            }
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+
     suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: HexKey) {
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val servers = account.blossomServers.flow.value
+        val servers = marmotMediaPolicyServers()
         require(servers.isNotEmpty()) {
             "Cannot enable encrypted media without at least one Blossom server configured"
         }

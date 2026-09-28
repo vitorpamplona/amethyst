@@ -67,9 +67,11 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun CreateGroupScreen(
@@ -136,6 +138,17 @@ fun CreateGroupScreen(
                     description = groupDescription.trim(),
                     icon = iconChange,
                 )
+                // Commit the encrypted-media policy while we are the only member. White Noise
+                // (MDK) refuses to send any attachment in a group without one
+                // ("group does not require encrypted media"), and joiners learn it from the
+                // Welcome, so nobody has to apply a later commit to be able to share media.
+                // Best-effort: a group without it still works for text and legacy MIP-04.
+                try {
+                    accountViewModel.enableMarmotEncryptedMediaV2(nostrGroupId)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("CreateGroupScreen") { "Could not enable encrypted media for $nostrGroupId: ${e.message}" }
+                }
                 nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
             } catch (e: Exception) {
                 isCreating = false
