@@ -180,6 +180,26 @@ first).
    it and no `commonsUI`-only symbols**. It is ready for step 3.
 3. **Move the group** (77 files) to `commons/jvmAndroid` in one PR. Desktop keeps its
    `DesktopIAccount` until the old app is retired; `IAccount` stays as the port it already is.
+
+   **Done 2026-09-28, to `commonMain` rather than `jvmAndroid`** (maintainer's call), and with the
+   packages renamed to `com.vitorpamplona.amethyst.commons.model.*`. Getting there took more than
+   the seam cuts:
+   - JVM-only APIs in the group swapped for KMP ones: `BigDecimal` (quartz), `UUID`
+     (`kotlin.uuid`), `Base64` (`kotlin.io.encoding`), concurrent maps and sets (quartz
+     `ConcurrentMap`, commons `ConcurrentSet` + new `snapshot()`), `Locale` (an expect).
+   - Cashu rewritten as KMP: quartz `MintHttpTransport` under `MintHttpClient` and
+     `CashuMintOperations` (OkHttp is the jvmAndroid implementation, wired in `AccountCacheState`
+     and the CLI); `CashuWalletOps`, `CashuWalletReader`, `CashuMintDirectoryState` to commonMain.
+   - cordn's file stores and `EncryptedAppendLog` rewritten on okio, with a golden test pinning
+     the on-disk bytes from the old `java.io` code.
+   - Desktop's own `Nip65RelayListState`, `BlossomServerListState` and
+     `Nip65RelayListRepository` moved into `desktopApp`, freeing those names for the app's.
+   - Two blockers that arrived from `main` meanwhile were injected: the Android Keystore cordn
+     cipher, and the `marmotQuic` stream transport.
+   - `NestsServerListState` moved too (a line-split fully-qualified name hid it from the survey).
+
+   The app's `model/` keeps 13 Android-bound files (`AccountCacheState`, preferences, Tor, …).
+   `IAccount` and `DesktopIAccount` are unchanged.
 4. **`AccountViewModel`**: the same recipe, using the dependency list above.
 5. **The shared composables and their helpers** (sized in the tracker's 2026-09-27 section):
    - `RouteMaker`;
