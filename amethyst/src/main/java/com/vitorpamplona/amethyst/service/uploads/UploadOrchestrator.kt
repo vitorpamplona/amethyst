@@ -205,28 +205,54 @@ class UploadOrchestrator {
 
     /**
      * Tries [selected], then the rest of the servers the picker offered (see
-     * [blossomUploadOrder]) until one stores the blob. A failure that no other server would
-     * fix (a read-only login) stops at once. When every server fails, the error shown is the
-     * selected server's: that is the one the user chose and will recognize.
+     * [blossomUploadOrder]) until one stores the blob. Every server gets the same blob, so they
+     * share one signed upload token: the signer is asked once, and a signer that refused, timed
+     * out or is read-only stops the fallback instead of prompting again per server. Attempts
+     * don't publish their errors; when every server fails, the error shown is the selected
+     * server's, the one the user chose and will recognize.
      */
     private suspend fun uploadBlossomWithFallback(
         selected: ServerName,
         account: Account,
-        uploadTo: suspend (serverBaseUrl: String) -> UploadingFinalState,
+        uploadTo: suspend (serverBaseUrl: String, auth: SharedUploadAuth) -> UploadingFinalState,
     ): UploadingFinalState {
         val order = blossomUploadOrder(selected, account.blossomServers.hostNameFlow.value)
+        val auth = SharedUploadAuth()
         var firstError: UploadingState.Error? = null
         for (server in order) {
-            when (val result = uploadTo(server.baseUrl)) {
+            when (val result = uploadTo(server.baseUrl, auth)) {
                 is UploadingState.Finished -> return result
                 is UploadingState.Error -> {
                     if (firstError == null) firstError = result
-                    if (result.errorResource == Res.string.login_with_a_private_key_to_be_able_to_upload) return result
+                    if (auth.signerFailed) return result.also { updateState(0.0, it) }
                     Log.w("UploadOrchestrator", "Upload to ${server.baseUrl} failed, trying the next server")
                 }
             }
         }
         return firstError!!.also { updateState(0.0, it) }
+    }
+
+    /**
+     * The upload token for one blob, signed at most once and reused by every server tried.
+     * A signer that returned no token is asked again on the next server; only a token or a
+     * signer failure is kept.
+     */
+    private class SharedUploadAuth {
+        private var outcome: Result<BlossomAuthorizationEvent>? = null
+
+        var signerFailed = false
+            private set
+
+        suspend fun get(sign: suspend () -> BlossomAuthorizationEvent?): BlossomAuthorizationEvent? {
+            outcome?.let { return it.getOrThrow() }
+            return try {
+                sign()?.also { outcome = Result.success(it) }
+            } catch (e: SignerExceptions) {
+                signerFailed = true
+                outcome = Result.failure(e)
+                throw e
+            }
+        }
     }
 
     private suspend fun uploadBlossom(
@@ -241,6 +267,7 @@ class UploadOrchestrator {
         account: Account,
         forcedSigner: NostrSigner?,
         context: Context,
+        sharedAuth: SharedUploadAuth,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
         // BUD-05: route through /media (optimize) when the user opted in. The forced-signer
@@ -262,12 +289,15 @@ class UploadOrchestrator {
                         // upload path: some servers reject an upload whose auth carries a
                         // `server` tag, and upload-token replay is not the threat scoping
                         // guards against (delete tokens are — those stay scoped).
-                        httpAuth =
-                            when {
-                                forcedSigner != null -> { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner) }
-                                useMedia -> { hash, size, alt -> account.createBlossomMediaAuth(hash, size, alt) }
-                                else -> { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt) }
-                            },
+                        httpAuth = { hash, size, alt ->
+                            sharedAuth.get {
+                                when {
+                                    forcedSigner != null -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner)
+                                    useMedia -> account.createBlossomMediaAuth(hash, size, alt)
+                                    else -> account.createBlossomUploadAuth(hash, size, alt)
+                                }
+                            }
+                        },
                         context = context,
                         useMediaEndpoint = useMedia,
                     )
@@ -298,13 +328,13 @@ class UploadOrchestrator {
 
             finalState
         } catch (_: SignerExceptions.ReadOnlyException) {
-            error(Res.string.login_with_a_private_key_to_be_able_to_upload)
+            UploadingState.Error(Res.string.login_with_a_private_key_to_be_able_to_upload, emptyArray())
         } catch (e: BlossomPaymentException) {
             // BUD-07: the server wants payment before it will store the blob.
-            error(Res.string.blossom_payment_required, e.payment.reason ?: serverBaseUrl)
+            UploadingState.Error(Res.string.blossom_payment_required, arrayOf(e.payment.reason ?: serverBaseUrl))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            error(Res.string.failed_to_upload_media, e.message?.ifBlank { null } ?: e.javaClass.simpleName)
+            UploadingState.Error(Res.string.failed_to_upload_media, arrayOf(e.message?.ifBlank { null } ?: e.javaClass.simpleName))
         }
     }
 
@@ -510,8 +540,8 @@ class UploadOrchestrator {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                 ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
                 ServerType.Blossom ->
-                    uploadBlossomWithFallback(server, account) { baseUrl ->
-                        uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, baseUrl, null, null, account, forcedSigner, context)
+                    uploadBlossomWithFallback(server, account) { baseUrl, auth ->
+                        uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, baseUrl, null, null, account, forcedSigner, context, auth)
                     }
             }
         } finally {
@@ -560,8 +590,8 @@ class UploadOrchestrator {
                 // The same encrypted file goes to every server tried, so its key, nonce and
                 // hash stay valid whichever one ends up holding it.
                 ServerType.Blossom ->
-                    uploadBlossomWithFallback(server, account) { baseUrl ->
-                        uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                    uploadBlossomWithFallback(server, account) { baseUrl, auth ->
+                        uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, auth)
                     }
             }
         } finally {
