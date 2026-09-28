@@ -100,7 +100,11 @@ class EncryptedAppendLog(
         var looseEntries: Int,
     )
 
-    /** Keyed by the normalized path, so two spellings of one file share an entry. */
+    /**
+     * Keyed by the normalized path. That folds `a/./b` and `a/../a/b` together but does not resolve
+     * a relative path against the working directory, so callers must spell one file one way; every
+     * store here builds its paths from one directory.
+     */
     private val logs = mutableMapOf<Path, LogState>()
 
     private fun stateFor(file: Path): LogState =

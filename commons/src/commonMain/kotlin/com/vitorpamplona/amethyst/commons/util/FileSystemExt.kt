@@ -61,16 +61,22 @@ fun FileSystem.deleteQuietly(path: Path): Boolean =
  * @return true when nothing is left, including when [path] never existed.
  */
 fun FileSystem.deleteRecursivelyQuietly(path: Path): Boolean {
-    // Directories come before their children in this listing, so the reverse
-    // deletes every child before the directory holding it.
-    val children =
-        try {
-            listRecursively(path).toList()
-        } catch (e: IOException) {
-            emptyList()
-        }
     var deleted = true
-    for (child in children.asReversed()) deleted = deleteQuietly(child) && deleted
+    // metadataOrNull does not follow symlinks, so a link reads as a non-directory
+    // and is deleted itself rather than walked into.
+    if (metadataOrNull(path)?.isDirectory == true) {
+        // Listed one directory at a time, so a directory that cannot be listed
+        // costs only its own subtree: its siblings are still deleted, as
+        // File.deleteRecursively did.
+        val children =
+            try {
+                list(path)
+            } catch (e: IOException) {
+                deleted = false
+                emptyList()
+            }
+        for (child in children) deleted = deleteRecursivelyQuietly(child) && deleted
+    }
     return deleteQuietly(path) && deleted
 }
 
