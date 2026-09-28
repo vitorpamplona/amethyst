@@ -79,17 +79,7 @@ fun computeFollowsGoing(
     nowSeconds: Long,
     isAppointmentVisible: (Address) -> Boolean = { true },
 ): FollowsGoing {
-    // (appointment, author) -> that author's newest answer to it
-    val latest = HashMap<Pair<Address, HexKey>, CalendarRSVPEvent>()
-    rsvps.forEach { rsvp ->
-        val target = rsvp.calendarEventAddress() ?: return@forEach
-        if (target.kind != CalendarTimeSlotEvent.KIND && target.kind != CalendarDateSlotEvent.KIND) return@forEach
-        val key = target to rsvp.pubKey
-        val current = latest[key]
-        if (current == null || rsvp.isNewerThan(current)) {
-            latest[key] = rsvp
-        }
-    }
+    val latest = latestRsvpAnswers(rsvps)
 
     val goingByAppointment = HashMap<Address, MutableList<CalendarRSVPEvent>>()
     latest.forEach { (key, rsvp) ->
@@ -129,6 +119,32 @@ fun computeFollowsGoing(
     )
 
     return FollowsGoing(upcoming.map { it.second }, unresolved.map { it.second })
+}
+
+/**
+ * Each author's newest RSVP to each appointment, keyed (appointment, author). RSVPs are
+ * addressable with a free-form `d` tag, so one person can hold several live answers to the same
+ * appointment (said "going", then "can't go" under a new d tag); only the newest is their answer.
+ * RSVPs pointing at anything but an appointment kind are skipped.
+ */
+fun latestRsvpAnswers(rsvps: Collection<CalendarRSVPEvent>): Map<Pair<Address, HexKey>, CalendarRSVPEvent> {
+    val latest = HashMap<Pair<Address, HexKey>, CalendarRSVPEvent>()
+    rsvps.forEach { rsvp ->
+        val target = rsvp.calendarEventAddress() ?: return@forEach
+        if (target.kind != CalendarTimeSlotEvent.KIND && target.kind != CalendarDateSlotEvent.KIND) return@forEach
+        val key = target to rsvp.pubKey
+        val current = latest[key]
+        if (current == null || rsvp.isNewerThan(current)) {
+            latest[key] = rsvp
+        }
+    }
+    return latest
+}
+
+/** Whether this RSVP is its author's current answer in [latest] (see [latestRsvpAnswers]). */
+fun CalendarRSVPEvent.isLatestAnswerIn(latest: Map<Pair<Address, HexKey>, CalendarRSVPEvent>): Boolean {
+    val target = calendarEventAddress() ?: return false
+    return latest[target to pubKey]?.id == id
 }
 
 // Newest first; the id breaks a same-second tie so the answer never depends on input order.

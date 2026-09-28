@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FollowsGoingTest {
@@ -217,5 +218,32 @@ class FollowsGoingTest {
 
         // The view model's StateFlow relies on this to drop no-op folds.
         assertEquals(fold(rsvps), fold(rsvps.reversed()))
+    }
+
+    @Test
+    fun anOlderGoingIsNotTheCurrentAnswerOnceTheAuthorDeclines() {
+        // The Home feed's rule: the "going" under the old d tag is still live, but it is not
+        // Alice's answer any more.
+        val conf = timeSlot("conf", start = now + 86_400)
+        val going = rsvp(alice, conf, "accepted", createdAt = 10)
+        val declined = rsvp(alice, conf, "declined", createdAt = 20)
+
+        val latest = latestRsvpAnswers(listOf(going, declined))
+
+        assertTrue(declined.isLatestAnswerIn(latest))
+        assertFalse(going.isLatestAnswerIn(latest))
+    }
+
+    @Test
+    fun anAnswerStaysCurrentWhenOnlyOtherPeopleOrOtherEventsChange() {
+        val conf = timeSlot("conf", start = now + 86_400)
+        val party = timeSlot("party", start = now + 2 * 86_400)
+        val aliceConf = rsvp(alice, conf, "accepted", createdAt = 10)
+        val aliceParty = rsvp(alice, party, "declined", createdAt = 30)
+        val bobConf = rsvp(bob, conf, "declined", createdAt = 40)
+
+        val latest = latestRsvpAnswers(listOf(aliceConf, aliceParty, bobConf))
+
+        assertTrue(aliceConf.isLatestAnswerIn(latest))
     }
 }
