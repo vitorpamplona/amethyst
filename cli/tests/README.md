@@ -170,6 +170,12 @@ the Marmot protocol, via its `wn` / `wnd` binaries (the `wn-cli` package).
 Every test records a pass/fail/skip result into a tab-separated log, and the
 summary is printed at the end of the run.
 
+The MDK checkout is pinned (`MDK_PIN` in `marmot/setup.sh`) to the commit the
+shipping White Noise apps embed, read from their `MARMOT_VERSION` lockfiles;
+when Android and iOS disagree the newer one wins. As of 2026-09-27 that is
+`03b1809e` (White Noise Android; iOS is on the 0.10.4 release `fcc85edd`, an
+ancestor). Override with `MDK_PIN=<sha>` to test another MDK.
+
 > These harnesses previously targeted `marmot-protocol/whitenoise-rs`, which was
 > archived on 2026-08-05 pinned to `mdk-core 0.8.0`. Testing against it meant
 > testing against a frozen MIP-era client. The reference moved into `mdk`, and
@@ -214,6 +220,22 @@ would make strict-mode DM sends spuriously fail. `127.0.0.2` is still
 pure loopback and isn't matched by that filter. Override with
 `--host 127.0.0.5` etc. if `127.0.0.2` is taken.
 
+**macOS:** Linux answers every `127.0.0.0/8` address on `lo`; macOS only
+answers `127.0.0.1` until you add an alias, once per boot:
+
+```bash
+sudo ifconfig lo0 alias 127.0.0.2 up
+```
+
+The harnesses check for it and stop with that command instead of failing
+later with "Can't assign requested address". Two more macOS traps are handled
+for you: `wnd` sockets are moved to a short `/tmp/wnd.*` directory when the
+checkout path is too long for `sun_path` ("path must be shorter than
+SUN_LEN"), and `amy` is rebuilt incrementally on every run (a stale
+`cli/build/install/amy` from another branch produces misleading publish
+failures), unless you pass `--no-build`. A run killed mid-way can leave
+`amy serve` holding the relay port; `pkill -f "amy.*serve"` frees it.
+
 **Note:** dm-05 validates the kind:15 wire format via reference mode
 (caller supplies the URL + AES-GCM key/nonce). The upload-mode variant
 (`dm send-file --file PATH --server URL`) needs a local Blossom server
@@ -240,7 +262,7 @@ On the Android side:
 ## Quick start
 
 ```bash
-cd tools/marmot-interop
+cd cli/tests/marmot
 ./marmot-interop.sh
 ```
 

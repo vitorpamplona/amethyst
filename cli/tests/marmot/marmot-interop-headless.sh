@@ -140,6 +140,8 @@ source "$TESTS_DIR/lib.sh"
 source "$SCRIPT_DIR/setup.sh"
 # shellcheck source=../headless/helpers.sh
 source "$TESTS_DIR/headless/helpers.sh"
+B_SOCKET="$(short_socket_path "$B_SOCKET")"
+C_SOCKET="$(short_socket_path "$C_SOCKET")"
 # shellcheck source=tests-create.sh
 source "$SCRIPT_DIR/tests-create.sh"
 # shellcheck source=tests-manage.sh
@@ -212,6 +214,8 @@ ALL_TESTS=(
   test_29_disband_amy_to_wn
   test_30_wn_commit_after_app_data_update
   test_31_reaction_materializes_on_wn
+  test_32_amy_message_after_wn_commit
+  test_33_wn_leaves_amy_admin_group
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

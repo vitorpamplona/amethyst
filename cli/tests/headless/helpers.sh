@@ -66,6 +66,22 @@ assert_eq() {
   return 1
 }
 
+# macOS caps a unix socket path at 104 bytes (sun_path) and wnd refuses a longer
+# one ("path must be shorter than SUN_LEN"). wnd binds first inside a staging
+# dir next to the final path (`.sock.<pid>.<name>/<name>`, ~30 bytes more), so a
+# checkout under an ordinary home dir already crosses it: ~85 bytes failed. Move
+# such a socket into a short private temp dir (0700, since wnd also refuses a
+# socket dir others can read).
+short_socket_path() {
+  local path="$1"
+  if [[ ${#path} -lt 70 ]]; then printf '%s' "$path"; return; fi
+  # Resolved, not /tmp itself: on macOS /tmp is a symlink to /private/tmp and wnd
+  # refuses a socket path through an alias ("untrusted directory alias").
+  local dir
+  dir="$(mktemp -d "$(cd /tmp && pwd -P)/wnd.XXXXXX")" && chmod 700 "$dir"
+  printf '%s/%s.sock' "$dir" "$(basename "$(dirname "$path")")"
+}
+
 # --- embedded relay (amy serve → geode) --------------------------------------
 # Every relay-backed harness talks to ONE loopback relay, and that relay is
 # `amy serve` — i.e. geode, the relay this repo ships — booted from the amy
@@ -96,6 +112,15 @@ start_local_relay() {
   local relay_home="$RELAY_DATA/home"
   local bind="${RELAY_BIND:-$RELAY_HOST}"
   mkdir -p "$relay_home" "$RELAY_DATA/logs"
+
+  # Linux answers all of 127.0.0.0/8 on lo; macOS only 127.0.0.1 until an alias
+  # is added, and binding to anything else fails with a bare "Can't assign
+  # requested address" deep in the relay log.
+  if [[ "$(uname -s)" == "Darwin" && "$bind" == 127.* && "$bind" != "127.0.0.1" ]] \
+      && ! ifconfig lo0 2>/dev/null | grep -q "inet $bind "; then
+    fail_msg "$bind is not on lo0. On macOS add it once per boot: sudo ifconfig lo0 alias $bind up"
+    exit 1
+  fi
 
   [[ -x "$AMY_BIN" ]] || { fail_msg "amy not found at $AMY_BIN — build it with ./gradlew :cli:installDist"; exit 1; }
 

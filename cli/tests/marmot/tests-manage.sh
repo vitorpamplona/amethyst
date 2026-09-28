@@ -337,3 +337,64 @@ test_31_reaction_materializes_on_wn() {
   printf '%s\n' "$tl" >> "$LOG_FILE"
   record_result "$id" fail "wn's timeline never showed amy's reaction (timeline JSON in the log)"
 }
+
+# The other direction of test 30. After wn commits (a rename carries an
+# UpdatePath), both sides reached the same epoch and wn's messages kept
+# decrypting on amy, yet wn never showed another amy message.
+test_32_amy_message_after_wn_commit() {
+  banner "Test 32 — amy's message after wn's commit reaches wn"
+  local id="32 amy after wn commit"
+
+  local out gid mls_gid b_gid
+  out=$(amy_json marmot group create --name "Interop-32") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  amy_json marmot group promote "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy promote failed"; return; }
+  sleep 5
+  wn_b groups rename "$mls_gid" "Interop-32-by-wn" >/dev/null 2>&1 || true
+  amy_json marmot await rename "$gid" --name "Interop-32-by-wn" --timeout 120 >/dev/null || { record_result "$id" fail "amy did not apply wn's rename"; return; }
+
+  amy_json marmot message send "$gid" "32 from amy after wn commit" >/dev/null || { record_result "$id" fail "amy send failed"; return; }
+  if wait_for_message B "$mls_gid" "32 from amy after wn commit" 90; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn never received amy's message sent after wn's commit"
+  fi
+}
+
+test_33_wn_leaves_amy_admin_group() {
+  banner "Test 33 — wn leaves a group amy administers; amy commits the departure"
+  local id="33 wn leaves amy's group"
+
+  # Leaving is a SelfRemove proposal that only an admin can commit. Test 15
+  # covers a wn admin committing it; here amy is the only admin, so the
+  # departure takes effect only if amy commits it during sync.
+  local out gid mls_gid b_gid
+  out=$(amy_json marmot group create --name "Interop-33") || { record_result "$id" fail "amy group create failed"; return; }
+  gid=$(printf '%s' "$out" | jq -r '.group_id')
+  mls_gid=$(printf '%s' "$out" | jq -r '.mls_group_id')
+  amy_json marmot group add "$gid" "$B_NPUB" >/dev/null || { record_result "$id" fail "amy could not invite wn"; return; }
+  b_gid=$(wait_for_invite B 60) || { record_result "$id" fail "wn never received the Welcome"; return; }
+  wn_b groups accept "$b_gid" >/dev/null 2>&1 || true
+  wn_group_field_becomes "$mls_gid" '.group.group_id // empty' "$mls_gid" 120 || { record_result "$id" fail "wn never surfaced the group"; return; }
+
+  wn_b groups leave "$mls_gid" >/dev/null 2>&1 || { record_result "$id" fail "wn leave failed"; return; }
+
+  local deadline=$(( $(date +%s) + 120 )) show b_still=1
+  while [[ $(date +%s) -lt $deadline ]]; do
+    show=$(amy_json marmot group show "$gid" 2>/dev/null) || { sleep 3; continue; }
+    b_still=$(printf '%s' "$show" | jq --arg p "$B_HEX" '[.members[]? | select((.pubkey // .member_id) == $p)] | length')
+    [[ "$b_still" == "0" ]] && break
+    sleep 3
+  done
+  if [[ "$b_still" == "0" ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "amy never committed wn's SelfRemove; wn is still in the tree"
+  fi
+}

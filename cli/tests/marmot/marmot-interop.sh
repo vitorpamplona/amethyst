@@ -111,6 +111,8 @@ mkdir -p "$STATE_DIR" "$LOG_DIR" "$B_DIR/logs" "$C_DIR/logs"
 source "$TESTS_DIR/lib.sh"
 # shellcheck source=../headless/helpers.sh — start_local_relay / stop_local_relay (embedded amy serve)
 source "$TESTS_DIR/headless/helpers.sh"
+B_SOCKET="$(short_socket_path "$B_SOCKET")"
+C_SOCKET="$(short_socket_path "$C_SOCKET")"
 
 # --- preflight ---------------------------------------------------------------
 preflight() {
