@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
-import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
 import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
@@ -102,7 +101,7 @@ class CordnRuntime(
     private val client: INostrClient,
     private val filesDir: Path,
     private val scope: CoroutineScope,
-    private val cipher: CordnBlobCipher = KeyStoreCordnBlobCipher(),
+    private val cipher: CordnBlobCipher,
     /**
      * How a coordinator connection is opened. The default is the real one.
      *

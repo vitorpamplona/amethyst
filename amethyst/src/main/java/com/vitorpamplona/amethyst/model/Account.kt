@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
@@ -179,7 +180,6 @@ import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
-import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
@@ -349,7 +349,6 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.containsAny
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -405,6 +404,8 @@ class Account(
     val nip46Consent: Nip46ConsentPrompter,
     /** Where this account's geohash-chat seed and nickname are kept (the app's encrypted storage). */
     val geohashIdentityStore: GeohashIdentityStore,
+    /** Builds the raw-QUIC transport for agent text stream previews, on the account's scope. */
+    val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
     /**
      * Where cordn keeps its encrypted group state, or null to run without it.
      *
@@ -414,6 +415,11 @@ class Account(
      * own, by the §3.1 rule in `amethyst/plans/2026-09-19-cordn-ui.md`.
      */
     val cordnFilesDir: Path? = null,
+    /**
+     * Encrypts cordn's state at rest (the Android Keystore in the app). Called once, when
+     * [cordnFilesDir] is set; without both, the account runs without cordn.
+     */
+    val cordnBlobCipher: (() -> CordnBlobCipher)? = null,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
@@ -994,13 +1000,16 @@ class Account(
      * network and no coordinator learns anything from it.
      */
     val cordnRuntime: CordnRuntime? =
-        cordnFilesDir?.let {
-            CordnRuntime(
-                accountSigner = signer,
-                client = client,
-                filesDir = it,
-                scope = scope,
-            )
+        cordnFilesDir?.let { dir ->
+            cordnBlobCipher?.let { cipher ->
+                CordnRuntime(
+                    accountSigner = signer,
+                    client = client,
+                    filesDir = dir,
+                    scope = scope,
+                    cipher = cipher(),
+                )
+            }
         }
 
     val marmotManager: MarmotManager? =
@@ -1044,15 +1053,7 @@ class Account(
      * authoritative kind:9 like ordinary chat — which is why this is a
      * separate optional piece rather than part of [marmotManager].
      */
-    val marmotStreamTransport: MarmotQuicTransport by lazy {
-        QuicAgentTextStreamTransport(
-            parentScope = scope,
-            // Preview brokers are commonly self-signed and the binding expects
-            // that; the platform trust store is still the default answer, and
-            // a deployment that pins does it here.
-            certificateValidator = JdkCertificateValidator(),
-        )
-    }
+    val marmotStreamTransport: MarmotQuicTransport by lazy { marmotStreamTransportFactory(scope) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 

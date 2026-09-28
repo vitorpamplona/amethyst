@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46Clien
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
@@ -45,6 +46,8 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.GeohashIdentityStore
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
+import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -56,6 +59,7 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -369,6 +373,8 @@ class AccountCacheState(
             marmotNotifier = marmotNotifier,
             nip46Consent = nip46Consent,
             geohashIdentityStore = geohashIdentityStore(signer.pubKey),
+            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
+            cordnBlobCipher = { KeyStoreCordnBlobCipher() },
             scope =
                 CoroutineScope(
                     Dispatchers.IO +
@@ -416,3 +422,14 @@ class AccountCacheState(
         const val CLIENT_TAG_NAME = "Amethyst"
     }
 }
+
+/**
+ * The app's raw-QUIC transport for Marmot agent text stream previews (`transports/quic.md`).
+ * Preview brokers are commonly self-signed and the binding expects that; the platform trust
+ * store is still the default answer, and a deployment that pins does it here.
+ */
+fun defaultMarmotStreamTransport(scope: CoroutineScope): MarmotQuicTransport =
+    QuicAgentTextStreamTransport(
+        parentScope = scope,
+        certificateValidator = JdkCertificateValidator(),
+    )

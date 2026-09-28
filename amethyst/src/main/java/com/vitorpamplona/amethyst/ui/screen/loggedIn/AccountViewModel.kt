@@ -122,6 +122,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.InMemoryGeohashIdentityStore
 import com.vitorpamplona.amethyst.model.LatestKeyPackageOwner
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -3254,6 +3255,7 @@ fun mockAccountViewModel(): AccountViewModel {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
+            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
         )
 
     return AccountViewModel(
@@ -3316,6 +3318,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             marmotNotifier = { MarmotGroupNotifier.None },
             nip46Consent = Nip46ConsentPrompter.Unanswered,
             geohashIdentityStore = InMemoryGeohashIdentityStore(),
+            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
         )
 
     return AccountViewModel(
