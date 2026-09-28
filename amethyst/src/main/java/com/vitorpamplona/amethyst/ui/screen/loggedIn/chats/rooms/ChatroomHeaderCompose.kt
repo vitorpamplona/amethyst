@@ -521,16 +521,6 @@ private fun MarmotGroupRoomCompose(
     val otherMembers = remember(members) { marmotOtherMembers(members, accountViewModel.account.signer.pubKey) }
     val groupName = marmotGroupTitle(displayName, otherMembers, chatroom.nostrGroupId, accountViewModel)
 
-    // Prefer the group's own avatar — the plain https link first, then the
-    // encrypted Blossom blob; when it has neither, fall back to the NIP-11 icon
-    // of one of the group's relays (fetched on a cache miss).
-    val channelPicture =
-        if (avatarUrl != null || image != null) {
-            rememberMarmotGroupAvatarUrl(avatarUrl, image, accountViewModel, adminPubkeys)
-        } else {
-            loadMarmotRelayIcon(relays)
-        }
-
     // The row is handed the group's placeholder note when it has no messages.
     val lastContent = marmotGroupPreviewText(lastMessage.takeIf { it.event != null }, accountViewModel)
 
@@ -550,6 +540,17 @@ private fun MarmotGroupRoomCompose(
         )
         return
     }
+
+    // Prefer the group's own avatar — the plain https link first, then the
+    // encrypted Blossom blob; when it has neither, fall back to the NIP-11 icon
+    // of one of the group's relays (fetched on a cache miss). Resolved only here: a row that
+    // shows its members' faces above never draws it, and the relay icon is a NIP-11 fetch.
+    val channelPicture =
+        if (avatarUrl != null || image != null) {
+            rememberMarmotGroupAvatarUrl(avatarUrl, image, accountViewModel, adminPubkeys)
+        } else {
+            loadMarmotRelayIcon(relays)
+        }
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
