@@ -471,26 +471,6 @@ When your app goes to the background, you can use NostrClient's `connect` and `d
 methods to stop all communication to relays. Add the `connect` to your `onResume` and `disconnect`
 to `onPause` methods.
 
-### Platform Support
-
-Quartz is published for Android, JVM, iOS (`iosArm64`, `iosSimulatorArm64`), macOS (`macosArm64`)
-and Linux (`linuxX64`). Almost all of it lives in `commonMain` and behaves identically everywhere:
-event parsing and signing, NIP-19, NIP-04/44/49 encryption, the relay client, the SQLite event
-store, MLS/Marmot, and every event kind's builders and parsers. Platform code is limited to crypto
-primitives and the network layer; this table lists where the targets differ.
-
-| Area | Android / JVM | iOS / macOS | Linux | Notes |
-| :--- | :---: | :---: | :---: | :--- |
-| Secp256k1 (Schnorr, ECDH, key tweaks) | ✅ | ✅ | ✅ | `secp256k1-kmp` on every target (JNI on Android/JVM). |
-| SHA-1/256/512, RIPEMD-160, HMAC, AES-CBC/GCM | ✅ | ✅ | ✅ | JCA on Android/JVM, `cryptography-kotlin` on native. |
-| XChaCha20-Poly1305, Ed25519, X25519 | ✅ | ✅ | ✅ | XChaCha20 is pure Kotlin in `commonMain`; the MLS curves have per-platform actuals. |
-| JSON (events, relay messages, NIP-46) | ✅ | ✅ | ✅ | Jackson on Android/JVM, `kotlinx.serialization` on native. |
-| Unicode NFKC normalization | ✅ | ✅ | ⚠️ No-op | Linux returns the input unchanged, so NIP-49 keys encrypted with a non-ASCII password won't interoperate. |
-| Relay WebSocket transport | ✅ `BasicOkHttpWebSocket` | ❌ Bring your own | ❌ Bring your own | Implement `WebsocketBuilder` (e.g. on Ktor) and pass it to `NostrClient`. |
-| HTTP-backed helpers | ✅ OkHttp | ❌ Bring your own | ❌ Bring your own | NIP-05, NIP-11, NIP-03 calendars/explorer, NIP-FE and NIP-BC Esplora each have a `commonMain` interface with an OkHttp implementation. The NIP-60 Cashu mint and NIP-34 git clients are JVM-only. |
-| NIP-66 TCP reachability probe | ✅ | ❌ | ❌ | `TcpProber` uses `java.net` sockets. |
-| NIP-64 chess engine | ✅ `kchesslib` | ❌ | ❌ | Chess events parse everywhere; the move-validation `ChessEngine` throws `NotImplementedError` on native. |
-
 ## Contributing
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide — workflow,
