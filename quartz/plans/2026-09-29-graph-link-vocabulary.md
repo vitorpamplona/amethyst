@@ -34,7 +34,8 @@ written once, where the tags are already parsed — the pattern `SearchFieldExtr
 A **link** is one statement an event makes about something else:
 
 ```kotlin
-@JvmInline value class Relation(val name: String)   // Relation.ROOT, … Relation.ALL: every constant
+class Relation<P : LinkProps>(val name: String)   // Relation.ROOT: Relation<NoProps>,
+                                                    // Relation.REPORTED: Relation<ReportProps>, … ALL
 
 sealed interface LinkTarget {
     data class Event(val id: HexKey) : LinkTarget
@@ -43,22 +44,38 @@ sealed interface LinkTarget {
     data class Tag(val name: String, val value: String) : LinkTarget  // a topic, url, label value…
 }
 
-data class Link(
-    val relation: Relation,
+data class Link<P : LinkProps>(
+    val relation: Relation<P>,
     val target: LinkTarget,
-    val via: String? = null,          // "content" for a nostr: URI in the text, else the tag name
-    val props: Map<String, Any>? = null,  // relation-specific values (a report's type, a rank)
+    val via: String? = null,   // "content" for a nostr: URI in the text, else the Tag class's TAG_NAME
+    val props: P? = null,      // the relation's typed qualifiers (a report's category, a zap's amount)
 )
 
-interface LinkProvider { fun links(): List<Link> }   // the class's own statements
-interface LinkFree : LinkProvider                    // a class that references nothing
+interface LinkProps { fun toMap(): Map<String, Any> }   // store form, keyed by the Nostr tag names
 
-fun Event.allLinks(): List<Link>   // AUTHOR, ADDRESS, the every-kind tags, then links()
+interface LinkProvider { fun links(): List<Link<*>> }   // the class's own statements
+interface LinkFree : LinkProvider                       // a class that references nothing
+
+fun Event.allLinks(): List<Link<*>>   // AUTHOR, ADDRESS, the every-kind tags, then links()
 ```
 
-`links { … }` builds a class's list through `LinkBuilder`, which validates every target once
+**Props are typed.** Each relation declares the one props class its links carry
+(`nip01Core/links/props/`: `ReportProps`, `ZapProps`, `MemberProps`, `SubjectProps` with every
+NIP-85 metric, …), so the builder rejects a mismatched pairing at compile time and a consumer
+reads a relation's schema from its declaration. The props classes hold plain values only, so the
+core depends on no NIP. A single role and a list of roles are one `roles: List<String>`.
+
+**Tag classes own their tags.** `links()` never reads a tag slot or writes a tag name: it walks the
+tags with their Tag class's parser (`each(tags, ReportedEventTag::parse) { … }`), passes the parsed
+tag object (`GenericETag`, `PubKeyReferenceTag`, `AddressReferenceTag`) or an accessor's value, and
+names `via` with the class's `TAG_NAME`. Where a qualifier lives in a tag, the Tag class produces
+the props (`ReportedEventTag.linkProps()`). `LinkCodeReadsTagClassesTest` reads the sources and
+fails on slot indexing, tag-size checks, string-literal tag names or raw-map props in link code.
+
+`links { … }` builds a class's list through `LinkBuilder`, which checks every target once more
 (64-hex ids and keys, `kind:<64-hex>:d` coordinates, non-blank values), lowercases hex so one key
-is one node, and drops exact duplicates. A malformed value is dropped, never linked.
+is one node, drops props with no value present, and drops exact duplicates. A malformed value is
+dropped, never linked.
 
 Rules the vocabulary follows:
 
@@ -376,9 +393,9 @@ implementing (each is detailed in its appendix row):
    for later.
 7. **Private list entries** (NIP-44 encrypted NIP-51 items, encrypted DVM requests) are invisible
    to any public index. Stated once, not per row.
-8. **Decided: props may hold a `List<String>`**, for a set a query tests membership in (NIP-29
-   and NIP-43 `roles`, NIP-32 `labels`, NIP-88 `responses`); otherwise strings, numbers and
-   booleans.
+8. **Decided: props are typed per relation** (see the model): strings, numbers, booleans, or a
+   `List<String>` for a set a query tests membership in (`roles`, NIP-32 `labels`, NIP-88
+   `responses`).
 9. **Kinds added after the review** were decided the same way: the NIP-XX push-notification
    control events (3079, 3080, 3083) link their push service as `NOTIFICATION_SERVER`; a
    divine.video view (22236) links the video and the version watched as `VIEWED` (new: the
