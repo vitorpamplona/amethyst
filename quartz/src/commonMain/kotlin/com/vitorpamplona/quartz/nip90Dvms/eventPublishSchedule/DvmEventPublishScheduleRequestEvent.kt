@@ -24,9 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParamValues
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmRequestLinks
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.nip90Dvms.tags.param
@@ -40,7 +44,10 @@ class DvmEventPublishScheduleRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    override fun links(): List<Link> = links { dvmRequestLinks(tags) }
+
     fun inputs(): List<InputTag> = tags.inputs()
 
     fun eventJsons(): List<String> = inputs().filter { it.type == "text" }.map { it.value }

@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -40,7 +41,8 @@ class AppSpecificDataEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<AppSpecificDataDiff> {
+    DiffableEvent<AppSpecificDataDiff>,
+    LinkFree {
     override fun diffFrom(older: Event): AppSpecificDataDiff? {
         if (older !is AppSpecificDataEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return AppSpecificDataDiff(ContentChange.between(older.content, content))

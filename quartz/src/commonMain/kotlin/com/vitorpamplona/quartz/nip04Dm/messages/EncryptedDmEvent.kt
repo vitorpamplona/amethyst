@@ -28,6 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -51,7 +55,15 @@ class EncryptedDmEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     ChatroomKeyable,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
+    /** NIP-04: `p` is the receiver, `e` "the previous message in a conversation or a message we are explicitly replying to". */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.RECIPIENT, recipientPubKey(), "p")
+            event(Relation.PARENT, replyTo(), "e")
+        }
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)

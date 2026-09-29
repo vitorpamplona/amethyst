@@ -24,7 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
@@ -44,7 +49,23 @@ class GroupEditMetadataEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
+    /** NIP-29 subgroups: `parent` and `child` are group ids on the same relay, so they target the group as `h` does. */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "h" -> tag(Relation.GROUP, "h", it[1])
+                    "parent" -> tag(Relation.PARENT, "h", it[1], "parent")
+                    "child" -> tag(Relation.CHILD, "h", it[1], "child")
+                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
+                    "g" -> tag(Relation.TAG, "g", it[1])
+                }
+            }
+        }
+
     fun groupId() = tags.groupId()
 
     fun name() = tags.firstTagValue("name")

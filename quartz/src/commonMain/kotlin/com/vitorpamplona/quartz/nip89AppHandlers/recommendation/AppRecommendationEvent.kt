@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -42,7 +46,16 @@ class AppRecommendationEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider {
+    AddressHintProvider,
+    LinkProvider {
+    /** NIP-89: each `a` is a recommended 31990 handler; its 4th slot says for which platform. */
+    override fun links(): List<Link> =
+        links {
+            recommendations().forEach {
+                address(Relation.RECOMMENDED, it.address, "a", it.platform?.ifBlank { null }?.let { platform -> mapOf("platform" to platform) })
+            }
+        }
+
     override fun addressHints() = tags.mapNotNull(RecommendationTag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(RecommendationTag::parseAddressId)

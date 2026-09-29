@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip59Giftwrap.seals
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
@@ -40,7 +41,8 @@ class SealEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    HasInnerEvent {
+    HasInnerEvent,
+    LinkFree {
     // `@Volatile`: set by the decrypting coroutine in [unsealThrowing], read
     // by relay socket threads walking the wrap → seal → rumor chain.
     @kotlinx.serialization.Transient

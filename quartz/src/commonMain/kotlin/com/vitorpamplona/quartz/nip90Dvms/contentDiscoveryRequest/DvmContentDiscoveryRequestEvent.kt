@@ -25,10 +25,14 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmRequestLinks
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -41,7 +45,10 @@ class DvmContentDiscoveryRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    override fun links(): List<Link> = links { dvmRequestLinks(tags, forUserParam = true) }
+
     fun inputs(): List<InputTag> = tags.inputs()
 
     fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)

@@ -24,7 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmResultLinks
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -35,7 +40,15 @@ class DvmEventPublishScheduleResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /** NIP-90 5905's output: the content is the id of the event the DVM published. */
+    override fun links(): List<Link> =
+        links {
+            dvmResultLinks(tags)
+            event(Relation.RESULT, publishedEventId(), Link.VIA_CONTENT)
+        }
+
     fun publishedEventId(): HexKey? = content.ifEmpty { null }
 
     companion object {

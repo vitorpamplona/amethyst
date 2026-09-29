@@ -26,6 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -44,7 +49,29 @@ class DraftWrapEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /**
+     * NIP-37: the draft itself is encrypted. Quartz copies its thread anchors into public tags
+     * ([ExposeInDraft]) so a draft shows in context: the channel or live activity it belongs to
+     * (ROOT) and the message it replies to (PARENT). `k` says which kind the draft is.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "k" -> tag(Relation.TAG, "k", it[1])
+                    "e" ->
+                        when (it.getOrNull(3)) {
+                            "root" -> event(Relation.ROOT, it[1], "e")
+                            "reply" -> event(Relation.PARENT, it[1], "e")
+                        }
+                    "a" -> address(Relation.ROOT, it[1], "a")
+                }
+            }
+        }
+
     override fun isContentEncoded() = true
 
     fun isDeleted() = content == ""

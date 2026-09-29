@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
@@ -37,7 +41,11 @@ class NwcNotificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /** NIP-47: `p` is the client the notification is encrypted to. */
+    override fun links(): List<Link> = links { user(Relation.RECIPIENT, clientPubKey(), "p") }
+
     override fun isContentEncoded() = true
 
     fun clientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip98HttpAuth.tags.MethodTag
 import com.vitorpamplona.quartz.nip98HttpAuth.tags.PayloadHashTag
@@ -39,7 +40,8 @@ class HTTPAuthorizationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     fun method() = tags.firstNotNullOfOrNull(MethodTag::parse)
 
     fun payloadHash() = tags.firstNotNullOfOrNull(PayloadHashTag::parse)

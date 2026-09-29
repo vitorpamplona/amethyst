@@ -25,8 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip29RelayGroups.groupPinLinks
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.groupPins
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.pinnedAddresses
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.pinnedEventIds
@@ -51,7 +55,11 @@ class GroupPinnedEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /** NIP-29 pinned events; the group this list belongs to is its own `d`, which restates its ADDRESS: not linked. */
+    override fun links(): List<Link> = links { groupPinLinks(pins()) }
+
     fun groupId() = dTag()
 
     /** The full ordered pin list — `e` and `a` references — in the relay's display order. */

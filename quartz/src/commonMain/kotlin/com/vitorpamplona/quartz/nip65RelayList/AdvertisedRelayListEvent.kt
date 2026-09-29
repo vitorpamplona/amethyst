@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -44,7 +45,8 @@ class AdvertisedRelayListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<AdvertisedRelayListDiff> {
+    DiffableEvent<AdvertisedRelayListDiff>,
+    LinkFree {
     override fun diffFrom(older: Event): AdvertisedRelayListDiff? {
         if (older !is AdvertisedRelayListEvent || older.pubKey != pubKey) return null
         return AdvertisedRelayListDiff(ListDiff.of(older.relaysByUrl(), relaysByUrl(), { it.relayUrl }, { a, b -> a.type == b.type }))

@@ -23,8 +23,14 @@ package com.vitorpamplona.quartz.nip17Dm.messages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -44,7 +50,22 @@ class ChatMessageEvent(
     sig: HexKey,
 ) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
+    /** NIP-17: `p` are the receivers, `e` "the direct parent message this post is replying to", `q` a NIP-18 quote. */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "p" -> user(Relation.RECIPIENT, it[1], "p")
+                    "e" -> event(Relation.PARENT, it[1], "e")
+                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
+                }
+            }
+            contentMentions(content)
+        }
+
     // content is the decrypted (plaintext) direct-message body.
     override fun indexableContent() = content
 

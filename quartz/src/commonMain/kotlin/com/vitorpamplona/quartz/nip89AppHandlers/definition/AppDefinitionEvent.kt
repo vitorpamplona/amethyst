@@ -24,6 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
@@ -57,7 +62,27 @@ class AppDefinitionEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PublishedAtProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
+    /**
+     * NIP-89: "App descriptor events SHOULD tag or otherwise reference related site manifest
+     * events"; `latest` is the current nsite manifest and `next` the one intended for rollout,
+     * both written like an `a`. The `client` tag is linked for every kind by `allLinks()`.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "a" -> address(Relation.SITE_MANIFEST, it[1], "a")
+                    "latest" -> address(Relation.SITE_MANIFEST, it[1], "latest", mapOf("release" to "latest"))
+                    "next" -> address(Relation.SITE_MANIFEST, it[1], "next", mapOf("release" to "next"))
+                    "k" -> tag(Relation.TAG, "k", it[1])
+                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
+                }
+            }
+        }
+
     // App-handler content is JSON; parse it and index the human-meaningful
     // fields plus the addresses/URLs people search by.
     override fun indexableContent() =

@@ -24,8 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.hasTagName
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
@@ -47,7 +52,25 @@ class GroupMetadataEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
+    /**
+     * NIP-29 subgroups: `parent` and `child` are group ids on this relay, targeted as `h` is.
+     * A Buzz relay writes its channel type as a `t` ([buzzChannelType]): a type, not a topic.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "parent" -> tag(Relation.PARENT, "h", it[1], "parent")
+                    "child" -> tag(Relation.CHILD, "h", it[1], "child")
+                    "t" -> if (it[1] !in BUZZ_CHANNEL_TYPES) tag(Relation.HASHTAG, "t", it[1].lowercase())
+                    "g" -> tag(Relation.TAG, "g", it[1])
+                }
+            }
+        }
+
     override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

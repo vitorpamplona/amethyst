@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.utils.Hex
@@ -37,7 +41,11 @@ class NostrConnectEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /** NIP-46: each side `p`-tags the other and encrypts to it. */
+    override fun links(): List<Link> = links { user(Relation.RECIPIENT, recipientPubKey(), "p") }
+
     override fun isContentEncoded() = true
 
     fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || recipientPubKey() == signer.pubKey

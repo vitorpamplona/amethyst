@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -56,7 +60,11 @@ open class GiftWrapEvent(
     sig: HexKey,
     kind: Int = KIND,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
-    HasInnerEvent {
+    HasInnerEvent,
+    LinkProvider {
+    /** NIP-59: the wrap names only its recipient; the rumor inside is its own event once unwrapped. */
+    override fun links(): List<Link> = links { user(Relation.RECIPIENT, recipientPubKey(), "p") }
+
     // `@Volatile`: set by the decrypting coroutine in [unwrapThrowing], read
     // by relay socket threads walking the wrap → seal → rumor chain.
     @kotlinx.serialization.Transient

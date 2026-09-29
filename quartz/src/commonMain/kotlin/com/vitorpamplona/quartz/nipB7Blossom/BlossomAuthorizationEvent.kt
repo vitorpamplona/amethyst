@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipB7Blossom
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
@@ -35,7 +36,8 @@ class BlossomAuthorizationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     /**
      * This event's JSON as standard Base64 WITH padding — the same encoder as
      * NIP-98's [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.rawToken].

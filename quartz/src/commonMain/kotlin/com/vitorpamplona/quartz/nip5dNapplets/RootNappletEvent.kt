@@ -24,12 +24,16 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteDescription
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteIcon
+import com.vitorpamplona.quartz.nip5aStaticWebsites.siteManifestLinks
 import com.vitorpamplona.quartz.nip5aStaticWebsites.sitePaths
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteServers
 import com.vitorpamplona.quartz.nip5aStaticWebsites.siteSource
@@ -52,7 +56,10 @@ class RootNappletEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     NappletManifest,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
+    override fun links(): List<Link> = links { siteManifestLinks(tags) }
+
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

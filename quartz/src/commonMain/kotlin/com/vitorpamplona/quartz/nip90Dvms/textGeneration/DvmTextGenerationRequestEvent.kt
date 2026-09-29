@@ -24,11 +24,15 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmRequestLinks
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputPrompt
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.nip90Dvms.tags.output
@@ -45,7 +49,10 @@ class DvmTextGenerationRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
+    override fun links(): List<Link> = links { dvmRequestLinks(tags) }
+
     override fun indexableContent() = inputs().filter { it.type == "prompt" || it.type == "text" }.joinToString(" ") { it.value }
 
     // The read path: the prompt-ish inputs, in the order the joined form takes them.
