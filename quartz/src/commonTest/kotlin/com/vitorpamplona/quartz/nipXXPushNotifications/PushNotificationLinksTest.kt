@@ -18,39 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip88Polls
+package com.vitorpamplona.quartz.nipXXPushNotifications
 
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class Nip88PollsLinksTest {
-    private val id = "0".repeat(64)
-    private val author = "1".repeat(64)
-    private val sig = "0".repeat(128)
+class PushNotificationLinksTest {
+    private val service = "5".repeat(64)
+    private val tags = arrayOf(arrayOf("p", service), arrayOf("app", "divine"))
 
     @Test
-    fun responseNamesThePollAndTheChosenOptions() {
-        val poll = "2".repeat(64)
-        val pollAuthor = "a".repeat(64)
-        val event =
-            PollResponseEvent(
-                id,
-                author,
-                1,
-                arrayOf(arrayOf("e", poll), arrayOf("p", pollAuthor), arrayOf("response", "yes"), arrayOf("response", "maybe")),
-                "",
-                sig,
-            )
-        assertEquals(
-            listOf(
-                Link(Relation.POLL, LinkTarget.Event(poll), "e", mapOf("responses" to listOf("yes", "maybe"))),
-                Link(Relation.POLL_AUTHOR, LinkTarget.User(pollAuthor), "p"),
-            ),
-            event.links(),
-        )
+    fun everyPushControlEventLinksItsServiceOnly() {
+        val expected = listOf(Link(Relation.NOTIFICATION_SERVER, LinkTarget.User(service), "p"))
+        val id = "0".repeat(64)
+        val author = "1".repeat(64)
+        val sig = "0".repeat(128)
+        assertEquals(expected, PushRegistrationEvent(id, author, 1, tags, "ciphertext", sig).links())
+        assertEquals(expected, PushDeregistrationEvent(id, author, 1, tags, "ciphertext", sig).links())
+        assertEquals(expected, PushPreferencesEvent(id, author, 1, tags, "ciphertext", sig).links())
     }
 }

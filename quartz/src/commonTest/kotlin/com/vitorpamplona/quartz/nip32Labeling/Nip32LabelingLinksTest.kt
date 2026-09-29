@@ -54,7 +54,7 @@ class Nip32LabelingLinksTest {
                 "",
                 sig,
             )
-        val labels = mapOf("labels" to "ISO-639-1:en\nugc:nsfw")
+        val labels = mapOf("labels" to listOf("ISO-639-1:en", "ugc:nsfw"))
 
         assertEquals(
             listOf(

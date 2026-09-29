@@ -23,6 +23,10 @@ package com.vitorpamplona.quartz.nipXXPushNotifications
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.serialization.json.Json
@@ -46,8 +50,15 @@ abstract class PushServiceEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    LinkProvider {
     override fun isContentEncoded() = true
+
+    /**
+     * The push service the payload is encrypted to (the `p`), as marmot's token records name
+     * theirs. The `app` tag is an application id, not a reference; the payload is private.
+     */
+    override fun links(): List<Link> = links { user(Relation.NOTIFICATION_SERVER, pushService(), "p") }
 
     fun pushService() = tags.pushService()
 

@@ -32,8 +32,16 @@ class NipB0WebBookmarksLinksTest {
     private val sig = "0".repeat(128)
 
     @Test
-    fun bookmarkLinksItsTopicsButNotItsOwnD() {
+    fun bookmarkLinksTheFullUrlItsDNamesAndItsTopics() {
+        // NIP-B0 drops the https scheme from the d tag; the link restores it, so it meets every
+        // other `r` reference to the same page.
         val event = WebBookmarkEvent(id, author, 1, arrayOf(arrayOf("d", "example.com/page"), arrayOf("t", "Read")), "", sig)
-        assertEquals(listOf(Link(Relation.HASHTAG, LinkTarget.Tag("t", "read"), "t")), event.links())
+        assertEquals(
+            listOf(
+                Link(Relation.BOOKMARK, LinkTarget.Tag("r", "https://example.com/page"), "d"),
+                Link(Relation.HASHTAG, LinkTarget.Tag("t", "read"), "t"),
+            ),
+            event.links(),
+        )
     }
 }

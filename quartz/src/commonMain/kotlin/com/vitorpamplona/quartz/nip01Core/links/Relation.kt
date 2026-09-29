@@ -227,6 +227,7 @@ value class Relation(
         val UNARCHIVED = Relation("UNARCHIVED")
         val VERIFIED = Relation("VERIFIED")
         val VERIFIER = Relation("VERIFIER")
+        val VIEWED = Relation("VIEWED")
         val VIDEO = Relation("VIDEO")
         val VIEWER = Relation("VIEWER")
         val VOTED = Relation("VOTED")
@@ -402,6 +403,7 @@ value class Relation(
                 UNARCHIVED,
                 VERIFIED,
                 VERIFIER,
+                VIEWED,
                 VIDEO,
                 VIEWER,
                 VOTED,

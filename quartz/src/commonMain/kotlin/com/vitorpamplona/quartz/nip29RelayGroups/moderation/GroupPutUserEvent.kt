@@ -48,7 +48,11 @@ class GroupPutUserEvent(
                 if (it.size < 2) return@fastForEach
                 when (it[0]) {
                     "h" -> tag(Relation.GROUP, "h", it[1])
-                    "p" -> user(Relation.ADDED_USER, it[1], "p")
+                    "p" -> {
+                        // NIP-29 put-user: `["p", <pubkey>, <role>…]`, the roles it grants.
+                        val roles = if (it.size > 2) (2 until it.size).mapNotNull { i -> it[i].ifBlank { null } } else emptyList()
+                        user(Relation.ADDED_USER, it[1], "p", if (roles.isEmpty()) null else mapOf("roles" to roles))
+                    }
                 }
             }
         }

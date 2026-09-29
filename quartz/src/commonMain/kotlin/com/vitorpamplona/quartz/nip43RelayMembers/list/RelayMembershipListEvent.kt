@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.userTagsWithRoles
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
@@ -44,7 +44,8 @@ class RelayMembershipListEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { userTags(Relation.MEMBER, tags, "member") }
+    // `["member", <pubkey>, <role id>…]`: the NIP-43 kind 33534 roles the relay assigned ride on the link.
+    override fun links(): List<Link> = links { userTagsWithRoles(Relation.MEMBER, tags, "member") }
 
     fun members() = tags.members()
 

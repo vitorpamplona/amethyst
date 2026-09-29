@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -74,8 +75,17 @@ class WebBookmarkEvent(
 
     fun description() = content
 
-    /** The bookmarked URL is the event's own `d` tag, which links leave to the address (see [url]). */
-    override fun links(): List<Link> = links { hashtags(tags) }
+    /**
+     * The bookmarked URL, which NIP-B0 writes as the `d` tag. Like a NIP-85 assertion's subject, this
+     * `d` names something other than the event itself, so it is a link: `BOOKMARK` to the full URL
+     * ([url] restores the scheme NIP-B0 drops) as an `r` value, the node every other reference to
+     * that URL shares.
+     */
+    override fun links(): List<Link> =
+        links {
+            tag(Relation.BOOKMARK, "r", url(), via = "d")
+            hashtags(tags)
+        }
 
     companion object {
         const val KIND = 39701

@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -58,7 +62,8 @@ class VideoViewEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
-    EventHintProvider {
+    EventHintProvider,
+    LinkProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
@@ -80,6 +85,17 @@ class VideoViewEvent(
     fun loops() = tags.loops()
 
     fun source() = tags.source()
+
+    /**
+     * The watched video: its address, and the id of the exact version played. Each carries the
+     * session `phase` (start / end) when there is one, so a view count is the `start`s.
+     */
+    override fun links(): List<Link> =
+        links {
+            val props = phase()?.let { mapOf("phase" to it.code) }
+            address(Relation.VIEWED, video(), ATag.TAG_NAME, props)
+            event(Relation.VIEWED, videoVersion(), ETag.TAG_NAME, props)
+        }
 
     companion object {
         const val KIND = 22236

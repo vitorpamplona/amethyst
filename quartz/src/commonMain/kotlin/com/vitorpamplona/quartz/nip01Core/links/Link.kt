@@ -31,8 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * @property via where the reference was written: the tag name, or [VIA_CONTENT] for a
  * `nostr:` URI in the text (NIP-27).
  * @property props values that qualify this one link and that a query filters on after choosing
- * the relation: a report's type, an assertion's rank, a zap split's weight. Strings, numbers and
- * booleans only, so any store can hold them.
+ * the relation: a report's type, an assertion's rank, a zap split's weight. Strings, numbers,
+ * booleans, or a `List<String>` for a set of values the query tests membership in (a NIP-29
+ * member's `roles`, a label event's `labels`): what graph stores hold as properties.
  */
 data class Link(
     val relation: Relation,

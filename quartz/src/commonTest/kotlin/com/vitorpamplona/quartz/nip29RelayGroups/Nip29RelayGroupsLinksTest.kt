@@ -53,7 +53,7 @@ class Nip29RelayGroupsLinksTest {
     fun putAndRemoveUserLinkTheGroupAndTheMember() {
         val tags = arrayOf(arrayOf("h", "pizza"), arrayOf("p", alice, "admin"), arrayOf("previous", "abcd1234"))
         assertEquals(
-            listOf(group, Link(Relation.ADDED_USER, LinkTarget.User(alice), "p")),
+            listOf(group, Link(Relation.ADDED_USER, LinkTarget.User(alice), "p", mapOf("roles" to listOf("admin")))),
             GroupPutUserEvent(id, alice, 1, tags, "", sig).links(),
         )
         assertEquals(
@@ -162,7 +162,7 @@ class Nip29RelayGroupsLinksTest {
     @Test
     fun relaySignedListsLinkTheirPeopleButNotTheGroupInTheirD() {
         val tags = arrayOf(arrayOf("d", "pizza"), arrayOf("p", alice, "admin", "moderator"), arrayOf("p", "short"))
-        assertEquals(listOf(Link(Relation.ADMIN, LinkTarget.User(alice), "p")), GroupAdminsEvent(id, relay, 1, tags, "", sig).links())
+        assertEquals(listOf(Link(Relation.ADMIN, LinkTarget.User(alice), "p", mapOf("roles" to listOf("admin", "moderator")))), GroupAdminsEvent(id, relay, 1, tags, "", sig).links())
         assertEquals(listOf(Link(Relation.MEMBER, LinkTarget.User(alice), "p")), GroupMembersEvent(id, relay, 1, tags, "", sig).links())
         assertEquals(
             listOf(Link(Relation.PARTICIPANT, LinkTarget.User(bob), "participant")),

@@ -18,46 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip43RelayMembers
+package com.vitorpamplona.quartz.nip71Video.views
 
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class Nip43RelayMembersLinksTest {
-    private val id = "0".repeat(64)
-    private val sig = "0".repeat(128)
-    private val relay = "f".repeat(64)
-    private val alice = "1".repeat(64)
-    private val bob = "2".repeat(64)
+class VideoViewLinksTest {
+    private val author = "1".repeat(64)
+    private val version = "2".repeat(64)
 
     @Test
-    fun addAndRemoveLinkTheMember() {
-        val tags = arrayOf(arrayOf("-"), arrayOf("p", alice), arrayOf("p", "short"))
-        assertEquals(listOf(Link(Relation.ADDED_USER, LinkTarget.User(alice), "p")), RelayAddMemberEvent(id, relay, 1, tags, "", sig).links())
-        assertEquals(listOf(Link(Relation.REMOVED_USER, LinkTarget.User(alice), "p")), RelayRemoveMemberEvent(id, relay, 1, tags, "", sig).links())
-    }
-
-    @Test
-    fun membershipListLinksEveryMember() {
+    fun aViewLinksTheVideoAndTheVersionWatchedWithItsPhase() {
+        val video = "34236:$author:loop"
         val event =
-            RelayMembershipListEvent(
-                id,
-                relay,
+            VideoViewEvent(
+                "0".repeat(64),
+                "3".repeat(64),
                 1,
-                arrayOf(arrayOf("-"), arrayOf("member", alice, "moderator"), arrayOf("member", bob), arrayOf("p", "3".repeat(64))),
+                arrayOf(arrayOf("a", video), arrayOf("e", version), arrayOf("phase", "start")),
                 "",
-                sig,
+                "0".repeat(128),
             )
+        val phase = mapOf("phase" to "start")
         assertEquals(
             listOf(
-                Link(Relation.MEMBER, LinkTarget.User(alice), "member", mapOf("roles" to listOf("moderator"))),
-                Link(Relation.MEMBER, LinkTarget.User(bob), "member"),
+                Link(Relation.VIEWED, LinkTarget.Address(video), "a", phase),
+                Link(Relation.VIEWED, LinkTarget.Event(version), "e", phase),
             ),
             event.links(),
         )

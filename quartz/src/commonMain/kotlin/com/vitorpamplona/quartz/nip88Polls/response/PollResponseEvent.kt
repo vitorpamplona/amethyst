@@ -65,11 +65,11 @@ class PollResponseEvent(
 
     fun poll() = tags.poll()
 
-    /** NIP-88: the poll, with the chosen option ids (comma-joined, in tag order) on the link. The `p` is Quartz's notification of the poll's author. */
+    /** NIP-88: the poll, with the chosen option ids (in tag order) on the link. The `p` is Quartz's notification of the poll's author. */
     override fun links(): List<Link> =
         links {
             val responses = responses()
-            eventTags(Relation.POLL, tags, props = if (responses.isEmpty()) null else mapOf("responses" to responses.joinToString(",")))
+            eventTags(Relation.POLL, tags, props = if (responses.isEmpty()) null else mapOf("responses" to responses))
             userTags(Relation.POLL_AUTHOR, tags)
         }
 

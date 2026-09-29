@@ -50,6 +50,21 @@ fun LinkBuilder.userTags(
     props: Map<String, Any>? = null,
 ) = tags.fastForEach { if (it.size > 1 && it[0] == name) user(relation, it[1], name, props) }
 
+/**
+ * Slot 1 of every [name] tag, as a pubkey, with the tag's remaining non-blank slots as the
+ * link's `roles` (NIP-29 `["p", <pubkey>, <role>…]`, NIP-43 members).
+ */
+fun LinkBuilder.userTagsWithRoles(
+    relation: Relation,
+    tags: TagArray,
+    name: String = "p",
+) = tags.fastForEach {
+    if (it.size > 1 && it[0] == name) {
+        val roles = if (it.size > 2) (2 until it.size).mapNotNull { i -> it[i].ifBlank { null } } else emptyList()
+        user(relation, it[1], name, if (roles.isEmpty()) null else mapOf("roles" to roles))
+    }
+}
+
 /** Slot 1 of every [name] tag, as an address. */
 fun LinkBuilder.addressTags(
     relation: Relation,

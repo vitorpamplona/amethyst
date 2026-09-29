@@ -132,12 +132,12 @@ class LabelEvent(
     /**
      * NIP-32: every `e`/`a`/`p`/`t`/`r` is a label TARGET (`LABELED`), so a 1985's `t` and `r` are
      * never its own topics. Each target carries the labels in `labels`: one `<namespace>:<label>`
-     * per `l` tag (`ugc` when unmarked), newline-separated. The `l`/`L` values are `TAG`s. With no
+     * per `l` tag (`ugc` when unmarked). The `l`/`L` values are `TAG`s. With no
      * target tag the labels apply to the label event itself, which is no link.
      */
     override fun links(): List<Link> =
         links {
-            val labels = labels().joinToString("\n") { "${it.namespace}:${it.label}" }
+            val labels = labels().map { "${it.namespace}:${it.label}" }
             val props = if (labels.isEmpty()) null else mapOf("labels" to labels)
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach
