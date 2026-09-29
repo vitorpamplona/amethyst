@@ -1,7 +1,9 @@
 # A link vocabulary: what each kind's references MEAN
 
-Status: **draft for review** (2026-09-29). Nothing is implemented yet; the names below are the
-thing to review.
+Status: **draft for review** (2026-09-29). Nothing is implemented yet. Decided in review: links
+always start at an event (no user-to-user shortcuts), the author of acted-on content gets its OWN
+relation, and the kind stays on the source event only. **Naming is still open** (the style below
+is a placeholder).
 
 ## Why
 
@@ -55,9 +57,10 @@ Rules the vocabulary follows:
 2. **One relation per action, across kinds.** `REPLIES_TO` is a kind 1 reply, a NIP-22 comment, a
    git reply and a chat reply. The source event's `kind` says which; a query that cares filters
    on it (`(c:Event {kind: 1111})-[:REPLIES_TO]->(x)`). Kinds are not repeated in the name.
-3. **An action points at the content AND at the person it is about.** A reaction
-   `REACTS_TO` the note and `REACTS_TO` its author; the target's type (event, address, user)
-   tells them apart. "Reactions to my notes" and "reactions naming me" are both one hop.
+3. **The author of acted-on content gets a relation of its own.** A reaction `REACTS_TO` the
+   note, and names the note's author through `REACTS_TO_AUTHOR`, not through a second
+   `REACTS_TO`. "Reactions to my notes" and "reactions to anything by me" stay one hop, and each
+   is its own constant-time count.
 4. **Split a relation when queries separate its meanings on the same target type.** Counting a
    relation per node is constant-time in Neo4j, but filtering on a property reads every edge.
    So a distinction that is filtered all the time becomes two relations: `REPORTS_USER` (a
@@ -86,8 +89,10 @@ the relation comes from today; each row is a golden test when implemented.
 
 | Relation | Targets | Meaning | Kinds |
 |---|---|---|---|
-| `REPLIES_TO` | E, A, U | The direct parent, and (to U) its author | 1 (NIP-10, `replyingTo()`), 1111 (`e`/`a`/`p`), 1244, 1622, 2004, 30818, 14, 42, 1311, and 9 — whose reply parent is a **`q`** tag (NIP-C7), the case that shows why tag letters cannot be the schema |
-| `THREAD_ROOT` | E, A, U | The thread's root, and (to U) its author | 1 (`root()`), 1111 (`E`/`A`/`P`), 1622, 42 |
+| `REPLIES_TO` | E, A | The direct parent | 1 (NIP-10, `replyingTo()`), 1111 (`e`/`a`/`p`), 1244, 1622, 2004, 30818, 14, 42, 1311, and 9 — whose reply parent is a **`q`** tag (NIP-C7), the case that shows why tag letters cannot be the schema |
+| `THREAD_ROOT` | E, A | The thread's root | 1 (`root()`), 1111 (`E`/`A`), 1622, 42 |
+| `REPLIES_TO_AUTHOR` | U | The direct parent's author | 1111 (`p`), 1244 |
+| `THREAD_ROOT_AUTHOR` | U | The root's author | 1111 (`P`), 1244 |
 | `MENTIONS` | E, A, U | Named in passing: a NIP-10 `mention` marker, a `p` that notifies, a `nostr:` URI in the text (`via: content`) | 1, 1111, 9, 24, 42, 1311, 1621, 1622, 9802, 30023, 30817, 30818, … |
 | `QUOTES` | E, A | A `q` tag (except kind 9, where `q` is the reply parent) | 1, 42, 1111, 1311, 1621, 30023, … |
 | `FORK_OF` | E | NIP-10 `fork` marker | 1 |
@@ -99,11 +104,15 @@ the relation comes from today; each row is a golden test when implemented.
 
 | Relation | Targets | Meaning | Kinds |
 |---|---|---|---|
-| `REACTS_TO` | E, A, U, T | The reacted-to content (the last `e`/`a`, `originalPost()`) and its author; kind 17 reacts to a URL / external id (T) | 7, 17 |
-| `REPOSTS` | E, A, U | The reposted content (`boostedEventId()` / `boostedAddress()`) and its author | 6, 16 |
-| `ZAPS` | E, A, U | The zapped content and the recipient. Props: `msats` | 9734, 9735, 9733, 9321, 8333, 9736, 9737 |
-| `ZAP_SENDER` | U | Who paid (a receipt's embedded request author) | 9735 |
-| `HIGHLIGHTS` | E, A, U | The highlighted source and its author | 9802 |
+| `REACTS_TO` | E, A, T | The reacted-to content (the last `e`/`a`, `originalPost()`); kind 17 reacts to a URL / external id (T) | 7, 17 |
+| `REACTS_TO_AUTHOR` | U | Its author (`originalAuthor()`) | 7 |
+| `REPOSTS` | E, A | The reposted content (`boostedEventId()` / `boostedAddress()`) | 6, 16 |
+| `REPOSTS_AUTHOR` | U | Its author | 6, 16 |
+| `ZAPS` | E, A | The zapped content. Props: `msats` | 9734, 9735, 9733, 9321, 8333, 9736, 9737 |
+| `ZAP_RECIPIENT` | U | Who is paid (NIP-57 `p`). Props: `msats` | same |
+| `ZAP_SENDER` | U | Who paid (NIP-57 `P`, the embedded request's author) | 9735 |
+| `HIGHLIGHTS` | E, A | The highlighted source | 9802 |
+| `HIGHLIGHTS_AUTHOR` | U | Its author | 9802 |
 | `RATES` | E, A, U | The rated entity | 34259 |
 
 ### Moderation
@@ -195,20 +204,16 @@ Each is a small, additive classification when someone needs it.
 
 ## Open questions for review
 
-1. **`FOLLOWS` user to user?** Kind 3 is replaceable: a user holds exactly one, so `FOLLOWS` could
-   run `(user)-[:FOLLOWS]->(user)` instead of `(list)-[:FOLLOWS]->(user)`, and the list event
-   would keep only `AUTHORED_BY`. Follows-of-follows drops from four hops to two, which is most of
-   web-of-trust. The cost is that the follow's provenance (which list version, when) moves to the
-   list node. Same question for `MUTES` from kind 10000. Recommendation: yes for both. The
-   projection would handle it, not Quartz: the relation is the same, only where it starts
-   differs.
-2. **Action relations to the author** (rule 3): one `REACTS_TO` for the note and the person, or a
-   separate `REACTS_TO_AUTHOR`? Recommendation: one, except where queries must separate them on
-   the same target type (reports, rule 4).
-3. **`kind` on links.** Rule 2 puts the kind only on the source event, not on every link. At
-   billions of relationships, a property on each one costs tens of GB in the graph; reading the
-   source node is one hop. A relation whose counts are per kind should be split instead (as
-   `FOLLOWS` is).
+Decided:
+- **No user-to-user shortcuts.** `FOLLOWS` runs from the kind 3 event, like every other list. There
+  are more than twenty people lists, and a shortcut for one invites one for each.
+- **The author of acted-on content has its own relation** (rule 3).
+- **`kind` stays on the source event only.** A property on billions of links would cost tens of GB,
+  and the source node is one hop away. A relation whose counts are needed per kind is split
+  instead (as `FOLLOWS` is).
+
+Open:
+
 4. **Naming style.** UPPER_SNAKE, verbs in the present tense, as Neo4j convention has it.
    Alternatives welcome on any row: `THREAD_ROOT` vs `IN_THREAD`, `LISTS` vs `LISTS_MEMBER`,
    `AUTHORED_BY` vs `BY`.
