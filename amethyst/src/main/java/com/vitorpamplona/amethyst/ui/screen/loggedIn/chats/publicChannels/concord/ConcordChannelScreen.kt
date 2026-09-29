@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.concordTimerText
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinDuties
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedMessagesSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -186,10 +185,9 @@ fun ConcordChannelScreen(
     newMessageModel.init(accountViewModel)
     newMessageModel.load(communityId, channelId)
 
-    // CORD-04 §7 Pins: the header's entry point, the sheet it opens, the jump it requests, and the
-    // delayed duty writes (deletion omission / Edit refresh) a PIN_MESSAGES holder owes.
+    // CORD-04 §7 Pins: the header's entry point, the sheet it opens and the jump it requests. The
+    // delayed duty writes a PIN_MESSAGES holder owes run from the account (scheduleConcordPinDuties).
     val pins by rememberConcordChannelPins(communityId, channelId, accountViewModel)
-    ConcordPinDuties(communityId, channelId, pins, accountViewModel)
     var showPins by remember { mutableStateOf(false) }
     val jumpToNoteId = remember { mutableStateOf<String?>(null) }
     pins?.let { current ->
@@ -199,6 +197,7 @@ fun ConcordChannelScreen(
                 channelId = channelId,
                 pins = current,
                 accountViewModel = accountViewModel,
+                nav = nav,
                 onJumpToMessage = { jumpToNoteId.value = it },
                 onDismiss = { showPins = false },
             )

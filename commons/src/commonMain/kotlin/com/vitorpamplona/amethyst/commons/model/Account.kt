@@ -190,6 +190,7 @@ import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
@@ -360,6 +361,7 @@ import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -367,7 +369,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -800,7 +805,7 @@ class Account(
      * decrypts the blob transparently on fetch (keyed by URL) — the same path NIP-17 encrypted media
      * uses. Runs for both inbound wraps and our own local echo, so a sent image renders immediately.
      */
-    private fun registerConcordEncryptedImages(rumor: Event) {
+    internal fun registerConcordEncryptedImages(rumor: Event) {
         val images = ChannelChat.encryptedImagesOf(rumor)
         if (images.isEmpty()) return
         images.forEach { img ->
@@ -4195,6 +4200,22 @@ class Account(
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
                 runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
+            }
+        }
+
+        // CORD-04 §7: a PIN_MESSAGES holder owes keyless readers the deletion omission and the Edit
+        // refresh whether or not the channel is open, so the delayed pin duties run from the account —
+        // on every structural tick (a new Pin List head, a fold) and whenever a delete or an Edit lands.
+        // The scheduler itself waits 3–15 s, keeps one duty per channel and one attempt per debt.
+        scope.launch {
+            @OptIn(FlowPreview::class)
+            merge(
+                concordSessions.revision.map { },
+                cache.live.newEventBundles
+                    .filter { notes -> notes.any { it.event is DeletionRequestEvent || it.event is ConcordChatEditEvent } }
+                    .map { },
+            ).sample(1000).collect {
+                runCatching { concord.scheduleConcordPinDuties(scope) }.onFailure { Log.w("Concord", "pin duty scheduling failed", it) }
             }
         }
 

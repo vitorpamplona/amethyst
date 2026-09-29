@@ -41,9 +41,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -53,11 +53,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinnedMessage
-import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip92IMeta.appendMissingImetaUrls
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_pinned_budget
@@ -68,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_pinned_unavailable
 import com.vitorpamplona.amethyst.commons.resources.message_edited
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -77,7 +80,6 @@ import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -108,34 +110,6 @@ fun rememberConcordChannelPins(
     }
 }
 
-/**
- * The deletion omission and the Edit refresh a PIN_MESSAGES holder owes keyless readers (§7), run
- * the way the spec asks: after a short random wait, re-read, and publish only if still owed — so
- * simultaneous curators collapse to one publisher and a burst of edits costs one write. One attempt
- * per distinct debt, so a failure never spins.
- */
-@Composable
-fun ConcordPinDuties(
-    communityId: String,
-    channelId: String,
-    pins: ConcordChannelPins?,
-    accountViewModel: AccountViewModel,
-) {
-    val debt =
-        remember(pins) {
-            pins
-                ?.takeIf { it.owesRepublish }
-                ?.let { p -> (p.killed.map { "d" + it.rumorId } + p.pins.mapNotNull { it.newerEdit?.let { e -> "e" + e.rumorId } }).sorted().joinToString("|") }
-        } ?: return
-    val attempted = remember(communityId, channelId) { HashSet<String>() }
-    LaunchedEffect(communityId, channelId, debt) {
-        if (debt in attempted || !accountViewModel.account.concord.canPinConcord(communityId)) return@LaunchedEffect
-        delay(ConcordPinning.dutyDelayMs())
-        attempted.add(debt)
-        accountViewModel.launchSigner { accountViewModel.account.concord.settleConcordPins(communityId, channelId) }
-    }
-}
-
 /** The channel header's pinned-messages entry point: a pin with a count badge. Hidden when there is nothing to show. */
 @Composable
 fun ConcordPinnedButton(
@@ -156,8 +130,9 @@ fun ConcordPinnedButton(
 
 /**
  * The pinned-messages sheet: each verified pin with its author, time and words (marked edited when
- * revised), an "unavailable" notice when the list is sealed under a key this account never held,
- * a jump to the message when it resolves locally, and Unpin for those who may write pins.
+ * revised) rendered like the chat feed renders the message — links, mentions and its `imeta`
+ * attachments included — an "unavailable" notice when the list is sealed under a key this account
+ * never held, a jump to the message when it resolves locally, and Unpin for those who may write pins.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,6 +141,7 @@ fun ConcordPinnedMessagesSheet(
     channelId: String,
     pins: ConcordChannelPins,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onJumpToMessage: (HexKey) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -220,6 +196,7 @@ fun ConcordPinnedMessagesSheet(
                     PinnedRow(
                         pinned = pinned,
                         accountViewModel = accountViewModel,
+                        nav = nav,
                         onClick =
                             if (jumpable) {
                                 {
@@ -257,6 +234,7 @@ private fun PinNotice(
 private fun PinnedRow(
     pinned: ConcordPinnedMessage,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onClick: (() -> Unit)?,
     onUnpin: (() -> Unit)?,
 ) {
@@ -292,12 +270,7 @@ private fun PinnedRow(
                     )
                 }
             }
-            Text(
-                text = pinned.content,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
-            )
+            PinnedContent(pinned, accountViewModel, nav)
         }
         if (onUnpin != null) {
             IconButton(onClick = onUnpin) {
@@ -305,6 +278,35 @@ private fun PinnedRow(
             }
         }
     }
+}
+
+/**
+ * The pinned message's words and attachments through the chat feed's own pipeline: the rumor rebuilt
+ * from the proof (its encrypted attachments' keys registered), an attachment-only message given its
+ * `imeta` URLs as text exactly as the feed does, and the shared rich-text viewer rendering the media.
+ */
+@Composable
+private fun PinnedContent(
+    pinned: ConcordPinnedMessage,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val rumor = remember(pinned) { accountViewModel.account.concord.concordPinnedRumor(pinned) }
+    val tags = remember(rumor) { rumor.tags.toImmutableListOfLists() }
+    val content = remember(rumor) { appendMissingImetaUrls(rumor.content, rumor) }
+    val background = MaterialTheme.colorScheme.surface
+    val backgroundColor = remember(background) { mutableStateOf(background) }
+    TranslatableRichTextViewer(
+        content = content,
+        canPreview = true,
+        quotesLeft = 0,
+        tags = tags,
+        backgroundColor = backgroundColor,
+        id = pinned.rumorId,
+        authorPubKey = pinned.author,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 /** [hex]'s best display name, reactively, falling back to a short hex. */

@@ -27,10 +27,12 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinContext
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinWrite
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinnedMessage
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
+import com.vitorpamplona.amethyst.commons.actions.toRumor
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -41,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
@@ -107,6 +110,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -1705,6 +1709,18 @@ class AccountConcordActions(
         )
     }
 
+    /**
+     * [pinned] as the rumor the chat feed would render — its newest proven words over the original's
+     * tags (the NIP-92 `imeta` attachments), with the encrypted attachments' keys registered so the
+     * shared media pipeline fetches and decrypts them exactly as for a feed message. A pin proves its
+     * message without this account ever having held it, so the keys come from the proof itself.
+     */
+    fun concordPinnedRumor(pinned: ConcordPinnedMessage): Event {
+        val rumor = pinned.toRumor()
+        account.registerConcordEncryptedImages(rumor)
+        return rumor
+    }
+
     /** The author's newest Concord Edit this account holds for [rumorId], or null. */
     private fun heldConcordEdit(
         rumorId: HexKey,
@@ -1822,6 +1838,30 @@ class AccountConcordActions(
         if (concordChannelPins(communityId, channelIdHex)?.owesRepublish != true) return ConcordPinOutcome.NOTHING_TO_DO
         return writeConcordPins(communityId, channelIdHex) { session, ctx ->
             ConcordPinning.settle(ctx, { pinned -> pinned.newerEdit?.let { session.pinSource(channelIdHex, it.rumorId) } }, TimeUtils.now())
+        }
+    }
+
+    private val concordPinDuties = ConcordPinDutyScheduler()
+
+    /**
+     * Schedules, in [scope], the delayed pin duties (CORD-04 §7) this account owes in every joined
+     * community where it may write pins: for each Channel with a Pin List head whose read owes a
+     * republish, one [settleConcordPins] after the 3–15 s random wait ([ConcordPinDutyScheduler]).
+     * Called by the account on the Concord revision tick and when a delete or an Edit lands — the
+     * duties no longer depend on the channel screen being open.
+     */
+    internal fun scheduleConcordPinDuties(scope: CoroutineScope) {
+        if (!account.isWriteable()) return
+        for (session in account.concordSessions.sessions()) {
+            val communityId = session.entry.id
+            if (!canPinConcord(communityId)) continue
+            for (channelIdHex in session.pinHeads.value.keys) {
+                val debt = ConcordPinDutyScheduler.debtOf(concordChannelPins(communityId, channelIdHex))
+                concordPinDuties.schedule(scope, ConcordPinDutyScheduler.keyOf(communityId, channelIdHex), debt) {
+                    runCatching { settleConcordPins(communityId, channelIdHex) }
+                        .onFailure { Log.w("Concord", "pin duty for $channelIdHex in $communityId failed", it) }
+                }
+            }
         }
     }
 
