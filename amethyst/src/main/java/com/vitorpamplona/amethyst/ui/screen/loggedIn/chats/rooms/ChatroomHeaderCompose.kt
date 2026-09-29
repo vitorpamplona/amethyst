@@ -1036,15 +1036,17 @@ private fun ConcordServerRoomCompose(
     // Community name/icon from the folded Control Plane (bumped via the session revision).
     val revision by accountViewModel.account.concordSessions.revision
         .collectAsStateWithLifecycle()
-    val metadata =
+    val session =
         remember(row.communityId, revision) {
-            accountViewModel.account.concordSessions
-                .sessionFor(row.communityId)
-                ?.state
-                ?.value
-                ?.metadata
+            accountViewModel.account.concordSessions.sessionFor(row.communityId)
         }
-    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.concord_home_title)
+    val metadata = remember(session, revision) { session?.state?.value?.metadata }
+    // Before the Control Plane folds there is no metadata; the name the community was joined under
+    // still tells the user which one it is.
+    val name =
+        metadata?.name?.takeIf { it.isNotBlank() }
+            ?: session?.entry?.name?.takeIf { it.isNotBlank() }
+            ?: stringRes(Res.string.concord_home_title)
 
     val author = row.newestMessage?.author
     val noteEvent = row.newestMessage?.event
