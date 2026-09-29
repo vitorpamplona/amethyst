@@ -24,9 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ConsentTag
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReplacedByTag
+import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -50,7 +55,8 @@ class ArchivedIdentityEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The archived target — the single `p` tag. */
     fun target() = tags.archivalTarget()
 
@@ -68,6 +74,14 @@ class ArchivedIdentityEvent(
 
     /** Whether the NIP-70 `-` protection marker is present (it always should be). */
     fun isProtected() = tags.isProtected()
+
+    override fun links(): List<Link> =
+        links {
+            user(Relation.ARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
+            consent()?.let { user(Relation.ACTOR, it.actorPubKey, ConsentTag.TAG_NAME, mapOf("path" to it.path)) }
+            event(Relation.REQUEST, requestId(), ETag.TAG_NAME)
+            user(Relation.REPLACED_BY, replacedBy(), ReplacedByTag.TAG_NAME)
+        }
 
     companion object {
         const val KIND = 8002

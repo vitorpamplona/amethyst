@@ -21,10 +21,15 @@
 package com.vitorpamplona.quartz.buzz.relayAdmin
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.relayAdmin.tags.RoleTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -44,12 +49,18 @@ class RelayAdminChangeRoleEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The member whose role is changing — the single `p` tag. */
     fun target() = tags.relayAdminTarget()
 
     /** The new `role` for the member. */
     fun role() = tags.relayAdminRole()
+
+    override fun links(): List<Link> =
+        links {
+            user(Relation.ROLE_CHANGED, target(), PTag.TAG_NAME, linkProps("role" to role()))
+        }
 
     companion object {
         const val KIND = 9032

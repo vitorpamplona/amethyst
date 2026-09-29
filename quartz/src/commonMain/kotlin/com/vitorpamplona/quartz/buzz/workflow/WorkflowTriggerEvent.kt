@@ -24,7 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -41,9 +46,19 @@ class WorkflowTriggerEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The workflow UUID this trigger targets - the `d` tag. */
     fun workflowId() = tags.workflowDTag()
+
+    /**
+     * The `d` on this REGULAR kind names the workflow to run, not this event: it is the
+     * 30620 definition's `d`, under this author, since only the workflow's owner may trigger it.
+     */
+    override fun links(): List<Link> =
+        links {
+            address(Relation.TRIGGERED, workflowId()?.let { "${WorkflowDefEvent.KIND}:$pubKey:$it" }, DTag.TAG_NAME)
+        }
 
     companion object {
         const val KIND = 46020

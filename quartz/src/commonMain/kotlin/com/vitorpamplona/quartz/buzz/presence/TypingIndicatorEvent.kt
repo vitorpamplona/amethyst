@@ -27,10 +27,17 @@ import com.vitorpamplona.quartz.buzz.presence.typing.threadRoot
 import com.vitorpamplona.quartz.buzz.presence.typing.typingChannel
 import com.vitorpamplona.quartz.buzz.presence.typing.typingThreadReply
 import com.vitorpamplona.quartz.buzz.presence.typing.typingThreadRoot
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadLinks
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -47,7 +54,8 @@ class TypingIndicatorEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The channel UUID this typing indicator targets — the `h` tag. */
     fun channelId(): String? = tags.typingChannel()
 
@@ -56,6 +64,12 @@ class TypingIndicatorEvent(
 
     /** The reply (parent) event id, if present. */
     fun threadReplyId(): String? = tags.typingThreadReply()
+
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+            buzzThreadLinks(threadRootId(), threadReplyId())
+        }
 
     companion object {
         const val KIND = 20002

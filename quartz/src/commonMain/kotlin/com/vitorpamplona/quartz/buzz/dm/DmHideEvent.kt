@@ -24,7 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -43,9 +49,16 @@ class DmHideEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The DM channel id being hidden - the `h` tag. */
     fun channelId() = tags.dmChannelId()
+
+    /** The `h` here is the DM being hidden, the object of the command, not its scope. */
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.HIDDEN, tags, GroupIdTag.TAG_NAME)
+        }
 
     companion object {
         const val KIND = 41012

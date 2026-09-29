@@ -24,7 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -42,7 +49,8 @@ class MemberAddedNotificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The pubkey that was added - the `p` tag. */
     fun target() = tags.notificationTarget()
 
@@ -58,6 +66,13 @@ class MemberAddedNotificationEvent(
 
     /** The pubkey that performed the add/remove, or null when the body is missing or malformed. */
     fun actor() = notification()?.actor
+
+    /** The actor rides in the content JSON, which links do not parse. */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.ADDED_USER, target(), PTag.TAG_NAME)
+            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+        }
 
     companion object {
         const val KIND = 44100

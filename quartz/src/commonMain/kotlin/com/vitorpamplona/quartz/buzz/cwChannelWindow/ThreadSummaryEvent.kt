@@ -24,6 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -46,7 +51,8 @@ class ThreadSummaryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The thread root event id — the `d` tag (equal to the `e` tag). */
     fun rootId() = dTag()
 
@@ -64,6 +70,16 @@ class ThreadSummaryEvent(
             summary()
         } catch (_: Exception) {
             null
+        }
+
+    /**
+     * The summary is ABOUT the thread root its `e` names; it is not part of that thread, so it
+     * is not a ROOT link. The `d` repeats the root and is not linked (rule: no links from `d`).
+     */
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+            event(Relation.ABOUT, rootEventTag(), ETag.TAG_NAME)
         }
 
     companion object {

@@ -22,12 +22,17 @@ package com.vitorpamplona.quartz.buzz.moderation
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
+import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.moderation.tags.ActionTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.ReportTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.StatusTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +53,8 @@ class ModerationResolveReportEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The kind:1984 report event id being resolved — the `report` tag. */
     fun report() = tags.moderationReport()
 
@@ -60,6 +66,12 @@ class ModerationResolveReportEvent(
 
     /** The optional reason surfaced to the reporter. */
     fun reason() = tags.moderationReason()
+
+    /** The report rides in Buzz's own `report` tag, not an `e`. */
+    override fun links(): List<Link> =
+        links {
+            event(Relation.RESOLVED, report(), ReportTag.TAG_NAME, linkProps("status" to status(), "action" to action(), "reason" to reason()))
+        }
 
     companion object {
         const val KIND = 9044

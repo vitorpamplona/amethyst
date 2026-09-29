@@ -24,8 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -46,7 +52,8 @@ class WorkflowDefEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(name(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -67,6 +74,11 @@ class WorkflowDefEvent(
 
     /** The workflow YAML source - the event `content`. */
     fun yaml() = content
+
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+        }
 
     companion object {
         const val KIND = 30620

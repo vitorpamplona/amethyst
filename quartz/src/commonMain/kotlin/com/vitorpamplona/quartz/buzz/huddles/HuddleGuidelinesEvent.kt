@@ -24,7 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -48,7 +54,8 @@ class HuddleGuidelinesEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -62,6 +69,11 @@ class HuddleGuidelinesEvent(
 
     /** The guidelines text — the event `content`. */
     fun guidelines(): String = content
+
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+        }
 
     companion object {
         const val KIND = 48106

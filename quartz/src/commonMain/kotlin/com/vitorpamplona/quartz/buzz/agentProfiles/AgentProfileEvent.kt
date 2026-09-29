@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -50,7 +51,8 @@ class AgentProfileEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkFree {
     override fun indexableContent() = profileOrNull()?.let { listOfNotNull(it.name, it.displayName).joinToString("\n") } ?: ""
 
     // The read path. The parse happens once and its fields are handed over one by

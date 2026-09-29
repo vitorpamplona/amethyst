@@ -24,8 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 
@@ -47,7 +52,8 @@ class PairingEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     override fun isContentEncoded() = true
 
     /** The recipient's ephemeral pubkey — the `p` tag. */
@@ -71,6 +77,12 @@ class PairingEvent(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
+        }
+
+    /** The `p` is the peer's ephemeral pairing key, not a long-lived identity. */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME)
         }
 
     companion object {

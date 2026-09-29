@@ -21,11 +21,17 @@
 package com.vitorpamplona.quartz.buzz.amTurnMetrics
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.tags.AgentTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 
@@ -46,7 +52,8 @@ class AgentTurnMetricEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     override fun isContentEncoded() = true
 
     /** The owner (recipient) pubkey — the `p` tag. */
@@ -73,6 +80,12 @@ class AgentTurnMetricEvent(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
+        }
+
+    override fun links(): List<Link> =
+        links {
+            user(Relation.OWNER, ownerPubKey(), PTag.TAG_NAME)
+            user(Relation.AGENT, agentPubKey(), AgentTag.TAG_NAME)
         }
 
     companion object {

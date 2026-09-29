@@ -24,7 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -48,12 +55,23 @@ class DmCreatedEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The DM id - the `d` tag (empty string when absent). */
     fun dmId() = tags.dmId()
 
     /** The DM participants - one per `p` tag. */
     fun participants() = tags.dmParticipants()
+
+    /**
+     * The DM id rides in `d` on a regular kind, so it is a reference, not this event's
+     * address: it is linked as the `h` group every other DM event scopes itself with.
+     */
+    override fun links(): List<Link> =
+        links {
+            tag(Relation.GROUP, GroupIdTag.TAG_NAME, dmId(), via = DTag.TAG_NAME)
+            userTags(Relation.PARTICIPANT, tags)
+        }
 
     companion object {
         const val KIND = 41001

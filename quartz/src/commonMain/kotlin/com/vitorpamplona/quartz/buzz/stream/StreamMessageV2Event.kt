@@ -21,10 +21,19 @@
 package com.vitorpamplona.quartz.buzz.stream
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadLinks
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -46,7 +55,8 @@ class StreamMessageV2Event(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -60,6 +70,14 @@ class StreamMessageV2Event(
     fun mentions() = tags.mentions()
 
     fun isBroadcast() = tags.isBroadcast()
+
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+            buzzThreadLinks(tags)
+            userTags(Relation.MENTION, tags)
+            contentMentions(content)
+        }
 
     companion object {
         const val KIND = 40002

@@ -24,9 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 
@@ -55,7 +60,8 @@ class EngramEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     override fun isContentEncoded() = true
 
     /** The owner (recipient) pubkey — the single `p` tag. */
@@ -80,6 +86,12 @@ class EngramEvent(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
+        }
+
+    /** The `d` is a blinded HMAC that only looks like an id: it is never linked. */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.OWNER, ownerPubKey(), PTag.TAG_NAME)
         }
 
     companion object {

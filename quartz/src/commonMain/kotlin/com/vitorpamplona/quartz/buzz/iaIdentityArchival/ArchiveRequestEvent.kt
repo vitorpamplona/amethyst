@@ -23,11 +23,17 @@ package com.vitorpamplona.quartz.buzz.iaIdentityArchival
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReplacedByTag
+import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.tags.AuthTag
+import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.verifiedOwner
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
@@ -51,7 +57,8 @@ class ArchiveRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The archival target — the single `p` tag. */
     fun target() = tags.archivalTarget()
 
@@ -66,6 +73,17 @@ class ArchiveRequestEvent(
 
     /** Whether the NIP-70 `-` protection marker is present (it always should be). */
     fun isProtected() = tags.isProtected()
+
+    /**
+     * The `auth` owner is linked only when its attestation verifies for this event's author:
+     * an unverified `auth` tag is a claim anyone can write about any key.
+     */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.ARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
+            user(Relation.REPLACED_BY, replacedBy(), ReplacedByTag.TAG_NAME)
+            verifiedOwner(auth(), pubKey)
+        }
 
     companion object {
         const val KIND = 9035

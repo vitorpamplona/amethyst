@@ -21,12 +21,19 @@
 package com.vitorpamplona.quartz.buzz.aoObserver
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.tags.AgentTag
 import com.vitorpamplona.quartz.buzz.aoObserver.tags.FrameTag
+import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 
@@ -54,7 +61,8 @@ class ObserverFrameEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     override fun isContentEncoded() = true
 
     /** The recipient pubkey — the `p` tag (owner for telemetry, agent for control). */
@@ -111,6 +119,13 @@ class ObserverFrameEvent(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
+        }
+
+    override fun links(): List<Link> =
+        links {
+            val frame = linkProps("frame" to frame())
+            user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME, frame)
+            user(Relation.AGENT, agentPubKey(), AgentTag.TAG_NAME, frame)
         }
 
     companion object {

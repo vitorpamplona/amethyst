@@ -22,9 +22,14 @@ package com.vitorpamplona.quartz.buzz.moderation
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
+import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
@@ -46,7 +51,8 @@ class ModerationBanEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The banned pubkey — the single `p` tag. */
     fun target() = tags.moderationTarget()
 
@@ -55,6 +61,11 @@ class ModerationBanEvent(
 
     /** The machine-readable `reason` code, if present. */
     fun reason() = tags.moderationReason()
+
+    override fun links(): List<Link> =
+        links {
+            user(Relation.BANNED, target(), PTag.TAG_NAME, linkProps("expiration" to expiresAt(), "reason" to reason()))
+        }
 
     companion object {
         const val KIND = 9040

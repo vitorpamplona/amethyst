@@ -24,6 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -43,7 +48,8 @@ class PresenceUpdateEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The raw presence status string — the `status` tag, or the `content` fallback. */
     fun status(): String = tags.presenceStatus() ?: content
 
@@ -55,6 +61,15 @@ class PresenceUpdateEvent(
      * relay-synthesized read form (relay-signed, subject in a `p` tag) it is the `p` tag.
      */
     fun subjectPubKey(): HexKey = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1) ?: pubKey
+
+    /**
+     * The relay-synthesized read form names whose presence it reports in a `p`; a
+     * client-published update carries none, since its subject is its author.
+     */
+    override fun links(): List<Link> =
+        links {
+            userTags(Relation.SUBJECT, tags)
+        }
 
     companion object {
         const val KIND = 20001
