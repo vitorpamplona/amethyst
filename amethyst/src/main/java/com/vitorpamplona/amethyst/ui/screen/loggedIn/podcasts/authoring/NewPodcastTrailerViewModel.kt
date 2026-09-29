@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -91,10 +90,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
 
     fun isValid(): Boolean = title.value.isNotBlank() && (media.value != null || url.value.isNotBlank())
 
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return
         val server = selectedServer.value
         if (server == null) {
@@ -112,7 +108,6 @@ class NewPodcastTrailerViewModel : ViewModel() {
         val mediaSnap = media.value
         val quality = CompressorQuality.fromSlider(mediaQualitySlider.value)
         val strip = stripMetadata.value
-        val appContext = context.applicationContext
 
         isSending.value = true
         accountViewModel.launchSigner {

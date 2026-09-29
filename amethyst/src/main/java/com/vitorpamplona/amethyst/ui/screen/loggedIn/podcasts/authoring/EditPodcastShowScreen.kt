@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -97,7 +96,6 @@ fun EditPodcastShowScreen(
     nav: INav,
 ) {
     val vm: EditPodcastShowViewModel = viewModel()
-    val context = LocalContext.current
 
     LaunchedEffect(accountViewModel) { vm.init(accountViewModel) }
 
@@ -124,7 +122,7 @@ fun EditPodcastShowScreen(
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
-                    vm.saveAndPublish(context, accountViewModel)
+                    vm.saveAndPublish(accountViewModel)
                 },
             )
         },

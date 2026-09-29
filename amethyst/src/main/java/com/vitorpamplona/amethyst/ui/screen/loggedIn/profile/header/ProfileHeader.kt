@@ -49,7 +49,6 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -194,7 +193,6 @@ private fun ProfilePictureUploadButton(
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     postViewModel.init(accountViewModel)
-    val context = LocalContext.current
 
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
@@ -202,7 +200,7 @@ private fun ProfilePictureUploadButton(
             onImageUri = { media ->
                 showGallerySelect = false
                 if (media != null) {
-                    postViewModel.uploadPictureAndSave(media, context, accountViewModel.toastManager::toast)
+                    postViewModel.uploadPictureAndSave(media, accountViewModel.host.mediaUploader, accountViewModel.toastManager::toast)
                 }
             },
         )

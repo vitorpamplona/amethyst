@@ -152,7 +152,7 @@ fun NewPodcastEpisodeScreen(
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
-                    vm.saveAndPublish(context, accountViewModel)
+                    vm.saveAndPublish(accountViewModel)
                 },
             )
         },

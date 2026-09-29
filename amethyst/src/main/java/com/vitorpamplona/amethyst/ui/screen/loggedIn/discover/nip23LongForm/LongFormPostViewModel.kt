@@ -51,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
-import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
@@ -61,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -72,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -487,36 +486,7 @@ class LongFormPostViewModel :
         galleryUri: SelectedMedia,
         uploader: MediaUploader,
         onError: (String, String) -> Unit,
-    ): String? {
-        val state =
-            UploadOrchestrator().upload(
-                uri = galleryUri.uri,
-                mimeType = galleryUri.mimeType,
-                alt = null,
-                contentWarningReason = null,
-                compressionQuality = CompressorQuality.MEDIUM,
-                server = account.settings.defaultFileServer,
-                account = account,
-                uploader = uploader,
-            )
-
-        return when (state) {
-            is UploadingState.Finished -> {
-                val uploaded = state.result
-                if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                    uploaded.url
-                } else {
-                    onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading))
-                    null
-                }
-            }
-            is UploadingState.Error -> {
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(state.errorResource, *state.params))
-                null
-            }
-            else -> null
-        }
-    }
+    ): String? = uploadToDefaultServer(galleryUri, account, uploader, onError)
 
     fun upload(
         alt: String?,

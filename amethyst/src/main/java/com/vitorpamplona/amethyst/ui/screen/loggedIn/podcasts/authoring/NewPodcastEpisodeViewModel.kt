@@ -174,10 +174,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
     /** Valid with a title and a resolvable audio source (picked file or a pasted URL). */
     fun isValid(): Boolean = title.value.isNotBlank() && (audioMedia.value != null || audioUrl.value.isNotBlank())
 
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return
 
         val server = selectedServer.value
@@ -208,7 +205,6 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 server = server,
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
-                appContext = context.applicationContext,
                 uploader = accountViewModel.host.mediaUploader,
             )
 
@@ -269,7 +265,6 @@ class NewPodcastEpisodeViewModel : ViewModel() {
         val server: ServerName,
         val quality: CompressorQuality,
         val stripMetadata: Boolean,
-        val appContext: Context,
         val uploader: MediaUploader,
     )
 

@@ -88,7 +88,6 @@ fun NewPodcastTrailerScreen(
     nav: INav,
 ) {
     val vm: NewPodcastTrailerViewModel = viewModel()
-    val context = LocalContext.current
 
     LaunchedEffect(accountViewModel) { vm.init(accountViewModel) }
     StrippingFailureDialog(vm.strippingFailureConfirmation)
@@ -112,7 +111,7 @@ fun NewPodcastTrailerScreen(
                 isActive = { vm.isValid() && !isBusy },
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
-                    vm.saveAndPublish(context, accountViewModel)
+                    vm.saveAndPublish(accountViewModel)
                 },
             )
         },

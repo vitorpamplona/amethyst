@@ -46,7 +46,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -91,7 +90,6 @@ fun NewUserMetadataScreen(
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     postViewModel.init(accountViewModel)
-    val context = LocalContext.current
 
     val socialExpanded = rememberSaveable { mutableStateOf(false) }
 
@@ -213,7 +211,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForPicture(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,
@@ -238,7 +236,7 @@ fun NewUserMetadataScreen(
                             tint = MaterialTheme.colorScheme.placeholderText,
                             modifier = Modifier.padding(start = 5.dp),
                         ) {
-                            postViewModel.uploadForBanner(it, context, onError = accountViewModel.toastManager::toast)
+                            postViewModel.uploadForBanner(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
                         }
                     },
                     singleLine = true,

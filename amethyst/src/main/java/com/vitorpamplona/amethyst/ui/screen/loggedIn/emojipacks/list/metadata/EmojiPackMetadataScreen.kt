@@ -53,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -109,7 +108,6 @@ private fun EmojiPackMetadataScaffold(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
     val scrollState = rememberScrollState()
 
     var wantsToPickImage by remember { mutableStateOf(false) }
@@ -127,7 +125,7 @@ private fun EmojiPackMetadataScaffold(
 
     val onSubmit: () -> Unit = {
         viewModel.submit(
-            context = context,
+            uploader = accountViewModel.host.mediaUploader,
             onSuccess = { nav.popBack() },
             onError = accountViewModel.toastManager::toast,
         )

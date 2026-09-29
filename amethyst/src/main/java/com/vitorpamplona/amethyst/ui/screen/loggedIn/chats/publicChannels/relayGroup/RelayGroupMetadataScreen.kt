@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -211,7 +210,6 @@ private fun RelayGroupMetadataScaffold(
     // existing group already implies a working relay, so callers pass true.
     nip29Support: Boolean? = true,
 ) {
-    val context = LocalContext.current
     val scrollState = rememberScrollState()
 
     // NIP-29 §Subgroups relay support detection: `"nip29": { "subgroups": true }` in the NIP-11.
@@ -236,7 +234,7 @@ private fun RelayGroupMetadataScaffold(
 
     val onSubmit: () -> Unit = {
         viewModel.submit(
-            context = context,
+            uploader = accountViewModel.host.mediaUploader,
             onSuccess = onSuccess,
             onError = accountViewModel.toastManager::toast,
         )

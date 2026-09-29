@@ -259,10 +259,7 @@ class NewMusicTrackViewModel : ViewModel() {
      * Errors are reported through the global toast manager rather than a callback because
      * the screen may already be gone by the time we know the outcome.
      */
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return // double-tap guard
 
         // Snapshot every input the upload needs into immutable locals BEFORE launching, so
@@ -293,7 +290,6 @@ class NewMusicTrackViewModel : ViewModel() {
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 loadedEvent = loadedEvent,
-                appContext = context.applicationContext,
                 uploader = accountViewModel.host.mediaUploader,
             )
 
@@ -365,7 +361,6 @@ class NewMusicTrackViewModel : ViewModel() {
         val quality: CompressorQuality,
         val stripMetadata: Boolean,
         val loadedEvent: MusicTrackEvent?,
-        val appContext: Context,
         val uploader: MediaUploader,
     )
 

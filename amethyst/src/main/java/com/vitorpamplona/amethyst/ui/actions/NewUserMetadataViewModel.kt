@@ -20,33 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
-import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
-import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
-import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
-import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
@@ -164,13 +150,13 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun uploadForPicture(
         uri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ) {
         accountViewModel.launchSigner {
             upload(
                 galleryUri = uri,
-                context = context,
+                uploader = uploader,
                 onError = onError,
             )?.let {
                 picture.value = it
@@ -180,13 +166,13 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun uploadForBanner(
         uri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ) {
         accountViewModel.launchSigner {
             upload(
                 galleryUri = uri,
-                context = context,
+                uploader = uploader,
                 onError = onError,
             )?.let {
                 banner.value = it
@@ -196,14 +182,14 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun uploadPictureAndSave(
         uri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ) {
         load()
         accountViewModel.launchSigner {
             upload(
                 galleryUri = uri,
-                context = context,
+                uploader = uploader,
                 onError = onError,
             )?.let {
                 picture.value = it
@@ -215,81 +201,12 @@ class NewUserMetadataViewModel : ViewModel() {
 
     private suspend fun upload(
         galleryUri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ): String? {
         isUploadingImageForPicture = true
-
-        val strippingResult =
-            if (account.settings.stripLocationOnUpload) {
-                try {
-                    MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
-                } catch (e: AvifMetadataNotVerifiableException) {
-                    isUploadingImageForPicture = false
-                    onError(
-                        loadStringRes(Res.string.metadata_strip_failed_title),
-                        loadStringRes(Res.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
-                    )
-                    return null
-                }
-            } else {
-                null
-            }
-
-        val sourceUri =
-            if (account.settings.stripLocationOnUpload &&
-                strippingResult != null &&
-                !strippingResult.stripped
-            ) {
-                onError(
-                    loadStringRes(Res.string.metadata_strip_failed_title),
-                    loadStringRes(Res.string.metadata_strip_failed_upload_cancelled),
-                )
-                return null
-            } else {
-                strippingResult?.uri ?: galleryUri.uri
-            }
-
-        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
-
         return try {
-            val result =
-                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
-                        onProgress = {},
-                        httpAuth = account::createHTTPAuthorization,
-                        context = context,
-                    )
-                } else {
-                    BlossomUploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
-                        httpAuth = account::createBlossomUploadAuth,
-                        context = context,
-                    )
-                }
-
-            if (result.url == null) {
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading))
-            }
-
-            result.url
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
-            null
+            uploadToDefaultServer(galleryUri, account, uploader, onError)
         } finally {
             isUploadingImageForPicture = false
         }

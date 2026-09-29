@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -119,7 +118,6 @@ fun AddEmojiDialog(
                     onValueChange = { url = it },
                     label = { Text(stringRes(Res.string.emoji_url_label)) },
                     leadingIcon = {
-                        val context = LocalContext.current
                         SelectSingleFromGallery(
                             isUploading = viewModel.isUploadingEmojiImage,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -127,7 +125,7 @@ fun AddEmojiDialog(
                         ) { selected ->
                             viewModel.uploadEmojiImage(
                                 uri = selected,
-                                context = context,
+                                uploader = accountViewModel.host.mediaUploader,
                                 onUploaded = { uploadedUrl -> url = uploadedUrl },
                                 onError = accountViewModel.toastManager::toast,
                             )

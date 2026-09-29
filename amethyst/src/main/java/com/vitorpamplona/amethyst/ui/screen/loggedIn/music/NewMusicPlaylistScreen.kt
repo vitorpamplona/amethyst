@@ -57,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,7 +115,6 @@ fun NewMusicPlaylistScreen(
     nav: INav,
 ) {
     val vm: NewMusicPlaylistViewModel = viewModel()
-    val context = LocalContext.current
 
     LaunchedEffect(accountViewModel) {
         vm.init(accountViewModel, editDTag)
@@ -155,7 +153,6 @@ fun NewMusicPlaylistScreen(
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
                     vm.saveAndPublish(
-                        context = context,
                         accountViewModel = accountViewModel,
                     )
                 },

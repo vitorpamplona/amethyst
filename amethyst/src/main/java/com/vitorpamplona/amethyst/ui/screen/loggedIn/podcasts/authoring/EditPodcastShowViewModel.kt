@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -130,10 +129,7 @@ class EditPodcastShowViewModel : ViewModel() {
 
     fun isValid(): Boolean = title.value.isNotBlank()
 
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return
 
         val coverOrch = coverMedia.value
@@ -171,7 +167,6 @@ class EditPodcastShowViewModel : ViewModel() {
                 server = server,
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
-                appContext = context.applicationContext,
                 uploader = accountViewModel.host.mediaUploader,
             )
 
@@ -223,7 +218,6 @@ class EditPodcastShowViewModel : ViewModel() {
         val server: ServerName?,
         val quality: CompressorQuality,
         val stripMetadata: Boolean,
-        val appContext: Context,
         val uploader: MediaUploader,
     )
 }

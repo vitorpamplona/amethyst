@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -185,10 +184,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
      * runs on [AccountViewModel.viewModelScope] via `launchSigner`, so it keeps running even if
      * the user leaves the screen — they get a toast notification when it finishes either way.
      */
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return // double-tap guard
         if (!isValid()) return
 
@@ -218,7 +214,6 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 loadedEvent = loadedEvent,
-                appContext = context.applicationContext,
                 uploader = accountViewModel.host.mediaUploader,
             )
 
@@ -266,7 +261,6 @@ class NewMusicPlaylistViewModel : ViewModel() {
         val quality: CompressorQuality,
         val stripMetadata: Boolean,
         val loadedEvent: MusicPlaylistEvent?,
-        val appContext: Context,
         val uploader: MediaUploader,
     )
 

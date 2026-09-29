@@ -154,7 +154,6 @@ fun NewMusicTrackScreen(
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
                     vm.saveAndPublish(
-                        context = context,
                         accountViewModel = accountViewModel,
                     )
                 },
