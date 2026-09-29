@@ -35,10 +35,12 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinWrite
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -91,7 +93,8 @@ object ConcordPinCommands {
                     ?.key
                     ?.conversationKey
             },
-            isKilled = view.evidence::isKilled,
+            // CORD-08 §3: an expired message never shows, pinned or not (the proof stays valid, the rumor says it is gone).
+            isKilled = { view.evidence.isKilled(it) || it.tags.isExpirationBefore(TimeUtils.now()) },
             newestEdit = view.evidence::newestEdit,
         )
     }
@@ -168,6 +171,7 @@ object ConcordPinCommands {
         val handle = args.positional(0, "community")
         val channelRef = args.positional(1, "channel")
         val rumorId = args.positional(2, "rumor_id").lowercase()
+        val force = pin && args.bool("force")
         args.rejectUnknown()
         if (!HEX64.matches(rumorId)) return Output.error("bad_args", "RUMOR_ID must be a 64-char hex rumor id")
         val stored = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
@@ -202,9 +206,14 @@ object ConcordPinCommands {
                 if (pin) {
                     val refused = ConcordPinning.refusal(pinCtx)
                     val source = if (refused == null) ConcordPinning.sourceFrom(view.wraps, view.planes, rumorId) else null
+                    val expiresAt = source?.let { ConcordDisappearing.expirationOf(it.opened.rumor) }
                     when {
                         refused != null -> ConcordPinWrite(refused)
                         source == null -> ConcordPinWrite(ConcordPinOutcome.MESSAGE_UNAVAILABLE)
+                        // A pin carries the message's words in its proof: pinning a disappearing message
+                        // makes it outlive its timer (CORD-08), so that takes an explicit --force.
+                        expiresAt != null && !force ->
+                            return Output.error("expiring_message", "that message disappears at $expiresAt (CORD-08) and a pin would keep its words past the timer; pass --force to pin it anyway")
                         else -> ConcordPinning.pin(pinCtx, source, TimeUtils.now())
                     }
                 } else {

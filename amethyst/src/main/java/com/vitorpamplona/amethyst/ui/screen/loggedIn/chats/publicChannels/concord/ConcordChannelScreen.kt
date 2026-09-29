@@ -208,7 +208,7 @@ fun ConcordChannelScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                actions = { ConcordPinnedButton(pins) { showPins = true } },
+                actions = { ConcordPinnedButton(communityId, pins, accountViewModel) { showPins = true } },
                 title = {
                     Column {
                         Text(channel.toBestDisplayName(), maxLines = 1)
@@ -332,7 +332,11 @@ private fun ConcordTimerIndicator(
     communityId: String,
     accountViewModel: AccountViewModel,
 ) {
-    val session = remember(communityId) { accountViewModel.account.concordSessions.sessionFor(communityId) } ?: return
+    // Re-resolved on every session-set change: the session may not exist yet at first composition, and
+    // a Refounding replaces it (a captured one would keep reading the dead epoch's fold).
+    val sessions = accountViewModel.account.concordSessions
+    val revision by sessions.revision.collectAsStateWithLifecycle()
+    val session = remember(communityId, revision) { sessions.sessionFor(communityId) } ?: return
     val state by session.state.collectAsStateWithLifecycle()
     val secs = state?.metadata?.messageExpirationSecs() ?: return
     Text(

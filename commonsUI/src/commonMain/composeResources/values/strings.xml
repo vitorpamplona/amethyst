@@ -619,6 +619,9 @@
     <string name="concord_pinned_unavailable">This channel's pins are sealed under a key you don't hold, so they can't be shown here, and pinning is paused until they can be read.</string>
     <string name="concord_pinned_budget">%1$d of %2$d pins · %3$d% of the size budget used</string>
     <string name="concord_pinned_open_hint">Tap a pin to jump to it</string>
+    <string name="concord_pin_expiring_title">Pin a disappearing message?</string>
+    <string name="concord_pin_expiring_body">This message is set to disappear. Pinning it keeps its words in the channel's pin list after the timer erases the message itself.</string>
+    <string name="concord_pin_expiring_confirm">Pin anyway</string>
     <string name="concord_pin_failed_title">Pins</string>
     <string name="concord_pin_failed_unavailable">The pinned list is sealed under a key you don't hold. Changing it now would drop pins you can't see.</string>
     <string name="concord_pin_failed_too_many">This channel already has 25 pins. Unpin one first.</string>

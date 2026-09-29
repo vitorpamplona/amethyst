@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonObject
 import kotlin.random.Random
@@ -105,6 +106,15 @@ class ConcordChannelPins(
     /** True when the head owes keyless readers a republish: an erased entry, or a newer Edit to attach. */
     val owesRepublish: Boolean get() = killed.isNotEmpty() || pins.any { it.newerEdit != null }
 
+    /** Every rumor id the list carries, shown or erased — what a delete or an Edit must name to change this read. */
+    val rumorIds: Set<HexKey> by lazy { (alive + killed).mapTo(HashSet()) { it.rumorId } }
+
+    /**
+     * The soonest NIP-40 deadline (unix seconds) after [now] among the shown pins, or null: when this
+     * read goes stale, since an expired message leaves the list (CORD-08 §3).
+     */
+    fun nextExpiry(now: Long): Long? = alive.mapNotNull { pin -> pin.tags.firstNotNullOfOrNull(ExpirationTag::parse) }.filter { it > now }.minOrNull()
+
     companion object {
         fun none(
             channelIdHex: HexKey,
@@ -143,6 +153,38 @@ class ConcordPinVerifier(
             while (verdicts.size > maxEntries) verdicts.remove(verdicts.keys.first())
         }
         return verdict
+    }
+
+    private val lists = LinkedHashMap<HexKey, ConcordPins.PinListRead>()
+
+    /** List parses (and sealed-form decrypts) actually performed (cache misses) — for tests. */
+    var listReads: Int = 0
+        private set
+
+    /**
+     * [head]'s content read as a Pin List, memoized by the head's rumor id: an edition's bytes never
+     * change, so re-reading the pins on every trigger (a fold, a delete landing, an expiry) parses and
+     * decrypts the list once. A read that found the list sealed under a key not held is not cached,
+     * so the key arriving later (a Private Channel key delivered on grant) opens it.
+     */
+    fun readList(
+        head: ControlEdition,
+        unsealKey: (epoch: Long) -> ByteArray?,
+    ): ConcordPins.PinListRead {
+        lock.withLock { lists[head.rumorId] }?.let { return it }
+        val read = ConcordPins.read(head.content, unsealKey)
+        lock.withLock {
+            listReads++
+            if (!read.sealedUnavailable) {
+                lists[head.rumorId] = read
+                while (lists.size > MAX_LISTS) lists.remove(lists.keys.first())
+            }
+        }
+        return read
+    }
+
+    companion object {
+        private const val MAX_LISTS = 64
     }
 }
 
@@ -297,7 +339,7 @@ object ConcordPinning {
         complete: Boolean = true,
     ): ConcordChannelPins {
         if (head == null) return ConcordChannelPins.none(channelIdHex, complete)
-        val read = ConcordPins.read(head.content, unsealKey)
+        val read = verifier.readList(head, unsealKey)
         val alive = ArrayList<VerifiedPin>()
         val killed = ArrayList<VerifiedPin>()
         var invalid = 0
@@ -326,11 +368,22 @@ object ConcordPinning {
             pins = shown,
             sealedUnavailable = read.sealedUnavailable,
             violating = read.violating,
-            sealedForm = ConcordPins.isSealedForm(head.content),
+            sealedForm = read.sealedForm,
             invalidEntries = invalid,
             complete = complete,
         )
     }
+
+    /**
+     * [pins]' shown entries a reader displays: an entry by a [isBanned] author (the community declines
+     * to show a banned member's posts, CORD-04 §4) or by someone the reader [isHidden]s (mutes or
+     * blocks) is left out. Display only — the list itself, and every write built from it, is untouched.
+     */
+    fun visible(
+        pins: ConcordChannelPins,
+        isBanned: (HexKey) -> Boolean,
+        isHidden: (HexKey) -> Boolean,
+    ): List<ConcordPinnedMessage> = pins.pins.filterNot { isBanned(it.author) || isHidden(it.author) }
 
     /** True when [edit] is newer than whatever Edit [pin]'s proof already carries. */
     private fun isNewer(

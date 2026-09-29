@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteActionHandlers
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordExpiringPinDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -108,12 +110,15 @@ import com.vitorpamplona.amethyst.ui.note.observeZapRailCapability
 import com.vitorpamplona.amethyst.ui.note.payViaIntentOrManualSplit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.uuid.ExperimentalUuidApi
 
 // null amount = open the on-chain dialog with no prefill.
@@ -379,15 +384,36 @@ fun ChatMessageActionSheet(
 
                     // Concord (CORD-04 §7): pin/unpin into the channel's Pin List. Only offered to a
                     // PIN_MESSAGES holder who can write the Control Plane (null otherwise).
-                    val concordPinned = remember(note) { accountViewModel.account.concord.concordPinState(note) }
+                    // Read off the main thread: it verifies the channel's whole Pin List.
+                    val concordPinState by produceState<Boolean?>(null, note) {
+                        value = withContext(Dispatchers.Default) { accountViewModel.account.concord.concordPinState(note) }
+                    }
+                    val concordPinned = concordPinState
                     if (concordPinned != null && !note.isDraft()) {
+                        var confirmExpiringPin by remember(note) { mutableStateOf(false) }
                         SectionDivider()
                         TileRow {
                             val label = if (concordPinned) Res.string.relay_group_unpin_message else Res.string.relay_group_pin_message
                             ActionTile(MaterialSymbols.PushPin, stringRes(label)) {
-                                accountViewModel.toggleConcordPin(note)
-                                onDismiss()
+                                // Pinning a disappearing message (CORD-08) keeps its words past the timer: ask first.
+                                val expires = note.event?.let { ConcordDisappearing.expirationOf(it) } != null
+                                if (!concordPinned && expires) {
+                                    confirmExpiringPin = true
+                                } else {
+                                    accountViewModel.toggleConcordPin(note)
+                                    onDismiss()
+                                }
                             }
+                        }
+                        if (confirmExpiringPin) {
+                            ConcordExpiringPinDialog(
+                                onConfirm = {
+                                    confirmExpiringPin = false
+                                    accountViewModel.toggleConcordPin(note)
+                                    onDismiss()
+                                },
+                                onDismiss = { confirmExpiringPin = false },
+                            )
                         }
                     }
                 }
