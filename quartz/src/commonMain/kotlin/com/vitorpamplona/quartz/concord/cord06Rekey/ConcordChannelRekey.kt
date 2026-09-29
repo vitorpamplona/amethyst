@@ -256,7 +256,8 @@ object ConcordChannelRekey {
             rotations
                 .filter { it.channelIdHex.equals(channelIdHex, ignoreCase = true) && it.newEpoch > heldEpoch && it.complete && honored(it) }
                 .groupBy { it.newEpoch }
-                .toSortedMap()
+                .entries
+                .sortedBy { it.key }
         if (byEpoch.isEmpty()) return ChannelRekeyOutcome.None
 
         var chainEpoch = heldEpoch
