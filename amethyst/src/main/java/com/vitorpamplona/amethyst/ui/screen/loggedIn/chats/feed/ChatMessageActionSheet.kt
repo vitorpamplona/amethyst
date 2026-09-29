@@ -376,6 +376,20 @@ fun ChatMessageActionSheet(
                     if (relayGroup != null && !note.isDraft()) {
                         RelayGroupPinTile(note, relayGroup, onDismiss, accountViewModel)
                     }
+
+                    // Concord (CORD-04 §7): pin/unpin into the channel's Pin List. Only offered to a
+                    // PIN_MESSAGES holder who can write the Control Plane (null otherwise).
+                    val concordPinned = remember(note) { accountViewModel.account.concord.concordPinState(note) }
+                    if (concordPinned != null && !note.isDraft()) {
+                        SectionDivider()
+                        TileRow {
+                            val label = if (concordPinned) Res.string.relay_group_unpin_message else Res.string.relay_group_pin_message
+                            ActionTile(MaterialSymbols.PushPin, stringRes(label)) {
+                                accountViewModel.toggleConcordPin(note)
+                                onDismiss()
+                            }
+                        }
+                    }
                 }
             }
 

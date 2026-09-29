@@ -199,7 +199,7 @@ object ConcordChannelCommands {
     }
 
     /** Resolve a channel handle: the `general` shortcut, a full hex id, or a folded name/id-prefix match. */
-    private suspend fun resolve(
+    internal suspend fun resolve(
         ctx: Context,
         sc: StoredCommunity,
         ref: String,

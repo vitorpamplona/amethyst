@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
@@ -76,6 +77,12 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_generic
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_message
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_large
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_many
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_unavailable
 import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
@@ -595,6 +602,34 @@ class AccountViewModel(
         launchSigner {
             if (isAdmin) account.concord.removeConcordAdmin(communityId, member) else account.concord.makeConcordAdmin(communityId, member)
         }
+    }
+
+    /** Pin or unpin Concord message [note] (CORD-04 §7, PIN_MESSAGES holders); a refusal surfaces as a toast. */
+    fun toggleConcordPin(note: Note) {
+        val pinned = account.concord.concordPinState(note) ?: return
+        launchSigner {
+            toastConcordPinOutcome(if (pinned) account.concord.unpinConcordMessage(note) else account.concord.pinConcordMessage(note))
+        }
+    }
+
+    /** Unpin the entry [rumorId] from [channelIdHex]'s Pin List — also for a pin whose message this account never held. */
+    fun unpinConcordRumor(
+        communityId: String,
+        channelIdHex: String,
+        rumorId: HexKey,
+    ) = launchSigner { toastConcordPinOutcome(account.concord.unpinConcordRumor(communityId, channelIdHex, rumorId)) }
+
+    private fun toastConcordPinOutcome(outcome: ConcordPinOutcome) {
+        val message =
+            when (outcome) {
+                ConcordPinOutcome.PUBLISHED, ConcordPinOutcome.ALREADY_PINNED, ConcordPinOutcome.NOT_PINNED, ConcordPinOutcome.NOTHING_TO_DO -> return
+                ConcordPinOutcome.LIST_UNAVAILABLE -> Res.string.concord_pin_failed_unavailable
+                ConcordPinOutcome.TOO_MANY_PINS -> Res.string.concord_pin_failed_too_many
+                ConcordPinOutcome.TOO_LARGE -> Res.string.concord_pin_failed_too_large
+                ConcordPinOutcome.MESSAGE_UNAVAILABLE, ConcordPinOutcome.UNVERIFIABLE -> Res.string.concord_pin_failed_message
+                else -> Res.string.concord_pin_failed_generic
+            }
+        toastManager.toast(Res.string.concord_pin_failed_title, message)
     }
 
     /** Promote/demote [member] as an Admin of [communityId] (from the Members roster; owner only takes effect). */

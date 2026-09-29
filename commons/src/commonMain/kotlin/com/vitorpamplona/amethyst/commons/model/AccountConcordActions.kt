@@ -21,7 +21,13 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
+import com.vitorpamplona.amethyst.commons.actions.ConcordLocalEdit
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinContext
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinWrite
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
@@ -43,6 +49,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordListTooLargeExcep
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.concordEpoch
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
@@ -92,6 +99,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
@@ -855,6 +864,10 @@ class AccountConcordActions(
             publishConcordWrap(session.entry, wrap)
             sent = true
         }
+        // Self-erasure outranks curation (CORD-04 §7): the delete hides a pinned entry for tracking
+        // members at once, but a future member learns of it only through an omitting edition. The
+        // author knows their own pins, so when they may write pins they publish it immediately.
+        if (sent) omitDeletedConcordPins(channel.channelId.communityId, channelIdHex, mine.mapTo(HashSet()) { it.id })
         return sent
     }
 
@@ -1220,6 +1233,168 @@ class AccountConcordActions(
         val wrap = ConcordModeration.unban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    // ── Concord pins (CORD-04 §7) ─────────────────────────────────────────────
+    // A Channel's Pin List rides the Control Plane as one replace-entire edition (vsk 11) of
+    // self-proving entries. The read side verifies every entry and applies what this client holds
+    // (deletes hide, newer Edits mark "edited"); the write side is ConcordPinning, gated here on
+    // PIN_MESSAGES + the control write key and serialized so two quick writes never drop each other.
+
+    /** Serializes pin writes: each replaces the list entire, so two in flight would lose one. */
+    private val concordPinMutex = Mutex()
+
+    /** Owner, or a PIN_MESSAGES holder per the fold (hasPermission, so a banned holder is not). Silent: UI gating asks this often. */
+    private fun holdsConcordPinBit(session: ConcordCommunitySession): Boolean {
+        val me = account.signer.pubKey
+        if (session.entry.owner.equals(me, ignoreCase = true)) return true
+        return session.state.value
+            ?.authority
+            ?.hasPermission(me, ConcordPermissions.PIN_MESSAGES) == true
+    }
+
+    /** True when this account may write [communityId]'s Pin Lists now: the bit, the control write key, a signer. */
+    fun canPinConcord(communityId: String): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        return account.isWriteable() && holdsConcordPinBit(session) && session.controlPlaneKeys().canWrite
+    }
+
+    /**
+     * [channelIdHex]'s verified pins, read from the current head: sealed lists open with the held
+     * key of their epoch (else [ConcordChannelPins.sealedUnavailable]), an entry its author deleted
+     * is hidden by the delete this account holds for the recomputed rumor id, and an entry behind a
+     * newer held Edit is marked edited. Null until the community has folded the channel.
+     */
+    fun concordChannelPins(
+        communityId: String,
+        channelIdHex: String,
+    ): ConcordChannelPins? {
+        val session = account.concordSessions.sessionFor(communityId) ?: return null
+        return session.readPins(
+            channelIdHex,
+            isKilled = { account.cache.deletionIndex.hasBeenDeleted(it.rumorId, it.author) },
+            newestEdit = { heldConcordEdit(it.rumorId, it.author) },
+        )
+    }
+
+    /** The author's newest Concord Edit this account holds for [rumorId], or null. */
+    private fun heldConcordEdit(
+        rumorId: HexKey,
+        author: HexKey,
+    ): ConcordLocalEdit? {
+        val edit =
+            account.cache
+                .getNoteIfExists(rumorId)
+                ?.latestConcordEdit()
+                ?.event as? ConcordChatEditEvent ?: return null
+        if (edit.pubKey != author) return null
+        return ConcordLocalEdit(edit.id, edit.pubKey, edit.content, edit.orderingMs())
+    }
+
+    /**
+     * For the message action sheet: null when [note] is not a pinnable Concord message or this
+     * account cannot write pins there; else whether it is pinned now.
+     */
+    fun concordPinState(note: Note): Boolean? {
+        val event = note.event ?: return null
+        if (event !is ChatEvent && event !is CommentEvent) return null
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
+        if (!canPinConcord(channel.channelId.communityId)) return null
+        val pins = concordChannelPins(channel.channelId.communityId, channel.channelId.channelId) ?: return null
+        return pins.isPinned(note.idHex)
+    }
+
+    /**
+     * Runs one pin write: re-reads the list inside the lock (the previous write was echoed into the
+     * session, so this chains onto it), resolves the context, and publishes the edition [op] builds.
+     */
+    private suspend fun writeConcordPins(
+        communityId: String,
+        channelIdHex: String,
+        op: suspend (ConcordCommunitySession, ConcordPinContext) -> ConcordPinWrite,
+    ): ConcordPinOutcome =
+        concordPinMutex.withLock {
+            if (!account.isWriteable()) return@withLock ConcordPinOutcome.NOT_WRITEABLE
+            val session = account.concordSessions.sessionFor(communityId) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+            val definition =
+                session.state.value
+                    ?.channels
+                    ?.get(channelIdHex)
+                    ?.definition ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+            val pins = concordChannelPins(communityId, channelIdHex) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+            val ctx =
+                ConcordPinContext(
+                    actor = account.signer,
+                    controlPlane = session.controlPlaneKeys(),
+                    communityId = communityId.hexToByteArray(),
+                    owner = session.entry.owner,
+                    current = session.controlEditions(),
+                    channelIdHex = channelIdHex,
+                    channelIsPrivate = definition.private,
+                    currentPlane = session.currentChannelPlane(channelIdHex),
+                    pins = pins,
+                    authorized = holdsConcordPinBit(session),
+                )
+            val write = op(session, ctx)
+            write.wrap?.let { publishConcordWrap(session.entry, it) }
+            write.outcome
+        }
+
+    /** Pin Concord message [note] into its channel's Pin List, proving it with its original seal. */
+    suspend fun pinConcordMessage(note: Note): ConcordPinOutcome {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return ConcordPinOutcome.NOT_FOLDED
+        val channelIdHex = channel.channelId.channelId
+        return writeConcordPins(channel.channelId.communityId, channelIdHex) { session, ctx ->
+            val refused = ConcordPinning.refusal(ctx)
+            val source = if (refused == null) session.pinSource(channelIdHex, note.idHex) else null
+            when {
+                refused != null -> ConcordPinWrite(refused)
+                source == null -> ConcordPinWrite(ConcordPinOutcome.MESSAGE_UNAVAILABLE)
+                else -> ConcordPinning.pin(ctx, source, TimeUtils.now())
+            }
+        }
+    }
+
+    /** Unpin Concord message [note]. */
+    suspend fun unpinConcordMessage(note: Note): ConcordPinOutcome {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return ConcordPinOutcome.NOT_FOLDED
+        return unpinConcordRumor(channel.channelId.communityId, channel.channelId.channelId, note.idHex)
+    }
+
+    /** Unpin the entry whose recomputed rumor id is [rumorId] — works for a pin whose message this account never held. */
+    suspend fun unpinConcordRumor(
+        communityId: String,
+        channelIdHex: String,
+        rumorId: HexKey,
+    ): ConcordPinOutcome = writeConcordPins(communityId, channelIdHex) { _, ctx -> ConcordPinning.unpin(ctx, rumorId, TimeUtils.now()) }
+
+    /** The pinner-style deletion omission: the list without [rumorIds], published now when this account may write pins. */
+    private suspend fun omitDeletedConcordPins(
+        communityId: String,
+        channelIdHex: String,
+        rumorIds: Set<HexKey>,
+    ) {
+        if (!canPinConcord(communityId)) return
+        val pins = concordChannelPins(communityId, channelIdHex) ?: return
+        if (pins.alive.none { it.rumorId in rumorIds } && pins.killed.none { it.rumorId in rumorIds }) return
+        writeConcordPins(communityId, channelIdHex) { _, ctx -> ConcordPinning.omit(ctx, rumorIds, TimeUtils.now()) }
+    }
+
+    /**
+     * Settle what [channelIdHex]'s head owes keyless readers (CORD-04 §7): drop entries their author
+     * erased and attach the newest provable Edit to entries behind one. The caller waits
+     * [ConcordPinning.dutyDelayMs] first; this re-reads the head and publishes only if it is still
+     * owed, so simultaneous curators collapse to one publisher and a burst of edits costs one write.
+     */
+    suspend fun settleConcordPins(
+        communityId: String,
+        channelIdHex: String,
+    ): ConcordPinOutcome {
+        if (!canPinConcord(communityId)) return ConcordPinOutcome.NOT_AUTHORIZED
+        if (concordChannelPins(communityId, channelIdHex)?.owesRepublish != true) return ConcordPinOutcome.NOTHING_TO_DO
+        return writeConcordPins(communityId, channelIdHex) { session, ctx ->
+            ConcordPinning.settle(ctx, { pinned -> pinned.newerEdit?.let { session.pinSource(channelIdHex, it.rumorId) } }, TimeUtils.now())
+        }
     }
 
     // ── Concord refounding / rekey (CORD-06) ──────────────────────────────────

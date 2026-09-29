@@ -90,6 +90,10 @@ object ConcordCommands {
         |  concord role COMMUNITY NAME POSITION PERM…  define a role (perms by name, e.g. BAN KICK)
         |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member
         |  concord ban COMMUNITY USER                  ban a member
+        |  concord pins COMMUNITY CHANNEL              the channel's verified Pin List (CORD-04 §7)
+        |  concord pin COMMUNITY CHANNEL RUMOR_ID      pin a message (PIN_MESSAGES); proves it with
+        |                                               its original seal, capped at 25 / 32 KiB
+        |  concord unpin COMMUNITY CHANNEL RUMOR_ID    unpin a message (the next edition without it)
         |  concord unban COMMUNITY USER                unban a member
         |  concord refound COMMUNITY --remove U[,U]    CORD-06 Refounding: rotate the root (and the
         |                                               control_root) so removed members lose every
@@ -108,7 +112,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|refound|dissolve|timer>",
+            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
@@ -128,6 +132,9 @@ object ConcordCommands {
                     "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
                     "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
                     "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
+                    "pins" to { rest -> ConcordPinCommands.pins(dataDir, rest) },
+                    "pin" to { rest -> ConcordPinCommands.pin(dataDir, rest) },
+                    "unpin" to { rest -> ConcordPinCommands.unpin(dataDir, rest) },
                     "refound" to { rest -> ConcordModCommands.refound(dataDir, rest) },
                     "dissolve" to { rest -> ConcordModCommands.dissolve(dataDir, rest) },
                     "timer" to { rest -> ConcordModCommands.timer(dataDir, rest) },

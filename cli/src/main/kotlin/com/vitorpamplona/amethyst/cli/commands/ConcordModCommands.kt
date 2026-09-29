@@ -313,7 +313,7 @@ object ConcordModCommands {
      * rewrites the stored record — a caller that kept the pre-load copy would then fail to pass the
      * secret on in its own Grant (CORD-04 §3).
      */
-    private class LoadedControl(
+    internal class LoadedControl(
         val community: StoredCommunity,
         val keys: ControlPlaneKeys,
         val editions: List<ControlEdition>,
@@ -624,7 +624,7 @@ object ConcordModCommands {
     }
 
     /** Drain the control plane and return its keys + current editions to chain onto. */
-    private suspend fun load(
+    internal suspend fun load(
         ctx: Context,
         sc: StoredCommunity,
         dataDir: DataDir? = null,
@@ -657,7 +657,7 @@ object ConcordModCommands {
      * a spam gate, never authority — holding the key still does not make the action
      * honored, which the Roster decides at fold (CORD-04 §5).
      */
-    private fun writeGuard(cp: ControlPlaneKeys): Int? {
+    internal fun writeGuard(cp: ControlPlaneKeys): Int? {
         if (cp.canWrite) return null
         Output.error("forbidden", "this account holds no control_root for the community, so it cannot publish Control Plane editions (CORD-02 §2) — ask a staff member to grant you a Control-writing role")
         return 1
