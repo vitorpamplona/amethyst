@@ -375,6 +375,16 @@ class NappletHostActivity : ComponentActivity() {
         }
     }
 
+    private val backgroundPauseHandler = Handler(Looper.getMainLooper())
+
+    // webView.onPause() pauses THIS WebView (animations, media, geolocation). Do NOT call pauseTimers(): it's
+    // process-global and freezes EVERY WebView in `:napplet`, including the embedded browser/napplet surfaces,
+    // which never resume.
+    private val backgroundPause =
+        Runnable {
+            if (!isDestroyed && this::webView.isInitialized && !webViewGone) webView.onPause()
+        }
+
     override fun onResume() {
         super.onResume()
         if (this::webView.isInitialized && !webViewGone) {
@@ -390,17 +400,25 @@ class NappletHostActivity : ComponentActivity() {
         held.forEach { if (brokerMessenger == null) pendingRequests.add(it) else sendToBroker(it) }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Back within the grace: the page was never paused.
+        backgroundPauseHandler.removeCallbacks(backgroundPause)
+    }
+
+    override fun onStop() {
+        // Out of sight: pause the page after the same grace the rest of the app gets
+        // (NappletHostContract.BACKGROUND_PAUSE_MS), so a quick trip to another app doesn't interrupt it.
+        // Anything that acts for the user is already held (see [resumed]).
+        backgroundPauseHandler.postDelayed(backgroundPause, NappletHostContract.BACKGROUND_PAUSE_MS)
+        super.onStop()
+    }
+
     override fun onPause() {
-        // Foreground-only: stop the applet's JS/timers in the background so it cannot fire a
-        // sign/decrypt/pay request whose consent prompt would surface over (and be confused with)
-        // Amethyst's own UI. Requests only happen while the user is looking at this napplet.
-        if (this::webView.isInitialized && !webViewGone) {
-            // webView.onPause() pauses THIS WebView's JS/DOM (the security goal — a backgrounded napplet can't
-            // fire a sign/decrypt/pay request). Do NOT call pauseTimers(): it's process-global and freezes
-            // EVERY WebView in `:napplet`, including the embedded browser/napplet surfaces, which never resume.
-            webView.onPause()
-        }
-        // No longer foreground: stop renewing and let the main process resume normal background scaling.
+        // Foreground-only for requests: while not resumed, the applet's requests that act for the user
+        // (sign/publish/pay…) are held until the user is back, so their consent prompt can't surface over
+        // (and be confused with) Amethyst's own UI and an "allow always" napplet can't act unwatched. The page
+        // itself keeps running until onStop's grace runs out.
         resumed = false
         stopForegroundHeartbeat()
         setBrokerForeground(false)
@@ -457,6 +475,7 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        backgroundPauseHandler.removeCallbacks(backgroundPause)
         uiScope.cancel()
         // Drop the broker's references to our reply Messenger BEFORE unbinding — a retained Messenger is a
         // binder and would pin this Activity (and its WebView) for the life of the `:napplet` process.

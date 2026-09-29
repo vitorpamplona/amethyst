@@ -412,12 +412,27 @@ class NappletBrowserActivity : ComponentActivity() {
         heartbeat.run()
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Back within the grace: the page was never paused.
+        heartbeatHandler.removeCallbacks(backgroundPause)
+    }
+
+    override fun onStop() {
+        // Out of sight: pause the page after the same grace the rest of the app gets
+        // (NappletHostContract.BACKGROUND_PAUSE_MS), so a quick trip to another app doesn't interrupt it.
+        // NIP-07 sign / encrypt / decrypt is already held while not resumed (see [heldWhileAway]).
+        heartbeatHandler.postDelayed(backgroundPause, NappletHostContract.BACKGROUND_PAUSE_MS)
+        super.onStop()
+    }
+
+    // Only pause THIS activity's WebView (onPause is per-WebView). Do NOT call pauseTimers(): it is
+    // process-global — it freezes JS/layout/parsing timers for EVERY WebView in `:napplet`, including the
+    // embedded ones in NappletBrowserService, which have no resume of their own. That left the embed frozen
+    // (dead page/connection) after returning from a full-screen excursion.
+    private val backgroundPause = Runnable { if (!isDestroyed) webView?.onPause() }
+
     override fun onPause() {
-        // Only pause THIS activity's WebView (onPause is per-WebView). Do NOT call pauseTimers(): it is
-        // process-global — it freezes JS/layout/parsing timers for EVERY WebView in `:napplet`, including
-        // the embedded ones in NappletBrowserService, which have no resume of their own. That left the
-        // embed frozen (dead page/connection) after returning from a full-screen excursion.
-        webView?.onPause()
         resumed = false
         heartbeatHandler.removeCallbacks(heartbeat)
         setBrokerForeground(false)
@@ -425,6 +440,7 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        heartbeatHandler.removeCallbacks(backgroundPause)
         // Tell the broker to drop every reference to our reply Messenger BEFORE unbinding — a retained
         // Messenger is a binder, and it would pin this Activity (and its WebView) in `:napplet` for the
         // life of the process. `unbindService` alone does not release it. See [replyMessenger].

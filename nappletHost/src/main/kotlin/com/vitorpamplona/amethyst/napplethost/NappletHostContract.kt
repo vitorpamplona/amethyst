@@ -26,6 +26,15 @@ package com.vitorpamplona.amethyst.napplethost
  * `:amethyst` depends on `:nappletHost`, never the other way around.
  */
 object NappletHostContract {
+    /**
+     * How long a napplet or website page keeps running after the app leaves the screen before its WebView is
+     * paused — embedded tabs and the full-screen hosts alike. The same grace the rest of the app gets: relays
+     * disconnect 30 s after the UI stops (RelayProxyClientConnector's `WhileSubscribed(30000)`), so a quick
+     * trip to another app (a 2FA code, a password manager) doesn't interrupt a page, while one left behind
+     * stops running. Requests that act for the user are held from the first moment regardless.
+     */
+    const val BACKGROUND_PAUSE_MS = 30_000L
+
     const val EXTRA_PATHS = "napplet_paths"
     const val EXTRA_HASHES = "napplet_hashes"
     const val EXTRA_SERVERS = "napplet_servers"

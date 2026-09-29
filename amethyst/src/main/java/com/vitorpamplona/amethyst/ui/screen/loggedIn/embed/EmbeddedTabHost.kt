@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 
 /**
  * Process-level holder of **warm embedded sessions** — the persistent-surface-layer half of keep-warm.
@@ -123,13 +124,8 @@ object EmbeddedTabHost {
 
     // ---- the app in the background ----
 
-    /**
-     * How long the app sits in the background before even the visible tab's page is paused. The same grace
-     * the rest of the app gets: relays disconnect 30 s after the UI stops (RelayProxyClientConnector's
-     * `WhileSubscribed(30000)`), so a quick trip to another app (a 2FA code, a password manager) doesn't
-     * interrupt a page, while one left behind stops running.
-     */
-    const val BACKGROUND_PAUSE_MS = 30_000L
+    /** How long the app sits in the background before even the visible tab's page is paused (see there). */
+    const val BACKGROUND_PAUSE_MS = NappletHostContract.BACKGROUND_PAUSE_MS
 
     private var appVisible = true
     private var backgroundIdle = false
