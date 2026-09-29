@@ -226,7 +226,7 @@
     <string name="git_repo_tab_readme">पठनीय</string>
     <string name="git_issue_close">विषय आवृत करें</string>
     <string name="git_issue_reopen">पुनःखोलें</string>
-    <string name="media_servers_blossom_section">ब्लोस्सम॰ सेवासंगणक</string>
+    <string name="media_servers_blossom_section">ब्लोस्सम सेवासंगणक</string>
     <string name="media_servers_blossom_explainer">सेवासंगणक जितना चाहें जोडें। किस संगणक का उपयोग करना है उसका चयन कर सकते हैं चित्र का आरोहण करते समय</string>
     <string name="torrent_download">अवरोहण</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
@@ -276,7 +276,7 @@
     <string name="always_on_notif_title">अमेथिस्ट सूचनाएँ सक्रिय</string>
     <string name="blossom_sync_cancel">निरस्त</string>
     <string name="blossom_sync_channel_description">प्रगति दर्शाता है आपके अभिलेखों की अनुकृति करते समय आपके ब्लोस्सम सेवासंगणकों में।</string>
-    <string name="blossom_sync_channel_name">ब्लोस्सम॰ समचरणीकरण</string>
+    <string name="blossom_sync_channel_name">ब्लोस्सम समचरणीकरण</string>
     <string name="call_ongoing">आह्वान</string>
     <string name="call_ongoing_description">चालू आह्वान सूचना</string>
     <string name="call_with">%1$s के साथ आह्वान</string>
