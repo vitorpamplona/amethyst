@@ -180,7 +180,10 @@ object ConcordModCommands {
                 return Output.error("not_owner", "only the owner can dissolve '$handle' (CORD-02 §9)")
             }
             val wrap = ConcordDissolution.build(ctx.signer, sc.communityId)
-            val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+            // A relay that gates the plane on NIP-42 wants AUTH as the stream key the wrap is signed by.
+            ctx.registerConcordStreamKeys(relays, listOf(ConcordDissolution.planeKey(sc.communityId).secretKey))
+            val ack = ctx.publish(wrap, relays)
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(mapOf("community" to sc.communityId, "dissolved" to true) + RawEventSupport.ackFields(ack))
             return 0

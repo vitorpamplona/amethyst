@@ -28,14 +28,18 @@ import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListIncompleteException
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListTooLargeException
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
@@ -73,7 +77,6 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
-import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -120,9 +123,40 @@ class AccountConcordActions(
         inviteCreator: HexKey? = null,
         inviteLabel: String? = null,
     ) {
-        account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(entry))
+        if (!persistConcordEntry(entry)) return
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
     }
+
+    /**
+     * Makes the Community List fetched before any write can depend on it: an empty fragment set
+     * only means "no List" once the relays have been asked (CORD-02 §8 — a write built on an
+     * unloaded List replaces fragments another device published).
+     */
+    private suspend fun ensureConcordListLoaded() {
+        if (!account.concordChannelList.relaysConfirmed) importConcordCommunities()
+    }
+
+    /**
+     * Read-modify-writes the Community List through [change] and publishes the fragments it
+     * produced. Returns false — logged, never thrown into a UI coroutine — when the List can't be
+     * written safely yet (fragments unreadable or not loaded) or a fragment would pass the ceiling.
+     */
+    private suspend fun writeConcordList(change: suspend (ConcordChannelListState) -> List<Event>): Boolean {
+        ensureConcordListLoaded()
+        return try {
+            account.sendMyPublicAndPrivateOutbox(change(account.concordChannelList))
+            true
+        } catch (e: ConcordListIncompleteException) {
+            Log.w("Concord") { "Community List not written: ${e.message}" }
+            false
+        } catch (e: ConcordListTooLargeException) {
+            Log.w("Concord") { "Community List not written: ${e.message}" }
+            false
+        }
+    }
+
+    /** Adds or replaces [entry] in the Community List; false when it could not be written. */
+    private suspend fun persistConcordEntry(entry: ConcordCommunityListEntry): Boolean = writeConcordList { it.follow(entry) }
 
     /** Publishes a Guestbook JOIN (kind 3306) for [entry] to its community relays. */
     private suspend fun announceConcordGuestbookJoin(
@@ -174,7 +208,7 @@ class AccountConcordActions(
                 controlRoot = community.controlRoot.toHexKey(),
                 relays = relayUrls,
                 name = name,
-                addedAt = TimeUtils.now() * 1000,
+                addedAt = TimeUtils.nowMillis(),
             ),
         )
         return community.communityIdHex
@@ -453,7 +487,7 @@ class AccountConcordActions(
     }
 
     /** Leave a joined Concord community: drop it from the Community List and tombstone it (CORD-02 §8). */
-    suspend fun leaveConcordCommunity(communityId: String) = account.sendMyPublicAndPrivateOutbox(account.concordChannelList.unfollow(communityId))
+    suspend fun leaveConcordCommunity(communityId: String): Boolean = writeConcordList { it.unfollow(communityId) }
 
     /**
      * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
@@ -562,7 +596,7 @@ class AccountConcordActions(
                 controlPk = bundle.controlPk,
                 relays = bundle.relays,
                 name = bundle.name,
-                addedAt = TimeUtils.now() * 1000,
+                addedAt = TimeUtils.nowMillis(),
                 // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
                 // Refounding that leaves us out of the recipient set is recoverable later. See
                 // recoverStrandedConcordCommunities().
@@ -1247,7 +1281,11 @@ class AccountConcordActions(
         // is shared with `amy` in [ConcordReceive.withAdoptedRoot]. Only the persist + publish and
         // the Guestbook re-announce below are Android's.
         val next = ConcordReceive.withAdoptedRoot(entry, newRoot, newEpoch, newControlPk, newControlRoot)
-        account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(next))
+        if (!persistConcordEntry(next)) {
+            // Not persisted, so not adopted: let the next drain retry it.
+            adoptedConcordRotations.remove("${entry.id}:$newEpoch")
+            return null
+        }
         announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)
         return next
     }
@@ -1335,9 +1373,7 @@ class AccountConcordActions(
             // [ConcordReceive.deliveredControlRoot]. Only the persist + publish below is Android's.
             val delivered = ConcordReceive.deliveredControlRoot(entry, session.controlEditions(), state.authority, account.signer) ?: continue
 
-            account.sendMyPublicAndPrivateOutbox(
-                account.concordChannelList.follow(entry.withControlRoot(delivered)),
-            )
+            persistConcordEntry(entry.withControlRoot(delivered))
         }
     }
 
@@ -1419,7 +1455,10 @@ class AccountConcordActions(
             val merged = ConcordActions.recoverStranded(entry, bundle, bannedHere) ?: continue
             if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
             Log.i("Concord") { "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}" }
-            account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(merged))
+            if (!persistConcordEntry(merged)) {
+                adoptedConcordRotations.remove("${entry.id}:${merged.rootEpoch}")
+                continue
+            }
             announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
         }
     }
@@ -1581,13 +1620,21 @@ class AccountConcordActions(
         }
         fragments.forEach { account.cache.justConsumeMyOwnEvent(it) }
         legacy?.let { account.cache.justConsumeMyOwnEvent(it) }
+        // The relays have now been asked: an empty fragment set from here on means "no List yet".
+        account.concordChannelList.markRelaysConfirmed()
         // Seed the fragments from the retired event only once the relays confirmed none exist: a
         // seeding write made while fragments are merely unloaded would replace them (CORD-02 §8).
         if (fragments.isEmpty() && legacy != null) {
-            val seeded = account.concordChannelList.republish()
-            if (seeded.isNotEmpty()) {
-                Log.d("Concord") { "importConcordCommunities: migrated the 13302 list into ${seeded.size} fragment(s)" }
-                account.sendMyPublicAndPrivateOutbox(seeded)
+            try {
+                val seeded = account.concordChannelList.republish()
+                if (seeded.isNotEmpty()) {
+                    Log.d("Concord") { "importConcordCommunities: migrated the 13302 list into ${seeded.size} fragment(s)" }
+                    account.sendMyPublicAndPrivateOutbox(seeded)
+                }
+            } catch (e: ConcordListIncompleteException) {
+                Log.w("Concord") { "importConcordCommunities: 13302 migration deferred: ${e.message}" }
+            } catch (e: ConcordListTooLargeException) {
+                Log.w("Concord") { "importConcordCommunities: 13302 migration deferred: ${e.message}" }
             }
         }
     }

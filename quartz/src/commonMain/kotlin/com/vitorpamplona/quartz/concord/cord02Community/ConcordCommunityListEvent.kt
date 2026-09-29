@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 
 /**
  * **Retired** (CORD-02 §8): the single-event Community List, superseded by the fragmented kind
@@ -68,6 +69,8 @@ class ConcordCommunityListEvent(
     suspend fun decryptPlaintext(signer: NostrSigner): String? =
         try {
             signer.nip44Decrypt(content, signer.pubKey)
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }

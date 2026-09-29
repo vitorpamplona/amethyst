@@ -79,8 +79,13 @@ class ConcordListFragmentSet private constructor(
         val createdAt: Long,
     )
 
-    /** True when every index below [declared] is held and readable. Vacuously true when nothing is. */
-    val complete: Boolean = !overflow && (0 until declared).all { it in held }
+    /**
+     * True when every index below [declared] is held and readable **and** no fragment we saw failed
+     * to open. An unreadable copy may declare a larger count than any readable one, or be the only
+     * copy of its index, so its presence always means "not the whole List" — never grounds for a
+     * repack that would overwrite it. Vacuously true only when no fragment was seen at all.
+     */
+    val complete: Boolean = !overflow && unreadable.isEmpty() && (0 until declared).all { it in held }
 
     /** True when no fragment has been seen at all. */
     val isEmpty: Boolean get() = createdAtFloor.isEmpty()
@@ -228,14 +233,27 @@ class ConcordListFragmentSet private constructor(
         suspend fun resolve(
             events: Collection<ConcordCommunityListFragmentEvent>,
             signer: NostrSigner,
-        ): ConcordListFragmentSet =
-            of(
-                events.mapNotNull { e ->
-                    val index = e.index() ?: return@mapNotNull null
-                    if (e.pubKey != signer.pubKey) return@mapNotNull null
-                    Copy(index, e.createdAt, e.id, e.decryptPlaintext(signer))
-                },
-            )
+        ): ConcordListFragmentSet = resolve(events, signer.pubKey) { it.decryptPlaintext(signer) }
+
+        /**
+         * [resolve] with a caller-supplied [decrypt], so a caller can memoize plaintext by event id
+         * instead of paying a signer round trip per fragment per read. Each event id is decrypted
+         * at most once per call, and only the newest copy per index is decrypted at all.
+         */
+        suspend fun resolve(
+            events: Collection<ConcordCommunityListFragmentEvent>,
+            owner: String,
+            decrypt: suspend (ConcordCommunityListFragmentEvent) -> String?,
+        ): ConcordListFragmentSet {
+            val newestPerIndex =
+                events
+                    .asSequence()
+                    .filter { it.pubKey == owner }
+                    .mapNotNull { e -> e.index()?.let { it to e } }
+                    .groupBy({ it.first }, { it.second })
+                    .mapValues { (_, list) -> list.sortedWith(compareByDescending<ConcordCommunityListFragmentEvent> { it.createdAt }.thenBy { it.id }).first() }
+            return of(newestPerIndex.map { (index, e) -> Copy(index, e.createdAt, e.id, decrypt(e)) })
+        }
 
         val EMPTY: ConcordListFragmentSet = of(emptyList())
     }

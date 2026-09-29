@@ -25,11 +25,13 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withAddedAt
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDocument
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListIncompleteException
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListResidue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -53,6 +55,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.Volatile
 
 /**
  * Persistence hook for the account's Community List (offline backup): the kind-33302 fragments
@@ -101,6 +104,43 @@ class ConcordChannelListState(
     /** Serializes read-modify-writes so two quick edits can't both build on the same base. */
     private val writeLock = Mutex()
 
+    /**
+     * Plaintext per fragment/legacy event id. Every List change re-reads the whole List, and each
+     * decrypt is a signer round trip (an IPC hop to Amber, a relay hop to a bunker); an event id's
+     * plaintext never changes, so each is decrypted once. Failures are not cached, so a transient
+     * signer error is retried on the next read.
+     */
+    private val plaintextById = LinkedHashMap<String, String>()
+    private val plaintextLock = KmpLock()
+
+    private suspend fun plaintextOf(
+        id: String,
+        decrypt: suspend () -> String?,
+    ): String? {
+        plaintextLock.withLock { plaintextById[id] }?.let { return it }
+        val plaintext = decrypt() ?: return null
+        plaintextLock.withLock {
+            plaintextById[id] = plaintext
+            // Bounded: only the newest copy per index is ever read, so a few dozen ids is plenty.
+            while (plaintextById.size > MAX_CACHED_PLAINTEXTS) plaintextById.remove(plaintextById.keys.first())
+        }
+        return plaintext
+    }
+
+    /**
+     * Whether the relays have been asked for this account's fragments since start-up
+     * ([markRelaysConfirmed], after the import fetch). Until then an empty fragment set means
+     * "not loaded yet", not "no List", and a write would replace fragments another device or
+     * client published — so [follow]/[unfollow] refuse rather than guess.
+     */
+    @Volatile
+    var relaysConfirmed = false
+        private set
+
+    fun markRelaysConfirmed() {
+        relaysConfirmed = true
+    }
+
     /** The retired single-event list's coordinate, still read for migration. */
     fun getConcordListAddress() = ConcordCommunityListEvent.createAddress(signer.pubKey)
 
@@ -119,7 +159,7 @@ class ConcordChannelListState(
 
     /** Resolves the fragments we hold, widening the watch when the List declares more of them. */
     suspend fun fragmentSet(): ConcordListFragmentSet {
-        val set = ConcordListFragmentSet.resolve(heldFragments(), signer)
+        val set = ConcordListFragmentSet.resolve(heldFragments(), signer.pubKey) { e -> plaintextOf(e.id) { e.decryptPlaintext(signer) } }
         if (set.declared > watchedFragments.value) watchedFragments.value = set.declared
         return set
     }
@@ -127,7 +167,8 @@ class ConcordChannelListState(
     /** The fragments plus the merged, decoded List a read-modify-write starts from. */
     private suspend fun snapshot(): Pair<ConcordListFragmentSet, ConcordCommunityListDocument> {
         val set = fragmentSet()
-        val legacy = (getConcordList() ?: settings.concordList())?.decryptPlaintext(signer)
+        val legacyEvent = getConcordList() ?: settings.concordList()
+        val legacy = legacyEvent?.let { e -> plaintextOf(e.id) { e.decryptPlaintext(signer) } }
         return set to ConcordCommunityList.decodeDocument(ConcordCommunityList.readWithLegacy(set, legacy))
     }
 
@@ -174,17 +215,32 @@ class ConcordChannelListState(
         entries: List<ConcordCommunityListEntry>,
         residue: ConcordListResidue,
     ): List<ConcordCommunityListFragmentEvent> {
+        if (set.isEmpty && !relaysConfirmed) {
+            throw ConcordListIncompleteException("the Community List has not been fetched from relays yet; refusing to overwrite it")
+        }
         val newDoc = ConcordCommunityList.encodeInternal(entries, residue)
         return set.planWrites(newDoc, TimeUtils.now()).map { w ->
             ConcordCommunityListFragmentEvent.create(signer, w.index, w.plaintext, w.createdAt).also { settings.updateConcordListFragmentTo(it) }
         }
     }
 
-    /** Add or replace [entry] (by community id) and return the fragment events to publish. */
+    /**
+     * Add or replace [entry] (by community id) and return the fragment events to publish.
+     *
+     * Adding a community we once left is a re-join, which must outrank the tombstone
+     * (`added_at > removed_at`, CORD-02 §8): an entry that doesn't — a join in the same second as
+     * the leave, or a stale snapshot — gets its `added_at` lifted just past the removal.
+     *
+     * Throws [ConcordListIncompleteException] when the List isn't loaded well enough to write
+     * without destroying a fragment, and [ConcordListTooLargeException] when a fragment would
+     * pass the event ceiling.
+     */
     suspend fun follow(entry: ConcordCommunityListEntry): List<Event> =
         writeLock.withLock {
             val (set, doc) = snapshot()
-            write(set, doc.entries.filterNot { it.id == entry.id } + entry, doc.residue)
+            val removedAt = doc.residue.removedAt(entry.id)
+            val live = if (removedAt != null && entry.addedAt <= removedAt) entry.withAddedAt(maxOf(TimeUtils.nowMillis(), removedAt + 1)) else entry
+            write(set, doc.entries.filterNot { it.id == entry.id } + live, doc.residue)
         }
 
     /**
@@ -196,7 +252,7 @@ class ConcordChannelListState(
         writeLock.withLock {
             val (set, doc) = snapshot()
             if (doc.entries.none { it.id == communityId }) return@withLock emptyList()
-            write(set, doc.entries.filterNot { it.id == communityId }, doc.residue.withTombstone(communityId, TimeUtils.now() * 1000))
+            write(set, doc.entries.filterNot { it.id == communityId }, doc.residue.withTombstone(communityId, TimeUtils.nowMillis()))
         }
 
     /**
@@ -209,6 +265,10 @@ class ConcordChannelListState(
             if (doc.entries.isEmpty() && doc.residue.tombstones.isEmpty()) return@withLock emptyList()
             write(set, doc.entries, doc.residue)
         }
+
+    companion object {
+        private const val MAX_CACHED_PLAINTEXTS = 64
+    }
 
     init {
         val savedLegacy = settings.concordList()

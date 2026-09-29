@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEven
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragments
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListIncompleteException
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -44,6 +45,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -121,6 +123,7 @@ class ConcordChannelListLeaveTest {
     private suspend fun state(vararg entries: ConcordCommunityListEntry): Pair<ConcordChannelListState, BackupOnlyRepository> {
         val repo = BackupOnlyRepository(null)
         val list = ConcordChannelListState(signer = signer, cache = StubCache(), scope = CoroutineScope(Dispatchers.Unconfined), settings = repo)
+        list.markRelaysConfirmed()
         for (e in entries) list.follow(e)
         return list to repo
     }
@@ -182,10 +185,29 @@ class ConcordChannelListLeaveTest {
         }
 
     @Test
+    fun reJoiningInTheSameMillisecondStillOutranksTheLeave() =
+        runTest {
+            val (list, _) = state(entry(alpha, "Alpha"))
+            list.unfollow(alpha)
+            // A stale entry (added long before the leave) re-followed: it must come back live.
+            list.follow(entry(alpha, "Alpha"))
+            assertEquals(listOf(alpha), list.entries().map { it.id })
+        }
+
+    @Test
+    fun anUnloadedListRefusesToWrite() =
+        runTest {
+            // Nothing held and the relays not asked yet: writing would replace fragments we never saw.
+            val list = ConcordChannelListState(signer = signer, cache = StubCache(), scope = CoroutineScope(Dispatchers.Unconfined), settings = BackupOnlyRepository(null))
+            assertFailsWith<ConcordListIncompleteException> { list.follow(entry(alpha, "Alpha")) }
+        }
+
+    @Test
     fun aMembershipOnlyTheRetiredListCarriesIsMigratedByTheNextWrite() =
         runTest {
             val repo = BackupOnlyRepository(ConcordCommunityListEvent.create(signer, listOf(entry(alpha, "Alpha"))))
             val list = ConcordChannelListState(signer = signer, cache = StubCache(), scope = CoroutineScope(Dispatchers.Unconfined), settings = repo)
+            list.markRelaysConfirmed()
             assertEquals(listOf(alpha), list.entries().map { it.id })
 
             list.follow(entry(beta, "Beta"))

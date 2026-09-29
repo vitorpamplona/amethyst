@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 
 /**
  * One fragment of a member's Community List (CORD-02 §8, kind 33302): addressable at
@@ -62,10 +63,17 @@ class ConcordCommunityListFragmentEvent(
      */
     fun index(): Int? = parseIndex(dTag())
 
-    /** The decrypted plaintext, or null when it does not open for [signer]. */
+    /**
+     * The decrypted plaintext, or null when it does not open for [signer]. A null makes the
+     * fragment's index unreadable, which blocks any repack — so a transient signer failure (a
+     * timed-out bunker, a backgrounded signer app) costs a write, never a membership.
+     * Cancellation is rethrown.
+     */
     suspend fun decryptPlaintext(signer: NostrSigner): String? =
         try {
             signer.nip44Decrypt(content, signer.pubKey)
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }

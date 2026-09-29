@@ -334,6 +334,19 @@ object ConcordListFragments {
         return JsonObject(out)
     }
 
+    /**
+     * [entryToWire], or null when the entry's join material is too incomplete to encode — only a
+     * membership the typed reader already could not parse (kept verbatim from a retired 13302
+     * document). It stays in that document; the fragments simply don't re-emit it, rather than one
+     * unreadable legacy entry blocking every join and leave.
+     */
+    private fun entryToWireOrNull(entry: JsonObject): JsonObject? =
+        try {
+            entryToWire(entry)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+
     /** One internal entry in the wire shape, or throws on corrupt join material. */
     fun entryToWire(entry: JsonObject): JsonObject {
         val cid = stringOr(entry["community_id"], "")
@@ -527,7 +540,7 @@ object ConcordListFragments {
                 .mapNotNull { it as? JsonObject }
                 .filter { isLive(it, removals) }
                 .sortedBy { idOf(it) }
-                .map { entryToWire(it) }
+                .mapNotNull { entryToWireOrNull(it) }
         val tombstones =
             (doc["tombstones"] as? JsonArray)
                 .orEmpty()
@@ -548,6 +561,9 @@ object ConcordListFragments {
             val last = frags.last()
             if (last.entries.isEmpty() || fits(last, cost)) last.entries.add(e) else frags.add(Packing(entries = mutableListOf(e)))
         }
+        // A fragment's first tombstone is placed without a size check, exactly as the reference
+        // packer does: identical state must fragment identically across clients, and the overshoot
+        // is one tombstone (~80 bytes) against an 8 KiB margin under the ceiling.
         for (t in tombstones) {
             val cost = byteLen(str(t)) + 1
             val last = frags.last()
@@ -584,7 +600,7 @@ object ConcordListFragments {
         val removals = removals(doc)
         return serializeFragment(
             frags,
-            keptEntries.filter { isLive(it, removals) }.sortedBy { idOf(it) }.map { entryToWire(it) },
+            keptEntries.filter { isLive(it, removals) }.sortedBy { idOf(it) }.mapNotNull { entryToWireOrNull(it) },
             keptTombs.sortedBy { idOf(it) }.mapNotNull { tombstoneToWire(it) },
             JsonObject(doc.filterKeys { it != "entries" && it != "tombstones" && it !in LIST_KEYS }),
         )

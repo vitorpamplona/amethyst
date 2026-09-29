@@ -34,6 +34,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -348,6 +349,50 @@ class ConcordListFragmentsTest {
             )
         assertTrue(0 in set.unreadable)
         assertTrue(set.held.isEmpty())
+    }
+
+    @Test
+    fun anUnreadableOnlyFragmentIsNeverOverwritten() {
+        // The one fragment on the wire didn't decrypt (a timed-out signer): not "no List".
+        val set = ConcordListFragmentSet.of(listOf(ConcordListFragmentSet.Copy(0, 100, "a", null)))
+        assertFalse(set.complete)
+        assertFalse(set.isEmpty)
+        assertFailsWith<ConcordListIncompleteException> { set.planWrites(doc(listOf(membership(0))), now = 1000) }
+    }
+
+    @Test
+    fun anUnreadableNewerFragmentBlocksARepackThatWouldShrinkTheCount() {
+        // Fragment 1 may declare more fragments than readable fragment 0 does; a repack to 1
+        // fragment would push its memberships out of range.
+        val set =
+            ConcordListFragmentSet.of(
+                listOf(
+                    ConcordListFragmentSet.Copy(0, 100, "a", frag(1, listOf(membership(0)))),
+                    ConcordListFragmentSet.Copy(1, 200, "b", null),
+                ),
+            )
+        assertFalse(set.complete)
+        val writes = set.planWrites(ConcordListFragments.mergeDocs(set.doc, doc(listOf(membership(5)))), now = 1000)
+        assertEquals(listOf(0), writes.map { it.index }, "only a scoped write into the readable fragment")
+        assertEquals(1, ConcordListFragments.decodeFragment(writes.single().plaintext).frags)
+    }
+
+    @Test
+    fun anEntryWithUnencodableMaterialIsSkippedNotFatal() {
+        val broken =
+            buildJsonObject {
+                put("community_id", h("broken"))
+                put("current", buildJsonObject { put("name", "no keys") })
+                put("added_at", 1)
+            }
+        val packed = ConcordListFragments.pack(doc(listOf(membership(0), broken))).single()
+        assertEquals(
+            1,
+            ConcordListFragments
+                .decodeFragment(packed)
+                .doc["entries"]!!
+                .jsonArray.size,
+        )
     }
 
     @Test

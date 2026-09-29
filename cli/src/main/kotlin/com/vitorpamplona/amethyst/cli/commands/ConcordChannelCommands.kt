@@ -153,13 +153,15 @@ object ConcordChannelCommands {
     ): ConcordCommunityState {
         val controlPlane = ConcordCommands.controlPlaneKeysFor(sc)
         val relays = ConcordCommands.relaysFor(ctx, sc)
-        // The relays gate the plane's kind-1059 behind NIP-42 as the stream key — register it so
-        // the drain's AUTH challenge is answered as the control plane, not the account. On a split
-        // epoch only staff hold that secret (CORD-02 §2); a plain member registers nothing and
-        // relies on the relay serving the plane unauthenticated.
-        ctx.registerConcordStreamKeys(relays, listOfNotNull(controlPlane.signer?.secretKey))
         // The dissolution tombstone lives at its own id-derived address (CORD-02 §9), drained alongside.
-        val dissolvedAddress = ConcordDissolution.planeKey(sc.communityId).publicKeyHex
+        val dissolved = ConcordDissolution.planeKey(sc.communityId)
+        val dissolvedAddress = dissolved.publicKeyHex
+        // The relays gate each plane's kind-1059 behind NIP-42 as the stream key — register them so
+        // the drain's AUTH challenge is answered as the plane, not the account. On a split epoch
+        // only staff hold the control secret (CORD-02 §2); a plain member relies on the relay
+        // serving that plane unauthenticated. The dissolved plane's key derives from the public
+        // community id, so every member can always answer for it.
+        ctx.registerConcordStreamKeys(relays, listOfNotNull(controlPlane.signer?.secretKey, dissolved.secretKey))
         val wraps =
             ctx
                 .drain(relays.associateWith { listOf(ConcordActions.planeFilterFor(listOf(controlPlane.address, dissolvedAddress))) }, pendingOnAuthRequired = true)

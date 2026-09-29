@@ -142,6 +142,13 @@ class ConcordListResidue(
         return ConcordListResidue(extras, tombstones.filterNot { it === prior } + next, unparsedEntries)
     }
 
+    /** The latest `removed_at` this residue holds for [communityId], or null when it was never left. */
+    fun removedAt(communityId: String): Long? =
+        tombstones
+            .filter { (it["community_id"] as? JsonPrimitive)?.contentOrNull == communityId }
+            .mapNotNull { (it["removed_at"] as? JsonPrimitive)?.longOrNull }
+            .maxOrNull()
+
     companion object {
         val EMPTY = ConcordListResidue()
     }
@@ -633,6 +640,26 @@ object ConcordCommunityList {
         excludedAtEpoch = excludedAtEpoch,
         residue = residue,
     )
+
+    /** Copy of this entry with [addedAt] (ms); every other field untouched. */
+    fun ConcordCommunityListEntry.withAddedAt(addedAt: Long) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+            residue = residue,
+        )
 
     /** Copy of this entry carrying [inviteRef]; every other field untouched. */
     fun ConcordCommunityListEntry.withInviteRef(inviteRef: String?) =
