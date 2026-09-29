@@ -25,11 +25,13 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -58,7 +60,7 @@ object PodcastComposerMedia {
         quality: CompressorQuality,
         stripMetadata: Boolean,
         alt: String?,
-        context: Context,
+        uploader: MediaUploader,
         onStrippingFailed: suspend () -> Boolean,
     ): String {
         val res =
@@ -68,12 +70,12 @@ object PodcastComposerMedia {
                 mediaQuality = quality,
                 server = server,
                 account = account,
-                context = context,
+                uploader = uploader,
                 useH265 = false,
                 stripMetadata = stripMetadata,
                 onStrippingFailed = onStrippingFailed,
             )
-        if (!res.allGood) throw UploadException(kind, formatUploadErrors(res.errors, context))
+        if (!res.allGood) throw UploadException(kind, formatUploadErrors(res.errors))
         return firstUploadedUrl(res.successful)
             ?: throw UploadException(kind, "Server didn't return a URL for the uploaded $kind.")
     }
@@ -83,10 +85,7 @@ object PodcastComposerMedia {
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private suspend fun formatUploadErrors(
-        errors: List<UploadingState.Error>,
-        context: Context,
-    ): String =
+    private suspend fun formatUploadErrors(errors: List<UploadingState.Error>): String =
         errors
             .map { loadStringRes(it.errorResource, *it.params) }
             .distinct()

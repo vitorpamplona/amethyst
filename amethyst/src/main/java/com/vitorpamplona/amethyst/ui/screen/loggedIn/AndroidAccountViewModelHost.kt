@@ -28,10 +28,12 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
+import com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -69,6 +71,8 @@ class AndroidAccountViewModelHost(
 
     override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
         get() = modules.authCoordinator.receiver.authStateFlow
+
+    override val mediaUploader: MediaUploader by lazy { AndroidMediaUploader(modules.appContext) }
 
     override val savedAccounts: Flow<Set<HexKey>> =
         LocalPreferences

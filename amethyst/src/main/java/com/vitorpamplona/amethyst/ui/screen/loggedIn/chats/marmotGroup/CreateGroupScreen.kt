@@ -59,7 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not
 import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not_set_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -122,7 +122,7 @@ fun CreateGroupScreen(
                 val iconChange =
                     pickedIcon?.let { media ->
                         MarmotGroupIconChange.Set(
-                            accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, context),
+                            accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, accountViewModel.host.mediaUploader),
                         )
                     } ?: MarmotGroupIconChange.Keep
                 // Always commit an initial metadata extension so that

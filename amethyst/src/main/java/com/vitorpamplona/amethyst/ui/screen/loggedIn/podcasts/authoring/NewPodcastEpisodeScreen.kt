@@ -90,8 +90,8 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_episode_video_label
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar

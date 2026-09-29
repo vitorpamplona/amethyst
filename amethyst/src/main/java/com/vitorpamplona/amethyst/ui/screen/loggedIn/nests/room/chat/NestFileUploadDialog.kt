@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -56,7 +55,6 @@ fun NestFileUploadDialog(
     nav: INav,
 ) {
     val room = nestScreenModel.room ?: return
-    val context = LocalContext.current
 
     val host = room.author ?: return
     val title = (room.event as? MeetingSpaceEvent)?.room().orEmpty()
@@ -93,7 +91,7 @@ fun NestFileUploadDialog(
         upload = {
             nestScreenModel.upload(
                 onError = accountViewModel.toastManager::toast,
-                context = context,
+                uploader = accountViewModel.host.mediaUploader,
                 onceUploaded = onUpload,
             )
 

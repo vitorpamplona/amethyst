@@ -71,7 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_cta
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_url_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar

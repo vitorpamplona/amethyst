@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.appContext
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.contentUriFor
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.copyAssetToCache
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -28,7 +28,7 @@ import androidx.compose.foundation.content.consume
 import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.content.hasMediaType
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 
 @OptIn(ExperimentalFoundationApi::class)
 actual fun Modifier.imageContentReceiver(onImage: (MediaUri, String?) -> Unit): Modifier =

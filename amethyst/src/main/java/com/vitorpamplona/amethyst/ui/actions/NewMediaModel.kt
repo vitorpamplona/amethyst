@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,13 +37,15 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -100,13 +101,13 @@ open class NewMediaModel : ViewModel() {
     ): Boolean = mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(url)
 
     fun upload(
-        context: Context,
+        uploader: MediaUploader,
         accountViewModel: AccountViewModel,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         try {
-            uploadUnsafe(context, accountViewModel, onSucess, onError)
+            uploadUnsafe(uploader, accountViewModel, onSucess, onError)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -118,7 +119,7 @@ open class NewMediaModel : ViewModel() {
     }
 
     fun uploadUnsafe(
-        context: Context,
+        uploader: MediaUploader,
         accountViewModel: AccountViewModel,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
@@ -135,10 +136,10 @@ open class NewMediaModel : ViewModel() {
                 myMultiOrchestrator.upload(
                     caption,
                     if (sensitiveContent) "" else null,
-                    MediaCompressor.intToCompressorQuality(mediaQualitySlider),
+                    CompressorQuality.fromSlider(mediaQualitySlider),
                     serverToUse,
                     myAccount,
-                    context,
+                    uploader,
                     useH265Codec,
                     stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,

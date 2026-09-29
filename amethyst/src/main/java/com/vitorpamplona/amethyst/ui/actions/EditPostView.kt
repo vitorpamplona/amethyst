@@ -59,7 +59,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
@@ -121,8 +120,6 @@ fun EditPostView(
 ) {
     val postViewModel: EditPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
-
-    val context = LocalContext.current
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -280,7 +277,7 @@ fun EditPostView(
                                             accountViewModel.account.settings.defaultFileServer,
                                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                                             onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context, stripMetadata)
+                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
                                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                                             },
                                             onDelete = postViewModel::deleteMediaToUpload,

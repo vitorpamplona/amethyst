@@ -67,8 +67,8 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_b
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_reset
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -389,6 +389,7 @@ private fun MarmotGroupFileUploadDialog(
                         }
                     },
                     context = context,
+                    uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->
                         MarmotFileSender(nostrGroupId, accountViewModel).send(uploads)
                         onUpload()

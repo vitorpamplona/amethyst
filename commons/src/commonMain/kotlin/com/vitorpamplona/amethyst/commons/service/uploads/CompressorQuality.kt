@@ -18,12 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.service.uploads
 
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+enum class CompressorQuality {
+    VERY_LOW,
+    LOW,
+    MEDIUM,
+    HIGH,
+    VERY_HIGH,
+    UNCOMPRESSED,
+    ;
 
-class SelectedMediaProcessing(
-    val media: SelectedMedia,
-    val orchestrator: UploadOrchestrator = UploadOrchestrator(),
-)
+    companion object {
+        /** The media-quality slider's position (0 low … 3 uncompressed) as a quality. */
+        fun fromSlider(position: Int): CompressorQuality =
+            when (position) {
+                0 -> LOW
+                1 -> MEDIUM
+                2 -> HIGH
+                3 -> UNCOMPRESSED
+                else -> MEDIUM
+            }
+    }
+}

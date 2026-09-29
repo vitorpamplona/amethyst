@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
@@ -44,7 +45,7 @@ class ChatFileUploader(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
         onEncryptedUploadError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onStrippingFailed: suspend () -> Boolean = { true },
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
@@ -58,11 +59,11 @@ class ChatFileUploader(
                 orchestrator.uploadEncrypted(
                     viewState.caption,
                     viewState.contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                    CompressorQuality.fromSlider(viewState.mediaQualitySlider),
                     cipher,
                     viewState.selectedServer,
                     account,
-                    context,
+                    uploader,
                     stripMetadata = viewState.stripMetadata,
                     onStrippingFailed = onStrippingFailed,
                 )
@@ -70,8 +71,9 @@ class ChatFileUploader(
             if (results.allGood) {
                 val list =
                     results.successful.mapNotNull { state ->
-                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, cipher)
+                        val uploaded = state.result
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, cipher)
                         } else {
                             null
                         }
@@ -97,7 +99,7 @@ class ChatFileUploader(
                 }
             }
         } else {
-            justUploadNIP17Unencrypted(viewState, onError, context, onStrippingFailed, onceUploaded)
+            justUploadNIP17Unencrypted(viewState, onError, uploader, onStrippingFailed, onceUploaded)
         }
 
         viewState.mediaUploadTracker.finishUpload()
@@ -106,7 +108,7 @@ class ChatFileUploader(
     suspend fun justUploadNIP17Unencrypted(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onStrippingFailed: suspend () -> Boolean = { true },
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
@@ -117,10 +119,10 @@ class ChatFileUploader(
             orchestrator.upload(
                 viewState.caption,
                 viewState.contentWarningReason,
-                MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                CompressorQuality.fromSlider(viewState.mediaQualitySlider),
                 viewState.selectedServer,
                 account,
-                context,
+                uploader,
                 stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
             )
@@ -128,8 +130,9 @@ class ChatFileUploader(
         if (results.allGood) {
             val list =
                 results.successful.mapNotNull { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, null)
+                    val uploaded = state.result
+                    if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, null)
                     } else {
                         null
                     }
@@ -153,7 +156,7 @@ class ChatFileUploader(
     suspend fun justUploadNIP04(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onStrippingFailed: suspend () -> Boolean = { true },
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
@@ -164,10 +167,10 @@ class ChatFileUploader(
             orchestrator.upload(
                 viewState.caption,
                 viewState.contentWarningReason,
-                MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                CompressorQuality.fromSlider(viewState.mediaQualitySlider),
                 viewState.selectedServer,
                 account,
-                context,
+                uploader,
                 stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
             )
@@ -175,8 +178,9 @@ class ChatFileUploader(
         if (results.allGood) {
             val list =
                 results.successful.mapNotNull { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, null)
+                    val uploaded = state.result
+                    if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, null)
                     } else {
                         null
                     }

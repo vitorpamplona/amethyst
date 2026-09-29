@@ -52,8 +52,8 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.new_product
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -292,7 +292,7 @@ private fun NewProductBody(
                         defaultServer = accountViewModel.account.settings.defaultFileServer,
                         isUploading = postViewModel.mediaUploadTracker.isUploading,
                         onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, stripMetadata)
+                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
                             accountViewModel.account.settings.changeDefaultFileServer(server)
                         },
                         onDelete = postViewModel::deleteMediaToUpload,

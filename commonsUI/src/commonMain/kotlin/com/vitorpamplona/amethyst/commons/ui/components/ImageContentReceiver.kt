@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 
 /**
  * Accepts images pasted or dragged into the field (keyboard GIFs, stickers, clipboard images),

@@ -29,10 +29,11 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -205,9 +206,10 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 existingCoverUrl = coverUrl.value.trim().ifBlank { null },
                 existingAudioUrl = audioUrl.value.trim(),
                 server = server,
-                quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value),
+                quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 appContext = context.applicationContext,
+                uploader = accountViewModel.host.mediaUploader,
             )
 
         isSending.value = true
@@ -265,9 +267,10 @@ class NewPodcastEpisodeViewModel : ViewModel() {
         val existingCoverUrl: String?,
         val existingAudioUrl: String,
         val server: ServerName,
-        val quality: com.vitorpamplona.amethyst.service.uploads.CompressorQuality,
+        val quality: CompressorQuality,
         val stripMetadata: Boolean,
         val appContext: Context,
+        val uploader: MediaUploader,
     )
 
     private suspend fun performParallelUploads(snapshot: Snapshot): Pair<String?, String?> =
@@ -294,7 +297,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
             quality = snapshot.quality,
             stripMetadata = snapshot.stripMetadata,
             alt = snapshot.title.ifBlank { null },
-            context = snapshot.appContext,
+            uploader = snapshot.uploader,
             onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
         )
 

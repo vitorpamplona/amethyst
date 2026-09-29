@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.post
 
-import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -36,11 +35,13 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_de
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import kotlinx.collections.immutable.ImmutableList
@@ -110,12 +111,12 @@ class NewBadgeModel : ViewModel() {
             name.isNotBlank()
 
     fun upload(
-        context: Context,
+        uploader: MediaUploader,
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         try {
-            uploadUnsafe(context, onSuccess, onError)
+            uploadUnsafe(uploader, onSuccess, onError)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -127,7 +128,7 @@ class NewBadgeModel : ViewModel() {
     }
 
     private fun uploadUnsafe(
-        context: Context,
+        uploader: MediaUploader,
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
@@ -142,10 +143,10 @@ class NewBadgeModel : ViewModel() {
                 orch.upload(
                     alt = name,
                     contentWarningReason = null,
-                    mediaQuality = MediaCompressor.intToCompressorQuality(mediaQualitySlider),
+                    mediaQuality = CompressorQuality.fromSlider(mediaQualitySlider),
                     server = serverToUse,
                     account = myAccount,
-                    context = context,
+                    uploader = uploader,
                     useH265 = false,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,

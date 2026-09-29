@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientB
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UnavailableMediaUploader
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
@@ -198,6 +200,7 @@ private object PreviewAccountViewModelHost : AccountViewModelHost {
     override val relayStats = RelayStats(EmptyNostrClient())
     override val torRelayEvaluation: StateFlow<TorRelayEvaluation> = MutableStateFlow(TorRelayEvaluation(TorRelaySettings()))
     override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>> = MutableStateFlow(persistentMapOf())
+    override val mediaUploader: MediaUploader = UnavailableMediaUploader
     override val websocketBuilder = BasicOkHttpWebSocket.Builder { OkHttpClient() }
     override val lnurlTransport = LnurlHttpTransport { throw IllegalStateException("Previews do not reach the network") }
     override val moneyOpRelays = MoneyOpRelayRouting.None

@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholder
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.save
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -114,7 +114,7 @@ fun EditGroupInfoScreen(
                             val iconChange =
                                 pickedIcon?.let { media ->
                                     MarmotGroupIconChange.Set(
-                                        accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, context),
+                                        accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, accountViewModel.host.mediaUploader),
                                     )
                                 } ?: if (removeIcon) MarmotGroupIconChange.Clear else MarmotGroupIconChange.Keep
                             accountViewModel.updateMarmotGroupMetadata(

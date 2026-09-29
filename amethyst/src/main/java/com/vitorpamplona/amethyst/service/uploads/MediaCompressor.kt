@@ -26,6 +26,8 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
@@ -33,12 +35,6 @@ import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
 import java.io.File
-
-class MediaCompressorResult(
-    val uri: Uri,
-    val contentType: String?,
-    val size: Long?,
-)
 
 class MediaCompressor {
     // ALL ERRORS ARE IGNORED. The original file is returned.
@@ -125,24 +121,4 @@ class MediaCompressor {
             MediaCompressorResult(uri, contentType, null)
         }
     }
-
-    companion object {
-        fun intToCompressorQuality(mediaQualityFloat: Int): CompressorQuality =
-            when (mediaQualityFloat) {
-                0 -> CompressorQuality.LOW
-                1 -> CompressorQuality.MEDIUM
-                2 -> CompressorQuality.HIGH
-                3 -> CompressorQuality.UNCOMPRESSED
-                else -> CompressorQuality.MEDIUM
-            }
-    }
-}
-
-enum class CompressorQuality {
-    VERY_LOW,
-    LOW,
-    MEDIUM,
-    HIGH,
-    VERY_HIGH,
-    UNCOMPRESSED,
 }

@@ -27,14 +27,15 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.collections.immutable.ImmutableList
@@ -214,10 +215,11 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 coverOrchestrator = coverMedia.value,
                 existingCoverUrl = coverUrl.value.trim().ifBlank { null },
                 server = server,
-                quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value),
+                quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 loadedEvent = loadedEvent,
                 appContext = context.applicationContext,
+                uploader = accountViewModel.host.mediaUploader,
             )
 
         isSending.value = true
@@ -265,6 +267,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
         val stripMetadata: Boolean,
         val loadedEvent: MusicPlaylistEvent?,
         val appContext: Context,
+        val uploader: MediaUploader,
     )
 
     private suspend fun runCoverUpload(
@@ -279,13 +282,13 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 mediaQuality = snapshot.quality,
                 server = server,
                 account = account,
-                context = snapshot.appContext,
+                uploader = snapshot.uploader,
                 useH265 = false,
                 stripMetadata = snapshot.stripMetadata,
                 onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
             )
         if (!res.allGood) {
-            throw UploadException(formatUploadErrors(res.errors, snapshot.appContext))
+            throw UploadException(formatUploadErrors(res.errors))
         }
         return firstUploadedUrl(res.successful)
             ?: throw UploadException("Server didn't return a URL for the uploaded cover.")
@@ -300,10 +303,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private suspend fun formatUploadErrors(
-        errors: List<UploadingState.Error>,
-        context: Context,
-    ): String =
+    private suspend fun formatUploadErrors(errors: List<UploadingState.Error>): String =
         errors
             .map { loadStringRes(it.errorResource, *it.params) }
             .distinct()

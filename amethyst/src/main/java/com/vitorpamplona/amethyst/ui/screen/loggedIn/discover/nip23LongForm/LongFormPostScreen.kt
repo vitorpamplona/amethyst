@@ -101,9 +101,9 @@ import com.vitorpamplona.amethyst.commons.resources.url_slug_placeholder
 import com.vitorpamplona.amethyst.commons.resources.your_article_title
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -238,15 +238,13 @@ private fun MarkdownPostScreenBody(
                         .fillMaxWidth()
                         .verticalScroll(scrollState, reverseScrolling = true),
             ) {
-                val context = LocalContext.current
-
                 // Banner image area
                 BannerImageArea(
                     coverImageUrl = postViewModel.coverImageUrl,
                     isUploading = postViewModel.isUploadingCoverImage,
                     accountViewModel = accountViewModel,
                     onImageSelected = {
-                        postViewModel.uploadCoverImage(it, context, onError = accountViewModel.toastManager::toast)
+                        postViewModel.uploadCoverImage(it, accountViewModel.host.mediaUploader, onError = accountViewModel.toastManager::toast)
                     },
                     onClear = {
                         postViewModel.coverImageUrl = ""
@@ -498,7 +496,7 @@ private fun MarkdownPostScreenBody(
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, uploadContext, useH265, stripMetadata, convertGifToMp4)
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, useH265, stripMetadata, convertGifToMp4)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,

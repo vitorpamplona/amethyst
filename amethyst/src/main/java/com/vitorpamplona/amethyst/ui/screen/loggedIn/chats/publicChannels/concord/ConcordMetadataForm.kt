@@ -168,7 +168,7 @@ private fun ConcordIconHero(
             uploading = true
             scope.launch {
                 try {
-                    icon.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(uri, context)
+                    icon.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(uri, context, accountViewModel.host.mediaUploader)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -239,7 +239,7 @@ private fun ConcordBannerHero(
             uploading = true
             scope.launch {
                 try {
-                    banner.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(uri, context)
+                    banner.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(uri, context, accountViewModel.host.mediaUploader)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

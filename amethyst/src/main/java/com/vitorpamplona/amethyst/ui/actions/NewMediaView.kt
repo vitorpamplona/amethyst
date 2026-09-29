@@ -46,7 +46,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,7 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
@@ -101,7 +100,6 @@ fun NewMediaView(
     initialCaption: String = "",
 ) {
     val account = accountViewModel.account
-    val context = LocalContext.current
 
     val scrollState = rememberScrollState()
 
@@ -130,7 +128,7 @@ fun NewMediaView(
                         onClose()
                     },
                     onPost = {
-                        postViewModel.upload(context, accountViewModel, onClose, accountViewModel.toastManager::toast)
+                        postViewModel.upload(accountViewModel.host.mediaUploader, accountViewModel, onClose, accountViewModel.toastManager::toast)
                         postViewModel.selectedServer?.let {
                             account.settings.changeDefaultFileServer(it)
                         }

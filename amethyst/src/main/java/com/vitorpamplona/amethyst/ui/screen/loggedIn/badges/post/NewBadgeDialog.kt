@@ -54,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -108,7 +107,6 @@ fun NewBadgeDialog(
     accountViewModel: AccountViewModel,
 ) {
     val account = accountViewModel.account
-    val context = LocalContext.current
 
     val scrollState = rememberScrollState()
 
@@ -152,7 +150,7 @@ fun NewBadgeDialog(
                     },
                     onPost = {
                         postViewModel.upload(
-                            context,
+                            accountViewModel.host.mediaUploader,
                             onSuccess = onClose,
                             onError = accountViewModel.toastManager::toast,
                         )

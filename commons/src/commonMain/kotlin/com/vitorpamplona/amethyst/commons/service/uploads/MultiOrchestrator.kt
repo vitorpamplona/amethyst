@@ -18,20 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads
+package com.vitorpamplona.amethyst.commons.service.uploads
 
-import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -67,7 +65,7 @@ class MultiOrchestrator(
         mediaQuality: CompressorQuality,
         server: ServerName,
         account: Account,
-        context: Context,
+        uploader: MediaUploader,
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
@@ -86,7 +84,7 @@ class MultiOrchestrator(
                             mediaQuality,
                             server,
                             account,
-                            context,
+                            uploader,
                             useH265,
                             stripMetadata,
                             onStrippingFailed,
@@ -109,7 +107,7 @@ class MultiOrchestrator(
         cipher: NostrCipher,
         server: ServerName,
         account: Account,
-        context: Context,
+        uploader: MediaUploader,
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
@@ -129,7 +127,7 @@ class MultiOrchestrator(
                             cipher,
                             server,
                             account,
-                            context,
+                            uploader,
                             useH265,
                             stripMetadata,
                             onStrippingFailed,

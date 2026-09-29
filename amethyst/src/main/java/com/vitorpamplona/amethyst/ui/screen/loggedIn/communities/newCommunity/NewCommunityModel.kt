@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity
 
-import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -39,11 +38,13 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_de
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -271,12 +272,12 @@ class NewCommunityModel : ViewModel() {
 
     @OptIn(ExperimentalUuidApi::class)
     fun publish(
-        context: Context,
+        uploader: MediaUploader,
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         try {
-            publishUnsafe(context, onSuccess, onError)
+            publishUnsafe(uploader, onSuccess, onError)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -289,7 +290,7 @@ class NewCommunityModel : ViewModel() {
 
     @OptIn(ExperimentalUuidApi::class)
     private fun publishUnsafe(
-        context: Context,
+        uploader: MediaUploader,
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
@@ -300,7 +301,7 @@ class NewCommunityModel : ViewModel() {
             try {
                 val uploadedUrl =
                     if (multiOrchestrator != null) {
-                        uploadImageIfAny(context, myAccount, onError) ?: return@launch
+                        uploadImageIfAny(uploader, myAccount, onError) ?: return@launch
                     } else {
                         null
                     }
@@ -371,7 +372,7 @@ class NewCommunityModel : ViewModel() {
     }
 
     private suspend fun uploadImageIfAny(
-        context: Context,
+        uploader: MediaUploader,
         myAccount: Account,
         onError: (String, String) -> Unit,
     ): String? {
@@ -382,10 +383,10 @@ class NewCommunityModel : ViewModel() {
             orch.upload(
                 alt = name.trim().ifBlank { "Community cover" },
                 contentWarningReason = null,
-                mediaQuality = MediaCompressor.intToCompressorQuality(mediaQualitySlider),
+                mediaQuality = CompressorQuality.fromSlider(mediaQualitySlider),
                 server = serverToUse,
                 account = myAccount,
-                context = context,
+                uploader = uploader,
                 useH265 = false,
                 stripMetadata = stripMetadata,
                 onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,

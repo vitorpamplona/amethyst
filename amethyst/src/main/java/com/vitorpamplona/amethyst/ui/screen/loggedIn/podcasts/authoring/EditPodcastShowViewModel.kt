@@ -28,10 +28,11 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
@@ -168,9 +169,10 @@ class EditPodcastShowViewModel : ViewModel() {
                     ),
                 coverOrchestrator = coverOrch,
                 server = server,
-                quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value),
+                quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 appContext = context.applicationContext,
+                uploader = accountViewModel.host.mediaUploader,
             )
 
         isSending.value = true
@@ -186,7 +188,7 @@ class EditPodcastShowViewModel : ViewModel() {
                             quality = snapshot.quality,
                             stripMetadata = snapshot.stripMetadata,
                             alt = snapshot.content.title,
-                            context = snapshot.appContext,
+                            uploader = snapshot.uploader,
                             onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                         )
                     }
@@ -219,9 +221,10 @@ class EditPodcastShowViewModel : ViewModel() {
         val content: Podcasting20PodcastMetadata.Content,
         val coverOrchestrator: MultiOrchestrator?,
         val server: ServerName?,
-        val quality: com.vitorpamplona.amethyst.service.uploads.CompressorQuality,
+        val quality: CompressorQuality,
         val stripMetadata: Boolean,
         val appContext: Context,
+        val uploader: MediaUploader,
     )
 }
 

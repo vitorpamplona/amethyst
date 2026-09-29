@@ -18,15 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.service.uploads
 
-actual abstract class MediaUri {
-    actual abstract override fun toString(): String
-}
-
-/** A picked file addressed by a path or URL string. */
-class StringMediaUri(
-    val value: String,
-) : MediaUri() {
-    override fun toString(): String = value
+/** Why an upload failed. The UI names it with `UploadingState.Error.errorResource`. */
+enum class UploadError {
+    MEDIA_TOO_BIG_FOR_NIP95,
+    COULD_NOT_CHECK_DOWNLOADED_FILE,
+    COULD_NOT_OPEN_COMPRESSED_FILE,
+    LOGIN_WITH_PRIVATE_KEY,
+    FAILED_TO_UPLOAD_MEDIA,
+    BLOSSOM_PAYMENT_REQUIRED,
+    SERVER_DID_NOT_PROVIDE_URL,
+    COULD_NOT_DOWNLOAD_FROM_SERVER,
+    AVIF_METADATA_STRIP_FAILED,
+    UPLOAD_CANCELLED,
 }

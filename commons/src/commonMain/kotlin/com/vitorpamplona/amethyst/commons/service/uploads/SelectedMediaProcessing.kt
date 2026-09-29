@@ -18,14 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.service.uploads
 
-/**
- * A picked file's address as the platform hands it over: Android's `content://` [android.net.Uri]
- * (a typealias there, so app code keeps reading it as a `Uri`), a string-backed subclass
- * elsewhere.
- */
-expect abstract class MediaUri {
-    /** The address as a string (`content://…` on Android). */
-    abstract override fun toString(): String
-}
+class SelectedMediaProcessing(
+    val media: SelectedMedia,
+    val orchestrator: UploadOrchestrator = UploadOrchestrator(),
+)

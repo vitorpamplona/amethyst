@@ -67,7 +67,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -142,7 +141,6 @@ fun NewGeocacheScreen(
 ) {
     val model: NewGeocacheViewModel = viewModel()
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     remember(editKind, editPubKeyHex, editDTag, prefillGeohash) {
         model.init(accountViewModel)
@@ -158,7 +156,7 @@ fun NewGeocacheScreen(
 
     val photoPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) scope.launch { model.uploadImage(uri, null, context) }
+            if (uri != null) scope.launch { model.uploadImage(uri, null, accountViewModel.host.mediaUploader) }
         }
 
     Scaffold(

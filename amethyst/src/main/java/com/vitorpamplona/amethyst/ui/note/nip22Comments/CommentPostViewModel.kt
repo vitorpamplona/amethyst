@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -55,7 +54,12 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
@@ -67,12 +71,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
@@ -787,11 +788,11 @@ open class CommentPostViewModel :
         mediaQuality: Int,
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         stripMetadata: Boolean = true,
     ) {
         try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
+            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, stripMetadata)
         } catch (_: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -808,7 +809,7 @@ open class CommentPostViewModel :
         mediaQuality: Int,
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -820,10 +821,10 @@ open class CommentPostViewModel :
                 myMultiOrchestrator.upload(
                     alt,
                     contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    CompressorQuality.fromSlider(mediaQuality),
                     server,
                     account,
-                    context,
+                    uploader,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
@@ -832,30 +833,31 @@ open class CommentPostViewModel :
             if (results.allGood) {
                 val urls =
                     results.successful.mapNotNull { state ->
-                        if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
+                        val uploaded = state.result
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason)
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                             note?.let {
                                 "nostr:" + it.toNEvent()
                             }
-                        } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
-                                IMetaTagBuilder(state.result.url)
+                                IMetaTagBuilder(uploaded.url)
                                     .apply {
-                                        hash(state.result.fileHeader.hash)
-                                        size(state.result.fileHeader.size)
-                                        state.result.fileHeader.mimeType
+                                        hash(uploaded.fileHeader.hash)
+                                        size(uploaded.fileHeader.size)
+                                        uploaded.fileHeader.mimeType
                                             ?.let { mimeType(it) }
-                                        state.result.fileHeader.dim
+                                        uploaded.fileHeader.dim
                                             ?.let { dims(it) }
-                                        state.result.fileHeader.blurHash
+                                        uploaded.fileHeader.blurHash
                                             ?.let { blurhash(it.blurhash) }
-                                        state.result.fileHeader.thumbHash
+                                        uploaded.fileHeader.thumbHash
                                             ?.let { thumbhash(it.thumbhash) }
-                                        state.result.magnet?.let { magnet(it) }
-                                        state.result.uploadedHash?.let { originalHash(it) }
+                                        uploaded.magnet?.let { magnet(it) }
+                                        uploaded.uploadedHash?.let { originalHash(it) }
 
                                         alt?.let { alt(it) }
                                         contentWarningReason?.let { sensitiveContent(contentWarningReason) }
@@ -863,7 +865,7 @@ open class CommentPostViewModel :
 
                             iMetaAttachments.replace(iMeta.url, iMeta)
 
-                            state.result.url
+                            uploaded.url
                         } else {
                             null
                         }

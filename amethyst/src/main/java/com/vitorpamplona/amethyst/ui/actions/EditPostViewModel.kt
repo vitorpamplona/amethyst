@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
@@ -41,17 +40,19 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
@@ -170,11 +171,11 @@ open class EditPostViewModel : ViewModel() {
         isPrivate: Boolean = false,
         server: ServerName,
         onError: (String, String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         stripMetadata: Boolean = true,
     ) {
         try {
-            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context, stripMetadata)
+            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, uploader, stripMetadata)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -192,7 +193,7 @@ open class EditPostViewModel : ViewModel() {
         isPrivate: Boolean = false,
         server: ServerName,
         onError: (String, String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         stripMetadata: Boolean = true,
     ) {
         accountViewModel.launchSigner {
@@ -206,10 +207,10 @@ open class EditPostViewModel : ViewModel() {
                     myMultiOrchestrator.upload(
                         alt,
                         if (sensitiveContent) "" else null,
-                        MediaCompressor.intToCompressorQuality(mediaQuality),
+                        CompressorQuality.fromSlider(mediaQuality),
                         server,
                         myAccount,
-                        context,
+                        uploader,
                         useH265Codec,
                         stripMetadata,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
@@ -218,11 +219,12 @@ open class EditPostViewModel : ViewModel() {
                 if (results.allGood) {
                     val urls =
                         results.successful.mapNotNull { state ->
-                            if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                            val uploaded = state.result
+                            if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
                                 val nip95 =
                                     myAccount.createNip95(
-                                        byteArray = state.result.bytes,
-                                        headerInfo = state.result.fileHeader,
+                                        byteArray = uploaded.bytes,
+                                        headerInfo = uploaded.fileHeader,
                                         alt = alt,
                                         contentWarningReason = if (sensitiveContent) "" else null,
                                     )
@@ -232,29 +234,29 @@ open class EditPostViewModel : ViewModel() {
                                 note?.let {
                                     "nostr:" + it.toNEvent()
                                 }
-                            } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                                 val iMeta =
-                                    IMetaTagBuilder(state.result.url)
+                                    IMetaTagBuilder(uploaded.url)
                                         .apply {
-                                            hash(state.result.fileHeader.hash)
-                                            size(state.result.fileHeader.size)
-                                            state.result.fileHeader.mimeType
+                                            hash(uploaded.fileHeader.hash)
+                                            size(uploaded.fileHeader.size)
+                                            uploaded.fileHeader.mimeType
                                                 ?.let { mimeType(it) }
-                                            state.result.fileHeader.dim
+                                            uploaded.fileHeader.dim
                                                 ?.let { dims(it) }
-                                            state.result.fileHeader.blurHash
+                                            uploaded.fileHeader.blurHash
                                                 ?.let { blurhash(it.blurhash) }
-                                            state.result.fileHeader.thumbHash
+                                            uploaded.fileHeader.thumbHash
                                                 ?.let { thumbhash(it.thumbhash) }
-                                            state.result.magnet?.let { magnet(it) }
-                                            state.result.uploadedHash?.let { originalHash(it) }
+                                            uploaded.magnet?.let { magnet(it) }
+                                            uploaded.uploadedHash?.let { originalHash(it) }
                                             alt?.let { alt(it) }
                                             if (sensitiveContent) sensitiveContent("")
                                         }.build()
 
                                 iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
 
-                                state.result.url
+                                uploaded.url
                             } else {
                                 null
                             }

@@ -63,7 +63,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -124,7 +123,6 @@ fun LogGeocacheFindScreen(
     val address = remember(kind, pubKeyHex, dTag) { Address(kind, pubKeyHex, dTag) }
     val model: LogGeocacheFindViewModel = viewModel(key = "LogGeocacheFind-${address.toValue()}")
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     remember(address) {
         model.init(accountViewModel, address)
@@ -137,7 +135,7 @@ fun LogGeocacheFindScreen(
     val photoPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
             if (uri != null) {
-                scope.launch { model.uploadImage(uri, null, context) }
+                scope.launch { model.uploadImage(uri, null, accountViewModel.host.mediaUploader) }
             }
         }
 

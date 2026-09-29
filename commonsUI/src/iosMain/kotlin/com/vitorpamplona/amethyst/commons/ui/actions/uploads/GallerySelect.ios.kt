@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 

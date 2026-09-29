@@ -84,8 +84,8 @@ import com.vitorpamplona.amethyst.commons.resources.music_track_title_placeholde
 import com.vitorpamplona.amethyst.commons.resources.music_track_uploading_banner
 import com.vitorpamplona.amethyst.commons.resources.new_music_track
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav

@@ -18,8 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.service.uploads
 
-import android.net.Uri
+sealed class UploadingState {
+    data object Ready : UploadingState()
 
-actual typealias MediaUri = Uri
+    data object Compressing : UploadingState()
+
+    data object Uploading : UploadingState()
+
+    data object ServerProcessing : UploadingState()
+
+    data object Downloading : UploadingState()
+
+    data object Hashing : UploadingState()
+
+    sealed class UploadingFinalState : UploadingState()
+
+    class Finished(
+        val result: UploadOrchestrator.OrchestratorResult,
+    ) : UploadingFinalState()
+
+    class Error(
+        val error: UploadError,
+        val params: Array<out String>,
+    ) : UploadingFinalState()
+}

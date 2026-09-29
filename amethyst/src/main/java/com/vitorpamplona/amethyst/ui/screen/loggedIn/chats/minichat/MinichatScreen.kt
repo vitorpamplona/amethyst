@@ -67,8 +67,8 @@ import com.vitorpamplona.amethyst.commons.resources.chat_minichat_title
 import com.vitorpamplona.amethyst.commons.resources.chat_send_image_title
 import com.vitorpamplona.amethyst.commons.resources.concord_open_channel
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -240,7 +240,7 @@ fun MinichatScreen(
                                 onEncryptedUploadError = { title, message ->
                                     launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
                                 },
-                                context = context,
+                                uploader = accountViewModel.host.mediaUploader,
                                 onceUploaded = { uploads ->
                                     val caption = uploadState.caption
                                     val imetas = if (isConcord) uploads.mapNotNull { it.toConcordImeta() } else uploads.toPlainImetas()

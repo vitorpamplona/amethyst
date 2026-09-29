@@ -21,6 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 
 actual fun Modifier.imageContentReceiver(onImage: (MediaUri, String?) -> Unit): Modifier = this

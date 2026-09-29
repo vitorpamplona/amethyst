@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,52 +34,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
-import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
-
-@Stable
-class SelectedMedia(
-    val uri: MediaUri,
-    val mimeType: String?,
-) {
-    fun isImage() = mimeType?.startsWith("image")
-
-    fun isGif() = mimeType?.equals("image/gif", ignoreCase = true) == true
-
-    fun isVideo() = mimeType?.startsWith("video")
-
-    fun isAudio() = mimeType?.startsWith("audio")
-
-    fun isNotMedia() =
-        mimeType?.let {
-            !(it.startsWith("image") || it.startsWith("video") || it.startsWith("audio"))
-        } ?: true
-
-    fun isDocument() = mimeType == "application/pdf"
-
-    /**
-     * Returns true if [MediaCompressor.compress] would actually compress this file when a
-     * non-UNCOMPRESSED quality is selected. AVIF, GIF, SVG, and unknown MIME types pass
-     * through MediaCompressor unchanged — the compression-quality slider has no effect on
-     * them, so the UI hides the slider when no selected files are compressible.
-     *
-     * Keep this in sync with the branching in MediaCompressor.compress() — if either side
-     * drifts, the UI will lie to the user.
-     */
-    fun isCompressible(): Boolean {
-        val mt = mimeType?.lowercase() ?: return false
-        return when {
-            mt.startsWith("video") -> true
-            mt.startsWith("image") ->
-                !mt.contains("gif") &&
-                    !mt.contains("svg") &&
-                    !isAvif(mt)
-            else -> false
-        }
-    }
-}
 
 @Composable
 fun SelectFromGallery(

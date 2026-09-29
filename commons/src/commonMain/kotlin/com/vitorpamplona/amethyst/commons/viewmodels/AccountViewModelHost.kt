@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -65,6 +66,9 @@ interface AccountViewModelHost {
 
     /** NIP-42 authentication state per relay, across every logged-in account. */
     val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
+
+    /** Compresses, strips, encrypts and uploads picked media for the composers. */
+    val mediaUploader: MediaUploader
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

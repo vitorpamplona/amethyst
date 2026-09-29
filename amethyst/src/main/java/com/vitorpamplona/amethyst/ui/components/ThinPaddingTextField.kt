@@ -53,7 +53,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.components.imageContentReceiver
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 

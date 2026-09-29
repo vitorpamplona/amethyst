@@ -26,10 +26,12 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
@@ -60,6 +62,7 @@ class ConcordImageUploader(
     suspend fun uploadEncrypted(
         uri: Uri,
         context: Context,
+        uploader: MediaUploader,
     ): ImagePointer =
         withContext(Dispatchers.IO) {
             // Fresh random key + nonce per image; we hold onto them to build the pointer below since the
@@ -76,7 +79,7 @@ class ConcordImageUploader(
                     encrypt = cipher,
                     server = resolveBlossomServer(),
                     account = account,
-                    context = context,
+                    uploader = uploader,
                 )
 
             val result =

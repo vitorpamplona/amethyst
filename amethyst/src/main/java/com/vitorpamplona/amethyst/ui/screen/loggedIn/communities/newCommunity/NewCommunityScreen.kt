@@ -58,7 +58,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -137,7 +136,6 @@ private fun CommunityFormScreen(
     nav: INav,
 ) {
     val model: NewCommunityModel = viewModel()
-    val context = LocalContext.current
 
     LaunchedEffect(accountViewModel.account) {
         model.init(accountViewModel.account)
@@ -185,7 +183,7 @@ private fun CommunityFormScreen(
                     },
                     onPost = {
                         model.publish(
-                            context = context,
+                            uploader = accountViewModel.host.mediaUploader,
                             onSuccess = { nav.popBack() },
                             onError = accountViewModel.toastManager::toast,
                         )
@@ -201,7 +199,7 @@ private fun CommunityFormScreen(
                     },
                     onPost = {
                         model.publish(
-                            context = context,
+                            uploader = accountViewModel.host.mediaUploader,
                             onSuccess = { nav.popBack() },
                             onError = accountViewModel.toastManager::toast,
                         )
