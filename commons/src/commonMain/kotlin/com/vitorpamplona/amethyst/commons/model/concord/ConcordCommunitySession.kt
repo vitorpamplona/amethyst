@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.amethyst.commons.actions.ChannelPlane
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -137,14 +140,40 @@ class ConcordCommunitySession(
      */
     private val nextBaseRekeyKey: GroupKey = ConcordActions.nextBaseRekeyPlane(root, communityIdBytes, entry.rootEpoch)
 
+    /**
+     * The rekey address the rotation INTO this epoch rode on (from the prior held root), or null
+     * for a joiner who holds no prior root. A racing sibling rotation to this same epoch lands
+     * here; the app drains it for the down-only heal (CORD-06 §3).
+     */
+    private val siblingBaseRekeyKey: GroupKey? = ConcordActions.siblingBaseRekeyPlane(entry)
+
+    /**
+     * The dissolution tombstone address (CORD-02 §9): derived from the community id alone, so it
+     * is the same for every epoch and every member past or present.
+     */
+    private val dissolvedKey: GroupKey = ConcordDissolution.planeKey(entry.id)
+
+    /**
+     * Set once a valid owner tombstone bound to this community arrives at [dissolvedAddress]. One
+     * way: there is no un-dissolve, so a later fold can never clear it.
+     */
+    @Volatile
+    private var dissolved = false
+
     /** The Control Plane stream address to subscribe to (known from the entry alone). */
     val controlPlaneAddress: HexKey get() = controlKeys.address
+
+    /** The dissolution tombstone stream address to subscribe to (known from the community id alone). */
+    val dissolvedAddress: HexKey get() = dissolvedKey.publicKeyHex
 
     /** The Guestbook Plane stream address to subscribe to (known from the entry alone). */
     val guestbookAddress: HexKey get() = guestbookKey.publicKeyHex
 
     /** The next-epoch base-rekey stream address to watch for an inbound Refounding. */
     val nextBaseRekeyAddress: HexKey get() = nextBaseRekeyKey.publicKeyHex
+
+    /** The current epoch's own base-rekey address (see [siblingBaseRekeyKey]), or null. */
+    val siblingBaseRekeyAddress: HexKey? get() = siblingBaseRekeyKey?.publicKeyHex
 
     /**
      * The Control Plane of every **prior** epoch we still hold a root for (address ->
@@ -159,7 +188,9 @@ class ConcordCommunitySession(
      * survives a process restart without any new storage.
      */
     private val historicalControlKeys: Map<HexKey, Pair<ControlPlaneKeys, Long>> =
-        entry.heldRoots
+        // Losing-fork roots of a healed race carry no Control Plane of the community's (CORD-06 §3).
+        ConcordRefounding
+            .canonicalHeldRoots(entry.heldRoots)
             .filter { it.epoch < entry.rootEpoch }
             .sortedByDescending { it.epoch }
             .take(ConcordActions.MAX_BACKFILL_EPOCHS)
@@ -221,15 +252,22 @@ class ConcordCommunitySession(
     private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>() // channelIdHex -> (wrapId -> wrap)
     private val guestbookWraps = LinkedHashMap<HexKey, Event>()
     private val baseRekeyWraps = LinkedHashMap<HexKey, Event>()
+    private val siblingRekeyWraps = LinkedHashMap<HexKey, Event>()
 
-    // channel plane pubkey -> (channelIdHex, key), refreshed on each control re-fold.
-    private var channelKeysByAddress = HashMap<HexKey, Pair<HexKey, GroupKey>>()
+    // Current channel plane pubkey -> plane (channel id, key, bound epoch), refreshed on each control
+    // re-fold. A Public Channel's plane derives from the root at the root epoch; a Private one's from
+    // its held channel key at the channel epoch (CORD-03 §1). A Private Channel we hold no key for has
+    // no entry at all: it is neither subscribed, read, nor written.
+    private var channelKeysByAddress = HashMap<HexKey, ChannelPlane>()
 
-    // Prior-epoch channel plane pubkey -> (channelIdHex, key, epoch), for pre-Refounding history.
-    // A CORD-06 Refounding rotates the root per epoch, so older messages live under a different
-    // plane per held root; we re-derive those here so historical wraps are subscribed, AUTHed, and
-    // decrypted alongside the current epoch. Empty when the account holds no prior roots.
-    private var historicalChannelKeysByAddress = HashMap<HexKey, Triple<HexKey, GroupKey, Long>>()
+    // Older channel plane pubkey -> plane, for history: a Public Channel's plane under each held
+    // prior root (a CORD-06 Refounding rotates the root per epoch) plus its private-era plane when a
+    // channel key is held. Subscribed, AUTHed and decrypted alongside the current planes.
+    private var historicalChannelKeysByAddress = HashMap<HexKey, ChannelPlane>()
+
+    // The held Private Channel keys the current channel planes were derived from, so a later list
+    // entry carrying different keys re-derives them (see [adoptPrivateChannels]).
+    private var derivedPrivateKeys = privateKeySet(entry)
 
     private val _state = MutableStateFlow<ConcordCommunityState?>(null)
     val state: StateFlow<ConcordCommunityState?> = _state
@@ -311,11 +349,32 @@ class ConcordCommunitySession(
         address == controlPlaneAddress ||
             address == guestbookAddress ||
             address == nextBaseRekeyAddress ||
+            address == siblingBaseRekeyAddress ||
+            address == dissolvedAddress ||
             address in historicalControlKeys ||
             lock.withLock { address in channelKeysByAddress || address in historicalChannelKeysByAddress }
 
     /** The Chat Plane stream address for [channelIdHex], once this community has folded that channel (else null). */
-    fun channelPlaneAddress(channelIdHex: HexKey): HexKey? = lock.withLock { channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key }
+    fun channelPlaneAddress(channelIdHex: HexKey): HexKey? = lock.withLock { channelKeysByAddress.entries.firstOrNull { it.value.channelIdHex == channelIdHex }?.key }
+
+    /**
+     * The plane [channelIdHex] is written on now, or null when it is not folded yet or is a Private
+     * Channel this account holds no key for (CORD-03 §1) — the caller must then refuse to post.
+     */
+    fun currentChannelPlane(channelIdHex: HexKey): ChannelPlane? = lock.withLock { channelKeysByAddress.values.firstOrNull { it.channelIdHex == channelIdHex } }
+
+    /**
+     * The plane of [channelIdHex] bound to [epoch] — current or historical — or null when this
+     * account holds none. A delete of an older message goes back onto the plane that carried it.
+     */
+    fun channelPlaneFor(
+        channelIdHex: HexKey,
+        epoch: Long,
+    ): ChannelPlane? =
+        lock.withLock {
+            channelKeysByAddress.values.firstOrNull { it.channelIdHex == channelIdHex && it.epoch == epoch }
+                ?: historicalChannelKeysByAddress.values.firstOrNull { it.channelIdHex == channelIdHex && it.epoch == epoch }
+        }
 
     /**
      * Every Chat Plane stream address for [channelIdHex] across epochs: the current one plus each
@@ -326,8 +385,8 @@ class ConcordCommunitySession(
      */
     fun channelPlaneAddressesAllEpochs(channelIdHex: HexKey): List<HexKey> =
         lock.withLock {
-            val current = channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key
-            val historical = historicalChannelKeysByAddress.entries.filter { it.value.first == channelIdHex }.map { it.key }
+            val current = channelKeysByAddress.entries.firstOrNull { it.value.channelIdHex == channelIdHex }?.key
+            val historical = historicalChannelKeysByAddress.entries.filter { it.value.channelIdHex == channelIdHex }.map { it.key }
             (listOfNotNull(current) + historical)
         }
 
@@ -336,6 +395,12 @@ class ConcordCommunitySession(
 
     /** The buffered kind-3303 base-rotation wraps seen at [nextBaseRekeyAddress], for the account to drain. */
     fun pendingBaseRekeyWraps(): List<Event> = lock.withLock { baseRekeyWraps.values.toList() }
+
+    /** The base-rekey [GroupKey] of the rotation into this epoch (sibling heal), or null. */
+    fun siblingBaseRekeyKey(): GroupKey? = siblingBaseRekeyKey
+
+    /** The buffered kind-3303 wraps seen at [siblingBaseRekeyAddress], for the account's heal drain. */
+    fun pendingSiblingRekeyWraps(): List<Event> = lock.withLock { siblingRekeyWraps.values.toList() }
 
     /**
      * Every stream key whose kind-1059 wraps this session reads: the Control Plane plus
@@ -362,13 +427,16 @@ class ConcordCommunitySession(
                 // Prior-epoch Control Planes: the anti-rollback floor is folded from them, so the
                 // gated relays must serve their wraps too.
                 historicalControlKeys.values.mapNotNull { it.first.signer } +
-                channelKeysByAddress.values.map { it.second } +
+                channelKeysByAddress.values.map { it.key } +
                 // Prior-epoch channel stream keys so the gated relays serve their older wraps too.
-                historicalChannelKeysByAddress.values.map { it.second }
+                historicalChannelKeysByAddress.values.map { it.key }
         }
 
-    /** The CORD-06 auxiliary plane keys (Guestbook + next base-rekey) for their own isolated AUTH. */
-    fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey)
+    /**
+     * The auxiliary plane keys (Guestbook, next base-rekey, and the CORD-02 §9 dissolution address)
+     * for their own isolated AUTH.
+     */
+    fun auxStreamKeys(): List<GroupKey> = listOfNotNull(guestbookKey, nextBaseRekeyKey, dissolvedKey, siblingBaseRekeyKey)
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlKeys) }
@@ -414,6 +482,33 @@ class ConcordCommunitySession(
             true
         }
 
+    /**
+     * Adopt a change to the Private Channel keys the Community List carries for this same community,
+     * root and epoch (a key delivered on grant, CORD-03 §1): the entry is swapped in place and the
+     * channel planes re-derived, so a newly held Private Channel is subscribed, read and written on
+     * its own plane without dropping the buffered Control Plane wraps a rebuild would lose.
+     *
+     * Returns false, changing nothing, when [newEntry] is not the same community at the same root,
+     * epoch and Control Plane material (the caller rebuilds, or adopts that first), or when the held
+     * channel keys did not change.
+     */
+    fun adoptPrivateChannels(newEntry: ConcordCommunityListEntry): Boolean {
+        val changed =
+            lock.withLock {
+                val cur = entry
+                if (newEntry.id != cur.id || newEntry.root != cur.root || newEntry.rootEpoch != cur.rootEpoch) return false
+                if (newEntry.controlPk != cur.controlPk || newEntry.controlRoot != cur.controlRoot) return false
+                // Compared with what the planes were derived from, not with [entry]: an adoption of
+                // Control material may already have swapped in an entry carrying the new keys.
+                if (privateKeySet(newEntry) == derivedPrivateKeys) return false
+                entry = newEntry
+                true
+            }
+        // Nothing folded yet: the first control wrap derives the planes from the swapped-in entry.
+        if (changed && lock.withLock { controlWraps.isNotEmpty() }) refold()
+        return changed
+    }
+
     /** This account's standing, from the current fold. */
     fun membership(): ConcordMembership {
         val s = _state.value ?: return ConcordMembership.MEMBER
@@ -449,12 +544,28 @@ class ConcordCommunitySession(
                 refoldGuestbook()
                 return ConcordIngestOutcome.STRUCTURAL
             }
+            dissolvedAddress -> {
+                // Anyone holding the (public) community id can sign here, so only an owner-signed,
+                // eid-bound tombstone counts (CORD-02 §9); everything else is noise we still claim.
+                if (dissolved || !ConcordDissolution.isTombstoneWrap(wrap, entry.id, entry.owner)) return ConcordIngestOutcome.NON_STRUCTURAL
+                lock.withLock {
+                    dissolved = true
+                    _state.value = _state.value?.withDissolved(true)
+                }
+                // The state watcher bumps the revision off the changed fold, as for a control wrap.
+                return ConcordIngestOutcome.STRUCTURAL_FOLD
+            }
             nextBaseRekeyAddress -> {
                 // Buffer only — decrypting a base-rotation blob needs the account signer, so the
                 // app layer drains [pendingBaseRekeyWraps] with it and authorizes the rotator. That
                 // drain runs off the revision tick, so a buffered rekey must bump (rare — a rekey,
                 // not a message).
                 lock.withLock { baseRekeyWraps[wrap.id] = wrap }
+                return ConcordIngestOutcome.STRUCTURAL
+            }
+            siblingBaseRekeyAddress -> {
+                // Same as above for a racing rotation into THIS epoch (the down-only heal).
+                lock.withLock { siblingRekeyWraps[wrap.id] = wrap }
                 return ConcordIngestOutcome.STRUCTURAL
             }
             else -> {
@@ -471,15 +582,13 @@ class ConcordCommunitySession(
                 }
                 val current = lock.withLock { channelKeysByAddress[wrap.pubKey] }
                 if (current != null) {
-                    val (channelIdHex, key) = current
-                    return ingestChannelWrap(wrap, channelIdHex, key, entry.rootEpoch, seenOnRelays)
+                    return ingestChannelWrap(wrap, current.channelIdHex, current.key, current.epoch, seenOnRelays)
                 }
-                // A prior-epoch plane (pre-Refounding history). Decrypt with that epoch's key and
-                // bind-check against that epoch. Keyed separately from the current buffer so a re-fold
-                // (which rebuilds only the current-epoch keys) never re-projects the historical ones.
+                // An older plane (pre-Refounding history, or a Public Channel's private era). Decrypt
+                // with that plane's key and bind-check against its epoch. Keyed separately from the
+                // current buffer so a re-fold never re-projects the historical ones.
                 val historical = lock.withLock { historicalChannelKeysByAddress[wrap.pubKey] } ?: return ConcordIngestOutcome.NOT_MINE
-                val (channelIdHex, key, epoch) = historical
-                return ingestChannelWrap(wrap, channelIdHex, key, epoch, seenOnRelays)
+                return ingestChannelWrap(wrap, historical.channelIdHex, historical.key, historical.epoch, seenOnRelays)
             }
         }
     }
@@ -519,8 +628,10 @@ class ConcordCommunitySession(
         key: GroupKey,
         epoch: Long,
     ) {
-        val rumor = ConcordStreamEnvelope.openOrNull(wrap, key)?.rumor ?: return
-        if (!ChannelChat.isTyping(rumor) || !ChannelChat.isBoundTo(rumor, channelIdHex, epoch)) return
+        val opened = ConcordStreamEnvelope.openOrNull(wrap, key) ?: return
+        // The same Chat gate as a stored rumor: encrypted seal, strict binding, well-formed ms.
+        val rumor = ChannelChat.acceptOpened(opened, channelIdHex, epoch) ?: return
+        if (!ChannelChat.isTyping(rumor)) return
         val who = rumor.pubKey.lowercase()
         if (who == myPubKey.lowercase()) return // never show my own typing back to me
         // A banned member's messages are dropped everywhere, so their typing heartbeat must be too —
@@ -552,35 +663,37 @@ class ConcordCommunitySession(
                 val folded =
                     ConcordCommunityState.fold(
                         editionsLocked(wraps, controlKeys),
+                        communityIdBytes,
                         entry.owner,
                         controlFloorsLocked(),
                     )
 
-                val prevChannels = channelKeysByAddress.values.mapTo(HashSet()) { it.first }
-                val next = HashMap<HexKey, Pair<HexKey, GroupKey>>()
-                for (channelIdHex in folded.channels.keys) {
-                    val key = ConcordActions.publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-                    next[key.publicKeyHex] = channelIdHex to key
+                val prevAddresses = channelKeysByAddress.keys.toHashSet()
+                val next = HashMap<HexKey, ChannelPlane>()
+                // Re-derive the older planes for the same (epoch-invariant) channel ids, so older
+                // history is subscribed/AUTHed/decrypted. Channels are known only after a fold, hence
+                // derived here rather than up front.
+                val historical = HashMap<HexKey, ChannelPlane>()
+                for ((channelIdHex, channel) in folded.channels) {
+                    val isPrivate = channel.definition.private
+                    // Null for a Private Channel with no held key: never the root-derived plane.
+                    ConcordActions.currentChannelPlane(entry, channelIdHex, isPrivate)?.let { next[it.key.publicKeyHex] = it }
+                    for (plane in ConcordActions.historicalChannelPlanes(entry, channelIdHex, isPrivate)) {
+                        historical[plane.key.publicKeyHex] = plane
+                    }
                 }
                 channelKeysByAddress = next
-
-                // Re-derive the prior-epoch planes for the same (epoch-invariant) channel ids, so older
-                // pre-Refounding history is subscribed/AUTHed/decrypted. Channels are known only after a
-                // fold, hence derived here rather than up front.
-                val historical = HashMap<HexKey, Triple<HexKey, GroupKey, Long>>()
-                for (plane in ConcordActions.historicalChannelPlanes(entry.heldRoots, folded.channels.keys)) {
-                    historical[plane.key.publicKeyHex] = Triple(plane.channelIdHex, plane.key, plane.epoch)
-                }
                 historicalChannelKeysByAddress = historical
+                derivedPrivateKeys = privateKeySet(entry)
 
-                _state.value = folded
-                folded.channels.keys.filterNot { it in prevChannels }
+                _state.value = folded.withDissolved(dissolved)
+                next.filterKeys { it !in prevAddresses }.values.map { it.channelIdHex }
             }
 
-        // Project only channels appearing for the first time. Existing channels' wraps were already
-        // emitted incrementally as they arrived (a channel plane is only subscribed after it folds, so
-        // a channel's buffer never pre-dates its first fold) — re-projecting all channels on every
-        // control edition would be O(channels × history) of redundant decryption.
+        // Project only channels whose current plane is new (a first fold, or a plane that moved when a
+        // Private Channel's key arrived). Existing planes' wraps were already emitted incrementally as
+        // they arrived — re-projecting all channels on every control edition would be
+        // O(channels × history) of redundant decryption.
         for (channelIdHex in newChannels) reprojectChannel(channelIdHex)
     }
 
@@ -596,7 +709,7 @@ class ConcordCommunitySession(
             if (editionByWrapId.containsKey(wrap.id)) {
                 editionByWrapId[wrap.id]
             } else {
-                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKeys)?.let { ControlEdition.fromRumor(it.rumor) }
+                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKeys)?.let { ControlEdition.fromOpened(it) }
                 editionByWrapId[wrap.id] = edition
                 edition
             }
@@ -621,7 +734,7 @@ class ConcordCommunitySession(
             val wraps = historicalControlWraps[address]?.values?.toList() ?: continue
             val editions = editionsLocked(wraps, keyAtEpoch.first)
             if (editions.isEmpty()) continue
-            floors = ConcordCommunityState.authorizedHeads(editions, entry.owner, floors)
+            floors = ConcordCommunityState.authorizedHeads(editions, communityIdBytes, entry.owner, floors)
         }
         return floors
     }
@@ -645,9 +758,9 @@ class ConcordCommunitySession(
      *  re-fold (keys may change). Prior-epoch wraps in the buffer simply won't open under the current
      *  key and are skipped — they were already emitted when they landed (the sink dedups by id). */
     private fun reprojectChannel(channelIdHex: HexKey) {
-        val key = lock.withLock { channelKeysByAddress.values.firstOrNull { it.first == channelIdHex }?.second } ?: return
+        val plane = currentChannelPlane(channelIdHex) ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
-        emitChannelRumors(channelIdHex, key, entry.rootEpoch, wraps)
+        emitChannelRumors(channelIdHex, plane.key, plane.epoch, wraps)
     }
 
     /**
@@ -675,6 +788,8 @@ class ConcordCommunitySession(
     }
 
     companion object {
+        private fun privateKeySet(e: ConcordCommunityListEntry) = e.privateChannels.mapTo(HashSet()) { Triple(it.channelId.lowercase(), it.key.lowercase(), it.epoch) }
+
         /** A typing heartbeat is considered current for this many seconds after it's seen. */
         const val TYPING_STALE_SECS = 8L
     }

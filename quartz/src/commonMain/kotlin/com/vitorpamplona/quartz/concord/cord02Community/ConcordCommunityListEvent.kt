@@ -29,8 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 
 /**
+ * **Retired** (CORD-02 §8): the single-event Community List, superseded by the fragmented kind
+ * 33302 [ConcordCommunityListFragmentEvent] once it outgrew one event. Still read, as a rescue
+ * source unioned into the fragments, so memberships only this event carries are migrated by the
+ * next write; never written.
+ *
  * The member's private, self-encrypted list of joined Concord communities (kind
  * 13302, CORD-05). A replaceable event whose
  * `content` is the NIP-44 self-encryption of the [ConcordCommunityListEntry] JSON
@@ -58,6 +64,16 @@ class ConcordCommunityListEvent(
     }
 
     override fun isContentEncoded() = true
+
+    /** The decrypted plaintext (the internal document shape), or null when it does not open. */
+    suspend fun decryptPlaintext(signer: NostrSigner): String? =
+        try {
+            signer.nip44Decrypt(content, signer.pubKey)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
 
     /** Decrypts this list's entries with [signer], or empty on failure / wrong key. */
     suspend fun decrypt(signer: NostrSigner): List<ConcordCommunityListEntry> = decryptDocument(signer).entries

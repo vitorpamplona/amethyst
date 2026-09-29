@@ -33,7 +33,8 @@ class EvTag {
         fun parse(tag: Array<String>): Long? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            return tag[1].toLongOrNull()?.takeIf { it >= 0 }
+            // Canonical decimal only: "04" or "+4" is not a version (CORD-01 §5).
+            return CanonicalDecimal.parse(tag[1])
         }
 
         fun assemble(version: Long) = arrayOf(TAG_NAME, version.toString())

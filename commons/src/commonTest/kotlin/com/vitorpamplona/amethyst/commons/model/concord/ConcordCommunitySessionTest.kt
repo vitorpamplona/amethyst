@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
+import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -31,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConcordCommunitySessionTest {
@@ -161,5 +164,40 @@ class ConcordCommunitySessionTest {
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))
             assertEquals(ConcordIngestOutcome.NOT_MINE, session.ingest(outsider.genesisWraps.first()))
+        }
+
+    private fun entryFor(community: NewConcordCommunity) =
+        ConcordCommunityListEntry(
+            id = community.communityIdHex,
+            owner = community.ownerPubKey,
+            ownerSalt = community.ownerSalt.toHexKey(),
+            root = community.communityRoot.toHexKey(),
+            rootEpoch = community.rootEpoch,
+            controlPk = community.controlPkHex,
+            controlRoot = community.controlRoot.toHexKey(),
+            relays = listOf("wss://r.example"),
+            name = "Doomed",
+        )
+
+    @Test
+    fun anOwnerTombstoneAtTheDissolvedAddressSealsTheCommunity() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Doomed", createdAt = 1L, relays = listOf("wss://r.example"))
+            val session = ConcordCommunitySession(entryFor(community), owner.pubKey)
+            community.genesisWraps.forEach { session.ingest(it) }
+            assertFalse(session.state.value!!.dissolved)
+            assertTrue(session.auxStreamKeys().any { it.publicKeyHex == session.dissolvedAddress }, "the grave must be AUTHed for")
+
+            // A stranger can sign at the (public) address, but only the owner's tombstone counts.
+            val stranger = NostrSignerInternal(KeyPair())
+            session.ingest(ConcordDissolution.build(stranger, community.communityIdHex))
+            assertFalse(session.state.value!!.dissolved)
+
+            session.ingest(ConcordDissolution.build(owner, community.communityIdHex))
+            assertTrue(session.state.value!!.dissolved)
+
+            // One-way: a later control fold never clears it.
+            community.genesisWraps.forEach { session.ingest(it) }
+            assertTrue(session.state.value!!.dissolved)
         }
 }

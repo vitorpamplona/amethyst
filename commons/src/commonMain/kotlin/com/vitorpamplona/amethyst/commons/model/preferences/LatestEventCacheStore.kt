@@ -41,6 +41,8 @@ import okio.IOException
  */
 enum class LatestEventSlot(
     val prefKey: String,
+    /** False for a slot added after the SharedPreferences era: there is nothing to migrate. */
+    val existedInLegacyPrefs: Boolean = true,
 ) {
     CONTACT_LIST("latestContactList"),
     USER_METADATA("latestUserMetadata"),
@@ -61,6 +63,9 @@ enum class LatestEventSlot(
     EPHEMERAL_LIST("latestEphemeralChatList"),
     RELAY_GROUP_LIST("latestRelayGroupList"),
     CONCORD_LIST("latestConcordList"),
+
+    /** The kind-33302 Community List fragments (CORD-02 §8), one event JSON per line. */
+    CONCORD_LIST_FRAGMENTS("latestConcordListFragments", existedInLegacyPrefs = false),
     TRUST_PROVIDER_LIST("latestTrustProviderList"),
     KEY_PACKAGE_RELAY_LIST("latestKeyPackageRelayList"),
     FAVORITE_ALGO_FEEDS_LIST("latestFavoriteAlgoFeedsList"),
@@ -94,7 +99,7 @@ class LatestEventCacheStore(
         val legacyTable =
             LegacyKeyTable(
                 "migrated.latestEvents",
-                LatestEventSlot.entries.map { LegacyStringKey(it.prefKey, it.key) },
+                LatestEventSlot.entries.filter { it.existedInLegacyPrefs }.map { LegacyStringKey(it.prefKey, it.key) },
             )
     }
 

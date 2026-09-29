@@ -515,10 +515,10 @@ class AccountViewModel(
         reaction: String,
     ) {
         // Concord messages are encrypted: a public kind-7 would e-tag the private rumor id onto
-        // public relays. Route the reaction through a channel-plane wrap instead. (Retraction of an
-        // existing Concord reaction is a follow-up; for now this only adds one.)
+        // public relays. Route the reaction through a channel-plane wrap instead; tapping it again
+        // retracts it with an in-channel kind-5 delete (CORD-01), never a NIP-17 one.
         if (note.inGatherers?.any { it is ConcordChannel } == true) {
-            launchSigner { account.concord.reactToConcordMessage(note, reaction) }
+            launchSigner { account.concord.toggleConcordReaction(note, reaction) }
             return
         }
 

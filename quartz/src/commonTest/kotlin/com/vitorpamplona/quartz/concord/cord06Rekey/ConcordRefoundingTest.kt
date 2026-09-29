@@ -29,10 +29,15 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -127,7 +132,7 @@ class ConcordRefoundingTest {
                             .fromRumor(it.rumor)
                     }
                 }
-            val folded = ConcordCommunityState.fold(editions, owner.pubKey)
+            val folded = ConcordCommunityState.fold(editions, communityId, owner.pubKey)
 
             assertEquals("Test", folded.metadata?.name)
             assertTrue(folded.authority.isOwner(owner.pubKey))
@@ -161,14 +166,14 @@ class ConcordRefoundingTest {
 
             val icon = ImagePointer(url = "https://media/icon.enc", key = "1a".repeat(32), nonce = "2b".repeat(16), hash = "3c".repeat(32))
 
-            // v1 metadata: add the icon, chained onto genesis.
+            // The next metadata edition: add the icon, chained onto genesis.
             val metaV1Json = ConcordJson.instance.encodeToString(MetadataEntity.serializer(), MetadataEntity(name = "NosFabrica", icon = icon))
-            val metaV1Rumor = ControlEditionBuilder.rumor(owner.pubKey, ControlEntityKind.METADATA, communityId, 1, genesisMeta.hash, metaV1Json, now + 1)
+            val metaV1Rumor = ControlEditionBuilder.rumor(owner.pubKey, ControlEntityKind.METADATA, communityId, genesisMeta.version + 1, genesisMeta.hash, metaV1Json, now + 1)
             val metaV1Wrap = ConcordStreamEnvelope.wrap(metaV1Rumor, control, owner, encrypted = false, createdAt = now + 1)
 
-            // v1 channel: rename #general, chained onto genesis.
+            // The next channel edition: rename #general, chained onto genesis.
             val chanV1Json = ConcordJson.instance.encodeToString(ChannelEntity.serializer(), ChannelEntity(name = "lobby", private = false))
-            val chanV1Rumor = ControlEditionBuilder.rumor(owner.pubKey, ControlEntityKind.CHANNEL, community.generalChannelId, 1, genesisChannel.hash, chanV1Json, now + 1)
+            val chanV1Rumor = ControlEditionBuilder.rumor(owner.pubKey, ControlEntityKind.CHANNEL, community.generalChannelId, genesisChannel.version + 1, genesisChannel.hash, chanV1Json, now + 1)
             val chanV1Wrap = ConcordStreamEnvelope.wrap(chanV1Rumor, control, owner, encrypted = false, createdAt = now + 1)
 
             val priorWraps = community.genesisWraps + metaV1Wrap + chanV1Wrap
@@ -194,7 +199,7 @@ class ConcordRefoundingTest {
                 build.controlWraps.mapNotNull { wrap ->
                     ConcordStreamEnvelope.openOrNull(wrap, newControl)?.let { ControlEdition.fromRumor(it.rumor) }
                 }
-            val folded = ConcordCommunityState.fold(editions, owner.pubKey)
+            val folded = ConcordCommunityState.fold(editions, communityId, owner.pubKey)
 
             // A fresh joiner MUST see the compacted heads — name, icon, and the renamed channel.
             assertEquals("NosFabrica", folded.metadata?.name, "fresh joiner lost the community name after refounding")
@@ -294,7 +299,7 @@ class ConcordRefoundingTest {
             val newControl =
                 com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
                     .forStaff(newRoot, communityId, newEpoch, newControlRoot)
-            val compacted = ConcordRefounding.compactControlPlane(listOf(realHead, forged), control, newControl, owner.pubKey)
+            val compacted = ConcordRefounding.compactControlPlane(listOf(realHead, forged), control, newControl, communityId, owner.pubKey)
 
             val carried =
                 compacted
@@ -305,5 +310,75 @@ class ConcordRefoundingTest {
             assertEquals(1, carried.size, "one metadata edition carried forward")
             assertEquals(50, carried.single().version, "the owner's real head, not the forged genesis")
             assertEquals("Real", ConcordJson.decodeOrNull<MetadataEntity>(carried.single().content)?.name)
+        }
+
+    /**
+     * CORD-06 §3 re-wraps each entity's CURRENT HEAD — including sub-kinds this client does not
+     * model. Another client's Pin List (vsk 11) or Signal (vsk 12) used to be dropped by our
+     * Refounding, because the parser returned null for a vsk it did not know (I7). And CORD-02 §5
+     * allows the Control Plane only plaintext seals, so an edition under an encrypted seal is
+     * never a head to carry, however high its version (S9).
+     */
+    @Test
+    fun compactionCarriesUnmodeledHeadsVerbatimAndRefusesEncryptedSeals() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Test", now)
+            val communityId = community.communityId
+            val control = community.controlPlane
+
+            fun raw(
+                vsk: String,
+                eid: ByteArray,
+                version: Long,
+                prev: ControlEdition?,
+                content: String,
+            ): Event {
+                val tags = mutableListOf(arrayOf("vsk", vsk), arrayOf("eid", eid.toHexKey()), arrayOf("ev", version.toString()))
+                prev?.let { tags.add(arrayOf("ep", it.hashHex)) }
+                return RumorAssembler.assembleRumor<Event>(owner.pubKey, now + version, ControlEditionEvent.KIND, tags.toTypedArray(), content)
+            }
+
+            val pinsEid = ByteArray(32) { 0x11 }
+            val pinsV1 = raw("11", pinsEid, 1, null, """{"entries":[]}""")
+            val pinsV2 = raw("11", pinsEid, 2, ControlEdition.fromRumor(pinsV1), """{"entries":["pinned"]}""")
+            val signal = raw("12", ByteArray(32) { 0x12 }, 1, null, """{"paused":true}""")
+
+            // The owner's metadata at v60, but under an ENCRYPTED seal: not a Control edition.
+            val encryptedMeta =
+                ControlEditionBuilder.rumor(
+                    owner.pubKey,
+                    ControlEntityKind.METADATA,
+                    communityId,
+                    60,
+                    community.genesisEditions.first { it.entityKind == ControlEntityKind.METADATA }.hash,
+                    """{"name":"Encrypted"}""",
+                    now,
+                )
+
+            val priorWraps =
+                community.genesisWraps +
+                    listOf(pinsV1, pinsV2, signal).map { ConcordStreamEnvelope.wrap(it, control, owner, encrypted = false, createdAt = now) } +
+                    ConcordStreamEnvelope.wrap(encryptedMeta, control, owner, encrypted = true, createdAt = now)
+
+            val newControl = ControlPlaneKeys.forStaff(newRoot, communityId, community.rootEpoch + 1, newControlRoot)
+            val carried =
+                ConcordRefounding
+                    .compactControlPlane(priorWraps, control, newControl, communityId, owner.pubKey)
+                    .mapNotNull { ConcordStreamEnvelope.openOrNull(it, newControl) }
+
+            // Every carried seal is the original plaintext seal, byte for byte.
+            assertTrue(carried.all { it.sealKind == ConcordStreamEnvelope.KIND_SEAL_PLAINTEXT })
+            val editions = carried.mapNotNull { ControlEdition.fromOpened(it) }
+
+            val pins = editions.filter { it.vsk == "11" }
+            assertEquals(1, pins.size, "the Pin List head rides through")
+            assertEquals(pinsV2.id, pins.single().rumorId, "its current head, verbatim")
+            assertEquals(ControlEntityKind.PIN_LIST, pins.single().entityKind)
+            val signals = editions.single { it.vsk == "12" }
+            assertEquals(signal.id, signals.rumorId, "the Signal head rides through")
+            assertNull(signals.entityKind, "a sub-kind we don't model")
+
+            val meta = editions.single { it.entityKind == ControlEntityKind.METADATA }
+            assertEquals("Test", ConcordJson.decodeOrNull<MetadataEntity>(meta.content)?.name, "the encrypted-seal edition is never the head")
         }
 }

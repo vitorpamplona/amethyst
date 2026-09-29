@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.concord.cord03Channels
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.MsTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
@@ -65,16 +66,7 @@ class ConcordChatEditEvent(
      * remainder tag (CORD-02 §4). Used to order competing edits at sub-second precision, matching the
      * reference client (an absent/malformed `ms` tag reads as 0). "Latest edit wins" compares this.
      */
-    fun orderingMs(): Long {
-        val remainder =
-            tags
-                .firstOrNull { it.size > 1 && it[0] == "ms" }
-                ?.get(1)
-                ?.toIntOrNull()
-                ?.takeIf { it in 0..999 }
-                ?: 0
-        return createdAt * 1000 + remainder
-    }
+    fun orderingMs(): Long = MsTag.orderingMs(createdAt, tags) ?: (createdAt * 1000)
 
     companion object {
         const val KIND = 3302

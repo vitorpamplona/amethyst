@@ -224,12 +224,7 @@ fun ConcordHomeScreen(
                             communityId = entry.id,
                             channelKey = ch.key,
                             channelName = def.name.ifBlank { ch.key },
-                            icon =
-                                when {
-                                    def.voice == true -> MaterialSymbols.Mic
-                                    def.private == true -> MaterialSymbols.Lock
-                                    else -> MaterialSymbols.Tag
-                                },
+                            icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag,
                             hideIfRead = mode == ChannelExpand.UNREAD,
                             accountViewModel = accountViewModel,
                             onClick = { nav.nav(Route.Concord(entry.id, ch.key)) },

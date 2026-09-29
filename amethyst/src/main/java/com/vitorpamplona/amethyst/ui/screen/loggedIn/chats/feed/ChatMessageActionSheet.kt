@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.ui.note.payViaIntentOrManualSplit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -278,15 +279,15 @@ fun ChatMessageActionSheet(
 
             // Editing my own chat message. Two surfaces publish an edit today, gated by type:
             //  - Buzz: kind-40002 stream message → a kind-40003 edit.
-            //  - Concord: kind-9 channel message (carries a ConcordChannel gatherer) → a
-            //    kind-1010 edit wrapped on the channel plane.
+            //  - Concord: kind-9 channel message or kind-1111 thread reply (carries a
+            //    ConcordChannel gatherer) → a kind-3302 edit wrapped on the channel plane.
             // Both restrict to my own messages; a note is only ever one of the two, so at
             // most one tile shows and both route through the same edit callback.
             val isMine = note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
             val canEditBuzz = onWantsToEditChatMessage != null && note.event is StreamMessageV2Event && isMine
             val canEditConcord =
                 onWantsToEditChatMessage != null &&
-                    note.event is ChatEvent &&
+                    (note.event is ChatEvent || note.event is CommentEvent) &&
                     isMine &&
                     note.inGatherers?.any { it is ConcordChannel } == true
             // Marmot: my own text message in a group -> a kind-1009 edit inside the group. A

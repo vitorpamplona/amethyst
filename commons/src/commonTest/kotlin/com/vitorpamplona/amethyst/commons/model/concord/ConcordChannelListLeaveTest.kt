@@ -26,8 +26,13 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragments
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListIncompleteException
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -40,14 +45,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * The "leave a Concord community" path: `unfollow` read-modify-writes the private kind-13302 list.
- * Everything that makes leaving safe lives here — it must drop only the named community, keep the
- * other memberships (and their secrets) intact, and be a pure local list edit that never depends on
- * the community's own (possibly dead) relays.
+ * The "leave a Concord community" path: `unfollow` read-modify-writes the Community List (CORD-02 §8).
+ * Everything that makes leaving safe lives here — it must remove only the named community, keep the
+ * other memberships (and their secrets) intact, leave a tombstone behind (only a tombstone subtracts
+ * a membership), and be a pure local list edit that never depends on the community's own (possibly
+ * dead) relays.
  */
 class ConcordChannelListLeaveTest {
     private val signer = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000007".hexToByteArray()))
@@ -72,11 +78,18 @@ class ConcordChannelListLeaveTest {
     /** Serves the list only from the offline backup — the state a dead-relay community lands in. */
     private class BackupOnlyRepository(
         var saved: ConcordCommunityListEvent?,
+        var fragments: List<ConcordCommunityListFragmentEvent> = emptyList(),
     ) : ConcordListRepository {
         override fun concordList() = saved
 
         override fun updateConcordListTo(newConcordList: ConcordCommunityListEvent?) {
             saved = newConcordList
+        }
+
+        override fun concordListFragments() = fragments
+
+        override fun updateConcordListFragmentTo(fragment: ConcordCommunityListFragmentEvent) {
+            fragments = fragments.filterNot { it.index() == fragment.index() } + fragment
         }
     }
 
@@ -106,64 +119,123 @@ class ConcordChannelListLeaveTest {
         override fun justConsumeMyOwnEvent(event: Event): Boolean = false
     }
 
-    private suspend fun state(vararg entries: ConcordCommunityListEntry) =
-        ConcordChannelListState(
-            signer = signer,
-            cache = StubCache(),
-            scope = CoroutineScope(Dispatchers.Unconfined),
-            // The cached note is empty (nothing folded from relays), so every read falls back to the
-            // offline backup — exactly the situation for a community whose relays no longer answer.
-            settings = BackupOnlyRepository(ConcordCommunityListEvent.create(signer, entries.toList())),
-        )
+    /** The cached notes are empty (nothing folded from relays), so every read falls back to the offline backup. */
+    private suspend fun state(vararg entries: ConcordCommunityListEntry): Pair<ConcordChannelListState, BackupOnlyRepository> {
+        val repo = BackupOnlyRepository(null)
+        val list = ConcordChannelListState(signer = signer, cache = StubCache(), scope = CoroutineScope(Dispatchers.Unconfined), settings = repo)
+        list.markRelaysConfirmed()
+        for (e in entries) list.follow(e)
+        return list to repo
+    }
+
+    private suspend fun readBack(fragments: List<Event>) = ConcordListFragmentSet.resolve(fragments.map { it as ConcordCommunityListFragmentEvent }, signer)
 
     @Test
-    fun leavingDropsOnlyThatCommunity() =
+    fun leavingDropsOnlyThatCommunityAndTombstonesIt() =
         runTest {
-            val list = state(entry(alpha, "Alpha"), entry(beta, "Beta"))
+            val (list, repo) = state(entry(alpha, "Alpha"), entry(beta, "Beta"))
 
-            val left = list.unfollow(alpha)!!
-            val remaining = left.decrypt(signer)
+            val left = list.unfollow(alpha)
+            assertEquals(1, left.size)
 
-            assertEquals(1, remaining.size)
-            assertEquals(beta, remaining[0].id)
+            val remaining = list.entries()
+            assertEquals(listOf(beta), remaining.map { it.id })
             // The surviving membership keeps its secrets — leaving one community must not damage another.
             assertEquals("2".repeat(64), remaining[0].root)
             assertEquals(3L, remaining[0].rootEpoch)
+
+            val doc = readBack(repo.fragments).doc
+            val tombstoned = ConcordListFragments.removals(doc)
+            assertTrue(alpha in tombstoned, "a leave must leave a tombstone, or another fragment can re-add it")
         }
 
     @Test
     fun leavingTheLastCommunityEmptiesTheList() =
         runTest {
-            val list = state(entry(alpha, "Alpha"))
-
-            val left = list.unfollow(alpha)!!
-
-            assertTrue(left.decrypt(signer).isEmpty())
+            val (list, _) = state(entry(alpha, "Alpha"))
+            list.unfollow(alpha)
+            assertTrue(list.entries().isEmpty())
         }
 
-    /** Nothing to publish when we weren't a member: the caller's publish is a no-op on null. */
+    /** Nothing to publish when we weren't a member. */
     @Test
     fun leavingSomethingWeNeverJoinedIsANoOp() =
         runTest {
-            val list = state(entry(alpha, "Alpha"))
+            val (list, _) = state(entry(alpha, "Alpha"))
+            assertTrue(list.unfollow(beta).isEmpty())
+        }
 
-            assertNull(list.unfollow(beta))
+    @Test
+    fun reJoiningAfterALeaveResurrectsTheMembership() =
+        runTest {
+            val (list, _) = state(entry(alpha, "Alpha"))
+            list.unfollow(alpha)
+            val rejoin =
+                ConcordCommunityListEntry(
+                    id = alpha,
+                    owner = signer.pubKey,
+                    ownerSalt = "1".repeat(64),
+                    root = "2".repeat(64),
+                    rootEpoch = 3,
+                    name = "Alpha",
+                    addedAt = Long.MAX_VALUE / 2,
+                )
+            list.follow(rejoin)
+            assertEquals(listOf(alpha), list.entries().map { it.id })
+        }
+
+    @Test
+    fun reJoiningInTheSameMillisecondStillOutranksTheLeave() =
+        runTest {
+            val (list, _) = state(entry(alpha, "Alpha"))
+            list.unfollow(alpha)
+            // A stale entry (added long before the leave) re-followed: it must come back live.
+            list.follow(entry(alpha, "Alpha"))
+            assertEquals(listOf(alpha), list.entries().map { it.id })
+        }
+
+    @Test
+    fun anUnloadedListRefusesToWrite() =
+        runTest {
+            // Nothing held and the relays not asked yet: writing would replace fragments we never saw.
+            val list = ConcordChannelListState(signer = signer, cache = StubCache(), scope = CoroutineScope(Dispatchers.Unconfined), settings = BackupOnlyRepository(null))
+            assertFailsWith<ConcordListIncompleteException> { list.follow(entry(alpha, "Alpha")) }
+        }
+
+    @Test
+    fun aMembershipOnlyTheRetiredListCarriesIsMigratedByTheNextWrite() =
+        runTest {
+            val repo = BackupOnlyRepository(ConcordCommunityListEvent.create(signer, listOf(entry(alpha, "Alpha"))))
+            val list = ConcordChannelListState(signer = signer, cache = StubCache(), scope = CoroutineScope(Dispatchers.Unconfined), settings = repo)
+            list.markRelaysConfirmed()
+            assertEquals(listOf(alpha), list.entries().map { it.id })
+
+            list.follow(entry(beta, "Beta"))
+            val migrated =
+                ConcordCommunityList
+                    .decodeDocument(readBack(repo.fragments).doc)
+                    .entries
+                    .map { it.id }
+                    .toSet()
+            assertEquals(setOf(alpha, beta), migrated)
         }
 
     /**
-     * The list is only readable by its owner, so the leave write must stay self-encrypted — a leave
+     * The list is only readable by its owner, so every fragment must stay self-encrypted — a leave
      * that leaked the remaining memberships in cleartext would be worse than not leaving at all.
      */
     @Test
     fun theRewrittenListStaysSelfEncrypted() =
         runTest {
-            val list = state(entry(alpha, "Alpha"), entry(beta, "Beta"))
+            val (list, _) = state(entry(alpha, "Alpha"), entry(beta, "Beta"))
 
-            val left = list.unfollow(alpha)!!
+            val left = list.unfollow(alpha).single() as ConcordCommunityListFragmentEvent
 
-            assertEquals(ConcordCommunityListEvent.KIND, left.kind)
+            assertEquals(ConcordCommunityListFragmentEvent.KIND, left.kind)
+            assertEquals("0", left.dTag())
             assertTrue(beta !in left.content)
+            assertTrue(ConcordListFragments.hexToB64(beta) !in left.content)
             val stranger = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000009".hexToByteArray()))
-            assertTrue(left.decrypt(stranger).isEmpty())
+            assertEquals(null, left.decryptPlaintext(stranger))
         }
 }

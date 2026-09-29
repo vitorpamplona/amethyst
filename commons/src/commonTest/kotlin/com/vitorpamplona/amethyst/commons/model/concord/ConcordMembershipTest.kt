@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -42,13 +44,20 @@ class ConcordMembershipTest {
         author: String = owner,
     ) = ControlEdition(kind, eid.hexToByteArray(), 0, null, null, content, author, "r-$eid", 0)
 
+    private val communityId = "cc".repeat(32).hexToByteArray()
+
     private val authority =
         AuthorityResolver.resolve(
             listOf(
                 ed(ControlEntityKind.ROLE, adminRole, """{"name":"Admin","position":1,"permissions":"25"}"""), // KICK|BAN|MANAGE_ROLES
-                ed(ControlEntityKind.GRANT, "ab".repeat(32), """{"member":"$admin","role_ids":["$adminRole"]}"""),
-                ed(ControlEntityKind.BANLIST, "44".repeat(32), """["$banned"]"""),
+                ed(
+                    ControlEntityKind.GRANT,
+                    ConcordKeyDerivation.grantCoordinate(communityId, admin.hexToByteArray()).toHexKey(),
+                    """{"member":"$admin","role_ids":["$adminRole"]}""",
+                ),
+                ed(ControlEntityKind.BANLIST, ConcordKeyDerivation.banlistCoordinate(communityId).toHexKey(), """["$banned"]"""),
             ),
+            communityId,
             owner,
         )
 

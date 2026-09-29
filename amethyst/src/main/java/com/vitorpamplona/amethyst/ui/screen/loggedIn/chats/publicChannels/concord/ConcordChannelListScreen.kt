@@ -399,12 +399,8 @@ fun ConcordChannelListScreen(
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
                     val name = def.name.ifBlank { entry.key }
-                    val icon =
-                        when {
-                            def.voice == true -> MaterialSymbols.Mic
-                            def.private == true -> MaterialSymbols.Lock
-                            else -> MaterialSymbols.Tag
-                        }
+                    // Every Channel is callable (CORD-07), so there is no voice-only icon.
+                    val icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag
                     val typingAuthors =
                         remember(typingMap, typingNow, entry.key) {
                             (typingMap[entry.key] ?: emptyMap())
@@ -417,7 +413,6 @@ fun ConcordChannelListScreen(
                         channelKey = entry.key,
                         channelName = name,
                         icon = icon,
-                        isVoice = def.voice == true,
                         typingAuthors = typingAuthors,
                         canManageChannels = canManageChannels,
                         accountViewModel = accountViewModel,
@@ -445,7 +440,6 @@ private fun ConcordChannelListRow(
     channelKey: String,
     channelName: String,
     icon: MaterialSymbol,
-    isVoice: Boolean,
     typingAuthors: List<HexKey>,
     canManageChannels: Boolean,
     accountViewModel: AccountViewModel,
@@ -506,7 +500,7 @@ private fun ConcordChannelListRow(
             // Line 2: the last-message preview (or a live "typing…"), then the unread-message badge.
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
-                    ConcordChannelPreviewLine(lastNote, isVoice, typingAuthors, accountViewModel)
+                    ConcordChannelPreviewLine(lastNote, typingAuthors, accountViewModel)
                 }
                 ConcordUnreadBadge(unread)
             }
@@ -535,7 +529,6 @@ private val FAB_CLEARANCE = 96.dp
 @Composable
 private fun ConcordChannelPreviewLine(
     lastNote: Note?,
-    isVoice: Boolean,
     typingAuthors: List<HexKey>,
     accountViewModel: AccountViewModel,
 ) {
@@ -572,8 +565,6 @@ private fun ConcordChannelPreviewLine(
         } else if (event != null) {
             event.content.take(80)
         } else {
-            // Voice channels never carry chat notes, so "No messages yet" would read oddly — leave blank.
-            if (isVoice) return
             stringRes(Res.string.concord_channel_no_messages)
         }
     Text(

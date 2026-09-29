@@ -57,6 +57,9 @@ object ConcordLabels {
     /** Banlist coordinate derivation (CORD-04). */
     const val BANLIST = "concord/banlist"
 
+    /** A Channel's Pin List coordinate (CORD-04 §7). */
+    const val PINS = "concord/pins"
+
     /** Invite-link coordinate derivation (CORD-05). */
     const val INVITE_LINKS = "concord/invite-links"
 

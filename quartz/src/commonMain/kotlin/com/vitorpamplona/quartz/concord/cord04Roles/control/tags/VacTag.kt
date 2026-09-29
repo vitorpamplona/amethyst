@@ -42,7 +42,7 @@ class VacTag {
             ensure(tag.has(3)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             val grantId = tag[1].hexToByteArrayOrNull()?.takeIf { it.size == 32 } ?: return null
-            val grantVersion = tag[2].toLongOrNull() ?: return null
+            val grantVersion = CanonicalDecimal.parse(tag[2]) ?: return null
             val grantHash = tag[3].hexToByteArrayOrNull()?.takeIf { it.size == 32 } ?: return null
             return AuthorityCitation(grantId, grantVersion, grantHash)
         }
