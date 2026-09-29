@@ -141,6 +141,8 @@ class ConcordPinsTest {
             val pin = ConcordPins.verify(edited, channelA)!!
             assertTrue(pin.edited)
             assertEquals("the plan", pin.content)
+            assertEquals(2_000L, pin.editOrderMs, "the proven Edit's send time, to judge a newer local Edit against")
+            assertNull(ConcordPins.verify(entry, channelA)!!.editOrderMs)
             assertEquals(original.id, pin.rumorId, "the identity stays the original's")
 
             val (_, foreign) = sendAndOpen(ChannelChat.edit(mallory.pubKey, channelA, 3, original.id, "pwned", 3), signer = mallory)
@@ -159,6 +161,9 @@ class ConcordPinsTest {
             val sealed = ConcordPins.serializeSealed(listOf(entry), plane.conversationKey, 3)
             val opened3 = ConcordPins.read(sealed) { epoch -> plane.conversationKey.takeIf { epoch == 3L } }
             assertEquals(listOf(entry), opened3.entries)
+            assertTrue(ConcordPins.isSealedForm(sealed))
+            assertFalse(ConcordPins.isSealedForm(ConcordPins.serializePublic(listOf(entry))))
+            assertFalse(ConcordPins.isSealedForm("not json"))
             val noKey = ConcordPins.read(sealed) { null }
             assertTrue(noKey.sealedUnavailable, "unreadable is not empty: a writer must not build on it")
             assertTrue(noKey.entries.isEmpty())

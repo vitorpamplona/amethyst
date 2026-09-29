@@ -36,7 +36,7 @@ class DeletionIndex {
             val compared = reference.compareTo(other.reference)
 
             return if (compared == 0) {
-                publicKey.compareTo(publicKey)
+                publicKey.compareTo(other.publicKey)
             } else {
                 compared
             }
@@ -127,6 +127,16 @@ class DeletionIndex {
         address: Address,
         pubKey: HexKey,
     ): Boolean = hasBeenDeleted(DeletionRequest(address.toValue(), pubKey))
+
+    /**
+     * Checks if a kind-5 event signed by [pubKey] deleted the event [eventId], for callers that hold
+     * only the id and its proven author — a Concord pin entry names a message the reader may never
+     * have loaded (CORD-04 §7: a held delete hides the entry by identity).
+     */
+    fun hasBeenDeleted(
+        eventId: HexKey,
+        pubKey: HexKey,
+    ): Boolean = hasBeenDeleted(DeletionRequest(eventId, pubKey))
 
     private fun hasBeenDeleted(key: DeletionRequest) = deletedReferencesBefore.containsKey(key)
 

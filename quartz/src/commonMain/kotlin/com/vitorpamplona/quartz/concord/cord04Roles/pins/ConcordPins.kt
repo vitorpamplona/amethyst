@@ -86,6 +86,12 @@ object ConcordPins {
         val edited: Boolean,
         /** The proven Edit's rumor id, when one verified. */
         val editRumorId: HexKey?,
+        /**
+         * The proven Edit's own send time (`created_at * 1000 + ms`), when one verified. A client
+         * holding an Edit newer than this MUST mark the pin edited (§7 Edits), and a refresh only
+         * ever attaches something newer, or it would silently revert the entry.
+         */
+        val editOrderMs: Long?,
         /** The wire entry, verbatim, for republishing. */
         val entry: JsonObject,
     )
@@ -150,6 +156,18 @@ object ConcordPins {
         if (array.size > MAX_ENTRIES) return PinListRead.VIOLATING
         // A non-object entry is just an invalid entry, dropped alone by the verifier.
         return PinListRead(array.mapNotNull { it as? JsonObject }, sealedUnavailable = false, violating = false)
+    }
+
+    /**
+     * True when [content] is the self-describing **sealed** form (`{"epoch", "sealed"}`), false for
+     * the public `{"entries"}` form or anything unreadable. A writer needs it to honor the
+     * private→public rule (§7): a list sealed in a Channel's private era is never mechanically
+     * re-formed into the public form, which would disclose private-era pins to everyone.
+     */
+    fun isSealedForm(content: String): Boolean {
+        if (content.encodeToByteArray().size > MAX_CONTENT_BYTES) return false
+        val root = parse(content) as? JsonObject ?: return false
+        return root["entries"] == null && root["sealed"] != null
     }
 
     // ---- verification ----------------------------------------------------------------------
@@ -244,6 +262,7 @@ object ConcordPins {
             wrapHint = (entry["wrap"] as? JsonPrimitive)?.contentOrNull?.takeIf { HEX64.matches(it) },
             edited = edit != null,
             editRumorId = edit?.id,
+            editOrderMs = edit?.orderMs(),
             entry = entry,
         )
     }
