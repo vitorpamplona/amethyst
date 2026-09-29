@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.public_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -90,7 +91,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField

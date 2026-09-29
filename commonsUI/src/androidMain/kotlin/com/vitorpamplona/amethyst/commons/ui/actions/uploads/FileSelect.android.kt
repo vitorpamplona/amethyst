@@ -18,85 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.upload_file
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
-fun SelectFromFiles(
-    isUploading: Boolean,
-    enabled: Boolean = true,
-    tint: Color,
-    modifier: Modifier,
-    onFilesChosen: (ImmutableList<SelectedMedia>) -> Unit,
-) {
-    var showFileSelect by remember { mutableStateOf(false) }
-    if (showFileSelect) {
-        FileSelect(
-            onFilesSelected = { files ->
-                showFileSelect = false
-                if (files.isNotEmpty()) {
-                    onFilesChosen(files)
-                }
-            },
-        )
-    }
-
-    FileSelectButton(isUploading, enabled, tint, modifier) { showFileSelect = true }
-}
-
-@Composable
-private fun FileSelectButton(
-    isUploading: Boolean,
-    enabled: Boolean,
-    tint: Color,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    IconButton(
-        modifier = modifier,
-        enabled = enabled && !isUploading,
-        onClick = { onClick() },
-    ) {
-        if (!isUploading) {
-            Icon(
-                symbol = MaterialSymbols.AttachFile,
-                contentDescription = stringRes(id = Res.string.upload_file),
-                modifier = Modifier.height(20.dp),
-                tint = tint,
-            )
-        } else {
-            LoadingAnimation()
-        }
-    }
-}
-
-@Composable
-fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit = {}) {
+actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
     val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
     val resolver = LocalContext.current.contentResolver
 
