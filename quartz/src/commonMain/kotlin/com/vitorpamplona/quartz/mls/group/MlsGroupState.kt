@@ -100,6 +100,12 @@ data class MlsGroupState(
      * after a restart. See [MlsGroup.decryptFormerEpoch].
      */
     val retainedEpochs: List<RetainedEpochReceiverData> = emptyList(),
+    /**
+     * The secret tree's unexpanded node secrets (STATE_VERSION 7+). Empty
+     * means "derive from [encryptionSecret]", which is what every older blob
+     * does. A state imported from ts-mls has these instead of a root.
+     */
+    val nodeSecrets: Map<Int, ByteArray> = emptyMap(),
 ) {
     fun encodeTls(): ByteArray {
         val writer = TlsWriter()
@@ -181,6 +187,11 @@ data class MlsGroupState(
         writer.putUint32(retainedEpochs.size.toLong())
         for (retained in retainedEpochs) retained.encodeTls(writer)
 
+        // Secret-tree node secrets (STATE_VERSION 7+), the current epoch's,
+        // then each retained epoch's in the same order as above.
+        writeNodeSecrets(writer, nodeSecrets)
+        for (retained in retainedEpochs) writeNodeSecrets(writer, retained.nodeSecrets)
+
         return writer.toByteArray()
     }
 
@@ -212,8 +223,11 @@ data class MlsGroupState(
          *     decode with none, as before.
          * v6: appends [retainedEpochs]. Older blobs decode with none, so the
          *     first commit after the upgrade starts the window.
+         * v7: appends the secret tree's [nodeSecrets], current and retained
+         *     epochs, so a state whose root secret is gone (imported from
+         *     ts-mls) restores. Older blobs derive from the root, as before.
          */
-        private const val STATE_VERSION = 6
+        private const val STATE_VERSION = 7
 
         fun decodeTls(data: ByteArray): MlsGroupState {
             val reader = TlsReader(data)
@@ -327,6 +341,14 @@ data class MlsGroupState(
                     emptyList()
                 }
 
+            // v7+: secret-tree node secrets. Absent for older blobs.
+            var nodeSecrets = emptyMap<Int, ByteArray>()
+            var retainedWithNodes = retainedEpochs
+            if (version >= 7 && reader.hasRemaining) {
+                nodeSecrets = readNodeSecrets(reader)
+                retainedWithNodes = retainedEpochs.map { it.copy(nodeSecrets = readNodeSecrets(reader)) }
+            }
+
             return MlsGroupState(
                 groupContext = groupContext,
                 treeBytes = treeBytes,
@@ -342,7 +364,8 @@ data class MlsGroupState(
                 pendingProposals = pendingProposals,
                 skippedApplicationSecrets = skippedApplicationSecrets,
                 skippedHandshakeSecrets = skippedHandshakeSecrets,
-                retainedEpochs = retainedEpochs,
+                retainedEpochs = retainedWithNodes,
+                nodeSecrets = nodeSecrets,
             )
         }
 
@@ -355,6 +378,27 @@ data class MlsGroupState(
                 writer.putUint32(key.first.toLong())
                 writer.putUint32(key.second.toLong())
                 writer.putOpaqueVarInt(secret)
+            }
+        }
+
+        private fun writeNodeSecrets(
+            writer: TlsWriter,
+            secrets: Map<Int, ByteArray>,
+        ) {
+            writer.putUint32(secrets.size.toLong())
+            for ((nodeIndex, secret) in secrets) {
+                writer.putUint32(nodeIndex.toLong())
+                writer.putOpaqueVarInt(secret)
+            }
+        }
+
+        private fun readNodeSecrets(reader: TlsReader): Map<Int, ByteArray> {
+            val count = reader.readUint32().toInt()
+            return buildMap {
+                repeat(count) {
+                    val nodeIndex = reader.readUint32().toInt()
+                    put(nodeIndex, reader.readOpaqueVarInt())
+                }
             }
         }
 
@@ -391,6 +435,8 @@ data class RetainedEpochReceiverData(
     val treeBytes: ByteArray,
     val senderRatchetStates: Map<Int, SenderRatchetState>,
     val skippedApplicationSecrets: Map<Pair<Int, Int>, ByteArray>,
+    /** The epoch's unexpanded secret-tree node secrets; empty means derive from [encryptionSecret]. */
+    val nodeSecrets: Map<Int, ByteArray> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

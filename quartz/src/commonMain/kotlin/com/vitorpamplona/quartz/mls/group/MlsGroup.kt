@@ -295,6 +295,7 @@ class MlsGroup private constructor(
             skippedApplicationSecrets = secretTree.exportSkippedApplicationSecrets(),
             skippedHandshakeSecrets = secretTree.exportSkippedHandshakeSecrets(),
             retainedEpochs = retainedEpochs.toList(),
+            nodeSecrets = secretTree.exportNodeSecrets(),
         )
     }
 
@@ -415,6 +416,7 @@ class MlsGroup private constructor(
             treeBytes = w.toByteArray(),
             senderRatchetStates = secretTree.exportSenderStates(),
             skippedApplicationSecrets = secretTree.exportSkippedApplicationSecrets(),
+            nodeSecrets = secretTree.exportNodeSecrets(),
         )
     }
 
@@ -1500,6 +1502,7 @@ class MlsGroup private constructor(
         val formerSecrets = SecretTree(retained.encryptionSecret, formerTree.leafCount)
         formerSecrets.importSenderStates(retained.senderRatchetStates)
         formerSecrets.importSkippedSecrets(retained.skippedApplicationSecrets, emptyMap())
+        if (retained.nodeSecrets.isNotEmpty()) formerSecrets.importNodeSecrets(retained.nodeSecrets)
 
         val opened = openPrivateMessage(privMsg, retained.senderDataSecret, formerTree, formerSecrets, allowOwnSentKeys = false)
         val decrypted = applicationFromOpened(privMsg, opened, formerTree, retained.groupContext)
@@ -1507,6 +1510,7 @@ class MlsGroup private constructor(
             retained.copy(
                 senderRatchetStates = formerSecrets.exportSenderStates(),
                 skippedApplicationSecrets = formerSecrets.exportSkippedApplicationSecrets(),
+                nodeSecrets = formerSecrets.exportNodeSecrets(),
             )
         return decrypted
     }
@@ -4158,6 +4162,7 @@ class MlsGroup private constructor(
             val secretTree = SecretTree(state.encryptionSecret, tree.leafCount)
             secretTree.importSenderStates(state.senderRatchetStates)
             secretTree.importSkippedSecrets(state.skippedApplicationSecrets, state.skippedHandshakeSecrets)
+            if (state.nodeSecrets.isNotEmpty()) secretTree.importNodeSecrets(state.nodeSecrets)
 
             return MlsGroup(
                 groupContext = state.groupContext,
