@@ -24,6 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
@@ -51,7 +57,8 @@ class GitRepositoryEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(name(), description(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -106,6 +113,19 @@ class GitRepositoryEvent(
      * author does not actively seek patches/feedback for this repository.
      */
     fun isPersonalFork(): Boolean = tags.any { HashtagTag.isTagged(it, PERSONAL_FORK) }
+
+    /**
+     * NIP-34: the other maintainers, topics (including the `personal-fork` marker), the earliest
+     * unique commit, and the repository this one is a fork of (`u`, when it holds an address rather
+     * than a git URL).
+     */
+    override fun links(): List<Link> =
+        links {
+            maintainers().forEach { user(Relation.MAINTAINER, it, "maintainers") }
+            hashtags(tags)
+            tag(Relation.TAG, "r", earliestUniqueCommit())
+            addressTags(Relation.FORK, tags, "u")
+        }
 
     companion object {
         const val KIND = 30617

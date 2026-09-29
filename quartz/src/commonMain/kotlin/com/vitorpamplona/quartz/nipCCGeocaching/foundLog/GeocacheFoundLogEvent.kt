@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -58,7 +62,8 @@ class GeocacheFoundLogEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     override fun addressHints() = tags.mapNotNull(GeocacheTag::parseAsHint)
@@ -84,6 +89,9 @@ class GeocacheFoundLogEvent(
      * Cheap enough for a render path: it does not parse the payload.
      */
     fun hasVerificationAttached() = tags.hasEmbeddedVerification()
+
+    /** NIP-CC: the cache found. Whether the log carries its cache's verification rides on the link; the verification itself is an embedded event, not a reference. */
+    override fun links(): List<Link> = links { address(Relation.FOUND, geocache(), "a", mapOf("verified" to hasVerificationAttached())) }
 
     companion object {
         const val KIND = 7516

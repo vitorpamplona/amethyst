@@ -27,6 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -55,7 +62,8 @@ class PublicMessageEvent(
     PubKeyHintProvider,
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -96,6 +104,14 @@ class PublicMessageEvent(
     fun chatroomKey(user: HexKey) = groupKeySet() - user
 
     fun peopleAndContent() = groupAsNProfileList() + " " + content
+
+    /** NIP-A4: `p` tags are the receivers, never mentions; mentions come only from the content. */
+    override fun links(): List<Link> =
+        links {
+            userTags(Relation.RECIPIENT, tags)
+            quotes(tags)
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 24

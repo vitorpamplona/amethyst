@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -54,7 +59,8 @@ class FileMetadataEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -97,6 +103,9 @@ class FileMetadataEvent(
     fun hasUrl() = tags.any(UrlTag::isTag)
 
     fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
+
+    /** NIP-94 carries no event, address or user; its only reference is the torrent infohash in `i`. */
+    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "i") }
 
     companion object {
         const val KIND = 1063

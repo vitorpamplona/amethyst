@@ -29,6 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
@@ -68,7 +76,8 @@ class Bolt12ZapIntentEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -112,6 +121,16 @@ class Bolt12ZapIntentEvent(
 
     /** True when neither `e` nor `a` is present — the intent targets the recipient's profile. */
     fun isProfileZap() = zappedEvent() == null && zappedAddress() == null
+
+    /** NIP-B1: an intent is not a payment, but it names the same targets its 9736 will; the would-be sender is the author. */
+    override fun links(): List<Link> =
+        links {
+            val props = amount()?.let { mapOf("msats" to it) }
+            userTags(Relation.ZAP_RECIPIENT, tags, props = props)
+            eventTags(Relation.ZAPPED, tags, props = props)
+            addressTags(Relation.ZAPPED, tags, props = props)
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 9737

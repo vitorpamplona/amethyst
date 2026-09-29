@@ -28,6 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -56,7 +60,8 @@ class LiveActivitiesRaidEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -83,6 +88,13 @@ class LiveActivitiesRaidEvent(
             .filter { it.size > 3 && it[0] == ATag.TAG_NAME && it[3] == marker }
             .mapNotNull(ATag::parse)
             .firstOrNull { it.kind == LiveActivitiesEvent.KIND }
+
+    /** The `root`-marked stream is the one raiding, the `mention`-marked one its target. */
+    override fun links(): List<Link> =
+        links {
+            address(Relation.ROOT, fromAddress(), "a")
+            address(Relation.RAIDED, toAddress(), "a")
+        }
 
     companion object {
         const val KIND = 1312

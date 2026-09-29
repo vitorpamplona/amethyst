@@ -26,9 +26,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -65,7 +72,8 @@ class WikiMergeRequestEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -127,6 +135,21 @@ class WikiMergeRequestEvent(
 
     /** A merge request with no source has nothing to merge and cannot be acted on. */
     fun hasMergeSource() = mergeSource() != null
+
+    /** NIP-54: the article to change and its author, the version to merge (`e` marked `source`, or `fork` as clients write it) and the unmarked base version. */
+    override fun links(): List<Link> =
+        links {
+            addressTags(Relation.DESTINATION, tags)
+            userTags(Relation.DESTINATION_AUTHOR, tags)
+            tags.fastForEach {
+                if (it.size < 2 || it[0] != ETag.TAG_NAME) return@fastForEach
+                val marker = it.getOrNull(MARKER_SLOT)
+                when {
+                    marker.isNullOrEmpty() -> event(Relation.BASE_VERSION, it[1], "e")
+                    marker in MERGE_SOURCE_MARKERS -> event(Relation.SOURCE, it[1], "e")
+                }
+            }
+        }
 
     companion object {
         const val KIND = 818

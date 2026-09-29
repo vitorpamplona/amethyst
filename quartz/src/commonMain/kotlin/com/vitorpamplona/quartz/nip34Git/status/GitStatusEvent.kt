@@ -22,12 +22,21 @@ package com.vitorpamplona.quartz.nip34Git.status
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip34Git.gitPeopleLinks
+import com.vitorpamplona.quartz.nip34Git.repositoryLinks
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -49,7 +58,8 @@ abstract class GitStatusEvent(
     PubKeyHintProvider,
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -84,6 +94,33 @@ abstract class GitStatusEvent(
     fun referenceCommits(): List<String> =
         tags.mapNotNull { tag ->
             if (tag.size > 1 && tag[0] == "r" && tag[1].isNotEmpty()) tag[1] else null
+        }
+
+    /**
+     * NIP-34 statuses: the `e` marked `root` is the issue, PR or patch, the `e` marked `reply` the
+     * accepted revision. Their authors are read from the `e` tags' author slot so the unmarked `p`
+     * tags can be told apart (see [gitPeopleLinks]).
+     */
+    override fun links(): List<Link> =
+        links {
+            var rootAuthor: HexKey? = null
+            var parentAuthor: HexKey? = null
+            tags.fastForEach {
+                val thread = MarkedETag.parseAllThreadTags(it) ?: return@fastForEach
+                when (thread.marker) {
+                    MarkedETag.MARKER.ROOT -> {
+                        event(Relation.ROOT, thread.eventId, "e")
+                        if (rootAuthor == null) rootAuthor = LinkBuilder.normalizedHex(thread.author)
+                    }
+                    MarkedETag.MARKER.REPLY -> {
+                        event(Relation.PARENT, thread.eventId, "e")
+                        if (parentAuthor == null) parentAuthor = LinkBuilder.normalizedHex(thread.author)
+                    }
+                    else -> event(Relation.MENTION, thread.eventId, "e")
+                }
+            }
+            gitPeopleLinks(tags, repositoryLinks(tags), rootAuthor, parentAuthor)
+            valueTags(Relation.TAG, tags, "r")
         }
 
     companion object {

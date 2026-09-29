@@ -27,6 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.containsAllTagNamesWithValues
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
@@ -63,7 +68,8 @@ class GeocacheCurationListEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), description(), content).joinToString("\n")
 
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
@@ -101,6 +107,12 @@ class GeocacheCurationListEvent(
     fun addresses() = tags.curatedAddresses()
 
     fun isWellFormed() = tags.containsAllTagNamesWithValues(REQUIRED_FIELDS) && geocaches().isNotEmpty()
+
+    override fun links(): List<Link> =
+        links {
+            geocaches().forEach { address(Relation.CURATED, it, "a") }
+            valueTags(Relation.TAG, tags, "g")
+        }
 
     companion object {
         const val KIND = 37517

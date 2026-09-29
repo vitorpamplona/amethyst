@@ -22,7 +22,9 @@ package com.vitorpamplona.quartz.nip35Torrents
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -30,6 +32,13 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -64,7 +73,8 @@ class TorrentCommentEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -122,6 +132,58 @@ class TorrentCommentEvent(
     fun torrentIds() = tags.firstNotNullOfOrNull(MarkedETag::parseRootId) ?: tags.firstNotNullOfOrNull(ETag::parseId)
 
     @Suppress("DEPRECATION")
+    /** NIP-35: a comment "works exactly like a kind 1": a NIP-10 thread rooted at the torrent. A `p` is the parent's author when it matches the parent `e` tag's author slot. */
+    override fun links(): List<Link> =
+        links {
+            val parentAuthor = threadLinks(tags)
+            tags.fastForEach {
+                if (it.size < 2 || it[0] != "p") return@fastForEach
+                val key = LinkBuilder.normalizedHex(it[1]) ?: return@fastForEach
+                user(if (key == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, key, "p")
+            }
+            quotes(tags)
+            contentMentions(citedNIP19())
+        }
+
+    /**
+     * NIP-10 threading: marked `e` tags say their role, and a thread with a `root` but no `reply`
+     * replies to the root. Unmarked tags are positional: the first is the root, the last the parent,
+     * the ones between are mentions. Returns the parent's author when its tag names one.
+     */
+    private fun LinkBuilder.threadLinks(tags: TagArray): HexKey? {
+        val thread = tags.mapNotNull(MarkedETag::parseAllThreadTags)
+        if (thread.isEmpty()) return null
+        var parent: MarkedETag? = null
+        if (thread.any { it.marker == MarkedETag.MARKER.ROOT || it.marker == MarkedETag.MARKER.REPLY }) {
+            var root: MarkedETag? = null
+            thread.forEach {
+                when (it.marker) {
+                    MarkedETag.MARKER.ROOT -> {
+                        event(Relation.ROOT, it.eventId, "e")
+                        if (root == null) root = it
+                    }
+                    MarkedETag.MARKER.REPLY -> {
+                        event(Relation.PARENT, it.eventId, "e")
+                        parent = it
+                    }
+                    else -> event(Relation.MENTION, it.eventId, "e")
+                }
+            }
+            if (parent == null) {
+                parent = root
+                event(Relation.PARENT, root?.eventId, "e")
+            }
+        } else {
+            thread.forEachIndexed { index, it ->
+                if (index == 0) event(Relation.ROOT, it.eventId, "e")
+                if (index == thread.lastIndex) event(Relation.PARENT, it.eventId, "e")
+                if (index != 0 && index != thread.lastIndex) event(Relation.MENTION, it.eventId, "e")
+            }
+            parent = thread.last()
+        }
+        return LinkBuilder.normalizedHex(parent?.author)
+    }
+
     companion object {
         const val KIND = 2004
 

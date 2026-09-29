@@ -27,6 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -45,7 +52,8 @@ class NutzapEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // content is the optional nutzap message.
     override fun indexableContent() = content
 
@@ -68,6 +76,20 @@ class NutzapEvent(
     fun mintUrl() = tags.mintUrl()
 
     fun unit() = tags.unit()
+
+    /**
+     * NIP-61: `e` is the nutzapped event and `p` the recipient; the sender is the author. The amount
+     * is what the proofs claim (it is only checked against the mint at redeem time), and only a
+     * sat-denominated nutzap can say it in msats.
+     */
+    override fun links(): List<Link> =
+        links {
+            val sats = claimedSatsTotal()
+            val props = if (sats > 0 && (unit() ?: "sat") == "sat") mapOf("msats" to sats * 1000) else null
+            eventTags(Relation.ZAPPED, tags, props = props)
+            userTags(Relation.ZAP_RECIPIENT, tags, props = props)
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 9321

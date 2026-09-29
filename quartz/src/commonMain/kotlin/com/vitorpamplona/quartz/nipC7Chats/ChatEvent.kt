@@ -23,11 +23,18 @@ package com.vitorpamplona.quartz.nipC7Chats
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -55,7 +62,8 @@ class ChatEvent(
     RootScope,
     EventHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -91,6 +99,30 @@ class ChatEvent(
         val nip19Hints = citedNIP19().pubKeys()
         return pHints + nip19Hints
     }
+
+    /**
+     * NIP-C7: a reply quotes its parent in a `q` tag whose fourth slot is the parent's author, so the
+     * last `q` is the parent and any other a NIP-18 quote. A chat inside a NIP-29 group names it in `h`.
+     */
+    override fun links(): List<Link> =
+        links {
+            val parent = tags.lastOrNull { it.size > 1 && it[0] == QTag.TAG_NAME }
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    QTag.TAG_NAME ->
+                        if (it === parent) {
+                            eventOrAddress(Relation.PARENT, it[1], "q")
+                            user(Relation.PARENT_AUTHOR, it.getOrNull(3), "q")
+                        } else {
+                            eventOrAddress(Relation.QUOTE, it[1], "q")
+                        }
+                    "p" -> user(Relation.MENTION, it[1], "p")
+                }
+            }
+            valueTags(Relation.GROUP, tags, "h")
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 9

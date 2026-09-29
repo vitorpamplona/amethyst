@@ -24,6 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -74,7 +79,8 @@ class Podcasting20EpisodeEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PodcastEpisode,
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = (listOfNotNull(title(), description(), content) + topics()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, without the join.
@@ -148,6 +154,13 @@ class Podcasting20EpisodeEvent(
     override fun episodePersons() = persons()
 
     override fun episodeSoundbites() = soundbites()
+
+    /** `edit` is the event id of the episode's original publication. `person` tags carry names, not keys. */
+    override fun links(): List<Link> =
+        links {
+            event(Relation.EDITED, editsEventId(), EditTag.TAG_NAME)
+            hashtags(tags)
+        }
 
     companion object {
         const val KIND = 30054

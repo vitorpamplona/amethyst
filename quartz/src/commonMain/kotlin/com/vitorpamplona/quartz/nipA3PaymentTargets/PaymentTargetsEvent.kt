@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,7 +38,8 @@ class PaymentTargetsEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<PaymentTargetsDiff> {
+    DiffableEvent<PaymentTargetsDiff>,
+    LinkFree {
     override fun diffFrom(older: Event): PaymentTargetsDiff? {
         if (older !is PaymentTargetsEvent || older.pubKey != pubKey) return null
         return PaymentTargetsDiff(ListDiff.of(older.paymentTargets(), paymentTargets(), { it }))

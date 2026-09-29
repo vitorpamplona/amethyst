@@ -25,6 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -57,7 +63,8 @@ class TextTrackEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // The cue text is the only searchable thing here: the `d` tag is a slug and the rest is
     // plumbing. Indexing it makes a video findable by what is said in it — the words only,
     // not the timings, cue settings and markup around them (see WebVttText). Content with no
@@ -83,6 +90,13 @@ class TextTrackEvent(
 
     /** ISO-639-1 code, from the NIP-32 style single-letter `l` tag publishers use here. */
     fun language() = tags.firstNotNullOfOrNull(LanguageTag::parse)
+
+    /** The video this track belongs to and its language (`l`). */
+    override fun links(): List<Link> =
+        links {
+            addressTags(Relation.VIDEO, tags)
+            valueTags(Relation.TAG, tags, "l")
+        }
 
     companion object {
         const val KIND = 39307

@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -37,6 +42,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
+import com.vitorpamplona.quartz.nip53LiveActivities.participantLinks
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -63,7 +69,8 @@ class LiveActivitiesEvent(
     EventHintProvider,
     PubKeyHintProvider,
     LiveStreamLike,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
@@ -160,6 +167,14 @@ class LiveActivitiesEvent(
         }
 
     fun participantsIntersect(keySet: Set<String>): Boolean = keySet.contains(pubKey) || tags.any(ParticipantTag::isIn, keySet)
+
+    /** NIP-53: participants with their roles, pinned chat messages, and the NIP-75 zap goal the stream raises toward (zap.stream's `goal`). */
+    override fun links(): List<Link> =
+        links {
+            participantLinks(tags)
+            eventTags(Relation.PIN, tags, "pinned")
+            eventTags(Relation.GOAL, tags, GOAL_TAG)
+        }
 
     companion object {
         const val KIND = 30311

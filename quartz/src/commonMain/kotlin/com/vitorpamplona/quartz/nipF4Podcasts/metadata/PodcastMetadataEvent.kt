@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -57,7 +61,8 @@ class PodcastMetadataEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PodcastShow,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -100,6 +105,12 @@ class PodcastMetadataEvent(
         content == MOCK_SPAM_CONTENT &&
             title() == MOCK_SPAM_TITLE &&
             description() == MOCK_SPAM_CONTENT
+
+    /** NIP-F4: the people the podcast (the signer) claims as its authors, with their role. The claim holds only when their 10064 names the podcast back. */
+    override fun links(): List<Link> =
+        links {
+            claimedAuthors().forEach { author -> user(Relation.PODCAST_AUTHOR, author.pubKey, "p", author.role?.let { mapOf("role" to it) }) }
+        }
 
     companion object {
         const val KIND = 10154

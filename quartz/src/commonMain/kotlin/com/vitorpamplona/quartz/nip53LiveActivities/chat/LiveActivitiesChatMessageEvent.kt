@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip53LiveActivities.chat
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -31,6 +32,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -38,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
@@ -66,7 +74,8 @@ class LiveActivitiesChatMessageEvent(
     PubKeyHintProvider,
     AddressHintProvider,
     ExposeInDraft,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = (listOf(content) + tags.hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, without the join.
@@ -129,6 +138,26 @@ class LiveActivitiesChatMessageEvent(
         tagArray<LiveActivitiesChatMessageEvent> {
             activity()?.let { aTag(it) }
             reply()?.let { markedETag(it) }
+        }
+
+    /**
+     * NIP-53: the activity's `a` is the chat's ROOT (the spec's example marks it `root`; without a
+     * marker, the first `a`), and an `e` is the message this one replies to.
+     */
+    override fun links(): List<Link> =
+        links {
+            val activity = tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" } ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "a" -> address(if (it === activity) Relation.ROOT else Relation.MENTION, it[1], "a")
+                    "e" -> event(if (it.getOrNull(3) == MarkedETag.MARKER.MENTION.code) Relation.MENTION else Relation.PARENT, it[1], "e")
+                    "p" -> user(Relation.MENTION, it[1], "p")
+                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
+                }
+            }
+            hashtags(tags)
+            contentMentions(citedNIP19())
         }
 
     companion object {

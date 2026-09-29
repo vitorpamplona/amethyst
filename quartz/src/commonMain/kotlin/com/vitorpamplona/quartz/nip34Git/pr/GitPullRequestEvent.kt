@@ -28,6 +28,13 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -36,11 +43,13 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
+import com.vitorpamplona.quartz.nip34Git.gitPeopleLinks
 import com.vitorpamplona.quartz.nip34Git.pr.tags.BranchNameTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.CurrentCommitTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.MergeBaseTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
+import com.vitorpamplona.quartz.nip34Git.repositoryLinks
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -65,7 +74,8 @@ class GitPullRequestEvent(
     PubKeyHintProvider,
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -109,6 +119,15 @@ class GitPullRequestEvent(
 
     /** Root patch event ID if this PR is a revision of a prior patch. */
     fun rootPatchId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** NIP-34: the repository and its owner, the root patch this PR revises (`e`), labels (`t`) and the earliest unique commit (`r`). */
+    override fun links(): List<Link> =
+        links {
+            gitPeopleLinks(tags, repositoryLinks(tags))
+            eventTags(Relation.REVISED, tags)
+            hashtags(tags)
+            valueTags(Relation.TAG, tags, "r")
+        }
 
     companion object {
         const val KIND = 1618

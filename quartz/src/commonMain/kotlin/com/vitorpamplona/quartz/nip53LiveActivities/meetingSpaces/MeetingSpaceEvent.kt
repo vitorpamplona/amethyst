@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -38,6 +41,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RelayList
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RoomNameTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.ServiceUrlTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
+import com.vitorpamplona.quartz.nip53LiveActivities.participantLinks
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -53,7 +57,8 @@ class MeetingSpaceEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(room(), summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -137,6 +142,8 @@ class MeetingSpaceEvent(
         }
 
     fun participantsIntersect(keySet: Set<String>): Boolean = keySet.contains(pubKey) || tags.any(ParticipantTag::isIn, keySet)
+
+    override fun links(): List<Link> = links { participantLinks(tags) }
 
     companion object Companion {
         const val KIND = 30312

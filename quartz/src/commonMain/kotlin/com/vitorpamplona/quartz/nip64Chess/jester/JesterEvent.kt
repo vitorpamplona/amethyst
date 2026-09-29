@@ -25,6 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -49,7 +55,8 @@ class JesterEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, JesterProtocol.KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, JesterProtocol.KIND, tags, content, sig),
+    LinkProvider {
     private val parsedContent: JesterContent? by lazy {
         try {
             JsonMapper.fromJson<JesterContent>(content)
@@ -102,6 +109,26 @@ class JesterEvent(
 
     /** Get all e-tags */
     fun eTags(): List<String> = tags.filter { it.size >= 2 && it[0] == "e" }.map { it[1] }
+
+    /**
+     * Jester threads a game by position: the first `e` is the game's start event and the second the
+     * previous move. A start event's only `e` is [JesterProtocol.START_POSITION_HASH], a hash of the
+     * starting board rather than an event id, so it is not a link.
+     */
+    override fun links(): List<Link> =
+        links {
+            var position = 0
+            tags.fastForEach {
+                if (it.size < 2 || it[0] != "e") return@fastForEach
+                val index = position++
+                if (it[1] == JesterProtocol.START_POSITION_HASH) return@fastForEach
+                when (index) {
+                    0 -> event(Relation.ROOT, it[1], "e")
+                    1 -> event(Relation.PARENT, it[1], "e")
+                }
+            }
+            userTags(Relation.OPPONENT, tags)
+        }
 
     companion object {
         const val KIND = JesterProtocol.KIND

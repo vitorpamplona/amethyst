@@ -25,6 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.containsAllTagNamesWithValues
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
@@ -70,7 +76,8 @@ class GeocacheListingEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // The hint and the mission are deliberately absent: a cache is found by walking to it, and a
     // search that matches on "in the branches" hands out the answer to anyone who types it.
     override fun indexableContent() = listOfNotNull(cacheName(), content).joinToString("\n")
@@ -144,6 +151,18 @@ class GeocacheListingEvent(
     fun logRelays() = tags.logRelays()
 
     fun isWellFormed() = tags.containsAllTagNamesWithValues(REQUIRED_FIELDS)
+
+    /**
+     * NIP-CC: the locked-in first-to-find winner (`F`), the key that signs verifications, the cache
+     * type as `t` and its geohashes. Its `r` tags are relays for logs, not web references.
+     */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.WINNER, firstToFindWinner(), "F")
+            user(Relation.VERIFIER, verificationKey(), "verification")
+            hashtags(tags)
+            valueTags(Relation.TAG, tags, "g")
+        }
 
     companion object {
         const val KIND = 37516

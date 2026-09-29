@@ -23,6 +23,11 @@ package com.vitorpamplona.quartz.nip64Chess.end
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip64Chess.GameResult
@@ -30,6 +35,7 @@ import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
+import com.vitorpamplona.quartz.nip64Chess.end.tags.WinnerTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -54,7 +60,8 @@ class LiveChessGameEndEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun result() = tags.result()
 
     fun termination() = tags.termination()
@@ -62,6 +69,22 @@ class LiveChessGameEndEvent(
     fun winnerPubkey() = tags.winnerPubkey()
 
     fun pgn(): String = content
+
+    /** The opponent and the winner, when there is one. The result and the termination reason ride on both. */
+    override fun links(): List<Link> =
+        links {
+            val result = result()
+            val termination = termination()
+            val props =
+                when {
+                    result != null && termination != null -> mapOf("result" to result, "termination" to termination)
+                    result != null -> mapOf("result" to result)
+                    termination != null -> mapOf("termination" to termination)
+                    else -> null
+                }
+            userTags(Relation.OPPONENT, tags, props = props)
+            user(Relation.WINNER, winnerPubkey(), WinnerTag.TAG_NAME, props)
+        }
 
     companion object {
         const val KIND = 30067

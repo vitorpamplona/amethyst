@@ -28,12 +28,19 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -77,7 +84,8 @@ class WikiArticleEvent(
     PublishedAtProvider,
     IForkableEvent,
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
@@ -164,6 +172,32 @@ class WikiArticleEvent(
             null
         }
     }
+
+    /**
+     * NIP-54 articles have no parent: an `a` or `e` marked `fork` is the version this one was forked
+     * from, one marked `defer` a version it considers better than itself, and any other is a citation.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "a", "e" -> {
+                        val relation =
+                            when (it.getOrNull(3)) {
+                                MarkedETag.MARKER.FORK.code -> Relation.FORK
+                                "defer" -> Relation.DEFER
+                                else -> Relation.MENTION
+                            }
+                        if (it[0] == "a") address(relation, it[1], "a") else event(relation, it[1], "e")
+                    }
+                    "p" -> user(Relation.MENTION, it[1], "p")
+                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
+                }
+            }
+            hashtags(tags)
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 30818

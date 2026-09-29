@@ -27,6 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -55,7 +62,8 @@ class CalendarRSVPEvent(
     PubKeyHintProvider,
     AddressHintProvider,
     EventHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -89,6 +97,23 @@ class CalendarRSVPEvent(
     fun calendarEventId() = firstTaggedEvent()
 
     fun calendarEventAuthor() = tags.firstNotNullOfOrNull(PTag.Companion::parse)
+
+    /** NIP-52: the calendar event responded to, by address and optionally by id, and its author. The RSVP status and free/busy flag ride on the calendar event links. */
+    override fun links(): List<Link> =
+        links {
+            val status = statusValue()
+            val freeBusy = freebusy()?.value
+            val props =
+                when {
+                    status != null && freeBusy != null -> mapOf("status" to status, "fb" to freeBusy)
+                    status != null -> mapOf("status" to status)
+                    freeBusy != null -> mapOf("fb" to freeBusy)
+                    else -> null
+                }
+            addressTags(Relation.CALENDAR_EVENT, tags, props = props)
+            eventTags(Relation.CALENDAR_EVENT, tags, props = props)
+            userTags(Relation.CALENDAR_EVENT_AUTHOR, tags)
+        }
 
     companion object {
         const val KIND = 31925

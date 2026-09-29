@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -44,7 +48,8 @@ class ProductEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun isContentEncoded() = true
 
     fun productData(): ProductData? =
@@ -68,6 +73,9 @@ class ProductEvent(
         if (!visitor.visit(data.description)) return
         categories().forEach { if (!visitor.visit(it)) return }
     }
+
+    /** NIP-15: `t` tags are categories. The stall is named by `stall_id` inside the content JSON, which links do not parse. */
+    override fun links(): List<Link> = links { hashtags(tags) }
 
     companion object {
         const val KIND = 30018

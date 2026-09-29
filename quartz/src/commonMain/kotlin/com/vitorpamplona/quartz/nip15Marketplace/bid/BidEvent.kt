@@ -27,6 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -43,7 +49,8 @@ class BidEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -55,6 +62,13 @@ class BidEvent(
     fun amount() = content.toDoubleOrNull()
 
     fun auctionId() = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** NIP-15: the auction is named by its event id (a 30020 version) and the bid amount is the content. The `p` is Quartz's notification of the auction's merchant. */
+    override fun links(): List<Link> =
+        links {
+            eventTags(Relation.AUCTION, tags, props = amount()?.let { mapOf("amount" to it) })
+            userTags(Relation.AUCTION_AUTHOR, tags)
+        }
 
     companion object {
         const val KIND = 1021

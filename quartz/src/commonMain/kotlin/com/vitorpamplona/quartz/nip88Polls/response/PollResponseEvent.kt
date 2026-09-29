@@ -27,6 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
@@ -45,7 +51,8 @@ class PollResponseEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    RootScope {
+    RootScope,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(PollTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(PollTag::parseId)
@@ -57,6 +64,14 @@ class PollResponseEvent(
     fun responses() = tags.responses()
 
     fun poll() = tags.poll()
+
+    /** NIP-88: the poll, with the chosen option ids (comma-joined, in tag order) on the link. The `p` is Quartz's notification of the poll's author. */
+    override fun links(): List<Link> =
+        links {
+            val responses = responses()
+            eventTags(Relation.POLL, tags, props = if (responses.isEmpty()) null else mapOf("responses" to responses.joinToString(",")))
+            userTags(Relation.POLL_AUTHOR, tags)
+        }
 
     companion object {
         const val KIND = 1018

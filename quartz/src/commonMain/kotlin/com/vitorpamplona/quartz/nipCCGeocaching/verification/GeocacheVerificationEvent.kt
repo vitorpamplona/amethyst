@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -52,7 +56,8 @@ class GeocacheVerificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun finderCache() = tags.finderCache()
 
     /** The pubkey this verification was issued to. */
@@ -63,6 +68,14 @@ class GeocacheVerificationEvent(
 
     /** Whether `content` matches the static format NIP-CC mandates for [finder]. */
     fun hasExpectedContent() = finder()?.let { content == contentFor(it) } ?: false
+
+    /** NIP-CC's `a` here is the composite `<finder>:<naddr>`, not a NIP-01 address: it names both the finder and the cache. */
+    override fun links(): List<Link> =
+        links {
+            val finderCache = finderCache() ?: return@links
+            user(Relation.FINDER, finderCache.finderPubKey, "a")
+            address(Relation.VERIFIED, finderCache.cache, "a")
+        }
 
     companion object {
         const val KIND = 7517

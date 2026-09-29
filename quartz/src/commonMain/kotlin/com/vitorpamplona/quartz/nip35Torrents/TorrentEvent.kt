@@ -24,6 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -51,7 +59,8 @@ class TorrentEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -95,6 +104,19 @@ class TorrentEvent(
     }
 
     fun totalSizeBytes(): Long = tags.sumOf { FileTag.parseBytes(it) ?: 0L }
+
+    /**
+     * NIP-35: `i` holds external catalogue ids (imdb, tmdb, newznab…) and `t` categories. Quartz's
+     * builder turns the description's `nostr:` references into `q` and `p` tags and its URLs into `r`.
+     */
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.TAG, tags, "i")
+            hashtags(tags)
+            quotes(tags)
+            userTags(Relation.MENTION, tags)
+            valueTags(Relation.TAG, tags, "r")
+        }
 
     companion object {
         const val KIND = 2003

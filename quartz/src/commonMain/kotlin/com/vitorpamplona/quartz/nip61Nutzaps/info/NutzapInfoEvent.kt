@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
@@ -43,7 +44,8 @@ class NutzapInfoEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<NutzapInfoDiff> {
+    DiffableEvent<NutzapInfoDiff>,
+    LinkFree {
     override fun diffFrom(older: Event): NutzapInfoDiff? {
         if (older !is NutzapInfoEvent || older.pubKey != pubKey) return null
         return NutzapInfoDiff(

@@ -23,7 +23,12 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
@@ -43,7 +48,8 @@ class VoiceReplyEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseVoiceEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseVoiceEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun replyAuthor() = tags.firstNotNullOfOrNull(ReplyAuthorTag::parse)
 
     fun replyAuthors() = tags.filter(ReplyAuthorTag::match)
@@ -88,6 +94,37 @@ class VoiceReplyEvent(
             authorTag?.copyOf()?.also { it[0] = RootAuthorTag.TAG_NAME },
         )
     }
+
+    /**
+     * NIP-A0 replies follow NIP-22: the root scope (`E`/`A`/`I`, `K`, `P`) and the parent item
+     * (`e`/`a`/`i`, `k`, `p`). A reply written before that carries only the parent; [rootScopeTags]
+     * recovers its root when the parent is itself a voice message, and those links keep the name of
+     * the tag they were read from.
+     */
+    override fun links(): List<Link> =
+        links {
+            val native = tags.any { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) }
+            rootScopeTags()?.forEach {
+                val via = if (native) it[0] else it[0].lowercase()
+                when (it[0]) {
+                    RootEventTag.TAG_NAME -> event(Relation.ROOT, it[1], via)
+                    RootAddressTag.TAG_NAME -> address(Relation.ROOT, it[1], via)
+                    RootIdentifierTag.TAG_NAME -> tag(Relation.ROOT, it[0], it[1], via)
+                    RootKindTag.TAG_NAME -> if (native) tag(Relation.TAG, it[0], it[1])
+                    RootAuthorTag.TAG_NAME -> user(Relation.ROOT_AUTHOR, it[1], via)
+                }
+            }
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "e" -> event(Relation.PARENT, it[1], "e")
+                    "a" -> address(Relation.PARENT, it[1], "a")
+                    "i" -> tag(Relation.PARENT, "i", it[1])
+                    "k" -> tag(Relation.TAG, "k", it[1])
+                    "p" -> user(Relation.PARENT_AUTHOR, it[1], "p")
+                }
+            }
+        }
 
     companion object {
         const val KIND = 1244

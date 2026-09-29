@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nip71Video
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -52,7 +55,8 @@ abstract class AddressableVideoEvent(
     PublishedAtProvider,
     VideoEvent,
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -100,4 +104,6 @@ abstract class AddressableVideoEvent(
     override fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
     override fun imetaTags() = iMetas ?: imetas().map { VideoMeta.parse(it) }.also { iMetas = it }
+
+    override fun links(): List<Link> = links { videoLinks(this@AddressableVideoEvent, tags) }
 }

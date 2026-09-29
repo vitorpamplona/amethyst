@@ -25,10 +25,17 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
@@ -37,12 +44,14 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip34Git.gitPeopleLinks
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitPgpSigTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.Committer
 import com.vitorpamplona.quartz.nip34Git.patch.tags.CommitterTag
 import com.vitorpamplona.quartz.nip34Git.patch.tags.ParentCommitTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.repositoryLinks
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -59,7 +68,8 @@ class GitPatchEvent(
     PubKeyHintProvider,
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -148,6 +158,26 @@ class GitPatchEvent(
         if (!found) return null
         return PATCH_PREFIX.replace(builder.toString().trim(), "").trim().ifBlank { null }
     }
+
+    /**
+     * NIP-34: the repository (`a`) and its owner's `p`; a series is threaded by marked `e` tags
+     * (`reply` points at the previous patch, `root` at the series' first). `t` holds the `root` and
+     * `root-revision` markers and `r` the earliest unique commit.
+     */
+    override fun links(): List<Link> =
+        links {
+            gitPeopleLinks(tags, repositoryLinks(tags))
+            tags.fastForEach {
+                val thread = MarkedETag.parseAllThreadTags(it) ?: return@fastForEach
+                when (thread.marker) {
+                    MarkedETag.MARKER.ROOT -> event(Relation.ROOT, thread.eventId, "e")
+                    MarkedETag.MARKER.REPLY -> event(Relation.PARENT, thread.eventId, "e")
+                    else -> event(Relation.MENTION, thread.eventId, "e")
+                }
+            }
+            hashtags(tags)
+            valueTags(Relation.TAG, tags, "r")
+        }
 
     companion object {
         const val KIND = 1617

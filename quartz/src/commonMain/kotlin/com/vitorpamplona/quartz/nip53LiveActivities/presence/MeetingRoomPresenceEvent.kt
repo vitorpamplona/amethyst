@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
@@ -47,7 +51,8 @@ class MeetingRoomPresenceEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider {
+    AddressHintProvider,
+    LinkProvider {
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(MeetingSpaceTag::parseAsHint)
 
     override fun linkedAddressIds(): List<String> = tags.mapNotNull(MeetingSpaceTag::parseAddressId)
@@ -63,6 +68,9 @@ class MeetingRoomPresenceEvent(
 
     /** True when the peer holds a speaker slot (vs. pure audience). */
     fun onstage() = tags.firstNotNullOfOrNull(OnstageTag::parse)
+
+    /** NIP-53 presence: `["a", <room>, <relay>, "root"]`. Quartz writes it without the marker, so the room is the `a` either way. */
+    override fun links(): List<Link> = links { address(Relation.ROOT, interactiveRoom()?.address, "a") }
 
     companion object Companion {
         const val KIND = 10312

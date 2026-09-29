@@ -24,6 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
@@ -48,8 +54,16 @@ class LiveChessGameAcceptEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun challengeEventId() = tags.challengeEventId()
+
+    /** The accepted challenge (`e`) and the challenger (`p`). */
+    override fun links(): List<Link> =
+        links {
+            eventTags(Relation.ACCEPTED, tags)
+            userTags(Relation.OPPONENT, tags)
+        }
 
     companion object {
         const val KIND = 30065

@@ -25,8 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -56,7 +62,8 @@ class WikiMergeAcceptanceEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -88,6 +95,18 @@ class WikiMergeAcceptanceEvent(
             } else {
                 null
             }
+        }
+
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size <= WikiMergeRequestEvent.MARKER_SLOT || it[0] != ETag.TAG_NAME) return@fastForEach
+                when (it[WikiMergeRequestEvent.MARKER_SLOT]) {
+                    RESULT_MARKER -> event(Relation.RESULT, it[1], "e")
+                    REQUEST_MARKER -> event(Relation.REQUEST, it[1], "e")
+                }
+            }
+            userTags(Relation.REQUEST_AUTHOR, tags)
         }
 
     companion object {

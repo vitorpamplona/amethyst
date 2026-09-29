@@ -25,8 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -63,7 +69,8 @@ class CashuSpendingHistoryEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -130,6 +137,26 @@ class CashuSpendingHistoryEvent(
         tags
             .mapNotNull(TokenReference::parseFromTag)
             .filter { it.marker == TokenReference.MARKER_REDEEMED }
+
+    /**
+     * NIP-60 marks each public `e` with what the spend did to it. Only `redeemed` (a NIP-61 nutzap)
+     * is meant to stay public; `created` and `destroyed` token events are normally encrypted and so
+     * invisible here. The `p` is the redeemed nutzap's sender.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                val reference = TokenReference.parseFromTag(it) ?: return@fastForEach
+                val relation =
+                    when (reference.marker) {
+                        TokenReference.MARKER_REDEEMED -> Relation.REDEEMED
+                        TokenReference.MARKER_CREATED -> Relation.CREATED
+                        else -> Relation.DESTROYED
+                    }
+                event(relation, reference.eventId, "e")
+            }
+            userTags(Relation.REDEEMED_AUTHOR, tags)
+        }
 
     companion object {
         const val KIND = 7376

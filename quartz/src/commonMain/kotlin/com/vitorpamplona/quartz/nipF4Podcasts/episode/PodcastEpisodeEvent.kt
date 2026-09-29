@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -54,7 +55,8 @@ class PodcastEpisodeEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     PodcastEpisode,
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkFree {
     override fun indexableContent() = listOfNotNull(title(), description(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

@@ -30,6 +30,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -65,7 +71,8 @@ class LiveActivitiesClipEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -96,6 +103,14 @@ class LiveActivitiesClipEvent(
     fun videoUrl(): String? = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 
     fun title(): String? = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    /** The clipped stream, its host (not necessarily the stream's signer, which may be a provider) and the clip's video URL (`r`). */
+    override fun links(): List<Link> =
+        links {
+            address(Relation.CLIPPED, activityAddress(), "a")
+            userTags(Relation.CLIPPED_AUTHOR, tags)
+            valueTags(Relation.TAG, tags, "r")
+        }
 
     companion object {
         const val KIND = 1313

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -51,7 +52,8 @@ class CashuWalletEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<CashuWalletDiff> {
+    DiffableEvent<CashuWalletDiff>,
+    LinkFree {
     override fun diffFrom(older: Event): CashuWalletDiff? {
         if (older !is CashuWalletEvent || older.pubKey != pubKey) return null
         return CashuWalletDiff(ContentChange.between(older.content, content))

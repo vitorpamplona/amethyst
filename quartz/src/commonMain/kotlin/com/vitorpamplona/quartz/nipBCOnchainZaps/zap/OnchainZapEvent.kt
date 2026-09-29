@@ -29,6 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
@@ -60,7 +68,8 @@ class OnchainZapEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // content is the optional onchain-zap message.
     override fun indexableContent() = content
 
@@ -105,6 +114,17 @@ class OnchainZapEvent(
 
     /** True when neither `e` nor `a` is present — the zap targets the recipient's profile. */
     fun isProfileZap() = zappedEvent() == null && zappedAddress() == null
+
+    /** NIP-BC: the recipient and the zapped content; the sender is the author. The amount is the sender's claim until it is checked on chain, and `i` names the transaction. */
+    override fun links(): List<Link> =
+        links {
+            val props = claimedAmountInSats()?.let { mapOf("msats" to it * 1000) }
+            userTags(Relation.ZAP_RECIPIENT, tags, props = props)
+            eventTags(Relation.ZAPPED, tags, props = props)
+            addressTags(Relation.ZAPPED, tags, props = props)
+            valueTags(Relation.TAG, tags, "i")
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 8333

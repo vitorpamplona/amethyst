@@ -24,6 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -47,7 +54,8 @@ class PictureEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -74,6 +82,17 @@ class PictureEvent(
     fun location() = tags.mapNotNull(LocationTag::parse)
 
     fun imetaTags() = iMetas ?: imetas().map { PictureMeta.parse(it) }.also { iMetas = it }
+
+    /** NIP-68 names its `p` tags "tagged users", and an imeta `annotate-user` places one at a point in the image. */
+    override fun links(): List<Link> =
+        links {
+            userTags(Relation.TAGGED, tags)
+            imetaTags().forEach { image ->
+                image.annotations.forEach { user(Relation.TAGGED, it.pubkey, "imeta", mapOf("x" to it.x, "y" to it.y)) }
+            }
+            hashtags(tags)
+            valueTags(Relation.TAG, tags, "g")
+        }
 
     companion object {
         const val KIND = 20

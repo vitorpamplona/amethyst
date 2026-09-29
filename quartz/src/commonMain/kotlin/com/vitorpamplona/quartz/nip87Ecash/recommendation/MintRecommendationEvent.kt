@@ -24,6 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -40,7 +46,8 @@ class MintRecommendationEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -58,6 +65,22 @@ class MintRecommendationEvent(
     fun isCashuRecommendation() = mintEventKind() == CashuMintEvent.KIND
 
     fun isFedimintRecommendation() = mintEventKind() == FedimintEvent.KIND
+
+    /** NIP-87: the recommended mint's announcement (38172 cashu or 38173 fedimint) and the recommended kind (`k`). */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2 || it[0] != "a") return@fastForEach
+                val platform =
+                    when {
+                        it[1].startsWith("${CashuMintEvent.KIND}:") -> "cashu"
+                        it[1].startsWith("${FedimintEvent.KIND}:") -> "fedimint"
+                        else -> return@fastForEach
+                    }
+                address(Relation.RECOMMENDED, it[1], "a", mapOf("platform" to platform))
+            }
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 38000

@@ -29,6 +29,15 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -59,7 +68,8 @@ class ZapGoalEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -92,6 +102,20 @@ class ZapGoalEvent(
     fun amount() = tags.firstNotNullOfOrNull(AmountTag::parse)
 
     fun relays() = tags.firstNotNullOfOrNull(RelayListTag::parse)
+
+    /**
+     * NIP-75: the event a goal raises funds for (Quartz writes both an `a` and an `e` for an
+     * addressable one) and a web page (`r`). NIP-75 defines no `p`; one here is a mention. The
+     * beneficiaries' `zap` tags are emitted for every kind by `Event.allLinks()`.
+     */
+    override fun links(): List<Link> =
+        links {
+            eventTags(Relation.FUNDED, tags)
+            addressTags(Relation.FUNDED, tags)
+            userTags(Relation.MENTION, tags)
+            valueTags(Relation.TAG, tags, "r")
+            hashtags(tags)
+        }
 
     companion object {
         const val KIND = 9041

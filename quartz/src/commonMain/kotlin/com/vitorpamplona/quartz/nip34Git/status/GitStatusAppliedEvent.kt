@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -51,12 +56,22 @@ class GitStatusAppliedEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : GitStatusEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : GitStatusEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun mergeCommit(): String? = tags.firstNotNullOfOrNull(MergeCommitTag::parse)
 
     fun appliedAsCommits(): List<String> = tags.mapNotNull(AppliedAsCommitsTag::parse).flatten()
 
     fun appliedPatchIds(): List<HexKey> = tags.mapNotNull(QTag::parseEventId)
+
+    /** A 1631 also names the patches it applied or merged, in `q` tags that are not NIP-18 quotes. */
+    override fun links(): List<Link> {
+        val status = super.links()
+        return links {
+            status.forEach { add(it) }
+            eventTags(Relation.APPLIED, tags, "q")
+        }
+    }
 
     companion object {
         const val KIND = KIND_APPLIED
