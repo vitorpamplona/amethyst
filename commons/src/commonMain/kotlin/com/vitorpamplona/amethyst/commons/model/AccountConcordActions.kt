@@ -24,12 +24,16 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
+import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
@@ -65,6 +69,7 @@ import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -90,8 +95,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
@@ -559,6 +567,38 @@ class AccountConcordActions(
                 InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable
             }
 
+        return joinValidatedConcordInvite(
+            bundle = bundle,
+            servedBy = relays,
+            // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
+            // Refounding that leaves us out of the recipient set is recoverable later. See
+            // recoverStrandedConcordCommunities().
+            inviteRef = ConcordActions.bareInviteRef(url),
+            // Invite attribution (CORD-05 §1): the joiner echoes the link's creator + label in their
+            // Guestbook Join, which is what makes per-link usage counters possible.
+            inviteCreator = bundle.creatorNpub,
+            inviteLabel = bundle.label,
+        )
+    }
+
+    /**
+     * The join half shared by every redeem path (link [joinConcordViaInvite], Direct Invite
+     * [acceptConcordDirectInvite]): [bundle] is already opened, bounded and owner-proof validated,
+     * and not expired. An already-held community only moves forward through a stranded rejoin (a
+     * Refounding left us behind and the user re-accepted); otherwise it refuses a community whose
+     * roster bans us (fails closed on an unreadable Control Plane, fetched over [servedBy] ∪ the
+     * bundle's relays), then stores the secret-bearing entry and announces the Guestbook Join with
+     * [inviteCreator]/[inviteLabel] attribution.
+     */
+    private suspend fun joinValidatedConcordInvite(
+        bundle: CommunityInvite,
+        servedBy: Set<NormalizedRelayUrl>,
+        inviteRef: String?,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+    ): ConcordInviteResult {
+        val relays = servedBy
+
         // Already a member? Just take the user to the community. Re-following and re-announcing a
         // Guestbook JOIN (kind 3306) would spam the community relays with a fresh join every time an
         // old invite is reopened, so short-circuit to Joined — the screen forwards to the community
@@ -620,15 +660,14 @@ class AccountConcordActions(
             return ConcordInviteResult.Banned
         }
 
-        // Invite attribution (CORD-05 §1): the joiner echoes the link's creator + label in their
-        // Guestbook Join, which is what makes per-link usage counters possible.
-        val inviteCreator = bundle.creatorNpub?.lowercase()?.takeIf { HEX64.matches(it) }
-        val inviteLabel = bundle.label?.takeIf { inviteCreator != null && it.isNotBlank() }
+        // Invite attribution (CORD-05 §1), echoed in the Guestbook Join; a label only rides with a creator.
+        val creator = inviteCreator?.lowercase()?.takeIf { HEX64.matches(it) }
+        val label = inviteLabel?.takeIf { creator != null && it.isNotBlank() }
 
         if (rejoined != null) {
             if (!adoptedConcordRotations.add("${rejoined.id}:${rejoined.rootEpoch}")) return ConcordInviteResult.Joined(bundle.communityId)
             Log.i("Concord") { "Stranded rejoin by explicit invite: ${rejoined.id} -> epoch ${rejoined.rootEpoch}" }
-            joinConcordCommunity(rejoined, inviteCreator, inviteLabel)
+            joinConcordCommunity(rejoined, creator, label)
             _strandedConcordCommunities.value -= rejoined.id
             return ConcordInviteResult.Joined(bundle.communityId)
         }
@@ -649,14 +688,174 @@ class AccountConcordActions(
                 relays = bundle.relays,
                 name = bundle.name,
                 addedAt = TimeUtils.nowMillis(),
-                // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
-                // Refounding that leaves us out of the recipient set is recoverable later. See
-                // recoverStrandedConcordCommunities().
-                inviteRef = ConcordActions.bareInviteRef(url),
+                // Anchor for stranded recovery (null for a Direct Invite, which has no link).
+                inviteRef = inviteRef,
             )
-        joinConcordCommunity(entry, inviteCreator, inviteLabel)
+        joinConcordCommunity(entry, creator, label)
         return ConcordInviteResult.Joined(bundle.communityId)
     }
+
+    // ---- CORD-05 §6 Direct Invites ---------------------------------------------
+
+    /**
+     * The Direct Invite inbox: wraps from the dedicated sweep ([refreshConcordDirectInvites]) and
+     * from the NIP-17 giftwrap pipeline land here, parked until the user accepts or declines.
+     */
+    val directInviteInbox = ConcordDirectInviteInbox(account.signer)
+
+    /**
+     * The parked Direct Invites a UI should show, newest first: invites for communities we don't
+     * hold, plus catch-ups for ones we do ([ConcordDirectInviteInbox.visible]).
+     */
+    val pendingConcordDirectInvites: StateFlow<List<ConcordDirectInviteView>> =
+        combine(directInviteInbox.pending, account.concordChannelList.liveCommunities) { pending, joined ->
+            ConcordDirectInviteInbox.visible(pending.values, joined)
+        }.stateIn(account.scope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM
+     * inbox relays (kind 10050, plus the NIP-65 read and private/local relays the DM feed already
+     * reads), else the stock Concord set.
+     */
+    private fun concordDirectInviteScanRelays(): Set<NormalizedRelayUrl> =
+        account.dmRelays.flow.value.ifEmpty {
+            ConcordActions.directInviteDeliveryRelays(null)
+        }
+
+    /**
+     * Sweeps our inbox relays for Direct Invite wraps
+     * (`{"kinds":[1059],"#p":[me],"#k":["3313"]}` since the inbox cursor, rewound by NIP-59's backdate
+     * window) and offers each to the inbox. Returns how many new invites were parked. Read-only: it
+     * decrypts, it never joins or contacts a community's relays.
+     */
+    suspend fun refreshConcordDirectInvites(): Int {
+        val relays = concordDirectInviteScanRelays()
+        if (relays.isEmpty()) return 0
+        val before = directInviteInbox.pending.value.keys
+        val filter = ConcordActions.directInvitesFilter(account.signer.pubKey, directInviteInbox.since())
+        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(filter) })
+        wraps.distinctBy { it.id }.forEach { directInviteInbox.offer(it) }
+        return (directInviteInbox.pending.value.keys - before).size
+    }
+
+    /**
+     * The recipient's giftwrap inbox (CORD-05 §6): their kind-10050 DM relays, else NIP-65 read
+     * relays — from the cache when we have their lists, fetched otherwise — else the stock set.
+     */
+    private suspend fun concordDirectInviteDeliveryRelays(recipient: HexKey): Set<NormalizedRelayUrl> {
+        val user = account.cache.getOrCreateUser(recipient)
+        val dmInbox = user.dmInboxRelayList()?.relays().orEmpty()
+        val cached =
+            if (dmInbox.isNotEmpty() || user.authorRelayList() != null) {
+                RecipientRelayFetcher.Lists(dmInbox = dmInbox, keyPackage = emptyList(), nip65 = user.authorRelayList())
+            } else {
+                null
+            }
+        val lists =
+            cached ?: run {
+                val seed = DefaultDmIndexerRelays.RELAYS.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value
+                RecipientRelayFetcher.fetchRelayLists(account.client, recipient, seed)
+            }
+        return ConcordActions.directInviteDeliveryRelays(lists)
+    }
+
+    /**
+     * Hands the keys of [communityId] straight to [recipientPubKey] as a Direct Invite (CORD-05 §6):
+     * the §1 bundle — carrying only the Private Channel keys the recipient's Roles entitle them to —
+     * sealed by our real key inside an ephemeral, `k`-tagged giftwrap, published to the recipient's
+     * inbox relays. It appears in no Registry and never flips the community Public; it cannot be
+     * revoked once it lands. [expiresAtMs] (unix ms) bounds its shelf life.
+     *
+     * No community permission gates it — none could (CORD-05 §6) — but a banned member is refused,
+     * like minting, and so is a banned recipient, whom the join would refuse anyway.
+     */
+    suspend fun sendConcordDirectInvite(
+        communityId: String,
+        recipientPubKey: HexKey,
+        expiresAtMs: Long? = null,
+    ): ConcordDirectInviteSendResult {
+        if (!account.isWriteable()) return ConcordDirectInviteSendResult.NOT_WRITEABLE
+        val recipient = recipientPubKey.lowercase()
+        if (!HEX64.matches(recipient)) return ConcordDirectInviteSendResult.INVALID_RECIPIENT
+        val entry =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == communityId } ?: return ConcordDirectInviteSendResult.NOT_MEMBER
+        val state =
+            account.concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value ?: return ConcordDirectInviteSendResult.ROSTER_NOT_LOADED
+        if (state.dissolved) return ConcordDirectInviteSendResult.NOT_MEMBER
+        if (state.authority.isBanned(account.signer.pubKey)) return ConcordDirectInviteSendResult.NOT_MEMBER
+        if (state.authority.isBanned(recipient)) return ConcordDirectInviteSendResult.RECIPIENT_BANNED
+
+        val invite =
+            ConcordActions.directInviteFor(
+                entry = entry,
+                authority = state.authority,
+                recipient = recipient,
+                creator = account.signer.pubKey,
+                expiresAtMs = expiresAtMs,
+                name = state.metadata?.name ?: entry.name,
+                icon = state.metadata?.icon,
+            )
+        val wrap = ConcordActions.buildDirectInvite(account.signer, recipient, invite)
+        val relays = concordDirectInviteDeliveryRelays(recipient)
+        if (relays.isEmpty()) return ConcordDirectInviteSendResult.NOT_DELIVERED
+        val delivered =
+            runCatching { account.client.publishAndConfirm(wrap, relays) }
+                .onFailure { Log.w("Concord", "direct invite publish failed for $communityId", it) }
+                .getOrDefault(false)
+        return if (delivered) ConcordDirectInviteSendResult.SENT else ConcordDirectInviteSendResult.NOT_DELIVERED
+    }
+
+    /**
+     * Accepts the parked Direct Invite [wrapId] (CORD-05 §6) through the same join path as a link:
+     * refused once `expires_at` has passed, refused when the roster bans us, and — for a community
+     * we already hold — only a catch-up adopting newly granted Private Channel keys on the same base.
+     * The Guestbook Join is attributed to the seal-verified sender. **Only from an explicit user
+     * action**: this is the first moment anything contacts the community's relays.
+     */
+    suspend fun acceptConcordDirectInvite(wrapId: HexKey): ConcordInviteResult {
+        if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
+        val opened = directInviteInbox.get(wrapId) ?: return ConcordInviteResult.InvalidLink
+        val bundle = opened.invite
+        val held =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id.equals(bundle.communityId, ignoreCase = true) }
+        val heldState =
+            held?.let {
+                account.concordSessions
+                    .sessionFor(it.id)
+                    ?.state
+                    ?.value
+            }
+        val result =
+            when (val plan = ConcordDirectInviteInbox.acceptPlan(opened, held, heldState, account.signer.pubKey)) {
+                DirectInviteAcceptPlan.Expired -> ConcordInviteResult.Expired
+                DirectInviteAcceptPlan.Banned -> ConcordInviteResult.Banned
+                // No folded roster yet: whether it bans us is unknown, so the invite waits.
+                DirectInviteAcceptPlan.RosterNotLoaded -> ConcordInviteResult.NotReachable
+                DirectInviteAcceptPlan.NothingNew -> ConcordInviteResult.Joined(bundle.communityId)
+                // Keys only, on the held base: no second Guestbook Join.
+                is DirectInviteAcceptPlan.CatchUp ->
+                    if (persistConcordEntry(plan.entry)) ConcordInviteResult.Joined(bundle.communityId) else ConcordInviteResult.NotReachable
+                DirectInviteAcceptPlan.Join ->
+                    joinValidatedConcordInvite(
+                        bundle = bundle,
+                        servedBy = emptySet(),
+                        inviteRef = null,
+                        // Attributed to the seal-verified sender (Armada), never the bundle's claim.
+                        inviteCreator = opened.sender,
+                        inviteLabel = bundle.label,
+                    )
+            }
+        if (result is ConcordInviteResult.Joined) directInviteInbox.resolve(opened.wrapId)
+        return result
+    }
+
+    /** Declines the parked Direct Invite [wrapId]: its keys are discarded and it never resurfaces. */
+    fun declineConcordDirectInvite(wrapId: HexKey): Boolean = directInviteInbox.decline(wrapId)
 
     /**
      * Post [text] to a Concord channel: derive the channel plane key, build an

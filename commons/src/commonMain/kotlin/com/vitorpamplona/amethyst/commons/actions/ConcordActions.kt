@@ -33,14 +33,18 @@ import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordStrandedRecovery
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.OpenedDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -50,11 +54,15 @@ import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -316,8 +324,15 @@ object ConcordActions {
      */
     fun bundlesFilter(linkSignerPubKeyHexes: List<HexKey>): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = linkSignerPubKeyHexes)
 
-    /** Pending direct invites addressed to the given member (indexed by k=3313). */
-    fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())))
+    /**
+     * Pending direct invites addressed to the given member (indexed by k=3313, CORD-05 §6). [since]
+     * should come from [ConcordDirectInvite.inboxSince]: wraps are backdated up to two days, so a
+     * cursor at the newest wrap seen would miss invites published after it.
+     */
+    fun directInvitesFilter(
+        memberPubKeyHex: HexKey,
+        since: Long? = null,
+    ): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())), since = since)
 
     // ---- community lifecycle --------------------------------------------------
 
@@ -582,6 +597,64 @@ object ConcordActions {
             creatorNpub = creator,
             label = label,
         )
+
+    /**
+     * The §1 bundle a Direct Invite hands [recipient] for the community [entry] holds (CORD-05 §6):
+     * the current base, epoch and `control_pk`, the relays, a name/icon preview, the optional
+     * [expiresAtMs] (unix ms) and [creator] attribution — and exactly the Private Channel keys the
+     * recipient's Roles entitle them to in [authority] ([ConcordInviteVend.vendableChannels], Armada's
+     * `VendAudience` "member" rule). A key the recipient isn't entitled to is never whispered, even
+     * though nothing on the wire could stop it.
+     */
+    fun directInviteFor(
+        entry: ConcordCommunityListEntry,
+        authority: AuthorityResolver,
+        recipient: HexKey,
+        creator: HexKey,
+        expiresAtMs: Long? = null,
+        name: String = entry.name,
+        icon: ImagePointer? = null,
+    ): CommunityInvite =
+        CommunityInvite(
+            communityId = entry.id,
+            owner = entry.owner,
+            ownerSalt = entry.ownerSalt,
+            communityRoot = entry.root,
+            rootEpoch = entry.rootEpoch,
+            controlPk = entry.controlPk,
+            channels = ConcordInviteVend.toInviteChannels(ConcordInviteVend.vendableChannels(entry.privateChannels, authority, recipient)),
+            relays = entry.relays.take(ConcordInviteBundle.MAX_COMMUNITY_RELAYS),
+            name = name.ifBlank { entry.name },
+            icon = icon,
+            expiresAt = expiresAtMs,
+            creatorNpub = creator,
+        )
+
+    /** Giftwraps [invite] to [recipient] as a Direct Invite (see [ConcordDirectInvite.build]). */
+    suspend fun buildDirectInvite(
+        senderSigner: NostrSigner,
+        recipient: HexKey,
+        invite: CommunityInvite,
+        createdAt: Long = TimeUtils.now(),
+    ): GiftWrapEvent = ConcordDirectInvite.build(senderSigner, recipient, invite, createdAt)
+
+    /** Opens + validates a Direct Invite wrap addressed to [recipientSigner] (see [ConcordDirectInvite.open]). */
+    suspend fun openDirectInvite(
+        wrap: Event,
+        recipientSigner: NostrSigner,
+    ): OpenedDirectInvite? = ConcordDirectInvite.open(wrap, recipientSigner)
+
+    /**
+     * Where a Direct Invite reaches a member, and where that member scans for one (CORD-05 §6):
+     * their kind-10050 DM relays, else their NIP-65 read relays, else the stock Concord set every
+     * client ships (Armada `inviteDeliveryRelays`). Send and scan share this so both sides meet. The
+     * stock set is fallback-only: a curated private inbox is never also fanned out to public relays.
+     */
+    fun directInviteDeliveryRelays(lists: RecipientRelayFetcher.Lists?): Set<NormalizedRelayUrl> {
+        val inbox = lists?.dmInboxOrFallback().orEmpty()
+        if (inbox.isNotEmpty()) return inbox.toSet()
+        return InviteRelayDictionary.STOCK.mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+    }
 
     /** Mints a shareable public invite link + bundle event (see [ConcordInviteBundle.mintLink]). */
     fun mintInviteLink(
