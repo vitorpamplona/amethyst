@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_before_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_change_agent
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_conditions_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_copy_tag
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_expired
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_form_desc
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_generate
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_grants_prefix
@@ -85,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_hold_desc
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_hold_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_holding
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_kind_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_not_yet_valid
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_readonly_desc
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_readonly_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_remove
@@ -103,6 +105,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -210,6 +213,17 @@ private fun HoldAttestationSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Buzz checks the time clauses against each AUTH, so a held credential outside them
+                // is silently worthless; say so rather than keep showing it as working.
+                val now = TimeUtils.now()
+                if (!mine.isValidAt(now)) {
+                    val expired = mine.validUntil()?.let { it < now } == true
+                    Text(
+                        text = stringRes(if (expired) Res.string.buzz_attest_expired else Res.string.buzz_attest_not_yet_valid),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 OutlinedButton(onClick = { attestation.clear() }) {
                     Text(stringRes(Res.string.buzz_attest_remove))
                 }

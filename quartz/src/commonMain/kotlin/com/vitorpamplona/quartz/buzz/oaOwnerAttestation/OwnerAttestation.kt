@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
@@ -65,25 +64,53 @@ data class OwnerAttestation(
 
     /**
      * Verifies this attestation authorizes [agentPubKey]. Checks structural validity
-     * (valid hex keys, canonical conditions, no self-attestation) and then the owner's
-     * Schnorr signature over the commitment hash.
+     * (lowercase hex keys and signature, canonical conditions, no self-attestation) and then
+     * the owner's Schnorr signature over the commitment hash. Time clauses are NOT evaluated
+     * here; see [verifyForAuthAt].
      */
     fun verify(agentPubKey: HexKey): Boolean {
-        if (!agentPubKey.isValid() || !ownerPubKey.isValid()) return false
+        if (!agentPubKey.isValid() || !ownerPubKey.isValid() || !isLowercaseHex(ownerPubKey, 64)) return false
         // Self-attestation is explicitly prohibited: the owner must differ from the agent.
         if (ownerPubKey == agentPubKey) return false
         if (!AttestationConditions.isValid(conditions)) return false
-        if (sig.length != 128 || !Hex.isHex(sig)) return false
+        // Buzz rejects uppercase hex before it reaches its (permissive) decoder.
+        if (!isLowercaseHex(sig, 128)) return false
 
         val message = sha256(commitment(agentPubKey).encodeToByteArray())
         return Nip01Crypto.verify(sig.hexToByteArray(), message, ownerPubKey.hexToByteArray())
     }
+
+    /**
+     * The check Buzz runs at admission: [verify], plus every `created_at<` / `created_at>`
+     * clause evaluated against the signed authentication event's [authCreatedAt] (strictly).
+     * An expired or not-yet-valid credential grants nothing, so the relay treats the agent as a
+     * non-member (`restricted`).
+     */
+    fun verifyForAuthAt(
+        agentPubKey: HexKey,
+        authCreatedAt: Long,
+    ): Boolean = verify(agentPubKey) && isValidAt(authCreatedAt)
+
+    /** True when the time clauses admit an authentication signed at [authCreatedAt]. */
+    fun isValidAt(authCreatedAt: Long): Boolean = AttestationConditions.timeBoundsAllow(conditions, authCreatedAt)
+
+    /** The last second this credential admits an authentication, or null when unbounded. */
+    fun validUntil(): Long? = AttestationConditions.validUntil(conditions)
+
+    /** The first second this credential admits an authentication, or null when unbounded. */
+    fun validFrom(): Long? = AttestationConditions.validFrom(conditions)
 
     /** Builds the NIP-OA `auth` tag for this attestation. */
     fun toTag(): Array<String> = AuthTag.assemble(this)
 
     companion object {
         const val COMMITMENT_PREFIX = "nostr:agent-auth:"
+
+        /** Exactly [length] characters of lowercase hex, the only form Buzz accepts on the wire. */
+        fun isLowercaseHex(
+            value: String,
+            length: Int,
+        ): Boolean = value.length == length && value.all { it in '0'..'9' || it in 'a'..'f' }
 
         /** SHA-256 of the commitment string — the 32-byte message the owner signs. */
         fun commitmentHash(

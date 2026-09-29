@@ -76,7 +76,7 @@ hand-transcribed schemas:
 Each feature is a sub-package following the standard Quartz per-NIP shape (`<Feature>Event`
 with a `KIND` companion, a `tags/` folder of tag classes, `TagArrayBuilderExt` write-DSL
 verbs, and `TagArrayExt` read accessors), mirroring e.g. `nip88Polls`. There is one event
-class per kind, ~78 in total, each registered in `utils/EventFactory.kt` (except the
+class per kind, ~84 in total, each registered in `utils/EventFactory.kt` (except the
 conflicts below).
 
 | Package | Buzz NIP | Kind(s) |
@@ -86,14 +86,44 @@ conflicts below).
 | `aoObserver` | NIP-AO | 24200 |
 | `aeEngrams` | NIP-AE | 30174 |
 | `apPersonas` / `teams` / `managedAgents` / `agentProfiles` | NIP-AP + agent identity | 30175 / 30176 / 30177 / 10100 |
+| `teamCatalog` | NIP-AP team catalog (shared projection with embedded members) | 30178 |
 | `erReminders` / `plPushLease` / `dvDmVisibility` / `wpWorkspaceProfile` | NIP-ER/PL/DV/WP | 30300 / 30350 / 30622 / 9033 |
-| `iaIdentityArchival` / `cwChannelWindow` | NIP-IA / NIP-CW | 9035/9036/8002/8003/13535 / 39005/39006 |
+| `iaIdentityArchival` / `cwChannelWindow` | NIP-IA / NIP-CW | 9035/9036/8002/8003/13535 / 39005/39006/39007 |
 | `relayAdmin` / `moderation` | admin + moderation | 9030-9032 / 9040-9044, 42000 |
 | `stream` / `stream.sidecars` | stream messaging | 40002-40008, 40099, 40100 / 40901, 40902 |
 | `dm` / `jobs` | DMs / agent jobs | 41001, 41010-41012 / 43001-43006 |
 | `workflow` / `forum` / `notifications` | workflow + social | 30620, 46001-46031 / 45001-45003 / 44100, 44101 |
-| `presence` / `huddles` / `pairing` / `audit` / `media` | presence + misc | 20001, 20002 / 24810, 48100-48106 / 24134 / 48001 / 49001 |
+| `arArtifacts` | NIP-AR channel artifacts (revision chain by `prev`) | 45010, 45011 (relay-signed removal) |
+| `mpProjects` | NIP-MP multi-repo projects (global, not `h`-scoped) | 30621 |
+| `presence` / `huddles` / `pairing` / `audit` / `media` | presence + misc | 20001, 20002 / 24810, 48100-48106 (48104 = relay-synthesized liveness) / 24134 / 48001 / 49001 |
 | `rsReadState` | NIP-RS | (helpers on `AppSpecificDataEvent`, kind 30078) |
+
+Not modelled on purpose: **NIP-PMA `kind:30179`** (private managed agent) is only reserved upstream
+— its spec says relays MUST reject it for now — and **NIP-FI** federated identity is an HTTP-upgrade
+header, not an event.
+
+### Upstream sync
+
+Last reconciled against `block/buzz` `4ef23609b` (2026-09-29); the previous full sync was
+`03fe19d6` (2026-07-21). Behaviour picked up in that pass, beyond the new kinds above:
+
+- **Read gates.** Personas (30175) and the team catalog (30178) are author-only unless the event
+  carries exactly `["shared","true"]` (`apPersonas/tags/SharedTag`); a malformed `shared` tag is
+  rejected at ingest. Persona content gained `acp_command`, `description` and `session_policy`
+  (upstream field order kept, so content bytes and hashes match), and a shared head publishes only a
+  portable harness alias (`PersonaContent.forSharedCatalog`).
+- **NIP-OA time bounds** are enforced at admission against the AUTH event's `created_at`
+  (strictly, every clause, `kind=` ignored): `OwnerAttestation.verifyForAuthAt`. Owner keys and
+  signatures must be lowercase hex, and the `auth` tag exactly four elements.
+- **NIP-10 threading** follows `buzz-core/src/nip10.rs`: markers need 4+ elements and a 64-hex id,
+  the last one wins, and a lone `root` marker is top-level (`threading/BuzzThreadMarkers`). A reply's
+  root must be derived with `buzzThreadRootForReplyTo` or the relay rejects it.
+- **Put-user (9000)** without a `role` tag is "no role change" on Buzz; a plain add sends none.
+- **Compare-and-swap writes**: canvas (40100) and workflow definitions (30620) take
+  `["expected-revision", <head id>]` and the relay answers `conflict:` on a stale head. A workflow's
+  `d` must be a UUID.
+- A REQ that hits the relay's query deadline ends with `CLOSED "error: query timed out"`, which the
+  pool treats as transient rather than a structural refusal.
 
 ### Kind conflicts — where a Buzz kind number is already owned
 

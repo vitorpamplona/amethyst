@@ -54,24 +54,31 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCanvasWriter
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_body_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_conflict
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_edit
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_head_in_future
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
+import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save_failed
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -86,8 +93,10 @@ import kotlinx.coroutines.withContext
  * re-composes off `canvasUpdates` when a newer revision lands.
  *
  * The edit FAB flips into a plain markdown editor; saving publishes a fresh [CanvasEvent] to the
- * channel's host [relayUrl] (last-write-wins on the relay too), and the consume path folds the new
- * revision back into [BuzzWorkspaceStates] so the view updates without a manual refresh.
+ * channel's host [relayUrl] through [BuzzCanvasWriter], which asserts the revision the editor was
+ * opened on (`expected-revision`) so a concurrent edit is refused by the relay instead of silently
+ * overwritten. An accepted revision is folded back into [BuzzWorkspaceStates] so the view updates
+ * without a manual refresh; a conflict keeps the editor open with the draft intact.
  */
 @Composable
 fun BuzzCanvasScreen(
@@ -118,15 +127,17 @@ fun BuzzCanvasScreen(
     // that Buzz's own client would never show.
     val canEdit = channel?.event?.isBuzzDm() != true
 
-    var editing by remember { mutableStateOf(false) }
+    // The head the editor was opened on, snapshotted at edit start (not the live head): a newer
+    // revision landing while the editor is open must surface as a conflict, not be overwritten.
+    var editBase by remember { mutableStateOf<CanvasEditBase?>(null) }
 
-    if (editing) {
+    editBase?.let { base ->
         CanvasEditor(
             channelId = channelId,
             relayUrl = relayUrl,
-            initial = content.orEmpty(),
+            base = base,
             accountViewModel = accountViewModel,
-            onClose = { editing = false },
+            onClose = { editBase = null },
         )
         return
     }
@@ -159,7 +170,10 @@ fun BuzzCanvasScreen(
         },
         floatingActionButton = {
             if (canEdit) {
-                FloatingActionButton(onClick = { editing = true }, shape = CircleShape) {
+                FloatingActionButton(
+                    onClick = { editBase = CanvasEditBase(content.orEmpty(), canvas?.idHex, canvas?.createdAt()) },
+                    shape = CircleShape,
+                ) {
                     Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.buzz_canvas_edit))
                 }
             }
@@ -206,17 +220,24 @@ fun BuzzCanvasScreen(
     }
 }
 
+/** The canvas revision an edit started from: its text, and its id/created_at (null when there was no canvas). */
+private class CanvasEditBase(
+    val content: String,
+    val headId: HexKey?,
+    val headCreatedAt: Long?,
+)
+
 /** The markdown editor: a full-height text field for the canvas body with a Save action. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CanvasEditor(
     channelId: String,
     relayUrl: String,
-    initial: String,
+    base: CanvasEditBase,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
 ) {
-    var text by remember { mutableStateOf(initial) }
+    var text by remember { mutableStateOf(base.content) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -248,15 +269,41 @@ private fun CanvasEditor(
                     error = null
                     scope.launch {
                         try {
-                            withContext(Dispatchers.IO) {
-                                accountViewModel.account.signAndSendPrivatelyOrBroadcast(
-                                    CanvasEvent.build(channelId, text),
-                                ) { listOf(relay) }
+                            val outcome =
+                                withContext(Dispatchers.IO) {
+                                    BuzzCanvasWriter.save(
+                                        account = accountViewModel.account,
+                                        relay = relay,
+                                        channelId = channelId,
+                                        markdown = text,
+                                        headId = base.headId,
+                                        headCreatedAt = base.headCreatedAt,
+                                    )
+                                }
+                            when (outcome) {
+                                is BuzzCanvasWriter.Outcome.Saved -> {
+                                    onClose()
+                                }
+
+                                is BuzzCanvasWriter.Outcome.Conflict -> {
+                                    saving = false
+                                    error = loadStringRes(Res.string.buzz_canvas_conflict)
+                                }
+
+                                BuzzCanvasWriter.Outcome.HeadTooFarInFuture -> {
+                                    saving = false
+                                    error = loadStringRes(Res.string.buzz_canvas_head_in_future)
+                                }
+
+                                is BuzzCanvasWriter.Outcome.Failed -> {
+                                    saving = false
+                                    error = loadStringRes(Res.string.buzz_canvas_save_failed, outcome.message)
+                                }
                             }
-                            onClose()
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             saving = false
-                            error = "Failed to save: ${e.message ?: e::class.simpleName}"
+                            error = loadStringRes(Res.string.buzz_canvas_save_failed, e.message ?: e::class.simpleName ?: "")
                         }
                     }
                 },

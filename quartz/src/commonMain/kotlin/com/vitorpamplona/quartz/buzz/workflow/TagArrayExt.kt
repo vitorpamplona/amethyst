@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 
+const val WORKFLOW_EXPECTED_REVISION_TAG = "expected-revision"
+
 /** The `h` channel UUID a workflow event belongs to. */
 fun TagArray.workflowChannel(): String? = firstTagValue(GroupIdTag.TAG_NAME)
 
@@ -35,6 +37,9 @@ fun TagArray.workflowDTag(): String? = firstTagValue(DTag.TAG_NAME)
 
 /** The optional workflow `name`. */
 fun TagArray.workflowName(): String? = firstTagValue("name")
+
+/** The CAS precondition (`expected-revision`) a definition update was made against, if any. */
+fun TagArray.workflowExpectedRevision(): HexKey? = firstTagValue(WORKFLOW_EXPECTED_REVISION_TAG)
 
 /** The approver pubkey (`p` tag) an approval-requested event is addressed to. */
 fun TagArray.workflowApprover(): HexKey? = firstNotNullOfOrNull(PTag::parseKey)

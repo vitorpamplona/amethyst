@@ -79,8 +79,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.mentions
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -590,7 +589,7 @@ open class ChannelNewMessageViewModel :
             val pk = user.pubkeyHex
             if (pk != me && channel.membershipOf(pk) == RelayGroupMembership.NONE) {
                 try {
-                    accountViewModel.account.relayGroups.putRelayGroupUser(channel, pk, emptyList())
+                    accountViewModel.account.relayGroups.addRelayGroupUser(channel, pk)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.w("BuzzAutoInvite", "Failed to add mentioned member ${pk.take(8)}", e)
@@ -832,16 +831,12 @@ open class ChannelNewMessageViewModel :
                 val broadcastReply = replyTo.value != null && replyMode.value == ReplyMode.INLINE
                 StreamMessageV2Event.build(channel.groupId.id, tagger.message, broadcast = broadcastReply) {
                     replyTo.value?.let { parent ->
-                        // The parent's root marker (when it is itself a nested reply),
-                        // else the parent's OWN reply target (a direct reply's collapsed
-                        // form carries the root as its "reply" marker — Buzz's relay
-                        // validates ancestry and rejects a mis-derived root), else the
-                        // parent starts the thread.
-                        val parentTags = parent.event?.tags
-                        val root =
-                            parentTags?.buzzThreadRoot()
-                                ?: parentTags?.buzzThreadReply()
-                                ?: parent.idHex
+                        // The parent's resolved root when it is itself a reply (a direct
+                        // reply's collapsed form carries the root as its "reply" marker),
+                        // else the parent starts the thread. A parent with only a `root`
+                        // marker counts as top-level: Buzz's relay validates ancestry that
+                        // way and rejects a mis-derived root.
+                        val root = parent.event?.tags?.buzzThreadRootForReplyTo(parent.idHex) ?: parent.idHex
                         buzzThread(root, parent.idHex)
                     }
 

@@ -95,5 +95,56 @@ data class AttestationConditions(
 
         /** True when [conditions] is a syntactically valid canonical conditions string. */
         fun isValid(conditions: String): Boolean = parse(conditions) != null
+
+        /**
+         * True when an authentication event signed at [authCreatedAt] satisfies every time clause
+         * in [conditions]. Both operators are strict (equality satisfies neither) and every clause
+         * must pass, including repeated ones — so this walks the raw string rather than [parse],
+         * which keeps only the last clause of each kind. `kind=` is deliberately ignored: Buzz
+         * treats the credential as connection-wide at admission. Ground truth:
+         * `verify_auth_tag_for_auth_event` in `buzz-sdk/src/nip_oa.rs`, enforced by the relay on
+         * NIP-42 AUTH, NIP-98 HTTP, Git and media admission.
+         */
+        fun timeBoundsAllow(
+            conditions: String,
+            authCreatedAt: Long,
+        ): Boolean {
+            if (conditions.isEmpty()) return true
+            for (clause in conditions.split("&")) {
+                when {
+                    clause.startsWith("created_at<") -> {
+                        val bound = clause.removePrefix("created_at<").toLongOrNull() ?: return false
+                        if (authCreatedAt >= bound) return false
+                    }
+                    clause.startsWith("created_at>") -> {
+                        val bound = clause.removePrefix("created_at>").toLongOrNull() ?: return false
+                        if (authCreatedAt <= bound) return false
+                    }
+                }
+            }
+            return true
+        }
+
+        /**
+         * The last second at which [conditions] still admit an authentication (the tightest
+         * `created_at<` bound minus one), or null when there is no upper bound.
+         */
+        fun validUntil(conditions: String): Long? =
+            conditions
+                .split("&")
+                .mapNotNull { if (it.startsWith("created_at<")) it.removePrefix("created_at<").toLongOrNull() else null }
+                .minOrNull()
+                ?.let { it - 1 }
+
+        /**
+         * The first second at which [conditions] admit an authentication (the tightest
+         * `created_at>` bound plus one), or null when there is no lower bound.
+         */
+        fun validFrom(conditions: String): Long? =
+            conditions
+                .split("&")
+                .mapNotNull { if (it.startsWith("created_at>")) it.removePrefix("created_at>").toLongOrNull() else null }
+                .maxOrNull()
+                ?.let { it + 1 }
     }
 }

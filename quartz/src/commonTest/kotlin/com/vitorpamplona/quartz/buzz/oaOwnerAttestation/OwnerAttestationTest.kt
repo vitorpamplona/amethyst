@@ -165,4 +165,38 @@ class OwnerAttestationTest {
         assertEquals(1713957000L, parsed?.createdAtBefore)
         assertEquals(1700000000L, parsed?.createdAtAfter)
     }
+
+    @Test
+    fun timeBoundsAreStrictAndEveryClauseMustPass() {
+        assertTrue(AttestationConditions.timeBoundsAllow("", 0))
+        assertTrue(AttestationConditions.timeBoundsAllow("created_at<200", 199))
+        assertFalse(AttestationConditions.timeBoundsAllow("created_at<200", 200))
+        assertTrue(AttestationConditions.timeBoundsAllow("created_at>100", 101))
+        assertFalse(AttestationConditions.timeBoundsAllow("created_at>100", 100))
+        // kind= is not evaluated at admission.
+        assertTrue(AttestationConditions.timeBoundsAllow("kind=1&created_at<200", 150))
+        // Repeated clauses all apply, even though parse() would keep only the last one.
+        assertFalse(AttestationConditions.timeBoundsAllow("created_at<100&created_at<200", 150))
+    }
+
+    @Test
+    fun verifyForAuthAtCombinesSignatureAndTime() {
+        val attestation = OwnerAttestation.sign(agentPub, "created_at<2000", owner.privKey!!)
+        assertTrue(attestation.verifyForAuthAt(agentPub, 1999))
+        assertFalse(attestation.verifyForAuthAt(agentPub, 2000))
+        assertEquals(1999L, attestation.validUntil())
+        assertNull(attestation.validFrom())
+    }
+
+    @Test
+    fun uppercaseHexIsRejected() {
+        val attestation = OwnerAttestation.sign(agentPub, "", owner.privKey!!)
+        // Buzz refuses uppercase owner keys and signatures before its permissive decoder.
+        assertFalse(OwnerAttestation(attestation.ownerPubKey.uppercase(), "", attestation.sig).verify(agentPub))
+        assertFalse(OwnerAttestation(attestation.ownerPubKey, "", attestation.sig.uppercase()).verify(agentPub))
+        assertNull(AuthTag.parse(arrayOf("auth", attestation.ownerPubKey.uppercase(), "", attestation.sig)))
+        assertNull(AuthTag.parse(arrayOf("auth", attestation.ownerPubKey, "", attestation.sig.uppercase())))
+        // Exactly four elements.
+        assertNull(AuthTag.parse(arrayOf("auth", attestation.ownerPubKey, "", attestation.sig, "extra")))
+    }
 }

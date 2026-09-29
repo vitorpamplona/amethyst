@@ -597,7 +597,7 @@ screen speaks.
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
 | `amy relaygroup edit RELAY GID [--name X] [--about A] [--picture URL] [--banner URL] [--parent GID\|--root] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads the current 39000 and changes only what you pass: picture, banner, subgroup links, other flags and unknown tags are carried over. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
-| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
+| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator] [--buzz-role owner\|admin\|member\|guest\|bot]` | Add or promote a user (9000, moderator). On Buzz, only `--buzz-role` sets a role; without it an existing member keeps theirs. |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 | `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
 

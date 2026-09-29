@@ -186,8 +186,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
@@ -2209,7 +2208,7 @@ class Account(
                     // [com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply]).
                     //
                     // Attached media rides as URLs appended to the content.
-                    val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
+                    val root = rootEvent.tags.buzzThreadRootForReplyTo(rootEvent.id)
                     signer.sign(
                         ChatEvent.build(finalText) {
                             hTag(group.groupId.id)

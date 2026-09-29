@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.buzz.stream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class SystemMessageEventTest {
     private val channelId = "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
@@ -141,5 +142,25 @@ class SystemMessageEventTest {
         val payload = SystemMessagePayload.decodeFromJson("""{"type":"pinned_changed","actor":"$actor","brand_new":"x"}""")
         assertEquals("pinned_changed", payload.type)
         assertEquals(actor, payload.actor)
+    }
+
+    /** `admin_outbox_worker.rs` emits `{type, target, action_id}` with no actor at all. */
+    @Test
+    fun adminKickCarriesTargetAndActionButNoActor() {
+        val payload = SystemMessagePayload.decodeFromJson("""{"type":"admin_kick","target":"$target","action_id":"5f0c"}""")
+        assertEquals(SystemMessagePayload.ADMIN_KICK, payload.type)
+        assertEquals(target, payload.target)
+        assertEquals("5f0c", payload.actionId)
+        assertNull(payload.actor)
+        assertEquals(target, payload.subject())
+    }
+
+    /** The ephemeral-channel reaper (`main.rs`) emits a bare `{type}`. */
+    @Test
+    fun channelAutoArchivedHasNoPeople() {
+        val payload = SystemMessagePayload.decodeFromJson("""{"type":"channel_auto_archived"}""")
+        assertEquals(SystemMessagePayload.CHANNEL_AUTO_ARCHIVED, payload.type)
+        assertNull(payload.actor)
+        assertNull(payload.subject())
     }
 }

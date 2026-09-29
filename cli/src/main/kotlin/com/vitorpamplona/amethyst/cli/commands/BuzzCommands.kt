@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.invite.BuzzInviteClaim
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
@@ -345,12 +346,24 @@ object BuzzCommands {
                 }.toString()
             val authEvent = ctx.signer.sign(HTTPAuthorizationEvent.build(claimUrl, "POST", claimReq.encodeToByteArray()))
             val (claimCode, claimBody) = httpPost(http, claimUrl, claimReq, authEvent.toAuthToken())
-            if (claimCode != 200) return Output.error("claim_failed", "invite claim failed ($claimCode): $claimBody")
+            if (claimCode != 200) {
+                return when (BuzzInviteClaim.errorOf(claimBody)) {
+                    BuzzInviteClaim.ERROR_EXHAUSTED -> Output.error("exhausted", "this invite has no uses left; ask for a new one")
+                    BuzzInviteClaim.ERROR_EXPIRED -> Output.error("expired", "this invite has expired")
+                    BuzzInviteClaim.ERROR_INVALID -> Output.error("invalid", "this invite is not valid for this workspace (revoked, mistyped, or never minted here)")
+                    BuzzInviteClaim.ERROR_JOIN_POLICY_REQUIRED ->
+                        Output.error("policy_required", "this workspace requires accepting its terms + age attestation; re-run with --accept-policy to consent")
+                    else -> Output.error("claim_failed", "invite claim failed ($claimCode): $claimBody")
+                }
+            }
 
             val result = jsonParser.parseToJsonElement(claimBody).jsonObject
+            val status = result["status"]?.jsonPrimitive?.content
             Output.emit(
                 mapOf(
-                    "status" to result["status"]?.jsonPrimitive?.content,
+                    "status" to status,
+                    // Distinguish a no-op claim (already a member; no invite use consumed) from a join.
+                    "already_member" to (status == BuzzInviteClaim.STATUS_ALREADY_MEMBER),
                     "community_id" to (result["community_id"]?.jsonPrimitive?.content ?: invite.communityId),
                     "role" to (result["role"]?.jsonPrimitive?.content ?: invite.role),
                     "host" to invite.host,
@@ -524,6 +537,9 @@ object BuzzCommands {
                     "total_tokens" to metrics.totals.totalTokens,
                     "input_tokens" to metrics.totals.inputTokens,
                     "output_tokens" to metrics.totals.outputTokens,
+                    // null = never reported (NIP-AM: an omitted cache component is unknown, not zero)
+                    "cache_read_tokens" to metrics.totals.cacheReadTokens,
+                    "cache_write_tokens" to metrics.totals.cacheWriteTokens,
                     "turns" to metrics.totalTurns,
                     "sessions" to metrics.totalSessions,
                     "agents" to metrics.agents.size,

@@ -2342,6 +2342,11 @@
     <string name="buzz_canvas_edit">Edit canvas</string>
     <string name="buzz_canvas_save">Save canvas</string>
     <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
+    <string name="buzz_canvas_conflict">Someone else changed this canvas since you started editing. Copy your changes, reopen the canvas and apply them again.</string>
+    <string name="buzz_canvas_head_in_future">The current canvas is timestamped too far in the future to be edited safely.</string>
+    <string name="buzz_canvas_save_failed">Couldn't save the canvas: %1$s</string>
+    <string name="buzz_system_admin_kick">%1$s was removed by an administrator</string>
+    <string name="buzz_system_channel_auto_archived">This channel was archived automatically</string>
     <string name="buzz_editing_banner">Editing message</string>
     <string name="message_edited">(edited)</string>
     <string name="buzz_typing_one">%1$s is typing…</string>
@@ -3137,6 +3142,9 @@
     <string name="buzz_attest_hold_title">Hold an attestation</string>
     <string name="buzz_attest_holding">Holding an attestation for this account. It is attached automatically when you authenticate to a Buzz relay.</string>
     <string name="buzz_attest_grants_prefix">Grants: %1$s</string>
+    <string name="buzz_huddle_live">Huddle live</string>
+    <string name="buzz_attest_expired">This attestation has expired. Buzz relays no longer accept it; ask the owner for a new one.</string>
+    <string name="buzz_attest_not_yet_valid">This attestation is not valid yet. Buzz relays will accept it once its start time passes.</string>
     <string name="buzz_attest_grants_unrestricted">any kind, any time (unrestricted)</string>
     <string name="buzz_attest_remove">Remove</string>
     <string name="buzz_attest_hold_desc">Paste an owner-signed auth tag issued to this account to authenticate to their Buzz workspace as a virtual member.</string>
@@ -3166,6 +3174,12 @@
     <string name="buzz_persona_provider">Provider (optional)</string>
     <string name="buzz_persona_runtime">Runtime (optional)</string>
     <string name="buzz_persona_avatar">Avatar URL (optional)</string>
+    <string name="buzz_persona_description">Description (optional)</string>
+    <string name="buzz_persona_description_help">Public, up to 280 characters.</string>
+    <string name="buzz_persona_shared">Share with the workspace</string>
+    <string name="buzz_persona_shared_help">Other members can see and use this persona. Off keeps it to your own devices.</string>
+    <string name="buzz_persona_thread_sessions">One conversation per thread</string>
+    <string name="buzz_persona_thread_sessions_help">The agent keeps a separate conversation for each thread instead of one per channel.</string>
     <string name="buzz_persona_publishing">Publishing…</string>
     <string name="buzz_persona_publish">Publish persona</string>
     <string name="profile_card_follows_you">Follows you</string>
