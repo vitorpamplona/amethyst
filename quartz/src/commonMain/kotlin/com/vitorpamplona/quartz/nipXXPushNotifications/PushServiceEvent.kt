@@ -53,15 +53,24 @@ abstract class PushServiceEvent(
 
     fun app() = tags.app()
 
-    fun canDecrypt(signer: NostrSigner): Boolean {
-        val service = pushService() ?: return false
-        return signer.pubKey == pubKey || signer.pubKey == service
+    fun canDecrypt(signer: NostrSigner) = counterpartyOf(signer.pubKey) != null
+
+    /**
+     * The other end of the NIP-44 conversation for [reader]: the author reads its own event back
+     * through the service's key, the service reads it through the author's. Null for anyone else.
+     */
+    private fun counterpartyOf(reader: HexKey): HexKey? {
+        val service = pushService() ?: return null
+        return when (reader) {
+            pubKey -> service
+            service -> pubKey
+            else -> null
+        }
     }
 
-    /** The author reads its own event back through the service's key, the service through the author's. */
+    /** Throws [SignerExceptions.UnauthorizedDecryptionException] when [signer] is neither end. */
     protected suspend fun decryptContent(signer: NostrSigner): String {
-        if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
-        val counterparty = if (signer.pubKey == pubKey) pushService()!! else pubKey
+        val counterparty = counterpartyOf(signer.pubKey) ?: throw SignerExceptions.UnauthorizedDecryptionException()
         return signer.nip44Decrypt(content, counterparty)
     }
 

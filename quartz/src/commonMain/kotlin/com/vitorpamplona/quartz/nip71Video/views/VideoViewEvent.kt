@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -91,7 +92,11 @@ class VideoViewEvent(
             initializer: TagArrayBuilder<VideoViewEvent>.() -> Unit = {},
         ) = build(video, ViewPhase.START, null, null, source, createdAt, initializer)
 
-        /** A segment ended after [watchedSeconds] of playback, [loops] of them complete or partial. */
+        /**
+         * A segment ended after [watchedSeconds] of playback, [loops] of them complete or partial.
+         * A [loops] that is not a positive finite number is left out, as divine-mobile does; a negative
+         * [watchedSeconds] throws, since it could only be a bug in the caller's clock.
+         */
         fun <T : AddressableVideoEvent> buildEnd(
             video: EventHintBundle<T>,
             watchedSeconds: Long,
@@ -99,7 +104,10 @@ class VideoViewEvent(
             source: ViewSource? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VideoViewEvent>.() -> Unit = {},
-        ) = build(video, ViewPhase.END, ViewedRange(0, watchedSeconds), loops, source, createdAt, initializer)
+        ): EventTemplate<VideoViewEvent> {
+            val playthroughs = loops?.takeIf { it.isFinite() && it > 0.0 }
+            return build(video, ViewPhase.END, ViewedRange(0, watchedSeconds), playthroughs, source, createdAt, initializer)
+        }
 
         /**
          * Prefer [buildStart] / [buildEnd]: they keep watch time off `start` events, where it

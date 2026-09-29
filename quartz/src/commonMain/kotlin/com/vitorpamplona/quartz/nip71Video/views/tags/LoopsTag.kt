@@ -41,6 +41,9 @@ class LoopsTag {
             return loops
         }
 
-        fun assemble(loops: Double) = arrayOf(TAG_NAME, loops.toString())
+        fun assemble(loops: Double): Array<String> {
+            require(loops.isFinite() && loops >= 0.0) { "Invalid loop count: $loops" }
+            return arrayOf(TAG_NAME, loops.toString())
+        }
     }
 }

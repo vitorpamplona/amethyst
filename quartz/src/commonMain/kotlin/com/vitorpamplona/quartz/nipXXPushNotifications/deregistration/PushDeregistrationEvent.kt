@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipXXPushNotifications.PushServiceEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.app
 import com.vitorpamplona.quartz.nipXXPushNotifications.pushService
@@ -55,11 +56,13 @@ class PushDeregistrationEvent(
             pushService: HexKey,
             app: String,
             signer: NostrSigner,
+            expiresAt: Long? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PushDeregistrationEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, signer.nip44Encrypt(json.encodeToString(PushToken.serializer(), PushToken(token)), pushService), createdAt) {
             pushService(pushService)
             app(app)
+            expiresAt?.let { expiration(it) }
             initializer()
         }
     }

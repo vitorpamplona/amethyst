@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip71Video.views.tags.ViewedTag
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -50,11 +51,11 @@ class VideoViewEventTest {
 
     // An `end` segment exactly as divine-mobile writes it, client tag included.
     private val endView =
-        """{"id":"2b1b0b53d6c0c2f1f5a8a2d5f0e7e1f8c9a4b3d2e1f0a9b8c7d6e5f4a3b2c1d0","pubkey":"34257350449d357c37e93eb8aef387ff1fee8879d794da664462346a4b540aa8","created_at":1789666900,"kind":22236,"tags":[["a","34236:$videoAuthor:$videoD","wss://relay.divine.video"],["e","$videoId","wss://relay.divine.video"],["phase","end"],["viewed","0","12"],["source","discovery","foryou"],["loops","2.0"],["version","1.0.23"],["client","Divine","31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile","wss://relay.divine.video"]],"content":"","sig":""}"""
+        """{"id":"2b1b0b53d6c0c2f1f5a8a2d5f0e7e1f8c9a4b3d2e1f0a9b8c7d6e5f4a3b2c1d0","pubkey":"34257350449d357c37e93eb8aef387ff1fee8879d794da664462346a4b540aa8","created_at":1789666900,"kind":22236,"tags":[["a","34236:$videoAuthor:$videoD","wss://relay.divine.video"],["e","$videoId","wss://relay.divine.video"],["phase","end"],["viewed","0","12"],["source","discovery:foryou"],["loops","2.0"],["version","1.0.23"],["client","Divine","31990:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:divine-mobile","wss://relay.divine.video"]],"content":"","sig":""}"""
 
     // The pre-phase single-shot shape: no `phase`, and `viewed` carries the whole session.
     private val legacyView =
-        """{"id":"3c2c1c64e7d1d3f2f6b9b3e6f1f8f2f9dab5c4e3f2f1bac9d8e7f6f5b4c3d2e1","pubkey":"34257350449d357c37e93eb8aef387ff1fee8879d794da664462346a4b540aa8","created_at":1789666900,"kind":22236,"tags":[["a","34236:$videoAuthor:$videoD","wss://relay.divine.video"],["e","$videoId","wss://relay.divine.video"],["viewed","0","5"],["loops","0.75"],["source","discovery"]],"content":"","sig":""}"""
+        """{"id":"3c2c1c64e7d1d3f2f6b9b3e6f1f8f2f9dab5c4e3f2f1bac9d8e7f6f5b4c3d2e1","pubkey":"34257350449d357c37e93eb8aef387ff1fee8879d794da664462346a4b540aa8","created_at":1789666900,"kind":22236,"tags":[["a","34236:$videoAuthor:$videoD","wss://relay.divine.video"],["e","$videoId","wss://relay.divine.video"],["viewed","0","5"],["loops","0.75"],["source","search","cats"]],"content":"","sig":""}"""
 
     private val relay = RelayUrlNormalizer.normalizeOrNull("wss://relay.divine.video")!!
 
@@ -68,7 +69,9 @@ class VideoViewEventTest {
         assertEquals(ViewedRange(0, 12), event.viewed())
         assertEquals(12, event.viewed()?.seconds)
         assertEquals(2.0, event.loops())
-        assertEquals(ViewSource(ViewSource.DISCOVERY, "foryou"), event.source())
+        // The tab rides inside the type; category is how a reader groups every discovery tab.
+        assertEquals(ViewSource("discovery:foryou"), event.source())
+        assertEquals(ViewSource.DISCOVERY, event.source()?.category)
         assertEquals(listOf("34236:$videoAuthor:$videoD"), event.linkedAddressIds())
         assertEquals(listOf(videoId), event.linkedEventIds())
     }
@@ -80,7 +83,8 @@ class VideoViewEventTest {
         assertNull(event.phase())
         assertEquals(ViewedRange(0, 5), event.viewed())
         assertEquals(0.75, event.loops())
-        assertEquals(ViewSource(ViewSource.DISCOVERY), event.source())
+        assertEquals(ViewSource(ViewSource.SEARCH, "cats"), event.source())
+        assertEquals(ViewSource.SEARCH, event.source()?.category)
     }
 
     @Test
@@ -90,6 +94,19 @@ class VideoViewEventTest {
         assertNull(ViewedTag.parse(arrayOf("viewed", "0")))
         assertNull(LoopsTag.parse(arrayOf("loops", "-1")))
         assertNull(LoopsTag.parse(arrayOf("loops", "NaN")))
+    }
+
+    @Test
+    fun endRefusesWhatTheParserWouldDrop() {
+        val bundle = EventHintBundle(Event.fromJson(video) as AddressableShortVideoEvent, relay)
+
+        assertFailsWith<IllegalArgumentException> { VideoViewEvent.buildEnd(bundle, watchedSeconds = -1) }
+
+        // Not a playthrough count: left out, as divine-mobile does, instead of signed and ignored.
+        for (loops in listOf(0.0, -1.0, Double.NaN, Double.POSITIVE_INFINITY)) {
+            val template = VideoViewEvent.buildEnd(bundle, watchedSeconds = 3, loops = loops)
+            assertNull(template.tags.firstOrNull { it[0] == LoopsTag.TAG_NAME }, "loops=$loops")
+        }
     }
 
     @Test

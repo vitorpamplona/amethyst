@@ -33,6 +33,12 @@ data class ViewedRange(
     val start: Long,
     val end: Long,
 ) {
+    init {
+        // The same rule ViewedTag.parse applies: an inverted range would read as negative watch
+        // time, so it is refused on the way out rather than signed and then ignored on the way in.
+        require(start in 0..end) { "Invalid viewed range: $start..$end" }
+    }
+
     val seconds get() = end - start
 }
 

@@ -26,21 +26,28 @@ import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * Where the viewer found the video. [type] is one of the documented values below, though
- * divine-mobile also writes feed-specific ones such as `discovery:foryou`. [detail] narrows it
- * further (a list, a feed mode) when the publisher knows more.
+ * Where the viewer found the video.
+ *
+ * [type] is written as-is: divine-mobile names the discovery tab inside it (`discovery:foryou`,
+ * `discovery:new`, `discovery:featured`, …), so [category] strips the tab when only the surface
+ * matters. [detail] is what the surface was showing: the hashtag, the search query, the featured
+ * tab's id.
  */
 @Immutable
 data class ViewSource(
     val type: String,
     val detail: String? = null,
 ) {
+    /** [type] without the tab: `discovery` for every `discovery:<tab>`. */
+    val category get() = type.substringBefore(':')
+
     companion object {
         const val HOME = "home"
         const val DISCOVERY = "discovery"
         const val PROFILE = "profile"
         const val SHARE = "share"
         const val SEARCH = "search"
+        const val UNKNOWN = "unknown"
     }
 }
 

@@ -71,9 +71,10 @@ class PushNotificationEventsTest {
     @Test
     fun deregistrationLeavesTheOffsetOut() =
         runTest {
-            val event = user.sign(PushDeregistrationEvent.build("fcm-token", service.pubKey, app, user))
+            val event = user.sign(PushDeregistrationEvent.build("fcm-token", service.pubKey, app, user, expiresAt = 1_800_000_000))
 
             assertEquals(PushDeregistrationEvent.KIND, event.kind)
+            assertEquals(1_800_000_000, event.expiration())
             assertEquals("""{"token":"fcm-token"}""", plaintextAtService(event))
             assertEquals(PushToken("fcm-token"), event.decrypt(service))
         }
@@ -103,6 +104,8 @@ class PushNotificationEventsTest {
         runTest {
             val event = user.sign(PushRegistrationEvent.build(PushToken("fcm-token"), service.pubKey, app, user))
 
+            assertTrue(event.canDecrypt(user))
+            assertTrue(event.canDecrypt(service))
             assertFalse(event.canDecrypt(stranger))
             assertFailsWith<SignerExceptions.UnauthorizedDecryptionException> { event.decrypt(stranger) }
         }
