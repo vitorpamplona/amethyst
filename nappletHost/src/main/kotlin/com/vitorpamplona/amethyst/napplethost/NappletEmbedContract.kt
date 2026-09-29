@@ -142,6 +142,15 @@ object NappletEmbedContract {
      */
     const val MSG_CLOSE_SESSION = 25
 
+    /**
+     * Client → provider: whether the user is looking at this napplet ([KEY_ATTENDED]) — it's the visible tab
+     * AND the app is on screen. While not, the provider holds the napplet's requests that act for the user
+     * (publish, pay, upload, notify, `inc.emit`) and sends them once the user is back. Separate from
+     * [MSG_PAUSE]: the page itself is only paused a while after the app leaves the screen, but nothing may
+     * act on the user's behalf the moment they stop watching.
+     */
+    const val MSG_SET_ATTENDED = 26
+
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"
     const val KEY_FIND_ACTIVE = "findActive"
@@ -190,6 +199,7 @@ object NappletEmbedContract {
      * so this scopes a control to the right surface and routes state/notices/IME back to the right tab.
      */
     const val KEY_SESSION_ID = "sessionId"
+    const val KEY_ATTENDED = "attended"
 
     const val NOTICE_PUBLISHED = "published"
     const val NOTICE_UPLOADED = "uploaded"

@@ -51,8 +51,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
@@ -238,22 +236,9 @@ private fun EmbeddedNostrAppTab(
         }
     }
 
-    // Pause the applet's JS while the app is backgrounded (parity with NappletHostActivity's onPause):
-    // an "allow always" napplet can't act on the user's behalf when they aren't looking. (The tab layer
-    // separately pauses it whenever it isn't the visible tab.)
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, controller) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_STOP -> controller.pause()
-                    Lifecycle.Event.ON_START -> controller.resume()
-                    else -> Unit
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    // No lifecycle handling here: the tab layer tells every warm tab when the app leaves the screen
+    // (EmbeddedTabHost.onAppStopped), which holds the applet's acting requests at once and pauses its page on
+    // the relays' 30 s schedule.
 
     BackHandler(enabled = canGoBack) { controller.back() }
 

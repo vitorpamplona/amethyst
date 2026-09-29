@@ -112,10 +112,15 @@ class EmbeddedNostrAppController(
     // previous view can never reap the replacement.
     private var sessionId: String = "napplet-${SESSION_SEQ.incrementAndGet()}"
 
-    // A parked tab can be hidden (paused) before the service even binds, so the pause message is
-    // dropped (no messenger yet). Remember the intent and replay it right after the session is created,
-    // otherwise an applet that was never shown comes up running in the background.
+    // What the provider was last told (see [syncPageState]). A parked tab can be hidden before the service
+    // even binds, when the message is dropped (no messenger yet), so both are replayed right after each
+    // session is created — otherwise an applet that was never shown comes up running, and acting, unwatched.
     private var wantPaused = false
+    private var wantAttended = true
+
+    // The app is on screen / has been in the background long enough to pause even the visible tab.
+    private var appVisible = true
+    private var backgroundIdle = false
 
     /** (canGoBack) — drives the in-tab back gesture. */
     var onStateChanged: ((Boolean) -> Unit)? = null
@@ -345,8 +350,8 @@ class EmbeddedNostrAppController(
     }
 
     override fun onShown() {
-        resume()
         val deferredRecovery = recovery.onShown()
+        syncPageState()
         if (createOnShow) {
             createOnShow = false
             sendCreateSession()
@@ -356,8 +361,40 @@ class EmbeddedNostrAppController(
     }
 
     override fun onHidden() {
-        pause()
         recovery.onHidden()
+        syncPageState()
+    }
+
+    override fun onAppVisibility(visible: Boolean) {
+        appVisible = visible
+        syncPageState()
+    }
+
+    override fun onBackgroundIdle(idle: Boolean) {
+        backgroundIdle = idle
+        syncPageState()
+    }
+
+    /**
+     * Tells the provider what the applet may do now — the same schedule as a website tab:
+     * - paused (JS-driven animations, media, geolocation) while parked off-screen, or once the app has sat in
+     *   the background as long as the relays get (EmbeddedTabHost.BACKGROUND_PAUSE_MS), so a quick trip to
+     *   another app doesn't interrupt it;
+     * - attended only while it's the visible tab AND the app is on screen. The provider holds its requests
+     *   that act for the user (publish, pay, upload…) while it isn't — at once, not after the grace: even an
+     *   "allow always" napplet can't act on the user's behalf while they aren't looking.
+     */
+    private fun syncPageState() {
+        val pause = !recovery.isShown || backgroundIdle
+        if (pause != wantPaused) {
+            wantPaused = pause
+            send(if (pause) NappletEmbedContract.MSG_PAUSE else NappletEmbedContract.MSG_RESUME)
+        }
+        val attended = recovery.isShown && appVisible
+        if (attended != wantAttended) {
+            wantAttended = attended
+            send(NappletEmbedContract.MSG_SET_ATTENDED) { putBoolean(NappletEmbedContract.KEY_ATTENDED, attended) }
+        }
     }
 
     override fun teardown() = unbind()
@@ -377,10 +414,11 @@ class EmbeddedNostrAppController(
                     }
             }
         runCatching { serviceMessenger?.send(msg) }
-        // Replay a pause that was requested before we had a messenger to send it on (parked-before-bound),
-        // so a never-shown applet doesn't start running. Messenger preserves order, so PAUSE lands after
-        // CREATE in the host.
+        // Replay a pause / not-attended that was decided before we had a messenger to send it on
+        // (parked-before-bound), so a never-shown applet doesn't start running or acting. Messenger preserves
+        // order, so these land after CREATE in the host.
         if (wantPaused) send(NappletEmbedContract.MSG_PAUSE)
+        if (!wantAttended) send(NappletEmbedContract.MSG_SET_ATTENDED) { putBoolean(NappletEmbedContract.KEY_ATTENDED, false) }
         if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
     }
 
@@ -548,17 +586,6 @@ class EmbeddedNostrAppController(
             val text = loadStringRes(res)
             withContext(Dispatchers.Main) { Toast.makeText(appContext, text, Toast.LENGTH_SHORT).show() }
         }
-    }
-
-    /** Pause/resume the applet's JS when the tab leaves/returns to the foreground (background gating). */
-    fun pause() {
-        wantPaused = true
-        send(NappletEmbedContract.MSG_PAUSE)
-    }
-
-    fun resume() {
-        wantPaused = false
-        send(NappletEmbedContract.MSG_RESUME)
     }
 
     private inline fun send(

@@ -121,9 +121,13 @@ class NappletHostService : Service() {
         // only built when the surface opens), so the flag is applied to every WebView built for the tab.
         var paused = false
 
-        // Requests that act for the user (publish, pay, upload…) sent while the tab was off-screen. Pausing
-        // the WebView doesn't stop JavaScript, so they are held here and sent when the user comes back.
+        // Whether the user is looking at this napplet (NappletEmbedContract.MSG_SET_ATTENDED). Requests that act
+        // for the user (publish, pay, upload…) made while they aren't — or while the page is paused — are held
+        // here and sent when they're back: pausing the WebView doesn't stop JavaScript.
+        var attended = true
         val heldWhilePaused = mutableListOf<Message>()
+
+        val mayAct: Boolean get() = attended && !paused
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
@@ -237,9 +241,12 @@ class NappletHostService : Service() {
                 tabFor(msg)?.let {
                     it.paused = false
                     it.webView?.onResume()
-                    val held = it.heldWhilePaused.toList()
-                    it.heldWhilePaused.clear()
-                    held.forEach { request -> if (brokerMessenger == null) pendingBrokerRequests.add(request) else sendToBroker(request) }
+                    releaseHeld(it)
+                }
+            NappletEmbedContract.MSG_SET_ATTENDED ->
+                tabFor(msg)?.let {
+                    it.attended = msg.data?.getBoolean(NappletEmbedContract.KEY_ATTENDED, true) ?: true
+                    releaseHeld(it)
                 }
             NappletEmbedContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
@@ -755,12 +762,21 @@ class NappletHostService : Service() {
                         putString(NappletIpc.KEY_LAUNCH_TOKEN, tab.launchToken)
                     }
             }
-        // Parked off-screen: an act on the user's behalf waits until they're looking at this napplet again.
-        if (tab.paused && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
+        // Nobody is looking (parked off-screen, or the app is in the background): an act on the user's behalf
+        // waits until they're looking at this napplet again.
+        if (!tab.mayAct && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
             tab.heldWhilePaused += msg
             return
         }
         if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
+    }
+
+    /** Sends [tab]'s held acting requests once it may act again (attended and not paused). */
+    private fun releaseHeld(tab: NappletTab) {
+        if (!tab.mayAct) return
+        val held = tab.heldWhilePaused.toList()
+        tab.heldWhilePaused.clear()
+        held.forEach { request -> if (brokerMessenger == null) pendingBrokerRequests.add(request) else sendToBroker(request) }
     }
 
     /**
