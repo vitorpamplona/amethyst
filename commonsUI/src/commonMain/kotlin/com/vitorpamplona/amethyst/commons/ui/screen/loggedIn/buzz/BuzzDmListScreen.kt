@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -62,7 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -84,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_dm_new
 import com.vitorpamplona.amethyst.commons.resources.buzz_dm_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.TimeAgoLabels
@@ -119,7 +119,7 @@ fun BuzzDmListScreen(
     nav: INav,
 ) {
     val pubkey = accountViewModel.account.userProfile().pubkeyHex
-    val viewModel: BuzzDmListViewModel = viewModel(key = "BuzzDmList-$relayUrl-$pubkey")
+    val viewModel: BuzzDmListViewModel = rememberViewModel(key = "BuzzDmList-$relayUrl-$pubkey") { BuzzDmListViewModel() }
     viewModel.bind(accountViewModel.account, relayUrl)
 
     val rows by viewModel.rows.collectAsStateWithLifecycle()

@@ -33,7 +33,7 @@ import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostPublisher
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
-import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

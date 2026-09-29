@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -121,6 +121,7 @@ fun buildSettingsCatalog(
     nav: INav,
     uriHandler: UriHandler,
     hasPrivateKey: Boolean,
+    legal: SettingsCategory?,
     onResetMarmot: () -> Unit,
 ): List<SettingsCategory> {
     // Most rows are a symbol icon + a keyword blob that navigates to a route. This local
@@ -246,5 +247,5 @@ fun buildSettingsCatalog(
                 },
         )
 
-    return listOfNotNull(account, app, legalSettingsCategory(uriHandler), danger)
+    return listOfNotNull(account, app, legal, danger)
 }

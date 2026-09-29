@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,13 +55,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetMetrics
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentUsageSummary
 import com.vitorpamplona.amethyst.commons.model.buzz.TokenTotals
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
@@ -87,7 +87,7 @@ fun AgentConsoleScreen(
     nav: INav,
 ) {
     val pubkey = accountViewModel.account.userProfile().pubkeyHex
-    val viewModel: AgentConsoleViewModel = viewModel(key = "AgentConsole-$relayUrl-$pubkey")
+    val viewModel: AgentConsoleViewModel = rememberViewModel(key = "AgentConsole-$relayUrl-$pubkey") { AgentConsoleViewModel() }
 
     viewModel.bind(accountViewModel.account, relayUrl)
 

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
+
 /**
  * Samples the device battery level at each ledger flush and accumulates the
  * drops that happen while discharging into [UsageKeys.BATTERY_DRAIN_FG] /

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.award
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.award_badge
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.award_badge_search_label
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_placeholder
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
@@ -75,7 +75,7 @@ fun AwardBadgeScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val vm: AwardBadgeViewModel = viewModel()
+    val vm: AwardBadgeViewModel = rememberViewModel { AwardBadgeViewModel() }
 
     LaunchedEffect(accountViewModel, kind, pubKeyHex, dTag) {
         vm.init(accountViewModel, kind, pubKeyHex, dTag)

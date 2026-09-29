@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SettingsSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsItem
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
@@ -79,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
@@ -113,12 +115,14 @@ fun AllSettingsScreen(
     // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
     // `isResettingMarmot` through `rememberUpdatedState` so the memoized closure never goes stale.
     val onResetMarmot by rememberUpdatedState(newValue = { if (!isResettingMarmot) showResetMarmotDialog = true })
+    val appPlatform = LocalAppPlatform.current
     val catalog =
-        remember(hasPrivateKey, nav, uriHandler) {
+        remember(hasPrivateKey, nav, uriHandler, appPlatform) {
             buildSettingsCatalog(
                 nav = nav,
                 uriHandler = uriHandler,
                 hasPrivateKey = hasPrivateKey,
+                legal = appPlatform.legalSettingsCategory(uriHandler),
                 onResetMarmot = { onResetMarmot() },
             )
         }

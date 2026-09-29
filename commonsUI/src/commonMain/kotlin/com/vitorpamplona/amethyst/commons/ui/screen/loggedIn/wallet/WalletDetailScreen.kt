@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -75,7 +75,7 @@ fun WalletDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val walletViewModel: WalletViewModel = viewModel()
+    val walletViewModel: WalletViewModel = rememberViewModel { WalletViewModel() }
     walletViewModel.init(accountViewModel)
     walletViewModel.selectWallet(walletId)
 

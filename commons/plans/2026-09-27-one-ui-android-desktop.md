@@ -390,9 +390,22 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      link and coordinator screens; relay auth, privacy, home tabs, security filters, profile
      UI, drawer and video-player settings; Cashu wallet, NWC and CLINK setup; the Concord
      channel list and invite links; the attestation screen and the redirect loader.
+   - **Wave 5 cuts:**
+     - `PlatformBackHandler` wraps AndroidX's `BackHandler` on Android and Compose
+       Multiplatform's `ui-backhandler` on desktop and iOS.
+     - `rememberLongNotice` joins `rememberShortNotice`.
+     - The wallet screens use `formatGrouped` and the shared clipboard extensions.
+     - A shared `formatMonthDayTime` builds its label from `DateSkeletonFormatter` and the
+       time-of-day formatter.
+     - `LocalCacheHost.usageCounter` feeds the resource-usage ledger.
+     - The flavour-specific legal settings section is `AppPlatform.legalSettingsCategory`.
+   - **Wave 5 moved:** 11 screens, 23 files: the wallet detail, send, receive and
+     transaction screens; on-chain transactions; the Buzz canvas, agent console and DM
+     list; badge awarding; old bookmarks; and the settings index.
    - **Next:** re-measure. Known exits: the upload/gallery stack, the Android-only
      `AccountViewModel` actions, `CalendarTimeFormat`, the chat views, `NestUiState`,
-     `NappletLauncher`, `UpdateZapAmountDialog` (biometrics), and the `java.time` pickers.
+     `NappletLauncher`, `UpdateZapAmountDialog` (biometrics), the `java.time` pickers, and
+     the language list in user settings.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.

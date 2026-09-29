@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
@@ -44,10 +46,14 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPicke
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog as AppGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel as AppRememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog as AppQrCodeScannerDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.legalSettingsCategory as flavorLegalSettingsCategory
 
 /** Android's [AppPlatform]: the app's own shell pieces, camera scanner, app launcher and icon caches. */
 object AndroidAppPlatform : AppPlatform {
     override val isCastingAvailable: Boolean get() = BuildConfig.IS_CASTING_AVAILABLE
+
+    // Per flavour: Play links the hosted policies, F-Droid surfaces none.
+    override fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = flavorLegalSettingsCategory(uriHandler)
 
     @Composable
     override fun AppBottomBar(

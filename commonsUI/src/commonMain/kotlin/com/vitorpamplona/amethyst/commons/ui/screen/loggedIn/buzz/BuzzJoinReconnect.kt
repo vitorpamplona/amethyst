@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 /**
@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
  * reconnect — it hands off to the in-app browser rather than reading a `#p=me`-gated
  * subscription — so `relay.trigger.buzz` undercounts joins, not re-challenges.
  */
-internal fun reconnectPoolAfterJoin(client: INostrClient) {
+fun reconnectPoolAfterJoin(client: INostrClient) {
     LocalCache.appHost.usageCounter.add(UsageKeys.relayTrigger(UsageKeys.TRIGGER_BUZZ), 1)
     client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
 }

@@ -24,10 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 
@@ -41,6 +43,9 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 interface AppPlatform {
     /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
     val isCastingAvailable: Boolean get() = false
+
+    /** The settings screen's legal links, when the build's distribution calls for them. */
+    fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
 
     @Composable
     fun AppBottomBar(

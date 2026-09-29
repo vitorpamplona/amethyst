@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.old
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -44,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -57,17 +56,18 @@ import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
 import com.vitorpamplona.amethyst.commons.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPrivateFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPrivateFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal.OldBookmarkPublicFeedViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -76,13 +76,13 @@ fun OldBookmarkListScreen(
     nav: INav,
 ) {
     val publicFeedViewModel: OldBookmarkPublicFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = "NostrOldBookmarkPublicFeedViewModel",
             factory = OldBookmarkPublicFeedViewModel.Factory(accountViewModel.account),
         )
 
     val privateFeedViewModel: OldBookmarkPrivateFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = "NostrOldBookmarkPrivateFeedViewModel",
             factory = OldBookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )

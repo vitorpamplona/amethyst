@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,16 +51,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.TransactionRowLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
@@ -69,13 +66,13 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps
 import com.vitorpamplona.amethyst.commons.resources.wallet_incoming
 import com.vitorpamplona.amethyst.commons.resources.wallet_loading
 import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions
-import com.vitorpamplona.amethyst.commons.resources.wallet_no_transactions_for_filter
-import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_no_address
-import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_no_backend
-import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_pending
-import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_open_zapped_note
 import com.vitorpamplona.amethyst.commons.resources.wallet_outgoing
 import com.vitorpamplona.amethyst.commons.resources.wallet_refresh
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
+import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_failed
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -83,41 +80,34 @@ import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.formatMonthDayTime
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssemblerSubscription
-import kotlin.math.absoluteValue
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OnchainTransactionsScreen(
+fun WalletTransactionsScreen(
+    walletId: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: OnchainTransactionsViewModel = viewModel()
+    val walletViewModel: WalletViewModel = rememberViewModel { WalletViewModel() }
 
-    LaunchedEffect(accountViewModel) {
-        viewModel.init(accountViewModel)
-        viewModel.fetchTransactions()
+    LaunchedEffect(accountViewModel, walletId) {
+        walletViewModel.init(accountViewModel)
+        walletViewModel.selectWallet(walletId)
+        walletViewModel.fetchTransactions()
     }
 
-    val windowSince by viewModel.oldestBlockTime.collectAsState()
-    OnchainZapsFilterAssemblerSubscription(
-        user = accountViewModel.account.userProfile(),
-        windowSinceSeconds = windowSince,
-        accountViewModel = accountViewModel,
-    )
-
-    val transactions by viewModel.filteredTransactions.collectAsState()
-    val hasAnyTransactions by viewModel.hasAnyTransactions.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
-    val hasMore by viewModel.hasMoreTransactions.collectAsState()
-    val currentFilter by viewModel.transactionFilter.collectAsState()
-    val address by viewModel.displayAddress.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val transactions by walletViewModel.filteredTransactions.collectAsState()
+    val isLoading by walletViewModel.isLoading.collectAsState()
+    val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
+    val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
+    val currentFilter by walletViewModel.transactionFilter.collectAsState()
+    val error by walletViewModel.error.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -134,14 +124,14 @@ fun OnchainTransactionsScreen(
 
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
-            viewModel.loadMoreTransactions()
+            walletViewModel.loadMoreTransactions()
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(Res.string.wallet_onchain_transactions)) },
+                title = { Text(stringRes(Res.string.wallet_transactions)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -151,7 +141,7 @@ fun OnchainTransactionsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.fetchTransactions() }) {
+                    IconButton(onClick = { walletViewModel.fetchTransactions() }) {
                         Icon(
                             symbol = MaterialSymbols.Refresh,
                             contentDescription = stringRes(Res.string.wallet_refresh),
@@ -161,110 +151,90 @@ fun OnchainTransactionsScreen(
             )
         },
     ) { padding ->
-        when {
-            address == null -> {
-                EmptyMessage(padding, stringRes(Res.string.wallet_onchain_no_address))
-            }
-            isLoading && !hasAnyTransactions -> {
-                Column(
-                    modifier =
-                        Modifier
-                            .padding(padding)
-                            .fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        stringRes(Res.string.wallet_loading),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-            }
-            error != null && !hasAnyTransactions -> {
-                EmptyMessage(
-                    padding,
-                    error ?: stringRes(Res.string.wallet_onchain_no_backend),
+        val currentError = error
+        if (isLoading && transactions.isEmpty()) {
+            Column(
+                modifier =
+                    Modifier
+                        .padding(padding)
+                        .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    stringRes(Res.string.wallet_loading),
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
-            !hasAnyTransactions -> {
-                EmptyMessage(padding, stringRes(Res.string.wallet_no_transactions))
+        } else if (currentError != null && transactions.isEmpty()) {
+            // A wallet refusal (e.g. RESTRICTED) leaves the list empty. Without this
+            // branch the screen would claim "no transactions yet" and hide the reason.
+            EmptyState(
+                title = stringRes(Res.string.wallet_transactions_load_failed),
+                modifier = Modifier.padding(padding).padding(24.dp),
+                description = currentError,
+                onRefresh = { walletViewModel.fetchTransactions() },
+                refreshLabel = stringRes(Res.string.wallet_refresh),
+            )
+        } else if (transactions.isEmpty()) {
+            Column(
+                modifier =
+                    Modifier
+                        .padding(padding)
+                        .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    stringRes(Res.string.wallet_no_transactions),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            else -> {
-                val uriHandler = LocalUriHandler.current
-                LazyColumn(
-                    modifier = Modifier.padding(padding),
-                    state = listState,
-                ) {
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                state = listState,
+            ) {
+                if (currentError != null) {
+                    // Already-loaded transactions stay visible; the banner explains why
+                    // the latest refresh or page load did not land.
                     item {
-                        TransactionFilterRow(currentFilter) { viewModel.setTransactionFilter(it) }
+                        Text(
+                            text = currentError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
                     }
-                    if (transactions.isEmpty()) {
-                        item {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(
-                                    stringRes(Res.string.wallet_no_transactions_for_filter),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    } else {
-                        items(transactions, key = { it.tx.txid }) { txView ->
-                            OnchainTransactionItem(
-                                view = txView,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                                onClick = { handleTxClick(txView, nav, uriHandler) },
-                            )
-                            HorizontalDivider()
-                        }
-                    }
-                    if (isLoadingMore) {
-                        item {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            }
+                }
+                item {
+                    TransactionFilterRow(currentFilter) { walletViewModel.setTransactionFilter(it) }
+                }
+                items(transactions) { tx ->
+                    TransactionItem(tx, accountViewModel, nav)
+                    HorizontalDivider()
+                }
+                if (isLoadingMore) {
+                    item {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun EmptyMessage(
-    padding: androidx.compose.foundation.layout.PaddingValues,
-    message: String,
-) {
-    Column(
-        modifier =
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -299,36 +269,49 @@ private fun TransactionFilterRow(
 }
 
 @Composable
-private fun OnchainTransactionItem(
-    view: OnchainTxView,
+private fun TransactionItem(
+    tx: NwcTransaction,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onClick: () -> Unit,
 ) {
-    val isIncoming = view.isIncoming
-    val amountSats = view.tx.netValueSats.absoluteValue
+    val isIncoming = tx.type == NwcTransactionType.INCOMING
+    val amountSats = (tx.amount ?: 0L) / 1000L
     val formattedAmount =
-        remember(view.tx.netValueSats) {
+        remember(amountSats) {
             (if (isIncoming) "+" else "-") + formatGrouped(amountSats)
         }
 
     val timeOfDay = rememberTimeOfDayFormatter()
     val dateText =
-        remember(view.tx.blockTime, view.tx.confirmations, timeOfDay) {
-            val ts = view.tx.blockTime
-            if (ts != null) formatMonthDayTime(ts, timeOfDay) else ""
+        remember(tx.created_at, timeOfDay) {
+            tx.created_at?.let { formatMonthDayTime(it, timeOfDay) } ?: ""
         }
 
-    val counterpartyPubkeyHex = view.counterpartyPubkeyHex()
-    val counterpartyAddress = view.tx.counterpartyAddresses.firstOrNull()
-    val zapComment = view.zap?.content?.takeIf { it.isNotBlank() }
+    val directionLabel =
+        if (isIncoming) stringRes(Res.string.wallet_incoming) else stringRes(Res.string.wallet_outgoing)
+
+    val labels =
+        remember(tx.metadata, tx.description, tx.type, directionLabel) {
+            TransactionRowLabels.resolve(tx, directionLabel)
+        }
+    val counterpartyPubkeyHex = (labels.title as? TransactionRowLabels.Title.User)?.pubkeyHex
+    val zappedNoteId = labels.zappedNoteId
 
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .then(
+                    // Before the padding, so the whole row height is the target. The
+                    // picture keeps its own tap (profile): picture -> profile, row -> note.
+                    if (zappedNoteId != null) {
+                        Modifier.clickable(onClickLabel = stringRes(Res.string.wallet_open_zapped_note)) {
+                            nav.nav(Route.Note(zappedNoteId))
+                        }
+                    } else {
+                        Modifier
+                    },
+                ).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (counterpartyPubkeyHex != null) {
@@ -360,53 +343,35 @@ private fun OnchainTransactionItem(
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            if (counterpartyPubkeyHex != null) {
-                OnchainCounterpartyName(counterpartyPubkeyHex, accountViewModel)
-            } else if (counterpartyAddress != null) {
+            when (val title = labels.title) {
+                is TransactionRowLabels.Title.User ->
+                    TransactionUserName(title.pubkeyHex, title.name, accountViewModel)
+
+                is TransactionRowLabels.Title.Literal ->
+                    Text(
+                        text = title.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+            }
+
+            labels.subtitle?.let {
                 Text(
-                    text = counterpartyAddress,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                Text(
-                    text =
-                        if (isIncoming) {
-                            stringRes(Res.string.wallet_incoming)
-                        } else {
-                            stringRes(Res.string.wallet_outgoing)
-                        },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
 
-            if (zapComment != null) {
-                Text(
-                    text = zapComment,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = dateText.ifBlank { stringRes(Res.string.wallet_onchain_pending) },
-                    style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (view.tx.confirmations == 0) {
-                            MaterialTheme.colorScheme.bitcoinColor
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                )
-            }
+            Text(
+                text = dateText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         Text(
@@ -420,33 +385,24 @@ private fun OnchainTransactionItem(
                     MaterialTheme.colorScheme.onBackground
                 },
         )
-    }
-}
 
-/**
- * Dispatch a transaction-row tap: jump to the matched on-chain zap event's
- * thread when we have one, otherwise open the tx on a public block explorer.
- * Mempool.space works over Tor and clearnet; deriving the user's configured
- * explorer URL would also need to know whether Bitcoin traffic is being
- * routed over Tor right now, which the UI layer doesn't carry — stick with
- * mempool.space as a sensible default.
- */
-private fun handleTxClick(
-    view: OnchainTxView,
-    nav: INav,
-    uriHandler: UriHandler,
-) {
-    val zap = view.zap
-    if (zap != null) {
-        nav.nav(Route.Note(zap.id))
-    } else {
-        runCatching { uriHandler.openUri("https://mempool.space/tx/${view.tx.txid}") }
+        if (zappedNoteId != null) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                symbol = MaterialSymbols.ChevronRight,
+                // The row's onClickLabel already announces it.
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Composable
-private fun OnchainCounterpartyName(
+private fun TransactionUserName(
     pubkeyHex: String,
+    fallbackName: String?,
     accountViewModel: AccountViewModel,
 ) {
     LoadUser(baseUserHex = pubkeyHex) { user ->
@@ -458,7 +414,7 @@ private fun OnchainCounterpartyName(
             )
         } else {
             Text(
-                text = pubkeyHex.take(8) + "...",
+                text = fallbackName ?: (pubkeyHex.take(8) + "..."),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,

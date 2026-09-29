@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,7 +59,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -71,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_creating_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
@@ -88,7 +88,7 @@ fun WalletReceiveScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val walletViewModel: WalletViewModel = viewModel()
+    val walletViewModel: WalletViewModel = rememberViewModel { WalletViewModel() }
 
     LaunchedEffect(accountViewModel, walletId) {
         walletViewModel.init(accountViewModel)
