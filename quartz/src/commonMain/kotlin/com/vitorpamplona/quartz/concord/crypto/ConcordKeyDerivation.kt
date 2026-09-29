@@ -236,6 +236,15 @@ object ConcordKeyDerivation {
      */
     fun dissolvedPlaneKey(communityId: ByteArray): GroupKey = groupKey(ConcordLabels.DISSOLVED, communityId, ByteArray(32))
 
+    /**
+     * A Channel's Pin List entity id (CORD-04 §7, A.6): `hkdf32(communityId, "concord/pins" ‖ 0x00 ‖
+     * channel_id)`. Derived from the community id, so a list binds to its Community by construction.
+     */
+    fun pinsCoordinate(
+        communityId: ByteArray,
+        channelId: ByteArray,
+    ): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.PINS, channelId))
+
     /** The community-wide Banlist entity id: `hkdf32(communityId, "concord/banlist" ‖ 0x00 ‖ ZERO32)`. */
     fun banlistCoordinate(communityId: ByteArray): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.BANLIST, ByteArray(32)))
 

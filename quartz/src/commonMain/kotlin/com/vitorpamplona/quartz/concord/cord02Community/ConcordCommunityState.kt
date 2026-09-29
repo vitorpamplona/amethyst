@@ -65,9 +65,6 @@ data class ConcordCommunityState(
     fun withDissolved(dissolved: Boolean): ConcordCommunityState = if (dissolved == this.dissolved) this else copy(dissolved = dissolved)
 
     companion object {
-        /** The Pin List sub-kind (CORD-04 §7), carried but not modeled here. */
-        private const val VSK_PINS = "11"
-
         /** The Community Signals sub-kind (CORD-04 §8, upstream PR #17), carried but not modeled here. */
         private const val VSK_SIGNALS = "12"
 
@@ -84,6 +81,7 @@ data class ConcordCommunityState(
                 ControlEntityKind.BANLIST -> ConcordPermissions.BAN
                 ControlEntityKind.INVITE_LIVE, ControlEntityKind.INVITE_REGISTRY, ControlEntityKind.INVITE_REVOKED -> ConcordPermissions.CREATE_INVITE
                 ControlEntityKind.DISSOLVED -> null
+                ControlEntityKind.PIN_LIST -> ConcordPermissions.PIN_MESSAGES
             }
 
         /**
@@ -91,8 +89,7 @@ data class ConcordCommunityState(
          * authored by the owner or a holder of the kind's bit, citing the Grant it acts under.
          *
          * A sub-kind we do not model is still gated — a floor or a compaction must only remember
-         * editions some reader honors: a Pin List by `PIN_MESSAGES` (CORD-04 §7), a Signal by
-         * `MANAGE_CHANNELS` (the one gate Armada implements, `pause`), and anything newer by any
+         * editions some reader honors: a Signal by `MANAGE_CHANNELS` (the one gate Armada implements, `pause`), and anything newer by any
          * staff bit, the set whose actions are Control editions at all (CORD-04 §3).
          */
         private fun honors(
@@ -108,7 +105,6 @@ data class ConcordCommunityState(
             edition: ControlEdition,
         ): Boolean =
             when (edition.vsk) {
-                VSK_PINS -> authority.admits(edition, ConcordPermissions.PIN_MESSAGES)
                 VSK_SIGNALS -> authority.admits(edition, ConcordPermissions.MANAGE_CHANNELS)
                 else -> authority.isOwner(edition.author) || (authority.isStaff(edition.author) && authority.citationSatisfied(edition))
             }
