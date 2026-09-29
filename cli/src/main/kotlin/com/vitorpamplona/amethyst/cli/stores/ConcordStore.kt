@@ -57,6 +57,13 @@ data class StoredCommunity(
     // A private channel is read and written ONLY on the plane its own key derives; without one it
     // is unreadable and `send` refuses rather than fall back to the root-derived plane.
     val privateChannels: List<StoredPrivateChannel> = emptyList(),
+    // Per Private Channel, the channel epoch whose rotation cut this account out (CORD-06 §2; the
+    // reference client's `channel_cuts`): a key below it is never adopted again from a bundle.
+    val channelCuts: Map<String, Long> = emptyMap(),
+    // Channel keys reserved for a Private Channel rotation this account started but has not yet
+    // adopted, keyed "channelId:newEpoch:prevcommit" (CORD-06): a retried `channel rekey` must
+    // re-deliver the SAME key, never a sibling that splits the members at one epoch.
+    val pendingChannelRotations: Map<String, String> = emptyMap(),
     // Keys reserved for a Refounding this account started but has not yet adopted (CORD-06 §3): a
     // retried `refound` must re-deliver the SAME root, never mint a sibling that splits the members.
     val pendingRefounding: StoredPendingRefounding? = null,

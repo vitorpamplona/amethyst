@@ -29,10 +29,13 @@ import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredPendingRefounding
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -41,6 +44,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordChannelRekey
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.cord06Rekey.IncompleteControlPlaneException
 import com.vitorpamplona.quartz.concord.cord06Rekey.PendingRefounding
@@ -204,7 +208,11 @@ object ConcordModCommands {
                 )
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            Output.emit(mapOf("member" to member, "roles" to listOf(roleId)) + RawEventSupport.ackFields(ack))
+            // Role-gated channel keys follow the Grant (CORD-03/06): vend what it opened, rotate what it closed.
+            val before = AuthorityResolver.resolve(editions, sc.communityId.hexToByteArray(), sc.owner)
+            val after = editions + ConcordActions.controlEditions(listOf(wrap), cp)
+            val access = ConcordPrivateChannelCommands.reconcileAccess(ctx, ConcordStore(dataDir.concordFile), loaded.community, before, after)
+            Output.emit(mapOf("member" to member, "roles" to listOf(roleId)) + access + RawEventSupport.ackFields(ack))
             return 0
         }
     }
@@ -544,11 +552,33 @@ object ConcordModCommands {
             }
             val compactionFailures = build.controlWraps.count { wrap -> ctx.publish(wrap, relays).values.none { it.accepted } }
 
+            // 4b. Rotate every held Private Channel (CORD-06 §3), each to its OWN entitled set among
+            //     the kept members, sealed under the PRIOR root so a base-fork loser can still open
+            //     it. One that no relay takes keeps its key and is reported: resumable, not atomic.
+            val afterBans = ConcordCommunityState.fold(chain, sc.communityId.hexToByteArray(), sc.owner)
+            val kept = recipients.mapTo(HashSet()) { it.lowercase() }
+            var withChannels = ConcordCommands.entryFor(loaded.community)
+            val channelsRotated = mutableListOf<String>()
+            val channelsNotRotated = mutableListOf<String>()
+            for (held in withChannels.privateChannels) {
+                val id = held.channelId.lowercase()
+                if (id !in afterBans.privateChannelIds || ConcordChannelKeyring.heldKey(withChannels, id) == null) continue
+                val keep = ConcordPrivateChannels.keepSet(afterBans.authority, id, me).filterTo(HashSet()) { it in kept || it == me.lowercase() }
+                val newKey = ConcordChannelRekey.mintKey()
+                val wraps = ConcordPrivateChannels.buildRotation(ctx.signer, priorRoot, held, newKey, keep, TimeUtils.now(), citation)
+                if (wraps.all { wrap -> ctx.publish(wrap, relays).values.any { it.accepted } }) {
+                    withChannels = ConcordChannelKeyring.withRotatedKey(withChannels, id, newKey.toHexKey(), held.epoch + 1) ?: withChannels
+                    channelsRotated += id
+                } else {
+                    channelsNotRotated += id
+                }
+            }
+
             // 5. Adopt the new epoch ourselves — the same pure rewrite Amethyst uses, banking the
             //    epoch we are leaving for the anti-rollback floor — and drop the reservation.
             val adopted =
                 ConcordReceive.withAdoptedRoot(
-                    ConcordCommands.entryFor(loaded.community),
+                    withChannels,
                     keys.newRoot,
                     build.newEpoch,
                     build.newControlKeys.address.hexToByteArray(),
@@ -606,6 +636,8 @@ object ConcordModCommands {
                     "rekey_wraps" to build.rekeyWraps.size,
                     "compaction_failures" to compactionFailures,
                     "invites_refreshed" to refreshed,
+                    "channels_rotated" to channelsRotated,
+                    "channels_not_rotated" to channelsNotRotated,
                 ),
             )
             return 0
