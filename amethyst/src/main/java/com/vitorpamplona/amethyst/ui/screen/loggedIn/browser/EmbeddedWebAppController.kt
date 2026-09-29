@@ -36,12 +36,12 @@ import android.os.Messenger
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBuffer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedAutoRecovery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
@@ -116,9 +117,18 @@ class EmbeddedWebAppController(
     override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
 
     /** JavaScript console output received from the embedded WebView, capped at [MAX_CONSOLE_LOGS] entries. */
-    override val consoleLogs = mutableStateListOf<ConsoleLine>()
+    private val console = ConsoleBuffer(MAX_CONSOLE_LOGS)
+    override val consoleLogs get() = console.lines
+    override val consoleErrorCount get() = console.errorCount
 
-    override fun clearConsoleLogs() = consoleLogs.clear()
+    override fun clearConsoleLogs() = console.clear()
+
+    // The user's per-tab page settings. The provider forgets them whenever the session is re-created (a
+    // `:napplet` restart, a rearm), so they are re-sent with every create — otherwise a site the user
+    // switched onto Tor would silently come back over clearnet while the pill still said Tor.
+    private var useTor = initialUseTor
+    private var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
+    private var desktopSite = false
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
@@ -177,6 +187,7 @@ class EmbeddedWebAppController(
                 // `:napplet` died (the OS reclaimed it, or it crashed). Its WebViews went with it; the
                 // system restarts the bound service and [onServiceConnected] re-creates the session.
                 serviceMessenger = null
+                resetPageState()
                 showRecovering()
             }
         }
@@ -202,10 +213,20 @@ class EmbeddedWebAppController(
         onImeEvent = null
         onMagnifierFrame = null
         onLoadStatusChanged = null
-        consoleLogs.clear()
+        console.clear()
+        resetPageState()
+    }
+
+    /**
+     * Drops UI state that belongs to the page on screen: once that page is gone (renderer death, session
+     * lost, `:napplet` restart) nothing will ever close it. A stale fullscreen flag swallowed every Back
+     * press, and a stale dialog or permission prompt auto-refused every new one from the rebuilt page.
+     */
+    private fun resetPageState() {
         pendingDialog.value = null
         pendingPermission.value = null
         isFullscreen.value = false
+        _findResult.value = null
     }
 
     override fun teardown() = unbind()
@@ -266,6 +287,7 @@ class EmbeddedWebAppController(
         sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
         adapterDelivered = false
         sessionDead = false
+        resetPageState()
         sendCreateSession()
     }
 
@@ -299,6 +321,7 @@ class EmbeddedWebAppController(
     private fun onSurfaceLost(sessionDead: Boolean) {
         if (sessionDead) this.sessionDead = true
         hasLoadedReal = false
+        resetPageState()
         // `:napplet` itself is down: its restart re-creates the session (see [onServiceConnected]).
         if (serviceMessenger?.binder?.isBinderAlive != true) {
             showRecovering()
@@ -332,7 +355,7 @@ class EmbeddedWebAppController(
                         putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
                         putString(NappletBrowserContract.KEY_URL, startUrl)
                         putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort)
-                        putBoolean(NappletBrowserContract.KEY_USE_TOR, initialUseTor)
+                        putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
                         putString(NappletBrowserContract.KEY_THEME, themeType)
                         // Opaque per-account storage partition, so an embedded site can't carry one
@@ -341,6 +364,9 @@ class EmbeddedWebAppController(
                     }
             }
         runCatching { serviceMessenger?.send(msg) }
+        // Messenger keeps order, so these land after the CREATE and are stored on the new tab.
+        if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
+        if (desktopSite) setDesktopSite(true)
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
@@ -382,8 +408,7 @@ class EmbeddedWebAppController(
                 val message = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_MESSAGE).orEmpty()
                 val source = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_SOURCE).orEmpty()
                 val line = msg.data?.getInt(NappletBrowserContract.KEY_CONSOLE_LINE, 0) ?: 0
-                if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
-                consoleLogs.add(ConsoleLine(consoleLevelOf(level), message, source, line))
+                console.add(ConsoleLine(consoleLevelOf(level), message, source, line))
             }
             NappletBrowserContract.MSG_FILE_CHOOSER_REQUEST -> {
                 val data = msg.data ?: return true
@@ -537,9 +562,15 @@ class EmbeddedWebAppController(
 
     override fun findNext(forward: Boolean) = send(NappletBrowserContract.MSG_FIND_NEXT) { putBoolean(NappletBrowserContract.KEY_FIND_FORWARD, forward) }
 
-    fun setDesktopSite(enabled: Boolean) = send(NappletBrowserContract.MSG_SET_DESKTOP) { putBoolean(NappletBrowserContract.KEY_ENABLED, enabled) }
+    fun setDesktopSite(enabled: Boolean) {
+        desktopSite = enabled
+        send(NappletBrowserContract.MSG_SET_DESKTOP) { putBoolean(NappletBrowserContract.KEY_ENABLED, enabled) }
+    }
 
-    fun setTextZoom(percent: Int) = send(NappletBrowserContract.MSG_SET_TEXT_ZOOM) { putInt(NappletBrowserContract.KEY_TEXT_ZOOM, percent) }
+    fun setTextZoom(percent: Int) {
+        textZoom = percent
+        send(NappletBrowserContract.MSG_SET_TEXT_ZOOM) { putInt(NappletBrowserContract.KEY_TEXT_ZOOM, percent) }
+    }
 
     /** Back to the app's home origin ([homeUrl]), Chrome's out-of-scope ✕. */
     fun backToScope(homeUrl: String) = send(NappletBrowserContract.MSG_BACK_TO_SCOPE) { putString(NappletBrowserContract.KEY_URL, homeUrl) }
@@ -581,7 +612,10 @@ class EmbeddedWebAppController(
         }
     }
 
-    fun setTor(useTor: Boolean) = send(NappletBrowserContract.MSG_SET_TOR) { putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor) }
+    fun setTor(useTor: Boolean) {
+        this.useTor = useTor
+        send(NappletBrowserContract.MSG_SET_TOR) { putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor) }
+    }
 
     override fun sendImeOp(json: String) = send(NappletBrowserContract.MSG_IME_OP) { putString(NappletBrowserContract.KEY_IME_PAYLOAD, json) }
 

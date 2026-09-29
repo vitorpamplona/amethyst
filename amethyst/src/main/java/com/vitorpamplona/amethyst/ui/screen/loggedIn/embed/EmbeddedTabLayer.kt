@@ -244,11 +244,13 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 activeController?.onLoadStatusChanged = { loadStatus = it }
                 onDispose { activeController?.onLoadStatusChanged = null }
             }
-            // Safety net: nothing painted and nothing actively loading after a grace period → offer a retry.
+            // Safety net: nothing painted after a grace period → offer a retry. A load still in flight (a slow
+            // site, one over Tor) gets a longer budget before it's called stuck, instead of flipping to an error
+            // while it's still progressing.
             LaunchedEffect(activeId, loadStatus) {
                 timedOut = false
                 if (!loadStatus.hasLoadedReal && !loadStatus.failed) {
-                    delay(12_000)
+                    delay(if (loadStatus.isLoading) 45_000 else 12_000)
                     timedOut = true
                 }
             }
@@ -322,7 +324,7 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 chrome.ui.copy(
                     chrome = chrome.ui.chrome.copy(hasFind = chrome.ui.chrome.hasFind && findBridge != null),
                     consoleShowing = consoleShowing,
-                    consoleErrors = consoleLogs?.count { it.level == ConsoleLine.Level.ERROR } ?: 0,
+                    consoleErrors = consoleBridge?.consoleErrorCount?.intValue ?: 0,
                 )
 
             Box(tabModifier) {
@@ -783,8 +785,17 @@ private fun SelectionHandle(
     val color = MaterialTheme.colorScheme.primary
     val currentTip by rememberUpdatedState(tipPx)
     val currentMagnify by rememberUpdatedState(onMagnify)
+    // The drag gesture is installed once (pointerInput(Unit)) and outlives recompositions, so everything it
+    // reads that can change mid-life (a rotation or resize moves the origin, the page's zoom changes the
+    // scale, the drag target captures the current bridge) is read through updated state.
+    val currentOriginX by rememberUpdatedState(surfaceOriginX)
+    val currentOriginY by rememberUpdatedState(surfaceOriginY)
+    val currentScale by rememberUpdatedState(scale)
+    val currentLineHalf by rememberUpdatedState(lineHalfPx)
+    val currentDragTo by rememberUpdatedState(onDragTo)
     var dragTip by remember { mutableStateOf<Offset?>(null) }
     val tip = dragTip ?: tipPx
+    EndDragOnDispose(isDragging = { dragTip != null }, onMagnify = { currentMagnify })
 
     // Loupe capture: X follows the finger, Y is locked to the authoritative endpoint's line ([currentTip] is
     // the foot, so lift by half the line height) — so the bubble shows the line being edited, not wherever the
@@ -792,7 +803,7 @@ private fun SelectionHandle(
     fun magnify(
         fingerPx: Offset,
         active: Boolean = true,
-    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - surfaceOriginX, currentTip.y - surfaceOriginY - lineHalfPx)
+    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - currentOriginX, currentTip.y - currentOriginY - currentLineHalf)
     // Place the box so its pointed corner lands on the tip: start = top-right corner, end = top-left corner.
     val boxLeft = if (isStart) tip.x - sizePx else tip.x
     Box(
@@ -809,7 +820,7 @@ private fun SelectionHandle(
                         change.consume()
                         val np = (dragTip ?: currentTip) + delta
                         dragTip = np
-                        onDragTo((np.x - surfaceOriginX) / scale, (np.y - surfaceOriginY) / scale)
+                        currentDragTo((np.x - currentOriginX) / currentScale, (np.y - currentOriginY) / currentScale)
                         magnify(np)
                     },
                     onDragEnd = {
@@ -870,6 +881,12 @@ private fun InsertionHandle(
     val currentTip by rememberUpdatedState(tipPx)
     val currentMagnify by rememberUpdatedState(onMagnify)
     val currentTap by rememberUpdatedState(onTap)
+    // Read through updated state for the same reason as SelectionHandle: the gesture outlives recompositions.
+    val currentOriginX by rememberUpdatedState(surfaceOriginX)
+    val currentOriginY by rememberUpdatedState(surfaceOriginY)
+    val currentScale by rememberUpdatedState(scale)
+    val currentLineHalf by rememberUpdatedState(lineHalfPx)
+    val currentDragTo by rememberUpdatedState(onDragTo)
 
     // Loupe capture: X follows the finger, Y is locked to the authoritative caret's line ([currentTip] is the
     // caret foot, so lift by half the line height) — so the bubble shows the edited line, not wherever the
@@ -877,11 +894,12 @@ private fun InsertionHandle(
     fun magnify(
         fingerPx: Offset,
         active: Boolean = true,
-    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - surfaceOriginX, currentTip.y - surfaceOriginY - lineHalfPx)
+    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - currentOriginX, currentTip.y - currentOriginY - currentLineHalf)
     // Track the finger separately from what we draw: the handle renders at the AUTHORITATIVE caret (tipPx,
     // which snaps to a character position as the move round-trips through the shim), while the finger drives
     // the move. So the handle stays glued to the line/text and clamps to the field instead of trailing off.
     var fingerPx by remember { mutableStateOf<Offset?>(null) }
+    EndDragOnDispose(isDragging = { fingerPx != null }, onMagnify = { currentMagnify })
     Box(
         Modifier
             .absoluteOffset { IntOffset((tipPx.x - wPx / 2f).roundToInt(), tipPx.y.roundToInt()) }
@@ -909,6 +927,7 @@ private fun InsertionHandle(
                         if (!dragging && (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
                             dragging = true
                             fp = currentTip
+                            fingerPx = fp
                             magnify(currentTip)
                         }
                         if (dragging) {
@@ -919,7 +938,7 @@ private fun InsertionHandle(
                             fp += change.positionChangeIgnoreConsumed()
                             change.consume()
                             fingerPx = fp
-                            onDragTo((fp.x - surfaceOriginX) / scale, (fp.y - surfaceOriginY) / scale)
+                            currentDragTo((fp.x - currentOriginX) / currentScale, (fp.y - currentOriginY) / currentScale)
                             magnify(fp)
                         }
                     }
@@ -999,6 +1018,9 @@ private fun SelectionToolbarItem(
     label: String,
     onClick: () -> Unit,
 ) {
+    // The gesture is keyed on the label only, so read the action through updated state: "Copy" captures the
+    // selected text, and a stale first lambda copied the previous selection.
+    val currentOnClick by rememberUpdatedState(onClick)
     Text(
         text = label,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1012,11 +1034,29 @@ private fun SelectionToolbarItem(
                         val up = waitForUpOrCancellation()
                         if (up != null) {
                             up.consume()
-                            onClick()
+                            currentOnClick()
                         }
                     }
                 }.padding(horizontal = 12.dp, vertical = 10.dp),
     )
+}
+
+/**
+ * Ends a handle drag that is still in progress when the handle leaves composition — the selection collapsed
+ * or the page blurred under the finger. The gesture's own end/cancel callbacks never run then (its coroutine
+ * is just cancelled), which left the loupe on screen, the toolbar hidden and the drawer's edge swipe disabled
+ * app-wide ([EmbeddedSelectionDrag]).
+ */
+@Composable
+private fun EndDragOnDispose(
+    isDragging: () -> Boolean,
+    onMagnify: () -> OnMagnify?,
+) {
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isDragging()) onMagnify()?.invoke(false, Offset.Zero, 0f, 0f)
+        }
+    }
 }
 
 /** One console line as plain text, for copying. */

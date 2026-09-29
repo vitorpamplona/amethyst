@@ -290,11 +290,14 @@ private fun EmbeddedWebAppTab(
     val bottomBarFlow = accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
     DisposableEffect(id) {
         val token = EmbeddedTabHost.setActive(id)
+        EmbeddedTabHost.hold(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfOwner(token)
             EmbeddedTabHost.clearActiveChrome(id)
-            // Only bottom-row apps stay warm; anything else restarts when it leaves.
-            if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
+            // Only bottom-row apps stay warm; anything else restarts when it leaves — unless a re-navigation
+            // to this same tab already composed a new screen on the same session.
+            val lastHolder = EmbeddedTabHost.release(id)
+            if (lastHolder && id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
         }
     }
 

@@ -121,6 +121,10 @@ class NappletHostService : Service() {
 
         // The session's root view; a WebView lost to a renderer crash is rebuilt inside it on retry.
         var container: FrameLayout? = null
+
+        // The client's last pause/resume. A parked tab is paused before its WebView exists (the WebView is
+        // only built when the surface opens), so the flag is applied to every WebView built for the tab.
+        var paused = false
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
@@ -210,8 +214,16 @@ class NappletHostService : Service() {
             // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
             // pauseTimers()/resumeTimers(): they are process-global and would freeze/thaw every WebView in
             // `:napplet` (the browser embed + other napplets), whose lifecycles are independent of this one.
-            NappletEmbedContract.MSG_PAUSE -> tabFor(msg)?.webView?.onPause()
-            NappletEmbedContract.MSG_RESUME -> tabFor(msg)?.webView?.onResume()
+            NappletEmbedContract.MSG_PAUSE ->
+                tabFor(msg)?.let {
+                    it.paused = true
+                    it.webView?.onPause()
+                }
+            NappletEmbedContract.MSG_RESUME ->
+                tabFor(msg)?.let {
+                    it.paused = false
+                    it.webView?.onResume()
+                }
             NappletEmbedContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
@@ -381,6 +393,7 @@ class NappletHostService : Service() {
         wv.setFindListener { active, total, _ -> pushFindResult(tab, active, total) }
         if (tab.textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) BrowserWebTools.setTextZoom(wv, tab.textZoom)
         tab.webView = wv
+        if (tab.paused) wv.onPause()
         wv.loadUrl(NappletWebContract.SHELL_URL)
         return wv
     }

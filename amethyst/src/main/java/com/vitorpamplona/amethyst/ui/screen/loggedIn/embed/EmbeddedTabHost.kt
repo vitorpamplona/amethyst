@@ -37,7 +37,7 @@ import androidx.compose.ui.geometry.Rect
  *
  * Warm-keep is scoped to **bottom-row apps**: a session is retained only while its app is a bottom-bar
  * favorite (see [retainOnly], driven by the bottom-bar settings). A favorite opened outside the bottom
- * row restarts when it leaves, and a low-memory trim ([evictAll]) drops everything.
+ * row restarts when it leaves, and a low-memory trim ([rebuildAll]) drops everything.
  *
  * State is Compose snapshot state so [EmbeddedTabLayer] recomposes as sessions / the active id / the
  * content bounds change. Main-thread only.
@@ -174,6 +174,35 @@ object EmbeddedTabHost {
         w.controller.teardown()
     }
 
+    /**
+     * Tears down [id]'s warm session so its screen re-acquires a freshly built one (e.g. an nSite switched
+     * between Tor and the open web). Unlike [evict] this keeps [activeId]: the screen stays composed and
+     * never re-runs its `setActive`, so clearing it would park the new session off-screen — a blank tab.
+     */
+    fun rebuild(id: String) {
+        val w = warm.firstOrNull { it.id == id } ?: return
+        keyboardUpOnLeave.remove(id)
+        warm.remove(w)
+        w.controller.teardown()
+    }
+
+    // How many composed screens currently show each id. Re-navigating to the same route composes the new
+    // screen (which acquires the SAME warm controller) before the old one disposes; counting lets the old
+    // one's disposal see that the tab is still in use instead of evicting the controller under the new one.
+    private val holders = mutableMapOf<String, Int>()
+
+    /** A screen showing [id] entered composition. Pair with [release]. */
+    fun hold(id: String) {
+        holders[id] = (holders[id] ?: 0) + 1
+    }
+
+    /** A screen showing [id] left composition. Returns true when no other screen still shows it. */
+    fun release(id: String): Boolean {
+        val left = (holders[id] ?: 1) - 1
+        if (left <= 0) holders.remove(id) else holders[id] = left
+        return left <= 0
+    }
+
     /** Drops every warm session whose id isn't in [keep] (bottom-row membership + the active tab). */
     fun retainOnly(keep: Set<String>) {
         warm
@@ -181,19 +210,12 @@ object EmbeddedTabHost {
             .forEach { evict(it.id) }
     }
 
-    fun evictAll() {
-        activeId = null
-        keyboardUpOnLeave.clear()
-        val copy = warm.toList()
-        warm.clear()
-        copy.forEach { it.controller.teardown() }
-    }
-
     /**
-     * Something a WebView can only pick up at construction changed (the theme, or the account): tear down
-     * every warm session and bump [rebuildEpoch] so the visible screen and the preloader re-acquire freshly
-     * built sessions. Unlike [evictAll] this keeps [activeId], so the visible tab re-activates the instant
-     * its screen re-acquires — the user just sees the current tab reload, not a blanked-out surface.
+     * Something a WebView can only pick up at construction changed (the theme, or the account), or the
+     * system asked for memory back: tear down every warm session and bump [rebuildEpoch] so the visible
+     * screen and the preloader re-acquire freshly built sessions. This keeps [activeId], so the visible tab
+     * re-activates the instant its screen re-acquires — the user just sees the current tab reload, not a
+     * blanked-out surface.
      */
     fun rebuildAll() {
         // Every page is about to be rebuilt from scratch, so no field survives to restore a keyboard onto.

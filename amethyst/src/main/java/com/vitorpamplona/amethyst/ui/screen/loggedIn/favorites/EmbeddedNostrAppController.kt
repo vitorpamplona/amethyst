@@ -36,18 +36,19 @@ import android.os.Messenger
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBuffer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedAutoRecovery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
@@ -134,9 +135,15 @@ class EmbeddedNostrAppController(
     override var onMagnifierFrame: ((MagnifierFrame) -> Unit)? = null
 
     /** The app's console output, capped at [MAX_CONSOLE_LOGS] entries. */
-    override val consoleLogs = mutableStateListOf<ConsoleLine>()
+    private val console = ConsoleBuffer(MAX_CONSOLE_LOGS)
+    override val consoleLogs get() = console.lines
+    override val consoleErrorCount get() = console.errorCount
 
-    override fun clearConsoleLogs() = consoleLogs.clear()
+    override fun clearConsoleLogs() = console.clear()
+
+    // The user's text zoom. The provider forgets it whenever the session is re-created (a `:napplet`
+    // restart, a rearm), so it is re-sent with every create.
+    private var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
 
     private val _findResult = mutableStateOf<FindResult?>(null)
     override val findResult: State<FindResult?> = _findResult
@@ -238,6 +245,7 @@ class EmbeddedNostrAppController(
         sessionId = "napplet-${SESSION_SEQ.incrementAndGet()}"
         adapterDelivered = false
         sessionDead = false
+        _findResult.value = null
         sendCreateSession()
     }
 
@@ -325,6 +333,7 @@ class EmbeddedNostrAppController(
         // so a never-shown applet doesn't start running. Messenger preserves order, so PAUSE lands after
         // CREATE in the host.
         if (wantPaused) send(NappletEmbedContract.MSG_PAUSE)
+        if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
@@ -386,8 +395,7 @@ class EmbeddedNostrAppController(
             }
             NappletEmbedContract.MSG_CONSOLE_LOG -> {
                 val data = msg.data ?: return true
-                if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
-                consoleLogs.add(
+                console.add(
                     ConsoleLine(
                         consoleLevelOf(data.getString(NappletEmbedContract.KEY_CONSOLE_LEVEL).orEmpty()),
                         data.getString(NappletEmbedContract.KEY_CONSOLE_MESSAGE).orEmpty(),
@@ -442,7 +450,10 @@ class EmbeddedNostrAppController(
 
     override fun findNext(forward: Boolean) = send(NappletEmbedContract.MSG_FIND_NEXT) { putBoolean(NappletEmbedContract.KEY_FIND_FORWARD, forward) }
 
-    fun setTextZoom(percent: Int) = send(NappletEmbedContract.MSG_SET_TEXT_ZOOM) { putInt(NappletEmbedContract.KEY_TEXT_ZOOM, percent) }
+    fun setTextZoom(percent: Int) {
+        textZoom = percent
+        send(NappletEmbedContract.MSG_SET_TEXT_ZOOM) { putInt(NappletEmbedContract.KEY_TEXT_ZOOM, percent) }
+    }
 
     /** User-triggered recovery for a stuck or failed session: reload the verified content from scratch. */
     override fun retry() {
