@@ -18,19 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.url
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.external_content_title
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -40,11 +40,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensible
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.commons.ui.note.platform.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.dal.UrlFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.datasource.UrlFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.dal.UrlFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.UrlFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 
 @Composable
@@ -66,7 +66,7 @@ fun PrepareViewModelsUrlScreen(
     nav: INav,
 ) {
     val urlFeedViewModel: UrlFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = url + "UrlFeedViewModel",
             factory =
                 UrlFeedViewModel.Factory(

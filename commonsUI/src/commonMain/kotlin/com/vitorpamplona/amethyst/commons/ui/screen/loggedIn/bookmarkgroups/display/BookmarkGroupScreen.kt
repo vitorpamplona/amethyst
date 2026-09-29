@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.display
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,7 +51,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
@@ -71,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
@@ -92,7 +92,7 @@ fun BookmarkGroupScreen(
     nav: INav,
 ) {
     val bookmarkGroupViewModel: BookmarkGroupViewModel =
-        viewModel(
+        rememberViewModel(
             factory = BookmarkGroupViewModel.Initializer(accountViewModel.account, bookmarkIdentifier),
         )
 

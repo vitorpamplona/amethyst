@@ -18,26 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.url.dal
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelayFilterAssembler
-import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelayQueryState
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.reflect.KClass
 
-@Composable
-fun RelayGroupsOnRelaySubscription(
-    relay: NormalizedRelayUrl,
-    dataSource: RelayGroupsOnRelayFilterAssembler,
-    accountViewModel: AccountViewModel,
-) {
-    val state =
-        remember(accountViewModel.account, relay) {
-            RelayGroupsOnRelayQueryState(relay, accountViewModel.account)
-        }
-
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+@Stable
+class UrlFeedViewModel(
+    val url: String,
+    val relays: Set<NormalizedRelayUrl>,
+    val account: Account,
+) : AndroidFeedViewModel(
+        UrlFeedFilter(url, relays, account, LocalCache),
+    ) {
+    @Suppress("UNCHECKED_CAST")
+    class Factory(
+        val url: String,
+        val relays: Set<NormalizedRelayUrl>,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = UrlFeedViewModel(url, relays, account) as T
+    }
 }

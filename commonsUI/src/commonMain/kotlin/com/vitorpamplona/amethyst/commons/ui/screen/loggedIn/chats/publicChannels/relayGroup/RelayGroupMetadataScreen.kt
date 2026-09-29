@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,7 +63,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -104,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discover
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_permissions
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
@@ -133,7 +133,7 @@ fun RelayGroupCreateScreen(
     isForum: Boolean = false,
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
-    val viewModel: RelayGroupMetadataViewModel = viewModel(key = "RelayGroupCreate:$relayUrl")
+    val viewModel: RelayGroupMetadataViewModel = rememberViewModel(key = "RelayGroupCreate:$relayUrl") { RelayGroupMetadataViewModel() }
     LaunchedEffect(relay) {
         viewModel.initCreate(accountViewModel, relay)
         if (isForum) viewModel.isForum = true
@@ -174,7 +174,7 @@ fun RelayGroupEditScreen(
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
     val groupId = remember(id, relay) { GroupId(id, relay) }
-    val viewModel: RelayGroupMetadataViewModel = viewModel(key = "RelayGroupEdit:${groupId.toKey()}")
+    val viewModel: RelayGroupMetadataViewModel = rememberViewModel(key = "RelayGroupEdit:${groupId.toKey()}") { RelayGroupMetadataViewModel() }
 
     LoadRelayGroupChannel(groupId) { channel ->
         // Keep the relay-signed metadata fresh while editing so a late load prefills.

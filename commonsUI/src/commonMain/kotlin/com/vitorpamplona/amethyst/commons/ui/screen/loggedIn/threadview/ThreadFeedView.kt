@@ -20,7 +20,7 @@
  */
 @file:Suppress("DEPRECATION")
 
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -396,8 +396,10 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
@@ -1354,7 +1356,7 @@ private fun RenderClassifiedsReaderForThread(
                     Modifier.padding(top = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val newAmount = price.amount.toBigDecimalOrNull()?.let { showAmount(it) } ?: price.amount
+                    val newAmount = parseBigDecimalOrNull(price.amount)?.let { showAmount(it) } ?: price.amount
 
                     val priceTag =
                         remember(noteEvent) {

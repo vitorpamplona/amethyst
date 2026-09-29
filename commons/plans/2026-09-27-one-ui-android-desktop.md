@@ -426,13 +426,32 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        image. They now call the shared `uploadToDefaultServer`.
      - Moved: the profile editor, the emoji pack screen and the emoji pack metadata screen
        (7 files).
-   - **Next:** most composer screens still exit through `ShowImageUploadItem` (the upload
-     preview, which uses Android media APIs to show a thumbnail) and `SelectFromFiles`.
-     After those comes the per-composer state: `ShortNotePostViewModel`, `PreviewState`
-     and the location pickers. The video player stack (media3) holds about 22 screens.
-     Smaller exits remain: the Android-only `AccountViewModel` actions,
-     `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`, `UpdateZapAmountDialog`
-     (biometrics), the `java.time` pickers and the language list.
+   - **Wave 7 (2026-09-29):**
+     - The upload preview, the file picker and the single-document picker are shared.
+     - A shared wallet-app launcher, edge-to-edge dialog properties, `CashuWalletDiscovery`
+       in commonMain, the Namecoin resolver on `AppServices`, and `ReusableZapButton` as a
+       slot.
+     - Moved: the wallet screen, the discovery tabs, badges, communities, music playlists,
+       Concord create/edit, the Cashu wizard, podcast show/trailer, geocache log and the
+       visualizer settings. 136 of 252 screens shared.
+   - **Player seam (2026-09-30):** the media3 player stays in the app, like WebView. Shared
+     UI reaches it only through `NotePlatform` slots.
+     - Twenty-three screens used to reach it through side doors: direct calls to
+       `EditPostView`, `ZoomableContentView`, the audio/music/voice renderers and
+       `VideoViewInner`. They now call the slots, plus a new `FullscreenVideoView` slot.
+     - No screen reaches `service/playback` now.
+     - Moved: the thread screen, bookmark groups, the URL feed and relay-group metadata.
+     - **Later:** sharing the player *chrome* (voice/music/podcast rows, controls, waveform)
+       needs a `PlaybackController` port: state flows plus play/pause/seek/mute, wrapping the
+       pooled media3 `MediaController` on Android. Do it when Desktop gets a player, and pick
+       that engine through the license gate. VLCJ's README says "GPL, version 3 or later",
+       with no linking exception (a commercial license is sold separately), so it is a stop.
+   - **Next:** the remaining screens exit mostly through navigation (`RememberNavs`, `Nav`,
+     step 7). After that: `Amethyst.instance` reads, the relay exporters, `TakePicture`,
+     `ReactionsRow`, `ZoomableContentView`, `UrlCachedPreviewer`, `MLKitImageLabelService`
+     and `ShortNotePostViewModel`. Smaller exits remain too: the Android-only
+     `AccountViewModel` actions, `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`,
+     `UpdateZapAmountDialog` (biometrics), the `java.time` pickers and the language list.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
