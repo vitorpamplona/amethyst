@@ -157,6 +157,18 @@ class AccountConcordActions(
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
     }
 
+    /** The community's current name: its folded metadata, else the name it was joined under. */
+    private fun currentConcordName(
+        session: ConcordCommunitySession?,
+        entry: ConcordCommunityListEntry,
+    ): String =
+        session
+            ?.state
+            ?.value
+            ?.metadata
+            ?.name
+            ?.takeIf { it.isNotBlank() } ?: entry.name
+
     private suspend fun awaitConcordSession(communityId: HexKey) {
         withTimeoutOrNull(SESSION_WAIT_MS) {
             account.concordSessions.revision.first { account.concordSessions.sessionFor(communityId) != null }
@@ -381,6 +393,7 @@ class AccountConcordActions(
                                     rootEpoch = entry.rootEpoch,
                                     controlPk = entry.controlPk,
                                     relays = entry.relays,
+                                    name = currentConcordName(account.concordSessions.sessionFor(entry.id), entry),
                                 )
                             // Confirmed: a link counted as moved but never stored is a link its
                             // holders can no longer redeem, reported as a success.
@@ -427,7 +440,9 @@ class AccountConcordActions(
                 ownerSaltHex = entry.ownerSalt,
                 communityRootHex = entry.root,
                 rootEpoch = entry.rootEpoch,
-                name = entry.name,
+                // The folded metadata, not the List entry: the entry keeps the name it was joined
+                // under, so a renamed community's invites previewed its old name.
+                name = currentConcordName(session, entry),
                 relays = entry.relays,
                 // The joiner can never derive the Control Plane address, so the bundle carries
                 // it (CORD-05 §1). Null on a legacy community, which has none to carry.
