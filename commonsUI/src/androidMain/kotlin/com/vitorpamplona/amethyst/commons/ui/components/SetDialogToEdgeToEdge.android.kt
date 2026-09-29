@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import android.view.View
 import android.view.WindowManager
@@ -29,11 +29,10 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
-import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
 @Composable
-fun SetDialogToEdgeToEdge() {
+actual fun SetDialogToEdgeToEdge() {
     val activityWindow = getActivityWindow()
     val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
     val parentView = LocalView.current.parent as View

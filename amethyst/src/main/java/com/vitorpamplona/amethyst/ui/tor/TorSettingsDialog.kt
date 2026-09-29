@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.tor.explainerId
 import com.vitorpamplona.amethyst.commons.tor.parseTorPresetType
 import com.vitorpamplona.amethyst.commons.tor.parseTorType
 import com.vitorpamplona.amethyst.commons.tor.resourceId
+import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
@@ -92,7 +93,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import org.jetbrains.compose.resources.StringResource

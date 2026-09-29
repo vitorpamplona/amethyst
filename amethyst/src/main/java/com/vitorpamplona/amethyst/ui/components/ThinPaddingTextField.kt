@@ -20,14 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.content.MediaType
-import androidx.compose.foundation.content.ReceiveContentListener
-import androidx.compose.foundation.content.TransferableContent
-import androidx.compose.foundation.content.consume
-import androidx.compose.foundation.content.contentReceiver
-import androidx.compose.foundation.content.hasMediaType
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,6 +53,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.ui.components.imageContentReceiver
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
 // COPIED FROM TEXT FIELD
@@ -72,7 +67,7 @@ fun ThinPaddingTextField(
     state: TextFieldState,
     modifier: Modifier = Modifier,
     onTextChanged: (() -> Unit)? = null,
-    onContentReceived: ((Uri, String?) -> Unit)? = null,
+    onContentReceived: ((MediaUri, String?) -> Unit)? = null,
     enabled: Boolean = true,
     readOnly: Boolean = false,
     textStyle: TextStyle = LocalTextStyle.current,
@@ -142,30 +137,7 @@ fun ThinPaddingTextField(
 
     val contentModifier =
         if (onContentReceived != null) {
-            modifier.contentReceiver(
-                object : ReceiveContentListener {
-                    override fun onReceive(transferableContent: TransferableContent): TransferableContent? {
-                        if (!transferableContent.hasMediaType(MediaType.Image)) {
-                            return transferableContent
-                        }
-                        val remaining =
-                            transferableContent.consume { item ->
-                                val uri = item.uri
-                                if (uri != null) {
-                                    onContentReceived(
-                                        uri,
-                                        transferableContent.clipEntry.clipData.description
-                                            .getMimeType(0),
-                                    )
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                        return remaining
-                    }
-                },
-            )
+            modifier.imageContentReceiver(onContentReceived)
         } else {
             modifier
         }
