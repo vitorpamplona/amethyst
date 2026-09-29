@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
+import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -68,14 +69,18 @@ data class ConcordChatMessage(
 )
 
 /**
- * One channel's Chat Plane at a prior epoch: the epoch-invariant [channelIdHex], the [epoch] the
- * wraps are bound to (for `isBoundTo` validation), and the derived [key] to decrypt them.
+ * One channel's Chat Plane: the epoch-invariant [channelIdHex], the [epoch] its rumors are bound to
+ * (for `isBoundTo` validation — the root epoch for a Public Channel, the channel's own epoch for a
+ * Private one, CORD-03 §1), and the derived [key] its wraps are addressed by and decrypt under.
  */
-data class HistoricalChannelPlane(
+data class ChannelPlane(
     val channelIdHex: HexKey,
     val epoch: Long,
     val key: GroupKey,
 )
+
+/** A [ChannelPlane] at a prior epoch (pre-Refounding history). */
+typealias HistoricalChannelPlane = ChannelPlane
 
 /**
  * Concord community verbs — pure builders, plane-key derivation, relay-filter
@@ -141,6 +146,92 @@ object ConcordActions {
         channelId: ByteArray,
         rootEpoch: Long,
     ): GroupKey = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+    private val HEX64 = Regex("^[0-9a-fA-F]{64}$")
+
+    /**
+     * The independent key this account holds for Private Channel [channelIdHex] (delivered on grant
+     * and carried in the Community List's `privateChannels`, CORD-03 §1 / CORD-02 §8), or null when
+     * it holds none. A keyless entry (a writer listing a public channel as `{id, epoch}`) is not a key.
+     */
+    fun heldPrivateChannelKey(
+        entry: ConcordCommunityListEntry,
+        channelIdHex: HexKey,
+    ): PrivateChannelKey? = entry.privateChannels.firstOrNull { it.channelId.equals(channelIdHex, ignoreCase = true) && HEX64.matches(it.key) }
+
+    /**
+     * The Chat Plane a channel is **written** on, or null when this account cannot write it
+     * (CORD-03 §1):
+     *  - Public: `group_key("concord/channel", community_root, channel_id, root_epoch)`, bound to
+     *    the root epoch;
+     *  - Private: `group_key("concord/channel", channel_key, channel_id, channel_epoch)` from the
+     *    held key, bound to the **channel** epoch — and null when no key is held. A Private Channel
+     *    must never fall back to the root-derived plane: every member decrypts that one, so a post
+     *    there would be public to the whole community under a Lock icon.
+     */
+    fun currentChannelPlane(
+        entry: ConcordCommunityListEntry,
+        channelIdHex: HexKey,
+        isPrivate: Boolean,
+    ): ChannelPlane? {
+        val channelId = channelIdHex.hexToByteArray()
+        if (isPrivate) {
+            val held = heldPrivateChannelKey(entry, channelIdHex) ?: return null
+            return ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
+        }
+        return ChannelPlane(channelIdHex, entry.rootEpoch, publicChannel(entry.root.hexToByteArray(), channelId, entry.rootEpoch))
+    }
+
+    /**
+     * [currentChannelPlane] for a channel of the folded [state], or null when the channel is not in
+     * the fold (unknown or deleted) or is Private with no held key.
+     */
+    fun currentChannelPlane(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+        channelIdHex: HexKey,
+    ): ChannelPlane? {
+        val def = state.channels[channelIdHex]?.definition ?: return null
+        return currentChannelPlane(entry, channelIdHex, def.private)
+    }
+
+    /**
+     * The older Chat Planes of a channel this account can still read, beside [currentChannelPlane]:
+     *  - Public: its plane under every held prior root ([historicalChannelPlanes]), plus the
+     *    private-era plane when a channel key is held (a channel that was Private before);
+     *  - Private: none. Only the channel-key planes are its own; the root-derived plane is readable
+     *    by every member, so showing it would present public content as private (Armada
+     *    `channelsView`). With no priors kept per channel key, that leaves nothing.
+     */
+    fun historicalChannelPlanes(
+        entry: ConcordCommunityListEntry,
+        channelIdHex: HexKey,
+        isPrivate: Boolean,
+    ): List<ChannelPlane> {
+        if (isPrivate) return emptyList()
+        val rootEras = historicalChannelPlanes(entry.heldRoots, listOf(channelIdHex))
+        val privateEra =
+            heldPrivateChannelKey(entry, channelIdHex)?.let { held ->
+                ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelIdHex.hexToByteArray(), held.epoch))
+            }
+        return rootEras + listOfNotNull(privateEra)
+    }
+
+    /**
+     * The Private Channel keys an [invite] delivers (CORD-05 §1), as Community List entries. A
+     * keyless listing (a public channel written as `{id, epoch}`) delivers nothing.
+     */
+    fun privateChannelKeysOf(invite: CommunityInvite): List<PrivateChannelKey> =
+        invite.channels
+            .filter { HEX64.matches(it.id) && HEX64.matches(it.key) }
+            .map { PrivateChannelKey(it.id.lowercase(), it.key.lowercase(), it.epoch, it.name) }
+
+    /** True when this account can read and write [channelIdHex] as folded in [state]. */
+    fun canAccessChannel(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+        channelIdHex: HexKey,
+    ): Boolean = currentChannelPlane(entry, state, channelIdHex) != null
 
     /**
      * How many prior epochs of channel history to backfill. A CORD-06 Refounding rotates the
@@ -344,6 +435,24 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
+    /**
+     * Builds an encrypted-seal **delete** wrap (kind-5 [ChannelChat.delete] of the author's own
+     * [targets]) on the [channel] plane — the in-stream delete of CORD-01. Never publish a Concord
+     * delete any other way: a signed kind 5 or a NIP-17 delete would carry the rumor ids outside
+     * the community.
+     */
+    suspend fun buildChannelDelete(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        targets: List<Event>,
+        createdAt: Long,
+    ): Event {
+        val rumor = ChannelChat.delete(authorSigner.pubKey, channelId, epoch, targets, createdAt)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
     /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
     suspend fun buildChannelReaction(
         authorSigner: NostrSigner,
@@ -376,8 +485,9 @@ object ConcordActions {
     }
 
     /**
-     * Opens the channel [wraps], keeps the kind-9 messages correctly bound to
-     * [channelId]/[epoch], and returns them oldest-first (createdAt, then id).
+     * Opens the channel [wraps], keeps the kind-9 messages that pass the Chat ingest gate
+     * ([channelRumors]), and returns them oldest-first by their CORD-02 §4 send time
+     * (`created_at * 1000 + ms`), then id.
      */
     fun channelMessages(
         wraps: List<Event>,
@@ -385,11 +495,11 @@ object ConcordActions {
         channelId: HexKey,
         epoch: Long,
     ): List<ConcordChatMessage> =
-        wraps
-            .mapNotNull { wrap -> ConcordStreamEnvelope.openOrNull(wrap, channel)?.rumor }
-            .filter { it.kind == ChatEvent.KIND && ChannelChat.isBoundTo(it, channelId, epoch) }
+        channelRumors(wraps, channel, channelId, epoch)
+            .filter { it.kind == ChatEvent.KIND }
+            .distinctBy { it.id }
+            .sortedWith(compareBy({ ChannelChat.orderingMs(it) }, { it.id }))
             .map { ConcordChatMessage(it.id, it.pubKey, it.content, it.createdAt, channelId, epoch) }
-            .sortedWith(compareBy({ it.createdAt }, { it.id }))
 
     /**
      * Opens the channel [wraps] and returns every validated inner rumor bound to
@@ -404,10 +514,20 @@ object ConcordActions {
         channel: GroupKey,
         channelId: HexKey,
         epoch: Long,
-    ): List<Event> =
-        wraps
-            .mapNotNull { wrap -> ConcordStreamEnvelope.openOrNull(wrap, channel)?.rumor }
-            .filter { ChannelChat.isBoundTo(it, channelId, epoch) }
+    ): List<Event> = wraps.mapNotNull { wrap -> openChannelRumor(wrap, channel, channelId, epoch) }
+
+    /**
+     * Opens one channel [wrap] and returns its rumor only when it passes the Chat ingest gate
+     * ([ChannelChat.acceptOpened]): an encrypted 20013 seal, a Chat kind (never another plane's
+     * kind), a strict `channel`/`epoch` binding, and a well-formed `ms`. Anything else is dropped
+     * here, before it can reach the store.
+     */
+    fun openChannelRumor(
+        wrap: Event,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch) }
 
     // ---- invites --------------------------------------------------------------
 

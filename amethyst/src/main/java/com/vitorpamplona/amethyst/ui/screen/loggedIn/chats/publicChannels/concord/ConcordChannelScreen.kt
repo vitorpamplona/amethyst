@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
+import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_no_key
 import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
@@ -123,6 +124,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -264,6 +266,10 @@ fun ConcordChannelScreen(
                 // CORD-02 §9: an owner-signed tombstone seals the community read-only — the composer is
                 // gone (canPost() is false) and this replaces it so the seal is explained, not silent.
                 ConcordDissolvedNotice()
+            } else if (!channel.keyHeld) {
+                // CORD-03 §1: a Private Channel is keyed independently; without its key there is no
+                // plane only its members can read, so nothing may be posted (never to the root plane).
+                ConcordReadOnlyNotice(Res.string.concord_private_channel_no_key)
             }
         }
     }
@@ -274,9 +280,13 @@ fun ConcordChannelScreen(
  * The tombstone seals the community: history stays readable, but no member may post again.
  */
 @Composable
-private fun ConcordDissolvedNotice() {
+private fun ConcordDissolvedNotice() = ConcordReadOnlyNotice(Res.string.concord_dissolved_read_only)
+
+/** A one-line explanation shown where the composer would be when this channel cannot be posted to. */
+@Composable
+private fun ConcordReadOnlyNotice(message: StringResource) {
     Text(
-        text = stringRes(Res.string.concord_dissolved_read_only),
+        text = stringRes(message),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.placeholderText,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),

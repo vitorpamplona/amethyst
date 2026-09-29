@@ -122,24 +122,28 @@ object ConcordSubscriptionPlanner {
         entry: ConcordCommunityListEntry,
         state: ConcordCommunityState,
     ): List<ConcordPlaneSub> {
-        val root = entry.root.hexToByteArray()
         val relays = normalize(entry.relays)
+        // A Private Channel is subscribed on its own key's plane only, and not at all without a held
+        // key (CORD-03 §1): never on the root-derived plane every member can read.
         val current =
-            state.channels.keys.map { channelIdHex ->
-                val ch = ConcordActions.publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-                ConcordPlaneSub(
-                    channelId = ConcordChannelId(entry.id, channelIdHex),
-                    pubKeyHex = ch.publicKeyHex,
-                    relays = relays,
-                )
+            state.channels.values.mapNotNull { channel ->
+                ConcordActions.currentChannelPlane(entry, channel.channelIdHex, channel.definition.private)?.let { plane ->
+                    ConcordPlaneSub(
+                        channelId = ConcordChannelId(entry.id, plane.channelIdHex),
+                        pubKeyHex = plane.key.publicKeyHex,
+                        relays = relays,
+                    )
+                }
             }
         val historical =
-            ConcordActions.historicalChannelPlanes(entry.heldRoots, state.channels.keys).map { plane ->
-                ConcordPlaneSub(
-                    channelId = ConcordChannelId(entry.id, plane.channelIdHex),
-                    pubKeyHex = plane.key.publicKeyHex,
-                    relays = relays,
-                )
+            state.channels.values.flatMap { channel ->
+                ConcordActions.historicalChannelPlanes(entry, channel.channelIdHex, channel.definition.private).map { plane ->
+                    ConcordPlaneSub(
+                        channelId = ConcordChannelId(entry.id, plane.channelIdHex),
+                        pubKeyHex = plane.key.publicKeyHex,
+                        relays = relays,
+                    )
+                }
             }
         return current + historical
     }

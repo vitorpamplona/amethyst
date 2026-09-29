@@ -676,9 +676,9 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord create --name NAME [--about T] [--relay wss://a,wss://b]` | Create an encrypted Concord community. `--relay` is canonical; `--relays` is accepted as an alias. |
 | `amy concord list` | List joined Concord communities. |
 | `amy concord import` | Fetch + decrypt this account's Community List — the kind:33302 fragments plus the retired kind:13302 (carries heldRoots, CORD-06). |
-| `amy concord channels COMMUNITY` | List a community's channels. |
-| `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). |
-| `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane. |
+| `amy concord channels COMMUNITY` | List a community's channels; `readable` is false for a private channel whose key this account does not hold (CORD-03 §1). |
+| `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). A private channel posts on its own key's plane; without a held key it fails with `no_channel_key` instead of falling back to the community-wide plane. |
+| `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane (public channels; a private channel reads its held key's plane). |
 | `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link. |
 | `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, then records it in your Invite List. |
 | `amy concord join URL` | Redeem an invite link and save the community. |

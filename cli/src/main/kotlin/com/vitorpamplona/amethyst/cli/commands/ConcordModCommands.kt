@@ -483,12 +483,15 @@ object ConcordModCommands {
     ): Set<String> {
         val out = HashSet<String>()
         val relays = ConcordCommands.relaysFor(ctx, sc)
-        for ((channelIdHex, _) in state.channels) {
+        val entry = ConcordCommands.entryFor(sc)
+        for (channelIdHex in state.channels.keys) {
+            // A Private Channel we hold no key for has no plane we may read (CORD-03 §1).
+            val plane = ConcordActions.currentChannelPlane(entry, state, channelIdHex) ?: continue
             runCatching {
-                val key = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelIdHex.hexToByteArray(), sc.rootEpoch)
+                val key = plane.key
                 ctx.registerConcordStreamKeys(relays, listOf(key.secretKey))
                 val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(key.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
-                ConcordActions.channelMessages(wraps, key, channelIdHex, sc.rootEpoch).mapTo(out) { it.author.lowercase() }
+                ConcordActions.channelMessages(wraps, key, channelIdHex, plane.epoch).mapTo(out) { it.author.lowercase() }
             }
         }
         return out

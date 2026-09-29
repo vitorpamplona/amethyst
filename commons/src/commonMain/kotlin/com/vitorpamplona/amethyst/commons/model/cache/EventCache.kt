@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
@@ -971,6 +972,11 @@ open class EventCache :
         rumor: Event,
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
+        // Defense in depth behind the session's Chat ingest gate: a channel plane carries Chat kinds
+        // only (CORD-02 Appendix B). Another plane's kind — a Control edition, a Guestbook motion, a
+        // rekey blob — must never land in the store as if it came from its own plane.
+        if (!ChannelChat.isChatKind(rumor.kind)) return
+
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through
         // the Messages-list incremental filter (which routes rows by that gatherer).

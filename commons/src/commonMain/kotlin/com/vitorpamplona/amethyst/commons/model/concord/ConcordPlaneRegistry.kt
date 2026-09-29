@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.concord.envelope.OpenedStreamEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 
 /** What kind of plane an address belongs to. */
 enum class ConcordPlaneKind {
@@ -105,17 +104,18 @@ class ConcordPlaneRegistry {
             }
         }
 
-    /** Registers the Chat Plane address of every channel in a folded community [state]. */
+    /**
+     * Registers the current Chat Plane address of every channel in a folded community [state] this
+     * account can read: a Public Channel's root-derived plane, a Private Channel's held-key plane,
+     * and nothing for a Private Channel whose key is not held (CORD-03 §1).
+     */
     fun registerChannels(
         entry: ConcordCommunityListEntry,
         state: ConcordCommunityState,
     ) = lock.withLock {
-        val root = entry.root.hexToByteArray()
-        for (channelIdHex in state.channels.keys) {
-            val ch =
-                com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
-                    .publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-            planes[ch.publicKeyHex] = ConcordPlane(ConcordPlaneKind.CHANNEL, entry.id, ConcordChannelId(entry.id, channelIdHex), ch)
+        for (channel in state.channels.values) {
+            val plane = ConcordActions.currentChannelPlane(entry, channel.channelIdHex, channel.definition.private) ?: continue
+            planes[plane.key.publicKeyHex] = ConcordPlane(ConcordPlaneKind.CHANNEL, entry.id, ConcordChannelId(entry.id, plane.channelIdHex), plane.key)
         }
     }
 

@@ -55,6 +55,14 @@ class ConcordChannel(
     var isPrivate: Boolean = false
         private set
 
+    /**
+     * False for a Private Channel whose independent key this account does not hold (CORD-03 §1):
+     * its plane can be neither read nor written, and it must never fall back to the root-derived
+     * plane every member can decrypt. Always true for a Public Channel.
+     */
+    var keyHeld: Boolean = true
+        private set
+
     /** The parent community's display name, from its folded metadata. */
     var communityName: String? = null
         private set
@@ -107,6 +115,7 @@ class ConcordChannel(
         state: ConcordCommunityState,
         relays: Set<NormalizedRelayUrl>,
         myPubKey: HexKey,
+        keyHeld: Boolean = true,
     ): Boolean {
         val def = state.channels[channelId.channelId]?.definition
         // Channel fields keep their prior value until the channel edition folds.
@@ -117,6 +126,7 @@ class ConcordChannel(
         val newCommunityBanner = state.metadata?.banner
         val newMembership = ConcordMembership.of(state.authority, myPubKey)
         val newDissolved = state.dissolved
+        val newKeyHeld = !newPrivate || keyHeld
 
         val changed =
             channelName != newChannelName ||
@@ -125,7 +135,8 @@ class ConcordChannel(
                 communityIcon != newCommunityIcon ||
                 communityBanner != newCommunityBanner ||
                 membership != newMembership ||
-                dissolved != newDissolved
+                dissolved != newDissolved ||
+                this.keyHeld != newKeyHeld
 
         channelName = newChannelName
         isPrivate = newPrivate
@@ -135,6 +146,7 @@ class ConcordChannel(
         communityRelays = relays
         membership = newMembership
         dissolved = newDissolved
+        this.keyHeld = newKeyHeld
         return changed
     }
 
@@ -148,8 +160,11 @@ class ConcordChannel(
      * ([ConcordMembership.isMember]) **and** the community must not have been dissolved (CORD-02 §9 —
      * a tombstone seals it read-only for everyone). Deleting one's own past message stays allowed even
      * after dissolution and does not go through this gate.
+     *
+     * A Private Channel whose key this account does not hold is never postable ([keyHeld]): there
+     * is no plane to write to that only its members can read.
      */
-    fun canPost(): Boolean = membership.isMember() && !dissolved
+    fun canPost(): Boolean = membership.isMember() && !dissolved && keyHeld
 
     // Synthetic note representing this channel in the Messages list before any
     // message has loaded (so a just-joined channel appears immediately). Mirrors

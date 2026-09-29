@@ -85,6 +85,9 @@ class ConcordSessionRegistry(
                     // buffered wraps and fold the community empty, and the plane's address is
                     // invariant under adoption anyway (CORD-02 §5).
                     existing.adoptControlMaterial(entry)
+                    // Likewise a Private Channel key delivered on grant (CORD-03 §1): re-derive the
+                    // channel planes in place so the channel becomes readable and writable.
+                    existing.adoptPrivateChannels(entry)
                 }
             }
             created
