@@ -24,9 +24,9 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
+import com.vitorpamplona.amethyst.commons.ui.platform.QrCodeScannerDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ScanOutcome
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException

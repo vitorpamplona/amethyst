@@ -51,9 +51,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt

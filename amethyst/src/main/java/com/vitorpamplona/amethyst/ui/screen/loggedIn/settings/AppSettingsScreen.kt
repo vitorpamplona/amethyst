@@ -30,22 +30,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,7 +56,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,7 +116,6 @@ import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplifi
 import com.vitorpamplona.amethyst.commons.resources.ui_style
 import com.vitorpamplona.amethyst.commons.resources.ui_style_description
 import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
-import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -134,7 +127,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.previewColor
 import com.vitorpamplona.amethyst.commons.ui.theme.toFontFamily
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -215,53 +207,6 @@ fun SettingsScreen(
             UiModeTile(sharedPrefs)
             SettingsDivider()
             ImmersiveScrollingTile(sharedPrefs)
-        }
-    }
-}
-
-/**
- * A [SettingsBlockTile] whose control is a full-width [SingleChoiceSegmentedButtonRow].
- * This is the in-screen replacement for the old dropdown ([TextSpinner]) rows: every
- * option is visible and one tap away. Best for 2–4 mutually-exclusive options.
- *
- * [optionTextStyle] lets each option render its own label preview — e.g. the font tiles
- * draw each label in the very typeface / size it selects, so the row demonstrates the
- * choices instead of only naming them.
- */
-@Composable
-internal fun <T> SegmentedChoiceTile(
-    icon: MaterialSymbol,
-    title: StringResource,
-    description: StringResource,
-    options: List<T>,
-    labelRes: (T) -> StringResource,
-    selected: T,
-    onSelect: (T) -> Unit,
-    optionTextStyle: (@Composable (T) -> TextStyle)? = null,
-) {
-    SettingsBlockTile(
-        icon = icon,
-        title = stringRes(title),
-        description = stringRes(description),
-    ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            options.forEachIndexed { index, option ->
-                SegmentedButton(
-                    selected = option == selected,
-                    onClick = { onSelect(option) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                    // Drop the default check icon: the fill already signals selection, and the icon
-                    // steals ~24dp that the label needs in a 3–4-up row.
-                    icon = {},
-                ) {
-                    Text(
-                        text = stringRes(labelRes(option)),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = optionTextStyle?.invoke(option) ?: LocalTextStyle.current,
-                    )
-                }
-            }
         }
     }
 }
@@ -613,94 +558,6 @@ private fun AccentColorSwatch(
                 contentDescription = null,
                 tint = contentColorOnAccent(color),
                 modifier = Modifier.size(20.dp),
-            )
-        }
-    }
-}
-
-@Composable
-fun SettingsRow(
-    name: StringResource,
-    description: StringResource,
-    selectedItems: ImmutableList<TitleExplainer>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-) {
-    SettingsRow(name, description) {
-        TextSpinner(
-            label = "",
-            placeholder = selectedItems[selectedIndex].title,
-            options = selectedItems,
-            onSelect = onSelect,
-            modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-        )
-    }
-}
-
-@Composable
-fun SettingsRow(
-    name: StringResource,
-    description: StringResource,
-    modifier: Modifier = Modifier.fillMaxWidth(),
-    content: @Composable () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Column(
-            modifier = Modifier.weight(2.0f),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Text(
-                text = stringRes(name),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringRes(description),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Column(
-            Modifier.weight(1f),
-            horizontalAlignment = Alignment.End,
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-fun SettingsRow(
-    name: StringResource,
-    description: StringResource,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Column(
-            modifier = Modifier.weight(2.0f),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Text(
-                text = stringRes(name),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringRes(description),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

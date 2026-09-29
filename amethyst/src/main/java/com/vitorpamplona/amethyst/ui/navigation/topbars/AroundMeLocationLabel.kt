@@ -40,10 +40,10 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
 import com.vitorpamplona.amethyst.commons.resources.loading_location
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 
 /** The "around me" feed's subtitle: asks for location, then shows the city it resolved to. */
 @OptIn(ExperimentalPermissionsApi::class)

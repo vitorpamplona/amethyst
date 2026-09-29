@@ -63,7 +63,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -74,7 +73,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
@@ -82,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
 import com.vitorpamplona.amethyst.commons.browser.SuggestedWebApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
+import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_address_hint
 import com.vitorpamplona.amethyst.commons.resources.browser_clear
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
@@ -104,21 +104,21 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nsites.datasource.NsitesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
-import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.favoriteAppItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import org.jetbrains.compose.resources.StringResource
-import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** How many of the most recent history entries the idle browser home surfaces under "Recent". */
 private const val RECENTS_LIMIT = 12
@@ -150,13 +150,14 @@ private fun BrowserLauncher(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
+    val appServices = LocalAppServices.current
+    val appLauncher = rememberAppLauncher()
     val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
-    val apps by Amethyst.instance.favoriteApps.favorites
+    val apps by appServices.favoriteApps.favorites
         .collectAsStateWithLifecycle()
-    val history by Amethyst.instance.browserHistory.history
+    val history by appServices.browserHistory.history
         .collectAsStateWithLifecycle()
-    val iconKeys by Amethyst.instance.browserIcons.keys
+    val iconKeys by appServices.browserIcons.keys
         .collectAsStateWithLifecycle()
 
     // Fetch favorited nsite/napplet manifests up front so tapping one launches immediately instead of
@@ -227,7 +228,7 @@ private fun BrowserLauncher(
 
     fun open(text: String) {
         val target = OmniboxInput.resolve(text) ?: return
-        FavoriteAppLauncher.launchUrl(context, target.url, target.forceTor)
+        appLauncher.launchUrl(target.url, target.forceTor)
     }
 
     // Pin/unpin a plain web URL by its favorite id. Shared by the suggestion list and the Recent rows.
@@ -236,10 +237,10 @@ private fun BrowserLauncher(
         label: String,
     ) {
         val id = "url:$url"
-        if (Amethyst.instance.favoriteApps.isFavorite(id)) {
-            Amethyst.instance.favoriteApps.remove(id)
+        if (appServices.favoriteApps.isFavorite(id)) {
+            appServices.favoriteApps.remove(id)
         } else {
-            Amethyst.instance.favoriteApps.add(FavoriteApp.WebApp(url, label.ifBlank { OmniboxInput.hostOf(url) ?: url }, System.currentTimeMillis()))
+            appServices.favoriteApps.add(FavoriteApp.WebApp(url, label.ifBlank { OmniboxInput.hostOf(url) ?: url }, System.currentTimeMillis()))
         }
     }
 
@@ -291,7 +292,7 @@ private fun BrowserLauncher(
                     historyUrls = historyUrls,
                     onOpen = { open(it.url) },
                     onToggleFavorite = { toggleFavorite(it.url, it.label) },
-                    onRemoveFromHistory = { Amethyst.instance.browserHistory.remove(it) },
+                    onRemoveFromHistory = { appServices.browserHistory.remove(it) },
                     modifier = contentModifier,
                 )
             else -> {
@@ -306,12 +307,12 @@ private fun BrowserLauncher(
                     suggested = suggested,
                     nsites = followedNsites,
                     napplets = followedNapplets,
-                    onOpenApp = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
-                    onRemoveApp = { Amethyst.instance.favoriteApps.remove(it.id) },
-                    onAddApp = { Amethyst.instance.favoriteApps.add(it) },
+                    onOpenApp = { appLauncher.launch(it, appStillLoadingStr) },
+                    onRemoveApp = { appServices.favoriteApps.remove(it.id) },
+                    onAddApp = { appServices.favoriteApps.add(it) },
                     onOpenUrl = { open(it) },
                     onToggleRecentFavorite = { entry -> toggleFavorite(entry.url, entry.title.ifBlank { entry.host }) },
-                    onRemoveRecent = { Amethyst.instance.browserHistory.remove(it) },
+                    onRemoveRecent = { appServices.browserHistory.remove(it) },
                     modifier = contentModifier,
                 )
             }
@@ -348,7 +349,7 @@ private fun OmniBar(
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            placeholder = { Text(stringRes(CommonsR.string.browser_address_hint)) },
+            placeholder = { Text(stringRes(Res.string.browser_address_hint)) },
             keyboardOptions =
                 KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
@@ -572,7 +573,8 @@ private fun SuggestedRow(
     onClick: () -> Unit,
     onAddFavorite: () -> Unit,
 ) {
-    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(Amethyst.instance.browserIcons::iconModelFor) }
+    val appServices = LocalAppServices.current
+    val iconModel = remember(entry, iconKeys) { OmniboxInput.hostOf(entry.app.url)?.let(appServices.browserIcons::iconModelFor) }
     Row(
         modifier =
             Modifier
@@ -644,7 +646,7 @@ private fun List<Note>.toDiscoverApps(
 /** Resolve a cached nsite/napplet manifest note into a launchable favorite + its description, or null. */
 private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val event = event ?: return null
-    val coordinate = FavoriteAppLauncher.coordinateOf(event)
+    val coordinate = favoriteCoordinateOf(event)
     val label: String
     val description: String?
     when (event) {
@@ -803,7 +805,8 @@ private fun SiteIcon(
     iconKeys: Set<String>,
     modifier: Modifier = Modifier,
 ) {
-    val model = remember(host, iconKeys) { Amethyst.instance.browserIcons.iconModelFor(host) }
+    val appServices = LocalAppServices.current
+    val model = remember(host, iconKeys) { appServices.browserIcons.iconModelFor(host) }
     val symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.Public
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     if (model == null) {

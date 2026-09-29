@@ -55,7 +55,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -88,7 +87,7 @@ fun RelayStatusBar(
             .connectedRelaysFlow()
             .collectAsStateWithLifecycle()
     val authState =
-        Amethyst.instance.authCoordinator.receiver.authStateFlow
+        accountViewModel.host.relayAuthState
             .collectAsStateWithLifecycle()
     val buzzState = BuzzRelayDialect.flow.collectAsStateWithLifecycle()
     val info by loadRelayInfo(relay)

@@ -44,10 +44,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.Channel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId

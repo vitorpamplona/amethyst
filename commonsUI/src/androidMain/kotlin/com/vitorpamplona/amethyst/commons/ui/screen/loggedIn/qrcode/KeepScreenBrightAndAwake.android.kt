@@ -18,23 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalView
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 
-/**
- * Pins the screen to full brightness, and awake, while a QR code is on it.
- *
- * Half of "this QR code will not scan" is the phone showing it. A dark-mode OLED at the
- * auto-brightness the room asked for can put so little contrast between the black and white
- * modules that the other camera's binarizer cannot separate them — and the person holding it has
- * no idea that is the problem, because to a human eye the code looks perfectly clear.
- */
 @Composable
-fun KeepScreenBrightAndAwake() {
+actual fun KeepScreenBrightAndAwake() {
     val view = LocalView.current
     // NOT `(view.context as? Activity)`: under Compose the context is routinely a
     // ContextThemeWrapper, so that cast silently yields null and brightness never changes —

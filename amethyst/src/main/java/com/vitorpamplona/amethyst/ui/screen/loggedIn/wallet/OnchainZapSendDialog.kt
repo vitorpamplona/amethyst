@@ -126,6 +126,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
@@ -144,7 +145,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
-import java.text.NumberFormat
 
 /** Shared with the profile Send Payment screen's on-chain rail. */
 internal enum class FeeTier(
@@ -706,7 +706,7 @@ private fun AmountSection(
     if (belowMinimum) {
         Spacer(Modifier.height(4.dp))
         Text(
-            text = stringRes(Res.string.onchain_send_min_warning, NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)),
+            text = stringRes(Res.string.onchain_send_min_warning, formatGrouped(MIN_ONCHAIN_ZAP_SATS)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error,
         )
@@ -806,7 +806,7 @@ private fun SendButton(
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.size(8.dp))
-        val sats = if (amountSats != null && amountSats > 0) NumberFormat.getNumberInstance().format(amountSats) else null
+        val sats = if (amountSats != null && amountSats > 0) formatGrouped(amountSats) else null
         Text(
             text =
                 when {
@@ -866,7 +866,7 @@ private fun SplitsRecipientSection(
                     if (share != null) {
                         val belowDust = share.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS
                         Text(
-                            text = "${NumberFormat.getNumberInstance().format(share.sats)} sats",
+                            text = "${formatGrouped(share.sats)} sats",
                             style = MaterialTheme.typography.bodySmall,
                             color =
                                 if (belowDust) {
@@ -971,12 +971,12 @@ private fun SuccessBody(result: OnchainZapSendResult.Success) {
         ResultRow(stringRes(Res.string.onchain_send_result_transaction), result.txid)
         ResultRow(
             stringRes(Res.string.onchain_send_result_fee),
-            stringRes(Res.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.feeSats)),
+            stringRes(Res.string.onchain_send_sats_amount, formatGrouped(result.feeSats)),
         )
         if (result.changeSats > 0) {
             ResultRow(
                 stringRes(Res.string.onchain_send_result_change),
-                stringRes(Res.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.changeSats)),
+                stringRes(Res.string.onchain_send_sats_amount, formatGrouped(result.changeSats)),
             )
         }
     }

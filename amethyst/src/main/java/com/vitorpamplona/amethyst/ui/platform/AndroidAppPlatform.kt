@@ -20,18 +20,31 @@
  */
 package com.vitorpamplona.amethyst.ui.platform
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
+import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRememberNappletIconModel
+import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel as AppRememberWebAppIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerContent as AppGeohashLocationPickerContent
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog as AppGeohashLocationPickerDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel as AppRememberConcordImageModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog as AppQrCodeScannerDialog
 
-/** Android's [AppPlatform]: the app's own bottom bar and location label. */
+/** Android's [AppPlatform]: the app's own shell pieces, camera scanner, app launcher and icon caches. */
 object AndroidAppPlatform : AppPlatform {
     @Composable
     override fun AppBottomBar(
@@ -58,4 +71,48 @@ object AndroidAppPlatform : AppPlatform {
         onConfirm: (String) -> Unit,
         modifier: Modifier,
     ) = AppGeohashLocationPickerContent(initialGeohash, confirmLabel, onConfirm, modifier)
+
+    @Composable
+    override fun QrCodeScannerDialog(
+        onDismiss: () -> Unit,
+        onScan: (String) -> ScanOutcome,
+    ) = AppQrCodeScannerDialog(onDismiss, onScan)
+
+    @Composable
+    override fun rememberAppLauncher(): AppLauncher {
+        val context = LocalContext.current
+        return remember(context) { AndroidAppLauncher(context) }
+    }
+
+    @Composable
+    override fun rememberConcordImageModel(
+        pointer: ImagePointer?,
+        accountViewModel: AccountViewModel,
+    ): String? = AppRememberConcordImageModel(pointer, accountViewModel)
+
+    @Composable
+    override fun rememberNappletIconModel(coordinate: String): String? = AppRememberNappletIconModel(coordinate)
+
+    @Composable
+    override fun rememberManifestIconModel(
+        author: String,
+        identifier: String,
+    ): String? = AppRememberManifestIconModel(author, identifier)
+
+    @Composable
+    override fun rememberWebAppIconModel(url: String): String? = AppRememberWebAppIconModel(url)
+}
+
+private class AndroidAppLauncher(
+    private val context: Context,
+) : AppLauncher {
+    override fun launch(
+        app: FavoriteApp,
+        stillLoading: String,
+    ) = FavoriteAppLauncher.launch(context, app, stillLoading)
+
+    override fun launchUrl(
+        url: String,
+        preferTor: Boolean,
+    ) = FavoriteAppLauncher.launchUrl(context, url, preferTor)
 }

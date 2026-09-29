@@ -106,10 +106,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheLabelRes
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheGeohash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheSize

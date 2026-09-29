@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppAuthorLine
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppIcon
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppLinksColumn
@@ -99,7 +100,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address

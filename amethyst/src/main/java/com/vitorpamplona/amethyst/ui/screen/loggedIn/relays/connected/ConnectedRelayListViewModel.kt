@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
@@ -36,7 +35,7 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
 
         return relayList
             .map {
-                val reqs = Amethyst.instance.client.activeRequests(it)
+                val reqs = account.client.activeRequests(it)
 
                 val users = mutableSetOf<HexKey>()
                 reqs.forEach { _, filters ->
@@ -55,9 +54,9 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
 
                 BasicRelaySetupInfo(
                     relay = it,
-                    relayStat = Amethyst.instance.relayStats.get(it),
+                    relayStat = accountViewModel.host.relayStats.get(it),
                     forcesTor =
-                        Amethyst.instance.torEvaluatorFlow.flow.value
+                        accountViewModel.host.torRelayEvaluation.value
                             .useTor(it),
                     users = users.mapNotNull { hex -> LocalCache.checkGetOrCreateUser(hex) },
                 )

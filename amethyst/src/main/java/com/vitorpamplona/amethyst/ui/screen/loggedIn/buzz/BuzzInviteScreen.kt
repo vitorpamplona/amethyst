@@ -47,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,9 +68,10 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_invite_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_workspace
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -85,7 +85,7 @@ import kotlinx.coroutines.launch
  * a flow the Buzz web app already implements and drives through `window.nostr`. So rather than
  * re-implement the legally-sensitive age/privacy consent natively, this confirms the workspace,
  * marks its relay as a Buzz dialect, and hands the URL to the in-app `window.nostr` browser
- * ([FavoriteAppLauncher.launchUrl] → the sandboxed WebView), where the SPA signs the claim with
+ * ([AppLauncher.launchUrl] → the sandboxed WebView), where the SPA signs the claim with
  * the user's key. The user returns here (or to the app) once enrolled.
  */
 @Composable
@@ -95,7 +95,7 @@ fun BuzzInviteScreen(
     nav: INav,
 ) {
     val invite = remember(link) { BuzzInviteLink.parse(link) }
-    val context = LocalContext.current
+    val appLauncher = rememberAppLauncher()
     val scope = rememberCoroutineScope()
     var launched by remember { mutableStateOf(false) }
 
@@ -201,7 +201,7 @@ fun BuzzInviteScreen(
                             accountViewModel.account.buzzWorkspaces.join(relay)
                             scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
                         }
-                        FavoriteAppLauncher.launchUrl(context, link)
+                        appLauncher.launchUrl(link)
                         launched = true
                     },
                     enabled = !expired,

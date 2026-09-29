@@ -54,7 +54,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -103,6 +102,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SegmentedChoiceTile
@@ -111,7 +112,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsControlRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
-import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
@@ -119,7 +119,7 @@ import org.jetbrains.compose.resources.StringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacyOptionsScreen(nav: INav) {
-    PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav)
+    PrivacyOptionsScreen(LocalAppServices.current.torSettings, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

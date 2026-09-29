@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -42,11 +42,6 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import com.google.zxing.qrcode.encoder.ByteMatrix
-import com.google.zxing.qrcode.encoder.Encoder
-import com.google.zxing.qrcode.encoder.QRCode
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import kotlin.math.min
 
@@ -79,7 +74,7 @@ fun QrCodeDrawer(
     contents: String,
     modifier: Modifier = Modifier,
 ) {
-    val qrCode = remember(contents) { createQrCode(contents = contents) }
+    val matrix = remember(contents) { encodeQrMatrix(contents) }
 
     val foregroundColor = Color.Black
 
@@ -91,63 +86,59 @@ fun QrCodeDrawer(
                 .aspectRatio(1f)
                 .background(Color.White),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            // Calculate the height and width of each column/row
-            // Solve for the module size with the quiet zone measured in modules, so the whole code
-            // (zone included) is exactly as wide as the canvas.
-            val rowHeight = size.height / (qrCode.matrix.height + QR_QUIET_ZONE_MODULES * 2f)
-            val columnWidth = size.width / (qrCode.matrix.width + QR_QUIET_ZONE_MODULES * 2f)
-            // Scale the rounding with the module size. A fixed 20px radius is a gentle touch on
-            // a large code and a serious deformation on a small one: the finder patterns are what
-            // a decoder locates first, and rounding away a third of a module's worth of their
-            // corners is exactly the kind of damage that makes a code readable on screen and
-            // unreadable in a photo of that screen.
-            val radius = CornerRadius(min(columnWidth, rowHeight) * FINDER_CORNER_RADIUS_MODULES)
-
-            // Draw all of the finder patterns required by the QR spec. Calculate the ratio
-            // of the number of rows/columns to the width and height
-            drawQrCodeFinders(
-                quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
-                sideLength = size.width,
-                finderPatternSize =
-                    Size(
-                        width = columnWidth * FINDER_PATTERN_ROW_COUNT,
-                        height = rowHeight * FINDER_PATTERN_ROW_COUNT,
-                    ),
-                color = foregroundColor,
-                cornerRadius = radius,
-            )
-
-            // Draw data bits (encoded data part)
-            drawAllQrCodeDataBits(
-                quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
-                bytes = qrCode.matrix,
-                size =
-                    Size(
-                        width = columnWidth,
-                        height = rowHeight,
-                    ),
-                color = foregroundColor,
-            )
+        if (matrix != null) {
+            QrCanvas(matrix, foregroundColor)
         }
     }
 }
 
-private typealias Coordinate = Pair<Int, Int>
+@Composable
+private fun QrCanvas(
+    matrix: QrMatrix,
+    foregroundColor: Color,
+) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        // Calculate the height and width of each column/row
+        // Solve for the module size with the quiet zone measured in modules, so the whole code
+        // (zone included) is exactly as wide as the canvas.
+        val rowHeight = size.height / (matrix.height + QR_QUIET_ZONE_MODULES * 2f)
+        val columnWidth = size.width / (matrix.width + QR_QUIET_ZONE_MODULES * 2f)
+        // Scale the rounding with the module size. A fixed 20px radius is a gentle touch on
+        // a large code and a serious deformation on a small one: the finder patterns are what
+        // a decoder locates first, and rounding away a third of a module's worth of their
+        // corners is exactly the kind of damage that makes a code readable on screen and
+        // unreadable in a photo of that screen.
+        val radius = CornerRadius(min(columnWidth, rowHeight) * FINDER_CORNER_RADIUS_MODULES)
 
-private fun createQrCode(contents: String): QRCode {
-    require(contents.isNotEmpty())
+        // Draw all of the finder patterns required by the QR spec. Calculate the ratio
+        // of the number of rows/columns to the width and height
+        drawQrCodeFinders(
+            quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
+            sideLength = size.width,
+            finderPatternSize =
+                Size(
+                    width = columnWidth * FINDER_PATTERN_ROW_COUNT,
+                    height = rowHeight * FINDER_PATTERN_ROW_COUNT,
+                ),
+            color = foregroundColor,
+            cornerRadius = radius,
+        )
 
-    return Encoder.encode(
-        contents,
-        ErrorCorrectionLevel.Q,
-        mapOf(
-            EncodeHintType.CHARACTER_SET to "UTF-8",
-            EncodeHintType.MARGIN to QR_QUIET_ZONE_MODULES,
-            EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.Q,
-        ),
-    )
+        // Draw data bits (encoded data part)
+        drawAllQrCodeDataBits(
+            quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
+            bytes = matrix,
+            size =
+                Size(
+                    width = columnWidth,
+                    height = rowHeight,
+                ),
+            color = foregroundColor,
+        )
+    }
 }
+
+private typealias Coordinate = Pair<Int, Int>
 
 fun newPath(withPath: Path.() -> Unit) =
     Path().apply {
@@ -157,7 +148,7 @@ fun newPath(withPath: Path.() -> Unit) =
 
 fun DrawScope.drawAllQrCodeDataBits(
     quietZonePx: Float,
-    bytes: ByteMatrix,
+    bytes: QrMatrix,
     size: Size,
     color: Color,
 ) {
@@ -197,7 +188,7 @@ fun DrawScope.drawAllQrCodeDataBits(
         val newSize = Size(size.width + 0.5f, size.height + 0.5f)
         for (y in section.first.second until section.second.second) {
             for (x in section.first.first until section.second.first) {
-                if (bytes[x, y] == 1.toByte()) {
+                if (bytes[x, y]) {
                     drawPath(
                         color = color,
                         path =

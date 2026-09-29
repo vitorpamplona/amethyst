@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
+import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 
 @Immutable
 data class ClassifiedsThumb(
@@ -141,7 +142,7 @@ fun InnerRenderClassifiedsThumb(
             card.price?.let {
                 val priceTag =
                     remember(card) {
-                        val newAmount = it.amount.toBigDecimalOrNull()?.let { showAmountInteger(it) } ?: it.amount
+                        val newAmount = parseBigDecimalOrNull(it.amount)?.let { showAmountInteger(it) } ?: it.amount
 
                         if (it.frequency != null && it.currency != null) {
                             "$newAmount ${it.currency}/${it.frequency}"

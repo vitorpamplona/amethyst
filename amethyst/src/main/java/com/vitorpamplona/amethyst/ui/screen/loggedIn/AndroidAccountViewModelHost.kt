@@ -29,16 +29,21 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
+import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 
@@ -59,6 +64,11 @@ class AndroidAccountViewModelHost(
     override val lnurlTransport: LnurlHttpTransport by lazy { OkHttpLnurlTransport(modules.roleBasedHttpClientBuilder::okHttpClientForMoney) }
 
     override val moneyOpRelays: MoneyOpRelayRouting get() = modules.torEvaluatorFlow
+
+    override val torRelayEvaluation: StateFlow<TorRelayEvaluation> get() = modules.torEvaluatorFlow.flow
+
+    override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
+        get() = modules.authCoordinator.receiver.authStateFlow
 
     override val savedAccounts: Flow<Set<HexKey>> =
         LocalPreferences

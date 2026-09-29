@@ -6243,4 +6243,6 @@
     <string name="cordn_voice_play">Play voice note</string>
     <string name="cordn_voice_record">Record a voice note</string>
     <string name="cordn_voice_stop">Stop and send</string>
+    <string name="browser_address_hint">Search or enter address</string>
+    <string name="napplet_untitled">Untitled nApplet</string>
 </resources>

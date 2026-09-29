@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraise
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayExternalId
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -118,7 +119,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoad
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
-import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceFlap
 import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSheet

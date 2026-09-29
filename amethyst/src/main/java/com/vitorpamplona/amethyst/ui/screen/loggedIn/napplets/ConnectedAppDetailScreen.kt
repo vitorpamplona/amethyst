@@ -114,9 +114,9 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_reconnecting
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberManifestIconModel
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
-import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.napplet.NappletBrokerService
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.napplet.counterpartyLabel

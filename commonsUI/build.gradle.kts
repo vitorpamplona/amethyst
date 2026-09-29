@@ -189,6 +189,10 @@ kotlin {
                     // org.jetbrains.androidx.lifecycle variant or accept a
                     // platform-specific ViewModel access pattern on iOS.
                     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+                    // ZXing core encodes the QR codes the shared QrCodeDrawer shows. Pure Java,
+                    // Apache-2.0, and already linked by both apps.
+                    implementation(libs.zxing)
                 }
             }
 

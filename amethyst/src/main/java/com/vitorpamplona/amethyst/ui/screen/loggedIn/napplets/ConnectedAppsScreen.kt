@@ -52,7 +52,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
@@ -69,13 +68,15 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
+import com.vitorpamplona.amethyst.commons.resources.napplet_untitled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberManifestIconModel
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberWebAppIconModel
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
-import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.ConnectedAppsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -86,7 +87,6 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /** Author placeholder used by the browser permission path — not a real pubkey. */
 private const val BROWSER_AUTHOR = "browser"
@@ -101,8 +101,9 @@ fun ConnectedAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val capabilityLedger = Amethyst.instance.nappletPermissionLedger
-    val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
+    val appServices = LocalAppServices.current
+    val capabilityLedger = appServices.nappletPermissionLedger
+    val signerLedger = remember { NostrSignerPermissionLedger(appServices.signerPermissionStore) }
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }
     var nappletAuthors by remember { mutableStateOf<Set<HexKey>>(emptySet()) }
@@ -156,7 +157,7 @@ fun ConnectedAppsScreen(
                 }
 
             else -> {
-                val untitled = stringRes(CommonsR.string.napplet_untitled)
+                val untitled = stringRes(Res.string.napplet_untitled)
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentPadding = PaddingValues(16.dp),

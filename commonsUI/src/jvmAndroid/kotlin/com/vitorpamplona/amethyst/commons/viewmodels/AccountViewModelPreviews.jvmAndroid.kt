@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
+import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -46,15 +48,20 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import okhttp3.OkHttpClient
@@ -189,6 +196,8 @@ private object PreviewAccountViewModelHost : AccountViewModelHost {
     override val localBlossomCacheAvailable: Flow<Boolean> = flowOf(false)
     override val powPublishFailures: Flow<PoWJobFailure> = emptyFlow()
     override val relayStats = RelayStats(EmptyNostrClient())
+    override val torRelayEvaluation: StateFlow<TorRelayEvaluation> = MutableStateFlow(TorRelayEvaluation(TorRelaySettings()))
+    override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>> = MutableStateFlow(persistentMapOf())
     override val websocketBuilder = BasicOkHttpWebSocket.Builder { OkHttpClient() }
     override val lnurlTransport = LnurlHttpTransport { throw IllegalStateException("Previews do not reach the network") }
     override val moneyOpRelays = MoneyOpRelayRouting.None

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.ui.CountFilter
@@ -131,7 +130,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 relaySetupInfoBuilder(
                     normalized = it,
                     forcesTor =
-                        Amethyst.instance.torEvaluatorFlow.flow.value
+                        accountViewModel.host.torRelayEvaluation.value
                             .useTor(it),
                 )
             }.distinctBy { it.relay }

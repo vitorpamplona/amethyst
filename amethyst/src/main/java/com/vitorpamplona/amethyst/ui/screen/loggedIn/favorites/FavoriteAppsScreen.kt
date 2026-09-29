@@ -54,12 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -73,11 +71,12 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps_empty
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.favorites.PreloadFavoriteNostrApps
-import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 
 /**
  * The Favorite Apps grid: the user's pinned web clients / nsites / napplets as big launch buttons.
@@ -91,9 +90,10 @@ fun FavoriteAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val appServices = LocalAppServices.current
     val appStillLoadingStr = stringRes(Res.string.favorite_app_still_loading)
-    val context = LocalContext.current
-    val apps by Amethyst.instance.favoriteApps.favorites
+    val appLauncher = rememberAppLauncher()
+    val apps by appServices.favoriteApps.favorites
         .collectAsStateWithLifecycle()
 
     // Fetch favorited nsite/napplet manifests up front so a tap launches immediately instead of showing
@@ -125,8 +125,8 @@ fun FavoriteAppsScreen(
         } else {
             FavoriteAppsGrid(
                 apps = apps,
-                onOpen = { FavoriteAppLauncher.launch(context, it, appStillLoadingStr) },
-                onRemove = { Amethyst.instance.favoriteApps.remove(it.id) },
+                onOpen = { appLauncher.launch(it, appStillLoadingStr) },
+                onRemove = { appServices.favoriteApps.remove(it.id) },
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -184,18 +184,19 @@ internal fun FavoriteAppCell(
     onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
+    val appServices = LocalAppServices.current
     var menuOpen by remember { mutableStateOf(false) }
 
     // For a plain web favorite, prefer the favicon captured when its site was opened; an nsite/napplet uses
     // the verified icon blob bundled in its own content. Observing the key set recomputes the model as a
     // captured favicon arrives.
-    val iconKeys by Amethyst.instance.browserIcons.keys
+    val iconKeys by appServices.browserIcons.keys
         .collectAsStateWithLifecycle()
     val faviconModel =
         when (app) {
             is FavoriteApp.WebApp ->
                 remember(app, iconKeys) {
-                    OmniboxInput.hostOf(app.url)?.let(Amethyst.instance.browserIcons::iconModelFor)
+                    OmniboxInput.hostOf(app.url)?.let(appServices.browserIcons::iconModelFor)
                 }
             is FavoriteApp.NostrApp -> rememberNappletIconModel(app.coordinate)
         }

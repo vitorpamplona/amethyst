@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.commons.ui.note.Gallery
 import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LikeReaction
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
@@ -67,8 +69,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

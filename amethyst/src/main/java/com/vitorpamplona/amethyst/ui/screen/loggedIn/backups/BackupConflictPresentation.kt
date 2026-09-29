@@ -114,7 +114,7 @@ import com.vitorpamplona.amethyst.commons.resources.backup_type_trust_providers
 import com.vitorpamplona.amethyst.commons.resources.backup_type_trust_providers_explainer
 import com.vitorpamplona.amethyst.commons.resources.backup_type_trusted_relays
 import com.vitorpamplona.amethyst.commons.resources.backup_type_trusted_relays_explainer
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListDiff

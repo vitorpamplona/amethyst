@@ -24,9 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 
 /**
  * The app shell's pieces that shared screens embed but only the front end can draw yet: the
@@ -64,6 +67,42 @@ interface AppPlatform {
         modifier: Modifier,
     ) {}
 
+    /** The camera QR scanner, full screen. [onScan] says whether the payload was used. */
+    @Composable
+    fun QrCodeScannerDialog(
+        onDismiss: () -> Unit,
+        onScan: (String) -> ScanOutcome,
+    ) {}
+
+    /** Opens favorite apps and web links in the platform's app surface. */
+    @Composable
+    fun rememberAppLauncher(): AppLauncher = AppLauncher.None
+
+    /**
+     * The image model for a CORD-02 community picture: the plain URL for a url-only pointer, or a
+     * local copy of the decrypted blob for an encrypted one (null while it loads or if it fails).
+     */
+    @Composable
+    fun rememberConcordImageModel(
+        pointer: ImagePointer?,
+        accountViewModel: AccountViewModel,
+    ): String? = pointer?.takeIf { !it.isResolvable() }?.url?.ifBlank { null }
+
+    /** The cached icon of the napplet or nsite at [coordinate], if one was fetched. */
+    @Composable
+    fun rememberNappletIconModel(coordinate: String): String? = null
+
+    /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
+    @Composable
+    fun rememberManifestIconModel(
+        author: String,
+        identifier: String,
+    ): String? = null
+
+    /** The favicon the browser captured for [url]'s host, if any. */
+    @Composable
+    fun rememberWebAppIconModel(url: String): String? = null
+
     /** Draws nothing: previews, and front ends still wiring their pieces. */
     object None : AppPlatform
 }
@@ -96,3 +135,61 @@ fun GeohashLocationPickerContent(
     onConfirm: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) = LocalAppPlatform.current.GeohashLocationPickerContent(initialGeohash, confirmLabel, onConfirm, modifier)
+
+@Composable
+fun QrCodeScannerDialog(
+    onDismiss: () -> Unit,
+    onScan: (String) -> ScanOutcome,
+) = LocalAppPlatform.current.QrCodeScannerDialog(onDismiss, onScan)
+
+@Composable
+fun rememberAppLauncher(): AppLauncher = LocalAppPlatform.current.rememberAppLauncher()
+
+@Composable
+fun rememberConcordImageModel(
+    pointer: ImagePointer?,
+    accountViewModel: AccountViewModel,
+): String? = LocalAppPlatform.current.rememberConcordImageModel(pointer, accountViewModel)
+
+@Composable
+fun rememberNappletIconModel(coordinate: String): String? = LocalAppPlatform.current.rememberNappletIconModel(coordinate)
+
+@Composable
+fun rememberManifestIconModel(
+    author: String,
+    identifier: String,
+): String? = LocalAppPlatform.current.rememberManifestIconModel(author, identifier)
+
+@Composable
+fun rememberWebAppIconModel(url: String): String? = LocalAppPlatform.current.rememberWebAppIconModel(url)
+
+/**
+ * Opens a favorite app or a web link in the platform's app surface (on Android, the sandboxed
+ * full-screen WebView in its own task).
+ */
+interface AppLauncher {
+    /** [stillLoading] is shown when a Nostr app's defining event has not arrived yet. */
+    fun launch(
+        app: FavoriteApp,
+        stillLoading: String,
+    )
+
+    /** [preferTor] forces Tor when available, e.g. for `.onion` hosts. */
+    fun launchUrl(
+        url: String,
+        preferTor: Boolean = false,
+    )
+
+    /** Launches nothing: front ends without an app surface yet. */
+    object None : AppLauncher {
+        override fun launch(
+            app: FavoriteApp,
+            stillLoading: String,
+        ) {}
+
+        override fun launchUrl(
+            url: String,
+            preferTor: Boolean,
+        ) {}
+    }
+}

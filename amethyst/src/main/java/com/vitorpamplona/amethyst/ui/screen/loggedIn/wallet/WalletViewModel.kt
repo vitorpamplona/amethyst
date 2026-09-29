@@ -78,6 +78,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 sealed class SendState {
     data object Idle : SendState()
@@ -338,6 +340,7 @@ class WalletViewModel : ViewModel() {
     }
 
     /** Adds a CLINK debit pointer (`ndebit1…`) as a spend-only payment source. */
+    @OptIn(ExperimentalUuidApi::class)
     fun addClinkDebitWallet(
         name: String,
         ndebit: String,
@@ -347,9 +350,7 @@ class WalletViewModel : ViewModel() {
         val entry =
             ClinkDebitWalletEntryNorm(
                 id =
-                    java.util.UUID
-                        .randomUUID()
-                        .toString(),
+                    Uuid.random().toString(),
                 name = name.ifBlank { "Debit" },
                 pointer = pointer,
             )
@@ -384,6 +385,7 @@ class WalletViewModel : ViewModel() {
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     fun addWallet(
         name: String,
         uri: Nip47WalletConnect.Nip47URINorm,
@@ -392,9 +394,7 @@ class WalletViewModel : ViewModel() {
         val entry =
             NwcWalletEntryNorm(
                 id =
-                    java.util.UUID
-                        .randomUUID()
-                        .toString(),
+                    Uuid.random().toString(),
                 name = name.ifBlank { "Wallet" },
                 uri = uri,
             )

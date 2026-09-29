@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LikeReaction
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImageBorder
@@ -54,8 +56,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.FavoriteAlgoFeedToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 

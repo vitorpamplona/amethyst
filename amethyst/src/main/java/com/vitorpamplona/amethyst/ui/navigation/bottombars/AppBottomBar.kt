@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -55,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.ui.insets.keyboardAsState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.HorzPadding
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size27Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.onSurface65
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 
 /** Content height of the [AppBottomBar] (the 50.dp Column inside [RenderBottomMenu]),
  * exclusive of the system navigation-bar inset. Used by FAB callers that want to
@@ -114,7 +114,7 @@ fun AppBottomBar(
     // Favorite entries in the unified list resolve to a live favorite for their icon/label and to an
     // embedded-tab route. Both kinds embed in-process (WebApp → browser surface, NostrApp → napplet
     // surface), so such a tab swaps in place rather than launching an activity from the bottom row.
-    val favorites by Amethyst.instance.favoriteApps.favorites
+    val favorites by LocalAppServices.current.favoriteApps.favorites
         .collectAsStateWithLifecycle()
 
     val isKeyboardState by keyboardAsState()
@@ -134,10 +134,11 @@ internal fun rememberFavoriteIconModel(fav: FavoriteApp): Any? =
     when (fav) {
         is FavoriteApp.WebApp -> {
             // Captured favicons, keyed so the icon appears once the site's capture lands.
-            val iconKeys by Amethyst.instance.browserIcons.keys
+            val browserIcons = LocalAppServices.current.browserIcons
+            val iconKeys by browserIcons.keys
                 .collectAsStateWithLifecycle()
             remember(fav, iconKeys) {
-                OmniboxInput.hostOf(fav.url)?.let(Amethyst.instance.browserIcons::iconModelFor)
+                OmniboxInput.hostOf(fav.url)?.let(browserIcons::iconModelFor)
             }
         }
 

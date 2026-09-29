@@ -23,10 +23,15 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
+import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * What the account's ViewModel needs from the process it runs in: app-wide services that outlive
@@ -54,6 +59,12 @@ interface AccountViewModelHost {
 
     /** Routes a payment's relays under the money-operations Tor preference while it runs. */
     val moneyOpRelays: MoneyOpRelayRouting
+
+    /** Which relays go through Tor under the user's settings, kept current. */
+    val torRelayEvaluation: StateFlow<TorRelayEvaluation>
+
+    /** NIP-42 authentication state per relay, across every logged-in account. */
+    val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

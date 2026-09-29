@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndDisplayNIP05
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.KeepScreenBrightAndAwake
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp

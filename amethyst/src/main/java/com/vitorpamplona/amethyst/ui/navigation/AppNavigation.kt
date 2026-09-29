@@ -1337,34 +1337,3 @@ fun URI.findParameterValue(parameterName: String): String? =
             Pair(name, value)
         }?.firstOrNull { it.first == parameterName }
         ?.second
-
-/**
- * The value of [parameterName] in this URI's query string, without going through
- * [java.net.URI].
- *
- * Needed because `java.net.URI` only exposes `rawQuery` for *hierarchical* URIs. A URI
- * with a scheme and no `//` is **opaque** — everything after the colon is one
- * scheme-specific part — so `URI("marmot:<hex>?account=npub1…").rawQuery` is null. That
- * is the shape [com.vitorpamplona.amethyst.service.notifications.NotificationRoutes.marmotUri]
- * produces, so every Marmot group notification silently lost its `?account=` and opened
- * the group under whichever account happened to be current instead of switching first.
- *
- * Splitting on the first `?` gets the same answer for both shapes, and returns null for a
- * bare `nevent1…` with no query at all.
- *
- * [com.vitorpamplona.quartz.utils.UriParser] reads an opaque query correctly too, and is the
- * right tool when a URI is already known to be well-formed. It is not this one: it builds a
- * [java.net.URI], which *throws* on anything that is not a legal URI. What arrives here comes
- * from an exported, browsable scheme, so it can be any string at all, and every caller on the
- * deep-link path treats an unreadable uri as "no route" rather than as a crash.
- */
-fun String.findQueryParameterValue(parameterName: String): String? {
-    val query = substringAfter('?', "")
-    if (query.isEmpty()) return null
-
-    return query
-        .split('&')
-        .firstOrNull { it.substringBefore('=') == parameterName }
-        ?.substringAfter('=', "")
-        ?.ifEmpty { null }
-}
