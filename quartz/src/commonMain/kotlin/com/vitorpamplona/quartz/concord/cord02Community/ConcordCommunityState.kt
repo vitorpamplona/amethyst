@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.asFloor
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /** A channel id paired with its current folded definition. */
@@ -57,7 +59,68 @@ data class ConcordCommunityState(
     val roles: Map<String, RoleEntity>,
     val authority: AuthorityResolver,
     val dissolved: Boolean,
+    /**
+     * Each creator's honored Invite Registry (CORD-05 §5, `vsk 8`): creator pubkey → the link-signer
+     * pubkeys (lowercase) of their live public links. A creator is present only while their registry
+     * head is honored — well-formed at their own coordinate, authored while holding `CREATE_INVITE`
+     * (or by the owner), citing their Grant — so a creator who loses the bit drops out.
+     */
+    val inviteRegistries: Map<HexKey, List<HexKey>> = emptyMap(),
 ) {
+    /** The aggregate active-set of live public links: every honored registry's link signers (CORD-05 §5). */
+    val liveInviteLinks: Set<HexKey> by lazy { inviteRegistries.values.flatMapTo(HashSet()) { it } }
+
+    /**
+     * The community's Public/Private mode (CORD-05 §5): Public while any live link exists in the
+     * aggregate registry set, Private otherwise. A Public ban is the Banlist alone; only a Private
+     * ban Refounds (CORD-06 §3).
+     */
+    val isPublic: Boolean get() = liveInviteLinks.isNotEmpty()
+
+    /**
+     * [isPublic] with [excludingCreators]' registries left out — the mode a ban of those members
+     * lands in, since a banned creator's registry stops being honored (Armada `isCommunityPublic`).
+     */
+    fun isPublic(excludingCreators: Collection<HexKey>): Boolean {
+        if (excludingCreators.isEmpty()) return isPublic
+        val excluded = excludingCreators.mapTo(HashSet()) { it.lowercase() }
+        return inviteRegistries.any { (creator, links) -> creator !in excluded && links.isNotEmpty() }
+    }
+
+    /**
+     * Whether any live link belongs to someone other than [viewer] (and [excludingCreators]) —
+     * links a rotation by [viewer] would strand, since only a link's creator can refresh its bundle
+     * (Armada `hasForeignLiveLinks`).
+     */
+    fun hasForeignLiveLinks(
+        viewer: HexKey,
+        excludingCreators: Collection<HexKey> = emptyList(),
+    ): Boolean {
+        val excluded = excludingCreators.mapTo(HashSet()) { it.lowercase() } + viewer.lowercase()
+        return inviteRegistries.any { (creator, links) -> creator !in excluded && links.isNotEmpty() }
+    }
+
+    /**
+     * Whether banning [targets] must Refound (CORD-06 §3): only a ban from a **Private** community
+     * does; a Public ban is the Banlist alone, because anyone holding a live link can fetch the
+     * rotated root straight back out of its bundle. Judged with the targets' own registries left
+     * out, since the ban stops honoring them.
+     */
+    fun banRequiresRefounding(targets: Collection<HexKey>): Boolean = !isPublic(targets)
+
+    /** [creator]'s honored registry (their live link signers), empty when they publish none. */
+    fun registryOf(creator: HexKey): List<HexKey> = inviteRegistries[creator.lowercase()] ?: emptyList()
+
+    /**
+     * Whether retiring [linkSigners] would flip the community Private (CORD-05 §2): it is Public
+     * now and no live link would remain. Retiring the last live link is a Refounding (CORD-06).
+     */
+    fun retiringWouldPrivatize(linkSigners: Collection<HexKey>): Boolean {
+        if (!isPublic) return false
+        val retiring = linkSigners.mapTo(HashSet()) { it.lowercase() }
+        return liveInviteLinks.all { it in retiring }
+    }
+
     /**
      * This state with [dissolved] set from the community's dissolution plane
      * ([ConcordDissolution.isDissolved]). One-way by the caller's contract: there is no un-dissolve.
@@ -250,6 +313,16 @@ data class ConcordCommunityState(
             // the dissolved plane sets [dissolved] via [withDissolved].
             val dissolved = false
 
+            // Invite Registries (CORD-05 §5): one entity per creator at invite_links_locator(community_id,
+            // creator), honored while its author holds CREATE_INVITE. The gate (AuthorityResolver.admits)
+            // pins the coordinate to the author and requires a JSON array, so a registry at someone
+            // else's coordinate or a malformed one never lands; entries are kept only when they are 64-hex.
+            val inviteRegistries = HashMap<HexKey, List<HexKey>>()
+            for (head in foldGatedBy(ControlEntityKind.INVITE_REGISTRY, ConcordPermissions.CREATE_INVITE).values) {
+                val links = ConcordInviteRegistry.decodeOrNull(head.content) ?: continue
+                inviteRegistries[head.author.lowercase()] = links
+            }
+
             return ConcordCommunityState(
                 ownerPubKey = ownerPubKey.lowercase(),
                 metadata = metadata,
@@ -257,6 +330,7 @@ data class ConcordCommunityState(
                 roles = roles,
                 authority = authority,
                 dissolved = dissolved,
+                inviteRegistries = inviteRegistries,
             )
         }
     }

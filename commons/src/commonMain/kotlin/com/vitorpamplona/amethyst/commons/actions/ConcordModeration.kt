@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -343,6 +344,28 @@ object ConcordModeration {
         communityId: ByteArray,
         owner: HexKey,
     ): Set<HexKey> = AuthorityResolver.resolve(current, communityId, owner).bannedMembers()
+
+    /**
+     * Publishes [actor]'s Invite Registry (CORD-05 §5, `vsk 8`) listing [linkSigners] — the
+     * link-signer pubkeys of their live public links, locators only. The entity sits at
+     * `invite_links_locator(community_id, actor)`, so it chains onto [actor]'s own registry head and
+     * can never touch another creator's; it is honored at fold only while [actor] holds
+     * CREATE_INVITE (or is the owner). Compute [linkSigners] with [ConcordInviteRegistry.nextLinks].
+     */
+    suspend fun setInviteRegistry(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        linkSigners: Collection<HexKey>,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event {
+        val entityId = ConcordInviteRegistry.coordinate(communityId, actor.pubKey)
+        val head = headOf(current, communityId, entityId, owner)
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.INVITE_REGISTRY, entityId, head, ConcordInviteRegistry.encode(linkSigners), current, createdAt, citation, owner)
+    }
 
     private suspend fun setBanlist(
         actor: NostrSigner,

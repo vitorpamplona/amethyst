@@ -96,6 +96,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_leave_message
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_owner_warning
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_title
+import com.vitorpamplona.amethyst.commons.resources.concord_mode_private
+import com.vitorpamplona.amethyst.commons.resources.concord_mode_public
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
@@ -108,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreviewLoader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -265,7 +268,24 @@ fun ConcordChannelListScreen(
     Scaffold(
         topBar = {
             ShorterTopAppBar(
-                title = { Text(communityName, maxLines = 1) },
+                title = {
+                    Column {
+                        Text(communityName, maxLines = 1)
+                        // The Public/Private mode (CORD-05 §5): any live invite link in the folded
+                        // registries makes the community Public; none makes it Private, where a ban
+                        // rotates the keys (CORD-06 §3). Unknown until the Control Plane has folded.
+                        state?.let { folded ->
+                            val links = folded.liveInviteLinks.size
+                            Text(
+                                if (folded.isPublic) pluralStringRes(Res.plurals.concord_mode_public, links, links) else stringRes(Res.string.concord_mode_private),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
                     if (canPop) {

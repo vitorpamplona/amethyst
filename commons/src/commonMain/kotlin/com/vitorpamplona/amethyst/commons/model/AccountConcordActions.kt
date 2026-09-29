@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -278,7 +279,8 @@ class AccountConcordActions(
     }
 
     /**
-     * Merges [patch] into the published Invite List and republishes it, returning whether it landed.
+     * Merges [patch] into the published Invite List and republishes it, returning the merged document
+     * when it landed and null when it did not.
      *
      * Read-merge-write, and **aborts rather than overwriting** when the read fails: the list is
      * replaceable, so publishing a patch-only document over an unread list deletes every other
@@ -286,20 +288,62 @@ class AccountConcordActions(
      * rotation. A momentarily unreachable relay or a bunker signer that declines one decrypt is
      * enough to trigger that, which is exactly how the kind-13302 community list was once emptied.
      */
-    private suspend fun publishConcordInviteList(patch: ConcordInviteListDocument): Boolean {
+    private suspend fun publishConcordInviteList(patch: ConcordInviteListDocument): ConcordInviteListDocument? {
         val publishTo = account.outboxRelays.flow.value
-        if (publishTo.isEmpty()) return false
+        if (publishTo.isEmpty()) return null
         val base =
             readConcordInviteList() ?: run {
                 Log.w("Concord") { "Refusing to write the invite list: could not read the current one (would drop other links' signer_sk)" }
-                return false
+                return null
             }
+        val merged = ConcordInviteList.merge(base, patch)
         // publishAndConfirm, never publish: `INostrClient.publish` returns Unit — it queues the event
         // and never reports acceptance — so a `runCatching { publish(); true }` is true whenever
         // local signing worked, and every caller's "did the record land?" gate becomes decorative.
-        return runCatching {
-            account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, ConcordInviteList.merge(base, patch), TimeUtils.now()), publishTo)
-        }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
+        val landed =
+            runCatching {
+                account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
+            }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
+        return if (landed) merged else null
+    }
+
+    /**
+     * Publishes this account's Invite Registry for [entry]'s community (CORD-05 §5, `vsk 8`): "a
+     * Registry edit accompanies every mint and every retire". The list is this account's honored
+     * registry plus the live links its Invite List [list] holds plus [minted], minus [retired] and
+     * minus every tombstoned or expired link ([ConcordInviteRegistry.nextLinks]), so an elapsed link
+     * stops keeping the community Public. Returns whether an edition was published.
+     *
+     * Best-effort, like the reference client's: the registry never gates a link working. It is
+     * skipped when there is no session to chain onto, when this account no longer holds
+     * CREATE_INVITE (every reader would drop the edition), when the `control_root` is not held
+     * (CORD-02 §2), and when the next list equals the one already honored.
+     */
+    private suspend fun publishConcordInviteRegistry(
+        entry: ConcordCommunityListEntry,
+        list: ConcordInviteListDocument?,
+        minted: List<HexKey> = emptyList(),
+        retired: List<HexKey> = emptyList(),
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(entry.id) ?: return false
+        if (!isAuthorizedFor(session, ConcordPermissions.CREATE_INVITE)) return false
+        val cp = controlKeysForWrite(session) ?: return false
+        val me = account.signer.pubKey
+        val state = session.state.value
+        val published = state?.registryOf(me).orEmpty()
+        val next = ConcordInviteRegistry.nextLinks(published, list, entry.id, TimeUtils.now(), minted, retired)
+        val hasHead = state?.inviteRegistries?.containsKey(me.lowercase()) == true
+        if (next == published.sorted() && (hasHead || next.isEmpty())) return false
+        // The writer chains off the same authorized head the fold honors (ConcordModeration.headOf).
+        val wrap =
+            try {
+                ConcordModeration.setInviteRegistry(account.signer, cp, entry.id.hexToByteArray(), next, session.controlEditions(), TimeUtils.now(), owner = entry.owner)
+            } catch (e: Exception) {
+                Log.w("Concord", "invite registry build failed for ${entry.id}", e)
+                return false
+            }
+        publishConcordWrap(entry, wrap)
+        return true
     }
 
     /**
@@ -414,7 +458,8 @@ class AccountConcordActions(
         // was never stored can never be refreshed, so the next Refounding orphans it and everyone
         // holding it is stranded — with nothing to have warned them. Failing the mint is the honest
         // outcome; a stored entry for a link nobody received is harmless by comparison.
-        if (!publishConcordInviteList(
+        val recorded =
+            publishConcordInviteList(
                 ConcordInviteListDocument(
                     entries =
                         listOf(
@@ -428,12 +473,15 @@ class AccountConcordActions(
                         ),
                 ),
             )
-        ) {
+        if (recorded == null) {
             Log.w("Concord") { "Invite not minted for ${entry.id}: its link signer could not be recorded, so the link could never be refreshed" }
             return null
         }
 
         if (publishTo.isNotEmpty()) account.client.publish(minted.bundleEvent, publishTo)
+        // The member-facing shadow of the list we just wrote (CORD-05 §5): the link now makes the
+        // community Public. Best-effort — the link works without it.
+        publishConcordInviteRegistry(entry, recorded, minted = listOf(minted.linkSignerPubKey))
         return minted.url
     }
 
@@ -472,24 +520,29 @@ class AccountConcordActions(
      * leave the link live with its signer gone and no way left to retire it. A failed list write is
      * recoverable — the link is already dead on the wire, and the refresh path re-mints only a
      * coordinate that still resolves Live.
+     *
+     * Every retire also edits this account's Invite Registry (CORD-05 §5). When the link was the
+     * community's last live one, retiring it flips the community Private — "a Refounding (CORD-06)"
+     * (CORD-05 §2) — so this then Refounds with nobody removed, provided this account may (it takes
+     * BAN). The result says which of those happened.
      */
     suspend fun revokeConcordInvite(
         communityId: String,
         token: String,
-    ): Boolean {
-        if (!account.isWriteable()) return false
+    ): ConcordRevokeResult {
+        if (!account.isWriteable()) return ConcordRevokeResult.FAILED
         val entry =
             account.concordChannelList.liveCommunities.value
-                .firstOrNull { it.id == communityId } ?: return false
+                .firstOrNull { it.id == communityId } ?: return ConcordRevokeResult.FAILED
         val link =
             readConcordInviteList()?.entries?.firstOrNull { it.token == token && it.communityId == communityId }
                 ?: run {
                     Log.w("Concord") { "Cannot revoke $token: it is not in this account's invite list, so its link signer is unknown" }
-                    return false
+                    return ConcordRevokeResult.FAILED
                 }
 
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
-        if (relays.isEmpty()) return false
+        if (relays.isEmpty()) return ConcordRevokeResult.FAILED
         // Confirmed, not fire-and-forget. A `publish` that returns Unit would report success for a
         // tombstone no relay stored — and the list write below would then drop this entry on merge,
         // destroying the only `signer_sk` that could ever retire the link while the link stays live.
@@ -497,14 +550,31 @@ class AccountConcordActions(
             runCatching {
                 account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
             }.onFailure { Log.w("Concord", "invite revocation failed for $communityId", it) }.getOrDefault(false)
-        if (!published) return false
+        if (!published) return ConcordRevokeResult.FAILED
 
-        if (!publishConcordInviteList(ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = communityId))))) {
+        val signer = link.signerPubKeyHex().lowercase()
+        // Judged on the fold BEFORE our registry edit lands: afterwards the link is gone from it.
+        val privatizes =
+            account.concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value
+                ?.retiringWouldPrivatize(listOf(signer)) == true
+
+        val recorded = publishConcordInviteList(ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = communityId))))
+        if (recorded == null) {
             // The link is already dead on the wire, so this is bookkeeping we can retry rather than a
             // failed revocation. Reported as success for exactly that reason.
             Log.w("Concord") { "Revoked $token on the wire but could not tombstone it in the invite list; a later revoke will record it" }
         }
-        return true
+        publishConcordInviteRegistry(entry, recorded, retired = listOf(signer))
+
+        if (!privatizes) return ConcordRevokeResult.REVOKED
+        // The last live link is gone: the community is Private now, and whoever already fetched a
+        // link holds the current root. CORD-05 §2/§5: this is a Refounding (CORD-06 §3, "converting a
+        // Public Community to Private"), which re-keys the members and leaves the lurkers behind.
+        Log.i("Concord") { "Retired the last live invite link of $communityId: the community is Private, Refounding" }
+        return if (privatizeConcordCommunity(communityId)) ConcordRevokeResult.PRIVATIZED else ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING
     }
 
     /** Leave a joined Concord community: drop it from the Community List and tombstone it (CORD-02 §8). */
@@ -1194,7 +1264,17 @@ class AccountConcordActions(
         return if (canBan) communityId to author else null
     }
 
-    /** Add [member] to the community banlist. */
+    /**
+     * Ban [member] (CORD-04 §5 composition): the Banlist edition first, then — only when the
+     * community is **Private** — the Refounding (CORD-06 §3). A Public ban is the Banlist alone
+     * (CORD-05 §5): anyone holding a live link can fetch a rotated root straight back out of its
+     * bundle, so rotating would cost every member a rekey and sever nobody. The mode is judged with
+     * the target's own links left out, since the ban stops honoring their registry
+     * ([com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState.banRequiresRefounding]).
+     *
+     * Returns whether the ban landed; a Refounding that fails is logged and can be retried with
+     * [refoundConcordCommunity].
+     */
     suspend fun banConcordMember(
         communityId: String,
         member: HexKey,
@@ -1204,6 +1284,13 @@ class AccountConcordActions(
         val cp = controlKeysForAction(session, ConcordPermissions.BAN, member) ?: return false
         val wrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
+        // Judged on the fold that now carries the ban (publishConcordWrap ingests it first).
+        val state = session.state.value
+        if (state != null && state.banRequiresRefounding(listOf(member))) {
+            if (!refoundConcordCommunity(communityId, setOf(member))) {
+                Log.w("Concord") { "Banned $member from the Private community $communityId, but its Refounding did not complete" }
+            }
+        }
         return true
     }
 
@@ -1241,6 +1328,22 @@ class AccountConcordActions(
         communityId: String,
         removed: Set<HexKey>,
     ): Boolean {
+        if (removed.isEmpty()) return false
+        return refound(communityId, removed)
+    }
+
+    /**
+     * Converts the community to Private (CORD-06 §3): a Refounding with nobody removed, run when its
+     * last live invite link is retired (CORD-05 §2/§5). Every member is re-keyed; whoever only ever
+     * fetched a link — and so holds the current root without being a member — is left behind.
+     * Takes BAN (or ownership), like any Refounding.
+     */
+    suspend fun privatizeConcordCommunity(communityId: String): Boolean = refound(communityId, emptySet())
+
+    private suspend fun refound(
+        communityId: String,
+        removed: Set<HexKey>,
+    ): Boolean {
         if (!account.isWriteable()) return false
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         val state = session.state.value ?: return false
@@ -1258,7 +1361,7 @@ class AccountConcordActions(
         val iCanBan = authority.isOwner(account.signer.pubKey) || authority.hasPermission(account.signer.pubKey, ConcordPermissions.BAN)
         if (!iCanBan) return false
         val removedLower = removed.mapTo(HashSet()) { it.lowercase() }
-        if (removedLower.isEmpty() || removedLower.any { authority.isOwner(it) }) return false
+        if (removedLower.any { authority.isOwner(it) }) return false
         // Removal is the hardest form of a ban, so it takes the same rank rule (CORD-04 §3): an admin
         // cannot Refound a peer admin out of the community any more than they could ban one. The owner
         // short-circuits, as everywhere else, because canActOn starts at hasPermission.
@@ -1288,7 +1391,10 @@ class AccountConcordActions(
         // 1. Ban the removed members on the current Control Plane so the compacted snapshot —
         //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
         //    first, so each subsequent edition chains onto the updated banlist head.
+        //    A target the fold already bans (a ban that is composing its Refounding) needs no second edition.
+        val alreadyBanned = authority.bannedMembers().mapTo(HashSet()) { it.lowercase() }
         for (target in removedLower) {
+            if (target in alreadyBanned) continue
             val banWrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
             publishConcordWrap(session.entry, banWrap)
         }

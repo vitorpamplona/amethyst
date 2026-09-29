@@ -86,7 +86,9 @@ object ConcordCommands {
         |                                               --rejoin re-accepts that link (a bundle never
         |                                               moves the base on its own, CORD-06 §2);
         |                                               refuses if that epoch banned us
-        |  concord roles COMMUNITY                     list live roles + current banlist (CORD-04)
+        |  concord roles COMMUNITY                     list live roles + current banlist (CORD-04),
+        |                                               and public: true/false + live invite links
+        |                                               from the folded registries (CORD-05 §5)
         |  concord role COMMUNITY NAME POSITION PERM…  define a role (perms by name, e.g. BAN KICK)
         |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member
         |  concord ban COMMUNITY USER                  ban a member
@@ -94,6 +96,9 @@ object ConcordCommands {
         |  concord refound COMMUNITY --remove U[,U]    CORD-06 Refounding: rotate the root (and the
         |                                               control_root) so removed members lose every
         |                                               key — the hard removal a ban cannot give
+        |  concord refound COMMUNITY --privatize       a Refounding that removes nobody: converts a
+        |                                               Public community to Private (owed after the
+        |                                               last live invite link is revoked, CORD-05 §2)
         |  concord dissolve COMMUNITY --yes            CORD-02 §9: owner-only, IRREVERSIBLE tombstone
         |                                               that seals the community read-only for everyone
         """.trimMargin()
@@ -313,7 +318,7 @@ object ConcordCommands {
                             ),
                     ),
                 )
-            if (!recorded) {
+            if (recorded == null) {
                 return Output.error(
                     "invite_unrecordable",
                     "could not record the link signer in your invite list (kind 13303), so this link could never be refreshed after a Refounding — not minting it",
@@ -323,12 +328,15 @@ object ConcordCommands {
             val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
 
+            // "A Registry edit accompanies every mint" (CORD-05 §5): the link now makes the community Public.
+            val registry = ConcordModCommands.publishInviteRegistry(ctx, sc, dataDir, recorded, minted = listOf(minted.linkSignerPubKey))
+
             Output.emit(
                 mapOf(
                     "url" to minted.url,
                     "bundle_event_id" to minted.bundleEvent.id,
                     "link_signer" to minted.linkSignerPubKey,
-                ) + RawEventSupport.ackFields(ack),
+                ) + registry + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -397,10 +405,18 @@ object ConcordCommands {
                     ctx,
                     ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = sc.communityId))),
                 )
-            if (!recorded) {
+            if (recorded == null) {
                 System.err.println(
                     "[concord] the link is revoked on the wire but the tombstone could not be recorded in your invite list (kind 13303); re-run this command once your outbox relays are reachable",
                 )
+            }
+
+            // "...and every retire" (CORD-05 §5). Retiring the last live link flips the community
+            // Private, which is a Refounding (CORD-05 §2): reported, and run with `refound --privatize`.
+            val signer = entry.signerPubKeyHex().lowercase()
+            val registry = ConcordModCommands.publishInviteRegistry(ctx, sc, dataDir, recorded ?: list, retired = listOf(signer))
+            if (registry["privatized"] == true) {
+                System.err.println("[concord] that was the community's last live invite link, so it is Private now: run `amy concord refound ${sc.communityId} --privatize` to rotate its keys (CORD-06 §3)")
             }
 
             Output.emit(
@@ -408,10 +424,10 @@ object ConcordCommands {
                     "revoked" to true,
                     "token" to token,
                     "community_id" to sc.communityId,
-                    "link_signer" to entry.signerPubKeyHex(),
+                    "link_signer" to signer,
                     "tombstone_event_id" to tombstone.id,
-                    "tombstoned_in_list" to recorded,
-                ) + RawEventSupport.ackFields(ack),
+                    "tombstoned_in_list" to (recorded != null),
+                ) + registry + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -826,7 +842,8 @@ object ConcordCommands {
     }
 
     /**
-     * Merges [patch] into the published list and republishes it, returning whether it landed.
+     * Merges [patch] into the published list and republishes it, returning the merged document when
+     * it landed and null when it did not.
      *
      * Read-merge-write, and **aborts rather than overwriting** when the read fails: kind 13303 is
      * replaceable, so writing a patch-only document over a list we could not read deletes every
@@ -839,12 +856,13 @@ object ConcordCommands {
     suspend fun publishInviteList(
         ctx: Context,
         patch: ConcordInviteListDocument,
-    ): Boolean {
+    ): ConcordInviteListDocument? {
         val relays = ctx.outboxRelays()
-        if (relays.isEmpty()) return false
-        val base = readInviteList(ctx) ?: return false
-        val event = ConcordInviteListEvent.create(ctx.signer, ConcordInviteList.merge(base, patch), TimeUtils.now())
-        return ctx.publish(event, relays).values.any { it.accepted }
+        if (relays.isEmpty()) return null
+        val base = readInviteList(ctx) ?: return null
+        val merged = ConcordInviteList.merge(base, patch)
+        val event = ConcordInviteListEvent.create(ctx.signer, merged, TimeUtils.now())
+        return if (ctx.publish(event, relays).values.any { it.accepted }) merged else null
     }
 
     fun notFound(handle: String): Int {
