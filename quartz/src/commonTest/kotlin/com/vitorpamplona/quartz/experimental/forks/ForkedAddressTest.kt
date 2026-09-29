@@ -21,12 +21,10 @@
 package com.vitorpamplona.quartz.experimental.forks
 
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.tags.ForkTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class ForkedAddressTest {
     private val pk = "1".repeat(64)
@@ -47,9 +45,9 @@ class ForkedAddressTest {
     }
 
     @Test
-    fun aNipTextForkTagIsItsOwnKind() {
+    fun aNipTextFindsTheTextItWasForkedFrom() {
         val origin = "${NipTextEvent.KIND}:$pk:nip-01"
-        assertNotNull(ForkTag.parse(arrayOf("a", origin, "", "fork")))
-        assertEquals(origin, ForkTag.parseValidAddress(arrayOf("a", origin, "", "fork")))
+        val text = NipTextEvent("0".repeat(64), pk, 1, arrayOf(arrayOf("d", "nip-01"), arrayOf("a", community), arrayOf("a", origin, "", "fork")), "", "0".repeat(128))
+        assertEquals(origin, text.forkFromAddress()?.toValue())
     }
 }
