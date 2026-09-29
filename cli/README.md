@@ -683,7 +683,7 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, then records it in your Invite List. |
 | `amy concord join URL` | Redeem an invite link and save the community. |
 | `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04). |
-| `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`). |
+| `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`; also `MANAGE_ROLES`, `MANAGE_CHANNELS`, `MANAGE_METADATA`, `MANAGE_MESSAGES`, `CREATE_INVITE`, `VIEW_AUDIT_LOG`, `MENTION_EVERYONE`, `PIN_MESSAGES`). |
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
 | `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
 | `amy concord dissolve COMMUNITY --yes` | Owner only, irreversible: publish the `eid`-bound dissolution tombstone that seals the community read-only (CORD-02 §9). |

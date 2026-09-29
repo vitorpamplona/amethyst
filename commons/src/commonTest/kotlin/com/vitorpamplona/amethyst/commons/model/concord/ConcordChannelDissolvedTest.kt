@@ -49,7 +49,7 @@ class ConcordChannelDissolvedTest {
     // The tombstone lives on its own plane (CORD-02 §9); the session sets the flag from there.
     private fun state(dissolved: Boolean): ConcordCommunityState =
         ConcordCommunityState
-            .fold(listOf(ed(ControlEntityKind.CHANNEL, channelId, """{"name":"general"}""")), owner)
+            .fold(listOf(ed(ControlEntityKind.CHANNEL, channelId, """{"name":"general"}""")), "cc".repeat(32).hexToByteArray(), owner)
             .withDissolved(dissolved)
 
     @Test

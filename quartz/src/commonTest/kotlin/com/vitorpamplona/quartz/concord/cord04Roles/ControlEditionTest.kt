@@ -21,11 +21,15 @@
 package com.vitorpamplona.quartz.concord.cord04Roles
 
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.EditionHash
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -108,6 +112,75 @@ class ControlEditionTest {
             ),
         )
     }
+
+    private fun parse(vararg tags: Array<String>) = ControlEdition.fromRumor(RumorAssembler.assembleRumor<Event>(author, 1L, ControlEditionEvent.KIND, arrayOf(*tags), "{}"))
+
+    private val cite = arrayOf("vac", ByteArray(32) { 0x02 }.toHexKey(), "2", ByteArray(32) { 0x03 }.toHexKey())
+
+    @Test
+    fun versionTagsMustBeCanonicalDecimals() {
+        // CORD-01 §5: no sign, no leading zeros. toLongOrNull() would read all of these as 4.
+        assertNotNull(parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "4")))
+        for (bad in listOf("04", "+4", "-4", "4.0", "0x4", "1e2", "", " 4")) {
+            assertNull(parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", bad)), "ev '$bad'")
+        }
+        assertNotNull(parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "0")), "a legacy v0 chain still reads")
+
+        // The vac version too, and a malformed vac rejects the edition rather than reading as "no citation".
+        assertEquals(2L, parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "4"), cite)?.authorityCitation?.grantVersion)
+        for (bad in listOf("02", "+2")) {
+            val vac = arrayOf("vac", cite[1], bad, cite[3])
+            assertNull(parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "4"), vac), "vac version '$bad'")
+        }
+
+        // And the sub-kind: "03" is not the Grant sub-kind.
+        assertNull(parse(arrayOf("vsk", "03"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "4")))
+    }
+
+    @Test
+    fun aDuplicatedMachineryTagMakesTheEditionInvalid() {
+        // Two readers could each take a different copy, so the edition is ambiguous (Armada `parseEdition`).
+        val base = arrayOf(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "4"))
+        assertNotNull(parse(*base))
+        assertNull(parse(*base, arrayOf("vsk", "2")), "duplicate vsk")
+        assertNull(parse(*base, arrayOf("eid", ByteArray(32).toHexKey())), "duplicate eid")
+        assertNull(parse(*base, arrayOf("ev", "5")), "duplicate ev")
+        assertNull(parse(*base, arrayOf("ep", ByteArray(32).toHexKey()), arrayOf("ep", ByteArray(32) { 1 }.toHexKey())), "duplicate ep")
+        assertNull(parse(*base, cite, cite), "duplicate vac")
+        // Even a duplicate that fails to parse on its own: "04" beside "4" is still two ev tags.
+        assertNull(parse(*base, arrayOf("ev", "04")), "a second, non-canonical ev")
+    }
+
+    @Test
+    fun subKindsThatAreNotControlEditionsAreRefusedAndUnknownOnesKept() {
+        // 6/9 belong to the kind-33301 invite marker, 7 is retired, 10 is the dissolution tombstone.
+        for (vsk in listOf("6", "7", "9", "10")) {
+            assertNull(parse(arrayOf("vsk", vsk), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1")), "vsk $vsk")
+        }
+        // A sub-kind this client does not model (Pins 11, Signals 12, anything newer) is kept, raw.
+        val pins = parse(arrayOf("vsk", "11"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1"))
+        assertNotNull(pins)
+        assertNull(pins.entityKind)
+        assertEquals("11", pins.vsk)
+        assertEquals(ControlEntityKind.CHANNEL.wire, parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1"))?.vsk)
+    }
+
+    @Test
+    fun anEditionUnderAnEncryptedSealIsNotAControlEdition() =
+        runTest {
+            // CORD-02 §5: Control Plane seals MUST be plaintext (20014) — only those survive a
+            // compaction re-wrap with the author's signature intact.
+            val signer = NostrSignerInternal(KeyPair())
+            val plane = ConcordKeyDerivation.controlPlaneKey(ByteArray(32) { 1 }, ByteArray(32) { 2 }, 0)
+            val rumor = ControlEditionBuilder.rumor(signer.pubKey, ControlEntityKind.CHANNEL, eid, 1, null, """{"name":"general"}""", 1L)
+
+            val plaintext = ConcordStreamEnvelope.open(ConcordStreamEnvelope.wrap(rumor, plane, signer, encrypted = false, createdAt = 1L), plane)
+            assertNotNull(ControlEdition.fromOpened(plaintext))
+
+            val encrypted = ConcordStreamEnvelope.open(ConcordStreamEnvelope.wrap(rumor, plane, signer, encrypted = true, createdAt = 1L), plane)
+            assertEquals(ConcordStreamEnvelope.KIND_SEAL_ENCRYPTED, encrypted.sealKind)
+            assertNull(ControlEdition.fromOpened(encrypted))
+        }
 
     @Test
     fun genesisHasNullPrevWhenEpAbsent() {

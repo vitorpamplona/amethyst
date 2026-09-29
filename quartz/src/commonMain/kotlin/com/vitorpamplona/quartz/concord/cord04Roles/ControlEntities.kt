@@ -111,11 +111,17 @@ data class RoleScope(
 
 /**
  * A Role's content (CORD-04): a named bundle of permissions at a [position].
- * The role's id is the edition's entity id, not a content field. Lower [position]
- * ranks higher; no role may claim position 0 (reserved for the owner).
+ * Lower [position] ranks higher; no role may claim position 0 (reserved for the owner).
+ *
+ * [roleId] is the role's own id, which the spec puts in the content (CORD-04 §2) and which
+ * must equal the edition's `eid`. The reference client drops a role without it, so every
+ * role we write carries it; roles minted before this client wrote it are still read (the
+ * `eid` is then the id), but a role whose [roleId] names a *different* coordinate is refused
+ * ([isWellFormedAt]).
  */
 @Serializable
 data class RoleEntity(
+    @SerialName("role_id") val roleId: String? = null,
     val name: String = "",
     val position: Long = 0,
     /** u64 permission bitfield as a decimal string. */
@@ -126,6 +132,18 @@ data class RoleEntity(
     val deleted: Boolean = false,
 ) {
     fun permissionBits(): ConcordPermissions = ConcordPermissions.fromWireOrNull(permissions) ?: ConcordPermissions.NONE
+
+    /**
+     * Whether this content may stand as the role at coordinate [entityIdHex] (CORD-04 §2/§3):
+     * its [roleId], when present, names that coordinate; its name fits the 64-byte cap; and a
+     * live role claims a position below the owner's 0. Mirrors Armada's `roleFromJSON`, except
+     * that a legacy role with no [roleId] is still accepted.
+     */
+    fun isWellFormedAt(entityIdHex: String): Boolean {
+        if (roleId != null && !roleId.equals(entityIdHex, ignoreCase = true)) return false
+        if (!ConcordLimits.nameFits(name)) return false
+        return deleted || position >= 1
+    }
 }
 
 /**

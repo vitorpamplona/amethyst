@@ -584,6 +584,7 @@ class ConcordCommunitySession(
                 val folded =
                     ConcordCommunityState.fold(
                         editionsLocked(wraps, controlKeys),
+                        communityIdBytes,
                         entry.owner,
                         controlFloorsLocked(),
                     )
@@ -628,7 +629,7 @@ class ConcordCommunitySession(
             if (editionByWrapId.containsKey(wrap.id)) {
                 editionByWrapId[wrap.id]
             } else {
-                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKeys)?.let { ControlEdition.fromRumor(it.rumor) }
+                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKeys)?.let { ControlEdition.fromOpened(it) }
                 editionByWrapId[wrap.id] = edition
                 edition
             }
@@ -653,7 +654,7 @@ class ConcordCommunitySession(
             val wraps = historicalControlWraps[address]?.values?.toList() ?: continue
             val editions = editionsLocked(wraps, keyAtEpoch.first)
             if (editions.isEmpty()) continue
-            floors = ConcordCommunityState.authorizedHeads(editions, entry.owner, floors)
+            floors = ConcordCommunityState.authorizedHeads(editions, communityIdBytes, entry.owner, floors)
         }
         return floors
     }

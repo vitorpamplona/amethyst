@@ -168,7 +168,7 @@ object ConcordChannelCommands {
                 .map { it.second }
         val (graveWraps, controlWraps) = wraps.partition { it.pubKey == dissolvedAddress }
         return ConcordActions
-            .foldCommunity(controlWraps, controlPlane, sc.owner)
+            .foldCommunity(controlWraps, controlPlane, sc.communityId.hexToByteArray(), sc.owner)
             .withDissolved(ConcordDissolution.isDissolved(graveWraps, sc.communityId, sc.owner))
     }
 

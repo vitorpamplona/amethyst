@@ -89,7 +89,7 @@ class ConcordInviteJoinFlowTest {
                 )
             assertFalse(controlPlane.canWrite, "an invite must never hand a joiner the write key")
             val editions = community.genesisWraps.mapNotNull { ControlEdition.fromRumor(ConcordStreamEnvelope.open(it, controlPlane).rumor) }
-            val state = ConcordCommunityState.fold(editions, invite.owner)
+            val state = ConcordCommunityState.fold(editions, invite.communityId.hexToByteArray(), invite.owner)
             assertEquals("Nostrichs", state.metadata?.name)
             assertTrue(state.channels.isNotEmpty()) // #general is visible to the new member
         }

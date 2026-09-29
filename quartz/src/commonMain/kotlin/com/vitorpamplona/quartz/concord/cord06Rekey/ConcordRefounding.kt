@@ -129,7 +129,7 @@ object ConcordRefounding {
         val newEpoch = rootEpoch + 1
         val newControlKeys = ControlPlaneKeys.forStaff(newRoot, communityId, newEpoch, newControlRoot)
 
-        val controlWraps = compactControlPlane(priorControlWraps, priorControlKeys, newControlKeys, ownerPubKey)
+        val controlWraps = compactControlPlane(priorControlWraps, priorControlKeys, newControlKeys, communityId, ownerPubKey)
 
         val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(priorRoot, communityId, newEpoch)
         val prevCommit = ConcordKeyDerivation.epochKeyCommitment(rootEpoch, priorRoot).toHexKey()
@@ -163,19 +163,27 @@ object ConcordRefounding {
      * must hold the new signer. A Rotator MUST NOT mirror editions to the new
      * epoch's legacy-derived address to appease stale readers — the mirror
      * re-opens exactly the member-writable surface the split closes.
+     *
+     * Only plaintext-sealed editions are carried ([ControlEdition.fromOpened]): an
+     * encrypted-seal edition is not a Control edition (CORD-02 §5), and re-wrapping one
+     * would republish it under a signature over ciphertext no reader can keep. Heads of
+     * sub-kinds this client does not model (Pins, Signals, anything newer) ride through
+     * verbatim like every other head, so our Refounding never erases another client's state
+     * (CORD-06 §3: the compaction re-wraps each entity's current head).
      */
     fun compactControlPlane(
         priorWraps: List<Event>,
         priorControlKeys: ControlPlaneKeys,
         newControlKeys: ControlPlaneKeys,
+        communityId: ByteArray,
         ownerPubKey: HexKey,
     ): List<Event> {
         // entity coordinate -> every edition we can open, paired with its verified seal.
         val byCoordinate = HashMap<String, MutableList<Pair<ControlEdition, Event>>>()
         for (wrap in priorWraps) {
             val opened = ConcordStreamEnvelope.openOrNull(wrap, priorControlKeys) ?: continue
-            val edition = ControlEdition.fromRumor(opened.rumor) ?: continue
-            val coord = edition.entityKind.wire + ":" + edition.entityIdHex
+            val edition = ControlEdition.fromOpened(opened) ?: continue
+            val coord = edition.vsk + ":" + edition.entityIdHex
             byCoordinate.getOrPut(coord) { ArrayList() }.add(edition to opened.seal)
         }
 
@@ -195,7 +203,7 @@ object ConcordRefounding {
         // unprivileged author, and it is exactly what ConcordCommunityState.fold would seat, so the
         // compacted epoch starts where the previous one left off.
         val editions = byCoordinate.values.flatten()
-        val honored = ConcordCommunityState.authorizedHeads(editions.map { it.first }, ownerPubKey)
+        val honored = ConcordCommunityState.authorizedHeads(editions.map { it.first }, communityId, ownerPubKey)
         val out = ArrayList<Event>(honored.size)
         for ((_, floor) in honored) {
             val head = floor.known ?: continue

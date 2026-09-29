@@ -44,11 +44,11 @@ Ranked security > interop > feature inside each group.
 | S2 | 03 §1-2 | Posts into a `private:true` channel go to the **root-derived** plane every member can decrypt, under a Lock icon; real private channels can't be read | open → chat-plane batch |
 | S3 | 01 Deletions | Deleting your own Concord message sends a *signed* NIP-17 kind 5 to the p-tagged users (leaks the rumor id outside the community) and never reaches the channel | open → chat-plane batch |
 | S4 | 06 §2 | Stranded recovery adopts a bundle's newer `community_root` with no continuity or authority check — a link creator can relocate every member who joined through their link | open → rekey/invite batch |
-| S5 | 04 §1 | Grant `eid` never checked against `grant_locator(cid, member)`; a second grant chain at a random coordinate overrides the canonical one, order-dependent | open → control-plane batch |
-| S6 | 04 §4 | Banlist unions every fork instead of folding to one head; a ban on a losing fork can never be undone; banlist `eid` unchecked | open → control-plane batch |
-| S7 | 04 §1 | Equal-version ties break on rumor id only, not authority-first; a low-ranked holder can grind an id to beat the owner | open → control-plane batch |
-| S8 | 04 §1 | Metadata `eid` not required to equal `community_id`; a fresh coordinate at a high version bypasses the chain | open → control-plane batch |
-| S9 | 02 §5 / App. B | Seal kind never enforced on read (Control must be 20014, Chat/rekey 20013); any rumor kind from a channel lands in `LocalCache` | open → control-plane + chat-plane batches |
+| S5 | 04 §1 | Grant `eid` never checked against `grant_locator(cid, member)`; a second grant chain at a random coordinate overrides the canonical one, order-dependent | **fixed** — `AuthorityResolver.resolve` / `ConcordCommunityState.fold` / `authorizedHeads` take the `community_id`; a Grant edition counts only when its `eid == grant_locator(cid, content.member)` |
+| S6 | 04 §4 | Banlist unions every fork instead of folding to one head; a ban on a losing fork can never be undone; banlist `eid` unchecked | **fixed** — the Banlist folds to ONE authority-gated head at `banlist_locator(cid)`; the rank-delta rule is kept; re-heal = the writer re-applying atop the winner (`ConcordModeration.ban` again after refold) |
+| S7 | 04 §1 | Equal-version ties break on rumor id only, not authority-first; a low-ranked holder can grind an id to beat the owner | **fixed** — `EditionFold.foldEntityGated`/`foldGated` take an author rank: authority first, then rumor id, both in the head pick (Armada `pickHead`) and in the walk's anchor/next-link choice. The walk part goes past Armada (whose `version.fold` walks on rumor id only, so a lower-id fork can strand an edition chained on the owner's sibling) — spec followed |
+| S8 | 04 §1 | Metadata `eid` not required to equal `community_id`; a fresh coordinate at a high version bypasses the chain | **fixed** — metadata is read only at `eid == community_id` (a fold gate, `AuthorityResolver.isWellFormed`) |
+| S9 | 02 §5 / App. B | Seal kind never enforced on read (Control must be 20014, Chat/rekey 20013); any rumor kind from a channel lands in `LocalCache` | Control half **fixed** — `ControlEdition.fromOpened` refuses a non-20014 seal; used by the session, `ConcordActions.controlEditions` (CLI) and Refounding compaction. Chat half open → chat-plane batch |
 | S10 | App. B | NIP-44 65,535-byte plaintext cap not enforced; quartz silently switches to the extended format strict readers reject | open → chat-plane batch |
 | S11 | 05 §1 | Bundle bounds (channel count, relay cap) not enforced; the join fetches from every relay a bundle names | open → rekey/invite batch |
 | S12 | 06 §3 | Compaction doesn't abort on an incomplete fold, and republishes the compacted plane before the root roll is confirmed | open → rekey/invite batch |
@@ -62,10 +62,10 @@ Ranked security > interop > feature inside each group.
 | I1 | 02 §8 | Community List on retired 13302, hex, no fragments, no tombstones | in progress (this branch) |
 | I2 | 02 §6 | Metadata/Channel edits rebuilt from scratch, wiping `custom`, `message_expiration` (CORD-08), `av_brokers` | **fixed** — `ConcordJson.encodePreserving` lays every edit over the authorized head; metadata/channel forms start from the folded entity |
 | I3 | 03 §2 | Per-channel `voice` flag still modeled and rendered (every Channel is callable since `23dcea5`) | **fixed** — field removed (rides through as an unknown key), Mic icon and blank-preview special case removed |
-| I4 | 04 §1/§5 | `vac` never written or verified — Armada drops every non-owner edition we author | open → control-plane batch |
-| I5 | 04 §2 | Role content lacks `role_id`; Armada ignores every role we mint | open → control-plane batch |
-| I6 | 04 §1 | First edition is v0; spec says versions start at 1 | open → control-plane batch |
-| I7 | 04 §7 | Unknown-vsk editions (pins, signals) dropped by our compaction | open → control-plane batch |
+| I4 | 04 §1/§5 | `vac` never written or verified — Armada drops every non-owner edition we author | **fixed** — `ConcordModeration` stamps every non-owner edition with `AuthorityCitations.forActor` (own grant coordinate, folded head version + hash); every fold gate (roles, grants, banlist, metadata, channels, unmodeled kinds, floors/compaction) requires it per Armada `citationSatisfied` |
+| I5 | 04 §2 | Role content lacks `role_id`; Armada ignores every role we mint | **fixed** — `RoleEntity.roleId` written by `defineRole`; read accepts a legacy role without it, refuses a mismatching one |
+| I6 | 04 §1 | First edition is v0; spec says versions start at 1 | **fixed** — genesis and every new entity start at v1; v0 chains still read |
+| I7 | 04 §7 | Unknown-vsk editions (pins, signals) dropped by our compaction | **fixed** — a canonical unmodeled `vsk` parses with `entityKind == null` + raw `vsk`; floors and compaction carry its gated head verbatim (11 by `PIN_MESSAGES`, 12 by `MANAGE_CHANNELS`, others by any staff bit). vsk 6/7/9/10 are no longer parsed as Control editions |
 | I8 | 06 | Rekey `chunk` index is 0-based; Armada requires 1-based and drops all our Refoundings | open → rekey/invite batch |
 | I9 | 06 §3 | Rotations carry no `vac` | open → rekey/invite batch |
 | I10 | 06 | 120 base blobs per chunk can overflow NIP-44; Armada budgets 99 @104 B / 90 @136 B | open → rekey/invite batch |
@@ -75,7 +75,7 @@ Ranked security > interop > feature inside each group.
 | I14 | 03 §2 | Channel deletion not terminal across the chain; no 64-byte name cap | open → chat-plane batch |
 | I15 | 02 §4 | No `ms` tag on chat rumors | open → chat-plane batch |
 | I16 | examples §2.1 | Inline quote `q` tag is 2-element, Armada writes `["q", id, "", author]` | open → chat-plane batch |
-| I17 | 04 §2, 02 §6 | Caps (role name, roles per member/community, metadata name/description) not enforced | open → control-plane batch |
+| I17 | 04 §2, 02 §6 | Caps (role name, roles per member/community, metadata name/description) not enforced | **fixed** — `ConcordLimits`; refused on write (factory, `ConcordModeration`, app verbs, CLI) and enforced at fold like Armada: over-cap role/metadata editions fall back, a Grant's `role_ids` trim to 64, the Community keeps its 100 lowest `role_id`s. Also: `ev`/`vac`/`vsk` must be canonical decimals and a duplicate `vsk`/`eid`/`ev`/`ep`/`vac` invalidates the edition; CLI knows `VIEW_AUDIT_LOG`/`MENTION_EVERYONE`/`PIN_MESSAGES`; the app's Admin role matches Armada's `ADMIN_ALL` |
 | I18 | 05 §1, §4 | Join doesn't echo invite attribution; CLI join publishes no Guestbook Join; Invite List merge lets the patch win; malformed tombstones dropped | open → rekey/invite batch |
 
 ### Features

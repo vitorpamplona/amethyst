@@ -20,23 +20,23 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles.control.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
-
-/** The `["ev", <n>]` edition-version tag: the monotonically increasing version of a kind-3308 edition. */
-class EvTag {
-    companion object {
-        const val TAG_NAME = "ev"
-
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): Long? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            // Canonical decimal only: "04" or "+4" is not a version (CORD-01 §5).
-            return CanonicalDecimal.parse(tag[1])
-        }
-
-        fun assemble(version: Long) = arrayOf(TAG_NAME, version.toString())
+/**
+ * The strict tag-number form CORD-01 §5 fixes for the Control Plane's machinery tags
+ * (`vsk`, `ev`, a `vac` version): decimal with no sign and no leading zeros — `0`, `4`,
+ * `12`, never `04`, `+4`, `0x4` or `1e2`.
+ *
+ * `String.toLongOrNull()` accepts `+4` and `04`, so two clients reading the same edition
+ * could disagree about which version it is. The reference client (Armada `isTagDecimal`)
+ * refuses anything else, and so do we.
+ */
+object CanonicalDecimal {
+    fun isCanonical(s: String): Boolean {
+        if (s.isEmpty()) return false
+        if (s.length > 1 && s[0] == '0') return false
+        for (c in s) if (c !in '0'..'9') return false
+        return true
     }
+
+    /** [s] as a non-negative Long when it is canonical and fits, else null. */
+    fun parse(s: String): Long? = if (isCanonical(s)) s.toLongOrNull() else null
 }
