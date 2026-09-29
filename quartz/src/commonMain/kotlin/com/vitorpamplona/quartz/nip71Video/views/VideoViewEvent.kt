@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ViewProps
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -90,9 +91,9 @@ class VideoViewEvent(
      * The watched video: its address, and the id of the exact version played. Each carries the
      * session `phase` (start / end) when there is one, so a view count is the `start`s.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
-            val props = phase()?.let { mapOf("phase" to it.code) }
+            val props = phase()?.let { ViewProps(it.code) }
             address(Relation.VIEWED, video(), ATag.TAG_NAME, props)
             event(Relation.VIEWED, videoVersion(), ETag.TAG_NAME, props)
         }

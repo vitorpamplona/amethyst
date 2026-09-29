@@ -65,7 +65,7 @@ class LearningResourceEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider,
     SearchableEvent {
-    override fun links(): List<Link> = links { hashtags(tags) }
+    override fun links(): List<Link<*>> = links { hashtags(tags) }
 
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 

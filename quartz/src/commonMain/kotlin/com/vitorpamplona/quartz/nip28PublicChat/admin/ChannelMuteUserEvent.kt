@@ -59,7 +59,7 @@ class ChannelMuteUserEvent(
      * The `p`s are `CHANNEL_MUTED`: channel moderation, not the author's personal mute list. The
      * channel is the `ROOT` (Quartz adds it; NIP-28's own 44 carries only the `p`).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.ROOT, channelId(), "e")
             userTags(Relation.CHANNEL_MUTED, tags)

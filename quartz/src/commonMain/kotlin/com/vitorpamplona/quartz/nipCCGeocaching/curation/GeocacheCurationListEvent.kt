@@ -108,7 +108,7 @@ class GeocacheCurationListEvent(
 
     fun isWellFormed() = tags.containsAllTagNamesWithValues(REQUIRED_FIELDS) && geocaches().isNotEmpty()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             geocaches().forEach { address(Relation.CURATED, it, "a") }
             valueTags(Relation.TAG, tags, "g")

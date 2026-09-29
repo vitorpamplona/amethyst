@@ -57,7 +57,7 @@ class GeohashPresenceEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "g") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "g") }
 
     fun geohash() = tags.firstNotNullOfOrNull(GeoHashTag::parse)
 

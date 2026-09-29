@@ -74,7 +74,7 @@ class GroupEvent(
      * ephemeral key per event, so the `AUTHOR` link every event states is a throwaway here; the
      * inner rumors carry their own links once decrypted.
      */
-    override fun links(): List<Link> = links { valueTags(Relation.GROUP, tags, "h") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.GROUP, tags, "h") }
 
     // Set when the app layer learns the envelope ↔ inner mapping: on decrypt
     // for inbound events, at build time for outbound ones. Lets relay

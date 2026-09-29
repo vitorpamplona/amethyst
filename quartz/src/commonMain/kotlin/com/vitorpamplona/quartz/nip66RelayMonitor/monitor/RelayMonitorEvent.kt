@@ -58,7 +58,7 @@ class RelayMonitorEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "g") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "g") }
 
     fun frequency() = tags.frequency()
 

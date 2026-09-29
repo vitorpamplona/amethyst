@@ -87,7 +87,7 @@ class StarterPackEvent(
     fun hashtags(): List<String> = tags.mapNotNull(HashtagTag::parse)
 
     /** NIP-51: the people in the pack are its `MEMBER`s; `t` are its topics. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             userTags(Relation.MEMBER, tags)
             hashtags(tags)

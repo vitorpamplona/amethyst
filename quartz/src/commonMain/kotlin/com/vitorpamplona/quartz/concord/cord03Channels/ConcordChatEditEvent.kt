@@ -56,7 +56,7 @@ class ConcordChatEditEvent(
     LinkProvider,
     SearchableEvent {
     /** The edited message. The channel/epoch binding tags carry Concord ids, not Nostr references. */
-    override fun links(): List<Link> = links { event(Relation.EDITED, editedMessageId(), "e") }
+    override fun links(): List<Link<*>> = links { event(Relation.EDITED, editedMessageId(), "e") }
 
     override fun indexableContent() = content
 

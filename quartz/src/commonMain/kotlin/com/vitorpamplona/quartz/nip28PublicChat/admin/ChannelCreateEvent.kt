@@ -108,7 +108,7 @@ class ChannelCreateEvent(
      * NIP-28 gives kind 40 no tags (its metadata and relays live in the content JSON); the `a`
      * tags Quartz reads as address hints are mentions, since nothing gives them another meaning.
      */
-    override fun links(): List<Link> = links { addressTags(Relation.MENTION, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.MENTION, tags) }
 
     companion object {
         const val KIND = 40

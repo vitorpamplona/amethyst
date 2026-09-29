@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ReportProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip56Reports.tags.DefaultReportTag
 import com.vitorpamplona.quartz.nip56Reports.tags.HashSha256Tag
@@ -119,7 +120,7 @@ class ReportEvent(
      * else the report's default, as a [ReportType] code), and `report_raw`, the type as written
      * (trimmed and lowercased; clients invent types that fold into `other`).
      */
-    override fun links(): List<Link> {
+    override fun links(): List<Link<*>> {
         val defaultType = defaultReportType()
         var defaultRaw: String? = null
         var ownDefaultRaw: String? = null
@@ -139,12 +140,9 @@ class ReportEvent(
         fun props(
             type: ReportType?,
             raw: String?,
-        ): Map<String, Any>? {
+        ): ReportProps? {
             val text = raw ?: fallbackRaw
-            return buildMap {
-                if (type != null) put("report", type.code)
-                if (text != null) put("report_raw", text)
-            }.ifEmpty { null }
+            return if (type == null && text == null) null else ReportProps(type?.code, text)
         }
 
         return links {

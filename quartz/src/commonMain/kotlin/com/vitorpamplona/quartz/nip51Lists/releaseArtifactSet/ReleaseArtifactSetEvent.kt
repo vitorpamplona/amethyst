@@ -130,7 +130,7 @@ class ReleaseArtifactSetEvent(
      * `CURATED`; the `a` is the software application (`APP`) they release and the NIP-82 `i` its
      * app id.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

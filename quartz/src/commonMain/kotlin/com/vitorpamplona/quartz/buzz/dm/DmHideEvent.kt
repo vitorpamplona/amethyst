@@ -55,7 +55,7 @@ class DmHideEvent(
     fun channelId() = tags.dmChannelId()
 
     /** The `h` here is the DM being hidden, the object of the command, not its scope. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.HIDDEN, tags, GroupIdTag.TAG_NAME)
         }

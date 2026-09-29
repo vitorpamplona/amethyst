@@ -48,5 +48,5 @@ abstract class WebRTCEvent(
      * NIP-AC: every signalling kind names its callee(s) in `p` ("one per member" in group
      * calls), so the whole family links the same way. `call-id` is a session value, not a link.
      */
-    override fun links(): List<Link> = links { userTags(Relation.RECIPIENT, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.RECIPIENT, tags) }
 }

@@ -40,8 +40,12 @@ data class ATag(
     val pubKeyHex: HexKey,
     val dTag: String = "",
     val relay: NormalizedRelayUrl? = null,
-) {
+) : AddressReferenceTag {
     constructor(address: Address, relayHint: NormalizedRelayUrl? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
+
+    override val relayHint get() = relay
+
+    override fun toAddressId() = toTag()
 
     fun toTag() = AddressSerializer.assemble(kind, pubKeyHex, dTag)
 

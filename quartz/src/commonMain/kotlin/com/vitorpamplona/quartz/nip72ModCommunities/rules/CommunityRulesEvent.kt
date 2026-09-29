@@ -109,7 +109,7 @@ class CommunityRulesEvent(
      * (split because every query filters on it), with its `role` when it names one; a `wot` gate's
      * pubkey is the `WOT_ROOT` of a web of trust `depth` hops deep; `k` names an allowed kind.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

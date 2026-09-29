@@ -108,7 +108,7 @@ class ZapGoalEvent(
      * addressable one) and a web page (`r`). NIP-75 defines no `p`; one here is a mention. The
      * beneficiaries' `zap` tags are emitted for every kind by `Event.allLinks()`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             eventTags(Relation.FUNDED, tags)
             addressTags(Relation.FUNDED, tags)

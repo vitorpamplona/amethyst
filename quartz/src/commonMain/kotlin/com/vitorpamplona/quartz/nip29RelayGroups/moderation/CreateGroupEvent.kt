@@ -43,7 +43,7 @@ class CreateGroupEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { valueTags(Relation.GROUP, tags, "h") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.GROUP, tags, "h") }
 
     fun groupId() = tags.groupId()
 

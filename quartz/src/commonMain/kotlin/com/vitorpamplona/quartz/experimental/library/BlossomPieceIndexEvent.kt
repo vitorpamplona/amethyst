@@ -62,7 +62,7 @@ class BlossomPieceIndexEvent(
     LinkProvider,
     SearchableEvent {
     /** The whole file's url (`r`). Hashes (`x`, `b`) and servers are values, not links. */
-    override fun links(): List<Link> = links { tag(Relation.TAG, URL_TAG, url()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, URL_TAG, url()) }
 
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 

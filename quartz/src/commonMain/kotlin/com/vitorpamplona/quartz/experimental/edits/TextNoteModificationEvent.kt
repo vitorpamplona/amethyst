@@ -46,7 +46,7 @@ class TextNoteModificationEvent(
     LinkProvider,
     SearchableEvent {
     /** The edited note (the first `e`, as [editedNote] reads it) and its author, whom the `p` notifies. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.EDITED, editedNote()?.eventId, "e")
             userTags(Relation.EDITED_AUTHOR, tags)

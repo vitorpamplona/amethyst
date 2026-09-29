@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.links
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapSplitProps
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -96,7 +97,7 @@ class LinkBuilderTest {
             listOf(
                 Link(Relation.AUTHOR, LinkTarget.User(event.pubKey)),
                 Link(Relation.CLIENT, LinkTarget.Address(handler), "client"),
-                Link(Relation.ZAP_SPLIT, LinkTarget.User(pk), "zap", mapOf("weight" to 3.0)),
+                Link(Relation.ZAP_SPLIT, LinkTarget.User(pk), "zap", ZapSplitProps(weight = 3.0)),
                 Link(Relation.EMOJI_SET, LinkTarget.Address(set), "emoji"),
             ),
             event.allLinks(),

@@ -56,7 +56,7 @@ class StreamMessageBookmarkedEvent(
 
     fun bookmarkedMessage() = tags.targetMessage()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             event(Relation.BOOKMARK, bookmarkedMessage(), ETag.TAG_NAME)

@@ -164,7 +164,7 @@ class GitPatchEvent(
      * (`reply` points at the previous patch, `root` at the series' first). `t` holds the `root` and
      * `root-revision` markers and `r` the earliest unique commit.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             gitPeopleLinks(tags, repositoryLinks(tags))
             tags.fastForEach {

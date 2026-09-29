@@ -80,7 +80,7 @@ class AppCurationSetEvent(
     fun apps() = tags.mapNotNull(AddressBookmark::parse)
 
     /** NIP-51: the curated software applications (kind 32267 `a` tags) are `CURATED`. */
-    override fun links(): List<Link> = links { addressTags(Relation.CURATED, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.CURATED, tags) }
 
     companion object {
         const val KIND = 30267

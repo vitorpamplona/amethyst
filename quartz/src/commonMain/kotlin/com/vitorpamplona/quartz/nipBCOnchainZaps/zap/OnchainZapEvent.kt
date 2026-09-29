@@ -116,7 +116,7 @@ class OnchainZapEvent(
     fun isProfileZap() = zappedEvent() == null && zappedAddress() == null
 
     /** NIP-BC: the recipient and the zapped content; the sender is the author. The amount is the sender's claim until it is checked on chain, and `i` names the transaction. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val props = claimedAmountInSats()?.let { mapOf("msats" to it * 1000) }
             userTags(Relation.ZAP_RECIPIENT, tags, props = props)

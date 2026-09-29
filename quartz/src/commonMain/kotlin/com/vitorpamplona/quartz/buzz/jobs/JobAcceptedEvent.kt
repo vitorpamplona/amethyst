@@ -62,7 +62,7 @@ class JobAcceptedEvent(
     /** The requester - the `p` tag. */
     fun requester() = tags.jobParticipant()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.REQUEST, jobRequest(), ETag.TAG_NAME)
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)

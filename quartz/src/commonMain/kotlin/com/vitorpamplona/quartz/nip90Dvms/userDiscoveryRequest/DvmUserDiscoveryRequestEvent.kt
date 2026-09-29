@@ -44,7 +44,7 @@ class DvmUserDiscoveryRequestEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { dvmRequestLinks(tags, forUserParam = true) }
+    override fun links(): List<Link<*>> = links { dvmRequestLinks(tags, forUserParam = true) }
 
     fun inputs(): List<InputTag> = tags.inputs()
 

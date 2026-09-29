@@ -39,6 +39,9 @@ import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListE
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
+import com.vitorpamplona.quartz.nip01Core.links.props.OrderProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -99,7 +102,7 @@ class ExperimentalListsLinksTest {
                 arrayOf("s", "39999:$alice:superset"),
                 arrayOf("q", note1, "", alice),
             )
-        val disputed = mapOf("polarity" to -1.0)
+        val disputed = ItemProps(polarity = -1.0)
         assertEquals(
             listOf(
                 Link(Relation.PARENT_LIST, LinkTarget.Address(concept), "z"),
@@ -134,7 +137,7 @@ class ExperimentalListsLinksTest {
         )
         // no tag: the computable node is not stated
         assertEquals(
-            emptyList<Link>(),
+            emptyList<Link<*>>(),
             AddressableListHeaderEvent(me, me, 0, tags(arrayOf("d", "dogs")), "", me).links(),
         )
     }
@@ -219,8 +222,8 @@ class ExperimentalListsLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.CURATED, LinkTarget.Address(track1), "a", mapOf("order" to 0)),
-                Link(Relation.CURATED, LinkTarget.Address(track2), "a", mapOf("order" to 1)),
+                Link(Relation.CURATED, LinkTarget.Address(track1), "a", OrderProps(order = 0)),
+                Link(Relation.CURATED, LinkTarget.Address(track2), "a", OrderProps(order = 1)),
                 Link(Relation.HASHTAG, LinkTarget.Tag("t", "playlist"), "t"),
             ),
             MusicPlaylistEvent(me, me, 0, tags, "", me).links(),
@@ -248,8 +251,8 @@ class ExperimentalListsLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.MEMBER, LinkTarget.Address(chapter), "a", mapOf("order" to 0, "level" to 1, "title" to "Chapter 1")),
-                Link(Relation.MEMBER, LinkTarget.Event(note1), "e", mapOf("order" to 1, "level" to 2)),
+                Link(Relation.MEMBER, LinkTarget.Address(chapter), "a", MemberProps(order = 0, level = 1, title = "Chapter 1")),
+                Link(Relation.MEMBER, LinkTarget.Event(note1), "e", MemberProps(order = 1, level = 2)),
                 Link(Relation.MENTION, LinkTarget.User(bob), "p"),
                 Link(Relation.HASHTAG, LinkTarget.Tag("t", "fables"), "t"),
                 Link(Relation.SOURCE, LinkTarget.Address(original), "A"),
@@ -298,7 +301,7 @@ class ExperimentalListsLinksTest {
         )
         // a legacy state with only its d: the d is not a link
         assertEquals(
-            emptyList<Link>(),
+            emptyList<Link<*>>(),
             InteractiveStoryReadingStateEvent(me, me, 0, tags(arrayOf("d", story)), "", me).links(),
         )
     }

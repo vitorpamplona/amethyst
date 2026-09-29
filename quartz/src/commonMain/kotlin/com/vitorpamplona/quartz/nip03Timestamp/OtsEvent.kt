@@ -65,7 +65,7 @@ class OtsEvent(
     suspend fun verify(resolver: OtsResolver): Long? = (verifyState(resolver) as? VerificationState.Verified)?.verifiedTime
 
     /** NIP-03: the `e` is the event the proof timestamps, the `k` its kind. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             eventTags(Relation.TIMESTAMPED, tags)
             valueTags(Relation.TAG, tags, "k")

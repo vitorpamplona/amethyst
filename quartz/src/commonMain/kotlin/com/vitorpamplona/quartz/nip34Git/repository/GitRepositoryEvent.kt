@@ -119,7 +119,7 @@ class GitRepositoryEvent(
      * unique commit, and the repository this one is a fork of (`u`, when it holds an address rather
      * than a git URL).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             maintainers().forEach { user(Relation.MAINTAINER, it, "maintainers") }
             hashtags(tags)

@@ -68,7 +68,7 @@ class ModerationResolveReportEvent(
     fun reason() = tags.moderationReason()
 
     /** The report rides in Buzz's own `report` tag, not an `e`. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.RESOLVED, report(), ReportTag.TAG_NAME, linkProps("status" to status(), "action" to action(), "reason" to reason()))
         }

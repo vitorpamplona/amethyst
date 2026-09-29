@@ -44,7 +44,7 @@ class NwcNotificationEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-47: `p` is the client the notification is encrypted to. */
-    override fun links(): List<Link> = links { user(Relation.RECIPIENT, clientPubKey(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, clientPubKey(), "p") }
 
     override fun isContentEncoded() = true
 

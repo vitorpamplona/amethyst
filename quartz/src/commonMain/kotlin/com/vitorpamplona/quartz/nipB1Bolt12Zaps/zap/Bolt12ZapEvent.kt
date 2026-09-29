@@ -145,7 +145,7 @@ class Bolt12ZapEvent(
     fun isAnonymous() = payer() == null
 
     /** NIP-B1: the recipient (`p`), the payer (`P`, absent on anonymous zaps) and the zapped content. The amount is verified against the payer proof, not by links. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val props = amount()?.let { mapOf("msats" to it) }
             userTags(Relation.ZAP_RECIPIENT, tags, props = props)

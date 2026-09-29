@@ -73,7 +73,7 @@ class CommunityListEvent(
     fun publicCommunityIds() = tags.communityIds()
 
     /** NIP-51: the NIP-72 communities (kind 34550 `a` tags) the user belongs to are `SUBSCRIBED`. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag -> address(Relation.SUBSCRIBED, CommunityTag.parseAddressId(tag), "a") }
         }

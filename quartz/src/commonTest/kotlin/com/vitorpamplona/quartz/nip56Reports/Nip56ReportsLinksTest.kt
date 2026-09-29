@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ReportProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -37,7 +38,7 @@ class Nip56ReportsLinksTest {
     private fun props(
         report: String,
         raw: String,
-    ) = mapOf("report" to report, "report_raw" to raw)
+    ) = ReportProps(report = report, reportRaw = raw)
 
     @Test
     fun aReportThatNamesNoContentIsAboutThePerson() {

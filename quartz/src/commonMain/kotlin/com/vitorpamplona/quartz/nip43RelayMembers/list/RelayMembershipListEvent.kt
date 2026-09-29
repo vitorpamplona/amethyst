@@ -27,9 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTagsWithRoles
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.MemberTag
 import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -45,7 +47,7 @@ class RelayMembershipListEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     // `["member", <pubkey>, <role id>…]`: the NIP-43 kind 33534 roles the relay assigned ride on the link.
-    override fun links(): List<Link> = links { userTagsWithRoles(Relation.MEMBER, tags, "member") }
+    override fun links(): List<Link<*>> = links { each(tags, MemberTag::parseMember) { user(Relation.MEMBER, it.pubKey, MemberTag.TAG_NAME, MemberProps(roles = it.roles)) } }
 
     fun members() = tags.members()
 

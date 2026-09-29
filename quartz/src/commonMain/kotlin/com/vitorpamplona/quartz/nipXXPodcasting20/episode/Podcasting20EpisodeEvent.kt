@@ -156,7 +156,7 @@ class Podcasting20EpisodeEvent(
     override fun episodeSoundbites() = soundbites()
 
     /** `edit` is the event id of the episode's original publication. `person` tags carry names, not keys. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.EDITED, editsEventId(), EditTag.TAG_NAME)
             hashtags(tags)

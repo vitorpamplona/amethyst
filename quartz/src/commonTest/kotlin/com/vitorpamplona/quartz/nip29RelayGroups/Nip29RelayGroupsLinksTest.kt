@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.allLinks
+import com.vitorpamplona.quartz.nip01Core.links.props.OrderProps
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -53,7 +55,7 @@ class Nip29RelayGroupsLinksTest {
     fun putAndRemoveUserLinkTheGroupAndTheMember() {
         val tags = arrayOf(arrayOf("h", "pizza"), arrayOf("p", alice, "admin"), arrayOf("previous", "abcd1234"))
         assertEquals(
-            listOf(group, Link(Relation.ADDED_USER, LinkTarget.User(alice), "p", mapOf("roles" to listOf("admin")))),
+            listOf(group, Link(Relation.ADDED_USER, LinkTarget.User(alice), "p", RoleProps(roles = listOf("admin")))),
             GroupPutUserEvent(id, alice, 1, tags, "", sig).links(),
         )
         assertEquals(
@@ -118,8 +120,8 @@ class Nip29RelayGroupsLinksTest {
         val tags = arrayOf(arrayOf("h", "pizza"), arrayOf("a", article), arrayOf("e", "bad"), arrayOf("e", note, "wss://relay.example/"))
         val pins =
             listOf(
-                Link(Relation.PIN, LinkTarget.Address(article), "a", mapOf("order" to 0)),
-                Link(Relation.PIN, LinkTarget.Event(note), "e", mapOf("order" to 1)),
+                Link(Relation.PIN, LinkTarget.Address(article), "a", OrderProps(order = 0)),
+                Link(Relation.PIN, LinkTarget.Event(note), "e", OrderProps(order = 1)),
             )
         assertEquals(listOf(group) + pins, GroupUpdatePinListEvent(id, alice, 1, tags, "", sig).links())
         // The relay-signed 39005: its group is its own d, which is not linked.
@@ -162,7 +164,7 @@ class Nip29RelayGroupsLinksTest {
     @Test
     fun relaySignedListsLinkTheirPeopleButNotTheGroupInTheirD() {
         val tags = arrayOf(arrayOf("d", "pizza"), arrayOf("p", alice, "admin", "moderator"), arrayOf("p", "short"))
-        assertEquals(listOf(Link(Relation.ADMIN, LinkTarget.User(alice), "p", mapOf("roles" to listOf("admin", "moderator")))), GroupAdminsEvent(id, relay, 1, tags, "", sig).links())
+        assertEquals(listOf(Link(Relation.ADMIN, LinkTarget.User(alice), "p", RoleProps(roles = listOf("admin", "moderator")))), GroupAdminsEvent(id, relay, 1, tags, "", sig).links())
         assertEquals(listOf(Link(Relation.MEMBER, LinkTarget.User(alice), "p")), GroupMembersEvent(id, relay, 1, tags, "", sig).links())
         assertEquals(
             listOf(Link(Relation.PARTICIPANT, LinkTarget.User(bob), "participant")),

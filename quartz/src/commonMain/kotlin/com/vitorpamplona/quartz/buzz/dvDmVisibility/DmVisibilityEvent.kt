@@ -66,7 +66,7 @@ class DmVisibilityEvent(
     fun hiddenChannels() = tags.dmVisibilityHiddenChannels()
 
     /** Each `h` is a DM the viewer has hidden, not a scope. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.VIEWER, viewerFromPTag(), PTag.TAG_NAME)
             valueTags(Relation.HIDDEN, tags, GroupIdTag.TAG_NAME)

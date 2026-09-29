@@ -68,7 +68,7 @@ class WindowBoundsEvent(
             null
         }
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
         }

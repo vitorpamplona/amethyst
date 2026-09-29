@@ -74,7 +74,7 @@ class CalendarCollectionEvent(
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     /** NIP-52: a calendar is a set of `a` references to the date and time slots it includes. */
-    override fun links(): List<Link> = links { addressTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.MEMBER, tags) }
 
     companion object {
         const val KIND = 31924

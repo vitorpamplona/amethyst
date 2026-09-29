@@ -66,7 +66,7 @@ class PresenceUpdateEvent(
      * The relay-synthesized read form names whose presence it reports in a `p`; a
      * client-published update carries none, since its subject is its author.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             userTags(Relation.SUBJECT, tags)
         }

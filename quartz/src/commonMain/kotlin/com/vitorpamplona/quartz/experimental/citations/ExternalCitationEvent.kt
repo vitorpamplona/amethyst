@@ -45,7 +45,7 @@ class ExternalCitationEvent(
     sig: HexKey,
 ) : CitationEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     /** The NIP-03 timestamp attesting when the page was seen, then the base's `g`. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.OPEN_TIMESTAMP, openTimestamp(), CitationTags.OPEN_TIMESTAMP)
             tag(Relation.TAG, CitationTags.GEOHASH, geohash())

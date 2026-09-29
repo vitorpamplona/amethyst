@@ -177,7 +177,7 @@ class WikiArticleEvent(
      * NIP-54 articles have no parent: an `a` or `e` marked `fork` is the version this one was forked
      * from, one marked `defer` a version it considers better than itself, and any other is a citation.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

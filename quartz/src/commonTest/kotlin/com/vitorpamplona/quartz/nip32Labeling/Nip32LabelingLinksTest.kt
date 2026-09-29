@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip32Labeling
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.LabelProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -54,7 +55,7 @@ class Nip32LabelingLinksTest {
                 "",
                 sig,
             )
-        val labels = mapOf("labels" to listOf("ISO-639-1:en", "ugc:nsfw"))
+        val labels = LabelProps(labels = listOf("ISO-639-1:en", "ugc:nsfw"))
 
         assertEquals(
             listOf(

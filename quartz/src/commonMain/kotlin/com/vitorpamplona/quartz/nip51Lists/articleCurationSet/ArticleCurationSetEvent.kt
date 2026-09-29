@@ -92,7 +92,7 @@ class ArticleCurationSetEvent(
     suspend fun privateItems(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 
     /** NIP-51: the curated articles (`a`) and notes (`e`), `e` or `a`, are `CURATED`. */
-    override fun links(): List<Link> = links { eventsAndAddresses(Relation.CURATED, tags) }
+    override fun links(): List<Link<*>> = links { eventsAndAddresses(Relation.CURATED, tags) }
 
     companion object {
         const val KIND = 30004

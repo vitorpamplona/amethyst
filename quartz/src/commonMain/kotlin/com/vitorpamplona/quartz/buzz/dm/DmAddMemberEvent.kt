@@ -59,7 +59,7 @@ class DmAddMemberEvent(
     /** The member being added - the single `p` tag. */
     fun member() = tags.dmParticipants().firstOrNull()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             user(Relation.ADDED_USER, member(), PTag.TAG_NAME)

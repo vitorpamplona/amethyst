@@ -56,7 +56,7 @@ class WakeUpEvent(
      * The events this wake-up is about and their authors: the `p` tags name the AUTHORS of the
      * subject events, not a recipient (see [notifies]).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

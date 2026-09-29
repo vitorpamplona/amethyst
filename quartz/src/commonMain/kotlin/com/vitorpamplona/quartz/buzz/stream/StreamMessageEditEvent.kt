@@ -55,7 +55,7 @@ class StreamMessageEditEvent(
 
     fun editedMessage() = tags.targetMessage()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             event(Relation.EDITED, editedMessage(), ETag.TAG_NAME)

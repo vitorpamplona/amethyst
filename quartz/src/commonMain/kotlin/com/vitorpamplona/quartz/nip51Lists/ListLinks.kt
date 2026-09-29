@@ -24,13 +24,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
 
 // The shapes NIP-51 lists share. Only public tags are read: private (NIP-44 encrypted) entries
 // are invisible to anyone but the owner, so they never become links.
 
 /** The `e` and `a` items of a bookmark-like list, in tag order, as [relation]. */
-internal fun LinkBuilder.eventsAndAddresses(
-    relation: Relation,
+internal fun <P : LinkProps> LinkBuilder.eventsAndAddresses(
+    relation: Relation<P>,
     tags: TagArray,
 ) = tags.fastForEach { tag ->
     if (tag.size < 2) return@fastForEach

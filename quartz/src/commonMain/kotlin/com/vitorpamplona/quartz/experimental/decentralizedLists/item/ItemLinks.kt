@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.Parent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 
 /**
@@ -39,7 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
  */
 internal fun LinkBuilder.listItemTag(
     entry: Array<String>,
-    itemProps: Map<String, Any>? = null,
+    itemProps: ItemProps? = null,
 ): Boolean {
     if (entry.size < 2) return false
     when (entry[0]) {

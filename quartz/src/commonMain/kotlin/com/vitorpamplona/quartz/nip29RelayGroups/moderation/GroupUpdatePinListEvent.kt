@@ -52,7 +52,7 @@ class GroupUpdatePinListEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, "h")
             groupPinLinks(pins())

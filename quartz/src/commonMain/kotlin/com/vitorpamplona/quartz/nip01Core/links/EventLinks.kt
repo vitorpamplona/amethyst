@@ -22,7 +22,12 @@ package com.vitorpamplona.quartz.nip01Core.links
 
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapSplitProps
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupParser
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 
 /**
  * Every link [this] event states: its `AUTHOR`, its `ADDRESS` (replaceable and addressable
@@ -30,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.fastForEach
  * ([everyKindLinks]), then the class's own [LinkProvider.links]. An event whose kind Quartz
  * has no class for states only the first three.
  */
-fun Event.allLinks(): List<Link> =
+fun Event.allLinks(): List<Link<*>> =
     links {
         user(Relation.AUTHOR, pubKey)
         if (this@allLinks is AddressableEvent) address(Relation.ADDRESS, addressTag())
@@ -39,21 +44,17 @@ fun Event.allLinks(): List<Link> =
     }
 
 /**
- * The tags NIP-89, NIP-57 and NIP-30 let any event carry, so no class repeats them:
- * - `["client", <name>, <31990 address>, <relay>]` → [Relation.CLIENT] (the handler's address);
- * - `["zap", <pubkey>, <relay>, <weight>]` → [Relation.ZAP_SPLIT], a split SETTING, not a
- *   payment (so not `ZAP_RECIPIENT`), with its `weight`;
- * - `["emoji", <shortcode>, <url>, <30030 address>]` → [Relation.EMOJI_SET], the set it is from.
+ * The tags NIP-89, NIP-57 and NIP-30 let any event carry, so no class repeats them, each read by
+ * its Tag class:
+ * - [ClientTag]: the handler's 31990 address → [Relation.CLIENT];
+ * - a zap split ([ZapSplitSetupParser]) → [Relation.ZAP_SPLIT] with its weight: a split SETTING,
+ *   not a payment, so not `ZAP_RECIPIENT`. A lightning-address split names no user;
+ * - [EmojiUrlTag]: the 30030 set an emoji comes from → [Relation.EMOJI_SET].
  */
-fun LinkBuilder.everyKindLinks(event: Event) =
-    event.tags.fastForEach { tag ->
-        if (tag.size < 2) return@fastForEach
-        when (tag[0]) {
-            "client" -> if (tag.size > 2) address(Relation.CLIENT, tag[2], "client")
-            "zap" -> {
-                val weight = tag.getOrNull(3)?.toDoubleOrNull()
-                user(Relation.ZAP_SPLIT, tag[1], "zap", weight?.let { mapOf("weight" to it) })
-            }
-            "emoji" -> if (tag.size > 3) address(Relation.EMOJI_SET, tag[3], "emoji")
-        }
+fun LinkBuilder.everyKindLinks(event: Event) {
+    each(event.tags, ClientTag::parse) { address(Relation.CLIENT, it.address, ClientTag.TAG_NAME) }
+    each(event.tags, ZapSplitSetupParser::parse) {
+        if (it is ZapSplitSetup) user(Relation.ZAP_SPLIT, it.pubKeyHex, BaseZapSplitSetup.TAG_NAME, ZapSplitProps(it.weight))
     }
+    each(event.tags, EmojiUrlTag::parse) { address(Relation.EMOJI_SET, it.emojiSet, EmojiUrlTag.TAG_NAME) }
+}

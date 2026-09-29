@@ -63,7 +63,7 @@ class BirdDetectionEvent(
     LinkProvider,
     SearchableEvent {
     /** The species (`i`, a Wikidata URL) and where it was seen (`g`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size > 1 && (it[0] == "i" || it[0] == "g")) tag(Relation.TAG, it[0], it[1])

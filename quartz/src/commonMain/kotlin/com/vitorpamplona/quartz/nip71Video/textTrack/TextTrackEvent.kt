@@ -92,7 +92,7 @@ class TextTrackEvent(
     fun language() = tags.firstNotNullOfOrNull(LanguageTag::parse)
 
     /** The video this track belongs to and its language (`l`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             addressTags(Relation.VIDEO, tags)
             valueTags(Relation.TAG, tags, "l")

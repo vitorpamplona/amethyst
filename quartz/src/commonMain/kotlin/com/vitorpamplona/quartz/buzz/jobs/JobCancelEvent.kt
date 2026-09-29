@@ -61,7 +61,7 @@ class JobCancelEvent(
     /** The optional cancellation reason - the event `content`. */
     fun reason() = content
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.REQUEST, jobRequest(), ETag.TAG_NAME)
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)

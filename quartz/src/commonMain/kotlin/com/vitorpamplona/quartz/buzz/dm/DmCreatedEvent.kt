@@ -67,7 +67,7 @@ class DmCreatedEvent(
      * The DM id rides in `d` on a regular kind, so it is a reference, not this event's
      * address: it is linked as the `h` group every other DM event scopes itself with.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tag(Relation.GROUP, GroupIdTag.TAG_NAME, dmId(), via = DTag.TAG_NAME)
             userTags(Relation.PARTICIPANT, tags)

@@ -106,7 +106,7 @@ class PublicMessageEvent(
     fun peopleAndContent() = groupAsNProfileList() + " " + content
 
     /** NIP-A4: `p` tags are the receivers, never mentions; mentions come only from the content. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             userTags(Relation.RECIPIENT, tags)
             quotes(tags)

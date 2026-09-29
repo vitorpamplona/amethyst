@@ -76,7 +76,7 @@ class ZapPollEvent(
      * between mentions). A `p` is the parent's author when it matches the author slot of the
      * parent's `e`, else a mention. Votes are zaps, not links of the poll.
      */
-    override fun links(): List<Link> {
+    override fun links(): List<Link<*>> {
         val thread = arrayOfNulls<MarkedETag>(tags.size)
         var markedRoot = -1
         var markedReply = -1

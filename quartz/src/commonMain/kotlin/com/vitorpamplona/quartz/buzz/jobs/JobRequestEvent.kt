@@ -65,7 +65,7 @@ class JobRequestEvent(
     /** The target agent - the `p` tag. */
     fun target() = tags.jobParticipant()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             user(Relation.AGENT, target(), PTag.TAG_NAME)

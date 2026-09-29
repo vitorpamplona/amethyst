@@ -163,7 +163,7 @@ class LongFormContentEvent(
      * `nostr:` URIs in the text. An article has no thread: though it extends [BaseThreadedEvent],
      * its `e`/`a` are never a root or a parent.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

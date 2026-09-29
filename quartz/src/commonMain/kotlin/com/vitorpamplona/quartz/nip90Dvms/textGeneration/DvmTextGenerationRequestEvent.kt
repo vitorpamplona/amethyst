@@ -51,7 +51,7 @@ class DvmTextGenerationRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent,
     LinkProvider {
-    override fun links(): List<Link> = links { dvmRequestLinks(tags) }
+    override fun links(): List<Link<*>> = links { dvmRequestLinks(tags) }
 
     override fun indexableContent() = inputs().filter { it.type == "prompt" || it.type == "text" }.joinToString(" ") { it.value }
 

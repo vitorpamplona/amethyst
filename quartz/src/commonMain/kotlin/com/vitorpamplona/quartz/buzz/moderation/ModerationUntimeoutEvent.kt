@@ -51,7 +51,7 @@ class ModerationUntimeoutEvent(
     /** The pubkey whose timeout is cleared — the single `p` tag. */
     fun target() = tags.moderationTarget()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.TIMEOUT_CLEARED, target(), PTag.TAG_NAME)
         }

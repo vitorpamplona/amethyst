@@ -128,7 +128,7 @@ class ExperimentalLinksTest {
         )
         // a `d` that is not a pubkey recommends nobody
         assertEquals(
-            emptyList<Link>(),
+            emptyList<Link<*>>(),
             AttestorRecommendationEvent(me, me, 0, tags(arrayOf("d", "someone")), "", me).links(),
         )
     }

@@ -62,7 +62,7 @@ class ModerationBanEvent(
     /** The machine-readable `reason` code, if present. */
     fun reason() = tags.moderationReason()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.BANNED, target(), PTag.TAG_NAME, linkProps("expiration" to expiresAt(), "reason" to reason()))
         }

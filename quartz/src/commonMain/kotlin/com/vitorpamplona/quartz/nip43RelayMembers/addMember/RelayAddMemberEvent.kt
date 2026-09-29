@@ -44,7 +44,7 @@ class RelayAddMemberEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { userTags(Relation.ADDED_USER, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.ADDED_USER, tags) }
 
     fun memberPubKeys() = tags.mapNotNull(PTag::parseKey)
 

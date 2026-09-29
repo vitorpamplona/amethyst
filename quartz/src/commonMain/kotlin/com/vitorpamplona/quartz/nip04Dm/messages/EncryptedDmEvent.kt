@@ -58,7 +58,7 @@ class EncryptedDmEvent(
     PubKeyHintProvider,
     LinkProvider {
     /** NIP-04: `p` is the receiver, `e` "the previous message in a conversation or a message we are explicitly replying to". */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.RECIPIENT, recipientPubKey(), "p")
             event(Relation.PARENT, replyTo(), "e")

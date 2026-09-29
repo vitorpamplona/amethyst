@@ -80,7 +80,7 @@ class PairingEvent(
         }
 
     /** The `p` is the peer's ephemeral pairing key, not a long-lived identity. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME)
         }

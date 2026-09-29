@@ -70,7 +70,7 @@ class RoadEventConfirmationEvent(
     LinkProvider,
     EventHintProvider {
     /** The confirmed (or denied) report, with the answer as `status`, and the location cells. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val status = status()?.let { mapOf("status" to it.code) }
             tags.fastForEach {

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip28PublicChat
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
@@ -48,14 +49,14 @@ class Nip28PublicChatLinksTest {
     private val bystander = "b2".repeat(32)
     private val relay = "wss://relay.example/"
 
-    private fun ev(
-        relation: Relation,
+    private fun <P : LinkProps> ev(
+        relation: Relation<P>,
         id: String,
         via: String = "e",
     ) = Link(relation, LinkTarget.Event(id), via)
 
-    private fun us(
-        relation: Relation,
+    private fun <P : LinkProps> us(
+        relation: Relation<P>,
         pubkey: String,
         via: String = "p",
     ) = Link(relation, LinkTarget.User(pubkey), via)

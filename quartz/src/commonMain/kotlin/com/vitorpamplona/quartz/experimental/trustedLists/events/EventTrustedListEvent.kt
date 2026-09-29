@@ -59,7 +59,7 @@ class EventTrustedListEvent(
     AddressHintProvider,
     PubKeyHintProvider {
     /** Members are event ids (`e`). */
-    override fun links(): List<Link> = trustedListLinks("e") { value, props -> event(Relation.MEMBER, value, "e", props) }
+    override fun links(): List<Link<*>> = trustedListLinks("e") { value, props -> event(Relation.MEMBER, value, "e", props) }
 
     override fun members(): List<EventMemberTag> = tags.members()
 

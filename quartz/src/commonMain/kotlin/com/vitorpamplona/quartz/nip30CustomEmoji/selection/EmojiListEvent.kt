@@ -59,7 +59,7 @@ class EmojiListEvent(
     fun emojiPackIds() = tags.mapNotNull(ATag::parseAddressId)
 
     /** NIP-51: the `a` pointers to the emoji sets (kind 30030) the user picked. Loose `emoji` tags are URLs. */
-    override fun links(): List<Link> = links { addressTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.MEMBER, tags) }
 
     companion object {
         const val KIND = 10030

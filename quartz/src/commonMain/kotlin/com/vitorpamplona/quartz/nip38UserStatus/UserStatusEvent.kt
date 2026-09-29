@@ -63,7 +63,7 @@ class UserStatusEvent(
      * NIP-38: a status may link to a profile, a note or an addressable event (`p`/`e`/`a`), each
      * `LINKED`, and to a URL (`r`). The `d` is the status type, not a reference.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

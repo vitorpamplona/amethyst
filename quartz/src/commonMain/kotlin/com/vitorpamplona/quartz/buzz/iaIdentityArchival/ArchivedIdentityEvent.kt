@@ -75,7 +75,7 @@ class ArchivedIdentityEvent(
     /** Whether the NIP-70 `-` protection marker is present (it always should be). */
     fun isProtected() = tags.isProtected()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.ARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
             consent()?.let { user(Relation.ACTOR, it.actorPubKey, ConsentTag.TAG_NAME, mapOf("path" to it.path)) }

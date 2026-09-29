@@ -99,7 +99,7 @@ class CalendarRSVPEvent(
     fun calendarEventAuthor() = tags.firstNotNullOfOrNull(PTag.Companion::parse)
 
     /** NIP-52: the calendar event responded to, by address and optionally by id, and its author. The RSVP status and free/busy flag ride on the calendar event links. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val status = statusValue()
             val freeBusy = freebusy()?.value

@@ -71,7 +71,7 @@ class PublicationContentEvent(
      * event's own author ([publicationAddress]), so an inference; and each `wikilink`: its event
      * when the tag names one, else its target slug as written, plus the linked event's author.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             address(Relation.PUBLICATION, publicationAddress(), if (firstValue(PUBLICATION_TAG) != null) PUBLICATION_TAG else PUBLICATION_TAG_ALT)
             wikilinks().forEach { link ->

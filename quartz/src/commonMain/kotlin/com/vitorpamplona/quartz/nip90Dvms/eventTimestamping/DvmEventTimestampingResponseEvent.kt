@@ -43,7 +43,7 @@ class DvmEventTimestampingResponseEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-90 5900's output: the content is the id of the kind 1040 proof, which itself links TIMESTAMPED. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             dvmResultLinks(tags)
             event(Relation.RESULT, otsEventId(), Link.VIA_CONTENT)

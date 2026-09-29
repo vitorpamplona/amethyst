@@ -200,7 +200,7 @@ class MetadataEvent(
      * The NIP-39 identity claims mirrored as `i` tags (`github:<user>`, …) are external ids. The
      * profile JSON's own values (names, pictures, `about`) are not references.
      */
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
 
     companion object {
         const val KIND = 0

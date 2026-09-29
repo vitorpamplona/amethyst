@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -105,8 +106,8 @@ class AddressableListItemEvent(
      * links as ITEM and a tagging's `polarity` rides on them. The `curation-method` is JSON, not
      * modelled.
      */
-    override fun links(): List<Link> {
-        val itemProps = tags.fastFirstNotNullOfOrNull(PolarityTag::parseValue)?.let { mapOf("polarity" to it) }
+    override fun links(): List<Link<*>> {
+        val itemProps = tags.fastFirstNotNullOfOrNull(PolarityTag::parseValue)?.let { ItemProps(polarity = it) }
         return links {
             tags.fastForEach {
                 if (listItemTag(it, itemProps) || it.size < 2) return@fastForEach

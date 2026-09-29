@@ -89,7 +89,7 @@ class EngramEvent(
         }
 
     /** The `d` is a blinded HMAC that only looks like an id: it is never linked. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.OWNER, ownerPubKey(), PTag.TAG_NAME)
         }

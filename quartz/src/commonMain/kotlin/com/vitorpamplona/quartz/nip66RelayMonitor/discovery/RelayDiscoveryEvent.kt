@@ -62,7 +62,7 @@ class RelayDiscoveryEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-66: the relay itself is this event's `d` (a URL, not linked); its topics, geohashes and accepted kinds are. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

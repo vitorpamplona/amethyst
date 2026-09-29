@@ -144,7 +144,7 @@ class LiveActivitiesChatMessageEvent(
      * NIP-53: the activity's `a` is the chat's ROOT (the spec's example marks it `root`; without a
      * marker, the first `a`), and an `e` is the message this one replies to.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val activity = tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" } ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
             tags.fastForEach {

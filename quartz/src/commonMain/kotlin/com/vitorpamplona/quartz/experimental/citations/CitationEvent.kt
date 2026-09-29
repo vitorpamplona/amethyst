@@ -66,7 +66,7 @@ abstract class CitationEvent(
     LinkProvider,
     SearchableEvent {
     /** The location the source was consulted from (`g`). The cited source itself is a value (a title, a DOI, a url). */
-    override fun links(): List<Link> = links { tag(Relation.TAG, CitationTags.GEOHASH, geohash()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, CitationTags.GEOHASH, geohash()) }
 
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 

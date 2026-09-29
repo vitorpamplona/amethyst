@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.buzz.audit
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.audit.tags.ObjectTag
-import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -30,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.AuditProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -72,11 +72,11 @@ class AuditEntryEvent(
      * The `object` is an event only when the action acts on one; otherwise it is a channel
      * UUID or a media hash, and a 64-hex hash must not become an event link.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.ACTOR, actor(), PTag.TAG_NAME)
             val action = action()
-            val props = linkProps("action" to action?.code)
+            val props = action?.code?.let { AuditProps(it) }
             when (action) {
                 AuditAction.EVENT_CREATED, AuditAction.EVENT_DELETED -> event(Relation.AUDITED, objectId(), ObjectTag.TAG_NAME, props)
                 else -> tag(Relation.AUDITED, ObjectTag.TAG_NAME, objectId(), props = props)

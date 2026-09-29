@@ -172,7 +172,7 @@ class MeetingRoomEvent(
     fun participantsIntersect(keySet: Set<String>): Boolean = keySet.contains(pubKey) || tags.any(ParticipantTag::isIn, keySet)
 
     /** NIP-53: a meeting's `a` is the space (30312) it takes place in. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             address(Relation.PARENT, interactiveRoom()?.address, "a")
             participantLinks(tags)

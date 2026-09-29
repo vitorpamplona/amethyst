@@ -53,7 +53,7 @@ class AttestorRecommendationEvent(
      * NIP-85 assertion's subject, it is the thing the event is about, not the event's own
      * identity, so it is a link; the validator drops a `d` that is not a pubkey.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.RECOMMENDED, dTag(), "d")
             valueTags(Relation.TAG, tags, KindTag.TAG_NAME)

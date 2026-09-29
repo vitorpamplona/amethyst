@@ -77,7 +77,7 @@ class MuteListEvent(
     override fun dTag() = FIXED_D_TAG
 
     /** NIP-51: every public entry (`p`, `e`, `t`, `word`) is a `MUTE`. */
-    override fun links(): List<Link> = links { mutes(tags) }
+    override fun links(): List<Link<*>> = links { mutes(tags) }
 
     companion object {
         const val KIND = 10000

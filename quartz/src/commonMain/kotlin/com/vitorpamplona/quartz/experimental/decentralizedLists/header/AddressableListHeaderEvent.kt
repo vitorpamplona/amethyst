@@ -75,7 +75,7 @@ class AddressableListHeaderEvent(
      * The `b` inherit-from targets and the Concept Graph node, only when the `concept-graph` tag
      * is written: [conceptGraph]'s computed fallback is derived from this header's own address.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

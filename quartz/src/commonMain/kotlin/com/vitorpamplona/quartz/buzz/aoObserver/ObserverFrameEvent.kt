@@ -121,7 +121,7 @@ class ObserverFrameEvent(
             null
         }
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val frame = linkProps("frame" to frame())
             user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME, frame)

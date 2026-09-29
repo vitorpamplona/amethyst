@@ -143,7 +143,7 @@ class MeetingSpaceEvent(
 
     fun participantsIntersect(keySet: Set<String>): Boolean = keySet.contains(pubKey) || tags.any(ParticipantTag::isIn, keySet)
 
-    override fun links(): List<Link> = links { participantLinks(tags) }
+    override fun links(): List<Link<*>> = links { participantLinks(tags) }
 
     companion object Companion {
         const val KIND = 30312

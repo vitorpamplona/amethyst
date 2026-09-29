@@ -71,7 +71,7 @@ class GeohashListEvent(
     suspend fun decryptGeohashes(signer: NostrSigner): List<String> = publicGeohashes() + (decryptPrivateGeohashes(signer) ?: emptyList())
 
     /** The followed locations: every public `g` geohash is `SUBSCRIBED`. */
-    override fun links(): List<Link> = links { valueTags(Relation.SUBSCRIBED, tags, "g") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.SUBSCRIBED, tags, "g") }
 
     companion object {
         const val KIND = 10081

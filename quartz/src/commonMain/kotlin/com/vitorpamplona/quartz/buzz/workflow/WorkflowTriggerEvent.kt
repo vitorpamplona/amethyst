@@ -55,7 +55,7 @@ class WorkflowTriggerEvent(
      * The `d` on this REGULAR kind names the workflow to run, not this event: it is the
      * 30620 definition's `d`, under this author, since only the workflow's owner may trigger it.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             address(Relation.TRIGGERED, workflowId()?.let { "${WorkflowDefEvent.KIND}:$pubKey:$it" }, DTag.TAG_NAME)
         }

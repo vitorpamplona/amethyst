@@ -61,7 +61,7 @@ class AttestationEvent(
     AddressHintProvider,
     SearchableEvent {
     /** The attested assertion (an `e` or an `a`) and the kind-31872 request it answers. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

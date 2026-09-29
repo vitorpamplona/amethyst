@@ -66,7 +66,7 @@ class WelcomeEvent(
      * a random global id). This is an unsigned rumor inside a gift wrap, so only the recipient
      * ever sees these links.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.KEY_PACKAGE, keyPackageEventId(), "e")
             valueTags(Relation.GROUP, tags, "h")

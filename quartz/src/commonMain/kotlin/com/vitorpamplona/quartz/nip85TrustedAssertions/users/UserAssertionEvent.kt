@@ -137,7 +137,7 @@ class UserAssertionEvent(
      * tag names (`rank`, `followers`, `hops`, …); `t` are the user's topics. A `p` equal to the
      * `d` is only its relay hint. The encrypted contact-card fields are invisible.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val scores = LinkedHashMap<String, Any>()
             tags.fastForEach { tag ->

@@ -41,7 +41,7 @@ class DvmOpReturnResponseEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { dvmResultLinks(tags) }
+    override fun links(): List<Link<*>> = links { dvmResultLinks(tags) }
 
     fun transactionId(): String? = content.ifEmpty { null }
 

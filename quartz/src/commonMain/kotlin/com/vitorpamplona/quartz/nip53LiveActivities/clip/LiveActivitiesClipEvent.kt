@@ -105,7 +105,7 @@ class LiveActivitiesClipEvent(
     fun title(): String? = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     /** The clipped stream, its host (not necessarily the stream's signer, which may be a provider) and the clip's video URL (`r`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             address(Relation.CLIPPED, activityAddress(), "a")
             userTags(Relation.CLIPPED_AUTHOR, tags)

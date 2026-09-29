@@ -46,7 +46,7 @@ class ExternalIdentitiesEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-39: each `i` is a `platform:identity` claim. */
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
 
     companion object {
         const val KIND = 10011

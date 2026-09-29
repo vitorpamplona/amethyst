@@ -93,7 +93,7 @@ class GenericRepostEvent(
             null
         }
 
-    override fun links(): List<Link> = repostLinks(tags)
+    override fun links(): List<Link<*>> = repostLinks(tags)
 
     companion object {
         const val KIND = 16

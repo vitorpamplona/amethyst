@@ -54,7 +54,7 @@ class UserTrustedListEvent(
     PubKeyHintProvider,
     AddressHintProvider {
     /** Members are pubkeys (`p`). */
-    override fun links(): List<Link> = trustedListLinks("p") { value, props -> user(Relation.MEMBER, value, "p", props) }
+    override fun links(): List<Link<*>> = trustedListLinks("p") { value, props -> user(Relation.MEMBER, value, "p", props) }
 
     override fun members(): List<PubKeyMemberTag> = tags.members()
 

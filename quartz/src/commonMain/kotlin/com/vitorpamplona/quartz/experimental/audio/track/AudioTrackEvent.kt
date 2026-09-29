@@ -55,7 +55,7 @@ class AudioTrackEvent(
     LinkProvider,
     SearchableEvent {
     /** Zapstr writes each participant's role (Host, Artist…) in the 4th slot of its `p`. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size > 1 && it[0] == ParticipantTag.TAG_NAME) {

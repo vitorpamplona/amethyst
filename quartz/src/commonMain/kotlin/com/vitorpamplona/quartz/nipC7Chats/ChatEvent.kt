@@ -104,7 +104,7 @@ class ChatEvent(
      * NIP-C7: a reply quotes its parent in a `q` tag whose fourth slot is the parent's author, so the
      * last `q` is the parent and any other a NIP-18 quote. A chat inside a NIP-29 group names it in `h`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val parent = tags.lastOrNull { it.size > 1 && it[0] == QTag.TAG_NAME }
             tags.fastForEach {

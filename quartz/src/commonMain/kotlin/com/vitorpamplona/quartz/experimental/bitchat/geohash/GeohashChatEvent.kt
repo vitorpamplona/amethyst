@@ -63,7 +63,7 @@ class GeohashChatEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** The channel cell (`g`) and the `t` tags (Bitchat writes `teleport` there). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.TAG, tags, "g")
             hashtags(tags)

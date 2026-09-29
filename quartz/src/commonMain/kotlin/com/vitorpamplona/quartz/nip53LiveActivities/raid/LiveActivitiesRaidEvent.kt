@@ -90,7 +90,7 @@ class LiveActivitiesRaidEvent(
             .firstOrNull { it.kind == LiveActivitiesEvent.KIND }
 
     /** The `root`-marked stream is the one raiding, the `mention`-marked one its target. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             address(Relation.ROOT, fromAddress(), "a")
             address(Relation.RAIDED, toAddress(), "a")

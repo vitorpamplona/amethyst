@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.links
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
 
 /**
  * One statement an event makes about something else: "my [relation] is [target]".
@@ -30,16 +31,15 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  *
  * @property via where the reference was written: the tag name, or [VIA_CONTENT] for a
  * `nostr:` URI in the text (NIP-27).
- * @property props values that qualify this one link and that a query filters on after choosing
- * the relation: a report's type, an assertion's rank, a zap split's weight. Strings, numbers,
- * booleans, or a `List<String>` for a set of values the query tests membership in (a NIP-29
- * member's `roles`, a label event's `labels`): what graph stores hold as properties.
+ * @property props the values that qualify this one link (a report's category, a zap's amount,
+ * a member's roles), of the type its [relation] declares; null when there are none.
+ * [LinkProps.toMap] is their store form.
  */
-data class Link(
-    val relation: Relation,
+data class Link<P : LinkProps>(
+    val relation: Relation<P>,
     val target: LinkTarget,
     val via: String? = null,
-    val props: Map<String, Any>? = null,
+    val props: P? = null,
 ) {
     companion object {
         /** [via] for a reference written as a `nostr:` URI in the content (NIP-27). */

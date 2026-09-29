@@ -58,7 +58,7 @@ class ArchivedIdentitiesListEvent(
     /** Whether the NIP-70 `-` protection marker is present (it always should be). */
     fun isProtected() = tags.isProtected()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             userTags(Relation.ARCHIVED, tags)
         }

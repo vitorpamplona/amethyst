@@ -52,7 +52,7 @@ class ExternalIdTrustedListEvent(
     AddressHintProvider,
     PubKeyHintProvider {
     /** Members are NIP-73 external ids (`i`). */
-    override fun links(): List<Link> = trustedListLinks("i") { value, props -> tag(Relation.MEMBER, "i", value, "i", props) }
+    override fun links(): List<Link<*>> = trustedListLinks("i") { value, props -> tag(Relation.MEMBER, "i", value, "i", props) }
 
     override fun members(): List<ExternalIdMemberTag> = tags.members()
 

@@ -134,7 +134,7 @@ class GitIssueEvent(
 
     fun subject() = tags.firstNotNullOfOrNull(SubjectTag::parse)
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             gitPeopleLinks(tags, repositoryLinks(tags))
             quotes(tags)

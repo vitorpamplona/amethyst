@@ -77,7 +77,7 @@ class NipTextEvent(
      * The version this text forks (an `a` or `e` marked `fork`), quotes, mentions (unmarked `a`,
      * `p`, NIP-27 URIs in the text) and the kinds it defines (`k`).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

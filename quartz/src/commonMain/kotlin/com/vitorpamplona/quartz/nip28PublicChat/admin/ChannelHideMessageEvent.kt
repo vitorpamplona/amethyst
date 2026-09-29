@@ -68,7 +68,7 @@ class ChannelHideMessageEvent(
     }
 
     /** The channel ([channel], the `root`-marked `e`) is the `ROOT`; every other `e` is `HIDDEN`. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.ROOT, channelId(), "e")
             eventsToHide().forEach { event(Relation.HIDDEN, it, "e") }

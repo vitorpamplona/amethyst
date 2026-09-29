@@ -82,7 +82,7 @@ class ExternalReactionEvent(
      * NIP-25 kind 17: every NIP-73 `i` is a `REACTED` external id (a podcast reaction names both
      * the show and the episode), `k` their kinds. The `i`'s URL hint is not a target.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.REACTED, tags, "i")
             valueTags(Relation.TAG, tags, "k")

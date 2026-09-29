@@ -65,7 +65,7 @@ class TypingIndicatorEvent(
     /** The reply (parent) event id, if present. */
     fun threadReplyId(): String? = tags.typingThreadReply()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             buzzThreadLinks(threadRootId(), threadReplyId())

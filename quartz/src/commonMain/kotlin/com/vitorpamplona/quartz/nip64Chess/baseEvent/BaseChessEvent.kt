@@ -43,5 +43,5 @@ open class BaseChessEvent(
     fun opponentPubkey() = tags.opponentKey()
 
     /** Every live chess event names the other player in its `p` tag. */
-    override fun links(): List<Link> = links { userTags(Relation.OPPONENT, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.OPPONENT, tags) }
 }

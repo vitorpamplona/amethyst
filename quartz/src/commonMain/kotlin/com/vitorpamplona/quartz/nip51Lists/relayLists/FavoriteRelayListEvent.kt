@@ -79,7 +79,7 @@ class FavoriteRelayListEvent(
     suspend fun decryptRelaySets(signer: NostrSigner): List<AddressBookmark> = publicRelaySets() + (decryptPrivateRelaySets(signer) ?: emptyList())
 
     /** NIP-51: the relay sets (kind 30002 `a` tags) among the favorite relays. The relay URLs themselves are not link targets. */
-    override fun links(): List<Link> = links { publicRelaySets().forEach { address(Relation.FAVORITE, it.address, "a") } }
+    override fun links(): List<Link<*>> = links { publicRelaySets().forEach { address(Relation.FAVORITE, it.address, "a") } }
 
     companion object {
         const val KIND = 10012

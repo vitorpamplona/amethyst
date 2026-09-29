@@ -156,7 +156,7 @@ class GeocacheListingEvent(
      * NIP-CC: the locked-in first-to-find winner (`F`), the key that signs verifications, the cache
      * type as `t` and its geohashes. Its `r` tags are relays for logs, not web references.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.WINNER, firstToFindWinner(), "F")
             user(Relation.VERIFIER, verificationKey(), "verification")

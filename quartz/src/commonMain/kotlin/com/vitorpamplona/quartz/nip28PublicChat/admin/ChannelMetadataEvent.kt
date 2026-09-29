@@ -103,7 +103,7 @@ class ChannelMetadataEvent(
     }
 
     /** NIP-28 tags the channel a metadata update is for with the `root` marker: its `ROOT`. */
-    override fun links(): List<Link> = links { event(Relation.ROOT, channelId(), "e") }
+    override fun links(): List<Link<*>> = links { event(Relation.ROOT, channelId(), "e") }
 
     companion object {
         const val KIND = 41

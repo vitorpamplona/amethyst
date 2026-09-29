@@ -59,7 +59,7 @@ class HuddleParticipantJoinedEvent(
     /** The ephemeral audio channel id carried in `content`. */
     fun ephemeralChannelId(): String? = HuddleLifecycleContent.decodeFromJsonOrNull(content)?.ephemeralChannelId
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             user(Relation.PARTICIPANT, participant(), PTag.TAG_NAME)

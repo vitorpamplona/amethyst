@@ -53,7 +53,7 @@ class ChatMessageEvent(
     SearchableEvent,
     LinkProvider {
     /** NIP-17: `p` are the receivers, `e` "the direct parent message this post is replying to", `q` a NIP-18 quote. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

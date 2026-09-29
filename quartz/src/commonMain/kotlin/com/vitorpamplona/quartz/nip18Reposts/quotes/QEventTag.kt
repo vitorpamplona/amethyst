@@ -27,15 +27,17 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 data class QEventTag(
-    val eventId: HexKey,
-) : QTag {
-    var relay: NormalizedRelayUrl? = null
-    var author: HexKey? = null
+    override val eventId: HexKey,
+) : QTag,
+    GenericETag {
+    override var relay: NormalizedRelayUrl? = null
+    override var author: HexKey? = null
 
     constructor(eventId: HexKey, relayHint: NormalizedRelayUrl? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
         this.relay = relayHint

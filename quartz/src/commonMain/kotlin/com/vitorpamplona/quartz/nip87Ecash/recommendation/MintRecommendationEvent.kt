@@ -67,7 +67,7 @@ class MintRecommendationEvent(
     fun isFedimintRecommendation() = mintEventKind() == FedimintEvent.KIND
 
     /** NIP-87: the recommended mint's announcement (38172 cashu or 38173 fedimint) and the recommended kind (`k`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2 || it[0] != "a") return@fastForEach

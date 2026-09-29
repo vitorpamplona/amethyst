@@ -105,7 +105,7 @@ class FileMetadataEvent(
     fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
 
     /** NIP-94 carries no event, address or user; its only reference is the torrent infohash in `i`. */
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
 
     companion object {
         const val KIND = 1063

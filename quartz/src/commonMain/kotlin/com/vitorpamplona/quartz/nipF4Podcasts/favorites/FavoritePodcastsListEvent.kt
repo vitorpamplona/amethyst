@@ -61,7 +61,7 @@ class FavoritePodcastsListEvent(
     suspend fun privateFavorites(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
 
     /** The public favorites; the encrypted ones stay private. */
-    override fun links(): List<Link> = links { userTags(Relation.FAVORITE, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.FAVORITE, tags) }
 
     companion object {
         const val KIND = 10054

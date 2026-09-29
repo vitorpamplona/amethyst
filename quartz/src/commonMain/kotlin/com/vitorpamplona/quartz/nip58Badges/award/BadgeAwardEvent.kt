@@ -73,7 +73,7 @@ class BadgeAwardEvent(
      * NIP-58: the `a` is the badge definition being awarded and each `p` a pubkey the issuer
      * awards it to. NIP-58 defines no `e` on a badge award.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

@@ -78,7 +78,7 @@ class ArchiveRequestEvent(
      * The `auth` owner is linked only when its attestation verifies for this event's author:
      * an unverified `auth` tag is a claim anyone can write about any key.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.ARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
             user(Relation.REPLACED_BY, replacedBy(), ReplacedByTag.TAG_NAME)

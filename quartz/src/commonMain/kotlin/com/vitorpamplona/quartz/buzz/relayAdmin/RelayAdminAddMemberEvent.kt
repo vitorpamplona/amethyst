@@ -58,7 +58,7 @@ class RelayAdminAddMemberEvent(
     /** The requested `role`, if present (absent means the relay defaults to `member`). */
     fun role() = tags.relayAdminRole()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.ADDED_USER, target(), PTag.TAG_NAME, linkProps("role" to role()))
         }

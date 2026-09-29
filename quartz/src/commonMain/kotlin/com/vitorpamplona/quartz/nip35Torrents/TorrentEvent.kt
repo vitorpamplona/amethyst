@@ -109,7 +109,7 @@ class TorrentEvent(
      * NIP-35: `i` holds external catalogue ids (imdb, tmdb, newznab…) and `t` categories. Quartz's
      * builder turns the description's `nostr:` references into `q` and `p` tags and its URLs into `r`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.TAG, tags, "i")
             hashtags(tags)

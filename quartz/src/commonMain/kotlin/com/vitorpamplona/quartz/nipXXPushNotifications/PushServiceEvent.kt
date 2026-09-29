@@ -58,7 +58,7 @@ abstract class PushServiceEvent(
      * The push service the payload is encrypted to (the `p`), as marmot's token records name
      * theirs. The `app` tag is an application id, not a reference; the payload is private.
      */
-    override fun links(): List<Link> = links { user(Relation.NOTIFICATION_SERVER, pushService(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.NOTIFICATION_SERVER, pushService(), "p") }
 
     fun pushService() = tags.pushService()
 

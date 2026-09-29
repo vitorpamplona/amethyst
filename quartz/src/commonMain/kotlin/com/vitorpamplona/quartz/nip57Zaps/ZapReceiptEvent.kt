@@ -131,7 +131,7 @@ class ZapReceiptEvent(
      * (from the `bolt11` invoice) on the `ZAPPED` and `ZAP_RECIPIENT` links, and adds the zap
      * sender as `P`. The zap request embedded in `description` is JSON and is not read here.
      */
-    override fun links(): List<Link> = zapLinks(tags, satsToMsats(amount)?.let { mapOf("msats" to it) }, withSender = true)
+    override fun links(): List<Link<*>> = zapLinks(tags, satsToMsats(amount)?.let { mapOf("msats" to it) }, withSender = true)
 
     companion object {
         const val KIND = 9735

@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
 import kotlin.test.Test
@@ -52,26 +53,26 @@ class Nip10NotesLinksTest {
         content: String = "",
     ) = TextNoteEvent(id, me, 1L, tags, content, sig)
 
-    private fun ev(
-        relation: Relation,
+    private fun <P : LinkProps> ev(
+        relation: Relation<P>,
         id: String,
         via: String? = "e",
     ) = Link(relation, LinkTarget.Event(id), via)
 
-    private fun us(
-        relation: Relation,
+    private fun <P : LinkProps> us(
+        relation: Relation<P>,
         pubkey: String,
         via: String? = "p",
     ) = Link(relation, LinkTarget.User(pubkey), via)
 
-    private fun ad(
-        relation: Relation,
+    private fun <P : LinkProps> ad(
+        relation: Relation<P>,
         address: String,
         via: String? = "a",
     ) = Link(relation, LinkTarget.Address(address), via)
 
-    private fun tg(
-        relation: Relation,
+    private fun <P : LinkProps> tg(
+        relation: Relation<P>,
         name: String,
         value: String,
     ) = Link(relation, LinkTarget.Tag(name, value), name)

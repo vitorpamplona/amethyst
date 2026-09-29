@@ -95,7 +95,7 @@ class CvmToolsListEvent(
      * CEP-15 common tool schemas, written NIP-73 style: `["i", <schema-hash>, <tool>]` and
      * `["k", "io.contextvm/common-schema"]`. The tool list itself is JSON content.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size > 1 && (it[0] == CvmTags.EXTERNAL_ID || it[0] == CvmTags.EXTERNAL_KIND)) tag(Relation.TAG, it[0], it[1])

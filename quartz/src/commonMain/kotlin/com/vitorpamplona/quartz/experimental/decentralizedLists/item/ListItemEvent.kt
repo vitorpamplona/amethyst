@@ -85,7 +85,7 @@ class ListItemEvent(
     PubKeyHintProvider,
     SearchableEvent {
     /** The list(s) this item is on and the item itself: see [listItemTag]. */
-    override fun links(): List<Link> = links { tags.fastForEach { listItemTag(it) } }
+    override fun links(): List<Link<*>> = links { tags.fastForEach { listItemTag(it) } }
 
     override fun listPointer() = id
 

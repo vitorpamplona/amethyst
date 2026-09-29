@@ -76,7 +76,7 @@ class ThreadSummaryEvent(
      * The summary is ABOUT the thread root its `e` names; it is not part of that thread, so it
      * is not a ROOT link. The `d` repeats the root and is not linked (rule: no links from `d`).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             event(Relation.ABOUT, rootEventTag(), ETag.TAG_NAME)

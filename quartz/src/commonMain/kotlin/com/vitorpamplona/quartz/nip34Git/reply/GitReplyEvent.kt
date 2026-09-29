@@ -139,7 +139,7 @@ class GitReplyEvent(
 
     @Suppress("DEPRECATION")
     /** The repository, the NIP-10 thread (the root is the issue or patch), notified people, quotes and citations. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             repositoryLinks(tags)
             threadLinks(tags)

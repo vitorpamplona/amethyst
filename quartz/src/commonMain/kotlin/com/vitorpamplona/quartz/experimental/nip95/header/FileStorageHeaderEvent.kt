@@ -65,7 +65,7 @@ class FileStorageHeaderEvent(
     LinkProvider,
     SearchableEvent {
     /** The kind-1064 events holding the bytes. The `e` tag's author slot is a hint, not a statement. */
-    override fun links(): List<Link> = links { eventTags(Relation.FILE_DATA, tags) }
+    override fun links(): List<Link<*>> = links { eventTags(Relation.FILE_DATA, tags) }
 
     // Only the summary tag is indexed; the file payload is base64 binary stored
     // in a separate FileStorageEvent and is intentionally never indexed.

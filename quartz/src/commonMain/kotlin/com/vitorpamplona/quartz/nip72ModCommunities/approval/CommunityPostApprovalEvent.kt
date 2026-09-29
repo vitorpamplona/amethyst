@@ -105,7 +105,7 @@ class CommunityPostApprovalEvent(
      * is the `APPROVED` post, the `p` its author and `k` its kind. The post's JSON in the content
      * is the same event as the `e`, not another link.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

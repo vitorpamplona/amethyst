@@ -73,7 +73,7 @@ class AuctionEvent(
     }
 
     /** NIP-15: `t` tags are categories. The stall is named by `stall_id` inside the content JSON, which links do not parse. */
-    override fun links(): List<Link> = links { hashtags(tags) }
+    override fun links(): List<Link<*>> = links { hashtags(tags) }
 
     companion object {
         const val KIND = 30020

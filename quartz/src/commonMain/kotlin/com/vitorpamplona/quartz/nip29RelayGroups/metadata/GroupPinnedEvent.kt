@@ -58,7 +58,7 @@ class GroupPinnedEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-29 pinned events; the group this list belongs to is its own `d`, which restates its ADDRESS: not linked. */
-    override fun links(): List<Link> = links { groupPinLinks(pins()) }
+    override fun links(): List<Link<*>> = links { groupPinLinks(pins()) }
 
     fun groupId() = dTag()
 

@@ -58,7 +58,7 @@ class GitRepositoryListEvent(
     suspend fun privateRepositories(signer: NostrSigner) = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
 
     /** NIP-51: the followed NIP-34 repositories (kind 30617 `a` tags) are `SUBSCRIBED`. */
-    override fun links(): List<Link> = links { addressTags(Relation.SUBSCRIBED, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.SUBSCRIBED, tags) }
 
     companion object {
         const val KIND = 10018

@@ -67,7 +67,7 @@ class SimpleGroupListEvent(
      * NIP-51: the NIP-29 groups the user is in are `SUBSCRIBED`. A group is its id, the `h` value
      * its messages carry, so that is the target; the host relay is not part of it.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 val group = GroupTag.parse(tag) ?: return@fastForEach

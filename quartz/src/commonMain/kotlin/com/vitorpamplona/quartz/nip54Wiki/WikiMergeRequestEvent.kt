@@ -137,7 +137,7 @@ class WikiMergeRequestEvent(
     fun hasMergeSource() = mergeSource() != null
 
     /** NIP-54: the article to change and its author, the version to merge (`e` marked `source`, or `fork` as clients write it) and the unmarked base version. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             addressTags(Relation.DESTINATION, tags)
             userTags(Relation.DESTINATION_AUTHOR, tags)

@@ -58,7 +58,7 @@ class GoodWikiAuthorListEvent(
     suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
 
     /** NIP-51: the user's "recommended wiki authors" are `RECOMMENDED`. */
-    override fun links(): List<Link> = links { userTags(Relation.RECOMMENDED, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.RECOMMENDED, tags) }
 
     companion object {
         const val KIND = 10101

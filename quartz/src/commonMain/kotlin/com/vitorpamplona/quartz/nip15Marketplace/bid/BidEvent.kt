@@ -64,7 +64,7 @@ class BidEvent(
     fun auctionId() = tags.firstNotNullOfOrNull(ETag::parseId)
 
     /** NIP-15: the auction is named by its event id (a 30020 version) and the bid amount is the content. The `p` is Quartz's notification of the auction's merchant. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             eventTags(Relation.AUCTION, tags, props = amount()?.let { mapOf("amount" to it) })
             userTags(Relation.AUCTION_AUTHOR, tags)

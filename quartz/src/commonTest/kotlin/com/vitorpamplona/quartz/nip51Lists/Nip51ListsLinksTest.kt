@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
+import com.vitorpamplona.quartz.nip01Core.links.props.MuteProps
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -65,24 +67,24 @@ class Nip51ListsLinksTest {
     private val otherNote = "e2".repeat(32)
     private val article = "30023:$alice:article"
 
-    private fun us(
-        relation: Relation,
+    private fun <P : LinkProps> us(
+        relation: Relation<P>,
         pubkey: String,
-        props: Map<String, Any>? = null,
+        props: P? = null,
     ) = Link(relation, LinkTarget.User(pubkey), "p", props)
 
-    private fun ev(
-        relation: Relation,
+    private fun <P : LinkProps> ev(
+        relation: Relation<P>,
         id: String,
     ) = Link(relation, LinkTarget.Event(id), "e")
 
-    private fun ad(
-        relation: Relation,
+    private fun <P : LinkProps> ad(
+        relation: Relation<P>,
         address: String,
     ) = Link(relation, LinkTarget.Address(address), "a")
 
-    private fun tg(
-        relation: Relation,
+    private fun <P : LinkProps> tg(
+        relation: Relation<P>,
         name: String,
         value: String,
         via: String = name,
@@ -142,7 +144,7 @@ class Nip51ListsLinksTest {
     @Test
     fun aKindMuteSetMutesForTheKindItsDNames() {
         val event = KindMuteSetEvent(id, me, 1L, arrayOf(arrayOf("d", "1"), arrayOf("p", alice)), encrypted, sig)
-        assertEquals(listOf(us(Relation.MUTE, alice, mapOf("muted_kind" to 1))), event.links())
+        assertEquals(listOf(us(Relation.MUTE, alice, MuteProps(mutedKind = 1))), event.links())
     }
 
     @Test

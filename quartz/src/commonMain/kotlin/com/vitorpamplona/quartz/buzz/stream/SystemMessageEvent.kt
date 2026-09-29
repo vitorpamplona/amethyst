@@ -58,7 +58,7 @@ class SystemMessageEvent(
      * Only the channel: the actor, target and deleted message live in the content JSON,
      * which links do not parse.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
         }

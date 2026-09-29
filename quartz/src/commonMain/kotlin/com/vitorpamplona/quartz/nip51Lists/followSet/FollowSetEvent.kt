@@ -107,7 +107,7 @@ class FollowSetEvent(
      * (NIP-51: "use instead kind 10000"), which is why [publicMembers] parses mute entries: there
      * its `p`/`e`/`t`/`word` entries are `MUTE`s.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             if (dTag() == "mute") mutes(tags) else userTags(Relation.MEMBER, tags)
         }

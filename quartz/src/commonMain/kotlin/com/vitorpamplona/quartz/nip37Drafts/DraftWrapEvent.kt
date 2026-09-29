@@ -56,7 +56,7 @@ class DraftWrapEvent(
      * ([ExposeInDraft]) so a draft shows in context: the channel or live activity it belongs to
      * (ROOT) and the message it replies to (PARENT). `k` says which kind the draft is.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

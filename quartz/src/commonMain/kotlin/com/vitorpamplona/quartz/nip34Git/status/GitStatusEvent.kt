@@ -101,7 +101,7 @@ abstract class GitStatusEvent(
      * accepted revision. Their authors are read from the `e` tags' author slot so the unmarked `p`
      * tags can be told apart (see [gitPeopleLinks]).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             var rootAuthor: HexKey? = null
             var parentAuthor: HexKey? = null

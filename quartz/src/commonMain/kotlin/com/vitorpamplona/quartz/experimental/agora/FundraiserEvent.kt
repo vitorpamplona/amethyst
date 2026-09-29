@@ -68,7 +68,7 @@ class FundraiserEvent(
     LinkProvider,
     PublishedAtProvider,
     SearchableEvent {
-    override fun links(): List<Link> = links { hashtags(tags) }
+    override fun links(): List<Link<*>> = links { hashtags(tags) }
 
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 

@@ -56,7 +56,7 @@ class ManageEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** The counterparty the message is addressed to (`p`) and, on a response, the request it answers (`e`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.RECIPIENT, recipientPubKey(), "p")
             event(Relation.REQUEST, requestId(), "e")

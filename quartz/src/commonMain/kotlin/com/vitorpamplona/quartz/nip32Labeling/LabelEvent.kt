@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.LabelProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -135,10 +136,10 @@ class LabelEvent(
      * per `l` tag (`ugc` when unmarked). The `l`/`L` values are `TAG`s. With no
      * target tag the labels apply to the label event itself, which is no link.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val labels = labels().map { "${it.namespace}:${it.label}" }
-            val props = if (labels.isEmpty()) null else mapOf("labels" to labels)
+            val props = if (labels.isEmpty()) null else LabelProps(labels)
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach
                 when (tag[0]) {

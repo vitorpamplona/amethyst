@@ -61,7 +61,7 @@ class PrivateZapEvent(
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     /** The decrypted request of a private zap: the same `e`/`a`/`p`/`k` as the public request it hides in. */
-    override fun links(): List<Link> = zapLinks(tags, null)
+    override fun links(): List<Link<*>> = zapLinks(tags, null)
 
     companion object {
         const val KIND = 9733

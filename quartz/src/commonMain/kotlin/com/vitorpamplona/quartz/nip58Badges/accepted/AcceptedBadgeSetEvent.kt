@@ -94,7 +94,7 @@ class AcceptedBadgeSetEvent(
      * NIP-58: the set lists badges as consecutive `a`/`e` pairs ([acceptedBadges]): the badge
      * definition and the award that granted it. An `a` or `e` outside a pair is not a badge.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             acceptedBadges().forEach { badge ->
                 address(Relation.BADGE_DEFINITION, badge.badgeDefinition.toTag(), "a")

@@ -68,7 +68,7 @@ class HuddleReactionEvent(
     fun customEmojis() = tags.reactionCustomEmojis()
 
     /** The `h` is the ephemeral huddle channel, not the timeline channel it runs in. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
         }

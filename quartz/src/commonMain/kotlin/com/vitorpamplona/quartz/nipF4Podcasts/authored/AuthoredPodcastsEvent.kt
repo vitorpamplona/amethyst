@@ -65,7 +65,7 @@ class AuthoredPodcastsEvent(
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     /** NIP-F4: the podcasts this user authors, the counter-claim a podcast's 10154 authors are verified against. */
-    override fun links(): List<Link> = links { userTags(Relation.AUTHORED, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.AUTHORED, tags) }
 
     companion object {
         const val KIND = 10064

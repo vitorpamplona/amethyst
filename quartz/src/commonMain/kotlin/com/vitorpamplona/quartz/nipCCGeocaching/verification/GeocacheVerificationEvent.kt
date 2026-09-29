@@ -70,7 +70,7 @@ class GeocacheVerificationEvent(
     fun hasExpectedContent() = finder()?.let { content == contentFor(it) } ?: false
 
     /** NIP-CC's `a` here is the composite `<finder>:<naddr>`, not a NIP-01 address: it names both the finder and the cache. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val finderCache = finderCache() ?: return@links
             user(Relation.FINDER, finderCache.finderPubKey, "a")

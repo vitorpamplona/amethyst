@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.MuteProps
 import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -64,9 +65,9 @@ class KindMuteSetEvent(
      * NIP-51: the `p`s muted for one kind, which the `d` names; it rides as `muted_kind`, since a
      * mute of one kind is not a full mute.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
-            userTags(Relation.MUTE, tags, props = dTag().toIntOrNull()?.let { mapOf("muted_kind" to it) })
+            userTags(Relation.MUTE, tags, props = dTag().toIntOrNull()?.let { MuteProps(it) })
         }
 
     companion object {

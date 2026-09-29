@@ -69,7 +69,7 @@ class AppDefinitionEvent(
      * events"; `latest` is the current nsite manifest and `next` the one intended for rollout,
      * both written like an `a`. The `client` tag is linked for every kind by `allLinks()`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

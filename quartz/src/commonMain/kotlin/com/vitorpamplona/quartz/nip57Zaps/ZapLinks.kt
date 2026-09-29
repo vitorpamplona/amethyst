@@ -39,7 +39,7 @@ internal fun zapLinks(
     tags: TagArray,
     props: Map<String, Any>?,
     withSender: Boolean = false,
-): List<Link> =
+): List<Link<*>> =
     links {
         tags.fastForEach { tag ->
             if (tag.size < 2) return@fastForEach

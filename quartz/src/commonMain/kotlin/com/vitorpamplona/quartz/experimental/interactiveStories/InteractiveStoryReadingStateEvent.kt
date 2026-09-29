@@ -59,7 +59,7 @@ class InteractiveStoryReadingStateEvent(
      * The story (`A`, its root) and the scene the reader is on (`a`). [root]'s fallback to the
      * `d` tag (which holds the root's address) is not a link: no link comes from an event's own `d`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

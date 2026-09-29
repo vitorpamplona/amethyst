@@ -89,7 +89,7 @@ class CodeSnippetEvent(
     fun repo() = tags.repo()
 
     /** NIP-C0: `repo` is a URL (not modelled) or a NIP-34 repository's address; `l` is the language. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { if (it.size > 1 && it[0] == RepoTag.TAG_NAME) address(Relation.REPOSITORY, it[1], RepoTag.TAG_NAME) }
             valueTags(Relation.TAG, tags, "l")

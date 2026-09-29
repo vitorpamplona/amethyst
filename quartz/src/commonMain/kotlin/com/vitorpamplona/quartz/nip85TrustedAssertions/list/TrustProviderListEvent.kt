@@ -67,7 +67,7 @@ class TrustProviderListEvent(
      * NIP-85: each `<kind>:<tag>` entry names the pubkey the user trusts to sign that assertion,
      * one `SERVICE_PROVIDER` link per entry with the `service` it provides (`30382:rank`).
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 val provider = ServiceProviderTag.parse(tag) ?: return@fastForEach

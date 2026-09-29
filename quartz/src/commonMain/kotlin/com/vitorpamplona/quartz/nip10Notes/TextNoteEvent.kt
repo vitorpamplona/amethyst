@@ -151,7 +151,7 @@ class TextNoteEvent(
      *   `e`'s pubkey slot, or an `a`'s coordinate): NIP-10 adds the replied-to author to the `p`s,
      *   but every thread member rides there too, and nothing else tells them apart.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val parentTag = markedReply() ?: markedRoot() ?: unmarkedReply()
             val rootId = root()?.eventId ?: markedReply()?.eventId

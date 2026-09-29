@@ -74,7 +74,7 @@ class VideoCollaborationEvent(
      * [isAccepted]) and the credited `role`. The divine-mobile `d` repeats the video's coordinate,
      * but no link comes from an event's own `d`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val props = HashMap<String, Any>(2)
             props["status"] = status() ?: StatusTag.ACCEPTED

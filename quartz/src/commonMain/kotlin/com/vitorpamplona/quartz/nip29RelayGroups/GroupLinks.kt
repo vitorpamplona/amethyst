@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip29RelayGroups
 
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.OrderProps
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
@@ -33,7 +34,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
  */
 fun LinkBuilder.groupPinLinks(pins: List<GroupPin>) =
     pins.forEachIndexed { index, pin ->
-        val order = mapOf<String, Any>("order" to index)
+        val order = OrderProps(index)
         when (pin) {
             is EventPin -> event(Relation.PIN, pin.eventId, EventPin.TAG_NAME, order)
             is AddressPin -> address(Relation.PIN, pin.address, AddressPin.TAG_NAME, order)

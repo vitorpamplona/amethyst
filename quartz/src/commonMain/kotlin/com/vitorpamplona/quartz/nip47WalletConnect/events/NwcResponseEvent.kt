@@ -43,7 +43,7 @@ class NwcResponseEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.REQUEST, requestId(), "e")
             user(Relation.REQUEST_AUTHOR, requestAuthor(), "p")

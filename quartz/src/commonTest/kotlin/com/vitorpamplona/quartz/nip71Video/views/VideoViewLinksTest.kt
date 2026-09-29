@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip71Video.views
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ViewProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -42,7 +43,7 @@ class VideoViewLinksTest {
                 "",
                 "0".repeat(128),
             )
-        val phase = mapOf("phase" to "start")
+        val phase = ViewProps(phase = "start")
         assertEquals(
             listOf(
                 Link(Relation.VIEWED, LinkTarget.Address(video), "a", phase),

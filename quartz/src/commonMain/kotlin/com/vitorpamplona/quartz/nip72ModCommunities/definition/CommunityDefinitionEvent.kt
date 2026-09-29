@@ -112,7 +112,7 @@ class CommunityDefinitionEvent(
      * no `e`/`a`/`q` here: the ones Quartz reads as hints are mentions and quotes. The `relay`
      * tags are URLs.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

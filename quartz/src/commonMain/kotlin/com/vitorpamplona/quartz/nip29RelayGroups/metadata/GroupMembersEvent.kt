@@ -45,7 +45,7 @@ class GroupMembersEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-29 group members (not exhaustive, per the NIP); the group this list belongs to is its own `d`, which restates its ADDRESS: not linked. */
-    override fun links(): List<Link> = links { userTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.MEMBER, tags) }
 
     fun groupId() = dTag()
 

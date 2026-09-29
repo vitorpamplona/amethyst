@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.FoundProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -91,7 +92,7 @@ class GeocacheFoundLogEvent(
     fun hasVerificationAttached() = tags.hasEmbeddedVerification()
 
     /** NIP-CC: the cache found. Whether the log carries its cache's verification rides on the link; the verification itself is an embedded event, not a reference. */
-    override fun links(): List<Link> = links { address(Relation.FOUND, geocache(), "a", mapOf("verified" to hasVerificationAttached())) }
+    override fun links(): List<Link<*>> = links { address(Relation.FOUND, geocache(), "a", FoundProps(verified = hasVerificationAttached())) }
 
     companion object {
         const val KIND = 7516

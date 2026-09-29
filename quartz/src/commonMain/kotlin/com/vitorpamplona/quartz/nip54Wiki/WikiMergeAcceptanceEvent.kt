@@ -97,7 +97,7 @@ class WikiMergeAcceptanceEvent(
             }
         }
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size <= WikiMergeRequestEvent.MARKER_SLOT || it[0] != ETag.TAG_NAME) return@fastForEach

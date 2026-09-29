@@ -58,7 +58,7 @@ class GitAuthorListEvent(
     suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(GitAuthorTag::parse)
 
     /** NIP-51: a follow list of code authors, so its `p`s are `SUBSCRIBED` (`FOLLOW` is kind 3 only). */
-    override fun links(): List<Link> = links { userTags(Relation.SUBSCRIBED, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.SUBSCRIBED, tags) }
 
     companion object {
         const val KIND = 10017

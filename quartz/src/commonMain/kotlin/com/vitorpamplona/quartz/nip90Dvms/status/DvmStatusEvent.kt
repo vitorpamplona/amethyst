@@ -42,7 +42,7 @@ class DvmStatusEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-90 job feedback: the request it reports on and its customer. Status and amount are values, not links. */
-    override fun links(): List<Link> = links { dvmResultLinks(tags, withInputs = false) }
+    override fun links(): List<Link<*>> = links { dvmResultLinks(tags, withInputs = false) }
 
     fun status() = tags.status(content)
 

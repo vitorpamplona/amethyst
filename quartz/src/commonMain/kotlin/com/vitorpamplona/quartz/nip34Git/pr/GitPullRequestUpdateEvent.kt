@@ -99,7 +99,7 @@ class GitPullRequestUpdateEvent(
     fun mergeBase(): String? = tags.firstNotNullOfOrNull(MergeBaseTag::parse)
 
     /** NIP-34 names the updated pull request with NIP-22 root tags: `E` and its author `P`. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             eventTags(Relation.ROOT, tags, "E")
             userTags(Relation.ROOT_AUTHOR, tags, "P")

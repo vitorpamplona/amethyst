@@ -74,6 +74,6 @@ class MarmotLinksTest {
     fun pushTokenPayloadsAreNotParsed() {
         // The member and server keys are inside the JSON content: out of scope for links().
         val content = PushGossip.encodeTokens(emptyList())
-        assertEquals(emptyList<Link>(), TokenListEvent(me, me, 0, arrayOf(arrayOf("v", "1")), content, "").links())
+        assertEquals(emptyList<Link<*>>(), TokenListEvent(me, me, 0, arrayOf(arrayOf("v", "1")), content, "").links())
     }
 }

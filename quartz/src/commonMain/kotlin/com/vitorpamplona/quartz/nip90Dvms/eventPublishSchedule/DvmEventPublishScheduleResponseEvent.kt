@@ -43,7 +43,7 @@ class DvmEventPublishScheduleResponseEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-90 5905's output: the content is the id of the event the DVM published. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             dvmResultLinks(tags)
             event(Relation.RESULT, publishedEventId(), Link.VIA_CONTENT)

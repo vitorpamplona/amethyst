@@ -58,7 +58,7 @@ class RootNappletEvent(
     NappletManifest,
     SearchableEvent,
     LinkProvider {
-    override fun links(): List<Link> = links { siteManifestLinks(tags) }
+    override fun links(): List<Link<*>> = links { siteManifestLinks(tags) }
 
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 

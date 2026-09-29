@@ -59,7 +59,7 @@ class WorkflowApprovalRequestedEvent(
     /** The approver whose action is required - the `p` tag. */
     fun approver() = tags.workflowApprover()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             user(Relation.APPROVER, approver(), PTag.TAG_NAME)

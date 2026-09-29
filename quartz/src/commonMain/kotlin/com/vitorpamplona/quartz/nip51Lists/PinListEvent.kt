@@ -57,7 +57,7 @@ class PinListEvent(
     fun isPinned(eventId: HexKey): Boolean = tags.any { EventBookmark.isTagged(it, eventId) }
 
     /** NIP-51: the notes pinned to the profile. */
-    override fun links(): List<Link> = links { eventTags(Relation.PIN, tags) }
+    override fun links(): List<Link<*>> = links { eventTags(Relation.PIN, tags) }
 
     companion object {
         const val KIND = 10001

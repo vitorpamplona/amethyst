@@ -58,7 +58,7 @@ class MediaFollowListEvent(
     suspend fun privateFollows(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
 
     /** NIP-51: a follow-like list, so its `p`s are `SUBSCRIBED` (`FOLLOW` is kind 3 only). */
-    override fun links(): List<Link> = links { userTags(Relation.SUBSCRIBED, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.SUBSCRIBED, tags) }
 
     companion object {
         const val KIND = 10020

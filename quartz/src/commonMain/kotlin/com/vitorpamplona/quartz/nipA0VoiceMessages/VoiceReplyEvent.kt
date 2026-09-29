@@ -101,7 +101,7 @@ class VoiceReplyEvent(
      * recovers its root when the parent is itself a voice message, and those links keep the name of
      * the tag they were read from.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val native = tags.any { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) }
             rootScopeTags()?.forEach {

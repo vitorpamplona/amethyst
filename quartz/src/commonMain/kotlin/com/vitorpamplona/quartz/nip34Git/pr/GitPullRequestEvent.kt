@@ -121,7 +121,7 @@ class GitPullRequestEvent(
     fun rootPatchId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
 
     /** NIP-34: the repository and its owner, the root patch this PR revises (`e`), labels (`t`) and the earliest unique commit (`r`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             gitPeopleLinks(tags, repositoryLinks(tags))
             eventTags(Relation.REVISED, tags)

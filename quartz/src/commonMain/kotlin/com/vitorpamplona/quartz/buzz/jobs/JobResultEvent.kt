@@ -70,7 +70,7 @@ class JobResultEvent(
     /** The result payload - the event `content`. */
     fun result() = content
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.REQUEST, jobRequest(), ETag.TAG_NAME, linkProps("status" to status()))
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)

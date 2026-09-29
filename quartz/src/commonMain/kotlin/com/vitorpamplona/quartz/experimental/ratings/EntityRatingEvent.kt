@@ -100,7 +100,7 @@ class EntityRatingEvent(
      * unique). The clients' extension tags (`a`/`A`, `e`, `p`, `k`) repeat the target; one link
      * is emitted per distinct target.
      */
-    override fun links(): List<Link> {
+    override fun links(): List<Link<*>> {
         val mark = mark()
         val props = HashMap<String, Any>(2)
         props["mark"] = mark

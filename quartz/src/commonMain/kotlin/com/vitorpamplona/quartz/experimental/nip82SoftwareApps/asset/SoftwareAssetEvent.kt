@@ -50,7 +50,7 @@ class SoftwareAssetEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** The application this asset belongs to, by its `i`: the 32267's `d` identifier, not a NIP-73 id. */
-    override fun links(): List<Link> = links { tag(Relation.TAG, "i", appId()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, "i", appId()) }
 
     fun appId() = tags.appId()
 

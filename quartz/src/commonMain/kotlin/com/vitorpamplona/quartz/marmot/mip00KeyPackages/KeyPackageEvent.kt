@@ -66,7 +66,7 @@ class KeyPackageEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** The KeyPackageRef (`i`), the lookup key a Welcome's inviter resolves. */
-    override fun links(): List<Link> = links { tag(Relation.TAG, "i", keyPackageRef()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, "i", keyPackageRef()) }
 
     /** Base64-encoded TLS-serialized KeyPackageBundle */
     fun keyPackageBase64() = content

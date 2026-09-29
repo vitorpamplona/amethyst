@@ -105,5 +105,5 @@ abstract class AddressableVideoEvent(
 
     override fun imetaTags() = iMetas ?: imetas().map { VideoMeta.parse(it) }.also { iMetas = it }
 
-    override fun links(): List<Link> = links { videoLinks(this@AddressableVideoEvent, tags) }
+    override fun links(): List<Link<*>> = links { videoLinks(this@AddressableVideoEvent, tags) }
 }

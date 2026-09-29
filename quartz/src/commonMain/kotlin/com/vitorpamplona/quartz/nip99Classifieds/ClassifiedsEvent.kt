@@ -148,7 +148,7 @@ class ClassifiedsEvent(
     }
 
     /** NIP-99 gives its `e`/`a`/`p` tags no role: they are the notes, listings and people the description cites. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             eventTags(Relation.MENTION, tags)
             addressTags(Relation.MENTION, tags)

@@ -20,7 +20,42 @@
  */
 package com.vitorpamplona.quartz.nip01Core.links
 
-import kotlin.jvm.JvmInline
+import com.vitorpamplona.quartz.nip01Core.links.props.ActorProps
+import com.vitorpamplona.quartz.nip01Core.links.props.AuctionProps
+import com.vitorpamplona.quartz.nip01Core.links.props.AuditProps
+import com.vitorpamplona.quartz.nip01Core.links.props.BidProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ChessResultProps
+import com.vitorpamplona.quartz.nip01Core.links.props.CollaborationProps
+import com.vitorpamplona.quartz.nip01Core.links.props.CreditProps
+import com.vitorpamplona.quartz.nip01Core.links.props.FoundProps
+import com.vitorpamplona.quartz.nip01Core.links.props.FrameProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
+import com.vitorpamplona.quartz.nip01Core.links.props.LabelProps
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ModerationProps
+import com.vitorpamplona.quartz.nip01Core.links.props.MuteProps
+import com.vitorpamplona.quartz.nip01Core.links.props.NoProps
+import com.vitorpamplona.quartz.nip01Core.links.props.OrderProps
+import com.vitorpamplona.quartz.nip01Core.links.props.OwnerProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
+import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
+import com.vitorpamplona.quartz.nip01Core.links.props.PollResponseProps
+import com.vitorpamplona.quartz.nip01Core.links.props.PositionProps
+import com.vitorpamplona.quartz.nip01Core.links.props.RatingProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ReleaseProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ReportProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ResolutionProps
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
+import com.vitorpamplona.quartz.nip01Core.links.props.RsvpProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ServiceProps
+import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
+import com.vitorpamplona.quartz.nip01Core.links.props.SubjectProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ViewProps
+import com.vitorpamplona.quartz.nip01Core.links.props.VoteProps
+import com.vitorpamplona.quartz.nip01Core.links.props.WotProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapSplitProps
 
 /**
  * What a link's target IS to the event that states it: its `ROOT`, its `PARENT`, the
@@ -32,212 +67,218 @@ import kotlin.jvm.JvmInline
  * `BOOKMARK`). One relation per role across kinds: the SOURCE event's kind says which kind of
  * parent a `PARENT` is. UPPER_SNAKE, the Cypher convention for relationship types.
  *
+ * [P] is the props type the relation's links carry ([NoProps] for none): the builder only accepts
+ * that type for it, and it is the relation's schema for a consumer.
+ *
  * The set is open (a consumer may mint its own), but every relation Quartz emits is a constant
  * here, so renaming one is a visible, breaking change.
  */
-@JvmInline
-value class Relation(
+class Relation<P : LinkProps>(
     val name: String,
 ) {
+    override fun equals(other: Any?) = other is Relation<*> && other.name == name
+
+    override fun hashCode() = name.hashCode()
+
     override fun toString() = name
 
     companion object {
         // Authorship and identity
-        val AUTHOR = Relation("AUTHOR")
-        val ADDRESS = Relation("ADDRESS")
+        val AUTHOR = Relation<NoProps>("AUTHOR")
+        val ADDRESS = Relation<NoProps>("ADDRESS")
 
         // Conversation
-        val ROOT = Relation("ROOT")
-        val PARENT = Relation("PARENT")
-        val ROOT_AUTHOR = Relation("ROOT_AUTHOR")
-        val PARENT_AUTHOR = Relation("PARENT_AUTHOR")
-        val MENTION = Relation("MENTION")
-        val QUOTE = Relation("QUOTE")
-        val FORK = Relation("FORK")
-        val EDITED = Relation("EDITED")
-        val EDITED_AUTHOR = Relation("EDITED_AUTHOR")
-        val RECIPIENT = Relation("RECIPIENT")
-        val COMMUNITY = Relation("COMMUNITY")
-        val REPOSITORY = Relation("REPOSITORY")
-        val REPOSITORY_OWNER = Relation("REPOSITORY_OWNER")
+        val ROOT = Relation<NoProps>("ROOT")
+        val PARENT = Relation<NoProps>("PARENT")
+        val ROOT_AUTHOR = Relation<NoProps>("ROOT_AUTHOR")
+        val PARENT_AUTHOR = Relation<NoProps>("PARENT_AUTHOR")
+        val MENTION = Relation<NoProps>("MENTION")
+        val QUOTE = Relation<NoProps>("QUOTE")
+        val FORK = Relation<NoProps>("FORK")
+        val EDITED = Relation<NoProps>("EDITED")
+        val EDITED_AUTHOR = Relation<NoProps>("EDITED_AUTHOR")
+        val RECIPIENT = Relation<FrameProps>("RECIPIENT")
+        val COMMUNITY = Relation<NoProps>("COMMUNITY")
+        val REPOSITORY = Relation<NoProps>("REPOSITORY")
+        val REPOSITORY_OWNER = Relation<NoProps>("REPOSITORY_OWNER")
 
         // Reactions, reposts, zaps
-        val REACTED = Relation("REACTED")
-        val REACTED_AUTHOR = Relation("REACTED_AUTHOR")
-        val REPOSTED = Relation("REPOSTED")
-        val REPOSTED_AUTHOR = Relation("REPOSTED_AUTHOR")
-        val ZAPPED = Relation("ZAPPED")
-        val ZAP_RECIPIENT = Relation("ZAP_RECIPIENT")
-        val ZAP_SENDER = Relation("ZAP_SENDER")
-        val ZAP_REQUEST = Relation("ZAP_REQUEST")
-        val HIGHLIGHTED = Relation("HIGHLIGHTED")
-        val HIGHLIGHTED_AUTHOR = Relation("HIGHLIGHTED_AUTHOR")
-        val RATED = Relation("RATED")
-        val RATED_AUTHOR = Relation("RATED_AUTHOR")
+        val REACTED = Relation<NoProps>("REACTED")
+        val REACTED_AUTHOR = Relation<NoProps>("REACTED_AUTHOR")
+        val REPOSTED = Relation<NoProps>("REPOSTED")
+        val REPOSTED_AUTHOR = Relation<NoProps>("REPOSTED_AUTHOR")
+        val ZAPPED = Relation<ZapProps>("ZAPPED")
+        val ZAP_RECIPIENT = Relation<ZapProps>("ZAP_RECIPIENT")
+        val ZAP_SENDER = Relation<NoProps>("ZAP_SENDER")
+        val ZAP_REQUEST = Relation<NoProps>("ZAP_REQUEST")
+        val HIGHLIGHTED = Relation<NoProps>("HIGHLIGHTED")
+        val HIGHLIGHTED_AUTHOR = Relation<RoleProps>("HIGHLIGHTED_AUTHOR")
+        val RATED = Relation<RatingProps>("RATED")
+        val RATED_AUTHOR = Relation<RatingProps>("RATED_AUTHOR")
 
         // Moderation
-        val DELETED = Relation("DELETED")
-        val DELETED_AUTHOR = Relation("DELETED_AUTHOR")
-        val REPORTED_USER = Relation("REPORTED_USER")
-        val REPORTED = Relation("REPORTED")
-        val REPORTED_AUTHOR = Relation("REPORTED_AUTHOR")
-        val LABELED = Relation("LABELED")
-        val MUTE = Relation("MUTE")
-        val HIDDEN = Relation("HIDDEN")
-        val CHANNEL_MUTED = Relation("CHANNEL_MUTED")
-        val APPROVED = Relation("APPROVED")
-        val APPROVED_AUTHOR = Relation("APPROVED_AUTHOR")
-        val MODERATOR = Relation("MODERATOR")
+        val DELETED = Relation<NoProps>("DELETED")
+        val DELETED_AUTHOR = Relation<NoProps>("DELETED_AUTHOR")
+        val REPORTED_USER = Relation<ReportProps>("REPORTED_USER")
+        val REPORTED = Relation<ReportProps>("REPORTED")
+        val REPORTED_AUTHOR = Relation<ReportProps>("REPORTED_AUTHOR")
+        val LABELED = Relation<LabelProps>("LABELED")
+        val MUTE = Relation<MuteProps>("MUTE")
+        val HIDDEN = Relation<NoProps>("HIDDEN")
+        val CHANNEL_MUTED = Relation<NoProps>("CHANNEL_MUTED")
+        val APPROVED = Relation<NoProps>("APPROVED")
+        val APPROVED_AUTHOR = Relation<NoProps>("APPROVED_AUTHOR")
+        val MODERATOR = Relation<NoProps>("MODERATOR")
 
         // Social graph and lists
-        val FOLLOW = Relation("FOLLOW")
-        val SUBSCRIBED = Relation("SUBSCRIBED")
-        val FAVORITE = Relation("FAVORITE")
-        val MEMBER = Relation("MEMBER")
-        val RECOMMENDED = Relation("RECOMMENDED")
-        val BOOKMARK = Relation("BOOKMARK")
-        val CURATED = Relation("CURATED")
-        val PIN = Relation("PIN")
+        val FOLLOW = Relation<NoProps>("FOLLOW")
+        val SUBSCRIBED = Relation<NoProps>("SUBSCRIBED")
+        val FAVORITE = Relation<NoProps>("FAVORITE")
+        val MEMBER = Relation<MemberProps>("MEMBER")
+        val RECOMMENDED = Relation<PlatformProps>("RECOMMENDED")
+        val BOOKMARK = Relation<NoProps>("BOOKMARK")
+        val CURATED = Relation<OrderProps>("CURATED")
+        val PIN = Relation<OrderProps>("PIN")
 
         // Badges (NIP-58)
-        val AWARDED = Relation("AWARDED")
-        val BADGE_DEFINITION = Relation("BADGE_DEFINITION")
-        val BADGE_AWARD = Relation("BADGE_AWARD")
-        val BADGE_SET = Relation("BADGE_SET")
+        val AWARDED = Relation<NoProps>("AWARDED")
+        val BADGE_DEFINITION = Relation<NoProps>("BADGE_DEFINITION")
+        val BADGE_AWARD = Relation<NoProps>("BADGE_AWARD")
+        val BADGE_SET = Relation<NoProps>("BADGE_SET")
 
         // Trust (NIP-85)
-        val SUBJECT = Relation("SUBJECT")
-        val SERVICE_PROVIDER = Relation("SERVICE_PROVIDER")
+        val SUBJECT = Relation<SubjectProps>("SUBJECT")
+        val SERVICE_PROVIDER = Relation<ServiceProps>("SERVICE_PROVIDER")
 
         // Events, calendars, live activities, markets
-        val PARTICIPANT = Relation("PARTICIPANT")
-        val CALENDAR_EVENT = Relation("CALENDAR_EVENT")
-        val CALENDAR_EVENT_AUTHOR = Relation("CALENDAR_EVENT_AUTHOR")
-        val CALENDAR = Relation("CALENDAR")
-        val RAIDED = Relation("RAIDED")
-        val CLIPPED = Relation("CLIPPED")
-        val CLIPPED_AUTHOR = Relation("CLIPPED_AUTHOR")
-        val POLL = Relation("POLL")
-        val POLL_AUTHOR = Relation("POLL_AUTHOR")
-        val AUCTION = Relation("AUCTION")
-        val AUCTION_AUTHOR = Relation("AUCTION_AUTHOR")
-        val BID = Relation("BID")
-        val BID_AUTHOR = Relation("BID_AUTHOR")
-        val TIMESTAMPED = Relation("TIMESTAMPED")
-        val REDIRECT = Relation("REDIRECT")
+        val PARTICIPANT = Relation<ParticipantProps>("PARTICIPANT")
+        val CALENDAR_EVENT = Relation<RsvpProps>("CALENDAR_EVENT")
+        val CALENDAR_EVENT_AUTHOR = Relation<NoProps>("CALENDAR_EVENT_AUTHOR")
+        val CALENDAR = Relation<NoProps>("CALENDAR")
+        val RAIDED = Relation<NoProps>("RAIDED")
+        val CLIPPED = Relation<NoProps>("CLIPPED")
+        val CLIPPED_AUTHOR = Relation<NoProps>("CLIPPED_AUTHOR")
+        val POLL = Relation<PollResponseProps>("POLL")
+        val POLL_AUTHOR = Relation<NoProps>("POLL_AUTHOR")
+        val AUCTION = Relation<AuctionProps>("AUCTION")
+        val AUCTION_AUTHOR = Relation<NoProps>("AUCTION_AUTHOR")
+        val BID = Relation<BidProps>("BID")
+        val BID_AUTHOR = Relation<NoProps>("BID_AUTHOR")
+        val TIMESTAMPED = Relation<NoProps>("TIMESTAMPED")
+        val REDIRECT = Relation<NoProps>("REDIRECT")
 
         // Topics and plain tags
-        val HASHTAG = Relation("HASHTAG")
-        val TAG = Relation("TAG")
+        val HASHTAG = Relation<NoProps>("HASHTAG")
+        val TAG = Relation<NoProps>("TAG")
 
         // Every kind: tags any event may carry
-        val CLIENT = Relation("CLIENT")
-        val ZAP_SPLIT = Relation("ZAP_SPLIT")
-        val EMOJI_SET = Relation("EMOJI_SET")
+        val CLIENT = Relation<NoProps>("CLIENT")
+        val ZAP_SPLIT = Relation<ZapSplitProps>("ZAP_SPLIT")
+        val EMOJI_SET = Relation<NoProps>("EMOJI_SET")
 
         // Added by the per-class review (see the appendix for each one's kinds and reason)
-        val ABOUT = Relation("ABOUT")
-        val ABOUT_AUTHOR = Relation("ABOUT_AUTHOR")
-        val ACCEPTED = Relation("ACCEPTED")
-        val ACTOR = Relation("ACTOR")
-        val ADDED_USER = Relation("ADDED_USER")
-        val ADMIN = Relation("ADMIN")
-        val AGENT = Relation("AGENT")
-        val ALLOWED = Relation("ALLOWED")
-        val APP = Relation("APP")
-        val APPLIED = Relation("APPLIED")
-        val APPROVER = Relation("APPROVER")
-        val ARCHIVED = Relation("ARCHIVED")
-        val ASSERTION = Relation("ASSERTION")
-        val ATTESTOR = Relation("ATTESTOR")
-        val AUDITED = Relation("AUDITED")
-        val AUTHORED = Relation("AUTHORED")
-        val BANNED = Relation("BANNED")
-        val BASE_VERSION = Relation("BASE_VERSION")
-        val CHILD = Relation("CHILD")
-        val COLLABORATED = Relation("COLLABORATED")
-        val COLLABORATED_AUTHOR = Relation("COLLABORATED_AUTHOR")
-        val CONCEPT_GRAPH = Relation("CONCEPT_GRAPH")
-        val CONFIRMED = Relation("CONFIRMED")
-        val COPIED = Relation("COPIED")
-        val CREATED = Relation("CREATED")
-        val CREDITED = Relation("CREDITED")
-        val CURRENT_SCENE = Relation("CURRENT_SCENE")
-        val DEFER = Relation("DEFER")
-        val DENIED = Relation("DENIED")
-        val DESTINATION = Relation("DESTINATION")
-        val DESTINATION_AUTHOR = Relation("DESTINATION_AUTHOR")
-        val DESTROYED = Relation("DESTROYED")
-        val ELEMENT_OF = Relation("ELEMENT_OF")
-        val EXERCISE = Relation("EXERCISE")
-        val FILE_DATA = Relation("FILE_DATA")
-        val FINDER = Relation("FINDER")
-        val FOR_USER = Relation("FOR_USER")
-        val FOUND = Relation("FOUND")
-        val FUNDED = Relation("FUNDED")
-        val GOAL = Relation("GOAL")
-        val GROUP = Relation("GROUP")
-        val INHERIT_FROM = Relation("INHERIT_FROM")
-        val INPUT = Relation("INPUT")
-        val INPUT_JOB = Relation("INPUT_JOB")
-        val ITEM = Relation("ITEM")
-        val KEY_PACKAGE = Relation("KEY_PACKAGE")
-        val KICKED = Relation("KICKED")
-        val LINKED = Relation("LINKED")
-        val MAINTAINER = Relation("MAINTAINER")
-        val MERCHANT = Relation("MERCHANT")
-        val NOTIFICATION_SERVER = Relation("NOTIFICATION_SERVER")
-        val OBSERVER = Relation("OBSERVER")
-        val OPEN_TIMESTAMP = Relation("OPEN_TIMESTAMP")
-        val OPPONENT = Relation("OPPONENT")
-        val OPTION = Relation("OPTION")
-        val ORIGIN = Relation("ORIGIN")
-        val OWNER = Relation("OWNER")
-        val PALETTE = Relation("PALETTE")
-        val PARENT_LIST = Relation("PARENT_LIST")
-        val PERSONA = Relation("PERSONA")
-        val PODCAST_AUTHOR = Relation("PODCAST_AUTHOR")
-        val PUBLICATION = Relation("PUBLICATION")
-        val REDEEMED = Relation("REDEEMED")
-        val REDEEMED_AUTHOR = Relation("REDEEMED_AUTHOR")
-        val RELEASE = Relation("RELEASE")
-        val REMINDED = Relation("REMINDED")
-        val REMOVED_USER = Relation("REMOVED_USER")
-        val REPLACED_BY = Relation("REPLACED_BY")
-        val REQUEST = Relation("REQUEST")
-        val REQUEST_AUTHOR = Relation("REQUEST_AUTHOR")
-        val RESOLVED = Relation("RESOLVED")
-        val RESULT = Relation("RESULT")
-        val REVISED = Relation("REVISED")
-        val ROLE_CHANGED = Relation("ROLE_CHANGED")
-        val SCHEDULED = Relation("SCHEDULED")
-        val SEARCH_AUTHOR = Relation("SEARCH_AUTHOR")
-        val SITE_MANIFEST = Relation("SITE_MANIFEST")
-        val SNAPSHOTTED = Relation("SNAPSHOTTED")
-        val SOURCE = Relation("SOURCE")
-        val SOURCE_TAG = Relation("SOURCE_TAG")
-        val STALL = Relation("STALL")
-        val SUBSET_OF = Relation("SUBSET_OF")
-        val TAGGED = Relation("TAGGED")
-        val TEMPLATE = Relation("TEMPLATE")
-        val TEXT_TRACK = Relation("TEXT_TRACK")
-        val TIMED_OUT = Relation("TIMED_OUT")
-        val TIMEOUT_CLEARED = Relation("TIMEOUT_CLEARED")
-        val TRIGGERED = Relation("TRIGGERED")
-        val UNARCHIVED = Relation("UNARCHIVED")
-        val VERIFIED = Relation("VERIFIED")
-        val VERIFIER = Relation("VERIFIER")
-        val VIEWED = Relation("VIEWED")
-        val VIDEO = Relation("VIDEO")
-        val VIEWER = Relation("VIEWER")
-        val VOTED = Relation("VOTED")
-        val WIKILINK = Relation("WIKILINK")
-        val WIKILINK_AUTHOR = Relation("WIKILINK_AUTHOR")
-        val WINNER = Relation("WINNER")
-        val WOT_ROOT = Relation("WOT_ROOT")
+        val ABOUT = Relation<NoProps>("ABOUT")
+        val ABOUT_AUTHOR = Relation<NoProps>("ABOUT_AUTHOR")
+        val ACCEPTED = Relation<NoProps>("ACCEPTED")
+        val ACTOR = Relation<ActorProps>("ACTOR")
+        val ADDED_USER = Relation<RoleProps>("ADDED_USER")
+        val ADMIN = Relation<RoleProps>("ADMIN")
+        val AGENT = Relation<FrameProps>("AGENT")
+        val ALLOWED = Relation<RoleProps>("ALLOWED")
+        val APP = Relation<NoProps>("APP")
+        val APPLIED = Relation<NoProps>("APPLIED")
+        val APPROVER = Relation<NoProps>("APPROVER")
+        val ARCHIVED = Relation<ModerationProps>("ARCHIVED")
+        val ASSERTION = Relation<NoProps>("ASSERTION")
+        val ATTESTOR = Relation<NoProps>("ATTESTOR")
+        val AUDITED = Relation<AuditProps>("AUDITED")
+        val AUTHORED = Relation<NoProps>("AUTHORED")
+        val BANNED = Relation<ModerationProps>("BANNED")
+        val BASE_VERSION = Relation<NoProps>("BASE_VERSION")
+        val CHILD = Relation<NoProps>("CHILD")
+        val COLLABORATED = Relation<CollaborationProps>("COLLABORATED")
+        val COLLABORATED_AUTHOR = Relation<CollaborationProps>("COLLABORATED_AUTHOR")
+        val CONCEPT_GRAPH = Relation<NoProps>("CONCEPT_GRAPH")
+        val CONFIRMED = Relation<StatusProps>("CONFIRMED")
+        val COPIED = Relation<NoProps>("COPIED")
+        val CREATED = Relation<NoProps>("CREATED")
+        val CREDITED = Relation<CreditProps>("CREDITED")
+        val CURRENT_SCENE = Relation<NoProps>("CURRENT_SCENE")
+        val DEFER = Relation<NoProps>("DEFER")
+        val DENIED = Relation<NoProps>("DENIED")
+        val DESTINATION = Relation<NoProps>("DESTINATION")
+        val DESTINATION_AUTHOR = Relation<NoProps>("DESTINATION_AUTHOR")
+        val DESTROYED = Relation<NoProps>("DESTROYED")
+        val ELEMENT_OF = Relation<NoProps>("ELEMENT_OF")
+        val EXERCISE = Relation<NoProps>("EXERCISE")
+        val FILE_DATA = Relation<NoProps>("FILE_DATA")
+        val FINDER = Relation<NoProps>("FINDER")
+        val FOR_USER = Relation<NoProps>("FOR_USER")
+        val FOUND = Relation<FoundProps>("FOUND")
+        val FUNDED = Relation<NoProps>("FUNDED")
+        val GOAL = Relation<NoProps>("GOAL")
+        val GROUP = Relation<NoProps>("GROUP")
+        val INHERIT_FROM = Relation<NoProps>("INHERIT_FROM")
+        val INPUT = Relation<NoProps>("INPUT")
+        val INPUT_JOB = Relation<NoProps>("INPUT_JOB")
+        val ITEM = Relation<ItemProps>("ITEM")
+        val KEY_PACKAGE = Relation<NoProps>("KEY_PACKAGE")
+        val KICKED = Relation<NoProps>("KICKED")
+        val LINKED = Relation<NoProps>("LINKED")
+        val MAINTAINER = Relation<NoProps>("MAINTAINER")
+        val MERCHANT = Relation<NoProps>("MERCHANT")
+        val NOTIFICATION_SERVER = Relation<NoProps>("NOTIFICATION_SERVER")
+        val OBSERVER = Relation<NoProps>("OBSERVER")
+        val OPEN_TIMESTAMP = Relation<NoProps>("OPEN_TIMESTAMP")
+        val OPPONENT = Relation<ChessResultProps>("OPPONENT")
+        val OPTION = Relation<NoProps>("OPTION")
+        val ORIGIN = Relation<NoProps>("ORIGIN")
+        val OWNER = Relation<OwnerProps>("OWNER")
+        val PALETTE = Relation<NoProps>("PALETTE")
+        val PARENT_LIST = Relation<NoProps>("PARENT_LIST")
+        val PERSONA = Relation<NoProps>("PERSONA")
+        val PODCAST_AUTHOR = Relation<RoleProps>("PODCAST_AUTHOR")
+        val PUBLICATION = Relation<NoProps>("PUBLICATION")
+        val REDEEMED = Relation<NoProps>("REDEEMED")
+        val REDEEMED_AUTHOR = Relation<NoProps>("REDEEMED_AUTHOR")
+        val RELEASE = Relation<NoProps>("RELEASE")
+        val REMINDED = Relation<NoProps>("REMINDED")
+        val REMOVED_USER = Relation<NoProps>("REMOVED_USER")
+        val REPLACED_BY = Relation<NoProps>("REPLACED_BY")
+        val REQUEST = Relation<StatusProps>("REQUEST")
+        val REQUEST_AUTHOR = Relation<NoProps>("REQUEST_AUTHOR")
+        val RESOLVED = Relation<ResolutionProps>("RESOLVED")
+        val RESULT = Relation<NoProps>("RESULT")
+        val REVISED = Relation<NoProps>("REVISED")
+        val ROLE_CHANGED = Relation<RoleProps>("ROLE_CHANGED")
+        val SCHEDULED = Relation<NoProps>("SCHEDULED")
+        val SEARCH_AUTHOR = Relation<NoProps>("SEARCH_AUTHOR")
+        val SITE_MANIFEST = Relation<ReleaseProps>("SITE_MANIFEST")
+        val SNAPSHOTTED = Relation<NoProps>("SNAPSHOTTED")
+        val SOURCE = Relation<NoProps>("SOURCE")
+        val SOURCE_TAG = Relation<NoProps>("SOURCE_TAG")
+        val STALL = Relation<NoProps>("STALL")
+        val SUBSET_OF = Relation<NoProps>("SUBSET_OF")
+        val TAGGED = Relation<PositionProps>("TAGGED")
+        val TEMPLATE = Relation<NoProps>("TEMPLATE")
+        val TEXT_TRACK = Relation<NoProps>("TEXT_TRACK")
+        val TIMED_OUT = Relation<ModerationProps>("TIMED_OUT")
+        val TIMEOUT_CLEARED = Relation<NoProps>("TIMEOUT_CLEARED")
+        val TRIGGERED = Relation<NoProps>("TRIGGERED")
+        val UNARCHIVED = Relation<ModerationProps>("UNARCHIVED")
+        val VERIFIED = Relation<NoProps>("VERIFIED")
+        val VERIFIER = Relation<NoProps>("VERIFIER")
+        val VIEWED = Relation<ViewProps>("VIEWED")
+        val VIDEO = Relation<NoProps>("VIDEO")
+        val VIEWER = Relation<NoProps>("VIEWER")
+        val VOTED = Relation<VoteProps>("VOTED")
+        val WIKILINK = Relation<NoProps>("WIKILINK")
+        val WIKILINK_AUTHOR = Relation<NoProps>("WIKILINK_AUTHOR")
+        val WINNER = Relation<ChessResultProps>("WINNER")
+        val WOT_ROOT = Relation<WotProps>("WOT_ROOT")
 
         /** Every relation Quartz emits, for consumers that declare a schema up front. */
-        val ALL: List<Relation> =
+        val ALL: List<Relation<*>> =
             listOf(
                 AUTHOR,
                 ADDRESS,

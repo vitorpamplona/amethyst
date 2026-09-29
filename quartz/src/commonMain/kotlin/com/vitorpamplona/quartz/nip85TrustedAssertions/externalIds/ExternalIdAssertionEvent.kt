@@ -59,7 +59,7 @@ class ExternalIdAssertionEvent(
      * NIP-85: the `d` is the SUBJECT, the NIP-73 identifier this assertion scores (the same node a
      * NIP-73 `i` names), with the scores as props; the `k` tags are its NIP-73 kinds.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tag(Relation.SUBJECT, "i", aboutExternalId(), "d", tags.contentAssertionScores())
             valueTags(Relation.TAG, tags, "k")

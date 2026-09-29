@@ -71,7 +71,7 @@ class StreamMessageV2Event(
 
     fun isBroadcast() = tags.isBroadcast()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             buzzThreadLinks(tags)

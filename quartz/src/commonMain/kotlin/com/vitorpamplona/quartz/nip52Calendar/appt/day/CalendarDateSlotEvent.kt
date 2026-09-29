@@ -97,7 +97,7 @@ class CalendarDateSlotEvent(
 
     fun references() = tags.references()
 
-    override fun links(): List<Link> = links { calendarSlotLinks(tags) }
+    override fun links(): List<Link<*>> = links { calendarSlotLinks(tags) }
 
     companion object {
         const val KIND = 31922

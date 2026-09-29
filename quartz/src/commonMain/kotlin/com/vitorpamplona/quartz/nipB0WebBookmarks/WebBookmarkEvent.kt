@@ -81,7 +81,7 @@ class WebBookmarkEvent(
      * ([url] restores the scheme NIP-B0 drops) as an `r` value, the node every other reference to
      * that URL shares.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tag(Relation.BOOKMARK, "r", url(), via = "d")
             hashtags(tags)

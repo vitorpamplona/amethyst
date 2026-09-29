@@ -78,7 +78,7 @@ class ProfileBadgesEvent(
      * definition and the award that granted it. An `a` to a kind 30008 badge set is a
      * `BADGE_SET` the profile displays whole, never a badge definition.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             acceptedBadges().forEach { badge ->
                 if (badge.badgeDefinition.kind == AcceptedBadgeSetEvent.KIND) return@forEach

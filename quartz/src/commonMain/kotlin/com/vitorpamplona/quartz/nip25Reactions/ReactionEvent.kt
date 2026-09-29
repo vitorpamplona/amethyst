@@ -83,7 +83,7 @@ class ReactionEvent(
      * `p` its `REACTED_AUTHOR` (not [originalPost]/[originalAuthor], which return all of them).
      * Earlier ones are copies of the target's thread tags: `MENTION`s. `k` is the target's kind.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val eventId = tags.lastNotNullOfOrNull(ETag::parseId)
             val address = tags.lastNotNullOfOrNull(ATag::parseAddressId)

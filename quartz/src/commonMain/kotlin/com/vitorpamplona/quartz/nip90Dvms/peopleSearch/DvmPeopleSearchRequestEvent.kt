@@ -50,7 +50,7 @@ class DvmPeopleSearchRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent,
     LinkProvider {
-    override fun links(): List<Link> = links { dvmRequestLinks(tags) }
+    override fun links(): List<Link<*>> = links { dvmRequestLinks(tags) }
 
     override fun indexableContent() = searchQuery() ?: ""
 

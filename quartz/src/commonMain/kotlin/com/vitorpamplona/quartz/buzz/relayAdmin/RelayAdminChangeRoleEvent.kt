@@ -57,7 +57,7 @@ class RelayAdminChangeRoleEvent(
     /** The new `role` for the member. */
     fun role() = tags.relayAdminRole()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.ROLE_CHANGED, target(), PTag.TAG_NAME, linkProps("role" to role()))
         }

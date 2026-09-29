@@ -82,7 +82,7 @@ class AgentTurnMetricEvent(
             null
         }
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.OWNER, ownerPubKey(), PTag.TAG_NAME)
             user(Relation.AGENT, agentPubKey(), AgentTag.TAG_NAME)

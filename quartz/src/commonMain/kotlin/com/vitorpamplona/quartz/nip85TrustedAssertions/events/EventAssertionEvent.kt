@@ -70,7 +70,7 @@ class EventAssertionEvent(
      * NIP-85: the `d` is the SUBJECT, the event this assertion scores (not the assertion's own
      * identity), with the scores as props. An `e` equal to the `d` is only its relay hint.
      */
-    override fun links(): List<Link> = links { event(Relation.SUBJECT, aboutEvent(), "d", tags.contentAssertionScores()) }
+    override fun links(): List<Link<*>> = links { event(Relation.SUBJECT, aboutEvent(), "d", tags.contentAssertionScores()) }
 
     companion object {
         const val KIND = 30383

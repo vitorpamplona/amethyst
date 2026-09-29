@@ -82,7 +82,7 @@ class NutzapEvent(
      * is what the proofs claim (it is only checked against the mint at redeem time), and only a
      * sat-denominated nutzap can say it in msats.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val sats = claimedSatsTotal()
             val props = if (sats > 0 && (unit() ?: "sat") == "sat") mapOf("msats" to sats * 1000) else null

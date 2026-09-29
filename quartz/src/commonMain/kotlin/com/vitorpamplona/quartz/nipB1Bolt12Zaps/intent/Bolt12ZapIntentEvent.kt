@@ -123,7 +123,7 @@ class Bolt12ZapIntentEvent(
     fun isProfileZap() = zappedEvent() == null && zappedAddress() == null
 
     /** NIP-B1: an intent is not a payment, but it names the same targets its 9736 will; the would-be sender is the author. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val props = amount()?.let { mapOf("msats" to it) }
             userTags(Relation.ZAP_RECIPIENT, tags, props = props)

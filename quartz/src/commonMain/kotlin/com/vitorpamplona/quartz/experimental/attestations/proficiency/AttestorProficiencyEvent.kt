@@ -48,7 +48,7 @@ class AttestorProficiencyEvent(
     LinkProvider,
     SearchableEvent {
     /** The kinds this attestor declares it can attest. */
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, KindTag.TAG_NAME) }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, KindTag.TAG_NAME) }
 
     override fun indexableContent() = listOfNotNull(description()).joinToString("\n")
 

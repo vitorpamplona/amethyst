@@ -65,7 +65,7 @@ class WorkoutRecordEvent(
      * POWR / NIP-101e exercise and workout templates, by coordinate. A RUNSTR `exercise` is a
      * plain verb, not a coordinate, and the parser skips it.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

@@ -143,7 +143,7 @@ class CashuSpendingHistoryEvent(
      * is meant to stay public; `created` and `destroyed` token events are normally encrypted and so
      * invisible here. The `p` is the redeemed nutzap's sender.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 val reference = TokenReference.parseFromTag(it) ?: return@fastForEach

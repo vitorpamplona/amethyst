@@ -65,7 +65,7 @@ class AdminCommandEvent(
      * the target, whose relation is the verb: a kick or a mute, the two queried apart (rule 4).
      * A command with an unknown verb names nobody.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             address(Relation.ROOT, room(), "a")
             when (action()) {

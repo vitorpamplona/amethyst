@@ -156,7 +156,7 @@ abstract class TrustedListEvent(
     protected fun trustedListLinks(
         memberTagName: String,
         member: LinkBuilder.(value: String, props: Map<String, Any>?) -> Unit,
-    ): List<Link> =
+    ): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

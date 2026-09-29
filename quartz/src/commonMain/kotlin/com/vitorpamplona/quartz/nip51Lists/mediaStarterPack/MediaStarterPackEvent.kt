@@ -86,7 +86,7 @@ class MediaStarterPackEvent(
     fun followIdSet() = tags.followIdSet()
 
     /** NIP-51: the people in the pack are its `MEMBER`s. */
-    override fun links(): List<Link> = links { userTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.MEMBER, tags) }
 
     companion object {
         const val KIND = 39092

@@ -79,7 +79,7 @@ class BidConfirmationEvent(
      * NIP-15 orders the `e` tags: the bid first, then its auction. The `p` is the bidder, which
      * Quartz adds to notify them. The confirmation's status rides on the bid link.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val bidProps =
                 confirmationData()?.let { data ->

@@ -71,7 +71,7 @@ class RoadEventReportEvent(
     LinkProvider,
     SearchableEvent {
     /** The road-event type code (`t`: police, accident…) and the location cells (`g`, at several precisions). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

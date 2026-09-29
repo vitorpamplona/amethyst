@@ -150,7 +150,7 @@ class ChannelMessageEvent(
      * adds the replied-to author as a `p`: it is the `PARENT_AUTHOR` when the parent tag names that
      * same author (Quartz writes it in the `e`'s pubkey slot), else a `MENTION`, as on kind 1.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val channelId = channelId()
             val parentTag = reply()?.takeIf { it.eventId != channelId }

@@ -77,7 +77,7 @@ class InterestListEvent(
      * sets (kind 30015 `a` tags; other `a` kinds are skipped, as [publicInterestSets] does) are
      * `SUBSCRIBED`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size > 1 && tag[0] == "t") tag(Relation.SUBSCRIBED, "t", tag[1].lowercase())

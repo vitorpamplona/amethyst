@@ -75,7 +75,7 @@ class WorkflowDefEvent(
     /** The workflow YAML source - the event `content`. */
     fun yaml() = content
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
         }

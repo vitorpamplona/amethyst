@@ -91,15 +91,13 @@ class OldBookmarkListEvent(
      * pin list (10001), `communities` the communities list (10004), anything else (`bookmark`)
      * the bookmarks (10003). Its `e`/`a` items mean what they mean in the list that replaced it.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
-            val relation =
-                when (dTag()) {
-                    "pin" -> Relation.PIN
-                    "communities" -> Relation.SUBSCRIBED
-                    else -> Relation.BOOKMARK
-                }
-            eventsAndAddresses(relation, tags)
+            when (dTag()) {
+                "pin" -> eventsAndAddresses(Relation.PIN, tags)
+                "communities" -> eventsAndAddresses(Relation.SUBSCRIBED, tags)
+                else -> eventsAndAddresses(Relation.BOOKMARK, tags)
+            }
         }
 
     companion object {

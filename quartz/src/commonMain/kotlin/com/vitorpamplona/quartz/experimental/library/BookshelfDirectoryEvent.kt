@@ -67,7 +67,7 @@ class BookshelfDirectoryEvent(
     AddressHintProvider,
     SearchableEvent {
     /** What is on the shelf, `a` and `e` entries alike ([items]). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             items().forEach { item ->
                 if (item.address != null) address(Relation.MEMBER, item.address, "a") else event(Relation.MEMBER, item.eventId, "e")

@@ -95,7 +95,7 @@ class ContactListEvent(
     }
 
     /** NIP-02: every `p` is a `FOLLOW`, the social graph. The legacy relay map in the content is not a reference. */
-    override fun links(): List<Link> = links { userTags(Relation.FOLLOW, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.FOLLOW, tags) }
 
     companion object {
         const val KIND = 3

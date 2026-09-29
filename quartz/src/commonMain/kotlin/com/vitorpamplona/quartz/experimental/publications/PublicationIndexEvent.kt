@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -83,13 +84,10 @@ class PublicationIndexEvent(
      * with its `order` (from 0), `level` and inline `title`; the `p` tags (NKBIP-01 does not say
      * whose), the topics, and the original a derivative work names in uppercase `A` / `E`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             sections().forEachIndexed { order, section ->
-                val props = HashMap<String, Any>(3)
-                props["order"] = order
-                props["level"] = section.level
-                section.title?.let { props["title"] = it }
+                val props = MemberProps(order = order, level = section.level, title = section.title)
                 if (section.address != null) {
                     address(Relation.MEMBER, section.address, "a", props)
                 } else {

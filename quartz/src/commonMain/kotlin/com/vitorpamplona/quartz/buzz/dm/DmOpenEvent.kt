@@ -56,7 +56,7 @@ class DmOpenEvent(
     /** The DM participants - one per `p` tag. */
     fun participants() = tags.dmParticipants()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             userTags(Relation.PARTICIPANT, tags)
         }

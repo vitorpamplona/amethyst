@@ -52,7 +52,7 @@ class GroupEditMetadataEvent(
     SearchableEvent,
     LinkProvider {
     /** NIP-29 subgroups: `parent` and `child` are group ids on the same relay, so they target the group as `h` does. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

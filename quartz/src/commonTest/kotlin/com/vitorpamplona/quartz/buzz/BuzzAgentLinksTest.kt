@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.AuditProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -206,14 +207,14 @@ class BuzzAgentLinksTest {
         assertEquals(
             listOf(
                 Link(Relation.ACTOR, LinkTarget.User(p1), "p"),
-                Link(Relation.AUDITED, LinkTarget.Event(e1), "object", mapOf("action" to "event_deleted")),
+                Link(Relation.AUDITED, LinkTarget.Event(e1), "object", AuditProps(action = "event_deleted")),
             ),
             AuditEntryEvent(id, author, 0, arrayOf(arrayOf("action", "event_deleted"), arrayOf("p", p1), arrayOf("object", e1)), "{}", sig).links(),
         )
         // A media sha256 is 64-hex too: it must stay a plain value.
         val sha256 = "5".repeat(64)
         assertEquals(
-            listOf(Link(Relation.AUDITED, LinkTarget.Tag("object", sha256), "object", mapOf("action" to "media_uploaded"))),
+            listOf(Link(Relation.AUDITED, LinkTarget.Tag("object", sha256), "object", AuditProps(action = "media_uploaded"))),
             AuditEntryEvent(id, author, 0, arrayOf(arrayOf("action", "media_uploaded"), arrayOf("object", sha256)), "{}", sig).links(),
         )
     }

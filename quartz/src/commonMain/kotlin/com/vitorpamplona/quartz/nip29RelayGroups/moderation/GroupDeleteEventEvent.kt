@@ -43,7 +43,7 @@ class GroupDeleteEventEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** A moderator's delete-event: NIP-09's owner-only rule does not govern it, the source kind says so. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

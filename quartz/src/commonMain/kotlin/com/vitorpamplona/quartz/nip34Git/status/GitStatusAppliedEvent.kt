@@ -65,7 +65,7 @@ class GitStatusAppliedEvent(
     fun appliedPatchIds(): List<HexKey> = tags.mapNotNull(QTag::parseEventId)
 
     /** A 1631 also names the patches it applied or merged, in `q` tags that are not NIP-18 quotes. */
-    override fun links(): List<Link> {
+    override fun links(): List<Link<*>> {
         val status = super.links()
         return links {
             status.forEach { add(it) }

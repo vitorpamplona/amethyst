@@ -66,7 +66,7 @@ class FavoriteAlgoFeedsListEvent(
     suspend fun privateFavoriteAlgoFeeds(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
 
     /** The feed DVMs (kind 31990 `a` tags) the user marked as favorites. */
-    override fun links(): List<Link> = links { addressTags(Relation.FAVORITE, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.FAVORITE, tags) }
 
     companion object {
         const val KIND = 10090

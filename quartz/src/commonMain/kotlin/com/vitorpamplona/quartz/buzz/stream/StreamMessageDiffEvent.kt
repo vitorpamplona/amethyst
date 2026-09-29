@@ -57,7 +57,7 @@ class StreamMessageDiffEvent(
     fun diffMeta() = tags.diffMeta()
 
     /** Buzz reuses `l` for the diff's programming language (not a NIP-32 label). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             valueTags(Relation.TAG, tags, LanguageTag.TAG_NAME)

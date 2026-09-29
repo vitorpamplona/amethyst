@@ -133,7 +133,7 @@ class TorrentCommentEvent(
 
     @Suppress("DEPRECATION")
     /** NIP-35: a comment "works exactly like a kind 1": a NIP-10 thread rooted at the torrent. A `p` is the parent's author when it matches the parent `e` tag's author slot. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val parentAuthor = threadLinks(tags)
             tags.fastForEach {

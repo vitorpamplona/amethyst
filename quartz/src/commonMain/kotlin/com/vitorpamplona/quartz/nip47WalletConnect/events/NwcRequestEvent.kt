@@ -45,7 +45,7 @@ class NwcRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-47: `p` is the wallet service the request is encrypted to. */
-    override fun links(): List<Link> = links { user(Relation.RECIPIENT, walletServicePubKey(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, walletServicePubKey(), "p") }
 
     override fun isContentEncoded() = true
 

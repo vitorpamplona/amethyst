@@ -70,7 +70,7 @@ class UnarchiveRequestEvent(
     fun isProtected() = tags.isProtected()
 
     /** The `auth` owner is linked only when its attestation verifies for this event's author. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.UNARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
             verifiedOwner(auth(), pubKey)

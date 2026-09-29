@@ -68,7 +68,7 @@ class MemberRemovedNotificationEvent(
     fun actor() = notification()?.actor
 
     /** The actor rides in the content JSON, which links do not parse. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.REMOVED_USER, target(), PTag.TAG_NAME)
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)

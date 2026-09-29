@@ -60,7 +60,7 @@ class ForumVoteEvent(
     /** The vote direction parsed from `content` (`"+"`/`"-"`), or null if malformed. */
     fun direction() = VoteDirection.fromContent(content)
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             event(Relation.VOTED, target(), ETag.TAG_NAME, linkProps("direction" to direction()?.code))

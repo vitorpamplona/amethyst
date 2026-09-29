@@ -26,14 +26,20 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 data class QAddressableTag(
     val address: Address,
-) : QTag {
+) : QTag,
+    AddressReferenceTag {
     var relay: NormalizedRelayUrl? = null
+
+    override val relayHint get() = relay
+
+    override fun toAddressId() = address.toValue()
 
     constructor(
         address: Address,

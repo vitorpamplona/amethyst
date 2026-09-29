@@ -71,7 +71,7 @@ class LiveChessGameEndEvent(
     fun pgn(): String = content
 
     /** The opponent and the winner, when there is one. The result and the termination reason ride on both. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val result = result()
             val termination = termination()

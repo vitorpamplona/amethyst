@@ -41,7 +41,7 @@ class DvmTextToSpeechResponseEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { dvmResultLinks(tags) }
+    override fun links(): List<Link<*>> = links { dvmResultLinks(tags) }
 
     companion object {
         const val KIND = 6250

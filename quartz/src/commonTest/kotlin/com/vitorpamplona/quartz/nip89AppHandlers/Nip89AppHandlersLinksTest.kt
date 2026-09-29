@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.allLinks
+import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlin.test.Test
@@ -54,7 +55,7 @@ class Nip89AppHandlersLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.RECOMMENDED, LinkTarget.Address(web), "a", mapOf("platform" to "web")),
+                Link(Relation.RECOMMENDED, LinkTarget.Address(web), "a", PlatformProps(platform = "web")),
                 Link(Relation.RECOMMENDED, LinkTarget.Address(android), "a"),
             ),
             event.links(),

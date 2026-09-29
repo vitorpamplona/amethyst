@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,8 +46,8 @@ class Nip22CommentsLinksTest {
         content: String = "",
     ) = CommentEvent(id, me, 1L, tags, content, sig)
 
-    private fun link(
-        relation: Relation,
+    private fun <P : LinkProps> link(
+        relation: Relation<P>,
         target: LinkTarget,
         via: String,
     ) = Link(relation, target, via)

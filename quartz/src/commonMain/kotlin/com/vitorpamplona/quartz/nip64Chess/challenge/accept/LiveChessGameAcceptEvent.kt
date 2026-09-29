@@ -59,7 +59,7 @@ class LiveChessGameAcceptEvent(
     fun challengeEventId() = tags.challengeEventId()
 
     /** The accepted challenge (`e`) and the challenger (`p`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             eventTags(Relation.ACCEPTED, tags)
             userTags(Relation.OPPONENT, tags)

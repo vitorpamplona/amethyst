@@ -48,7 +48,7 @@ class DvmSummarizationRequestEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { dvmRequestLinks(tags) }
+    override fun links(): List<Link<*>> = links { dvmRequestLinks(tags) }
 
     fun inputs(): List<InputTag> = tags.inputs()
 

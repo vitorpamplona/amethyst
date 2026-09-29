@@ -164,7 +164,7 @@ class ExperimentalNotesLinksTest {
         )
         // relays are not link targets
         assertEquals(
-            emptyList<Link>(),
+            emptyList<Link<*>>(),
             EntityRatingEvent(me, me, 0, tags(arrayOf("d", "relay:wss://relay.example/"), arrayOf("m", "relay")), "", me).links(),
         )
     }

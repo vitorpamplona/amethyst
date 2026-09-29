@@ -229,7 +229,7 @@ class HighlightEvent(
      * `role` — author, editor — riding along when written); in a quote highlight a `p` or `r` with
      * the `mention` marker is named in the comment instead: a `MENTION`, or a plain URL `TAG`.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

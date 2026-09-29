@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.NoProps
 
 /**
  * The references an nsite manifest carries (NIP-5A, and the NIP-5D napplets that reuse its tag
@@ -38,7 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
  */
 fun LinkBuilder.siteManifestLinks(
     tags: TagArray,
-    parent: Relation = Relation.COPIED,
+    parent: Relation<NoProps> = Relation.COPIED,
 ) = tags.fastForEach {
     if (it.size < 2) return@fastForEach
     when (it[0]) {

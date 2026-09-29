@@ -84,7 +84,7 @@ class PictureEvent(
     fun imetaTags() = iMetas ?: imetas().map { PictureMeta.parse(it) }.also { iMetas = it }
 
     /** NIP-68 names its `p` tags "tagged users", and an imeta `annotate-user` places one at a point in the image. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             userTags(Relation.TAGGED, tags)
             imetaTags().forEach { image ->

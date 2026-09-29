@@ -58,7 +58,7 @@ class NappletSnapshotEvent(
     NappletManifest,
     SearchableEvent,
     LinkProvider {
-    override fun links(): List<Link> = links { siteManifestLinks(tags, Relation.SNAPSHOTTED) }
+    override fun links(): List<Link<*>> = links { siteManifestLinks(tags, Relation.SNAPSHOTTED) }
 
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 

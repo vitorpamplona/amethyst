@@ -47,7 +47,7 @@ interface BaseRepostEvent {
  * Any earlier `e`/`a`/`p` is not part of the repost and is a `MENTION`; `k` is the reposted kind.
  * The reposted event's JSON in the content is the same event as the `e`, not another link.
  */
-internal fun repostLinks(tags: TagArray): List<Link> =
+internal fun repostLinks(tags: TagArray): List<Link<*>> =
     links {
         val eventId = tags.lastNotNullOfOrNull(ETag::parseId)
         val address = tags.lastNotNullOfOrNull(ATag::parseAddressId)

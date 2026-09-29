@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip43RelayMembers
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
@@ -56,7 +57,7 @@ class Nip43RelayMembersLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.MEMBER, LinkTarget.User(alice), "member", mapOf("roles" to listOf("moderator"))),
+                Link(Relation.MEMBER, LinkTarget.User(alice), "member", MemberProps(roles = listOf("moderator"))),
                 Link(Relation.MEMBER, LinkTarget.User(bob), "member"),
             ),
             event.links(),

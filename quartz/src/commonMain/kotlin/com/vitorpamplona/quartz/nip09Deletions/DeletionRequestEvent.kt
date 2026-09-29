@@ -84,7 +84,7 @@ class DeletionRequestEvent(
      * NIP-09: the `e`/`a` tags are what this request deletes and `k` their kinds. The `p` is
      * Quartz's practice (not in NIP-09): the deleted events' author.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size < 2) return@fastForEach

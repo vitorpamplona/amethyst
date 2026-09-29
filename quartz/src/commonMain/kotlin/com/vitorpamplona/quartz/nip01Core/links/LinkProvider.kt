@@ -34,7 +34,7 @@ package com.vitorpamplona.quartz.nip01Core.links
  * the emoji tag's set).
  */
 interface LinkProvider {
-    fun links(): List<Link>
+    fun links(): List<Link<*>>
 }
 
 /**
@@ -42,5 +42,5 @@ interface LinkProvider {
  * metadata, relay and server lists, key material): it links only through [allLinks].
  */
 interface LinkFree : LinkProvider {
-    override fun links(): List<Link> = emptyList()
+    override fun links(): List<Link<*>> = emptyList()
 }

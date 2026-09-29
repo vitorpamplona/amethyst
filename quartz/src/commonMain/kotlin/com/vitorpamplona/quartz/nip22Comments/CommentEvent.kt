@@ -267,7 +267,7 @@ class CommentEvent(
      * pubkey mentioned in the content, and those are `MENTION`s. An `A` root at a NIP-72 community
      * is also the `COMMUNITY` the comment is posted in.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             val parentAuthors = HashSet<String>()
             tags.fastForEach { tag ->

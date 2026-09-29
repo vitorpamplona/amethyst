@@ -57,7 +57,7 @@ class SoftwareApplicationEvent(
     LinkProvider,
     SearchableEvent {
     /** zapstore apps `a`-tag their latest kind-30063 release. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             addressTags(Relation.RELEASE, tags)
             hashtags(tags)

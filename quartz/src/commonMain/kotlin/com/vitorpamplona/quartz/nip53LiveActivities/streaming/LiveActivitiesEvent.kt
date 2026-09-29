@@ -169,7 +169,7 @@ class LiveActivitiesEvent(
     fun participantsIntersect(keySet: Set<String>): Boolean = keySet.contains(pubKey) || tags.any(ParticipantTag::isIn, keySet)
 
     /** NIP-53: participants with their roles, pinned chat messages, and the NIP-75 zap goal the stream raises toward (zap.stream's `goal`). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             participantLinks(tags)
             eventTags(Relation.PIN, tags, "pinned")

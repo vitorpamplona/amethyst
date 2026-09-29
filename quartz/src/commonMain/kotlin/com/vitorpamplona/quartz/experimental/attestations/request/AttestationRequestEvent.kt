@@ -61,7 +61,7 @@ class AttestationRequestEvent(
     PubKeyHintProvider,
     SearchableEvent {
     /** The assertion to attest (an `e` or an `a`) and the attestors asked to (`p`, see [attestorPubKeys]). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

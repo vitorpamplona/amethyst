@@ -71,7 +71,7 @@ class PublicChatListEvent(
     override fun linkedEventIds() = tags.mapNotNull(ChannelTag::parseId)
 
     /** NIP-51: the public chats (kind 40 channels) the user follows are `SUBSCRIBED`. */
-    override fun links(): List<Link> = links { eventTags(Relation.SUBSCRIBED, tags) }
+    override fun links(): List<Link<*>> = links { eventTags(Relation.SUBSCRIBED, tags) }
 
     companion object {
         const val KIND = 10005

@@ -104,7 +104,7 @@ class BookmarkSetEvent(
     suspend fun privateBookmarks(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 
     /** NIP-51: every public `e`/`a` is a `BOOKMARK`. */
-    override fun links(): List<Link> = links { eventsAndAddresses(Relation.BOOKMARK, tags) }
+    override fun links(): List<Link<*>> = links { eventsAndAddresses(Relation.BOOKMARK, tags) }
 
     companion object {
         const val KIND = 30003

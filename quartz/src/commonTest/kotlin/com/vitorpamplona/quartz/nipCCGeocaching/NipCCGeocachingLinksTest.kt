@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipCCGeocaching
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.FoundProps
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
@@ -43,7 +44,7 @@ class NipCCGeocachingLinksTest {
     @Test
     fun foundLogNamesTheCache() {
         val event = GeocacheFoundLogEvent(id, finder, 1, arrayOf(arrayOf("a", cache, "wss://relay.example/")), "Found it!", sig)
-        assertEquals(listOf(Link(Relation.FOUND, LinkTarget.Address(cache), "a", mapOf("verified" to false))), event.links())
+        assertEquals(listOf(Link(Relation.FOUND, LinkTarget.Address(cache), "a", FoundProps(verified = false))), event.links())
     }
 
     @Test

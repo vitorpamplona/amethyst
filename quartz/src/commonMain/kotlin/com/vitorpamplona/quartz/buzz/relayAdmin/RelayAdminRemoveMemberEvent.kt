@@ -52,7 +52,7 @@ class RelayAdminRemoveMemberEvent(
     /** The member being removed — the single `p` tag. */
     fun target() = tags.relayAdminTarget()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             user(Relation.REMOVED_USER, target(), PTag.TAG_NAME)
         }

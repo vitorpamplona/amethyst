@@ -54,7 +54,7 @@ class AddressableTrustedListEvent(
     AddressHintProvider,
     PubKeyHintProvider {
     /** Members are addresses (`a`). */
-    override fun links(): List<Link> = trustedListLinks("a") { value, props -> address(Relation.MEMBER, value, "a", props) }
+    override fun links(): List<Link<*>> = trustedListLinks("a") { value, props -> address(Relation.MEMBER, value, "a", props) }
 
     override fun members(): List<AddressMemberTag> = tags.members()
 

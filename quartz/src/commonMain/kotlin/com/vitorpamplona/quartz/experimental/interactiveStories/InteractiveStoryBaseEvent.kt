@@ -48,7 +48,7 @@ open class InteractiveStoryBaseEvent(
     LinkProvider,
     SearchableEvent {
     /** The scenes a reader can go to next: each `option` names one by its address (3rd slot). */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size > 2 && it[0] == StoryOptionTag.TAG_NAME) address(Relation.OPTION, it[2], StoryOptionTag.TAG_NAME)

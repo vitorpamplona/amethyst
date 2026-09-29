@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -42,7 +43,7 @@ class GroupPutUserEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach
@@ -51,7 +52,7 @@ class GroupPutUserEvent(
                     "p" -> {
                         // NIP-29 put-user: `["p", <pubkey>, <role>…]`, the roles it grants.
                         val roles = if (it.size > 2) (2 until it.size).mapNotNull { i -> it[i].ifBlank { null } } else emptyList()
-                        user(Relation.ADDED_USER, it[1], "p", if (roles.isEmpty()) null else mapOf("roles" to roles))
+                        user(Relation.ADDED_USER, it[1], "p", if (roles.isEmpty()) null else RoleProps(roles))
                     }
                 }
             }

@@ -75,7 +75,7 @@ class WikiRedirectEvent(
     /** A redirect that names no destination cannot be followed. */
     fun hasTarget() = target() != null
 
-    override fun links(): List<Link> = links { addressTags(Relation.REDIRECT, tags) }
+    override fun links(): List<Link<*>> = links { addressTags(Relation.REDIRECT, tags) }
 
     companion object {
         const val KIND = 30819

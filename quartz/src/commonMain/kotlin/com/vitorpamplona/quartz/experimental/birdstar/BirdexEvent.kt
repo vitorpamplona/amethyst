@@ -65,7 +65,7 @@ class BirdexEvent(
     LinkProvider,
     SearchableEvent {
     /** Every species on the life list, by its `i` (a Wikidata URL). */
-    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
 
     override fun indexableContent() = (listOfNotNull(summary()) + speciesNames()).joinToString("\n")
 

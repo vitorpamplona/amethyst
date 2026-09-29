@@ -115,7 +115,7 @@ class JesterEvent(
      * previous move. A start event's only `e` is [JesterProtocol.START_POSITION_HASH], a hash of the
      * starting board rather than an event id, so it is not a link.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             var position = 0
             tags.fastForEach {

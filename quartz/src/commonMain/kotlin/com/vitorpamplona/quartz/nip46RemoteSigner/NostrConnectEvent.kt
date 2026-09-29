@@ -44,7 +44,7 @@ class NostrConnectEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-46: each side `p`-tags the other and encrypts to it. */
-    override fun links(): List<Link> = links { user(Relation.RECIPIENT, recipientPubKey(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, recipientPubKey(), "p") }
 
     override fun isContentEncoded() = true
 

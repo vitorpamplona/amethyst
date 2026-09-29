@@ -78,7 +78,7 @@ class InterestSetEvent(
     suspend fun privateHashtags(signer: NostrSigner) = privateTags(signer)?.mapNotNull(HashtagTag::parse)
 
     /** NIP-51: the hashtags that make up the interest (`t`, the same lowercased node `HASHTAG` uses) are its `MEMBER`s. */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach { tag ->
                 if (tag.size > 1 && tag[0] == "t") tag(Relation.MEMBER, "t", tag[1].lowercase())

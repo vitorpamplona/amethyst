@@ -111,7 +111,7 @@ class ZapRequestEvent(
      * NIP-57 Appendix A: the `e`/`a` is the `ZAPPED` content and the `p` the `ZAP_RECIPIENT`, both
      * with the requested `msats` (the `amount` tag) when there is one; `k` is the zapped kind.
      */
-    override fun links(): List<Link> {
+    override fun links(): List<Link<*>> {
         val msats = tags.firstNotNullOfOrNull { tag -> if (tag.size > 1 && tag[0] == "amount") tag[1].toLongOrNull()?.takeIf { it > 0 } else null }
         return zapLinks(tags, msats?.let { mapOf("msats" to it) })
     }

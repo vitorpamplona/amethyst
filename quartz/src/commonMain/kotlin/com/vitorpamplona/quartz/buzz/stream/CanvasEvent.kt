@@ -63,7 +63,7 @@ class CanvasEvent(
 
     fun channel() = tags.channel()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
             contentMentions(content)

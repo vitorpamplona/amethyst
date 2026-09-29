@@ -58,7 +58,7 @@ class GroupMetadataEvent(
      * NIP-29 subgroups: `parent` and `child` are group ids on this relay, targeted as `h` is.
      * A Buzz relay writes its channel type as a `t` ([buzzChannelType]): a type, not a topic.
      */
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             tags.fastForEach {
                 if (it.size < 2) return@fastForEach

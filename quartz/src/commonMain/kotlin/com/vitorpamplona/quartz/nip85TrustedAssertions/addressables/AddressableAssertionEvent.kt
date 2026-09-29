@@ -70,7 +70,7 @@ class AddressableAssertionEvent(
      * NIP-85: the `d` is the SUBJECT, the address this assertion scores (not the assertion's own
      * identity), with the scores as props. An `a` equal to the `d` is only its relay hint.
      */
-    override fun links(): List<Link> = links { address(Relation.SUBJECT, aboutAddress(), "d", tags.contentAssertionScores()) }
+    override fun links(): List<Link<*>> = links { address(Relation.SUBJECT, aboutAddress(), "d", tags.contentAssertionScores()) }
 
     companion object {
         const val KIND = 30384

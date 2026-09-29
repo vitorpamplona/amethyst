@@ -63,7 +63,7 @@ class JobProgressEvent(
     /** The optional status token - the `status` tag. */
     fun status() = tags.jobStatus()
 
-    override fun links(): List<Link> =
+    override fun links(): List<Link<*>> =
         links {
             event(Relation.REQUEST, jobRequest(), ETag.TAG_NAME, linkProps("status" to status()))
             valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)

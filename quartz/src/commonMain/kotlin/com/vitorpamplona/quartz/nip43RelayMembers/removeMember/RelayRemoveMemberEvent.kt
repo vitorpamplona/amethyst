@@ -44,7 +44,7 @@ class RelayRemoveMemberEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link> = links { userTags(Relation.REMOVED_USER, tags) }
+    override fun links(): List<Link<*>> = links { userTags(Relation.REMOVED_USER, tags) }
 
     fun memberPubKeys() = tags.mapNotNull(PTag::parseKey)
 

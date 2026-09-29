@@ -65,7 +65,7 @@ class ThreadEvent(
     fun title() = tags.title() ?: tags.firstTagValue("subject")
 
     /** A thread posted in a NIP-29 group names it in `h`. Replies are NIP-22 comments that point here. */
-    override fun links(): List<Link> = links { valueTags(Relation.GROUP, tags, "h") }
+    override fun links(): List<Link<*>> = links { valueTags(Relation.GROUP, tags, "h") }
 
     companion object {
         const val KIND = 11
