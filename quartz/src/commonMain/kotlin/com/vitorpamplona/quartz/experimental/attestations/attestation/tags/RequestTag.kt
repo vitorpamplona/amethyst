@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.attestations.attestation.tags
 
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
@@ -43,6 +44,11 @@ class RequestTag(
     companion object {
         const val TAG_NAME = "request"
         private val REQUEST_KIND_STR = AttestationRequestEvent.KIND.toString()
+
+        // The raw-string readers hand the value on as an address id (hints, gatherers), so they
+        // need the whole `31872:<64-hex pubkey>:<d>` shape, not just the kind prefix: checked
+        // without allocating, as the parsers that build an Address get it from Address.parse.
+        private fun isRequestCoordinate(value: String) = Address.isOfKind(value, REQUEST_KIND_STR) && CoordinateShape.matches(value)
 
         // The request an attestation answers is always a kind 31872 attestation request.
         fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && Address.isOfKind(tag[1], REQUEST_KIND_STR)
@@ -91,15 +97,14 @@ class RequestTag(
         fun parseAddressId(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(Address.isOfKind(tag[1], REQUEST_KIND_STR)) { return null }
+            ensure(isRequestCoordinate(tag[1])) { return null }
             return tag[1]
         }
 
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(Address.isOfKind(tag[1], REQUEST_KIND_STR)) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            ensure(isRequestCoordinate(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
