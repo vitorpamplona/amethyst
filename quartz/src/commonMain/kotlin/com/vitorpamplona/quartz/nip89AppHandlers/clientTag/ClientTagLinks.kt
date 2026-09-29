@@ -18,21 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.graph
+package com.vitorpamplona.quartz.nip89AppHandlers.clientTag
 
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 
-// The walk every links() uses. Helpers for tags many kinds share live next to those tags (hashtags,
-// quotes, content mentions, the every-kind tags), so this package depends on no NIP.
-
-/**
- * Every tag [parse] accepts, handed to [block]. The way a `links()` walks its tags: the Tag
- * class's parser says which tags are its own and what they hold, e.g.
- * `each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }`.
- */
-inline fun <T : Any> LinkBuilder.each(
-    tags: TagArray,
-    parse: (Array<String>) -> T?,
-    block: LinkBuilder.(T) -> Unit,
-) = tags.fastForEach { tag -> parse(tag)?.let { block(it) } }
+/** NIP-89 [ClientTag]s, which any event may carry: the handler's 31990 address → [Relation.CLIENT]. */
+fun LinkBuilder.clientLinks(tags: TagArray) = each(tags, ClientTag::parse) { address(Relation.CLIENT, it.address, ClientTag.TAG_NAME) }

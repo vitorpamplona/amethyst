@@ -22,10 +22,10 @@ package com.vitorpamplona.quartz.nip71Video
 
 import com.vitorpamplona.quartz.graph.LinkBuilder
 import com.vitorpamplona.quartz.graph.Relation
-import com.vitorpamplona.quartz.graph.hashtags
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip71Video.credits.CreditTarget
 import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit

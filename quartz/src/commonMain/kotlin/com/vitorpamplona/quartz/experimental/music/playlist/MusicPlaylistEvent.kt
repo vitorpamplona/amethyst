@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.graph.Link
 import com.vitorpamplona.quartz.graph.LinkProvider
 import com.vitorpamplona.quartz.graph.Relation
-import com.vitorpamplona.quartz.graph.hashtags
 import com.vitorpamplona.quartz.graph.links
 import com.vitorpamplona.quartz.graph.props.OrderProps
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -45,6 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils

@@ -18,28 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.decentralizedLists
+package com.vitorpamplona.quartz.nip30CustomEmoji
 
-/**
- * A cheap, allocation-free check that a value has the `<kind>:<64-hex pubkey>:<d>` coordinate
- * shape, done before anything reaches `AddressSerializer.parse`. That parser splits the string
- * and logs a warning for every value it rejects — and in this family a rejected value is
- * routine: `z` tags legitimately carry plain list names, which may be long and contain colons.
- */
-internal object CoordinateShape {
-    fun matches(value: String): Boolean {
-        val firstColon = value.indexOf(':')
-        // kinds are at most 5 digits (0..65535)
-        if (firstColon !in 1..5) return false
-        for (i in 0 until firstColon) {
-            if (value[i] !in '0'..'9') return false
-        }
-        val pubKeyEnd = firstColon + 1 + 64
-        if (value.length <= pubKeyEnd || value[pubKeyEnd] != ':') return false
-        for (i in firstColon + 1 until pubKeyEnd) {
-            val c = value[i]
-            if (c !in '0'..'9' && c !in 'a'..'f' && c !in 'A'..'F') return false
-        }
-        return true
-    }
-}
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+
+/** NIP-30 [EmojiUrlTag]s, which any event may carry: the 30030 set an emoji comes from → [Relation.EMOJI_SET]. */
+fun LinkBuilder.emojiSetLinks(tags: TagArray) = each(tags, EmojiUrlTag::parse) { address(Relation.EMOJI_SET, it.emojiSet, EmojiUrlTag.TAG_NAME) }

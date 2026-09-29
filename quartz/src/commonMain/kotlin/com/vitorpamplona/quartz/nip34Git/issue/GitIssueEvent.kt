@@ -23,10 +23,7 @@ package com.vitorpamplona.quartz.nip34Git.issue
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.graph.Link
 import com.vitorpamplona.quartz.graph.LinkProvider
-import com.vitorpamplona.quartz.graph.contentMentions
-import com.vitorpamplona.quartz.graph.hashtags
 import com.vitorpamplona.quartz.graph.links
-import com.vitorpamplona.quartz.graph.quotes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -44,8 +41,10 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.contentMentions
 import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints

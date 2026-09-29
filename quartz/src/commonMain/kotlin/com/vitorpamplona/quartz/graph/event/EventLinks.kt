@@ -18,16 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.graph
+package com.vitorpamplona.quartz.graph.event
 
-import com.vitorpamplona.quartz.graph.props.ZapSplitProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.LinkProvider
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.links
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupParser
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojiSetLinks
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitLinks
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.clientLinks
+
+// The one place that knows every event's links, so it depends on the NIPs whose tags any kind may
+// carry. It sits in its own package so `graph` itself depends on no NIP: the NIPs import `graph`
+// to state their links, and this package imports them back to assemble an event's.
 
 /**
  * Every link [this] event states: its `AUTHOR`, its `ADDRESS` (replaceable and addressable
@@ -43,18 +49,9 @@ fun Event.allLinks(): List<Link<*>> =
         if (this@allLinks is LinkProvider) links().forEach { add(it) }
     }
 
-/**
- * The tags NIP-89, NIP-57 and NIP-30 let any event carry, so no class repeats them, each read by
- * its Tag class:
- * - [ClientTag]: the handler's 31990 address → [Relation.CLIENT];
- * - a zap split ([ZapSplitSetupParser]) → [Relation.ZAP_SPLIT] with its weight: a split SETTING,
- *   not a payment, so not `ZAP_RECIPIENT`. A lightning-address split names no user;
- * - [EmojiUrlTag]: the 30030 set an emoji comes from → [Relation.EMOJI_SET].
- */
+/** The tags NIP-89, NIP-57 and NIP-30 let any event carry, read by their own packages' helpers, so no class repeats them. */
 fun LinkBuilder.everyKindLinks(event: Event) {
-    each(event.tags, ClientTag::parse) { address(Relation.CLIENT, it.address, ClientTag.TAG_NAME) }
-    each(event.tags, ZapSplitSetupParser::parse) {
-        if (it is ZapSplitSetup) user(Relation.ZAP_SPLIT, it.pubKeyHex, BaseZapSplitSetup.TAG_NAME, ZapSplitProps(it.weight))
-    }
-    each(event.tags, EmojiUrlTag::parse) { address(Relation.EMOJI_SET, it.emojiSet, EmojiUrlTag.TAG_NAME) }
+    clientLinks(event.tags)
+    zapSplitLinks(event.tags)
+    emojiSetLinks(event.tags)
 }

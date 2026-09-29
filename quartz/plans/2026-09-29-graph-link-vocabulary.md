@@ -281,11 +281,12 @@ Open:
    interface, the value classes, the relation constants and their props, the builder), plus one
    `links()` per class, beside its tags. It is not NIP-01: the vocabulary spans every NIP and no NIP
    defines it, so it sits beside `utils` and the protocol families rather than inside a NIP.
-   `Event.allLinks()` adds the every-kind tags (`client`, `zap`, emoji sets). Known wrinkle: the
-   package imports a few NIP Tag classes back (NIP-18 quotes, NIP-19 mentions, the NIP-30/57/89
-   every-kind tags) while every NIP imports it; moving those helpers next to their tags would
-   break the cycle. The hint providers could later be derived from `links()`, which carry the same
-   ids plus their meaning.
+   `graph` depends on no NIP (only NIP-01's core and tag types), and a test holds it: the helpers
+   for tags many kinds share live next to those tags (`hashtags` beside `HashtagTag`, `quotes` in
+   NIP-18, `contentMentions` in NIP-19, `clientLinks` / `zapSplitLinks` / `emojiSetLinks` in
+   NIP-89 / 57 / 30). `graph.event.allLinks()` assembles an event's links, every-kind tags
+   included, and is the one package that imports the NIPs. The hint providers could later be
+   derived from `links()`, which carry the same ids plus their meaning.
 2. **Vocabulary stability.** Adding a relation or classifying a kind is additive. Renaming or
    re-splitting one breaks graph queries, so this review is the cheap moment.
 

@@ -67,6 +67,27 @@ class LinkCodeReadsTagClassesTest {
         assertTrue(findings.isEmpty(), "${findings.size} raw tag access(es) in link code:\n" + findings.joinToString("\n"))
     }
 
+    /**
+     * The NIPs import `graph` to state their links, so `graph` must not import them back: its core
+     * depends only on NIP-01's core and tag types. `graph.event`, which assembles an event's every
+     * link, is the one package allowed to reach into the NIPs.
+     */
+    @Test
+    fun graphDependsOnNoNip() {
+        val graph = File("src/commonMain/kotlin/com/vitorpamplona/quartz/graph")
+        assertTrue(graph.isDirectory, "run from the quartz module directory: ${graph.absolutePath}")
+        val allowed = Regex("""^import com\.vitorpamplona\.quartz\.(graph|nip01Core\.core|nip01Core\.tags)\.""")
+        val findings =
+            graph
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .filterNot { it.invariantSeparatorsPath.contains("/quartz/graph/event/") }
+                .flatMap { file ->
+                    file.readLines().filter { it.startsWith("import com.vitorpamplona.quartz.") && !allowed.containsMatchIn(it) }.map { "${file.name}: $it" }
+                }.toList()
+        assertTrue(findings.isEmpty(), "graph imports a NIP, which imports graph back:\n" + findings.joinToString("\n"))
+    }
+
     /** (first line, text) of each `links()` body and each `LinkBuilder`-receiver function body. */
     private fun linkCodeBlocks(source: String): List<Pair<Int, String>> {
         val starts = mutableListOf<Int>()

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.graph
 
-import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.graph.props.LinkProps
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag

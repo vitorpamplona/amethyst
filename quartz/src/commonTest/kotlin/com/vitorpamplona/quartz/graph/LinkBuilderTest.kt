@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.graph
 
+import com.vitorpamplona.quartz.graph.event.allLinks
 import com.vitorpamplona.quartz.graph.props.ZapSplitProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip19Bech32.contentMentions
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub

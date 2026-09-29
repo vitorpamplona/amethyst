@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.experimental.attestations.attestation.tags
 
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
-import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint

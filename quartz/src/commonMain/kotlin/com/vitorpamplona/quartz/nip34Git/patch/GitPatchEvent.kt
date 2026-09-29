@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.graph.Link
 import com.vitorpamplona.quartz.graph.LinkProvider
 import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.graph.each
-import com.vitorpamplona.quartz.graph.hashtags
 import com.vitorpamplona.quartz.graph.links
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -39,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags

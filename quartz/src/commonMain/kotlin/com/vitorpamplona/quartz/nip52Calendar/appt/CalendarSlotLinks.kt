@@ -23,10 +23,10 @@ package com.vitorpamplona.quartz.nip52Calendar.appt
 import com.vitorpamplona.quartz.graph.LinkBuilder
 import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.graph.each
-import com.vitorpamplona.quartz.graph.hashtags
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.SlotParticipantTag
 

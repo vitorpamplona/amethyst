@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip89AppHandlers
 import com.vitorpamplona.quartz.graph.Link
 import com.vitorpamplona.quartz.graph.LinkTarget
 import com.vitorpamplona.quartz.graph.Relation
-import com.vitorpamplona.quartz.graph.allLinks
+import com.vitorpamplona.quartz.graph.event.allLinks
 import com.vitorpamplona.quartz.graph.props.PlatformProps
 import com.vitorpamplona.quartz.graph.props.ReleaseProps
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent

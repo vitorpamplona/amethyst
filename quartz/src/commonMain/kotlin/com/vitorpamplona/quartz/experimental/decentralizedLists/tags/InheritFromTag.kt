@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.tags
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 

@@ -18,21 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.graph
+package com.vitorpamplona.quartz.nip18Reposts.quotes
 
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
+import com.vitorpamplona.quartz.graph.props.NoProps
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 
-// The walk every links() uses. Helpers for tags many kinds share live next to those tags (hashtags,
-// quotes, content mentions, the every-kind tags), so this package depends on no NIP.
-
-/**
- * Every tag [parse] accepts, handed to [block]. The way a `links()` walks its tags: the Tag
- * class's parser says which tags are its own and what they hold, e.g.
- * `each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }`.
- */
-inline fun <T : Any> LinkBuilder.each(
+/** NIP-18 `q` tags ([QTag]): an event or an address, as [Relation.QUOTE] (or [relation]). */
+fun LinkBuilder.quotes(
     tags: TagArray,
-    parse: (Array<String>) -> T?,
-    block: LinkBuilder.(T) -> Unit,
-) = tags.fastForEach { tag -> parse(tag)?.let { block(it) } }
+    relation: Relation<NoProps> = Relation.QUOTE,
+) = each(tags, QTag::parse) {
+    when (it) {
+        is QEventTag -> event(relation, it, QTag.TAG_NAME)
+        is QAddressableTag -> address(relation, it, QTag.TAG_NAME)
+    }
+}

@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
+import com.vitorpamplona.quartz.nip01Core.core.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.Hex
