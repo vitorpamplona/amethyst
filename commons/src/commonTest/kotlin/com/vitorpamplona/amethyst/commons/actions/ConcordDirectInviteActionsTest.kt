@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -39,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -123,6 +126,29 @@ class ConcordDirectInviteActionsTest {
             assertEquals(entry.root, toMember.communityRoot)
             assertEquals(entry.rootEpoch, toMember.rootEpoch)
             assertEquals(entry.controlPk, toMember.controlPk)
+        }
+
+    @Test
+    fun draftRefusesBannedPartiesAndBadRecipients() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val cp = community.controlPlane
+            val editions = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, community.communityId, member.pubKey, editions, createdAt = 2L, owner = community.ownerPubKey)), cp)
+            val state = ConcordCommunityState.fold(editions, community.communityId, community.ownerPubKey)
+            val entry = entryOf(community)
+
+            fun refusal(draft: ConcordDirectInviteDraft) = (draft as? ConcordDirectInviteDraft.Refused)?.reason
+
+            assertEquals(ConcordDirectInviteSendResult.RECIPIENT_BANNED, refusal(ConcordActions.draftDirectInvite(entry, state, owner.pubKey, member.pubKey)))
+            assertEquals(ConcordDirectInviteSendResult.NOT_MEMBER, refusal(ConcordActions.draftDirectInvite(entry, state, member.pubKey, mod.pubKey)))
+            assertEquals(ConcordDirectInviteSendResult.NOT_MEMBER, refusal(ConcordActions.draftDirectInvite(entry, state.withDissolved(true), owner.pubKey, mod.pubKey)))
+            assertEquals(ConcordDirectInviteSendResult.INVALID_RECIPIENT, refusal(ConcordActions.draftDirectInvite(entry, state, owner.pubKey, "npub1notahexkey")))
+
+            // The folded metadata names the preview.
+            val ready = assertIs<ConcordDirectInviteDraft.Ready>(ConcordActions.draftDirectInvite(entry, state, owner.pubKey, mod.pubKey.uppercase()))
+            assertEquals("Nostrichs", ready.invite.name)
+            assertEquals(owner.pubKey, ready.invite.creatorNpub)
         }
 
     @Test

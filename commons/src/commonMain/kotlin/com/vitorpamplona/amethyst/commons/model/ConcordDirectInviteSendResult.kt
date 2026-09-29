@@ -20,6 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+
+/** A Direct Invite bundle ready to wrap, or why this account may not send one (see `ConcordActions.draftDirectInvite`). */
+sealed interface ConcordDirectInviteDraft {
+    class Ready(
+        val invite: CommunityInvite,
+    ) : ConcordDirectInviteDraft
+
+    class Refused(
+        val reason: ConcordDirectInviteSendResult,
+    ) : ConcordDirectInviteDraft
+}
+
 /** The outcome of sending a Concord Direct Invite (CORD-05 §6), so the UI can say why it failed. */
 enum class ConcordDirectInviteSendResult {
     /** At least one of the recipient's inbox relays accepted the wrap. */

@@ -776,29 +776,20 @@ class AccountConcordActions(
     ): ConcordDirectInviteSendResult {
         if (!account.isWriteable()) return ConcordDirectInviteSendResult.NOT_WRITEABLE
         val recipient = recipientPubKey.lowercase()
-        if (!HEX64.matches(recipient)) return ConcordDirectInviteSendResult.INVALID_RECIPIENT
         val entry =
             account.concordChannelList.liveCommunities.value
                 .firstOrNull { it.id == communityId } ?: return ConcordDirectInviteSendResult.NOT_MEMBER
+        // The fold decides which Private Channel keys the recipient may receive; no fold, no send.
         val state =
             account.concordSessions
                 .sessionFor(communityId)
                 ?.state
                 ?.value ?: return ConcordDirectInviteSendResult.ROSTER_NOT_LOADED
-        if (state.dissolved) return ConcordDirectInviteSendResult.NOT_MEMBER
-        if (state.authority.isBanned(account.signer.pubKey)) return ConcordDirectInviteSendResult.NOT_MEMBER
-        if (state.authority.isBanned(recipient)) return ConcordDirectInviteSendResult.RECIPIENT_BANNED
-
         val invite =
-            ConcordActions.directInviteFor(
-                entry = entry,
-                authority = state.authority,
-                recipient = recipient,
-                creator = account.signer.pubKey,
-                expiresAtMs = expiresAtMs,
-                name = state.metadata?.name ?: entry.name,
-                icon = state.metadata?.icon,
-            )
+            when (val draft = ConcordActions.draftDirectInvite(entry, state, account.signer.pubKey, recipient, expiresAtMs)) {
+                is ConcordDirectInviteDraft.Refused -> return draft.reason
+                is ConcordDirectInviteDraft.Ready -> draft.invite
+            }
         val wrap = ConcordActions.buildDirectInvite(account.signer, recipient, invite)
         val relays = concordDirectInviteDeliveryRelays(recipient)
         if (relays.isEmpty()) return ConcordDirectInviteSendResult.NOT_DELIVERED

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -629,6 +631,37 @@ object ConcordActions {
             expiresAt = expiresAtMs,
             creatorNpub = creator,
         )
+
+    /**
+     * The Direct Invite [sender] may hand [recipient] for the held [entry] whose Control Plane folds
+     * to [state] (CORD-05 §6), or why not. No community permission gates a Direct Invite — none
+     * could — but a dissolved community, a [sender] its roster bans (like minting a link), and a
+     * banned [recipient] (whose join would be refused anyway) are refused; the bundle's name/icon
+     * preview comes from the folded metadata.
+     */
+    fun draftDirectInvite(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+        sender: HexKey,
+        recipient: HexKey,
+        expiresAtMs: Long? = null,
+    ): ConcordDirectInviteDraft {
+        val to = recipient.lowercase()
+        if (!HEX64.matches(to)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.INVALID_RECIPIENT)
+        if (state.dissolved || state.authority.isBanned(sender)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.NOT_MEMBER)
+        if (state.authority.isBanned(to)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.RECIPIENT_BANNED)
+        return ConcordDirectInviteDraft.Ready(
+            directInviteFor(
+                entry = entry,
+                authority = state.authority,
+                recipient = to,
+                creator = sender.lowercase(),
+                expiresAtMs = expiresAtMs,
+                name = state.metadata?.name ?: entry.name,
+                icon = state.metadata?.icon,
+            ),
+        )
+    }
 
     /** Giftwraps [invite] to [recipient] as a Direct Invite (see [ConcordDirectInvite.build]). */
     suspend fun buildDirectInvite(

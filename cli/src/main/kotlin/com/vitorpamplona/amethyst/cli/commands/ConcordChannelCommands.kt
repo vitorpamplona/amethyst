@@ -172,7 +172,7 @@ object ConcordChannelCommands {
     }
 
     /** Drain the control plane and fold it into the current community state. */
-    private suspend fun foldState(
+    suspend fun foldState(
         ctx: Context,
         sc: StoredCommunity,
     ): ConcordCommunityState {
