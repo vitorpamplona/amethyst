@@ -346,19 +346,20 @@ implementing (each is detailed in its appendix row):
    `REQUEST_AUTHOR` (NIP-90's "customer"), `ZAP_SPLIT` (NIP-75's "beneficiary"). Still to
    decide: `APP` vs `APPLICATION`, `AUTHORED` (10064) beside `AUTHOR`, whether
    `SERVICE_PROVIDER` spans NIP-85 and NIP-90 or splits (rule 4).
-2. **What a group is.** NIP-29 names a group by the address of its kind 39000, signed by the
-   relay's key; `h` alone would merge forks that reuse an id. Options: that address when the
-   relay key is known, a tag value `h` with the relay as a prop, or a new `LinkTarget.Group`.
-   Marmot's `h` is a random global id, sound as a tag value.
-3. **URLs and external ids as targets.** Kind 17 reactions, highlight sources (`r`), web
-   bookmarks (39701) and NIP-22 `I` scopes point at URLs or NIP-73 ids. Are those **T**
-   targets in v1?
+2. **Decided: a group is its `h` value** (a **T** target). Known limit, unsolved: NIP-29 ids are
+   only unique per relay, so two relays' groups with one id merge into one node. A group's own
+   metadata (39000–39005) is signed by its relay's key, which could scope it; a message carries
+   only `h`, so there is nothing to scope it by. Marmot's `h` is a random global id and has no
+   such limit.
+3. **Decided: URLs and external ids are valid T targets** (kind 17 reactions, highlight
+   sources, web bookmarks 39701, NIP-22 `I` scopes, NIP-73 ids).
 4. **Value tags need a per-class opt-in.** The same letter means different things by kind, so
    `HASHTAG` / `TAG` come from each class's `links()`, never from a global allowlist.
-5. **Links derived from the event's own `d`** (30618 → its repository, 39001–39005 → the group,
-   30177 → its agent): in `links()`, or left to the graph?
-6. **References inside content JSON** (buzz 40099 / 40902 / 44100, DVM results, 30175–30177,
-   marketplace stalls): each needs a new parser.
+5. **Decided: no links derived from an event's own `d`** (30618 → its repository, 39001–39005 →
+   the group, 30177 → its agent). They restate the event's `ADDRESS`; the graph can join on it.
+6. **Decided: references inside content JSON are left out for now** (buzz 40099 / 40902 /
+   44100, DVM results, 30175–30177, marketplace stalls). The appendix rows keep them, marked,
+   for later.
 7. **Private list entries** (NIP-44 encrypted NIP-51 items, encrypted DVM requests) are invisible
    to any public index. Stated once, not per row.
 
