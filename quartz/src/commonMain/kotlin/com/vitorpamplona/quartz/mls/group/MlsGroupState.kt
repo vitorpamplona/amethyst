@@ -83,6 +83,17 @@ data class MlsGroupState(
      * the proposal that would evict them.
      */
     val pendingProposals: List<PendingProposal> = emptyList(),
+    /**
+     * Secrets of skipped APPLICATION generations, (leafIndex, generation) ->
+     * secret (STATE_VERSION 5+).
+     *
+     * A message that arrives after a later one from the same sender needs
+     * its generation's secret, and the ratchet has already moved past it.
+     * Without these a restart between the two loses that message for good.
+     */
+    val skippedApplicationSecrets: Map<Pair<Int, Int>, ByteArray> = emptyMap(),
+    /** Same for the HANDSHAKE ratchet (STATE_VERSION 5+). */
+    val skippedHandshakeSecrets: Map<Pair<Int, Int>, ByteArray> = emptyMap(),
 ) {
     fun encodeTls(): ByteArray {
         val writer = TlsWriter()
@@ -156,6 +167,10 @@ data class MlsGroupState(
             writer.putOpaqueVarInt(pending.authenticatedContentBytes ?: ByteArray(0))
         }
 
+        // Skipped-generation secrets (STATE_VERSION 5+).
+        writeSkippedSecrets(writer, skippedApplicationSecrets)
+        writeSkippedSecrets(writer, skippedHandshakeSecrets)
+
         return writer.toByteArray()
     }
 
@@ -182,8 +197,11 @@ data class MlsGroupState(
          * v4: appends [pendingProposals] so a departing member's staged
          *     `SelfRemove` survives a restart instead of leaving them in the
          *     tree. Older blobs decode with an empty pool.
+         * v5: appends [skippedApplicationSecrets] and [skippedHandshakeSecrets]
+         *     so an out-of-order message survives a restart. Older blobs
+         *     decode with none, as before.
          */
-        private const val STATE_VERSION = 4
+        private const val STATE_VERSION = 5
 
         fun decodeTls(data: ByteArray): MlsGroupState {
             val reader = TlsReader(data)
@@ -284,6 +302,10 @@ data class MlsGroupState(
                     emptyList()
                 }
 
+            // v5+: skipped-generation secrets. Absent for older blobs.
+            val skippedApplicationSecrets = if (version >= 5 && reader.hasRemaining) readSkippedSecrets(reader) else emptyMap()
+            val skippedHandshakeSecrets = if (version >= 5 && reader.hasRemaining) readSkippedSecrets(reader) else emptyMap()
+
             return MlsGroupState(
                 groupContext = groupContext,
                 treeBytes = treeBytes,
@@ -297,7 +319,32 @@ data class MlsGroupState(
                 senderRatchetStates = senderRatchetStates,
                 pathPrivateKeys = pathPrivateKeys,
                 pendingProposals = pendingProposals,
+                skippedApplicationSecrets = skippedApplicationSecrets,
+                skippedHandshakeSecrets = skippedHandshakeSecrets,
             )
+        }
+
+        private fun writeSkippedSecrets(
+            writer: TlsWriter,
+            secrets: Map<Pair<Int, Int>, ByteArray>,
+        ) {
+            writer.putUint32(secrets.size.toLong())
+            for ((key, secret) in secrets) {
+                writer.putUint32(key.first.toLong())
+                writer.putUint32(key.second.toLong())
+                writer.putOpaqueVarInt(secret)
+            }
+        }
+
+        private fun readSkippedSecrets(reader: TlsReader): Map<Pair<Int, Int>, ByteArray> {
+            val count = reader.readUint32().toInt()
+            return buildMap {
+                repeat(count) {
+                    val leafIndex = reader.readUint32().toInt()
+                    val generation = reader.readUint32().toInt()
+                    put(Pair(leafIndex, generation), reader.readOpaqueVarInt())
+                }
+            }
         }
     }
 }

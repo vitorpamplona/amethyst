@@ -290,6 +290,8 @@ class MlsGroup private constructor(
             // restart that forgot it would leave the leaver in the tree with
             // the group's keys and nobody holding the proposal to evict them.
             pendingProposals = pendingProposals.toList(),
+            skippedApplicationSecrets = secretTree.exportSkippedApplicationSecrets(),
+            skippedHandshakeSecrets = secretTree.exportSkippedHandshakeSecrets(),
         )
     }
 
@@ -4039,6 +4041,7 @@ class MlsGroup private constructor(
             val tree = RatchetTree.decodeTls(TlsReader(state.treeBytes))
             val secretTree = SecretTree(state.encryptionSecret, tree.leafCount)
             secretTree.importSenderStates(state.senderRatchetStates)
+            secretTree.importSkippedSecrets(state.skippedApplicationSecrets, state.skippedHandshakeSecrets)
 
             return MlsGroup(
                 groupContext = state.groupContext,
