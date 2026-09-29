@@ -50,6 +50,7 @@ class AuthorityResolverTest {
         json: String,
     ) = ControlEdition(ControlEntityKind.ROLE, roleId.hexToByteArray(), 0, null, null, json, owner, "role-$roleId", 0)
 
+    /** A genesis Grant of [member] at their own coordinate; [grantId] only names the rumor. */
     private fun grant(
         grantId: String,
         member: String,
@@ -57,7 +58,7 @@ class AuthorityResolverTest {
         granter: String,
     ) = ControlEdition(
         ControlEntityKind.GRANT,
-        grantId.hexToByteArray(),
+        ControlFixtures.grantEid(member).hexToByteArray(),
         0,
         null,
         null,
@@ -75,7 +76,7 @@ class AuthorityResolverTest {
         vararg banned: String,
     ) = ControlEdition(
         ControlEntityKind.BANLIST,
-        "44".repeat(32).hexToByteArray(),
+        ControlFixtures.banlistEid().hexToByteArray(),
         0,
         null,
         null,
@@ -106,7 +107,7 @@ class AuthorityResolverTest {
             )
 
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(
                     role(adminRole, adminJson), // position 1, owner-authored
                     modV0, // position 5, owner-authored
@@ -130,7 +131,7 @@ class AuthorityResolverTest {
         // strip anyone, the owner's admins included. Armada gates this the same way: a grant is an
         // action ON the member, so demotion must be at least as hard as promotion.
         val modWithManageRoles = """{"name":"Mod","position":5,"permissions":"9"}""" // KICK|MANAGE_ROLES
-        val adminGrantId = "31".repeat(32)
+        val adminGrantId = ControlFixtures.grantEid(alice)
         val adminGrant = grant(adminGrantId, alice, listOf(adminRole), granter = owner)
         val revokeByMod =
             ControlEdition(
@@ -146,7 +147,7 @@ class AuthorityResolverTest {
             )
 
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(
                     role(adminRole, adminJson), // position 1
                     role(modRole, modWithManageRoles), // position 5
@@ -163,7 +164,7 @@ class AuthorityResolverTest {
     @Test
     fun anAdminCanStillRevokeAMemberBeneathIt() {
         // The gate must not block legitimate moderation: an admin may revoke a moderator's roles.
-        val modGrantId = "32".repeat(32)
+        val modGrantId = ControlFixtures.grantEid(bob)
         val modGrant = grant(modGrantId, bob, listOf(modRole), granter = owner)
         val revokeByAdmin =
             ControlEdition(
@@ -179,7 +180,7 @@ class AuthorityResolverTest {
             )
 
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(
                     role(adminRole, adminJson),
                     role(modRole, modJson),
@@ -211,7 +212,7 @@ class AuthorityResolverTest {
             )
 
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(
                     role(adminRole, adminJson),
                     modV0,
@@ -235,7 +236,7 @@ class AuthorityResolverTest {
                 grant("ba".repeat(32), bob, listOf(modRole), granter = alice),
                 grant("ab".repeat(32), alice, listOf(adminRole), granter = owner),
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
 
         assertTrue(r.isOwner(owner))
         assertEquals(0L, r.rank(owner))
@@ -263,7 +264,7 @@ class AuthorityResolverTest {
                 // carol has no authority, so her grant to dave is dropped
                 grant("cd".repeat(32), dave, listOf(adminRole), granter = carol),
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
         assertNull(r.rank(dave))
         assertEquals(ConcordPermissions.NONE.bits, r.effectivePermissions(dave).bits)
     }
@@ -277,7 +278,7 @@ class AuthorityResolverTest {
                 grant("ab".repeat(32), alice, listOf(modRole), granter = owner), // alice is a mod (no MANAGE_ROLES)
                 grant("ae".repeat(32), dave, listOf(adminRole), granter = alice), // mod cannot grant admin
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
         assertEquals(5L, r.rank(alice))
         assertNull(r.rank(dave)) // rejected: alice lacks MANAGE_ROLES and doesn't outrank admin
     }
@@ -290,7 +291,7 @@ class AuthorityResolverTest {
                 grant("ab".repeat(32), alice, listOf(adminRole), granter = owner),
                 banlist(alice),
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
         assertTrue(r.isBanned(alice))
         // A banned actor can take no action even though the role bit is present.
         assertFalse(r.hasPermission(alice, BAN))
@@ -298,11 +299,11 @@ class AuthorityResolverTest {
     }
 
     @Test
-    fun concurrentBansHealIntoAUnionAndAreNeverDropped() {
-        // Two authorized moderators ban different abusers at the same banlist version — a
-        // fork of the single banlist doc. Folding to one chain tip would silently drop the
-        // loser's ban and let that abuser back in; the union keeps both (M1 / CORD-06
-        // down-only healing).
+    fun concurrentBansForkAndTheFoldKeepsOneEdition() {
+        // Two authorized members ban different abusers at the same banlist version — a fork of
+        // the single replaced document. CORD-04 §4: "the fold keeps one edition and the other's
+        // addition drops until re-applied". Authority breaks the tie (§1), so the owner's edition
+        // wins even though alice's rumor id sorts first; a union of forks is NOT the fold.
         val heads =
             listOf(
                 role(adminRole, adminJson),
@@ -310,9 +311,71 @@ class AuthorityResolverTest {
                 banlistBy(owner, "ban-owner", bob), // owner bans bob
                 banlistBy(alice, "ban-alice", carol), // alice concurrently bans carol
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
+        assertTrue(r.isBanned(bob), "the owner's edition wins the fork")
+        assertFalse(r.isBanned(carol), "the losing fork's addition drops until re-applied")
+    }
+
+    @Test
+    fun theLosingBanIsReHealedByReApplyingItAtopTheWinner() {
+        // §4 re-heal: after publishing, re-fold, and if your addition isn't in the head, re-apply
+        // it on top of the winner. That converges on the union without the fold ever unioning.
+        val ownerFork = banlistBy(owner, "ban-owner", bob)
+        val base =
+            listOf(
+                role(adminRole, adminJson),
+                grant("ab".repeat(32), alice, listOf(adminRole), granter = owner),
+                ownerFork,
+                banlistBy(alice, "ban-alice", carol),
+            )
+        val reHeal =
+            ControlEdition(
+                ControlEntityKind.BANLIST,
+                ControlFixtures.banlistEid().hexToByteArray(),
+                1,
+                ownerFork.hash, // atop the winner
+                null,
+                "[\"$bob\",\"$carol\"]",
+                alice,
+                "ban-alice-reheal",
+                1,
+            )
+        val r = ControlFixtures.resolve(base + reHeal, owner)
         assertTrue(r.isBanned(bob))
-        assertTrue(r.isBanned(carol))
+        assertTrue(r.isBanned(carol), "re-applied atop the winner, alice's ban lands")
+    }
+
+    @Test
+    fun aBanOnALosingForkNeverSticks() {
+        // The union's worst failure: a ban that lost the fork could never be lifted, because no
+        // later edition supersedes a fork. Folding to one head, the losing fork is simply inert, and
+        // an unban chained onto the head sticks.
+        val ownerV0 = banlistBy(owner, "ban-owner", bob)
+        val unban =
+            ControlEdition(ControlEntityKind.BANLIST, ControlFixtures.banlistEid().hexToByteArray(), 1, ownerV0.hash, null, "[]", owner, "unban", 1)
+        val r =
+            ControlFixtures.resolve(
+                listOf(
+                    role(adminRole, adminJson),
+                    grant("ab".repeat(32), alice, listOf(adminRole), granter = owner),
+                    ownerV0,
+                    banlistBy(alice, "ban-alice", dave), // a v0 fork that loses to the owner
+                    unban,
+                ),
+                owner,
+            )
+        assertFalse(r.isBanned(bob), "the owner's unban applies")
+        assertFalse(r.isBanned(dave), "and the losing fork's ban never took effect")
+    }
+
+    @Test
+    fun aBanlistAtAnyOtherCoordinateIsIgnored() {
+        // The Banlist lives at banlist_locator(community_id) (CORD-02 A.6). A list at any other eid
+        // is not this community's Banlist, even owner-signed.
+        val stray =
+            ControlEdition(ControlEntityKind.BANLIST, "44".repeat(32).hexToByteArray(), 0, null, null, "[\"$bob\"]", owner, "stray", 0)
+        val r = ControlFixtures.resolve(listOf(role(adminRole, adminJson), stray), owner)
+        assertFalse(r.isBanned(bob))
     }
 
     @Test
@@ -323,7 +386,7 @@ class AuthorityResolverTest {
                 role(adminRole, adminJson),
                 banlistBy(carol, "ban-carol", dave),
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
         assertFalse(r.isBanned(dave))
     }
 
@@ -335,7 +398,7 @@ class AuthorityResolverTest {
                 role(modRole, """{"name":"Peer","position":0,"permissions":"25"}"""), // illegal position 0
                 grant("ab".repeat(32), alice, listOf(adminRole, modRole), granter = owner),
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
         assertNull(r.rank(alice)) // both assigned roles are invalid
     }
 
@@ -352,7 +415,7 @@ class AuthorityResolverTest {
                 role(adminRole, """{"name":"Admin","position":1,"permissions":"25","scope":{"kind":"server"},"color":0}"""),
                 grant("ab".repeat(32), alice, listOf(adminRole), granter = owner),
             )
-        val r = AuthorityResolver.resolve(heads, owner)
+        val r = ControlFixtures.resolve(heads, owner)
         assertEquals(1L, r.rank(alice))
         assertTrue(r.effectivePermissions(alice).has(BAN))
     }
@@ -365,7 +428,7 @@ class AuthorityResolverTest {
      */
     @Test
     fun rogueHigherVersionGrantCannotSupersedeALegitGrant() {
-        val grantId = "ab".repeat(32)
+        val grantId = ControlFixtures.grantEid(alice)
         val ownerGrant = grant(grantId, alice, listOf(adminRole), granter = owner) // v0, prev null
         val rogueV1 =
             ControlEdition(
@@ -379,7 +442,7 @@ class AuthorityResolverTest {
                 "grant-$grantId-rogue",
                 1,
             )
-        val r = AuthorityResolver.resolve(listOf(role(adminRole, adminJson), ownerGrant, rogueV1), owner)
+        val r = ControlFixtures.resolve(listOf(role(adminRole, adminJson), ownerGrant, rogueV1), owner)
         assertEquals(1L, r.rank(alice)) // rogue v1 dropped; the owner's v0 grant stands
     }
 
@@ -411,7 +474,7 @@ class AuthorityResolverTest {
      */
     @Test
     fun anUnauthorizedEditionMidChainDoesNotOrphanTheHonestEditionsAboveIt() {
-        val grantId = "ab".repeat(32)
+        val grantId = ControlFixtures.grantEid(alice)
         val v0 = edition(ControlEntityKind.GRANT, grantId, 0, null, grantJson(listOf(modRole)), owner, "g0")
         val v1 = edition(ControlEntityKind.GRANT, grantId, 1, v0, grantJson(listOf(adminRole)), owner, "g1")
         // carol holds ZERO roles — correctly rejected, at any position in the chain.
@@ -421,7 +484,7 @@ class AuthorityResolverTest {
         val v5 = edition(ControlEntityKind.GRANT, grantId, 5, v4, grantJson(listOf(modRole)), owner, "g5")
 
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(role(adminRole, adminJson), role(modRole, modJson), v0, v1, v2, v3, v4, v5),
                 owner,
             )
@@ -446,7 +509,7 @@ class AuthorityResolverTest {
         val v4 = edition(ControlEntityKind.ROLE, modRole, 4, v3, mod(7, "8"), owner, "r4")
 
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(role(adminRole, adminJson), v0, v1, v2, v3, v4, grant("32".repeat(32), bob, listOf(modRole), granter = owner)),
                 owner,
             )
@@ -463,7 +526,7 @@ class AuthorityResolverTest {
      */
     @Test
     fun anUnauthorizedBanlistEditionMidChainDoesNotOrphanOrResurrectBans() {
-        val banId = "44".repeat(32)
+        val banId = ControlFixtures.banlistEid()
 
         fun list(vararg keys: String) = "[${keys.joinToString(",") { "\"$it\"" }}]"
 
@@ -472,7 +535,7 @@ class AuthorityResolverTest {
         val v2 = edition(ControlEntityKind.BANLIST, banId, 2, v1, list(), dave, "b2") // dave holds no BAN
         val v3 = edition(ControlEntityKind.BANLIST, banId, 3, v2, list(carol), owner, "b3") // owner unbans bob
 
-        val r = AuthorityResolver.resolve(listOf(role(adminRole, adminJson), v0, v1, v2, v3), owner)
+        val r = ControlFixtures.resolve(listOf(role(adminRole, adminJson), v0, v1, v2, v3), owner)
 
         assertTrue(r.isBanned(carol), "carol's ban survives to the head")
         assertFalse(r.isBanned(bob), "the owner's v3 unban must apply — v2 may not orphan it")
@@ -481,7 +544,7 @@ class AuthorityResolverTest {
     /** A forged edition takes effect at NO position: not at the tip, and not mid-chain. */
     @Test
     fun aForgedEditionNeverTakesEffectAtAnyPosition() {
-        val grantId = "ab".repeat(32)
+        val grantId = ControlFixtures.grantEid(alice)
         val v0 = edition(ControlEntityKind.GRANT, grantId, 0, null, grantJson(listOf(adminRole)), owner, "g0")
         // carol holds nothing; her revoke is the forgery, and it must apply at NO position.
         val forgedV1 = edition(ControlEntityKind.GRANT, grantId, 1, v0, grantJson(emptyList()), carol, "g1")
@@ -490,18 +553,18 @@ class AuthorityResolverTest {
 
         // Mid-chain: the honest v2 above it still resolves (this arm needs the fix), and the
         // forged revoke never empties alice's roles.
-        val mid = AuthorityResolver.resolve(base + listOf(v0, forgedV1, v2), owner)
+        val mid = ControlFixtures.resolve(base + listOf(v0, forgedV1, v2), owner)
         assertEquals(setOf(modRole), mid.rolesOf(alice))
         assertEquals(5L, mid.rank(alice))
 
         // At the tip: the chain-verified head fails the gate, so the fold falls back to v0.
-        val tip = AuthorityResolver.resolve(base + listOf(v0, forgedV1), owner)
+        val tip = ControlFixtures.resolve(base + listOf(v0, forgedV1), owner)
         assertEquals(setOf(adminRole), tip.rolesOf(alice), "the forged revoke must not strip alice")
         assertEquals(1L, tip.rank(alice))
 
         // Above the tip, dangling: a higher version is never a shortcut past the gate.
         val danglingV9 = edition(ControlEntityKind.GRANT, grantId, 9, null, grantJson(emptyList()), carol, "g9")
-        val above = AuthorityResolver.resolve(base + listOf(v0, danglingV9), owner)
+        val above = ControlFixtures.resolve(base + listOf(v0, danglingV9), owner)
         assertEquals(setOf(adminRole), above.rolesOf(alice))
         assertEquals(1L, above.rank(alice))
     }
@@ -522,7 +585,7 @@ class AuthorityResolverTest {
     private val modWithBanJson = """{"name":"Mod","position":5,"permissions":"24"}""" // KICK|BAN
 
     private fun rankedBanScenario(vararg extra: ControlEdition) =
-        AuthorityResolver.resolve(
+        ControlFixtures.resolve(
             listOf(
                 role(adminRole, adminJson), // position 1
                 role(modRole, modWithBanJson), // position 5, holds BAN
@@ -592,7 +655,7 @@ class AuthorityResolverTest {
         // PIN_MESSAGES alone (bit 11 = 2048) writes Control editions, so it is a staff bit.
         val pinJson = """{"name":"Curator","position":6,"permissions":"2048"}"""
         val r =
-            AuthorityResolver.resolve(
+            ControlFixtures.resolve(
                 listOf(
                     role(adminRole, adminJson), // MANAGE_ROLES|KICK|BAN → staff via MANAGE_ROLES/BAN
                     role(modRole, modJson), // KICK only → Guestbook writer, NOT staff

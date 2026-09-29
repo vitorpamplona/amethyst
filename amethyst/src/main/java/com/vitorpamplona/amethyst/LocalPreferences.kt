@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -960,6 +961,11 @@ object LocalPreferences {
                     LatestEventSlot.EPHEMERAL_LIST to settings.backupEphemeralChatList?.let { OptimizedJsonMapper.toJson(it) },
                     LatestEventSlot.RELAY_GROUP_LIST to settings.backupRelayGroupList?.let { OptimizedJsonMapper.toJson(it) },
                     LatestEventSlot.CONCORD_LIST to settings.backupConcordList?.let { OptimizedJsonMapper.toJson(it) },
+                    // Event JSON never holds a raw newline, so one event per line is unambiguous.
+                    LatestEventSlot.CONCORD_LIST_FRAGMENTS to
+                        settings.backupConcordListFragments
+                            .takeIf { it.isNotEmpty() }
+                            ?.joinToString("\n") { OptimizedJsonMapper.toJson(it) },
                     LatestEventSlot.TRUST_PROVIDER_LIST to settings.backupTrustProviderList?.let { OptimizedJsonMapper.toJson(it) },
                     LatestEventSlot.KEY_PACKAGE_RELAY_LIST to settings.backupKeyPackageRelayList?.let { OptimizedJsonMapper.toJson(it) },
                     LatestEventSlot.FAVORITE_ALGO_FEEDS_LIST to settings.backupFavoriteAlgoFeedsList?.let { OptimizedJsonMapper.toJson(it) },
@@ -1452,6 +1458,7 @@ object LocalPreferences {
                         backupEphemeralChatList = latestEphemeralListResolved,
                         backupRelayGroupList = latestRelayGroupListResolved,
                         backupConcordList = latestConcordListResolved,
+                        backupConcordListFragments = parseConcordListFragments(stores.latestEvents[LatestEventSlot.CONCORD_LIST_FRAGMENTS]),
                         backupTrustProviderList = latestTrustProviderListResolved,
                         backupKeyPackageRelayList = latestKeyPackageRelayListResolved,
                         backupFavoriteAlgoFeedsList = latestFavoriteAlgoFeedsListResolved,
@@ -1617,6 +1624,16 @@ object LocalPreferences {
             null
         }
     }
+
+    /**
+     * The saved kind-33302 Community List fragments, one event JSON per line. Kept out of the
+     * account loader's coroutine body, which already sits at the JVM's method-size limit.
+     */
+    private fun parseConcordListFragments(value: String?): List<ConcordCommunityListFragmentEvent> =
+        value
+            ?.split('\n')
+            ?.mapNotNull { parseEventOrNull<ConcordCommunityListFragmentEvent>(it) }
+            .orEmpty()
 
     private inline fun <reified T> parseEventOrNull(value: String?): T? {
         if (value.isNullOrEmpty() || value == "null") {

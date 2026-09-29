@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.concord.cord02Community
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -126,6 +127,29 @@ class ConcordListResidue(
     val tombstones: List<JsonObject> = emptyList(),
     val unparsedEntries: List<JsonObject> = emptyList(),
 ) {
+    /**
+     * This residue with [communityId] tombstoned at [removedAtMs] (CORD-02 §8). There is exactly
+     * one tombstone per community: a later removal replaces an earlier one (keeping its unknown
+     * keys), an earlier one changes nothing.
+     */
+    fun withTombstone(
+        communityId: String,
+        removedAtMs: Long,
+    ): ConcordListResidue {
+        val prior = tombstones.firstOrNull { (it["community_id"] as? JsonPrimitive)?.contentOrNull == communityId }
+        val priorAt = (prior?.get("removed_at") as? JsonPrimitive)?.longOrNull
+        if (priorAt != null && priorAt >= removedAtMs) return this
+        val next = JsonObject((prior ?: NoExtras) + mapOf("community_id" to JsonPrimitive(communityId), "removed_at" to JsonPrimitive(removedAtMs)))
+        return ConcordListResidue(extras, tombstones.filterNot { it === prior } + next, unparsedEntries)
+    }
+
+    /** The latest `removed_at` this residue holds for [communityId], or null when it was never left. */
+    fun removedAt(communityId: String): Long? =
+        tombstones
+            .filter { (it["community_id"] as? JsonPrimitive)?.contentOrNull == communityId }
+            .mapNotNull { (it["removed_at"] as? JsonPrimitive)?.longOrNull }
+            .maxOrNull()
+
     companion object {
         val EMPTY = ConcordListResidue()
     }
@@ -286,6 +310,8 @@ object ConcordCommunityList {
         @SerialName(EXTRAS) val extras: JsonObject = NoExtras,
     )
 
+    // `name` is always written: Armada refuses to serialize a list entry whose name is not a string.
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     private class JoinMaterialWire(
         @SerialName("community_id") val communityId: String,
@@ -300,7 +326,7 @@ object ConcordCommunityList {
             WireChannel,
         > = emptyList(),
         val relays: List<String> = emptyList(),
-        val name: String = "",
+        @EncodeDefault val name: String = "",
         @SerialName("held_roots") val heldRoots: List<
             @Serializable(WireHeldRootSerializer::class)
             WireHeldRoot,
@@ -433,6 +459,39 @@ object ConcordCommunityList {
         val merged = JsonObject(encoded + ("entries" to JsonArray(allEntries)))
         return ConcordJson.instance.encodeToString(JsonObject.serializer(), merged)
     }
+
+    /**
+     * [encode] as a JSON object: the internal document shape [ConcordListFragments] merges and
+     * packs into kind-33302 fragments.
+     */
+    fun encodeInternal(
+        entries: List<ConcordCommunityListEntry>,
+        residue: ConcordListResidue = ConcordListResidue.EMPTY,
+    ): JsonObject = ConcordJson.instance.parseToJsonElement(encode(entries, residue)).jsonObject
+
+    /**
+     * The List as a reader sees it (CORD-02 §8): the union of the kind-33302 fragments in [set]
+     * and, when one exists, the retired kind-13302 document's [legacyPlaintext] — read as a rescue
+     * source, so a membership only the old event carries stays joined until a write migrates it.
+     * A legacy document that does not parse contributes nothing.
+     */
+    fun readWithLegacy(
+        set: ConcordListFragmentSet,
+        legacyPlaintext: String?,
+    ): JsonObject {
+        val legacy =
+            legacyPlaintext?.let {
+                try {
+                    ConcordJson.instance.parseToJsonElement(it) as? JsonObject
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: return set.doc
+        return ConcordListFragments.mergeDocs(legacy, set.doc)
+    }
+
+    /** Decodes an internal document (a merged fragment set, or a legacy 13302 plaintext). */
+    fun decodeDocument(doc: JsonObject): ConcordCommunityListDocument = decodeDocument(ConcordJson.instance.encodeToString(JsonObject.serializer(), doc))
 
     /**
      * Parses the decrypted plaintext JSON document back into live entries, or empty on
@@ -585,6 +644,26 @@ object ConcordCommunityList {
         residue = residue,
     )
 
+    /** Copy of this entry with [addedAt] (ms); every other field untouched. */
+    fun ConcordCommunityListEntry.withAddedAt(addedAt: Long) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+            residue = residue,
+        )
+
     /** Copy of this entry carrying [inviteRef]; every other field untouched. */
     fun ConcordCommunityListEntry.withInviteRef(inviteRef: String?) =
         ConcordCommunityListEntry(
@@ -611,6 +690,29 @@ object ConcordCommunityList {
      * Every other field untouched.
      */
     fun ConcordCommunityListEntry.withControlRoot(controlRoot: String?) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+            residue = residue,
+        )
+
+    /**
+     * Copy of this entry holding [privateChannels] — e.g. after a Direct Invite catch-up delivered a
+     * Private Channel key (CORD-05 §6). Every other field, the base included, untouched.
+     */
+    fun ConcordCommunityListEntry.withPrivateChannels(privateChannels: List<PrivateChannelKey>) =
         ConcordCommunityListEntry(
             id = id,
             owner = owner,

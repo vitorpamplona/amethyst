@@ -24,38 +24,37 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 
 /**
- * Stranded recovery (CORD-05/06).
+ * Stranded detection (CORD-05/06).
  *
  * A Refounding carries only `(newRoot, newEpoch, rotator)` — there is **no
  * recipient list** — so a member who is simply left out of the rekey recipient
- * set receives nothing and is silently stranded on the dead epoch forever, while
- * everyone else moves on. This is true of any member, the owner included, and
- * cannot be prevented on the receive side.
+ * set receives nothing and is silently stranded on the dead epoch, while everyone
+ * else moves on. The invite link the membership was joined through
+ * ([ConcordCommunityListEntry.inviteRef]) is re-minted at the current epoch by its
+ * creator, so re-resolving it and finding a **higher** epoch tells a member they
+ * were left behind.
  *
- * The way out is the invite link the membership was joined through
- * ([ConcordCommunityListEntry.inviteRef]): the community keeps publishing its
- * bundle at that same addressable coordinate, re-minted at the current epoch. So
- * a member who re-resolves their own join link and finds a **higher** epoch than
- * the one they hold knows they were left behind, and can merge forward.
- *
- * This object holds only the pure decision + merge; fetching and unlocking the
- * bundle at the link is the caller's job.
+ * What a bundle may NOT do is move the base (CORD-06 §2, and the reference client's
+ * `isCatchUpBundle`: "It may never move the base"). Nothing binds `community_root`
+ * to `community_id`, so a bundle is not proof of continuity: a link creator — or
+ * anyone who ever held a link's signer — could serve a higher-epoch bundle carrying
+ * a root of their own and silently relocate every member who joined through that
+ * link onto streams they read. The base advances only by a CORD-06 §2 rekey blob
+ * whose `prevcommit` proves it extends the key we hold, from a rotator our roster
+ * authorizes. So this object only **detects** ([isStranded]); the background sweep
+ * never adopts anything, and the one way forward from a bundle is the user
+ * explicitly accepting the link again ([rejoinForward]) — the same trust decision
+ * as the first join, never taken on their behalf.
  */
 object ConcordStrandedRecovery {
     /**
-     * True when [bundle], resolved at [entry]'s stored invite link, proves we were
+     * True when [bundle], resolved at [entry]'s stored invite link, says we were
      * left behind: it must describe the same community and sit at a strictly higher
      * epoch. Same or lower is a no-op (we are current, or the bundle is stale).
      *
      * [bannedAtCurrentEpoch] is the caller's answer to "does the community, as I fold
-     * it right now, have me on its banlist?" — and a `true` refuses the recovery
-     * outright. It is a required argument rather than a caller-side `if` because
-     * getting it wrong turns this mechanism inside out: recovery exists so a member
-     * *wrongly* omitted from a rotation can catch up, but the test it performs (a
-     * higher epoch at a link whose unlock token an ex-member keeps forever) cannot
-     * tell that member apart from one the community deliberately removed. Without
-     * this, a Refounding — the only hard removal Concord has — is undone by our own
-     * background sweep a few minutes later.
+     * it right now, have me on its banlist?" — and a `true` answers false outright:
+     * a removed member is not stranded, they are removed.
      */
     fun isStranded(
         entry: ConcordCommunityListEntry,
@@ -68,21 +67,18 @@ object ConcordStrandedRecovery {
             bundle.rootEpoch > entry.rootEpoch
 
     /**
-     * Merges [entry] forward onto the higher-epoch [bundle], or returns null when
-     * there is nothing to do ([isStranded] is false) — so the caller can treat null
-     * as "stay put" without a second check.
+     * The entry that results from the user **explicitly** re-accepting the invite
+     * link [bundle] was resolved from, while stranded on [entry] — or null when
+     * [isStranded] is false. Never call this from a background sweep: adopting a
+     * bundle's root is a join decision (see the class note), and only the user can
+     * make it.
      *
-     * The merge is epoch-monotonic (it never moves backwards, by construction of
-     * [isStranded]) and preserves two things the naive "adopt the bundle" would
-     * destroy:
-     *
-     * - the [ConcordCommunityListEntry.inviteRef] anchor, so the next Refounding we
-     *   are left out of is recoverable too; and
-     * - the existing [ConcordCommunityListEntry.heldRoots], plus the root we are
-     *   leaving, so prior-epoch history the member legitimately holds stays
-     *   derivable instead of going dark on catch-up.
+     * The merge is epoch-monotonic and preserves what a fresh join would lose: the
+     * [ConcordCommunityListEntry.inviteRef] anchor, and the existing
+     * [ConcordCommunityListEntry.heldRoots] plus the root we are leaving, so
+     * prior-epoch history stays derivable.
      */
-    fun mergeForward(
+    fun rejoinForward(
         entry: ConcordCommunityListEntry,
         bundle: CommunityInvite,
         bannedAtCurrentEpoch: Boolean,
@@ -92,7 +88,7 @@ object ConcordStrandedRecovery {
         // Bank the epoch we are leaving with its control_pk, so its Control Plane
         // stays re-subscribable for the anti-rollback floor (a split epoch's address
         // is held, never derivable — CORD-02 §2).
-        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch }
+        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch to it.key.lowercase() }
 
         return ConcordCommunityListEntry(
             id = entry.id,
@@ -109,10 +105,8 @@ object ConcordStrandedRecovery {
             name = entry.name.ifEmpty { bundle.name },
             addedAt = entry.addedAt,
             inviteRef = entry.inviteRef,
-            // We were excluded from the epoch we were sitting on when we found the gap.
-            excludedAtEpoch = entry.rootEpoch,
             // Unknown keys another client wrote are data we hold in trust: carry them forward,
-            // or this recovery write silently deletes them.
+            // or this write silently deletes them.
             residue = entry.residue,
         )
     }

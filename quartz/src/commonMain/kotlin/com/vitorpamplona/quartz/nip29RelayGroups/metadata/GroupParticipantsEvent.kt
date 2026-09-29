@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -48,7 +49,7 @@ class GroupParticipantsEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun groupId() = dTag()
 
-    fun participants(): List<HexKey> = tags.mapValueTagged(TAG_NAME) { it }
+    fun participants(): List<HexKey> = tags.mapValueTagged(TAG_NAME) { it.takeIf { value -> value.isValid() } }
 
     companion object {
         const val KIND = 39004

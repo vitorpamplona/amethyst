@@ -140,6 +140,9 @@ import com.vitorpamplona.amethyst.commons.resources.kind_profile_badges
 import com.vitorpamplona.amethyst.commons.resources.kind_profile_gallery
 import com.vitorpamplona.amethyst.commons.resources.kind_proxy_relays
 import com.vitorpamplona.amethyst.commons.resources.kind_public_message
+import com.vitorpamplona.amethyst.commons.resources.kind_push_deregistration
+import com.vitorpamplona.amethyst.commons.resources.kind_push_preferences
+import com.vitorpamplona.amethyst.commons.resources.kind_push_registration
 import com.vitorpamplona.amethyst.commons.resources.kind_reactions
 import com.vitorpamplona.amethyst.commons.resources.kind_relay_auth
 import com.vitorpamplona.amethyst.commons.resources.kind_relay_discovery
@@ -165,6 +168,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_video_collaboration
 import com.vitorpamplona.amethyst.commons.resources.kind_video_list
 import com.vitorpamplona.amethyst.commons.resources.kind_video_repl
 import com.vitorpamplona.amethyst.commons.resources.kind_video_subtitles
+import com.vitorpamplona.amethyst.commons.resources.kind_video_views
 import com.vitorpamplona.amethyst.commons.resources.kind_voice_msg
 import com.vitorpamplona.amethyst.commons.resources.kind_voice_reply
 import com.vitorpamplona.amethyst.commons.resources.kind_wake
@@ -300,6 +304,7 @@ import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
+import com.vitorpamplona.quartz.nip71Video.views.VideoViewEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -333,6 +338,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
 import org.jetbrains.compose.resources.StringResource
 
 /** Returns the catalog entry for the translated kind name, or null if unknown. */
@@ -485,6 +493,10 @@ fun kindDisplayName(kind: Int): StringResource? =
         VideoCurationSetEvent.KIND -> Res.string.kind_video_list
         VideoCollaborationEvent.KIND -> Res.string.kind_video_collaboration
         TextTrackEvent.KIND -> Res.string.kind_video_subtitles
+        VideoViewEvent.KIND -> Res.string.kind_video_views
+        PushRegistrationEvent.KIND -> Res.string.kind_push_registration
+        PushDeregistrationEvent.KIND -> Res.string.kind_push_deregistration
+        PushPreferencesEvent.KIND -> Res.string.kind_push_preferences
         AddressableNormalVideoEvent.KIND -> Res.string.kind_video_repl
         AddressableShortVideoEvent.KIND -> Res.string.kind_shorts_repl
         VideoNormalEvent.KIND -> Res.string.kind_video

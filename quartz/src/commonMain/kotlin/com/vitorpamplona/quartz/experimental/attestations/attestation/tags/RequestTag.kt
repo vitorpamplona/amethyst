@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.experimental.attestations.attestation.tags
 
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -43,8 +43,15 @@ class RequestTag(
 
     companion object {
         const val TAG_NAME = "request"
+        private val REQUEST_KIND_STR = AttestationRequestEvent.KIND.toString()
 
-        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && !Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)
+        // The raw-string readers hand the value on as an address id (hints, gatherers), so they
+        // need the whole `31872:<64-hex pubkey>:<d>` shape, not just the kind prefix: checked
+        // without allocating, as the parsers that build an Address get it from Address.parse.
+        private fun isRequestCoordinate(value: String) = Address.isOfKind(value, REQUEST_KIND_STR) && CoordinateShape.matches(value)
+
+        // The request an attestation answers is always a kind 31872 attestation request.
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && Address.isOfKind(tag[1], REQUEST_KIND_STR)
 
         fun isTagged(
             tag: Array<String>,
@@ -53,7 +60,7 @@ class RequestTag(
 
         fun isTagged(
             tag: Array<String>,
-            address: ApprovedAddressTag,
+            address: RequestTag,
         ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == address.toTag()
 
         fun isIn(
@@ -61,20 +68,20 @@ class RequestTag(
             addressIds: Set<String>,
         ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
 
-        fun parse(tag: Array<String>): ApprovedAddressTag? {
+        fun parse(tag: Array<String>): RequestTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            ensure(Address.isOfKind(tag[1], REQUEST_KIND_STR)) { return null }
 
             val address = Address.parse(tag[1]) ?: return null
             val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-            return ApprovedAddressTag(address, relayHint)
+            return RequestTag(address, relayHint)
         }
 
         fun parseValidAddress(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            ensure(Address.isOfKind(tag[1], REQUEST_KIND_STR)) { return null }
             return Address.parse(tag[1])?.toValue()
         }
 
@@ -83,22 +90,21 @@ class RequestTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             val address = Address.parse(tag[1]) ?: return null
-            ensure(address.kind != CommunityDefinitionEvent.KIND) { return null }
+            ensure(address.kind == AttestationRequestEvent.KIND) { return null }
             return address
         }
 
         fun parseAddressId(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            ensure(isRequestCoordinate(tag[1])) { return null }
             return tag[1]
         }
 
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            ensure(isRequestCoordinate(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])

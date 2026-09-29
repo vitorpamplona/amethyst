@@ -31,9 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -55,21 +58,14 @@ class ConcordInviteClassifyTest {
             name = "Nostrichs",
         )
 
-    /** A raw kind-33301 event at the link-signer coordinate carrying an arbitrary [vsk] wire value. */
+    /** A kind-33301 event at the coordinate of [linkSigner], signed by it, carrying an arbitrary [vsk] wire value. */
     private fun coordinateEvent(
-        linkSignerPubKey: String,
+        linkSigner: ByteArray,
         vsk: String,
         createdAt: Long,
         content: String = "",
-    ) = Event(
-        id = "00".repeat(32),
-        pubKey = linkSignerPubKey,
-        createdAt = createdAt,
-        kind = ConcordInviteBundleEvent.KIND,
-        tags = arrayOf(arrayOf("d", ""), VskTag.TAG_NAME.let { arrayOf(it, vsk) }),
-        content = content,
-        sig = "00".repeat(64),
-    )
+        dTag: String = "",
+    ): Event = NostrSignerSync(KeyPair(privKey = linkSigner)).sign(createdAt, ConcordInviteBundleEvent.KIND, arrayOf(arrayOf("d", dTag), arrayOf(VskTag.TAG_NAME, vsk)), content)
 
     @Test
     fun liveBundleOpens() =
@@ -77,7 +73,7 @@ class ConcordInviteClassifyTest {
             val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
             val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L, relays = listOf("wss://relay.example"))
 
-            val status = ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.token)
+            val status = ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.linkSignerPubKey, minted.token)
             assertTrue(status is InviteBundleStatus.Live)
             assertEquals(community.communityIdHex, status.invite.communityId)
         }
@@ -89,11 +85,11 @@ class ConcordInviteClassifyTest {
             val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L, relays = listOf("wss://relay.example"))
 
             // A newer vsk=9 tombstone at the same coordinate buries the still-openable bundle.
-            val tombstone = coordinateEvent(minted.linkSignerPubKey, ControlEntityKind.INVITE_REVOKED.wire, createdAt = 2L)
+            val tombstone = coordinateEvent(minted.linkSignerPrivKey, ControlEntityKind.INVITE_REVOKED.wire, createdAt = 2L)
 
-            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(minted.bundleEvent, tombstone), minted.token))
+            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(minted.bundleEvent, tombstone), minted.linkSignerPubKey, minted.token))
             // Order of the fetched list must not matter — newest createdAt wins regardless.
-            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(tombstone, minted.bundleEvent), minted.token))
+            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(tombstone, minted.bundleEvent), minted.linkSignerPubKey, minted.token))
         }
 
     @Test
@@ -111,7 +107,7 @@ class ConcordInviteClassifyTest {
 
             // Both fetch orders must resolve to the re-mint — `fetchAll` gives no ordering guarantee.
             listOf(listOf(minted.bundleEvent, remint), listOf(remint, minted.bundleEvent)).forEach { wraps ->
-                val status = ConcordInviteBundle.classify(wraps, minted.token)
+                val status = ConcordInviteBundle.classify(wraps, minted.linkSignerPubKey, minted.token)
                 assertTrue(status is InviteBundleStatus.Live)
                 assertEquals("bb".repeat(32), status.invite.communityRoot)
                 assertEquals(2L, status.invite.rootEpoch)
@@ -123,8 +119,9 @@ class ConcordInviteClassifyTest {
         runTest {
             // A mis-posted registry (vsk=8) at the bundle coordinate — the exact shape of the
             // relayop.xyz link that hung — is present but not a vsk=6 bundle we can open.
-            val registry = coordinateEvent("aa".repeat(32), ControlEntityKind.INVITE_REGISTRY.wire, createdAt = 1L, content = "unopenable")
-            assertEquals(InviteBundleStatus.Unreadable, ConcordInviteBundle.classify(listOf(registry), ByteArray(16)))
+            val signer = KeyPair()
+            val registry = coordinateEvent(signer.privKey!!, ControlEntityKind.INVITE_REGISTRY.wire, createdAt = 1L, content = "unopenable")
+            assertEquals(InviteBundleStatus.Unreadable, ConcordInviteBundle.classify(listOf(registry), signer.pubKey.toHexKey(), ByteArray(16)))
         }
 
     /**
@@ -152,11 +149,11 @@ class ConcordInviteClassifyTest {
             val wraps = listOf(minted.bundleEvent)
 
             // Before the expiry the very same bundle still opens…
-            val live = ConcordInviteBundle.classify(wraps, minted.token, nowMs = expiresAtMs - 1)
+            val live = ConcordInviteBundle.classify(wraps, minted.linkSignerPubKey, minted.token, nowMs = expiresAtMs - 1)
             assertTrue(live is InviteBundleStatus.Live)
 
             // …and after it, the join path must refuse it (not Live) while the preview data survives.
-            val expired = ConcordInviteBundle.classify(wraps, minted.token, nowMs = expiresAtMs + 1)
+            val expired = ConcordInviteBundle.classify(wraps, minted.linkSignerPubKey, minted.token, nowMs = expiresAtMs + 1)
             assertTrue(expired is InviteBundleStatus.Expired)
             assertEquals(community.communityIdHex, expired.invite.communityId)
         }
@@ -167,12 +164,12 @@ class ConcordInviteClassifyTest {
         runTest {
             val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
             val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L, relays = listOf("wss://relay.example"))
-            assertTrue(ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.token, nowMs = Long.MAX_VALUE) is InviteBundleStatus.Live)
+            assertTrue(ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.linkSignerPubKey, minted.token, nowMs = Long.MAX_VALUE) is InviteBundleStatus.Live)
         }
 
     @Test
     fun emptyFetchIsAbsent() {
-        assertEquals(InviteBundleStatus.Absent, ConcordInviteBundle.classify(emptyList(), ByteArray(16)))
+        assertEquals(InviteBundleStatus.Absent, ConcordInviteBundle.classify(emptyList(), "aa".repeat(32), ByteArray(16)))
     }
 
     @Test
@@ -201,12 +198,12 @@ class ConcordInviteClassifyTest {
 
             // End to end: what the creator publishes is what every redeemer then resolves.
             val grave = ConcordInviteBundle.buildRevocation(minted.linkSignerPrivKey, createdAt = 2L)
-            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(minted.bundleEvent, grave), minted.token))
+            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(minted.bundleEvent, grave), minted.linkSignerPubKey, minted.token))
 
             // And a re-mint that lands AFTER the grave un-revokes the link, which is exactly why the
             // refresh path must skip a coordinate it did not resolve Live first.
             val remint = ConcordInviteBundle.build(minted.linkSignerPrivKey, minted.token, inviteFor(community), createdAt = 3L)
-            assertTrue(ConcordInviteBundle.classify(listOf(minted.bundleEvent, grave, remint), minted.token) is InviteBundleStatus.Live)
+            assertTrue(ConcordInviteBundle.classify(listOf(minted.bundleEvent, grave, remint), minted.linkSignerPubKey, minted.token) is InviteBundleStatus.Live)
         }
 
     @Test
@@ -218,6 +215,86 @@ class ConcordInviteClassifyTest {
             """{"content":"ApoDjyzcHUg2imEiqw6Gsfpc2O86r+CMtMor+jc8ZlgrYwlI6CCmX7qGGEQvEJ5537nINE9H09Ro8RtEghpYgwkhdPHS274RpklFmuyLMdcoC5u1EVhppu8BrlHZ0YBfw3GX1Ui0uwy3V/J+rvrYiLhdREmwlK39JAX8sZfzCUhVtDMCgLVy03dwdpTC1Kj/ZeZJTYhJ8qmaN2273jgBTno/bFLzJlYvbANss69Tg53mljcmdSyhMlZ8z1kuenm1zkrPO5yHvi//r25tXkXb580OCkWxTmEwFzo20ntMgFnVSwVRvLZelOZt++tMevqi2Z5asvDgG7RytHP/0vLxxPzmjH0No+nITsxcmDbEweoKvSSzoc/7DYzENmfmrLXgP2KU/eE6CpTcSNaedLVKbAu9XptdtV8ruZxHjVBh1wpOwXkETEdqqvbCiR4TCNWzqbmwRKJ+acvZLBxhXcpfqmRsolaATU4sZKLs4iu92YpMIuUDh2Pquu0Daiz/IGnVe7BPb7E/gSd9NBFIxds6Nk1DbP8XKMRtYmWdTforUPWZqdM4EOtt8AcNpALRmsbEF26Gyd6t4/81bQPh+7WhI97lR/KkdWtKxNjjJ4CoJLgceyHuwbxXnFR23IWhzvQpBY12MBeYOw9oizvEzEGhEqpUns6LkH2sUNRRXbneNNvVgCEk6BK7j6Dxi95mcGJDEtOW+coE1SjhnfrwjIsdJL7cUEyC5DHFKuvxUi0iw/1I6b3AfZV5+A1tssEE2dhDv8uw6B3/a5EfMURFDqSfmGw1btdPPJ3+yjo1yYu2BtbYa4U++GtaAJfmNPrsB9lm4YgXuwCCRSpI2+TR9H2ntWM2j3HVdXqOpg3kfX82o9KFndo2g+7vGrOAyfL1jcybluq7AxPEV6D5yBky82MjoMeS0vSM6ytYu+0jheWPwDVs/3iPTELHPeDXAZOaw76ISBvNsXcxHvFsSiZBguBr+ucZOUnazVRAYIsmm/WNcIJu+6tfbyupqFCo5wkus6lKN2RNYIH1SRIi163cdBDhTBOdZoI2WcDr+SSW2fHtZutk7fW5IkJvSuy5xlke+YW/u3uzvriAIRmVDtk/fKISKEnMj2G47JdGn6EiHf+2+XfUSuDiliJb62pPXWBupinbb9HEW0tuyPHYGACH0/GA/egr6KMgI6YSh+BWS8vniMRTkmouKCzL5Csvc+2txC9LrfodrMF2R3jFZ1nig0mYzTQ9HvhqA2Uc+YG06iZtRaU7KqH6fMZYzPbjrxVOliyXR2G6","created_at":1784122846,"id":"112701bc1541c10b92f5a105e2e1f1813e591936e20075ec6a53c8bb8d235d81","kind":33301,"pubkey":"7177ccb8e8786c152e4960765f03fbceb7419d36a26e693a6399319760e7fd30","sig":"80eb4b49d70d73d35c1026b9c06d0fab280787950b5df412ebe4cdd05fcacadb4d20419c4e732749ed2698186a321069b4329ebd93fe21d8594d7392bf6445e0","tags":[["d",""],["vsk","8"]]}"""
         val event = Event.fromJson(json)
         val token = "c0277c415fe2ecc901a22b2f23dca5bf".hexToByteArray()
-        assertEquals(InviteBundleStatus.Unreadable, ConcordInviteBundle.classify(listOf(event), token))
+        assertEquals(InviteBundleStatus.Unreadable, ConcordInviteBundle.classify(listOf(event), event.pubKey, token))
     }
+
+    // ---- S14: the relay filter is a hint, not a proof (CORD-05 §2) ----------------------
+
+    @Test
+    fun aForgedNewerRevocationByAnotherKeyDoesNotRevoke() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L)
+
+            // A relay serves a newer vsk=9 "at the coordinate" — but signed by someone else.
+            val forger = KeyPair()
+            val forged = coordinateEvent(forger.privKey!!, ControlEntityKind.INVITE_REVOKED.wire, createdAt = 2L)
+            assertIs<InviteBundleStatus.Live>(ConcordInviteBundle.classify(listOf(minted.bundleEvent, forged), minted.linkSignerPubKey, minted.token))
+        }
+
+    @Test
+    fun aNewerRevocationClaimingTheSignerButBadlySignedDoesNotRevoke() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L)
+
+            // Right pubkey, garbage signature: exactly what a relay could fabricate without the secret.
+            val forged =
+                Event(
+                    id = "00".repeat(32),
+                    pubKey = minted.linkSignerPubKey,
+                    createdAt = 2L,
+                    kind = ConcordInviteBundleEvent.KIND,
+                    tags = arrayOf(arrayOf("d", ""), arrayOf(VskTag.TAG_NAME, ControlEntityKind.INVITE_REVOKED.wire)),
+                    content = "",
+                    sig = "00".repeat(64),
+                )
+            assertIs<InviteBundleStatus.Live>(ConcordInviteBundle.classify(listOf(minted.bundleEvent, forged), minted.linkSignerPubKey, minted.token))
+        }
+
+    @Test
+    fun aRevocationAtAnotherDTagIsNotThisCoordinate() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L)
+
+            // Genuinely signed by the link signer, but at a different `d` — a different coordinate.
+            val elsewhere = coordinateEvent(minted.linkSignerPrivKey, ControlEntityKind.INVITE_REVOKED.wire, createdAt = 2L, dTag = "x")
+            assertIs<InviteBundleStatus.Live>(ConcordInviteBundle.classify(listOf(minted.bundleEvent, elsewhere), minted.linkSignerPubKey, minted.token))
+        }
+
+    @Test
+    fun aBundleFromTheWrongAuthorIsAbsent() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L)
+            assertEquals(InviteBundleStatus.Absent, ConcordInviteBundle.classify(listOf(minted.bundleEvent), "aa".repeat(32), minted.token))
+        }
+
+    // ---- S11: bundle bounds (CORD-05 §1) --------------------------------------------------
+
+    @Test
+    fun aBundleNamingTooManyChannelsIsRefused() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val huge = inviteFor(community).copy(channels = List(ConcordInviteBundle.MAX_BUNDLE_CHANNELS + 1) { InviteChannel(id = it.toString(), epoch = 0) })
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", huge, createdAt = 1L)
+            assertNull(ConcordInviteBundle.bound(huge))
+            assertEquals(InviteBundleStatus.Unreadable, ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.linkSignerPubKey, minted.token))
+
+            val atCap = inviteFor(community).copy(channels = List(ConcordInviteBundle.MAX_BUNDLE_CHANNELS) { InviteChannel(id = it.toString(), epoch = 0) })
+            val ok = ConcordInviteBundle.mintLink("https://vector.chat", atCap, createdAt = 1L)
+            assertIs<InviteBundleStatus.Live>(ConcordInviteBundle.classify(listOf(ok.bundleEvent), ok.linkSignerPubKey, ok.token))
+        }
+
+    @Test
+    fun aBundlesRelaysAreTruncatedToTheCommunityCap() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val relays = List(40) { "wss://r$it.example" }
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community).copy(relays = relays + relays), createdAt = 1L)
+            val status = ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.linkSignerPubKey, minted.token)
+            assertIs<InviteBundleStatus.Live>(status)
+            assertEquals(relays.take(ConcordInviteBundle.MAX_COMMUNITY_RELAYS), status.invite.relays)
+        }
 }

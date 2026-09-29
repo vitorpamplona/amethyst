@@ -107,10 +107,11 @@ class LatestEventCacheStoreTest {
         assertEquals("latestUserMetadata", LatestEventSlot.USER_METADATA.prefKey)
         assertEquals("latestContactList", LatestEventSlot.CONTACT_LIST.prefKey)
         assertEquals("latestNIP65RelayList", LatestEventSlot.NIP65_RELAY_LIST.prefKey)
-        assertEquals(26, LatestEventSlot.entries.size)
+        assertEquals("latestConcordListFragments", LatestEventSlot.CONCORD_LIST_FRAGMENTS.prefKey)
+        assertEquals(27, LatestEventSlot.entries.size)
         assertEquals(
             "prefKeys must be unique",
-            26,
+            27,
             LatestEventSlot.entries
                 .map { it.prefKey }
                 .toSet()

@@ -884,6 +884,9 @@ private fun printUsage() {
         |  concord send COMMUNITY CHANNEL TEXT        post a message (CHANNEL = general|name|id)
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages
         |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
+        |  concord invite COMMUNITY --to USER         send a Direct Invite (giftwrapped bundle)
+        |  concord invites                            list Direct Invites waiting for you
+        |  concord accept|decline WRAP-ID             join from / discard a Direct Invite
         |  concord revoke COMMUNITY TOKEN|URL         retire a link you minted (vsk=9 tombstone)
         |  concord join URL                           redeem an invite link and save the community
         |

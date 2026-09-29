@@ -24,9 +24,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 
 fun TagArray.acceptedBadges() = AcceptedBadge.parseAll(this)
 
 fun TagArray.badgeAwardEvents() = taggedEvents()
 
-fun TagArray.badgeAwardDefinitions() = taggedAddresses()
+/**
+ * The badge DEFINITIONS (kind 30009) a profile displays. NIP-58 profiles also carry `a` tags
+ * pointing at badge SETS (kind 30008), which are not definitions.
+ */
+fun TagArray.badgeAwardDefinitions() = taggedAddresses().filter { it.kind == BadgeDefinitionEvent.KIND }

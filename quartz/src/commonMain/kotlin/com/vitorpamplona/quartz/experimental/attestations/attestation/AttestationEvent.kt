@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.attestations.attestation
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.AttestationStatus
+import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.RequestTag
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
@@ -65,9 +66,10 @@ class AttestationEvent(
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
 
-    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
+    // The attested assertion is an `a`; the request it answers (kind 31872) is a `request` tag.
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(RequestTag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(RequestTag::parseAddressId)
 
     fun status() = tags.status()
 

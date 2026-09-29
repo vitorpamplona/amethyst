@@ -137,8 +137,11 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
@@ -970,11 +973,18 @@ open class EventCache :
         rumor: Event,
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
+        // Defense in depth behind the session's Chat ingest gate: a channel plane carries Chat kinds
+        // only (CORD-02 Appendix B). Another plane's kind — a Control edition, a Guestbook motion, a
+        // rekey blob — must never land in the store as if it came from its own plane.
+        if (!ChannelChat.isChatKind(rumor.kind)) return
+
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through
         // the Messages-list incremental filter (which routes rows by that gatherer).
         val messageRow =
-            if (rumor is ChatEvent || rumor is CommentEvent) {
+            // A CORD-08 timer notice is a channel row too: the inline "… set disappearing messages" line
+            // (the feed shows it only when its author holds MANAGE_METADATA, see Account.isAcceptable).
+            if (rumor is ChatEvent || rumor is CommentEvent || rumor is ConcordTimerNoticeEvent) {
                 val ch = getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
                 val note = getOrCreateNote(rumor.id)
                 // Skip attaching a row for a message we already know is deleted (its kind-5 delete
@@ -3835,6 +3845,8 @@ open class EventCache :
                 // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
                 // hub stays empty even after the event arrives.
                 is ConcordCommunityListEvent,
+                // Its successor (CORD-02 §8): the List split into addressable fragments at d = index.
+                is ConcordCommunityListFragmentEvent,
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
@@ -3919,6 +3931,10 @@ open class EventCache :
                 is PublicationContentEvent,
                 is RelayReviewEvent,
                 is EntityRatingEvent,
+                // NIP-87 mint announcements and recommendations (kind 38172 / 38173 / 38000).
+                is CashuMintEvent,
+                is FedimintEvent,
+                is MintRecommendationEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 // ============================================================
@@ -3935,16 +3951,6 @@ open class EventCache :
                 is CashuTokenEvent,
                 is CashuSpendingHistoryEvent,
                 is CashuMintQuoteEvent,
-                // NIP-87 Cashu mint discovery + recommendations: all three are kind 3xxxx
-                // (parameterized-replaceable per the spec) but neither CashuMintEvent /
-                // FedimintEvent / MintRecommendationEvent extends AddressableEvent in Quartz
-                // today, so consumeBaseReplaceable's `check(event is AddressableEvent)` would
-                // crash. Route them as regular events — downstream consumers
-                // (CashuMintDirectoryState, CashuWalletState) already dedupe by (pubKey, dTag)
-                // and keep the newest.
-                is CashuMintEvent,
-                is FedimintEvent,
-                is MintRecommendationEvent,
                 is ChatMessageEncryptedFileHeaderEvent,
                 is ChatMessageEvent,
                 is BirdDetectionEvent,
@@ -4018,6 +4024,7 @@ open class EventCache :
                 is WakeUpEvent,
                 is WelcomeEvent,
                 is WorkoutRecordEvent,
+                is ConcordTimerNoticeEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {

@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 
@@ -30,28 +34,48 @@ import com.vitorpamplona.quartz.utils.Log
  * "The Roster is owner-rooted: every Grant and Role is signed by an npub the
  * Roster ranks strictly above it, and the chain terminates at the owner."
  *
- * Build one with [resolve] from the current entity heads (the values of
- * [EditionFold.fold]) plus the community's known owner pubkey. It then answers:
+ * Build one with [resolve] from the community's Control Plane editions, its
+ * `community_id` (which pins every derived coordinate) and its known owner pubkey.
+ * It then answers:
  *  - [rank] — a member's authority (lower is higher; owner is [OWNER_RANK]; a
  *    member with no validly-granted role has no rank).
  *  - [effectivePermissions] — the union of a member's roles' bits (owner: all).
- *  - [isBanned] — membership in the healed banlist union.
+ *  - [isBanned] — membership in the folded Banlist head.
  *  - [canActOn] — whether an actor may take a permissioned action on a target:
  *    the actor must hold the bit, must strictly outrank the target (equal cannot
  *    act on equal), and the owner is unremovable.
+ *  - [citationFor] / [citationSatisfied] — the `vac` authority citation (CORD-04 §5)
+ *    an actor writes, and whether an edition's citation resolves against this roster.
  *
  * Grants are validated by a fixpoint that only ever empowers members reachable
- * from the owner: a Grant is honored when its signer already outranks every
- * assigned Role and holds [ConcordPermissions.MANAGE_ROLES]. Cycles that never
- * touch the owner can never bootstrap themselves.
+ * from the owner: a Grant is honored when it sits at its member's own coordinate,
+ * its signer already outranks every assigned Role, holds
+ * [ConcordPermissions.MANAGE_ROLES], and cites the Grant it acts under. Cycles that
+ * never touch the owner can never bootstrap themselves.
  */
 @ConsistentCopyVisibility
 data class AuthorityResolver private constructor(
+    private val communityIdHex: String,
     private val ownerLower: String,
     private val roles: Map<String, RoleEntity>,
     private val memberRoles: Map<String, Set<String>>,
     private val banned: Set<String>,
+    /** Each role-holder's honored Grant head, keyed by member — what a `vac` must pin. */
+    private val grantHeads: Map<String, GrantHead>,
 ) {
+    // Derived from the constructor values, so deliberately outside the data class's equality.
+    private val communityId: ByteArray by lazy { communityIdHex.hexToByteArray() }
+    private val banlistEidHex: String by lazy { banlistCoordinateHex(communityId) }
+
+    /**
+     * A member's honored Grant head: the edition every reader folded their roles from, and so
+     * the one their authority actions cite (CORD-04 §5).
+     */
+    data class GrantHead(
+        val version: Long,
+        val hashHex: String,
+    )
+
     /** The resolved role definitions (authority-gated), keyed by role id. Safe for display. */
     fun roles(): Map<String, RoleEntity> = roles
 
@@ -73,7 +97,7 @@ data class AuthorityResolver private constructor(
      */
     fun roleHolders(): Set<String> = memberRoles.keys
 
-    /** The healed banlist union (lowercase hex). */
+    /** The folded Banlist (lowercase hex). */
     fun bannedMembers(): Set<String> = banned
 
     /** The member's rank, lower being higher authority; null = no authority. Owner = [OWNER_RANK]. */
@@ -83,6 +107,12 @@ data class AuthorityResolver private constructor(
         val held = memberRoles[m] ?: return null
         return held.mapNotNull { roles[it]?.position }.minOrNull()
     }
+
+    /**
+     * [author]'s standing for an equal-version tie-break (CORD-04 §1, "authority first"):
+     * the owner first, then by Role position, a roleless author last.
+     */
+    fun tieBreakRank(author: String): Long = rank(author) ?: Long.MAX_VALUE
 
     /** The union of a member's roles' permission bits (owner holds every bit). */
     fun effectivePermissions(pubKey: String): ConcordPermissions {
@@ -132,6 +162,68 @@ data class AuthorityResolver private constructor(
         return actorRank < targetRank
     }
 
+    /** [member]'s honored Grant head, or null when they hold none (the owner never does). */
+    fun grantHead(member: String): GrantHead? = grantHeads[member.lowercase()]
+
+    /**
+     * The `vac` citation (CORD-04 §1/§5) [actor] must attach to a Control-authority action:
+     * their own Grant coordinate, pinned at the version and hash of the head this roster
+     * folded. Null for the owner (who cites nothing) and for an actor holding no honored
+     * Grant (whose actions no reader would honor anyway).
+     */
+    fun citationFor(actor: String): AuthorityCitation? {
+        val m = actor.lowercase()
+        if (m == ownerLower) return null
+        val head = grantHeads[m] ?: return null
+        val coordinate = grantCoordinateOrNull(communityId, m) ?: return null
+        return AuthorityCitation(coordinate.hexToByteArray(), head.version, head.hashHex.hexToByteArray())
+    }
+
+    /**
+     * Whether [citation] satisfies CORD-04 §5 for an action by [actor] against this roster:
+     * the owner needs none; anyone else must cite their **own** Grant coordinate, and this
+     * roster must hold that Grant at the cited version with the cited hash, or past it. A
+     * citation ahead of what we hold (not yet synced), at a forked hash, or naming someone
+     * else's Grant parks the action — here, drops it until a later fold. It is a sync floor,
+     * never the verdict: the caller still judges rank against the current roster.
+     */
+    fun citationSatisfied(
+        actor: String,
+        citation: AuthorityCitation?,
+    ): Boolean {
+        val m = actor.lowercase()
+        if (m == ownerLower) return true
+        val coordinate = grantCoordinateOrNull(communityId, m) ?: return false
+        return citationMatches(citation, coordinate, grantHeads[m])
+    }
+
+    /** [citationSatisfied] for [edition]'s author and `vac`. */
+    fun citationSatisfied(edition: ControlEdition): Boolean = citationSatisfied(edition.author, edition.authorityCitation)
+
+    /**
+     * Whether an edition's content may stand at its coordinate at all, independent of who
+     * signed it: the entity coordinates CORD-04 §1 derives from the `community_id` (Metadata
+     * at the `community_id`, a Grant at its member's `grant_locator`, the Banlist at
+     * `banlist_locator`, an Invite Registry at its author's locator) and the content caps
+     * (CORD-04 §2, CORD-02 §6). A sub-kind we do not model is judged by its signer alone.
+     */
+    fun isWellFormed(edition: ControlEdition): Boolean = wellFormed(edition, communityId, communityIdHex, banlistEidHex)
+
+    /**
+     * Whether a reader honors [edition] as an action gated by [bit] (CORD-04 §5): it is
+     * [isWellFormed], its author is the owner or holds [bit] (and is not banned), and its
+     * `vac` resolves ([citationSatisfied]). A null [bit] is owner-only.
+     */
+    fun admits(
+        edition: ControlEdition,
+        bit: Int?,
+    ): Boolean {
+        if (!isWellFormed(edition)) return false
+        if (isOwner(edition.author)) return true
+        if (bit == null || !hasPermission(edition.author, bit)) return false
+        return citationSatisfied(edition)
+    }
+
     companion object {
         private const val TAG = "ConcordAuthorityResolver"
 
@@ -146,10 +238,76 @@ data class AuthorityResolver private constructor(
          */
         private const val MAX_BAN_RESOLUTION_PASSES = 4
 
+        /** `grant_locator(community_id, member)` as hex, or null when [member] is not a 32-byte hex key. */
+        internal fun grantCoordinateOrNull(
+            communityId: ByteArray,
+            member: String,
+        ): String? {
+            val xOnly = member.hexToByteArrayOrNull()?.takeIf { it.size == 32 } ?: return null
+            return ConcordKeyDerivation.grantCoordinate(communityId, xOnly).toHexKey()
+        }
+
+        private fun banlistCoordinateHex(communityId: ByteArray): String = ConcordKeyDerivation.banlistCoordinate(communityId).toHexKey()
+
+        /**
+         * The CORD-04 §5 citation test against the Grant head [head] a verifier holds at the
+         * actor's coordinate [expectedGrantIdHex] — Armada's `citationSatisfied`, case for case:
+         * the citation must name that coordinate, and the head must be past the cited version,
+         * or at it with the same hash. Behind it (unsynced) or at a forked hash, it parks.
+         */
+        internal fun citationMatches(
+            citation: AuthorityCitation?,
+            expectedGrantIdHex: String,
+            head: GrantHead?,
+        ): Boolean {
+            if (citation == null || head == null) return false
+            if (citation.grantId.toHexKey() != expectedGrantIdHex) return false
+            if (head.version > citation.grantVersion) return true
+            if (head.version == citation.grantVersion) return head.hashHex == citation.grantHash.toHexKey()
+            return false
+        }
+
+        /** The Grant content at [edition], or null when it does not sit at its member's own coordinate (S5). */
+        private fun grantAt(
+            edition: ControlEdition,
+            communityId: ByteArray,
+        ): GrantEntity? {
+            val g = ConcordJson.decodeOrNull<GrantEntity>(edition.content) ?: return null
+            val coordinate = grantCoordinateOrNull(communityId, g.member.lowercase()) ?: return null
+            return g.takeIf { coordinate == edition.entityIdHex }
+        }
+
+        /** See [isWellFormed]. */
+        private fun wellFormed(
+            edition: ControlEdition,
+            communityId: ByteArray,
+            communityIdHex: String,
+            banlistEidHex: String,
+        ): Boolean =
+            when (edition.entityKind) {
+                ControlEntityKind.METADATA ->
+                    edition.entityIdHex == communityIdHex &&
+                        ConcordJson.decodeOrNull<MetadataEntity>(edition.content)?.let(ConcordLimits::metadataFits) == true
+                ControlEntityKind.ROLE -> ConcordJson.decodeOrNull<RoleEntity>(edition.content)?.isWellFormedAt(edition.entityIdHex) == true
+                ControlEntityKind.GRANT -> grantAt(edition, communityId) != null
+                ControlEntityKind.BANLIST -> edition.entityIdHex == banlistEidHex && ConcordJson.decodeBanlist(edition.content) != null
+                // CORD-05 §5: the coordinate binds to the author, so each creator owns exactly their own
+                // list; the content must be a JSON array (a malformed one falls back to the previous head).
+                ControlEntityKind.INVITE_REGISTRY ->
+                    edition.entityIdHex == ConcordKeyDerivation.inviteLinksCoordinate(communityId, edition.author.hexToByteArray()).toHexKey() &&
+                        ConcordInviteRegistry.isWellFormed(edition.content)
+                else -> true
+            }
+
         /**
          * The owner-rooted authority state of a community, with the banlist honored **against the
          * Control Plane itself** (CORD-04 §4: a reader "drops every event from a banned npub —
          * message, reaction, edit, or authority action").
+         *
+         * [communityId] pins every derived coordinate: a Grant is honored only at its member's own
+         * `grant_locator(community_id, member)` and the Banlist only at `banlist_locator(community_id)`
+         * (CORD-02 A.6), so a second chain minted at any other coordinate cannot override the
+         * canonical one.
          *
          * This is a bounded two-pass, because the rule is circular as stated: you cannot know who is
          * banned until you fold the Banlist, and you cannot decide who may write the Banlist without
@@ -178,9 +336,10 @@ data class AuthorityResolver private constructor(
          */
         fun resolve(
             editions: Collection<ControlEdition>,
+            communityId: ByteArray,
             ownerPubKey: String,
         ): AuthorityResolver {
-            val passA = resolveOnce(editions, ownerPubKey, bannedAuthors = emptySet())
+            val passA = resolveOnce(editions, communityId, ownerPubKey, bannedAuthors = emptySet())
             // A further pass costs a whole fold, so skip it unless it could change something. Nobody
             // banned, or nobody banned who ever wrote to the Control Plane — the overwhelmingly common
             // shape, since most bans land on plain members who hold no role and author no editions —
@@ -204,7 +363,7 @@ data class AuthorityResolver private constructor(
             var mask = passA.banned
             var result = passA
             repeat(MAX_BAN_RESOLUTION_PASSES) {
-                result = resolveOnce(editions, ownerPubKey, bannedAuthors = mask)
+                result = resolveOnce(editions, communityId, ownerPubKey, bannedAuthors = mask)
                 if (result.banned == mask) return result
                 mask = result.banned
             }
@@ -226,10 +385,17 @@ data class AuthorityResolver private constructor(
          */
         private fun resolveOnce(
             editions: Collection<ControlEdition>,
+            communityId: ByteArray,
             ownerPubKey: String,
             bannedAuthors: Set<String>,
         ): AuthorityResolver {
             val ownerLower = ownerPubKey.lowercase()
+            val communityIdHex = communityId.toHexKey()
+
+            // grant_locator(community_id, member) for every author the gates ask about, derived once.
+            val grantCoordinates = HashMap<String, String?>()
+
+            fun grantCoordinateOf(member: String): String? = grantCoordinates.getOrPut(member) { grantCoordinateOrNull(communityId, member) }
 
             // Chains grouped by entity: one role chain per role id, one grant chain per member
             // coordinate. We fold each chain through AUTHORIZED editions only, so a rogue cannot
@@ -240,6 +406,7 @@ data class AuthorityResolver private constructor(
 
             var roles: Map<String, RoleEntity> = emptyMap()
             var memberRoles: Map<String, Set<String>> = emptyMap()
+            var grantHeads: Map<String, GrantHead> = emptyMap()
 
             // Authority helpers read the CURRENT (previous-pass) roster, so within a pass a granter's
             // rank is judged by the chain already settled behind it — the owner-rooted resolution the
@@ -249,6 +416,9 @@ data class AuthorityResolver private constructor(
                 val held = memberRoles[member] ?: return null
                 return held.mapNotNull { roles[it]?.position }.minOrNull()
             }
+
+            // Authority first at an equal-version tie (CORD-04 §1), judged by the same settled roster.
+            fun tieRank(author: String): Long = rankOf(author.lowercase()) ?: Long.MAX_VALUE
 
             // The bits a member currently holds, evaluated against the chain settled so far — the same
             // owner-rooted basis as rankOf. Needed inside the fixpoint; effectivePermissionsOf below is
@@ -267,6 +437,17 @@ data class AuthorityResolver private constructor(
                 return held.any { roles[it]?.permissionBits()?.has(ConcordPermissions.MANAGE_ROLES) == true }
             }
 
+            // CORD-04 §5: a non-owner edition must cite the exact Grant it acts under — its author's
+            // own coordinate — and we must hold that Grant at or past the cited version, hash
+            // matching at equality. Judged against the Grant heads settled so far, so the owner's
+            // grants settle first and delegation bootstraps outward (Armada `citedOk`).
+            fun cited(e: ControlEdition): Boolean {
+                val author = e.author.lowercase()
+                if (author == ownerLower) return true
+                val coordinate = grantCoordinateOf(author) ?: return false
+                return citationMatches(e.authorityCitation, coordinate, grantHeads[author])
+            }
+
             // Owner-rooted fixpoint: each pass only ever empowers members reachable from the owner, so
             // the roster grows monotonically and settles. Bounded by the edition count as a backstop.
             val maxPasses = editions.size + 1
@@ -279,12 +460,16 @@ data class AuthorityResolver private constructor(
                     entity: String,
                     e: ControlEdition,
                 ): Boolean {
+                    // Well-formed first, for every author: a role_id naming another coordinate, an
+                    // over-long name, or a live role at the owner's position 0 is no role at all.
+                    val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: return false
+                    if (!r.isWellFormedAt(entity)) return false
                     val author = e.author.lowercase()
                     if (author == ownerLower) return true
                     if (author in bannedAuthors) return false
                     if (!holdsManageRoles(author)) return false
+                    if (!cited(e)) return false
                     val authorRank = rankOf(author) ?: return false
-                    val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: return false
                     // MANAGE_ROLES alone was the whole test, which let any holder rewrite the
                     // role they hold — position 1 with every bit — and then demote the real
                     // admins beneath them. Grants are gated on rank (a granter must outrank
@@ -302,7 +487,7 @@ data class AuthorityResolver private constructor(
 
                 val newRoles = HashMap<String, RoleEntity>()
                 for ((entity, chain) in roleChains) {
-                    val head = EditionFold.foldEntityGated(chain) { roleGate(entity, it) } ?: continue
+                    val head = EditionFold.foldEntityGated(chain, rank = ::tieRank) { roleGate(entity, it) } ?: continue
                     val r = ConcordJson.decodeOrNull<RoleEntity>(head.content) ?: continue
                     if (r.deleted || r.position < 1) continue // no role may claim the owner's position 0
                     newRoles[entity] = r
@@ -312,14 +497,18 @@ data class AuthorityResolver private constructor(
                 // AND strictly outranks every role it hands out. Same candidate-then-gate shape, so a
                 // rogue grant is dropped without orphaning the honest grants chained above it.
                 fun grantGate(e: ControlEdition): Boolean {
+                    // The coordinate must be the member's own grant_locator (CORD-04 §1, S5): a chain
+                    // minted anywhere else is not that member's Grant, whoever signed it.
+                    val g = grantAt(e, communityId) ?: return false
                     val granter = e.author.lowercase()
                     if (granter == ownerLower) return true
                     if (granter in bannedAuthors) return false
                     if (!holdsManageRoles(granter)) return false
+                    if (!cited(e)) return false
                     val granterRank = rankOf(granter) ?: return false
-                    val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return false
                     // Must strictly outrank each assigned role that actually exists...
-                    if (!g.roleIds.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }) return false
+                    val assigned = g.roleIds.take(ConcordLimits.MAX_ROLES_PER_MEMBER)
+                    if (!assigned.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }) return false
                     // ...and outrank the member being edited. A grant is an action ON that
                     // member, and a REVOKE carries no role ids at all — `all {}` over an
                     // empty list is vacuously true, so without this any MANAGE_ROLES holder
@@ -330,15 +519,36 @@ data class AuthorityResolver private constructor(
                 }
 
                 val newMemberRoles = HashMap<String, Set<String>>()
+                val newGrantHeads = HashMap<String, GrantHead>()
                 for ((_, chain) in grantChains) {
-                    val head = EditionFold.foldEntityGated(chain, gate = ::grantGate) ?: continue
-                    val g = ConcordJson.decodeOrNull<GrantEntity>(head.content) ?: continue
-                    newMemberRoles[g.member.lowercase()] = g.roleIds.filter { newRoles.containsKey(it) }.toSet()
+                    val head = EditionFold.foldEntityGated(chain, rank = ::tieRank, gate = ::grantGate) ?: continue
+                    val g = grantAt(head, communityId) ?: continue
+                    val member = g.member.lowercase()
+                    // A member holds at most 64 Roles (CORD-04 §2): the rest of the list is ignored.
+                    newMemberRoles[member] =
+                        g.roleIds
+                            .take(ConcordLimits.MAX_ROLES_PER_MEMBER)
+                            .filter { newRoles.containsKey(it) }
+                            .toSet()
+                    newGrantHeads[member] = GrantHead(head.version, head.hashHex)
                 }
 
-                if (newRoles == roles && newMemberRoles == memberRoles) break
+                if (newRoles == roles && newMemberRoles == memberRoles && newGrantHeads == grantHeads) break
                 roles = newRoles
                 memberRoles = newMemberRoles
+                grantHeads = newGrantHeads
+            }
+
+            // A Community carries at most 100 Roles (CORD-04 §2): fold the 100 lowest role_ids and
+            // ignore the rest, after authorization, exactly where Armada trims them.
+            if (roles.size > ConcordLimits.MAX_ROLES_PER_COMMUNITY) {
+                val kept =
+                    roles.keys
+                        .sorted()
+                        .take(ConcordLimits.MAX_ROLES_PER_COMMUNITY)
+                        .toSet()
+                roles = roles.filterKeys { it in kept }
+                memberRoles = memberRoles.mapValues { (_, held) -> held.filterTo(HashSet()) { it in kept } }
             }
 
             // The union of a member's roles' permission bits (owner holds every bit).
@@ -350,22 +560,22 @@ data class AuthorityResolver private constructor(
                 return acc
             }
 
-            // Banlist: honored only from a signer holding BAN (or the owner). The banlist is a single
-            // replaced doc, so fold its chain to the head first — that honors a legitimate unban, which
-            // is a *chained* edition replacing the previous set (e.g. ban→unban). Then heal concurrent
-            // forks: two moderators who ban different abusers at the same chain version fork the doc, and
-            // folding to one head would silently drop the other's ban. Union in every authorized edition
-            // that is NOT an ancestor of the head — those are the parallel bans the chain never absorbed.
-            // Ancestors (superseded by the chain, including an unban's now-cleared target) are already
-            // reflected by the head and must not be resurrected. This is CORD-06's "down-only healing":
-            // a concurrent ban is never lost, while an on-chain unban still takes effect.
-            val allBanlist = editions.filter { it.entityKind == ControlEntityKind.BANLIST }
+            // Banlist: honored only from a signer holding BAN (or the owner), at the one coordinate
+            // CORD-02 A.6 derives for it. It is a single replaced document folded to ONE head like any
+            // entity (CORD-04 §4): two admins banning different members at the same version collide,
+            // the fold keeps one edition (authority first, then the lower rumor id), and the loser's
+            // addition drops until its writer re-heals it on top of the winner. Unioning every fork
+            // instead made a ban on a losing fork impossible to lift — no later edition supersedes a
+            // fork — and diverged from every other client's fold.
+            val banlistEid = banlistCoordinateHex(communityId)
+            val allBanlist = editions.filter { it.entityKind == ControlEntityKind.BANLIST && it.entityIdHex == banlistEid }
 
             fun banGate(e: ControlEdition): Boolean {
+                if (ConcordJson.decodeBanlist(e.content) == null) return false
                 val author = e.author.lowercase()
-                return author == ownerLower || (author !in bannedAuthors && effectivePermissionsOf(author).has(ConcordPermissions.BAN))
+                if (author == ownerLower) return true
+                return author !in bannedAuthors && effectivePermissionsOf(author).has(ConcordPermissions.BAN) && cited(e)
             }
-            val authorizedBanlist = allBanlist.filter(::banGate)
 
             // CORD-04 §3's rank rule binds "every action", and it names banning as its example ("an
             // admin cannot ban a peer admin"); §5 step 3 restates it. Only §4, which defines the
@@ -428,46 +638,13 @@ data class AuthorityResolver private constructor(
                 return result
             }
 
-            val banned = HashSet<String>()
             // Candidate-then-gate, like roles and grants: an unauthorized banlist edition in the
             // middle of the chain must not orphan the authorized ones chained above it (which, on
             // a banlist, would silently resurrect every ban a later unban had cleared).
-            val banHead = EditionFold.foldEntityGated(allBanlist, gate = ::banGate)
-            if (banHead != null) {
-                banned.addAll(effectiveList(banHead, HashSet()))
-                // Ancestry is a STRUCTURAL fact, so it is walked over the full pool: an unauthorized
-                // edition on the head's back-chain still supersedes what is beneath it, and walking
-                // only the authorized subset would stop there and mis-read those genuine ancestors as
-                // concurrent forks — un-doing the unban the chain already recorded.
-                val ancestry = banlistAncestry(banHead, allBanlist)
-                for (edition in authorizedBanlist) {
-                    if (edition.hashHex !in ancestry) {
-                        banned.addAll(effectiveList(edition, HashSet()))
-                    }
-                }
-            }
+            val banHead = EditionFold.foldEntityGated(allBanlist, rank = ::tieRank, gate = ::banGate)
+            val banned = banHead?.let { effectiveList(it, HashSet()) } ?: emptySet()
 
-            return AuthorityResolver(ownerLower, roles, memberRoles.toMap(), banned)
-        }
-
-        /**
-         * The set of edition hashes on [head]'s back-chain (head itself plus every edition it chains
-         * from via `prevHash`), among [pool]. Used to tell a superseded ancestor (already reflected by
-         * the head) from a concurrent fork (a parallel ban to heal). The `add`-guarded walk also
-         * terminates on any cycle.
-         */
-        private fun banlistAncestry(
-            head: ControlEdition,
-            pool: List<ControlEdition>,
-        ): Set<String> {
-            val byHash = pool.associateBy { it.hashHex }
-            val acc = HashSet<String>()
-            var cur: ControlEdition? = head
-            while (cur != null && acc.add(cur.hashHex)) {
-                val prev = cur.prevHash?.toHexKey()
-                cur = if (prev != null) byHash[prev] else null
-            }
-            return acc
+            return AuthorityResolver(communityIdHex, ownerLower, roles, memberRoles.toMap(), banned, grantHeads)
         }
     }
 }

@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Entry for a NIP-52 calendar RSVP: decodes the [Note], makes sure the appointment it answers is
@@ -138,10 +139,13 @@ private fun RsvpWithAppointment(
     val range = remember(appointmentEvent) { formatCalendarRange(appointment, context) }
     val relative = rememberRelativeTimeLabel(view, appointmentEvent?.id)
     val route = remember(appointment) { detailRouteFor(appointment) }
+    // Past a week the relative formatter falls back to a plain date ("October 31"), which the
+    // badge and the time line right below already show, so the strip says nothing instead.
+    val startsWithinAWeek = remember(view.startSeconds) { startsWithinAWeek(view.startSeconds, TimeUtils.now()) }
 
     CalendarRsvpCard(
         event = event,
-        statusDetail = relative,
+        statusDetail = relative?.takeIf { startsWithinAWeek },
         onClick = { nav.nav(route) },
     ) {
         val image = view.image
@@ -170,6 +174,15 @@ private fun RsvpWithAppointment(
         }
     }
 }
+
+/**
+ * Whether [startSeconds] is close enough for "in 3 days" to say something the date does not:
+ * anything that has started, or starts within a week. A missing start has no phrase at all.
+ */
+internal fun startsWithinAWeek(
+    startSeconds: Long?,
+    nowSeconds: Long,
+): Boolean = startSeconds != null && startSeconds - nowSeconds <= TimeUtils.ONE_WEEK
 
 private val CoverImageModifier = Modifier.fillMaxWidth().aspectRatio(2f)
 

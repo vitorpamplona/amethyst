@@ -66,7 +66,7 @@ class ConcordPlaneRegistryTest {
             assertEquals(community.communityIdHex, routedControl.plane.communityId)
 
             // After folding + registering channels, a channel message routes to CHANNEL.
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
             registry.registerChannels(entry, state)
 
             val channel = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch)

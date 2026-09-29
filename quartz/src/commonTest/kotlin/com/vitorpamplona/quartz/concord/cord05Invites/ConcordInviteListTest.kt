@@ -194,4 +194,40 @@ class ConcordInviteListTest {
         assertTrue(!live.isExpired(nowSecs = 99))
         assertTrue(!forever.isExpired(nowSecs = Long.MAX_VALUE), "no expiry means it never elapses")
     }
+
+    // ---- I18: entries are immutable; malformed tombstones ride as residue (CORD-05 §4) ----
+
+    @Test
+    fun anExistingTokensEntryIsImmutableSoTheFirstCopyWins() {
+        // The published list (base) already holds t1; a device's patch carrying a different copy of
+        // the same token must not rewrite its signer_sk or url (the reference client's first-wins).
+        val base = ConcordInviteListDocument(entries = listOf(ConcordInviteListEntry("t1", "sk-original", "c", "url-original", createdAt = 1)))
+        val patch = ConcordInviteListDocument(entries = listOf(ConcordInviteListEntry("t1", "sk-other", "c", "url-other", label = "late", createdAt = 9)))
+
+        val merged = ConcordInviteList.merge(base, patch)
+
+        assertEquals(1, merged.entries.size)
+        assertEquals("sk-original", merged.entries.first().signerSk)
+        assertEquals("url-original", merged.entries.first().url)
+        assertEquals(null, merged.entries.first().label)
+    }
+
+    @Test
+    fun aTombstoneThatFailsToTypeCheckIsCarriedNotDropped() {
+        val json =
+            """
+            { "entries": [ { "token": "aa", "signer_sk": "bb", "community_id": "cc", "url": "u" } ],
+              "tombstones": [ { "token": "aa", "community_id": {"weird": true}, "mark": "grave" } ] }
+            """.trimIndent()
+
+        val doc = ConcordInviteList.decodeOrNull(json)!!
+        assertEquals(0, doc.tombstones.size)
+        assertEquals(1, doc.opaqueTombstones.size, "the untyped tombstone is kept")
+        assertTrue(ConcordInviteList.encode(doc).contains("grave"), "an untyped tombstone was lost on re-encode")
+
+        // It still retires the token it names: a merge must not let the entry stay live.
+        val merged = ConcordInviteList.merge(doc, ConcordInviteListDocument.EMPTY)
+        assertTrue(merged.entries.none { it.token == "aa" }, "an untyped tombstone must still beat its entry")
+        assertTrue(ConcordInviteList.encode(merged).contains("grave"), "merge dropped an untyped tombstone")
+    }
 }

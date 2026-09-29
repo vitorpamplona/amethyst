@@ -69,4 +69,11 @@ sealed interface ConcordInviteResult {
      * bundle format this app can't read yet. Retrying can't help.
      */
     data object Incompatible : ConcordInviteResult
+
+    /**
+     * The invite was good, but the membership could not be written to the Community List: the
+     * List is not loaded yet, or every fragment this device holds is full while the rest are
+     * missing (CORD-02 §8). Nothing was announced. Retrying can help once the List loads.
+     */
+    data object NotSaved : ConcordInviteResult
 }

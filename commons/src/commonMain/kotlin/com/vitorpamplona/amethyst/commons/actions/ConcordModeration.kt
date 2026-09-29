@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitations
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
@@ -33,6 +35,8 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -41,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 
@@ -52,12 +57,19 @@ import kotlinx.serialization.builtins.serializer
  * re-encryption across epochs) and wrapped on the community's Control Plane. The
  * caller passes the community's **current** editions so this can chain the next
  * version onto the entity's head (`version = head.version + 1`, `prevHash =
- * head.hash`) and union the banlist. Authority is enforced at *fold* time by the
- * `AuthorityResolver`, not here — an edition whose author doesn't outrank its
- * target (or trace to the owner via [citation]) is simply dropped by every client.
+ * head.hash`, a new entity starting at version 1) and read the banlist. Authority is
+ * enforced at *fold* time by the `AuthorityResolver`, not here — an edition whose
+ * author doesn't outrank its target is simply dropped by every client.
  *
- * The owner needs no [citation]; a delegated moderator must cite the grant they
- * act under so the fold can verify the chain terminates at the owner.
+ * Every non-owner edition carries the `vac` authority citation (CORD-04 §1/§5): the
+ * actor's own Grant head as the same [current] editions fold it
+ * ([AuthorityCitations.forActor]), which every reader, the reference client included,
+ * requires before honoring the action. The owner cites nothing. A caller may still pass
+ * an explicit [AuthorityCitation] to override it.
+ *
+ * The CORD-04 §2 / CORD-02 §6 caps ([ConcordLimits]) are enforced here too: an edition
+ * every reader would drop is refused with an [IllegalArgumentException] rather than
+ * published.
  */
 object ConcordModeration {
     /**
@@ -83,42 +95,66 @@ object ConcordModeration {
      */
     private fun headOf(
         current: List<ControlEdition>,
+        communityId: ByteArray,
         entityId: ByteArray,
         owner: HexKey,
-    ): ControlEdition? = ConcordCommunityState.authorizedHeads(current, owner)[entityId.toHexKey()]?.known
+    ): ControlEdition? = ConcordCommunityState.authorizedHeads(current, communityId, owner)[entityId.toHexKey()]?.known
 
-    /** version/prevHash to chain onto the current head of [entityId], or genesis. */
-    private fun versioning(
-        current: List<ControlEdition>,
-        entityId: ByteArray,
-        owner: HexKey,
-    ): Pair<Long, ByteArray?> {
-        val head = headOf(current, entityId, owner)
-        return if (head != null) (head.version + 1) to head.hash else 0L to null
-    }
+    /** version/prevHash to chain onto the current head of [entityId], or a genesis at version 1 (CORD-04 §1). */
+    private fun versioning(head: ControlEdition?): Pair<Long, ByteArray?> = if (head != null) (head.version + 1) to head.hash else 1L to null
 
     private suspend fun wrap(
         actor: NostrSigner,
         controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
         kind: ControlEntityKind,
         entityId: ByteArray,
-        version: Long,
-        prevHash: ByteArray?,
+        head: ControlEdition?,
         content: String,
+        current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation?,
+        owner: HexKey,
     ): Event {
-        val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, citation)
+        val (version, prevHash) = versioning(head)
+        val vac = citation ?: AuthorityCitations.forActor(current, communityId, owner, actor.pubKey)
+        val rumor = ControlEditionBuilder.rumor(actor.pubKey, kind, entityId, version, prevHash, content, createdAt, vac)
         return ConcordStreamEnvelope.wrap(rumor, controlPlane, actor, encrypted = false, createdAt = createdAt)
     }
 
     /**
+     * Writes [value] as the next edition of [entityId]: laid over the current authorized head's
+     * content, so every field the head carries that [serializer] does not model survives the edit
+     * (CORD-02 §6 — renaming never wipes another client's `custom` or a newer protocol field),
+     * chained onto that head and cited.
+     */
+    private suspend fun <T> edit(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        kind: ControlEntityKind,
+        entityId: ByteArray,
+        serializer: KSerializer<T>,
+        value: T,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation?,
+        owner: HexKey,
+    ): Event {
+        val head = headOf(current, communityId, entityId, owner)
+        val content = ConcordJson.encodePreserving(serializer, value, head?.content)
+        return wrap(actor, controlPlane, communityId, kind, entityId, head, content, current, createdAt, citation, owner)
+    }
+
+    /**
      * Defines (or updates) a role. [roleId] is the role's stable 32-byte entity id
-     * — generate one for a new role and reuse it to edit or [RoleEntity.deleted] it.
+     * — generate one for a new role and reuse it to edit or [RoleEntity.deleted] it. The
+     * content always carries it as `role_id` (CORD-04 §2), which the reference client requires.
      */
     suspend fun defineRole(
         actor: NostrSigner,
         controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
         roleId: ByteArray,
         role: RoleEntity,
         current: List<ControlEdition>,
@@ -126,21 +162,23 @@ object ConcordModeration {
         citation: AuthorityCitation? = null,
         owner: HexKey,
     ): Event {
-        val (version, prev) = versioning(current, roleId, owner)
-        val content = ConcordJson.instance.encodeToString(RoleEntity.serializer(), role)
-        return wrap(actor, controlPlane, ControlEntityKind.ROLE, roleId, version, prev, content, createdAt, citation)
+        require(ConcordLimits.nameFits(role.name)) { "role name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes" }
+        // CORD-04 §3: position 0 is the owner's alone — refuse here rather than have every reader drop it.
+        require(role.deleted || role.position >= 1) { "role position must be 1 or greater (position 0 is the owner's)" }
+        val stamped = role.copy(roleId = roleId.toHexKey())
+        return edit(actor, controlPlane, communityId, ControlEntityKind.ROLE, roleId, RoleEntity.serializer(), stamped, current, createdAt, citation, owner)
     }
 
     /**
      * Defines (or updates) a channel (CORD-03/04, `vsk=2`). [channelId] is the channel's stable
      * 32-byte entity id — generate one for a new channel and reuse it to rename, flip its
      * private/voice flags, or [ChannelEntity.deleted] it (terminal; the id is never reused).
-     * Honored at fold only when [actor] holds MANAGE_CHANNELS (or is the owner) tracing to the owner
-     * via [citation].
+     * Honored at fold only when [actor] holds MANAGE_CHANNELS (or is the owner).
      */
     suspend fun defineChannel(
         actor: NostrSigner,
         controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
         channelId: ByteArray,
         channel: ChannelEntity,
         current: List<ControlEdition>,
@@ -148,16 +186,34 @@ object ConcordModeration {
         citation: AuthorityCitation? = null,
         owner: HexKey,
     ): Event {
-        val (version, prev) = versioning(current, channelId, owner)
-        val content = ConcordJson.instance.encodeToString(ChannelEntity.serializer(), channel)
-        return wrap(actor, controlPlane, ControlEntityKind.CHANNEL, channelId, version, prev, content, createdAt, citation)
+        // Every reader drops an edition naming an empty or over-cap Channel (CORD-03 §2), so
+        // refuse to mint one rather than publish an edition nobody will honor.
+        require(channel.hasValidName()) { "Channel name must be 1..${ChannelEntity.NAME_MAX_BYTES} UTF-8 bytes" }
+        return edit(actor, controlPlane, communityId, ControlEntityKind.CHANNEL, channelId, ChannelEntity.serializer(), channel, current, createdAt, citation, owner)
     }
+
+    /**
+     * Sets the community's disappearing-messages timer (CORD-08 §1) to [secs] seconds, or turns it
+     * off when null. It is a metadata edition like any other — same chain, same MANAGE_METADATA
+     * gate — laid over the folded [standing] metadata so nothing else changes.
+     */
+    suspend fun setMessageExpiration(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        standing: MetadataEntity,
+        secs: Long?,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event = editMetadata(actor, controlPlane, communityId, standing.withMessageExpiration(secs), current, createdAt, citation, owner)
 
     /**
      * Replaces the community metadata (name / icon / description / relays). The
      * metadata entity id is the community id itself (as in genesis), so this chains
      * the next version onto the metadata head. Honored at fold only when [actor]
-     * holds MANAGE_METADATA (or is the owner) tracing to the owner via [citation].
+     * holds MANAGE_METADATA (or is the owner), and only within the CORD-02 §6 caps.
      */
     suspend fun editMetadata(
         actor: NostrSigner,
@@ -169,9 +225,9 @@ object ConcordModeration {
         citation: AuthorityCitation? = null,
         owner: HexKey,
     ): Event {
-        val (version, prev) = versioning(current, communityId, owner)
-        val content = ConcordJson.instance.encodeToString(MetadataEntity.serializer(), metadata)
-        return wrap(actor, controlPlane, ControlEntityKind.METADATA, communityId, version, prev, content, createdAt, citation)
+        require(ConcordLimits.nameFits(metadata.name)) { "community name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes" }
+        require(ConcordLimits.descriptionFits(metadata.description)) { "description exceeds ${ConcordLimits.DESCRIPTION_MAX_BYTES} bytes" }
+        return edit(actor, controlPlane, communityId, ControlEntityKind.METADATA, communityId, MetadataEntity.serializer(), metadata, current, createdAt, citation, owner)
     }
 
     /**
@@ -195,10 +251,10 @@ object ConcordModeration {
         owner: HexKey,
         controlWrap: String? = null,
     ): Event {
+        require(roleIds.size <= ConcordLimits.MAX_ROLES_PER_MEMBER) { "a member holds at most ${ConcordLimits.MAX_ROLES_PER_MEMBER} roles" }
         val entityId = ConcordKeyDerivation.grantCoordinate(communityId, member.hexToByteArray())
-        val (version, prev) = versioning(current, entityId, owner)
-        val content = ConcordJson.instance.encodeToString(GrantEntity.serializer(), GrantEntity(member = member, roleIds = roleIds, controlWrap = controlWrap))
-        return wrap(actor, controlPlane, ControlEntityKind.GRANT, entityId, version, prev, content, createdAt, citation)
+        val grant = GrantEntity(member = member, roleIds = roleIds, controlWrap = controlWrap)
+        return edit(actor, controlPlane, communityId, ControlEntityKind.GRANT, entityId, GrantEntity.serializer(), grant, current, createdAt, citation, owner)
     }
 
     /**
@@ -227,7 +283,7 @@ object ConcordModeration {
         epoch: Long,
     ): Event {
         val wrap =
-            if (controlRoot != null && makesStaff(roleIds, current, owner)) {
+            if (controlRoot != null && makesStaff(roleIds, current, communityId, owner)) {
                 ControlRootWrap.build(actor, member, epoch, controlRoot)
             } else {
                 null
@@ -239,14 +295,47 @@ object ConcordModeration {
     fun makesStaff(
         roleIds: List<String>,
         current: List<ControlEdition>,
+        communityId: ByteArray,
         owner: HexKey,
     ): Boolean {
         if (roleIds.isEmpty()) return false
-        val roles = AuthorityResolver.resolve(current, owner).roles()
+        val roles = AuthorityResolver.resolve(current, communityId, owner).roles()
         return roleIds.any { roles[it]?.permissionBits()?.hasAny(ConcordPermissions.STAFF_BITS) == true }
     }
 
-    /** Adds [member] to the banlist (union with the current head). */
+    /**
+     * Writes [content] — an already-serialized Pin List ([ConcordPins.serializePublic] /
+     * [ConcordPins.serializeSealed]) — as the next edition of [channelId]'s Pin List (CORD-04 §7,
+     * vsk 11, at `pins_locator(community_id, channel_id)`), chained onto [head].
+     *
+     * Unlike the other editors this takes the head explicitly rather than re-folding [current]: a
+     * Pin List is replaced entire, so the edition MUST chain onto exactly the list the caller read
+     * its entries from (§7 — never build from a list you could not read). [ConcordPinning] is the
+     * caller that enforces that, the PIN_MESSAGES gate and the caps; this only mints the wrap.
+     */
+    suspend fun setPinList(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        channelId: ByteArray,
+        head: ControlEdition?,
+        content: String,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event {
+        require(content.encodeToByteArray().size <= ConcordPins.MAX_CONTENT_BYTES) { "pin list exceeds ${ConcordPins.MAX_CONTENT_BYTES} bytes" }
+        val entityId = ConcordKeyDerivation.pinsCoordinate(communityId, channelId)
+        require(head == null || head.entityIdHex == entityId.toHexKey()) { "head is not this channel's Pin List" }
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.PIN_LIST, entityId, head, content, current, createdAt, citation, owner)
+    }
+
+    /**
+     * Adds [member] to the banlist, written over the current folded head. Another admin's
+     * concurrent edition at the same version may win the fold (CORD-04 §4); calling this again
+     * after the refold re-applies the ban atop the winner — the spec's re-heal.
+     */
     suspend fun ban(
         actor: NostrSigner,
         controlPlane: ControlPlaneKeys,
@@ -271,19 +360,41 @@ object ConcordModeration {
     ): Event = setBanlist(actor, controlPlane, communityId, currentBanned(current, communityId, owner) - member.lowercase(), current, createdAt, citation, owner)
 
     /**
-     * The current banlist union across the head editions (lowercase hex).
+     * The current banlist (lowercase hex): the folded head's list.
      *
      * Read through the [AuthorityResolver] rather than by decoding the head's content directly, so
-     * this is the *honored* banlist: the resolver heals concurrent forks into the union (CORD-04 §4
-     * re-heal) and drops entries whose signer did not outrank them (§3's rank rule, enforced as a
-     * delta rule). Decoding the raw head instead would make every ban/unban we author re-publish
-     * entries our own fold refuses — laundering an unauthorized ban into a list signed by us.
+     * this is the *honored* banlist: the resolver drops entries whose signer did not outrank them
+     * (§3's rank rule, enforced as a delta rule). Decoding the raw head instead would make every
+     * ban/unban we author re-publish entries our own fold refuses — laundering an unauthorized ban
+     * into a list signed by us.
      */
     fun currentBanned(
         current: List<ControlEdition>,
         communityId: ByteArray,
         owner: HexKey,
-    ): Set<HexKey> = AuthorityResolver.resolve(current, owner).bannedMembers()
+    ): Set<HexKey> = AuthorityResolver.resolve(current, communityId, owner).bannedMembers()
+
+    /**
+     * Publishes [actor]'s Invite Registry (CORD-05 §5, `vsk 8`) listing [linkSigners] — the
+     * link-signer pubkeys of their live public links, locators only. The entity sits at
+     * `invite_links_locator(community_id, actor)`, so it chains onto [actor]'s own registry head and
+     * can never touch another creator's; it is honored at fold only while [actor] holds
+     * CREATE_INVITE (or is the owner). Compute [linkSigners] with [ConcordInviteRegistry.nextLinks].
+     */
+    suspend fun setInviteRegistry(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        linkSigners: Collection<HexKey>,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event {
+        val entityId = ConcordInviteRegistry.coordinate(communityId, actor.pubKey)
+        val head = headOf(current, communityId, entityId, owner)
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.INVITE_REGISTRY, entityId, head, ConcordInviteRegistry.encode(linkSigners), current, createdAt, citation, owner)
+    }
 
     private suspend fun setBanlist(
         actor: NostrSigner,
@@ -296,8 +407,8 @@ object ConcordModeration {
         owner: HexKey,
     ): Event {
         val entityId = ConcordKeyDerivation.banlistCoordinate(communityId)
-        val (version, prev) = versioning(current, entityId, owner)
+        val head = headOf(current, communityId, entityId, owner)
         val content = ConcordJson.instance.encodeToString(ListSerializer(String.serializer()), banned.sorted())
-        return wrap(actor, controlPlane, ControlEntityKind.BANLIST, entityId, version, prev, content, createdAt, citation)
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.BANLIST, entityId, head, content, current, createdAt, citation, owner)
     }
 }

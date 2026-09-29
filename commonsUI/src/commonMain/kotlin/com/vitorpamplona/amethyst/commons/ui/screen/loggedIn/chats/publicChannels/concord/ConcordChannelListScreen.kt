@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_channel_no_messages
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename_save
 import com.vitorpamplona.amethyst.commons.resources.concord_channels_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_action
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_action
@@ -94,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_leave_message
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_owner_warning
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_title
+import com.vitorpamplona.amethyst.commons.resources.concord_mode_private
+import com.vitorpamplona.amethyst.commons.resources.concord_mode_public
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
@@ -107,6 +110,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordDirectInviteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreviewLoader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
@@ -178,6 +183,11 @@ fun ConcordChannelListScreen(
     // Read once here (it is @Composable) so the post-leave navigation can use it from a callback.
     val canPop = nav.canPop()
     var showLeave by remember { mutableStateOf(false) }
+    var showDirectInvite by remember { mutableStateOf(false) }
+
+    if (showDirectInvite) {
+        ConcordDirectInviteDialog(communityId, accountViewModel, onDismiss = { showDirectInvite = false })
+    }
 
     if (showLeave) {
         ConcordLeaveDialog(
@@ -264,7 +274,24 @@ fun ConcordChannelListScreen(
     Scaffold(
         topBar = {
             ShorterTopAppBar(
-                title = { Text(communityName, maxLines = 1) },
+                title = {
+                    Column {
+                        Text(communityName, maxLines = 1)
+                        // The Public/Private mode (CORD-05 §5): any live invite link in the folded
+                        // registries makes the community Public; none makes it Private, where a ban
+                        // rotates the keys (CORD-06 §3). Unknown until the Control Plane has folded.
+                        state?.let { folded ->
+                            val links = folded.liveInviteLinks.size
+                            Text(
+                                if (folded.isPublic) pluralStringRes(Res.plurals.concord_mode_public, links, links) else stringRes(Res.string.concord_mode_private),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
                     if (canPop) {
@@ -326,6 +353,16 @@ fun ConcordChannelListScreen(
                         SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        // A Direct Invite (CORD-05 §6) hands keys to one known npub. No permission gates
+                        // it — none could, any keyholder can whisper keys — so neither does this item;
+                        // what it carries is bounded by the recipient's roles instead.
+                        DropdownMenuItem(
+                            text = { Text(stringRes(Res.string.concord_direct_invite_action)) },
+                            onClick = {
+                                menuOpen = false
+                                showDirectInvite = true
+                            },
+                        )
                         // Deliberately not gated on CREATE_INVITE, unlike minting: the links listed
                         // there are this account's own, authored by link-signer keys only we hold.
                         // Gating on the bit would mean a demoted admin could no longer retire the
@@ -398,12 +435,8 @@ fun ConcordChannelListScreen(
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
                     val name = def.name.ifBlank { entry.key }
-                    val icon =
-                        when {
-                            def.voice == true -> MaterialSymbols.Mic
-                            def.private == true -> MaterialSymbols.Lock
-                            else -> MaterialSymbols.Tag
-                        }
+                    // Every Channel is callable (CORD-07), so there is no voice-only icon.
+                    val icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag
                     val typingAuthors =
                         remember(typingMap, typingNow, entry.key) {
                             (typingMap[entry.key] ?: emptyMap())
@@ -416,7 +449,6 @@ fun ConcordChannelListScreen(
                         channelKey = entry.key,
                         channelName = name,
                         icon = icon,
-                        isVoice = def.voice == true,
                         typingAuthors = typingAuthors,
                         canManageChannels = canManageChannels,
                         accountViewModel = accountViewModel,
@@ -444,7 +476,6 @@ private fun ConcordChannelListRow(
     channelKey: String,
     channelName: String,
     icon: MaterialSymbol,
-    isVoice: Boolean,
     typingAuthors: List<HexKey>,
     canManageChannels: Boolean,
     accountViewModel: AccountViewModel,
@@ -505,7 +536,7 @@ private fun ConcordChannelListRow(
             // Line 2: the last-message preview (or a live "typing…"), then the unread-message badge.
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
-                    ConcordChannelPreviewLine(lastNote, isVoice, typingAuthors, accountViewModel)
+                    ConcordChannelPreviewLine(lastNote, typingAuthors, accountViewModel)
                 }
                 ConcordUnreadBadge(unread)
             }
@@ -534,7 +565,6 @@ private val FAB_CLEARANCE = 96.dp
 @Composable
 private fun ConcordChannelPreviewLine(
     lastNote: Note?,
-    isVoice: Boolean,
     typingAuthors: List<HexKey>,
     accountViewModel: AccountViewModel,
 ) {
@@ -571,8 +601,6 @@ private fun ConcordChannelPreviewLine(
         } else if (event != null) {
             event.content.take(80)
         } else {
-            // Voice channels never carry chat notes, so "No messages yet" would read oddly — leave blank.
-            if (isVoice) return
             stringRes(Res.string.concord_channel_no_messages)
         }
     Text(

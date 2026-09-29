@@ -174,6 +174,20 @@ tasks.named("installDist") {
     dependsOn(patchAmyLauncherCharset)
 }
 
+// Since Compose Multiplatform 1.12 the JetBrains `runtime-desktop` artifact is a class-less
+// redirect stub (manifest + license) whose real classes come from
+// androidx.compose.runtime:runtime-desktop — and both jars are named
+// `runtime-desktop-<ver>.jar`, so installDist/distZip failed on the duplicate lib/ entry.
+// Excluding the module from resolution would also drop the androidx jar it pulls in, so only
+// the stub's file is left out of the copy; the start script names the androidx jar either way.
+distributions.named("main") {
+    contents {
+        eachFile {
+            if (file.invariantSeparatorsPath.contains("/org.jetbrains.compose.runtime/runtime-desktop/")) exclude()
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Native distribution (jlink + jpackage)
 //

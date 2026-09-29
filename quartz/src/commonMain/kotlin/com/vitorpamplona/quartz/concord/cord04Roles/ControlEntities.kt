@@ -21,11 +21,20 @@
 package com.vitorpamplona.quartz.concord.cord04Roles
 
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.elementNames
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlin.math.floor
 
 /**
  * JSON facility for Concord Control Plane entity content. Unknown keys are
@@ -46,6 +55,37 @@ object ConcordJson {
         } catch (_: Exception) {
             null
         }
+
+    /**
+     * Encodes [value] as the next edition's content **without losing what the previous edition
+     * carried and we don't model** (CORD-02 §6: "an editor MUST round-trip fields it doesn't
+     * understand"). Every key [serializer] declares is ours to set — including to absent, so a form
+     * can clear an optional field — and every other key of [previousContent] (another client's
+     * `custom`, a newer protocol field like `av_brokers`) rides through verbatim.
+     *
+     * [previousContent] is the entity's current authorized head, or null for a genesis edition. A
+     * head that is not a JSON object contributes nothing.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    fun <T> encodePreserving(
+        serializer: KSerializer<T>,
+        value: T,
+        previousContent: String?,
+    ): String {
+        val next = instance.encodeToJsonElement(serializer, value).jsonObject
+        val previous =
+            previousContent?.let {
+                try {
+                    instance.parseToJsonElement(it) as? JsonObject
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: return instance.encodeToString(JsonObject.serializer(), next)
+        val managed = serializer.descriptor.elementNames.toSet()
+        val kept = previous.filterKeys { it !in managed }
+        if (kept.isEmpty()) return instance.encodeToString(JsonObject.serializer(), next)
+        return instance.encodeToString(JsonObject.serializer(), JsonObject(next + kept))
+    }
 
     /** Parses a Banlist edition's content (a bare JSON array of hex pubkeys). */
     fun decodeBanlist(content: String): List<String>? =
@@ -71,11 +111,17 @@ data class RoleScope(
 
 /**
  * A Role's content (CORD-04): a named bundle of permissions at a [position].
- * The role's id is the edition's entity id, not a content field. Lower [position]
- * ranks higher; no role may claim position 0 (reserved for the owner).
+ * Lower [position] ranks higher; no role may claim position 0 (reserved for the owner).
+ *
+ * [roleId] is the role's own id, which the spec puts in the content (CORD-04 §2) and which
+ * must equal the edition's `eid`. The reference client drops a role without it, so every
+ * role we write carries it; roles minted before this client wrote it are still read (the
+ * `eid` is then the id), but a role whose [roleId] names a *different* coordinate is refused
+ * ([isWellFormedAt]).
  */
 @Serializable
 data class RoleEntity(
+    @SerialName("role_id") val roleId: String? = null,
     val name: String = "",
     val position: Long = 0,
     /** u64 permission bitfield as a decimal string. */
@@ -86,6 +132,18 @@ data class RoleEntity(
     val deleted: Boolean = false,
 ) {
     fun permissionBits(): ConcordPermissions = ConcordPermissions.fromWireOrNull(permissions) ?: ConcordPermissions.NONE
+
+    /**
+     * Whether this content may stand as the role at coordinate [entityIdHex] (CORD-04 §2/§3):
+     * its [roleId], when present, names that coordinate; its name fits the 64-byte cap; and a
+     * live role claims a position below the owner's 0. Mirrors Armada's `roleFromJSON`, except
+     * that a legacy role with no [roleId] is still accepted.
+     */
+    fun isWellFormedAt(entityIdHex: String): Boolean {
+        if (roleId != null && !roleId.equals(entityIdHex, ignoreCase = true)) return false
+        if (!ConcordLimits.nameFits(name)) return false
+        return deleted || position >= 1
+    }
 }
 
 /**
@@ -110,16 +168,35 @@ data class GrantEntity(
 
 /**
  * A Channel's content (CORD-03). The channel id is the edition entity id.
- * [private] selects derived-key visibility; [voice] flags an audio channel.
- * A [deleted] channel is terminal — its id is never reused.
+ * [private] selects derived-key visibility. A [deleted] channel is terminal — its id is never
+ * reused.
+ *
+ * There is no voice flag: every Channel is callable (CORD-07). A `voice` key an older client
+ * wrote is not ours to interpret; it rides through edits untouched like any unknown field
+ * ([ConcordJson.encodePreserving]), as does the optional `custom` object (CORD-02 §6).
  */
 @Serializable
 data class ChannelEntity(
     val name: String = "",
     val private: Boolean = false,
-    val voice: Boolean = false,
     val deleted: Boolean = false,
-)
+) {
+    /** True when [name] is within the protocol's name rule ([isValidName]). */
+    fun hasValidName(): Boolean = isValidName(name)
+
+    companion object {
+        /** The protocol-wide name cap, in UTF-8 bytes (CORD-03 §2, CORD-04). */
+        const val NAME_MAX_BYTES = 64
+
+        /**
+         * A Channel name must be non-empty and at most [NAME_MAX_BYTES] UTF-8 bytes. Enforced when
+         * building an edition and again when folding one: an edition naming an empty or over-cap
+         * Channel is unauthorized, and the fold falls back to the previous candidate (the reference
+         * client's channel gate).
+         */
+        fun isValidName(name: String): Boolean = name.isNotEmpty() && name.encodeToByteArray().size <= NAME_MAX_BYTES
+    }
+}
 
 /**
  * A community's Metadata content (CORD-02): display [name], optional [description], the community's
@@ -137,4 +214,28 @@ data class MetadataEntity(
     val banner: ImagePointer? = null,
     val description: String? = null,
     val relays: List<String> = emptyList(),
-)
+    /**
+     * The disappearing-messages timer (CORD-08 §1) exactly as the edition carried it. Kept raw so
+     * a malformed value is carried through an edit untouched; read it through [messageExpirationSecs].
+     */
+    @SerialName("message_expiration") val messageExpiration: JsonElement? = null,
+) {
+    /**
+     * The disappearing-messages timer in whole seconds, or null when it is off (CORD-08 §1).
+     * Absent, `0`, negative or malformed (a string, an object, a non-finite number) all read as
+     * off — a reader MUST NOT guess a default from garbage. A fractional value floors, as the
+     * reference client does.
+     */
+    fun messageExpirationSecs(): Long? {
+        val primitive = messageExpiration as? JsonPrimitive ?: return null
+        if (primitive.isString) return null
+        val value = primitive.doubleOrNull ?: return null
+        if (!value.isFinite()) return null
+        val secs = floor(value)
+        if (secs < 1 || secs > Long.MAX_VALUE.toDouble()) return null
+        return secs.toLong()
+    }
+
+    /** This metadata with the timer set to [secs], or turned off when [secs] is null or below 1. */
+    fun withMessageExpiration(secs: Long?): MetadataEntity = copy(messageExpiration = secs?.takeIf { it >= 1 }?.let { JsonPrimitive(it) })
+}

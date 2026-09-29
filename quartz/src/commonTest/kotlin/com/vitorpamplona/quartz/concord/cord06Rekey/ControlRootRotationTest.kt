@@ -167,7 +167,7 @@ class ControlRootRotationTest {
                 build.controlWraps.mapNotNull { wrap ->
                     ConcordStreamEnvelope.openOrNull(wrap, memberView)?.let { ControlEdition.fromRumor(it.rumor) }
                 }
-            val folded = ConcordCommunityState.fold(editions, owner.pubKey)
+            val folded = ConcordCommunityState.fold(editions, community.communityId, owner.pubKey)
             assertEquals("Test", folded.metadata?.name)
             assertTrue(folded.channels.isNotEmpty())
         }
@@ -194,7 +194,7 @@ class ControlRootRotationTest {
 
             val baseRekey = ConcordKeyDerivation.baseRekeyAddress(community.communityRoot, community.communityId, newEpoch)
             val prevCommit = ConcordKeyDerivation.epochKeyCommitment(community.rootEpoch, community.communityRoot).toHexKey()
-            val tags = ConcordRekey.tags(ConcordRekey.ROOT_SCOPE, newEpoch, community.rootEpoch, prevCommit, 0, 1)
+            val tags = ConcordRekey.tags(ConcordRekey.ROOT_SCOPE, newEpoch, community.rootEpoch, prevCommit, 1, 1)
             val rumor =
                 RumorAssembler.assembleRumor<Event>(owner.pubKey, now, ConcordRekey.KIND, tags, ConcordRekey.encodeContent(listOf(blob)))
             val wrap = ConcordStreamEnvelope.wrap(rumor, baseRekey, owner, encrypted = true, createdAt = now)
@@ -224,7 +224,7 @@ class ControlRootRotationTest {
 
             val baseRekey = ConcordKeyDerivation.baseRekeyAddress(community.communityRoot, community.communityId, newEpoch)
             val prevCommit = ConcordKeyDerivation.epochKeyCommitment(community.rootEpoch, community.communityRoot).toHexKey()
-            val tags = ConcordRekey.tags(ConcordRekey.ROOT_SCOPE, newEpoch, community.rootEpoch, prevCommit, 0, 1)
+            val tags = ConcordRekey.tags(ConcordRekey.ROOT_SCOPE, newEpoch, community.rootEpoch, prevCommit, 1, 1)
             val rumor =
                 RumorAssembler.assembleRumor<Event>(owner.pubKey, now, ConcordRekey.KIND, tags, ConcordRekey.encodeContent(listOf(blob)))
             val wrap = ConcordStreamEnvelope.wrap(rumor, baseRekey, owner, encrypted = true, createdAt = now)
