@@ -157,13 +157,17 @@ object ConcordChannelCommands {
             // The channel plane is NIP-42-gated to its own derived stream key; register it so the drain authenticates.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
             val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(channel.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
-            val msgs = ConcordActions.channelMessages(wraps, channel, channelId, epoch).takeLast(limit)
+            // A banned member's messages are hidden, as every client shows the channel (CORD-04 §4);
+            // the count of what was hidden stays in the output so interop checks can see it arrived.
+            val (banned, visible) = ConcordActions.channelMessages(wraps, channel, channelId, epoch).partition { state.authority.isBanned(it.author) }
+            val msgs = visible.takeLast(limit)
             Output.emit(
                 mapOf(
                     "channel" to channelId,
                     "epoch" to epoch,
                     "plane" to channel.publicKeyHex,
                     "count" to msgs.size,
+                    "hidden_banned" to banned.size,
                     "messages" to msgs.map { mapOf("event_id" to it.id, "author" to it.author, "content" to it.content, "created_at" to it.createdAt) },
                 ),
             )
