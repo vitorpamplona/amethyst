@@ -368,23 +368,32 @@ implementing (each is detailed in its appendix row):
    `HASHTAG` / `TAG` come from each class's `links()`, never from a global allowlist.
 5. **Decided: no links derived from an event's own `d`** (30618 → its repository, 39001–39005 →
    the group, 30177 → its agent). They restate the event's `ADDRESS`; the graph can join on it.
+   The exception is a `d` that names something OTHER than the event: a NIP-85 assertion's
+   subject (30382–30385), a recommended attestor (31873), a rated entity (34259), a bookmarked
+   URL (39701), and a `d` on a regular (non-addressable) kind, which is no address at all.
 6. **Decided: references inside content JSON are left out for now** (buzz 40099 / 40902 /
    44100, DVM results, 30175–30177, marketplace stalls). The appendix rows keep them, marked,
    for later.
 7. **Private list entries** (NIP-44 encrypted NIP-51 items, encrypted DVM requests) are invisible
    to any public index. Stated once, not per row.
+8. **Decided: props may hold a `List<String>`**, for a set a query tests membership in (NIP-29
+   and NIP-43 `roles`, NIP-32 `labels`, NIP-88 `responses`); otherwise strings, numbers and
+   booleans.
+9. **Kinds added after the review** were decided the same way: the NIP-XX push-notification
+   control events (3079, 3080, 3083) link their push service as `NOTIFICATION_SERVER`; a
+   divine.video view (22236) links the video and the version watched as `VIEWED` (new: the
+   past participle of the action), with the session `phase`.
 
 
 ## Plan
 
-1. This review: the vocabulary, the model, the open questions. The per-class
-   [appendix](2026-09-29-graph-link-vocabulary-appendix.md) is done; the open decisions above
-   and the 115 new relation names remain.
-2. Quartz: `nip01Core/links/`, the every-kind tags on `Event`, and the coverage test; then
-   `links()` class by class from the appendix, starting with the NIPs the graph already
-   interprets (10, 18, 22, 25, 56, 57, 85, 51, 58, 72, 09), each with a golden test. The Quartz
-   bugs above land with the classes they affect.
+1. **Done.** This review: the vocabulary, the model, the open questions, the per-class
+   [appendix](2026-09-29-graph-link-vocabulary-appendix.md).
+2. **Done.** Quartz: `nip01Core/links/`, the every-kind tags (`Event.allLinks()`), the coverage
+   test, and `links()` on every class, each class that links with a golden test beside its
+   package (`<Package>LinksTest`). The Quartz bugs above landed first (#4267).
 3. neo4j-eventstore: derive from `links()`, schema 2.0, rewrite `docs/schema.md` and the reference
    queries.
-4. The rest of the appendix, until the coverage test passes for all 410 classes. Kinds with an
-   unmerged or missing spec (`UNCERTAIN` rows) are decided with their maintainers.
+4. **Done.** `LinkCoverageTest` passes for all 417 classes (410 at review time, plus 7 added
+   since). `UNCERTAIN` rows were implemented as the row proposed; they are the ones to revisit
+   with their kinds' maintainers.

@@ -1,6 +1,11 @@
 # Appendix: every Quartz event class, and what its references mean
 
 Companion to [`2026-09-29-graph-link-vocabulary.md`](2026-09-29-graph-link-vocabulary.md).
+
+**Implemented.** Every row now lives as the class's `links()` and its golden test
+(`<Package>LinksTest`), and those are the reference: where the code departs from a row it
+applies a later decision (no links from the event's own `d`, none from content JSON, `h` as the
+group, `APPLICATION` merged into `APP`, list-valued props), which the plan records.
 Generated 2026-09-29 from `utils/EventFactory.kt`: **410 classes**, each read against its tags,
 its tag parsers and its NIP (or, for Quartz-only families, its package docs). **340** carry
 references; **70** carry none (they get only `AUTHOR`, and `ADDRESS` when addressable).
