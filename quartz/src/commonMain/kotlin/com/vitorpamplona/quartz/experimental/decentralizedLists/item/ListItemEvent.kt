@@ -84,8 +84,8 @@ class ListItemEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    /** The list(s) this item is on and the item itself: see [listItemTag]. */
-    override fun links(): List<Link<*>> = links { tags.fastForEach { listItemTag(it) } }
+    /** The list(s) this item is on and the item itself: see [listItemLinks]. */
+    override fun links(): List<Link<*>> = links { listItemLinks(tags) }
 
     override fun listPointer() = id
 

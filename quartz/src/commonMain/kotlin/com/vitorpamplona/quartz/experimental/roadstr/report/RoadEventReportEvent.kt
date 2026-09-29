@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.roadstr.report
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventType
+import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventTypeTag
 import com.vitorpamplona.quartz.experimental.roadstr.tags.coordinates
 import com.vitorpamplona.quartz.experimental.roadstr.tags.latitude
 import com.vitorpamplona.quartz.experimental.roadstr.tags.longitude
@@ -29,12 +30,13 @@ import com.vitorpamplona.quartz.experimental.roadstr.tags.roadGeohashes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
@@ -73,13 +75,9 @@ class RoadEventReportEvent(
     /** The road-event type code (`t`: police, accident…) and the location cells (`g`, at several precisions). */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
-                    "g" -> tag(Relation.TAG, "g", it[1])
-                }
-            }
+            // The raw code, unknown types included, lowercased like any hashtag.
+            each(tags, RoadEventTypeTag::parseCode) { tag(Relation.HASHTAG, RoadEventTypeTag.TAG_NAME, it.lowercase()) }
+            each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
         }
 
     override fun indexableContent() = content

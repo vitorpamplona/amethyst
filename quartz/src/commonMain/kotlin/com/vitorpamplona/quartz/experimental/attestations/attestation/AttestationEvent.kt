@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -38,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -63,14 +63,9 @@ class AttestationEvent(
     /** The attested assertion (an `e` or an `a`) and the kind-31872 request it answers. */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "e" -> event(Relation.ASSERTION, it[1], "e")
-                    "a" -> address(Relation.ASSERTION, it[1], "a")
-                    RequestTag.TAG_NAME -> address(Relation.REQUEST, RequestTag.parseAddressId(it), RequestTag.TAG_NAME)
-                }
-            }
+            each(tags, ETag::parse) { event(Relation.ASSERTION, it, ETag.TAG_NAME) }
+            each(tags, ATag::parse) { address(Relation.ASSERTION, it, ATag.TAG_NAME) }
+            each(tags, RequestTag::parse) { address(Relation.REQUEST, it, RequestTag.TAG_NAME) }
         }
 
     override fun indexableContent() = content

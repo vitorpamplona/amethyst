@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -47,10 +48,13 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 data class AddressMemberTag(
     val address: String,
-    val relayHint: NormalizedRelayUrl? = null,
+    override val relayHint: NormalizedRelayUrl? = null,
     override val score: Int? = null,
-) : TrustedListMemberTag {
+) : TrustedListMemberTag,
+    AddressReferenceTag {
     override val memberValue: String get() = address
+
+    override fun toAddressId() = address
 
     fun toAddress(): Address? = AddressSerializer.parse(address)
 

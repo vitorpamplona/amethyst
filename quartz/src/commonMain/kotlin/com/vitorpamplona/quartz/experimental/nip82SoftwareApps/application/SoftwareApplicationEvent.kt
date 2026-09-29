@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -59,7 +59,7 @@ class SoftwareApplicationEvent(
     /** zapstore apps `a`-tag their latest kind-30063 release. */
     override fun links(): List<Link<*>> =
         links {
-            addressTags(Relation.RELEASE, tags)
+            each(tags, ATag::parse) { address(Relation.RELEASE, it, ATag.TAG_NAME) }
             hashtags(tags)
         }
 

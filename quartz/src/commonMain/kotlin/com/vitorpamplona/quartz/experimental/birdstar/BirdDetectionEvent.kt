@@ -21,14 +21,16 @@
 package com.vitorpamplona.quartz.experimental.birdstar
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.birdstar.tags.SpeciesIdTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -65,9 +67,8 @@ class BirdDetectionEvent(
     /** The species (`i`, a Wikidata URL) and where it was seen (`g`). */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size > 1 && (it[0] == "i" || it[0] == "g")) tag(Relation.TAG, it[0], it[1])
-            }
+            each(tags, SpeciesIdTag::parse) { tag(Relation.TAG, SpeciesIdTag.TAG_NAME, it) }
+            each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
         }
 
     override fun indexableContent() = listOfNotNull(summary(), speciesName()).joinToString("\n")

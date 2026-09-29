@@ -21,14 +21,15 @@
 package com.vitorpamplona.quartz.experimental.birdstar
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.birdstar.tags.SpeciesIdTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -65,7 +66,7 @@ class BirdexEvent(
     LinkProvider,
     SearchableEvent {
     /** Every species on the life list, by its `i` (a Wikidata URL). */
-    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { each(tags, SpeciesIdTag::parse) { tag(Relation.TAG, SpeciesIdTag.TAG_NAME, it) } }
 
     override fun indexableContent() = (listOfNotNull(summary()) + speciesNames()).joinToString("\n")
 

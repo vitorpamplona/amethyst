@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -59,7 +60,10 @@ class EventTrustedListEvent(
     AddressHintProvider,
     PubKeyHintProvider {
     /** Members are event ids (`e`). */
-    override fun links(): List<Link<*>> = trustedListLinks("e") { value, props -> event(Relation.MEMBER, value, "e", props) }
+    override fun links(): List<Link<*>> =
+        trustedListLinks(EventMemberTag.TAG_NAME) {
+            each(tags, EventMemberTag::parse) { event(Relation.MEMBER, it.eventId, EventMemberTag.TAG_NAME, it.linkProps()) }
+        }
 
     override fun members(): List<EventMemberTag> = tags.members()
 

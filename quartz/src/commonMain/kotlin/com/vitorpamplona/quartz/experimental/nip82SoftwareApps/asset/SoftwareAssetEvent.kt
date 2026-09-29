@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -50,7 +51,7 @@ class SoftwareAssetEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** The application this asset belongs to, by its `i`: the 32267's `d` identifier, not a NIP-73 id. */
-    override fun links(): List<Link<*>> = links { tag(Relation.TAG, "i", appId()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, AppIdTag.TAG_NAME, appId()) }
 
     fun appId() = tags.appId()
 

@@ -28,14 +28,17 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 class RequestTag(
     val address: Address,
-    val relayHint: NormalizedRelayUrl? = null,
-) {
+    override val relayHint: NormalizedRelayUrl? = null,
+) : AddressReferenceTag {
     fun toTag() = Address.assemble(address.kind, address.pubKeyHex, address.dTag)
+
+    override fun toAddressId() = toTag()
 
     fun toTagArray() = assemble(address, relayHint)
 

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.RatingProps
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
 import kotlin.test.Test
@@ -135,7 +136,7 @@ class ExperimentalNotesLinksTest {
                 arrayOf("k", "30040"),
                 arrayOf("p", alice),
             )
-        val props = mapOf("mark" to "publication", "stars" to 4.0)
+        val props = RatingProps(mark = "publication", stars = 4.0)
         assertEquals(
             listOf(
                 Link(Relation.RATED, LinkTarget.Address(book), "a", props),
@@ -150,16 +151,16 @@ class ExperimentalNotesLinksTest {
     @Test
     fun entityRatingReadsASpecOnlyDByItsMark() {
         assertEquals(
-            listOf(Link(Relation.RATED, LinkTarget.Tag("d", "hashtag:bitcoin"), "d", mapOf("mark" to "hashtag", "stars" to 5.0))),
+            listOf(Link(Relation.RATED, LinkTarget.Tag("d", "hashtag:bitcoin"), "d", RatingProps(mark = "hashtag", stars = 5.0))),
             EntityRatingEvent(me, me, 0, tags(arrayOf("d", "hashtag:bitcoin"), arrayOf("m", "hashtag"), arrayOf("rating", "1")), "", me).links(),
         )
         assertEquals(
-            listOf(Link(Relation.RATED, LinkTarget.User(bob), "d", mapOf("mark" to "profile"))),
+            listOf(Link(Relation.RATED, LinkTarget.User(bob), "d", RatingProps(mark = "profile"))),
             EntityRatingEvent(me, me, 0, tags(arrayOf("d", bob), arrayOf("m", "profile")), "", me).links(),
         )
         // no mark: a nostr event
         assertEquals(
-            listOf(Link(Relation.RATED, LinkTarget.Event(note2), "d", mapOf("mark" to "event"))),
+            listOf(Link(Relation.RATED, LinkTarget.Event(note2), "d", RatingProps(mark = "event"))),
             EntityRatingEvent(me, me, 0, tags(arrayOf("d", note2)), "", me).links(),
         )
         // relays are not link targets

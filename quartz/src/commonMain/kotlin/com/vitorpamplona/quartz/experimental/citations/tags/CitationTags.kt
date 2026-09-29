@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.citations.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -37,7 +38,7 @@ object CitationTags {
     const val SUMMARY = "summary"
     const val LOCATION = "location"
     const val VERSION = "version"
-    const val GEOHASH = "g"
+    const val GEOHASH = GeoHashTag.TAG_NAME
 
     // External (kind 31).
     const val URL = "u"

@@ -21,7 +21,10 @@
 package com.vitorpamplona.quartz.experimental.forks
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.utils.ensure
 
 /**
  * The address an `a` tag marked `fork` points at: `["a", <address>, <relay>, "fork"]`, the
@@ -34,3 +37,17 @@ fun parseForkedAddress(tag: Array<String>): Address? {
     if (tag[3] != MarkedETag.MARKER.FORK.code) return null
     return Address.parse(tag[1])
 }
+
+/** [parseForkedAddress] as the parsed [ATag], relay hint included. */
+fun parseForkedATag(tag: Array<String>): ATag? {
+    ensure(isForkMarked(tag)) { return null }
+    return ATag.parse(tag)
+}
+
+/** An `a` that is not marked `fork`: a plain reference (a mention, a community). */
+fun parseUnforkedATag(tag: Array<String>): ATag? {
+    ensure(!isForkMarked(tag)) { return null }
+    return ATag.parse(tag)
+}
+
+private fun isForkMarked(tag: Array<String>) = tag.has(MarkedETag.ORDER_MARKER) && tag[MarkedETag.ORDER_MARKER] == MarkedETag.MARKER.FORK.code

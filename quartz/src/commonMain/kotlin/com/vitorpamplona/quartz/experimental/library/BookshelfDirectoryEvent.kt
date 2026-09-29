@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -70,7 +71,7 @@ class BookshelfDirectoryEvent(
     override fun links(): List<Link<*>> =
         links {
             items().forEach { item ->
-                if (item.address != null) address(Relation.MEMBER, item.address, "a") else event(Relation.MEMBER, item.eventId, "e")
+                if (item.address != null) address(Relation.MEMBER, item.address, ATag.TAG_NAME) else event(Relation.MEMBER, item.eventId, ETag.TAG_NAME)
             }
         }
 

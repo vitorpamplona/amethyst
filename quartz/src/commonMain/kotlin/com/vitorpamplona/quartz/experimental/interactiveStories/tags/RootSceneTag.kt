@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -34,8 +35,10 @@ data class RootSceneTag(
     val kind: Int,
     val pubKeyHex: String,
     val dTag: String,
-) {
+) : AddressReferenceTag {
     var relay: NormalizedRelayUrl? = null
+
+    override val relayHint get() = relay
 
     constructor(
         kind: Int,
@@ -47,6 +50,8 @@ data class RootSceneTag(
     }
 
     fun toTag() = assembleATagId(kind, pubKeyHex, dTag)
+
+    override fun toAddressId() = toTag()
 
     fun toTagArray() = assemble(kind, pubKeyHex, dTag, relay)
 

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.publications
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.publications.tags.PublicationIdTag
 import com.vitorpamplona.quartz.experimental.publications.tags.WikilinkTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -73,14 +74,14 @@ class PublicationContentEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            address(Relation.PUBLICATION, publicationAddress(), if (firstValue(PUBLICATION_TAG) != null) PUBLICATION_TAG else PUBLICATION_TAG_ALT)
+            address(Relation.PUBLICATION, publicationAddress(), publicationTagName())
             wikilinks().forEach { link ->
                 if (link.eventId != null) {
-                    event(Relation.WIKILINK, link.eventId, WIKILINK_TAG)
+                    event(Relation.WIKILINK, link.eventId, WikilinkTag.TAG_NAME)
                 } else {
-                    tag(Relation.WIKILINK, WIKILINK_TAG, link.target)
+                    tag(Relation.WIKILINK, WikilinkTag.TAG_NAME, link.target)
                 }
-                user(Relation.WIKILINK_AUTHOR, link.pubKey, WIKILINK_TAG)
+                user(Relation.WIKILINK_AUTHOR, link.pubKey, WikilinkTag.TAG_NAME)
             }
         }
 
@@ -107,7 +108,10 @@ class PublicationContentEvent(
      * carries a pubkey, which is safe because an index and its sections are published by the same
      * author -- see [publicationAddress], which is where that assumption is made explicit.
      */
-    fun publicationIdentifier(): String? = firstValue(PUBLICATION_TAG) ?: firstValue(PUBLICATION_TAG_ALT)
+    fun publicationIdentifier(): String? = tags.firstNotNullOfOrNull(PublicationIdTag::parse) ?: tags.firstNotNullOfOrNull(PublicationIdTag::parseAlt)
+
+    /** The spelling [publicationIdentifier] was read from: `T` when there is one, else `c`. */
+    private fun publicationTagName() = if (tags.firstNotNullOfOrNull(PublicationIdTag::parse) != null) PublicationIdTag.TAG_NAME else PublicationIdTag.ALT_TAG_NAME
 
     /**
      * The index this section belongs to, as a coordinate.
@@ -121,11 +125,6 @@ class PublicationContentEvent(
 
     /** The `[[wikilink]]` references this section declares, in event order. */
     fun wikilinks(): List<WikilinkTag> = tags.mapNotNull(WikilinkTag::parse)
-
-    private fun firstValue(name: String) =
-        tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > 1 && tag[0] == name && tag[1].isNotEmpty()) tag[1] else null
-        }
 
     /** The `[[wikilink]]` targets this section references, in event order. */
     fun wikilinkTargets(): List<String> = wikilinks().map { it.target }
@@ -142,8 +141,8 @@ class PublicationContentEvent(
 
     companion object {
         const val KIND = 30041
-        const val PUBLICATION_TAG = "T"
-        const val PUBLICATION_TAG_ALT = "c"
+        const val PUBLICATION_TAG = PublicationIdTag.TAG_NAME
+        const val PUBLICATION_TAG_ALT = PublicationIdTag.ALT_TAG_NAME
         const val WIKILINK_TAG = WikilinkTag.TAG_NAME
 
         /** Case- and separator-insensitive key for matching a body reference to a `wikilink` tag. */

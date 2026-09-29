@@ -31,9 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.props.CollaborationProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -76,11 +76,9 @@ class VideoCollaborationEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val props = HashMap<String, Any>(2)
-            props["status"] = status() ?: StatusTag.ACCEPTED
-            role()?.let { props["role"] = it }
-            addressTags(Relation.COLLABORATED, tags, props = props)
-            userTags(Relation.COLLABORATED_AUTHOR, tags, props = props)
+            val props = answerProps()
+            each(tags, ATag::parse) { address(Relation.COLLABORATED, it, ATag.TAG_NAME, props) }
+            each(tags, PTag::parse) { user(Relation.COLLABORATED_AUTHOR, it, PTag.TAG_NAME, props) }
         }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
@@ -101,6 +99,9 @@ class VideoCollaborationEvent(
     fun role() = tags.firstNotNullOfOrNull(RoleTag::parse)
 
     fun status() = tags.firstNotNullOfOrNull(StatusTag::parse)
+
+    /** The answer as link props: an absent `status` is an acceptance ([isAccepted]). */
+    private fun answerProps() = CollaborationProps(roles = listOfNotNull(role()), status = status() ?: StatusTag.ACCEPTED)
 
     /**
      * True unless the collaborator explicitly said no. An absent `status` means yes — see the

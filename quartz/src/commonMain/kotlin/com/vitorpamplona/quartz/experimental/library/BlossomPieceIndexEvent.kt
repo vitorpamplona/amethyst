@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -62,7 +63,7 @@ class BlossomPieceIndexEvent(
     LinkProvider,
     SearchableEvent {
     /** The whole file's url (`r`). Hashes (`x`, `b`) and servers are values, not links. */
-    override fun links(): List<Link<*>> = links { tag(Relation.TAG, URL_TAG, url()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, ReferenceTag.TAG_NAME, url()) }
 
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
@@ -96,7 +97,7 @@ class BlossomPieceIndexEvent(
      * Until there is one, this is the single address that opens and plays, which is why it is
      * what the card links to.
      */
-    fun url() = firstValue(URL_TAG)
+    fun url() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 
     /** Blossom servers that hold the pieces. Publishers may list more than one. */
     fun blossomServers(): List<String> = allValues(BLOSSOM_TAG)
@@ -136,7 +137,7 @@ class BlossomPieceIndexEvent(
         const val KIND = 32176
         const val SIZE_TAG = "size"
         const val TYPE_TAG = "type"
-        const val URL_TAG = "r"
+        const val URL_TAG = ReferenceTag.TAG_NAME
         const val BLOSSOM_TAG = "blossom"
         const val HASH_TAG = "x"
         const val PIECE_TAG = "b"

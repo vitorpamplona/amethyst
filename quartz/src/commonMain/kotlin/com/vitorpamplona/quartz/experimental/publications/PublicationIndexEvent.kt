@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
@@ -36,14 +35,19 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -89,20 +93,16 @@ class PublicationIndexEvent(
             sections().forEachIndexed { order, section ->
                 val props = MemberProps(order = order, level = section.level, title = section.title)
                 if (section.address != null) {
-                    address(Relation.MEMBER, section.address, "a", props)
+                    address(Relation.MEMBER, section.address, ATag.TAG_NAME, props)
                 } else {
-                    event(Relation.MEMBER, section.eventId, "e", props)
+                    event(Relation.MEMBER, section.eventId, ETag.TAG_NAME, props)
                 }
             }
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "p" -> user(Relation.MENTION, it[1], "p")
-                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
-                    "A" -> address(Relation.SOURCE, it[1], "A")
-                    "E" -> event(Relation.SOURCE, it[1], "E")
-                }
-            }
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
+            hashtags(tags)
+            // A derivative work names its original the way a NIP-22 scope does: uppercase `A` / `E`.
+            each(tags, RootAddressTag::parseAddressId) { address(Relation.SOURCE, it, RootAddressTag.TAG_NAME) }
+            each(tags, RootEventTag::parseKey) { event(Relation.SOURCE, it, RootEventTag.TAG_NAME) }
         }
 
     override fun indexableContent() = listOfNotNull(title(), author(), summary()).joinToString("\n")

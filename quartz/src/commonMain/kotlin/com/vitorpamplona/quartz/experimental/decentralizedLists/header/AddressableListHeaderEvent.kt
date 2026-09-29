@@ -39,10 +39,10 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -77,13 +77,8 @@ class AddressableListHeaderEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    InheritFromTag.TAG_NAME -> address(Relation.INHERIT_FROM, InheritFromTag.parse(it)?.target, InheritFromTag.TAG_NAME)
-                    ConceptGraphTag.TAG_NAME -> address(Relation.CONCEPT_GRAPH, it[1], ConceptGraphTag.TAG_NAME)
-                }
-            }
+            each(tags, InheritFromTag::parse) { address(Relation.INHERIT_FROM, it.target, InheritFromTag.TAG_NAME) }
+            each(tags, ConceptGraphTag::parse) { address(Relation.CONCEPT_GRAPH, it, ConceptGraphTag.TAG_NAME) }
         }
 
     override fun listPointer() = addressTag()

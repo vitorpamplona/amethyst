@@ -27,11 +27,12 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TemplateTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
@@ -67,14 +68,9 @@ class WorkoutRecordEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    ExerciseSetTag.TAG_NAME -> address(Relation.EXERCISE, ExerciseSetTag.parseAddressId(it), ExerciseSetTag.TAG_NAME)
-                    TemplateTag.TAG_NAME -> address(Relation.TEMPLATE, TemplateTag.parseAddressId(it), TemplateTag.TAG_NAME)
-                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
-                }
-            }
+            each(tags, ExerciseSetTag::parseAddressId) { address(Relation.EXERCISE, it, ExerciseSetTag.TAG_NAME) }
+            each(tags, TemplateTag::parseAddressId) { address(Relation.TEMPLATE, it, TemplateTag.TAG_NAME) }
+            hashtags(tags)
         }
 
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")

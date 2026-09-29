@@ -152,7 +152,7 @@ class ExperimentalListsLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.MEMBER, LinkTarget.User(alice), "p", mapOf("score" to 87)),
+                Link(Relation.MEMBER, LinkTarget.User(alice), "p", MemberProps(score = 87)),
                 // 950 is not on the 0..100 scale: the member stands, unscored
                 Link(Relation.MEMBER, LinkTarget.User(bob), "p"),
                 Link(Relation.ABOUT, LinkTarget.Address(tagCoordinate), "a"),
@@ -170,7 +170,7 @@ class ExperimentalListsLinksTest {
         )
         assertEquals(
             listOf(
-                Link(Relation.MEMBER, LinkTarget.Event(note1), "e", mapOf("score" to 50)),
+                Link(Relation.MEMBER, LinkTarget.Event(note1), "e", MemberProps(score = 50)),
                 Link(Relation.ABOUT, LinkTarget.Address(tagCoordinate), "a"),
                 Link(Relation.ABOUT, LinkTarget.User(carol), "p"),
             ),
@@ -178,13 +178,13 @@ class ExperimentalListsLinksTest {
         )
         assertEquals(
             listOf(
-                Link(Relation.MEMBER, LinkTarget.Address(article), "a", mapOf("score" to 10)),
+                Link(Relation.MEMBER, LinkTarget.Address(article), "a", MemberProps(score = 10)),
                 Link(Relation.ABOUT, LinkTarget.User(carol), "p"),
             ),
             AddressableTrustedListEvent(me, me, 0, tags(arrayOf("d", "l"), arrayOf("a", article, "", "10"), arrayOf("p", carol)), "", me).links(),
         )
         assertEquals(
-            listOf(Link(Relation.MEMBER, LinkTarget.Tag("i", "isbn:9780765382030"), "i", mapOf("score" to 5))),
+            listOf(Link(Relation.MEMBER, LinkTarget.Tag("i", "isbn:9780765382030"), "i", MemberProps(score = 5))),
             ExternalIdTrustedListEvent(me, me, 0, tags(arrayOf("d", "l"), arrayOf("i", "isbn:9780765382030", "", "5")), "", me).links(),
         )
     }

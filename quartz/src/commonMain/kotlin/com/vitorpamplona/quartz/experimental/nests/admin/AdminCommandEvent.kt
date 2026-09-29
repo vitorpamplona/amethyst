@@ -67,10 +67,10 @@ class AdminCommandEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            address(Relation.ROOT, room(), "a")
+            address(Relation.ROOT, roomTag(), ATag.TAG_NAME)
             when (action()) {
-                Action.KICK -> user(Relation.KICKED, targetPubkey(), "p")
-                Action.MUTE -> user(Relation.CHANNEL_MUTED, targetPubkey(), "p")
+                Action.KICK -> user(Relation.KICKED, targetTag(), PTag.TAG_NAME)
+                Action.MUTE -> user(Relation.CHANNEL_MUTED, targetTag(), PTag.TAG_NAME)
                 null -> Unit
             }
         }
@@ -78,8 +78,14 @@ class AdminCommandEvent(
     /** The room this command applies to, if a single `a`-tag is present. */
     fun room(): String? = tags.firstOrNull { it.firstOrNull() == "a" }?.getOrNull(1)
 
+    /** The room as its parsed `a`: the first well-formed one. */
+    fun roomTag(): ATag? = tags.firstNotNullOfOrNull(ATag::parse)
+
     /** The pubkey the host is acting on. */
     fun targetPubkey(): HexKey? = tags.firstOrNull { it.firstOrNull() == "p" }?.getOrNull(1)
+
+    /** The target as its parsed `p`: the first well-formed one. */
+    fun targetTag(): PTag? = tags.firstNotNullOfOrNull(PTag::parse)
 
     /**
      * The verb (e.g. "kick"). Reads the spec-correct

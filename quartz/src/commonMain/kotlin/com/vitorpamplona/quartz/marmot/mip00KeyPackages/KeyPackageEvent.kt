@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.AppComponentsTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.KeyPackageRefTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProposalsTag
 import com.vitorpamplona.quartz.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.mls.components.ComponentsList
@@ -66,7 +67,7 @@ class KeyPackageEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** The KeyPackageRef (`i`), the lookup key a Welcome's inviter resolves. */
-    override fun links(): List<Link<*>> = links { tag(Relation.TAG, "i", keyPackageRef()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, KeyPackageRefTag.TAG_NAME, keyPackageRef()) }
 
     /** Base64-encoded TLS-serialized KeyPackageBundle */
     fun keyPackageBase64() = content

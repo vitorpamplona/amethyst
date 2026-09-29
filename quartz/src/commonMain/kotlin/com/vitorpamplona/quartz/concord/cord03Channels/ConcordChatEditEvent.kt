@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -56,7 +57,7 @@ class ConcordChatEditEvent(
     LinkProvider,
     SearchableEvent {
     /** The edited message. The channel/epoch binding tags carry Concord ids, not Nostr references. */
-    override fun links(): List<Link<*>> = links { event(Relation.EDITED, editedMessageId(), "e") }
+    override fun links(): List<Link<*>> = links { event(Relation.EDITED, editedMessageId(), ETag.TAG_NAME) }
 
     override fun indexableContent() = content
 

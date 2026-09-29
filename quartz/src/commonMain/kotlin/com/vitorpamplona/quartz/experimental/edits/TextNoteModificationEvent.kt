@@ -26,10 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -48,8 +50,8 @@ class TextNoteModificationEvent(
     /** The edited note (the first `e`, as [editedNote] reads it) and its author, whom the `p` notifies. */
     override fun links(): List<Link<*>> =
         links {
-            event(Relation.EDITED, editedNote()?.eventId, "e")
-            userTags(Relation.EDITED_AUTHOR, tags)
+            event(Relation.EDITED, editedNote(), ETag.TAG_NAME)
+            each(tags, PTag::parse) { user(Relation.EDITED_AUTHOR, it, PTag.TAG_NAME) }
         }
 
     fun editedNote() = firstTaggedEvent()

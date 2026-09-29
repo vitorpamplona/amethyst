@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -66,7 +67,7 @@ abstract class CitationEvent(
     LinkProvider,
     SearchableEvent {
     /** The location the source was consulted from (`g`). The cited source itself is a value (a title, a DOI, a url). */
-    override fun links(): List<Link<*>> = links { tag(Relation.TAG, CitationTags.GEOHASH, geohash()) }
+    override fun links(): List<Link<*>> = links { tag(Relation.TAG, GeoHashTag.TAG_NAME, geohash()) }
 
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 

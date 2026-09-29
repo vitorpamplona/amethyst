@@ -18,41 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags
+package com.vitorpamplona.quartz.contextvm.cep15CommonSchemas.tags
 
+import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
 import com.vitorpamplona.quartz.utils.ensure
 
-/** Confirmation status carried in the `status` tag of a Roadstr confirmation (kind 1316). */
-enum class RoadEventStatus(
-    val code: String,
-) {
-    STILL_THERE("still_there"),
-    NO_LONGER_THERE("no_longer_there"),
-    ;
-
-    /** The answer as the `status` a confirmation's link to its report carries. */
-    fun linkProps() = StatusProps(code)
-
+/** CEP-15's NIP-73 `["i", "<schema-hash>", "<tool-name>"]`: a common schema a server implements. */
+class SchemaHashTag {
     companion object {
-        fun fromCode(code: String?): RoadEventStatus? = entries.firstOrNull { it.code == code }
-    }
-}
+        const val TAG_NAME = CvmTags.EXTERNAL_ID
 
-/** The `status` tag of a Roadstr confirmation (kind 1316): `still_there` or `no_longer_there`. */
-class RoadEventStatusTag {
-    companion object {
-        const val TAG_NAME = "status"
-
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): RoadEventStatus? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            return RoadEventStatus.fromCode(tag[1])
+        /** The schema hash, the identity two equivalent servers share. */
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotBlank()) { return null }
+            return tag[1]
         }
 
-        fun assemble(status: RoadEventStatus) = arrayOf(TAG_NAME, status.code)
+        fun assemble(
+            schemaHash: String,
+            toolName: String,
+        ) = arrayOf(TAG_NAME, schemaHash, toolName)
     }
 }

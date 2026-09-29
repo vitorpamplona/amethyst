@@ -48,6 +48,9 @@ import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborati
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.CollaborationProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
+import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -138,7 +141,7 @@ class ExperimentalLinksTest {
         val tags = tags(arrayOf("d", "track"), arrayOf("p", alice, "", "Host"), arrayOf("p", bob), arrayOf("c", "Podcast"))
         assertEquals(
             listOf(
-                Link(Relation.PARTICIPANT, LinkTarget.User(alice), "p", mapOf("role" to "Host")),
+                Link(Relation.PARTICIPANT, LinkTarget.User(alice), "p", ParticipantProps(roles = listOf("Host"))),
                 Link(Relation.PARTICIPANT, LinkTarget.User(bob), "p"),
             ),
             AudioTrackEvent(me, me, 0, tags, "", me).links(),
@@ -312,7 +315,7 @@ class ExperimentalLinksTest {
     fun roadstrLinksReportsAndCells() {
         assertEquals(
             listOf(
-                Link(Relation.CONFIRMED, LinkTarget.Event(note1), "e", mapOf("status" to "no_longer_there")),
+                Link(Relation.CONFIRMED, LinkTarget.Event(note1), "e", StatusProps("no_longer_there")),
                 Link(Relation.TAG, LinkTarget.Tag("g", "u4pr"), "g"),
             ),
             RoadEventConfirmationEvent(me, me, 0, tags(arrayOf("e", note1, "", alice), arrayOf("status", "no_longer_there"), arrayOf("g", "u4pr")), "", me).links(),
@@ -330,7 +333,7 @@ class ExperimentalLinksTest {
     @Test
     fun videoCollaborationCarriesTheAnswer() {
         val video = "34236:$alice:clip"
-        val declined = mapOf("status" to "declined", "role" to "Director")
+        val declined = CollaborationProps(roles = listOf("Director"), status = "declined")
         assertEquals(
             listOf(
                 Link(Relation.COLLABORATED, LinkTarget.Address(video), "a", declined),
@@ -347,7 +350,7 @@ class ExperimentalLinksTest {
         )
         // no status: the event's existence is the acceptance
         assertEquals(
-            listOf(Link(Relation.COLLABORATED, LinkTarget.Address(video), "a", mapOf("status" to "accepted"))),
+            listOf(Link(Relation.COLLABORATED, LinkTarget.Address(video), "a", CollaborationProps(status = "accepted"))),
             VideoCollaborationEvent(me, me, 0, tags(arrayOf("d", "random"), arrayOf("a", video)), "", me).links(),
         )
     }

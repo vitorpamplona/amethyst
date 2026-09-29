@@ -61,7 +61,7 @@ class ProfileGalleryEntryEvent(
     LinkProvider,
     SearchableEvent {
     /** The event the picture was taken from. */
-    override fun links(): List<Link<*>> = links { event(Relation.SOURCE, fromEvent(), "e") }
+    override fun links(): List<Link<*>> = links { event(Relation.SOURCE, fromEvent(), ETag.TAG_NAME) }
 
     // Only the optional summary caption is indexed; this event is otherwise a
     // url/hash pointer with no natural-language body (content is empty).

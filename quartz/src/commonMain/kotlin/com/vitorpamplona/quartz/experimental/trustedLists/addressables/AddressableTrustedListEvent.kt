@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -54,7 +55,10 @@ class AddressableTrustedListEvent(
     AddressHintProvider,
     PubKeyHintProvider {
     /** Members are addresses (`a`). */
-    override fun links(): List<Link<*>> = trustedListLinks("a") { value, props -> address(Relation.MEMBER, value, "a", props) }
+    override fun links(): List<Link<*>> =
+        trustedListLinks(AddressMemberTag.TAG_NAME) {
+            each(tags, AddressMemberTag::parse) { address(Relation.MEMBER, it, AddressMemberTag.TAG_NAME, it.linkProps()) }
+        }
 
     override fun members(): List<AddressMemberTag> = tags.members()
 

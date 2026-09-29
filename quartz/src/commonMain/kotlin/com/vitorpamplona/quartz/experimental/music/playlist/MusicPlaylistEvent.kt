@@ -68,7 +68,7 @@ class MusicPlaylistEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            trackAddresses().forEachIndexed { order, track -> address(Relation.CURATED, track, "a", OrderProps(order)) }
+            trackAddresses().forEachIndexed { order, track -> address(Relation.CURATED, track, ATag.TAG_NAME, OrderProps(order)) }
             hashtags(tags)
         }
 

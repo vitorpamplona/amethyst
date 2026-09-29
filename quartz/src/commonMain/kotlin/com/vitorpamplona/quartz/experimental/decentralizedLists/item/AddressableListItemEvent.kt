@@ -61,8 +61,10 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -98,7 +100,7 @@ class AddressableListItemEvent(
     PubKeyHintProvider,
     SearchableEvent {
     /**
-     * The item tags ([listItemTag]), plus Tapestry's class-thread claims (`b` inherit-from, `n`
+     * The item tags ([listItemLinks]), plus Tapestry's class-thread claims (`b` inherit-from, `n`
      * element-of, `s` subset-of) and the `q` a curation copy points back to its original with.
      *
      * Taggings overload the item slots (a PubKeyTagging's `a` is the tag applied, its `p` the
@@ -109,15 +111,11 @@ class AddressableListItemEvent(
     override fun links(): List<Link<*>> {
         val itemProps = tags.fastFirstNotNullOfOrNull(PolarityTag::parseValue)?.let { ItemProps(polarity = it) }
         return links {
-            tags.fastForEach {
-                if (listItemTag(it, itemProps) || it.size < 2) return@fastForEach
-                when (it[0]) {
-                    InheritFromTag.TAG_NAME -> address(Relation.INHERIT_FROM, InheritFromTag.parse(it)?.target, InheritFromTag.TAG_NAME)
-                    ElementOfTag.TAG_NAME -> address(Relation.ELEMENT_OF, it[1], ElementOfTag.TAG_NAME)
-                    SubsetOfTag.TAG_NAME -> address(Relation.SUBSET_OF, it[1], SubsetOfTag.TAG_NAME)
-                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
-                }
-            }
+            listItemLinks(tags, itemProps)
+            each(tags, InheritFromTag::parse) { address(Relation.INHERIT_FROM, it.target, InheritFromTag.TAG_NAME) }
+            each(tags, ElementOfTag::parse) { address(Relation.ELEMENT_OF, it, ElementOfTag.TAG_NAME) }
+            each(tags, SubsetOfTag::parse) { address(Relation.SUBSET_OF, it, SubsetOfTag.TAG_NAME) }
+            quotes(tags)
         }
     }
 

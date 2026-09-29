@@ -29,9 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -55,8 +56,8 @@ class AttestorRecommendationEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            user(Relation.RECOMMENDED, dTag(), "d")
-            valueTags(Relation.TAG, tags, KindTag.TAG_NAME)
+            user(Relation.RECOMMENDED, dTag(), DTag.TAG_NAME)
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     override fun indexableContent() = listOfNotNull(description()).joinToString("\n")

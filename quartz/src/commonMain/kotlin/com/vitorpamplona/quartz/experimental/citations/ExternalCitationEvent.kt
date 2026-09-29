@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +49,7 @@ class ExternalCitationEvent(
     override fun links(): List<Link<*>> =
         links {
             event(Relation.OPEN_TIMESTAMP, openTimestamp(), CitationTags.OPEN_TIMESTAMP)
-            tag(Relation.TAG, CitationTags.GEOHASH, geohash())
+            tag(Relation.TAG, GeoHashTag.TAG_NAME, geohash())
         }
 
     /**

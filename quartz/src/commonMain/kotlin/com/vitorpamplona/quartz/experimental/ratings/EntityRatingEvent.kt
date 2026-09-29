@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -40,10 +39,13 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.RatingProps
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -102,28 +104,24 @@ class EntityRatingEvent(
      */
     override fun links(): List<Link<*>> {
         val mark = mark()
-        val props = HashMap<String, Any>(2)
-        props["mark"] = mark
-        stars()?.let { props["stars"] = it }
+        val props = RatingProps(mark, stars())
+        // The targets already linked, so the `d` below does not repeat one of them.
         val rated = HashSet<String>()
         return links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "a", RootAddressTag.TAG_NAME -> if (rated.add(it[1])) address(Relation.RATED, it[1], it[0], props)
-                    "e" -> if (rated.add(it[1])) event(Relation.RATED, it[1], "e", props)
-                    "p" -> user(Relation.RATED_AUTHOR, it[1], "p", props)
-                    ReplyKindTag.TAG_NAME -> tag(Relation.TAG, ReplyKindTag.TAG_NAME, it[1])
-                }
-            }
+            each(tags, ATag::parse) { if (rated.add(it.toAddressId())) address(Relation.RATED, it, ATag.TAG_NAME, props) }
+            each(tags, RootAddressTag::parseAddressId) { if (rated.add(it)) address(Relation.RATED, it, RootAddressTag.TAG_NAME, props) }
+            each(tags, ETag::parse) { if (rated.add(it.eventId)) event(Relation.RATED, it, ETag.TAG_NAME, props) }
+            // NIP-73 kinds as written: a book's `k` is `isbn`, not a number.
+            each(tags, ReplyKindTag::parse) { tag(Relation.TAG, ReplyKindTag.TAG_NAME, it) }
+            each(tags, PTag::parse) { user(Relation.RATED_AUTHOR, it, PTag.TAG_NAME, props) }
             val target = targetIdentifier()
             if (target.isNotEmpty() && target !in rated) {
                 when {
-                    mark == RatingMark.PROFILE -> user(Relation.RATED, target, "d", props)
+                    mark == RatingMark.PROFILE -> user(Relation.RATED, target, DTag.TAG_NAME, props)
                     mark == RatingMark.RELAY -> Unit
-                    target.length == 64 -> event(Relation.RATED, target, "d", props)
-                    LinkBuilder.normalizedAddress(target) != null -> address(Relation.RATED, target, "d", props)
-                    else -> tag(Relation.RATED, "d", dTag(), "d", props)
+                    target.length == 64 -> event(Relation.RATED, target, DTag.TAG_NAME, props)
+                    LinkBuilder.normalizedAddress(target) != null -> address(Relation.RATED, target, DTag.TAG_NAME, props)
+                    else -> tag(Relation.RATED, DTag.TAG_NAME, dTag(), DTag.TAG_NAME, props)
                 }
             }
         }

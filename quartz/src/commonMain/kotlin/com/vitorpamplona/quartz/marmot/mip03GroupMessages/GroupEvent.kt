@@ -21,14 +21,15 @@
 package com.vitorpamplona.quartz.marmot.mip03GroupMessages
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -74,7 +75,7 @@ class GroupEvent(
      * ephemeral key per event, so the `AUTHOR` link every event states is a throwaway here; the
      * inner rumors carry their own links once decrypted.
      */
-    override fun links(): List<Link<*>> = links { valueTags(Relation.GROUP, tags, "h") }
+    override fun links(): List<Link<*>> = links { each(tags, GroupIdTag::parse) { tag(Relation.GROUP, GroupIdTag.TAG_NAME, it) } }
 
     // Set when the app layer learns the envelope ↔ inner mapping: on decrypt
     // for inbound events, at build time for outbound ones. Lets relay

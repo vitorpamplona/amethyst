@@ -24,10 +24,10 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
@@ -50,9 +50,7 @@ open class InteractiveStoryBaseEvent(
     /** The scenes a reader can go to next: each `option` names one by its address (3rd slot). */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size > 2 && it[0] == StoryOptionTag.TAG_NAME) address(Relation.OPTION, it[2], StoryOptionTag.TAG_NAME)
-            }
+            each(tags, StoryOptionTag::parse) { address(Relation.OPTION, it.address, StoryOptionTag.TAG_NAME) }
         }
 
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")

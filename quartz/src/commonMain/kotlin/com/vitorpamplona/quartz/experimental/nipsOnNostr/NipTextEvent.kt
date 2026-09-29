@@ -22,13 +22,15 @@ package com.vitorpamplona.quartz.experimental.nipsOnNostr
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.forks.parseFork
+import com.vitorpamplona.quartz.experimental.forks.parseForkedATag
 import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
 import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
+import com.vitorpamplona.quartz.experimental.forks.parseUnforkedATag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
@@ -37,11 +39,15 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -79,17 +85,12 @@ class NipTextEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                val fork = it.size > MarkedETag.ORDER_MARKER && it[MarkedETag.ORDER_MARKER] == MarkedETag.MARKER.FORK.code
-                when (it[0]) {
-                    "a" -> address(if (fork) Relation.FORK else Relation.MENTION, it[1], "a")
-                    "e" -> if (fork) event(Relation.FORK, it[1], "e")
-                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
-                    "p" -> user(Relation.MENTION, it[1], "p")
-                    "k" -> tag(Relation.TAG, "k", it[1])
-                }
-            }
+            each(tags, ::parseForkedATag) { address(Relation.FORK, it, ATag.TAG_NAME) }
+            each(tags, MarkedETag::parseFork) { event(Relation.FORK, it, MarkedETag.TAG_NAME) }
+            each(tags, ::parseUnforkedATag) { address(Relation.MENTION, it, ATag.TAG_NAME) }
+            quotes(tags)
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
             contentMentions(citedNIP19())
         }
 

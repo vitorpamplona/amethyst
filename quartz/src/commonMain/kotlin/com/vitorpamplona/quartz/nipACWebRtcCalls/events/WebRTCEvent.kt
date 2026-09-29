@@ -27,8 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 
 @Immutable
@@ -48,5 +49,5 @@ abstract class WebRTCEvent(
      * NIP-AC: every signalling kind names its callee(s) in `p` ("one per member" in group
      * calls), so the whole family links the same way. `call-id` is a session value, not a link.
      */
-    override fun links(): List<Link<*>> = links { userTags(Relation.RECIPIENT, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, PTag::parse) { user(Relation.RECIPIENT, it, PTag.TAG_NAME) } }
 }

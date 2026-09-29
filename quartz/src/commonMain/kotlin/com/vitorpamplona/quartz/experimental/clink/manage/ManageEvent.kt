@@ -58,8 +58,8 @@ class ManageEvent(
     /** The counterparty the message is addressed to (`p`) and, on a response, the request it answers (`e`). */
     override fun links(): List<Link<*>> =
         links {
-            user(Relation.RECIPIENT, recipientPubKey(), "p")
-            event(Relation.REQUEST, requestId(), "e")
+            user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME)
+            event(Relation.REQUEST, requestId(), ETag.TAG_NAME)
         }
 
     override fun isContentEncoded() = true

@@ -38,7 +38,9 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -77,14 +79,14 @@ class ZapPollEvent(
      * parent's `e`, else a mention. Votes are zaps, not links of the poll.
      */
     override fun links(): List<Link<*>> {
-        val thread = arrayOfNulls<MarkedETag>(tags.size)
+        // Every `e`, malformed ids included: each one still takes its place in the positional
+        // scheme, and the builder drops the ones that are not event ids.
+        val thread = tags.mapNotNull(MarkedETag::parseAllThreadTags)
         var markedRoot = -1
         var markedReply = -1
         var firstUnmarked = -1
         var lastUnmarked = -1
-        tags.forEachIndexed { i, tag ->
-            val e = MarkedETag.parseAllThreadTags(tag) ?: return@forEachIndexed
-            thread[i] = e
+        thread.forEachIndexed { i, e ->
             when (e.marker) {
                 MarkedETag.MARKER.ROOT -> if (markedRoot < 0) markedRoot = i
                 MarkedETag.MARKER.REPLY -> markedReply = i
@@ -103,24 +105,19 @@ class ZapPollEvent(
                 markedReply >= 0 -> markedReply
                 else -> markedRoot
             }
-        val parentAuthor = if (parent >= 0) thread[parent]?.author else null
+        val parentAuthor = thread.getOrNull(parent)?.author
 
         return links {
-            tags.forEachIndexed { i, tag ->
-                if (tag.size < 2) return@forEachIndexed
-                when (tag[0]) {
-                    "e" -> {
-                        if (i == root) event(Relation.ROOT, tag[1], "e")
-                        if (i == parent) event(Relation.PARENT, tag[1], "e")
-                        if (i != root && i != parent) {
-                            event(if (thread[i]?.marker == MarkedETag.MARKER.FORK) Relation.FORK else Relation.MENTION, tag[1], "e")
-                        }
-                    }
-                    "a" -> address(Relation.MENTION, tag[1], "a")
-                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
-                    "p" -> user(if (tag[1] == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
+            thread.forEachIndexed { i, e ->
+                if (i == root) event(Relation.ROOT, e, MarkedETag.TAG_NAME)
+                if (i == parent) event(Relation.PARENT, e, MarkedETag.TAG_NAME)
+                if (i != root && i != parent) {
+                    event(if (e.marker == MarkedETag.MARKER.FORK) Relation.FORK else Relation.MENTION, e, MarkedETag.TAG_NAME)
                 }
             }
+            each(tags, PTag::parse) { user(if (it.pubKey == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, it, PTag.TAG_NAME) }
+            quotes(tags)
+            each(tags, ATag::parse) { address(Relation.MENTION, it, ATag.TAG_NAME) }
             contentMentions(citedNIP19())
         }
     }

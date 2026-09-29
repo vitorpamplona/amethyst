@@ -24,18 +24,26 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * Zapstr's `["p", <pubkey>, <relay>, <role>]`: a track's participant and, in the 4th slot, what
+ * they did on it (Host, Artist…).
+ */
 @Immutable
 data class ParticipantTag(
     override val pubKey: String,
     override val relayHint: NormalizedRelayUrl?,
+    val role: String? = null,
 ) : PubKeyReferenceTag {
-    fun toTagArray() = assemble(pubKey, relayHint)
+    fun toTagArray() = assemble(pubKey, relayHint, role)
+
+    fun linkProps() = ParticipantProps(roles = listOfNotNull(role))
 
     companion object {
         const val TAG_NAME = "p"
@@ -44,7 +52,11 @@ data class ParticipantTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ParticipantTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            return ParticipantTag(
+                tag[1],
+                tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+                tag.getOrNull(3)?.ifBlank { null },
+            )
         }
 
         fun parseKey(tag: Tag): String? {
@@ -54,9 +66,15 @@ data class ParticipantTag(
             return tag[1]
         }
 
+        // The role is positional: without a relay its slot is written empty, not dropped.
         fun assemble(
             pubkey: HexKey,
             relayHint: NormalizedRelayUrl? = null,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url)
+            role: String? = null,
+        ) = if (role == null) {
+            arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url)
+        } else {
+            arrayOf(TAG_NAME, pubkey, relayHint?.url ?: "", role)
+        }
     }
 }

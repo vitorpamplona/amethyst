@@ -18,41 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags
+package com.vitorpamplona.quartz.experimental.birdstar.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
 import com.vitorpamplona.quartz.utils.ensure
 
-/** Confirmation status carried in the `status` tag of a Roadstr confirmation (kind 1316). */
-enum class RoadEventStatus(
-    val code: String,
-) {
-    STILL_THERE("still_there"),
-    NO_LONGER_THERE("no_longer_there"),
-    ;
-
-    /** The answer as the `status` a confirmation's link to its report carries. */
-    fun linkProps() = StatusProps(code)
-
+/** Birdstar's NIP-73 `["i", "<wikidata-entity-url>"]`: the species an event is about. */
+class SpeciesIdTag {
     companion object {
-        fun fromCode(code: String?): RoadEventStatus? = entries.firstOrNull { it.code == code }
-    }
-}
+        const val TAG_NAME = "i"
 
-/** The `status` tag of a Roadstr confirmation (kind 1316): `still_there` or `no_longer_there`. */
-class RoadEventStatusTag {
-    companion object {
-        const val TAG_NAME = "status"
-
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): RoadEventStatus? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            return RoadEventStatus.fromCode(tag[1])
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotBlank()) { return null }
+            return tag[1]
         }
 
-        fun assemble(status: RoadEventStatus) = arrayOf(TAG_NAME, status.code)
+        fun assemble(speciesUrl: String) = arrayOf(TAG_NAME, speciesUrl)
     }
 }

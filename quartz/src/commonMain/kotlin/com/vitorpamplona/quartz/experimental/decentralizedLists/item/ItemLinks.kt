@@ -22,14 +22,18 @@ package com.vitorpamplona.quartz.experimental.decentralizedLists.item
 
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
 /**
- * The tags every Decentralized Lists item (9999, 39999) shares, one tag at a time; returns
- * false when [entry] is not one of them.
+ * The tags every Decentralized Lists item (9999, 39999) shares.
  *
  * - `z` names the list the item is on: a header's id, its coordinate, or the bare name of an
  *   undeclared list ([ParentListTag.classify]), so [Relation.PARENT_LIST] takes all three.
@@ -38,25 +42,20 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
  *
  * [itemProps] qualifies every [Relation.ITEM] (a tagging's polarity).
  */
-internal fun LinkBuilder.listItemTag(
-    entry: Array<String>,
+internal fun LinkBuilder.listItemLinks(
+    tags: TagArray,
     itemProps: ItemProps? = null,
-): Boolean {
-    if (entry.size < 2) return false
-    when (entry[0]) {
-        ParentListTag.TAG_NAME -> {
-            when (val parent = ParentListTag.parse(entry)) {
-                is ParentList.EventId -> event(Relation.PARENT_LIST, parent.eventId, ParentListTag.TAG_NAME)
-                is ParentList.Coordinate -> address(Relation.PARENT_LIST, parent.address, ParentListTag.TAG_NAME)
-                is ParentList.Name -> tag(Relation.PARENT_LIST, ParentListTag.TAG_NAME, parent.name)
-                null -> Unit
-            }
+) {
+    each(tags, ParentListTag::parse) { parent ->
+        when (parent) {
+            is ParentList.EventId -> event(Relation.PARENT_LIST, parent.eventId, ParentListTag.TAG_NAME)
+            is ParentList.Coordinate -> address(Relation.PARENT_LIST, parent.address, ParentListTag.TAG_NAME)
+            is ParentList.Name -> tag(Relation.PARENT_LIST, ParentListTag.TAG_NAME, parent.name)
         }
-        "p" -> user(Relation.ITEM, entry[1], "p", itemProps)
-        "e" -> event(Relation.ITEM, entry[1], "e", itemProps)
-        "a" -> address(Relation.ITEM, ATag.parseAddress(entry), "a", itemProps)
-        "t" -> tag(Relation.ITEM, "t", entry[1], "t", itemProps)
-        else -> return false
     }
-    return true
+    each(tags, PTag::parse) { user(Relation.ITEM, it, PTag.TAG_NAME, itemProps) }
+    each(tags, ETag::parse) { event(Relation.ITEM, it, ETag.TAG_NAME, itemProps) }
+    each(tags, ATag::parse) { address(Relation.ITEM, it, ATag.TAG_NAME, itemProps) }
+    // HashtagTag::parse keeps the case, which a list value needs; hashtags() would lowercase it.
+    each(tags, HashtagTag::parse) { tag(Relation.ITEM, HashtagTag.TAG_NAME, it, HashtagTag.TAG_NAME, itemProps) }
 }

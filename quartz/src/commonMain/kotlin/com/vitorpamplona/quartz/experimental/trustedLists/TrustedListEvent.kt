@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.experimental.trustedLists
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.ListStatus
-import com.vitorpamplona.quartz.experimental.trustedLists.tags.MemberTagFields
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.ObserverTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.SourceTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
@@ -30,13 +29,15 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -147,27 +148,21 @@ abstract class TrustedListEvent(
     fun contentEcho() = TrustedListContent.parse(content)
 
     /**
-     * The family's links in one pass: every [memberTagName] tag is a [Relation.MEMBER] (through
-     * [member], which knows the member type) carrying its `score` (0..100) when it has one; an
-     * `a` or `p` that is not the member tag is discovery metadata, what the list is [Relation.ABOUT];
-     * `observer` is the point of view it was computed under and `source-tag` the tag definition
-     * it was computed from (its author and slug are provenance, not links).
+     * The family's links: [members] states each member as a [Relation.MEMBER] carrying its
+     * `score` (0..100) when it has one ([TrustedListMemberTag.linkProps]); an `a` or `p` that is
+     * not the member tag ([memberTagName]) is discovery metadata, what the list is
+     * [Relation.ABOUT]; `observer` is the point of view it was computed under and `source-tag`
+     * the tag definition it was computed from (its author and slug are provenance, not links).
      */
     protected fun trustedListLinks(
         memberTagName: String,
-        member: LinkBuilder.(value: String, props: Map<String, Any>?) -> Unit,
+        members: LinkBuilder.() -> Unit,
     ): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                val name = it[0]
-                when {
-                    name == memberTagName -> member(it[1], MemberTagFields.score(it)?.let { score -> mapOf("score" to score) })
-                    name == "a" -> address(Relation.ABOUT, it[1], "a")
-                    name == "p" -> user(Relation.ABOUT, it[1], "p")
-                    name == ObserverTag.TAG_NAME -> user(Relation.OBSERVER, it[1], ObserverTag.TAG_NAME)
-                    name == SourceTag.TAG_NAME -> event(Relation.SOURCE_TAG, it[1], SourceTag.TAG_NAME)
-                }
-            }
+            members()
+            if (memberTagName != ATag.TAG_NAME) each(tags, ATag::parse) { address(Relation.ABOUT, it, ATag.TAG_NAME) }
+            if (memberTagName != PTag.TAG_NAME) each(tags, PTag::parse) { user(Relation.ABOUT, it, PTag.TAG_NAME) }
+            each(tags, ObserverTag::parse) { user(Relation.OBSERVER, it, ObserverTag.TAG_NAME) }
+            each(tags, SourceTag::parse) { event(Relation.SOURCE_TAG, it.eventId, SourceTag.TAG_NAME) }
         }
 }

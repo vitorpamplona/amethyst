@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -52,7 +53,12 @@ class ExternalIdTrustedListEvent(
     AddressHintProvider,
     PubKeyHintProvider {
     /** Members are NIP-73 external ids (`i`). */
-    override fun links(): List<Link<*>> = trustedListLinks("i") { value, props -> tag(Relation.MEMBER, "i", value, "i", props) }
+    override fun links(): List<Link<*>> =
+        trustedListLinks(ExternalIdMemberTag.TAG_NAME) {
+            each(tags, ExternalIdMemberTag::parse) {
+                tag(Relation.MEMBER, ExternalIdMemberTag.TAG_NAME, it.externalId, ExternalIdMemberTag.TAG_NAME, it.linkProps())
+            }
+        }
 
     override fun members(): List<ExternalIdMemberTag> = tags.members()
 

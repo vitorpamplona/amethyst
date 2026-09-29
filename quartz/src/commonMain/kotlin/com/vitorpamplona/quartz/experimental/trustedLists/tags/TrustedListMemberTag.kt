@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.tags
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 
 /**
  * Kind-agnostic view of a Trusted List member.
@@ -41,4 +42,7 @@ interface TrustedListMemberTag {
      * tag carries no score and when it carries one this scale cannot express.
      */
     val score: Int?
+
+    /** The member's [score] as the props of its `MEMBER` link; an unscored member has none. */
+    fun linkProps() = MemberProps(score = score)
 }

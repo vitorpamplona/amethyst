@@ -21,15 +21,16 @@
 package com.vitorpamplona.quartz.contextvm.cep06Announcements
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.contextvm.cep15CommonSchemas.tags.SchemaHashTag
+import com.vitorpamplona.quartz.contextvm.cep15CommonSchemas.tags.SchemaNamespaceTag
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
-import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 
 /**
@@ -97,9 +98,8 @@ class CvmToolsListEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size > 1 && (it[0] == CvmTags.EXTERNAL_ID || it[0] == CvmTags.EXTERNAL_KIND)) tag(Relation.TAG, it[0], it[1])
-            }
+            each(tags, SchemaHashTag::parse) { tag(Relation.TAG, SchemaHashTag.TAG_NAME, it) }
+            each(tags, SchemaNamespaceTag::parse) { tag(Relation.TAG, SchemaNamespaceTag.TAG_NAME, it) }
         }
 
     /** The advertised tools, or null when the content does not parse as a list. */

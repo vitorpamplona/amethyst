@@ -21,14 +21,16 @@
 package com.vitorpamplona.quartz.marmot.mip02Welcome
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.marmot.mip02Welcome.tags.KeyPackageEventTag
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -68,8 +70,8 @@ class WelcomeEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            event(Relation.KEY_PACKAGE, keyPackageEventId(), "e")
-            valueTags(Relation.GROUP, tags, "h")
+            event(Relation.KEY_PACKAGE, keyPackageEventId(), KeyPackageEventTag.TAG_NAME)
+            each(tags, GroupIdTag::parse) { tag(Relation.GROUP, GroupIdTag.TAG_NAME, it) }
         }
 
     /** Base64-encoded MLSMessage (wire_format = mls_welcome) */
