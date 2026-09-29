@@ -187,7 +187,6 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.divine.DivineKinds
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -305,6 +304,7 @@ import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
+import com.vitorpamplona.quartz.nip71Video.views.VideoViewEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -338,6 +338,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
 import org.jetbrains.compose.resources.StringResource
 
 /** Returns the catalog entry for the translated kind name, or null if unknown. */
@@ -490,10 +493,10 @@ fun kindDisplayName(kind: Int): StringResource? =
         VideoCurationSetEvent.KIND -> Res.string.kind_video_list
         VideoCollaborationEvent.KIND -> Res.string.kind_video_collaboration
         TextTrackEvent.KIND -> Res.string.kind_video_subtitles
-        DivineKinds.VIDEO_VIEW -> Res.string.kind_video_views
-        DivineKinds.PUSH_REGISTRATION -> Res.string.kind_push_registration
-        DivineKinds.PUSH_DEREGISTRATION -> Res.string.kind_push_deregistration
-        DivineKinds.PUSH_PREFERENCES -> Res.string.kind_push_preferences
+        VideoViewEvent.KIND -> Res.string.kind_video_views
+        PushRegistrationEvent.KIND -> Res.string.kind_push_registration
+        PushDeregistrationEvent.KIND -> Res.string.kind_push_deregistration
+        PushPreferencesEvent.KIND -> Res.string.kind_push_preferences
         AddressableNormalVideoEvent.KIND -> Res.string.kind_video_repl
         AddressableShortVideoEvent.KIND -> Res.string.kind_shorts_repl
         VideoNormalEvent.KIND -> Res.string.kind_video

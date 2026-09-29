@@ -40,7 +40,6 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeade
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
-import com.vitorpamplona.quartz.experimental.divine.DivineKinds
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -246,6 +245,7 @@ import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
+import com.vitorpamplona.quartz.nip71Video.views.VideoViewEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -338,6 +338,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
 
 /**
  * Human-readable label and defining NIP for a Nostr event kind.
@@ -511,10 +514,10 @@ object KindNames {
             VideoShortEvent.KIND to KindName("Shorts", "71"),
             VideoCollaborationEvent.KIND to KindName("Video Collaboration", null),
             TextTrackEvent.KIND to KindName("Video Subtitles", null),
-            DivineKinds.VIDEO_VIEW to KindName("Video Views", null),
-            DivineKinds.PUSH_REGISTRATION to KindName("Push Registration", null),
-            DivineKinds.PUSH_DEREGISTRATION to KindName("Push Deregistration", null),
-            DivineKinds.PUSH_PREFERENCES to KindName("Push Preferences", null),
+            VideoViewEvent.KIND to KindName("Video Views", null),
+            PushRegistrationEvent.KIND to KindName("Push Registration", null),
+            PushDeregistrationEvent.KIND to KindName("Push Deregistration", null),
+            PushPreferencesEvent.KIND to KindName("Push Preferences", null),
             VoiceEvent.KIND to KindName("Voice Msg", "A0"),
             VoiceReplyEvent.KIND to KindName("Voice Reply", "A0"),
             WakeUpEvent.KIND to KindName("WakeUp", null),
