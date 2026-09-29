@@ -77,8 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.formatMonthDayTime
-import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.note.rememberMonthDayTimeFormatter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -281,10 +280,10 @@ private fun TransactionItem(
             (if (isIncoming) "+" else "-") + formatGrouped(amountSats)
         }
 
-    val timeOfDay = rememberTimeOfDayFormatter()
+    val monthDayTime = rememberMonthDayTimeFormatter()
     val dateText =
-        remember(tx.created_at, timeOfDay) {
-            tx.created_at?.let { formatMonthDayTime(it, timeOfDay) } ?: ""
+        remember(tx.created_at, monthDayTime) {
+            tx.created_at?.let { monthDayTime(it) } ?: ""
         }
 
     val directionLabel =

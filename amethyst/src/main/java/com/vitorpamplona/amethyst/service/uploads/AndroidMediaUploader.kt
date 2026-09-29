@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
@@ -56,7 +57,9 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * Android's [MediaUploader]: compresses with LightCompressor/Compressor, strips metadata, encrypts,
  * and uploads over the app's upload-role OkHttp clients. Reads files through the application
- * [appContext]'s content resolver, so it needs no Activity.
+ * [appContext]'s content resolver, so it needs no Activity. Every entry point moves to
+ * [Dispatchers.IO] itself: hashing, bitmap decoding and stripping block, and shared callers may
+ * launch from a Main-bound scope.
  */
 class AndroidMediaUploader(
     private val appContext: Context,
@@ -75,7 +78,7 @@ class AndroidMediaUploader(
         onStrippingFailed: suspend () -> Boolean,
         convertGifToMp4: Boolean,
         forcedSigner: NostrSigner?,
-    ): UploadingFinalState = Job(progress).upload(uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
+    ): UploadingFinalState = withContext(Dispatchers.IO) { Job(progress).upload(uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner) }
 
     override suspend fun uploadEncrypted(
         progress: UploadOrchestrator,
@@ -92,7 +95,7 @@ class AndroidMediaUploader(
         onStrippingFailed: suspend () -> Boolean,
         convertGifToMp4: Boolean,
         forcedSigner: NostrSigner?,
-    ): UploadingFinalState = Job(progress).uploadEncrypted(uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
+    ): UploadingFinalState = withContext(Dispatchers.IO) { Job(progress).uploadEncrypted(uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, appContext, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner) }
 
     override suspend fun compressIfNeeded(
         progress: UploadOrchestrator,
@@ -101,7 +104,7 @@ class AndroidMediaUploader(
         compressionQuality: CompressorQuality,
         useH265: Boolean,
         convertGifToMp4: Boolean,
-    ): MediaCompressorResult = Job(progress).compressIfNeeded(uri, mimeType, compressionQuality, appContext, useH265, convertGifToMp4)
+    ): MediaCompressorResult = withContext(Dispatchers.IO) { Job(progress).compressIfNeeded(uri, mimeType, compressionQuality, appContext, useH265, convertGifToMp4) }
 
     /** One upload's run: the pipeline, reporting into [progress]. */
     private class Job(

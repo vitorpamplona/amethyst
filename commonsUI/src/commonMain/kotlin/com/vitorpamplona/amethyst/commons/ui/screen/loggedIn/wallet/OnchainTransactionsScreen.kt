@@ -80,8 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.formatMonthDayTime
-import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.note.rememberMonthDayTimeFormatter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -312,11 +311,11 @@ private fun OnchainTransactionItem(
             (if (isIncoming) "+" else "-") + formatGrouped(amountSats)
         }
 
-    val timeOfDay = rememberTimeOfDayFormatter()
+    val monthDayTime = rememberMonthDayTimeFormatter()
     val dateText =
-        remember(view.tx.blockTime, view.tx.confirmations, timeOfDay) {
+        remember(view.tx.blockTime, view.tx.confirmations, monthDayTime) {
             val ts = view.tx.blockTime
-            if (ts != null) formatMonthDayTime(ts, timeOfDay) else ""
+            if (ts != null) monthDayTime(ts) else ""
         }
 
     val counterpartyPubkeyHex = view.counterpartyPubkeyHex()

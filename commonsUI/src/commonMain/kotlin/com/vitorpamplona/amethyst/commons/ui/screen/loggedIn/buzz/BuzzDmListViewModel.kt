@@ -329,8 +329,13 @@ class BuzzDmListViewModel : ViewModel() {
                                 .filterValues { it in scoped }
                         var changed = false
                         memberships.forEach { (channelId, relay) ->
-                            if (memberChannels[channelId] == null) changed = true
-                            memberChannels[channelId] = relay
+                            // One atomic insert decides "new", so a concurrent seed of the same
+                            // channel can't make this pass skip its row rebuild.
+                            if (memberChannels.putIfAbsent(channelId, relay) == null) {
+                                changed = true
+                            } else {
+                                memberChannels[channelId] = relay
+                            }
                         }
                         // A kind-44101 takes the membership away: drop the row rather than leaving a
                         // conversation the relay no longer lets us read.

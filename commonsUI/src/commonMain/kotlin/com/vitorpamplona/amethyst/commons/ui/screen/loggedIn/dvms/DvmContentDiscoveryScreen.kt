@@ -487,13 +487,15 @@ fun ZapDVMButton(
     nav: INav,
 ) {
     val config =
-        ZapButtonConfig(
-            grayTint = grayTint,
-            iconSize = iconSize,
-            showUserFinderSubscription = true,
-            zapAmountChoices = listOf(amount / 1000),
-            buttonText = "Zap ${(amount / 1000)} sats to the DVM",
-        )
+        remember(grayTint, iconSize, amount) {
+            ZapButtonConfig(
+                grayTint = grayTint,
+                iconSize = iconSize,
+                showUserFinderSubscription = true,
+                zapAmountChoices = listOf(amount / 1000),
+                buttonText = "Zap ${(amount / 1000)} sats to the DVM",
+            )
+        }
 
     ReusableZapButton(
         baseNote = baseNote,

@@ -22,11 +22,9 @@ package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
 
-/**
- * Formats an instant (epoch seconds) as the locale's month, day and short time in one pattern
- * ("May 28, 14:32" / "28 May, 2:32 PM"), in the current time zone. Android follows the system
- * 12/24-hour setting; the JVM and iOS follow the locale. Identity-stable, so it can key a
- * `remember`.
- */
+private val monthDayTime = DateSkeletonFormatter("MMMdjm")
+
+private val formatMonthDayTime: (Long) -> String = { epochSeconds -> monthDayTime.format(epochSeconds * 1000L) }
+
 @Composable
-expect fun rememberMonthDayTimeFormatter(): (epochSeconds: Long) -> String
+actual fun rememberMonthDayTimeFormatter(): (epochSeconds: Long) -> String = formatMonthDayTime

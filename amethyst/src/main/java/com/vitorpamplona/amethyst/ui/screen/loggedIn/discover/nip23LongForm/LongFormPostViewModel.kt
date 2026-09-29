@@ -486,7 +486,9 @@ class LongFormPostViewModel :
         galleryUri: SelectedMedia,
         uploader: MediaUploader,
         onError: (String, String) -> Unit,
-    ): String? = uploadToDefaultServer(galleryUri, account, uploader, onError)
+    ): String? =
+        // Cover images were never stripped: keep them as picked, only compressed.
+        uploadToDefaultServer(galleryUri, account, uploader, onError, stripMetadata = false)
 
     fun upload(
         alt: String?,

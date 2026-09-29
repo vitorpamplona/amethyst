@@ -1096,7 +1096,7 @@ private suspend fun sendAttachment(
             // same reason the voice path deletes its recording. Both calls no-op on the
             // user's own file.
             deleteTempFile(finalUri, uri)
-            deleteTempFile(compressed.uri, uri)
+            if (compressed.uri != finalUri) deleteTempFile(compressed.uri, uri)
         }
     } finally {
         // Always, not just on success: a failure leaves the dialog up to retry from,
@@ -1342,5 +1342,10 @@ private fun deleteTempFile(
 ) {
     if (tempUri == originalUri) return
     val path = tempUri.path ?: return
-    if (!File(path).delete()) Log.w("CordnGroupChat") { "Could not delete temp file $path" }
+    try {
+        val file = File(path)
+        if (file.exists() && !file.delete()) Log.w("CordnGroupChat") { "Could not delete temp file $path" }
+    } catch (e: Exception) {
+        Log.w("CordnGroupChat", "Failed to delete temp file $path", e)
+    }
 }

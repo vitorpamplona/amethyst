@@ -236,7 +236,6 @@ fun GroupDMScreenContent(
     nav: INav,
 ) {
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f)) {

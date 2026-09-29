@@ -29,12 +29,12 @@ class StringMediaUri(
     val value: String,
 ) : MediaUri() {
     override fun toString(): String = value
+
+    // Value equality, like android.net.Uri: the upload pipeline tells a temp file from the
+    // user's own by comparing addresses, and deletes the temp one.
+    override fun equals(other: Any?): Boolean = other is StringMediaUri && other.value == value
+
+    override fun hashCode(): Int = value.hashCode()
 }
 
-actual fun MediaUri.lastPathSegmentOrNull(): String? =
-    toString()
-        .substringBefore('?')
-        .substringBefore('#')
-        .trimEnd('/')
-        .substringAfterLast('/')
-        .ifBlank { null }
+actual fun MediaUri.lastPathSegmentOrNull(): String? = lastPathSegmentOf(toString())

@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.viewmodel.CreationExtras
 import kotlin.reflect.KClass
 
 /**
@@ -50,15 +49,4 @@ actual fun <VM : ViewModel> rememberViewModel(
     modelClass: KClass<VM>,
     key: String?,
     factory: () -> VM,
-): VM =
-    rememberViewModel(
-        modelClass,
-        key,
-        object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(
-                modelClass: KClass<T>,
-                extras: CreationExtras,
-            ): T = factory() as T
-        },
-    )
+): VM = rememberViewModel(modelClass, key, rememberLambdaFactory(factory))

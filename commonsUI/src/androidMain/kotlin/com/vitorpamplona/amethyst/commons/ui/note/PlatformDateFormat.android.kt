@@ -28,25 +28,35 @@ import androidx.compose.ui.platform.LocalContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
- * Per-thread cached [SimpleDateFormat] keyed off the current default [Locale].
+ * Per-thread cached [SimpleDateFormat] keyed off the current default [Locale] and time zone.
  *
  * `SimpleDateFormat` is mutable and not thread-safe, and these formatters are read from both
  * the UI thread (composition) and background coroutines. `ThreadLocal` gives each thread its
- * own instance: no locks, no allocation per call, and a lazy rebuild on locale change.
+ * own instance: no locks, and a lazy rebuild on a locale or time-zone change. A formatter fixes
+ * its zone when built, so without the zone in the key a trip across zones would keep printing
+ * dates in the old one.
  */
 actual class DateSkeletonFormatter actual constructor(
     private val skeleton: String,
 ) {
-    private val cache = ThreadLocal<Pair<Locale, SimpleDateFormat>>()
+    private class Cached(
+        val locale: Locale,
+        val zoneId: String,
+        val formatter: SimpleDateFormat,
+    )
+
+    private val cache = ThreadLocal<Cached>()
 
     private fun get(): SimpleDateFormat {
-        val current = Locale.getDefault()
+        val locale = Locale.getDefault()
+        val zoneId = TimeZone.getDefault().id
         val cached = cache.get()
-        if (cached != null && cached.first == current) return cached.second
-        val fresh = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, skeleton), current)
-        cache.set(current to fresh)
+        if (cached != null && cached.locale == locale && cached.zoneId == zoneId) return cached.formatter
+        val fresh = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+        cache.set(Cached(locale, zoneId, fresh))
         return fresh
     }
 

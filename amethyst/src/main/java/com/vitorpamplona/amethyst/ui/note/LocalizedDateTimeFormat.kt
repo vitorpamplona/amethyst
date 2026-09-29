@@ -22,40 +22,12 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.text.format.DateFormat
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
-/**
- * Date/time formatters that respect the user's Android system settings:
- *   - Date order (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd…) is derived from the
- *     active [Locale] via [DateFormat.getBestDateTimePattern].
- *   - 12-hour vs 24-hour clock follows the system setting via
- *     [DateFormat.is24HourFormat] (which is the user's manual override on
- *     top of the locale default).
- *
- * All formatters here use Unicode LDML skeletons. `j` and `jm` are intentionally
- * avoided — `j` only picks 12/24 hour from the *locale*, not the user override.
- * We pick the time skeleton explicitly based on [DateFormat.is24HourFormat].
- */
-
-private fun timeSkeleton(context: Context): String = if (DateFormat.is24HourFormat(context)) "Hm" else "hma"
-
-private fun bestPattern(
-    context: Context,
-    skeletonBase: String,
-    includeTime: Boolean,
-): SimpleDateFormat {
-    val locale = Locale.getDefault()
-    val skeleton = if (includeTime) skeletonBase + timeSkeleton(context) else skeletonBase
-    return SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
-}
-
-/** Locale-aware month + day + short time (e.g. "May 28, 14:32" / "28 May, 2:32 PM"). */
-fun formatMonthDayTime(
-    epochSeconds: Long,
-    context: Context,
-): String = bestPattern(context, "MMMd", includeTime = true).format(Date(epochSeconds * 1000L))
+// Date/time formatters that respect the user's Android system settings: the date order comes
+// from the active locale and the clock follows DateFormat.is24HourFormat (the user's manual
+// override on top of the locale default). The shared month/day/time formatter lives in
+// commonsUI (rememberMonthDayTimeFormatter).
 
 /** Locale-aware medium date (e.g. "May 28, 2026" / "28 May 2026" / "28.05.2026"). */
 fun formatMediumDate(

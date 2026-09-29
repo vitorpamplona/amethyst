@@ -486,6 +486,9 @@ class ChatNewMessageViewModel :
                     encryptedUploadErrorTitle = title
                     encryptedUploadErrorMessage = message
                     pendingRetryMode = RetryMode.HOLD
+                    pendingRetryOnError = onError
+                    pendingRetryUploader = uploader
+                    pendingRetryOnceUploaded = onceUploaded
                 },
                 uploader,
                 onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
@@ -556,7 +559,9 @@ class ChatNewMessageViewModel :
 
         dismissEncryptedUploadError()
 
-        if (room == null || uploadState == null || uploader == null) return
+        // HOLD only uploads; SEND also needs the room to send into.
+        if (uploadState == null || uploader == null) return
+        if (mode == RetryMode.SEND && room == null) return
 
         uploadState.encryptFiles = false
 
@@ -576,13 +581,14 @@ class ChatNewMessageViewModel :
                 }
 
                 RetryMode.SEND -> {
+                    val sendRoom = room ?: return@launchSigner
                     ChatFileUploader(account).justUploadNIP17Unencrypted(
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
                         uploader,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     ) {
-                        ChatFileSender(room, account).sendNIP17(it)
+                        ChatFileSender(sendRoom, account).sendNIP17(it)
                         draftTag.newVersion()
                         onceUploaded?.invoke()
                     }

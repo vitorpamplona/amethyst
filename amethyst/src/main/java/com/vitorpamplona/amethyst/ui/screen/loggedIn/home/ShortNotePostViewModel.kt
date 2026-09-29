@@ -1937,7 +1937,6 @@ open class ShortNotePostViewModel :
         val recording = voiceRecording ?: return
         val fileToUpload = activeFile ?: recording.file
         val waveform = activeWaveform ?: recording.amplitudes
-        val appContext = Amethyst.instance.appContext
         val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
         val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)

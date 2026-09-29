@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.subscriptions
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -35,8 +34,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -143,13 +140,15 @@ class ActiveSubscriptionsViewModel : ViewModel() {
     private val _state = MutableStateFlow(ActiveSubscriptionsState())
     val state: StateFlow<ActiveSubscriptionsState> = _state.asStateFlow()
 
-    /** Polls while the screen is on. [REFRESH_MS] is slow enough to be free, fast enough to feel live. */
-    fun startPolling(client: INostrClient) {
-        viewModelScope.launch(Dispatchers.Default) {
-            while (isActive) {
-                _state.value = snapshot(client)
-                delay(REFRESH_MS)
-            }
+    /**
+     * Polls until the caller's scope is cancelled. Run it from the screen's effect, so leaving the
+     * screen stops it; a loop in `viewModelScope` would outlive the screen, and each return to it
+     * would stack another. [REFRESH_MS] is slow enough to be free, fast enough to feel live.
+     */
+    suspend fun pollWhileShown(client: INostrClient) {
+        while (true) {
+            _state.value = snapshot(client)
+            delay(REFRESH_MS)
         }
     }
 

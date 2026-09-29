@@ -28,16 +28,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
-    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    // Saveable: a picker open across an activity recreation must not be launched a second time.
+    var hasLaunched by rememberSaveable { mutableStateOf(false) }
     val resolver = LocalContext.current.contentResolver
 
     val launcher =
@@ -50,14 +51,15 @@ actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
                             SelectedMedia(it, resolver.getType(it))
                         }.toImmutableList(),
                 )
-                hasLaunched.set(false)
+                hasLaunched = false
             },
         )
 
     @Composable
     fun LaunchFilePicker() {
         SideEffect {
-            if (!hasLaunched.getAndSet(true)) {
+            if (!hasLaunched) {
+                hasLaunched = true
                 launcher.launch(
                     arrayOf(
                         "audio/*",
@@ -76,11 +78,20 @@ actual fun DocumentSelectSingle(
     mimeTypes: List<String>,
     onPicked: (SelectedMedia?) -> Unit,
 ) {
+    var hasLaunched by rememberSaveable { mutableStateOf(false) }
     val resolver = LocalContext.current.contentResolver
     val launcher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
-            onResult = { uri: Uri? -> onPicked(uri?.let { SelectedMedia(it, resolver.getType(it)) }) },
+            onResult = { uri: Uri? ->
+                hasLaunched = false
+                onPicked(uri?.let { SelectedMedia(it, resolver.getType(it)) })
+            },
         )
-    LaunchedEffect(Unit) { launcher.launch(mimeTypes.toTypedArray()) }
+    LaunchedEffect(Unit) {
+        if (!hasLaunched) {
+            hasLaunched = true
+            launcher.launch(mimeTypes.toTypedArray())
+        }
+    }
 }

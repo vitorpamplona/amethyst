@@ -32,3 +32,47 @@ expect abstract class MediaUri {
 
 /** The last path segment of this address, if it has one (on Android, `Uri.lastPathSegment`). */
 expect fun MediaUri.lastPathSegmentOrNull(): String?
+
+/**
+ * The last path segment of a string address, percent-decoded, or null when it has no path
+ * (`content://host`, `https://host/`). Accepts backslash separators, so a Windows path works too. The
+ * string-backed platforms use it to match Android's `Uri.lastPathSegment`.
+ */
+internal fun lastPathSegmentOf(address: String): String? {
+    var path = address.substringBefore('#').substringBefore('?')
+    val schemeEnd = path.indexOf("://")
+    if (schemeEnd >= 0) {
+        val pathStart = path.indexOf('/', schemeEnd + 3)
+        if (pathStart < 0) return null
+        path = path.substring(pathStart)
+    }
+    val segment = path.replace('\\', '/').trimEnd('/').substringAfterLast('/')
+    return if (segment.isEmpty()) null else percentDecodeUtf8(segment)
+}
+
+/** Decodes `%XX` escapes as UTF-8 bytes; malformed escapes are kept as written. */
+private fun percentDecodeUtf8(input: String): String {
+    if ('%' !in input) return input
+    val out = StringBuilder(input.length)
+    val bytes = ArrayList<Byte>()
+    var i = 0
+    while (i < input.length) {
+        val c = input[i]
+        val hex = if (c == '%' && i + 2 < input.length && isHex(input[i + 1]) && isHex(input[i + 2])) input.substring(i + 1, i + 3).toInt(16) else null
+        if (hex != null) {
+            bytes.add(hex.toByte())
+            i += 3
+        } else {
+            if (bytes.isNotEmpty()) {
+                out.append(bytes.toByteArray().decodeToString())
+                bytes.clear()
+            }
+            out.append(c)
+            i++
+        }
+    }
+    if (bytes.isNotEmpty()) out.append(bytes.toByteArray().decodeToString())
+    return out.toString()
+}
+
+private fun isHex(c: Char) = c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'

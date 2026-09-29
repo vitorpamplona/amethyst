@@ -32,7 +32,7 @@ package com.vitorpamplona.amethyst.commons.ui.navigation
  * the group under whichever account happened to be current instead of switching first.
  *
  * Splitting on the first `?` gets the same answer for both shapes, and returns null for a
- * bare `nevent1…` with no query at all.
+ * bare `nevent1…` with no query at all. A `#fragment` is dropped; a value may itself contain `=`.
  *
  * `UriParser` reads an opaque query correctly too, and is the
  * right tool when a URI is already known to be well-formed. It is not this one: it builds a
@@ -41,7 +41,8 @@ package com.vitorpamplona.amethyst.commons.ui.navigation
  * deep-link path treats an unreadable uri as "no route" rather than as a crash.
  */
 fun String.findQueryParameterValue(parameterName: String): String? {
-    val query = substringAfter('?', "")
+    // A raw `#` starts the fragment, which is not part of the query (as `java.net.URI` read it).
+    val query = substringBefore('#').substringAfter('?', "")
     if (query.isEmpty()) return null
 
     return query

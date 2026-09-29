@@ -37,11 +37,10 @@ class HiddenAccountsFeedViewModel(
             modelClass: KClass<T>,
             extras: CreationExtras,
         ): T {
-            if (modelClass == HiddenAccountsFeedViewModel::class) {
-                @Suppress("UNCHECKED_CAST")
-                return HiddenAccountsFeedViewModel(account) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.simpleName}")
+            // Like the sibling feed factories: a caller may ask for a supertype
+            // (`UserFeedViewModel`), which a class-equality check would reject.
+            @Suppress("UNCHECKED_CAST")
+            return HiddenAccountsFeedViewModel(account) as T
         }
     }
 }

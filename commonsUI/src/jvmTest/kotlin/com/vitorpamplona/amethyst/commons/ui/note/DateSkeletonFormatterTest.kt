@@ -76,6 +76,17 @@ class DateSkeletonFormatterTest {
     }
 
     @Test
+    fun monthDayTimeSkeletonIsOnePattern() {
+        // rememberMonthDayTimeFormatter's JVM skeleton: `j` must be accepted, and the locale's
+        // own separator kept between the date and the time.
+        Locale.setDefault(Locale.US)
+        val us = DateSkeletonFormatter("MMMdjm").format(millis(2024, 5, 28, hour = 14))
+        assertTrue(us, us.startsWith("May 28,") && us.contains("2:00") && us.contains("PM"))
+        Locale.setDefault(Locale.UK)
+        assertTrue(DateSkeletonFormatter("MMMdjm").format(millis(2024, 5, 28, hour = 14)).contains("14:00"))
+    }
+
+    @Test
     fun calendarDayDistinguishesDaysAndYears() {
         assertEquals(calendarYearAndDay(millis(2024, 3, 1, hour = 1)), calendarYearAndDay(millis(2024, 3, 1, hour = 23)))
         assertTrue(calendarYearAndDay(millis(2024, 3, 1)) != calendarYearAndDay(millis(2024, 3, 2)))

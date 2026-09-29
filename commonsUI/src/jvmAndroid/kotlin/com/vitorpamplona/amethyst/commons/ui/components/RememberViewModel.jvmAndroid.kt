@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.reflect.KClass
 
@@ -39,16 +38,4 @@ actual fun <VM : ViewModel> rememberViewModel(
     modelClass: KClass<VM>,
     key: String?,
     factory: () -> VM,
-): VM =
-    viewModel(
-        modelClass = modelClass,
-        key = key,
-        factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(
-                    modelClass: KClass<T>,
-                    extras: CreationExtras,
-                ): T = factory() as T
-            },
-    )
+): VM = viewModel(modelClass = modelClass, key = key, factory = rememberLambdaFactory(factory))

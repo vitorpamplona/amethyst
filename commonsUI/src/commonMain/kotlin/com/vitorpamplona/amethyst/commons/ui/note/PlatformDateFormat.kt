@@ -25,8 +25,8 @@ import androidx.compose.runtime.Composable
 /**
  * Formats instants with a Unicode LDML date skeleton ("yMMMd", "MMMd", "yMMM"), letting the
  * platform pick the default locale's field order ("MMM d, y" in en-US, "d MMM y" in en-GB).
- * Safe to call from any thread. Rebuilds itself when the default locale changes (the JVM actual
- * also on a time-zone change; Android and iOS keep the zone they were built with).
+ * Safe to call from any thread. Rebuilds itself when the default locale or time zone changes (iOS
+ * keeps the zone it was built with).
  */
 expect class DateSkeletonFormatter(
     skeleton: String,

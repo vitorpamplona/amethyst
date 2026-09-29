@@ -267,10 +267,7 @@ fun ZapDonationButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val config =
-        ZapButtonConfig(
-            grayTint = grayTint,
-        )
+    val config = remember(grayTint) { ZapButtonConfig(grayTint = grayTint) }
 
     ReusableZapButton(
         baseNote = baseNote,

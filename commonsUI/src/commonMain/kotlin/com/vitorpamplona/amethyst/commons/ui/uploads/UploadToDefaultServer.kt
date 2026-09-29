@@ -24,10 +24,13 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_upload
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
+import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -35,9 +38,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.coroutines.CancellationException
 
 /**
- * Compresses, strips (when the account asks for it) and uploads one picked file to the account's
- * default media server, returning the hosted URL. Every failure, a metadata-stripping one
- * included, is reported through [onError] with a user-facing title and message, and yields null.
+ * Compresses, strips (when [stripMetadata] and the account ask for it) and uploads one picked file
+ * to the account's default media server, returning the hosted URL. Every failure, a
+ * metadata-stripping one included, is reported through [onError] with a user-facing title and
+ * message, and yields null.
  *
  * For single-image fields (avatars, banners, pack and cover images) that only need a URL back.
  */
@@ -47,6 +51,7 @@ suspend fun uploadToDefaultServer(
     uploader: MediaUploader,
     onError: (title: String, message: String) -> Unit,
     quality: CompressorQuality = CompressorQuality.MEDIUM,
+    stripMetadata: Boolean = true,
 ): String? {
     val state =
         try {
@@ -59,7 +64,7 @@ suspend fun uploadToDefaultServer(
                 server = account.settings.defaultFileServer,
                 account = account,
                 uploader = uploader,
-                stripMetadata = account.settings.stripLocationOnUpload,
+                stripMetadata = stripMetadata && account.settings.stripLocationOnUpload,
                 onStrippingFailed = { false },
             )
         } catch (_: SignerExceptions.ReadOnlyException) {
@@ -83,7 +88,16 @@ suspend fun uploadToDefaultServer(
         }
 
         is UploadingState.Error -> {
-            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(state.errorResource, *state.params))
+            when (state.error) {
+                // The only cancel on this path is a metadata strip that failed: say so, since the
+                // user turned stripping on and would otherwise not know why nothing uploaded.
+                UploadError.UPLOAD_CANCELLED ->
+                    onError(loadStringRes(Res.string.metadata_strip_failed_title), loadStringRes(Res.string.metadata_strip_failed_upload_cancelled))
+                UploadError.AVIF_METADATA_STRIP_FAILED ->
+                    onError(loadStringRes(Res.string.metadata_strip_failed_title), loadStringRes(state.errorResource, *state.params))
+                else ->
+                    onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(state.errorResource, *state.params))
+            }
             null
         }
     }

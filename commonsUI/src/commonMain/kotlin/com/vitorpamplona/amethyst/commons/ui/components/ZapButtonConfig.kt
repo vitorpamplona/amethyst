@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -28,8 +29,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 
 /**
- * Configuration for zap button behavior and appearance
+ * Configuration for zap button behavior and appearance. Never mutated after construction, so it
+ * is marked immutable for Compose (its `Modifier` and `List` fields would otherwise make it unstable).
  */
+@Immutable
 data class ZapButtonConfig(
     val grayTint: Color = Color.Gray,
     val iconSize: Dp = Size35dp,

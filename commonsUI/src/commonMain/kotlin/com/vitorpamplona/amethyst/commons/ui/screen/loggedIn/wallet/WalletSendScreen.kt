@@ -130,7 +130,7 @@ fun WalletSendScreen(
                         maxLines = 5,
                         trailingIcon = {
                             IconButton(onClick = {
-                                clipboardScope.launch { invoiceText = clipboard.getText() ?: "" }
+                                clipboardScope.launch { clipboard.getText()?.let { invoiceText = it } }
                             }) {
                                 Icon(
                                     symbol = MaterialSymbols.ContentPaste,

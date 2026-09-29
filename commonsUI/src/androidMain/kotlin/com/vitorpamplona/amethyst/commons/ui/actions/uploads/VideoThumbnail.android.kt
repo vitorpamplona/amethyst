@@ -25,6 +25,7 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -56,19 +57,26 @@ actual fun rememberVideoThumbnail(media: SelectedMedia): ImageBitmap? {
     return thumb
 }
 
+// A preview tile: a frame this size is plenty, where a full 4K frame would be ~33 MB.
+private const val THUMB_MAX_SIDE = 1024
+
 /**
- * Creates a bitmap thumbnail from video uri of the scheme type content://
+ * Creates a bitmap thumbnail, at most [THUMB_MAX_SIDE] on its longer side, from a video uri of the
+ * scheme type content://
  */
-fun createVideoThumb(
+@RequiresApi(Build.VERSION_CODES.O_MR1)
+private fun createVideoThumb(
     context: Context,
     uri: Uri,
 ): Bitmap? {
-    try {
-        val mediaMetadataRetriever = MediaMetadataRetriever()
-        mediaMetadataRetriever.setDataSource(context, uri)
-        return mediaMetadataRetriever.frameAtTime
+    val retriever = MediaMetadataRetriever()
+    return try {
+        retriever.setDataSource(context, uri)
+        retriever.getScaledFrameAtTime(-1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, THUMB_MAX_SIDE, THUMB_MAX_SIDE)
     } catch (ex: Exception) {
         Log.w("VideoThumbnail", "Couldn't create thumbnail, but the video can be uploaded", ex)
+        null
+    } finally {
+        retriever.release()
     }
-    return null
 }

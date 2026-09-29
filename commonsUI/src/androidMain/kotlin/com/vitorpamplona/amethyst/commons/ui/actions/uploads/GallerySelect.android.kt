@@ -28,16 +28,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {
-    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    // Saveable: a picker open across an activity recreation must not be launched a second time.
+    var hasLaunched by rememberSaveable { mutableStateOf(false) }
     val resolver = LocalContext.current.contentResolver
 
     val launcher =
@@ -50,14 +51,15 @@ actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {
                             SelectedMedia(it, resolver.getType(it))
                         }.toImmutableList(),
                 )
-                hasLaunched.set(false)
+                hasLaunched = false
             },
         )
 
     @Composable
     fun LaunchGallery() {
         SideEffect {
-            if (!hasLaunched.getAndSet(true)) {
+            if (!hasLaunched) {
+                hasLaunched = true
                 launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
         }
@@ -71,7 +73,8 @@ actual fun GallerySelectSingle(
     imagesOnly: Boolean,
     onImageUri: (SelectedMedia?) -> Unit,
 ) {
-    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    // Saveable: a picker open across an activity recreation must not be launched a second time.
+    var hasLaunched by rememberSaveable { mutableStateOf(false) }
     val resolver = LocalContext.current.contentResolver
 
     val launcher =
@@ -84,14 +87,15 @@ actual fun GallerySelectSingle(
                     onImageUri(null)
                 }
 
-                hasLaunched.set(false)
+                hasLaunched = false
             },
         )
 
     @Composable
     fun LaunchGallery() {
         SideEffect {
-            if (!hasLaunched.getAndSet(true)) {
+            if (!hasLaunched) {
+                hasLaunched = true
                 launcher.launch(PickVisualMediaRequest(if (imagesOnly) ActivityResultContracts.PickVisualMedia.ImageOnly else ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
         }
