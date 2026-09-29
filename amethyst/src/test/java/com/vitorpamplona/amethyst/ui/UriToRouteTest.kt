@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.fragmentHashtagOrNull
+import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

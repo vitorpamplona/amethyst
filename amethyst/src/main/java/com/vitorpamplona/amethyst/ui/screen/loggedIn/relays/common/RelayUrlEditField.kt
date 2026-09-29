@@ -52,6 +52,10 @@ import com.vitorpamplona.amethyst.commons.resources.add_a_relay
 import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.IRelaySuggestionState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelaySuggestionState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.ShowRelaySuggestionList
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding

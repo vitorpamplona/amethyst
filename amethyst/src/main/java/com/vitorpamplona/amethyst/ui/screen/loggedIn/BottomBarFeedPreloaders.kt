@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.datasource.Mu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.polls.datasource.PollsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilte
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 

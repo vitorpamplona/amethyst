@@ -48,7 +48,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.search.SearchState
 import com.vitorpamplona.amethyst.commons.search.wholeInputNip19
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.userUriPrefixes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

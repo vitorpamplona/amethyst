@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_navigate
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_system
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import org.jetbrains.compose.resources.StringResource
 
 /**

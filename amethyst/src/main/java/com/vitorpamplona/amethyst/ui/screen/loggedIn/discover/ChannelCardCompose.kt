@@ -33,12 +33,12 @@ import com.vitorpamplona.amethyst.commons.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip28Chats.RenderPublicChatChannelThumb
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip51FollowSets.RenderFollowSetThumb
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.RenderLongFormThumb
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderPublicChatChannelThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.RenderLiveActivityThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.RenderCommunitiesThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.RenderContentDVMThumb

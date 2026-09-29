@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowU
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.amethyst.commons.ui.search.GroupCandidate
 import com.vitorpamplona.amethyst.commons.ui.search.SEARCH_PICKER_LIMIT
 import com.vitorpamplona.amethyst.commons.ui.search.SearchFieldState
@@ -147,7 +148,6 @@ import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers

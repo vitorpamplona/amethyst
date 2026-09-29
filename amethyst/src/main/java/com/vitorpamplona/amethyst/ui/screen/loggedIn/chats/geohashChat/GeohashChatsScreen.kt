@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * The dedicated top-level list of the user's joined Bitchat-interoperable location channels — the
- * geohash-chat analogue of [com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScreen]
+ * geohash-chat analogue of [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.publicChats.PublicChatsScreen]
  * (NIP-28) and the Relay Groups / Concord home screens. Reached from the drawer's "Feeds" section and
  * pinnable as a bottom-bar tab. Each row opens the cell's chat; the "+" opens [NewGeohashChatScreen] to
  * join more (near me / manual / teleport).

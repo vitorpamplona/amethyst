@@ -35,10 +35,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRememberNappletIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel as AppRememberWebAppIconModel
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerContent as AppGeohashLocationPickerContent
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog as AppGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel as AppRememberConcordImageModel

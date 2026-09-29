@@ -56,11 +56,11 @@ import com.vitorpamplona.amethyst.commons.resources.scan_qr
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrImageImport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ZxingCppBarcodeDecoder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.copyToClipboard
-import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
