@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -346,7 +347,21 @@ class GiftWrapEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        val innerGift = event.unwrapOrNull(account.signer) ?: return
+        val innerGift =
+            try {
+                event.unwrapThrowing(account.signer)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A Direct Invite-tagged wrap (CORD-05 §6) that will never open is written off in the
+                // invite inbox too, so its sweep does not decrypt it again; a signer that merely
+                // could not answer now leaves it to be retried.
+                if (ConcordDirectInvite.isInviteTagged(event) && !ConcordDirectInvite.isTransientSignerFailure(e)) {
+                    account.concord.directInviteInbox.markNotInvite(event.id)
+                }
+                Log.d("GiftWrapEvent") { "Couldn't Decrypt the content " + event.toNostrUri() }
+                return
+            }
 
         eventNote.event = event.copyNoContent()
 
@@ -535,17 +550,32 @@ class SealEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        val innerRumor = event.unsealOrNull(account.signer) ?: return
+        // Decrypted once, kept as the seal carries it (claimed author intact) so a Direct Invite can be
+        // checked against NIP-59 anti-spoofing without a second decrypt.
+        val rumor =
+            try {
+                event.unsealRumorThrowing(account.signer)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
+                return
+            }
+        val innerRumor = event.unsealed(rumor)
 
         // A Concord Direct Invite (CORD-05 §6) is a standard NIP-59 giftwrap, so the DM inbox sees
         // it too — tagged `k=3313` or not. It is not a DM: its rumor carries a community's keys. Hand
-        // the seal to the Concord invite inbox, which re-opens it with the NIP-59 anti-spoofing check
-        // the generic unseal skips and parks it for the user, and keep the rumor out of the cache and
-        // every chat feed. Must run before the seal's content is stripped below.
+        // the seal and its rumor to the Concord invite inbox, which runs the NIP-59 anti-spoofing
+        // check the generic unseal skips and parks it for the user, and keep the rumor out of the
+        // cache and every chat feed.
         if (innerRumor.kind == ConcordDirectInvite.KIND) {
-            account.concord.directInviteInbox.offerSeal(publicNote.event ?: event, event)
+            account.concord.directInviteInbox.offerRumor(publicNote.event ?: event, event, rumor)
             eventNote.event = event.copyNoContent()
             return
+        }
+        // Tagged as an invite but carrying something else: never one, so the inbox sweep skips it.
+        (publicNote.event as? GiftWrapEvent)?.let { wrap ->
+            if (ConcordDirectInvite.isInviteTagged(wrap)) account.concord.directInviteInbox.markNotInvite(wrap.id)
         }
 
         eventNote.event = event.copyNoContent()

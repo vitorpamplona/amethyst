@@ -66,9 +66,18 @@ class SealEvent(
 
     override fun isContentEncoded() = true
 
-    suspend fun unsealThrowing(signer: NostrSigner): Event {
-        val rumor = Rumor.fromJson(plainContent(signer))
+    suspend fun unsealThrowing(signer: NostrSigner): Event = unsealed(unsealRumorThrowing(signer))
 
+    /**
+     * The rumor exactly as this seal carries it — its claimed `pubkey` NOT yet overwritten by the
+     * seal's — in one decrypt. For a caller that must run the NIP-59 anti-spoofing check itself
+     * (rumor author == seal author) and then still wants the merged event: pass the result to
+     * [unsealed] rather than decrypting again.
+     */
+    suspend fun unsealRumorThrowing(signer: NostrSigner): Rumor = Rumor.fromJson(plainContent(signer))
+
+    /** [rumor] (decrypted from this seal) merged into the inner event, recorded as [innerEventId]. */
+    fun unsealed(rumor: Rumor): Event {
         val event = rumor.mergeWith(this)
         innerEventId = event.id
 

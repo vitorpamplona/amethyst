@@ -794,15 +794,34 @@ class AccountConcordActions(
      * The Direct Invite inbox: wraps from the dedicated sweep ([refreshConcordDirectInvites]) and
      * from the NIP-17 giftwrap pipeline land here, parked until the user accepts or declines.
      */
-    val directInviteInbox = ConcordDirectInviteInbox(account.signer)
+    val directInviteInbox =
+        ConcordDirectInviteInbox(
+            account.signer,
+            // Muted/blocked senders never park; followed ones outrank strangers when the inbox is full.
+            isHidden = { account.isHidden(it) },
+            isFollowed = { it in account.followingKeySet() },
+        )
 
     /**
-     * The parked Direct Invites a UI should show, newest first: invites for communities we don't
-     * hold, plus catch-ups for ones we do ([ConcordDirectInviteInbox.visible]).
+     * The parked Direct Invites a UI should show, followed senders first, then newest: invites for
+     * communities we don't hold (nor left after they were sent), plus catch-ups for ones we do
+     * ([ConcordDirectInviteInbox.visible]).
      */
     val pendingConcordDirectInvites: StateFlow<List<ConcordDirectInviteView>> =
-        combine(directInviteInbox.pending, account.concordChannelList.liveCommunities) { pending, joined ->
-            ConcordDirectInviteInbox.visible(pending.values, joined)
+        combine(
+            directInviteInbox.pending,
+            account.concordChannelList.liveCommunities,
+            account.concordChannelList.removedAt,
+            account.hiddenUsers.flow,
+            account.kind3FollowList.flow,
+        ) { pending, joined, removedAt, _, follows ->
+            ConcordDirectInviteInbox.visible(
+                pending.values,
+                joined,
+                removedAt = removedAt,
+                isFollowed = { it in follows.authors },
+                isHidden = { account.isHidden(it) },
+            )
         }.stateIn(account.scope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**

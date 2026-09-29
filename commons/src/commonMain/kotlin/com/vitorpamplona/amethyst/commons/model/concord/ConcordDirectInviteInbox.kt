@@ -31,8 +31,11 @@ import com.vitorpamplona.quartz.concord.cord05Invites.OpenedDirectInvite
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +55,12 @@ class ConcordDirectInviteView(
     val opened: OpenedDirectInvite,
     val catchUp: Boolean,
     val expired: Boolean,
+    /** For a [catchUp]: the ids of the Private Channels it would newly add (not every key it carries). */
+    val newChannelIds: List<HexKey> = emptyList(),
+    /** The rumor's `sentAt` clamped to the time it was ranked, so a future date buys no rank. */
+    val clampedSentAt: Long = opened.sentAt,
+    /** True when this account follows the sender: ranked above strangers. */
+    val followedSender: Boolean = false,
 ) {
     val wrapId: HexKey get() = opened.wrapId
     val sender: HexKey get() = opened.sender
@@ -60,11 +69,17 @@ class ConcordDirectInviteView(
     val name: String get() = opened.invite.name
     val icon: ImagePointer? get() = opened.invite.icon
 
-    /** Names of the Private Channels the bundle carries (what a catch-up would add). */
-    val channelNames: List<String> get() =
-        opened.invite.channels
-            .filter { it.key.isNotBlank() }
-            .map { it.name }
+    /**
+     * Names of the Private Channels a catch-up would newly add — [newChannelIds] only, named by
+     * [foldedName] (the held community's folded channel name) when it knows the channel, else by the
+     * bundle's own label.
+     */
+    fun newChannelNames(foldedName: (HexKey) -> String? = { null }): List<String> {
+        val ids = newChannelIds.mapTo(HashSet()) { it.lowercase() }
+        return opened.invite.channels
+            .filter { it.id.lowercase() in ids }
+            .map { foldedName(it.id)?.takeIf { name -> name.isNotBlank() } ?: it.name }
+    }
 }
 
 /** What accepting a Direct Invite does; see [ConcordDirectInviteInbox.acceptPlan]. */
@@ -96,22 +111,36 @@ sealed interface DirectInviteAcceptPlan {
  * Wraps arrive from anywhere — a `{"kinds":[1059],"#p":[me],"#k":["3313"]}` sweep
  * ([com.vitorpamplona.amethyst.commons.actions.ConcordActions.directInvitesFilter]), or the general
  * NIP-17 giftwrap pipeline, which honours an untagged invite all the same — and are [offer]ed here.
- * The inbox opens each wrap once (two NIP-44 decrypts), dedupes by wrap id, drops a wrap whose NIP-40
- * `expiration` has passed, validates the bundle exactly like a fetched one, and parks it in
- * [pending]. **Nothing** else happens: no relay connection, no icon fetch, no Join, until the user
- * accepts (the caller's join path) or [decline]s.
+ * The inbox opens each wrap once (two NIP-44 decrypts; none more when the DM pipeline already
+ * unsealed it, [offerRumor]), dedupes by wrap id, drops a wrap whose NIP-40 `expiration` has passed,
+ * validates the bundle exactly like a fetched one, and parks it in [pending]. **Nothing** else
+ * happens: no relay connection, no icon fetch, no Join, until the user accepts (the caller's join
+ * path) or [decline]s.
  *
- * Declined wrap ids are remembered ([declined], restorable via [restoreDeclined]) so a re-delivered
- * wrap never resurfaces. [newestWrapCreatedAt] is the sweep cursor; query from [since], which
- * rewinds it by NIP-59's two-day backdate window.
+ * A wrap is written off ([seen]) only on a definitive outcome — opened, not an invite for us, or
+ * expired. A signer that could not answer (timed out, busy, not approved) leaves it to be retried by
+ * the next delivery or sweep.
+ *
+ * Bounded: at most [MAX_PENDING] invites are parked; past it the lowest-ranked one goes (a sender
+ * [isFollowed] outranks a stranger, then newer outranks older). Invites from senders [isHidden]
+ * (muted or blocked) are never parked.
+ *
+ * Declined wrap ids are remembered ([declined], restorable via [restoreDeclined], at most
+ * [DECLINED_CAP]) so a re-delivered wrap never resurfaces. [newestWrapCreatedAt] is the sweep cursor;
+ * query from [since], which rewinds it by NIP-59's two-day backdate window.
  */
 class ConcordDirectInviteInbox(
     private val signer: NostrSigner,
+    private val isHidden: (HexKey) -> Boolean = { false },
+    private val isFollowed: (HexKey) -> Boolean = { false },
 ) {
     private val mutex = Mutex()
 
-    /** Wrap ids already handled this session (opened, refused, or expired), oldest first. */
+    /** Wrap ids with a definitive outcome this session (opened, refused, or expired), oldest first. */
     private val seen = LinkedHashSet<HexKey>()
+
+    /** Wrap ids being opened right now, so a concurrent delivery of the same wrap is not decrypted twice. */
+    private val inFlight = HashSet<HexKey>()
 
     private val _pending = MutableStateFlow<Map<HexKey, OpenedDirectInvite>>(emptyMap())
 
@@ -120,7 +149,7 @@ class ConcordDirectInviteInbox(
 
     private val _declined = MutableStateFlow<Set<HexKey>>(emptySet())
 
-    /** Wrap ids the user declined; persisted by the front end so they stay declined across restarts. */
+    /** Wrap ids the user declined, oldest first; persisted by the front end so they stay declined across restarts. */
     val declined: StateFlow<Set<HexKey>> = _declined.asStateFlow()
 
     /** The newest wrap `created_at` offered so far (the sweep cursor), or null on a cold inbox. */
@@ -131,21 +160,27 @@ class ConcordDirectInviteInbox(
     /** The `since` for the next sweep: the cursor rewound by the backdate window (null = everything). */
     fun since(): Long? = ConcordDirectInvite.inboxSince(newestWrapCreatedAt)
 
-    /** Replaces the declined set — used to restore it from disk at startup. Drops any pending one. */
-    fun restoreDeclined(wrapIds: Set<HexKey>) {
-        _declined.value = wrapIds
-        _pending.update { current -> current.filterKeys { it !in wrapIds } }
+    /**
+     * Replaces the declined set — used to restore it from disk at startup — keeping the newest
+     * [DECLINED_CAP]. Drops any pending one. Serialized with [offer] so a restore can't race a park.
+     */
+    suspend fun restoreDeclined(wrapIds: Set<HexKey>) {
+        mutex.withLock {
+            _declined.value = bounded(wrapIds)
+            _pending.update { current -> current.filterKeys { it !in wrapIds } }
+        }
     }
 
     /**
      * Considers one kind-1059 [wrap] addressed to us. Returns the parked invite (new or already
      * pending), or null when it isn't one: not a direct invite for us, a forgery, an invalid
-     * bundle, an expired handoff, or a wrap the user already declined. Never throws.
+     * bundle, an expired handoff, a hidden sender, a wrap the user already declined — or a signer
+     * that could not answer now (retried on the next offer). Never throws but for cancellation.
      */
     suspend fun offer(
         wrap: Event,
         nowSecs: Long = TimeUtils.now(),
-    ): OpenedDirectInvite? = admit(wrap, nowSecs) { ConcordDirectInvite.open(wrap, signer) }
+    ): OpenedDirectInvite? = admit(wrap, nowSecs) { ConcordDirectInvite.openOrRetry(wrap, signer) }
 
     /**
      * [offer] for a pipeline that already peeled [wrap] down to its kind-13 [seal] (the NIP-17
@@ -156,7 +191,27 @@ class ConcordDirectInviteInbox(
         wrap: Event,
         seal: Event,
         nowSecs: Long = TimeUtils.now(),
-    ): OpenedDirectInvite? = admit(wrap, nowSecs) { ConcordDirectInvite.openSeal(wrap.id, seal, signer) }
+    ): OpenedDirectInvite? = admit(wrap, nowSecs) { ConcordDirectInvite.openSealOrRetry(wrap.id, seal, signer) }
+
+    /**
+     * [offerSeal] for a pipeline that already decrypted [seal] into [rumor] (the rumor as the seal
+     * carries it, its claimed author intact — [SealEvent.unsealRumorThrowing]): validated without
+     * any further decrypt.
+     */
+    suspend fun offerRumor(
+        wrap: Event,
+        seal: Event,
+        rumor: Rumor,
+        nowSecs: Long = TimeUtils.now(),
+    ): OpenedDirectInvite? = admit(wrap, nowSecs) { ConcordDirectInvite.openRumor(wrap.id, seal, rumor) }
+
+    /**
+     * Records [wrapId] as definitively not an invite for us (it failed to open for a reason no retry
+     * changes, or opened to something else), so a sweep that fetches it again skips the decrypt.
+     */
+    suspend fun markNotInvite(wrapId: HexKey) {
+        mutex.withLock { if (wrapId !in _pending.value) remember(wrapId) }
+    }
 
     private suspend fun admit(
         wrap: Event,
@@ -165,20 +220,54 @@ class ConcordDirectInviteInbox(
     ): OpenedDirectInvite? {
         if (wrap.kind != GiftWrapEvent.KIND) return null
         mutex.withLock {
+            // The cursor only advances to a time that has happened (plus the skew allowance): a
+            // future-dated wrap would otherwise push `since` past every invite sent until then.
+            val stamp = minOf(wrap.createdAt, nowSecs + FUTURE_SKEW_SECS)
             val newest = newestWrapCreatedAt
-            if (newest == null || wrap.createdAt > newest) newestWrapCreatedAt = wrap.createdAt
+            if (newest == null || stamp > newest) newestWrapCreatedAt = stamp
             _pending.value[wrap.id]?.let { return it }
-            if (wrap.id in _declined.value || wrap.id in seen) return null
-            remember(wrap.id)
+            if (wrap.id in _declined.value || wrap.id in seen || wrap.id in inFlight) return null
+            inFlight.add(wrap.id)
         }
-        // An expired handoff is never decrypted or surfaced (NIP-40 on the wrap mirrors expires_at).
-        if (ConcordDirectInvite.isWrapExpired(wrap, nowSecs)) return null
-        val opened = open() ?: return null
-        mutex.withLock {
-            if (wrap.id in _declined.value) return null
-            _pending.update { it + (wrap.id to opened) }
+        try {
+            // An expired handoff is never decrypted or surfaced (NIP-40 on the wrap mirrors expires_at).
+            if (ConcordDirectInvite.isWrapExpired(wrap, nowSecs)) {
+                mutex.withLock { remember(wrap.id) }
+                return null
+            }
+            val opened =
+                try {
+                    open()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // The signer could not answer now: not written off, so the next offer retries it.
+                    return null
+                }
+            mutex.withLock {
+                remember(wrap.id)
+                if (opened == null || wrap.id in _declined.value) return null
+                // Muted or blocked senders never reach the inbox.
+                if (isHidden(opened.sender)) return null
+                _pending.update { park(it, opened, nowSecs) }
+            }
+            return _pending.value[wrap.id]
+        } finally {
+            mutex.withLock { inFlight.remove(wrap.id) }
         }
-        return opened
+    }
+
+    /** [current] plus [opened], shedding the lowest-ranked invite past [MAX_PENDING]. */
+    private fun park(
+        current: Map<HexKey, OpenedDirectInvite>,
+        opened: OpenedDirectInvite,
+        nowSecs: Long,
+    ): Map<HexKey, OpenedDirectInvite> {
+        val next = current + (opened.wrapId to opened)
+        if (next.size <= MAX_PENDING) return next
+        val rank = compareBy<OpenedDirectInvite>({ isFollowed(it.sender) }, { clampedSentAt(it, nowSecs) }, { it.wrapId })
+        val drop = next.values.minWithOrNull(rank) ?: return next
+        return next - drop.wrapId
     }
 
     /** The parked invite behind [wrapId], if any. */
@@ -188,7 +277,7 @@ class ConcordDirectInviteInbox(
     fun decline(wrapId: HexKey): Boolean {
         val id = get(wrapId)?.wrapId ?: return false
         _pending.update { it - id }
-        _declined.update { it + id }
+        _declined.update { bounded(it + id) }
         return true
     }
 
@@ -208,6 +297,23 @@ class ConcordDirectInviteInbox(
     companion object {
         /** Cap on remembered wrap ids; the oldest half is shed past it (a sweep re-dedupes deeper). */
         const val SEEN_CAP = 4096
+
+        /** Cap on parked invites (the reference client's bound): a flood can't grow the inbox without end. */
+        const val MAX_PENDING = 256
+
+        /** Cap on remembered declines, newest kept: a declined wrap older than that has long expired or been buried. */
+        const val DECLINED_CAP = 4096
+
+        /** Clock skew tolerated on a wrap's `created_at` before it stops moving the sweep cursor. */
+        const val FUTURE_SKEW_SECS = 15 * 60L
+
+        private fun bounded(ids: Set<HexKey>): Set<HexKey> = if (ids.size <= DECLINED_CAP) ids else ids.toList().takeLast(DECLINED_CAP).toCollection(LinkedHashSet())
+
+        /** [opened]'s `sentAt` (the sender's word) clamped to [nowSecs]: a future date buys no rank. */
+        fun clampedSentAt(
+            opened: OpenedDirectInvite,
+            nowSecs: Long,
+        ): Long = minOf(opened.sentAt, nowSecs)
 
         /**
          * What accepting [opened] should do (CORD-05 §6), given the community entry this account
@@ -240,39 +346,59 @@ class ConcordDirectInviteInbox(
 
         /**
          * What a UI shows out of [pending], given the communities this account already holds
-         * ([joined]): newest first, with
+         * ([joined]) and the ones it left ([removedAt], community id → the Community List
+         * tombstone's `removed_at` in unix ms): followed senders first, then newest first, with
          *  - an invite for a community already held on the SAME base that carries a Private Channel
          *    key it lacks kept as a [ConcordDirectInviteView.catchUp];
          *  - any other invite for a held community (nothing new, or a different base — which may
          *    never move the held one) hidden;
-         *  - one invite per community (newest `sentAt`, ties by wrap id), catch-ups keyed by their
+         *  - an invite sent at or before the user left that community hidden (it would otherwise
+         *    resurface right after leaving; a fresh re-invite still shows — Armada `tombstonedAt`);
+         *  - invites from [isHidden] (muted/blocked) senders hidden;
+         *  - one invite per community and sender (newest clamped `sentAt`, ties by wrap id), so a
+         *    future-dated invite can only ever shadow its own sender's; catch-ups keyed by their
          *    channel set too since each may vend a key no other wrap carries (Armada
-         *    `dedupeParkedInvites`).
+         *    `dedupeParkedInvites`). `sentAt` is the sender's word, so it is clamped to now for both
+         *    ordering and the tombstone check.
          */
         fun visible(
             pending: Collection<OpenedDirectInvite>,
             joined: List<ConcordCommunityListEntry>,
             nowMs: Long = TimeUtils.nowMillis(),
+            removedAt: Map<String, Long> = emptyMap(),
+            isFollowed: (HexKey) -> Boolean = { false },
+            isHidden: (HexKey) -> Boolean = { false },
         ): List<ConcordDirectInviteView> {
+            val nowSecs = nowMs / 1000
             val heldById = joined.associateBy { it.id.lowercase() }
+            val removedById = removedAt.mapKeys { it.key.lowercase() }
             val byKey = LinkedHashMap<String, ConcordDirectInviteView>()
             for (opened in pending) {
+                if (isHidden(opened.sender)) continue
                 val communityId = opened.invite.communityId.lowercase()
+                val sentAt = clampedSentAt(opened, nowSecs)
+                val buriedAt = removedById[communityId]
+                if (buriedAt != null && sentAt * 1000 <= buriedAt) continue
                 val held = heldById[communityId]
                 val newChannels = ConcordInviteVend.catchUpChannelIds(held, opened.invite)
                 if (held != null && newChannels.isEmpty()) continue
                 val catchUp = held != null
-                val key = if (catchUp) communityId + "|" + newChannels.sorted().joinToString(",") else communityId
-                val view = ConcordDirectInviteView(opened, catchUp, opened.isExpired(nowMs))
+                val base = communityId + "|" + opened.sender.lowercase()
+                val key = if (catchUp) base + "|" + newChannels.sorted().joinToString(",") else base
+                val view = ConcordDirectInviteView(opened, catchUp, opened.isExpired(nowMs), newChannels.toList(), sentAt, isFollowed(opened.sender))
                 val existing = byKey[key]
                 if (existing == null ||
-                    opened.sentAt > existing.opened.sentAt ||
-                    (opened.sentAt == existing.opened.sentAt && opened.wrapId < existing.opened.wrapId)
+                    sentAt > existing.clampedSentAt ||
+                    (sentAt == existing.clampedSentAt && opened.wrapId < existing.opened.wrapId)
                 ) {
                     byKey[key] = view
                 }
             }
-            return byKey.values.sortedWith(compareByDescending<ConcordDirectInviteView> { it.opened.sentAt }.thenBy { it.wrapId })
+            return byKey.values.sortedWith(
+                compareByDescending<ConcordDirectInviteView> { it.followedSender }
+                    .thenByDescending { it.clampedSentAt }
+                    .thenBy { it.wrapId },
+            )
         }
     }
 }

@@ -196,6 +196,19 @@ class ConcordChannelListState(
                 emptyList(),
             )
 
+    /**
+     * When this account left each community it no longer holds (community id → the List
+     * tombstone's `removed_at`, unix ms, CORD-02 §8). A Direct Invite sent at or before that moment
+     * stays buried instead of resurfacing right after the leave.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val removedAt: StateFlow<Map<String, Long>> =
+        listChanges
+            .transformLatest { emit(document().residue.removals()) }
+            .onStart { emit(document().residue.removals()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     /** The distinct community ids across the joined list — the "servers" rail. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveServers: StateFlow<Set<String>> =
