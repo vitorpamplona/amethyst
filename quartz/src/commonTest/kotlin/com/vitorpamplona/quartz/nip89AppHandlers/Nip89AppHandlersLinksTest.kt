@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip89AppHandlers
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.allLinks
-import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
-import com.vitorpamplona.quartz.nip01Core.links.props.ReleaseProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.allLinks
+import com.vitorpamplona.quartz.graph.props.PlatformProps
+import com.vitorpamplona.quartz.graph.props.ReleaseProps
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlin.test.Test

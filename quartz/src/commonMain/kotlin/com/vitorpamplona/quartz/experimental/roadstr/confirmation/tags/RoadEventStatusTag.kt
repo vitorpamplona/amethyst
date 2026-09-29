@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags
 
+import com.vitorpamplona.quartz.graph.props.StatusProps
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
 import com.vitorpamplona.quartz.utils.ensure
 
 /** Confirmation status carried in the `status` tag of a Roadstr confirmation (kind 1316). */

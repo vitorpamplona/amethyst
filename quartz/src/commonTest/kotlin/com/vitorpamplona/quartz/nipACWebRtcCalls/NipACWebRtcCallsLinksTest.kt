@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nipACWebRtcCalls
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent

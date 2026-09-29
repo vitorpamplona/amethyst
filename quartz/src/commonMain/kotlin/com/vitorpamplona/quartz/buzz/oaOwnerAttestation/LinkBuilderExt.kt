@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.buzz.oaOwnerAttestation
 
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.tags.AuthTag
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Relation
 
 /**
  * The owner a NIP-OA `auth` tag names, linked only when the attestation verifies for

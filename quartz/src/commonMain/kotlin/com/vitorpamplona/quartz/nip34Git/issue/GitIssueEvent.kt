@@ -21,6 +21,12 @@
 package com.vitorpamplona.quartz.nip34Git.issue
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkProvider
+import com.vitorpamplona.quartz.graph.contentMentions
+import com.vitorpamplona.quartz.graph.hashtags
+import com.vitorpamplona.quartz.graph.links
+import com.vitorpamplona.quartz.graph.quotes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -30,12 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
-import com.vitorpamplona.quartz.nip01Core.links.contentMentions
-import com.vitorpamplona.quartz.nip01Core.links.hashtags
-import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags

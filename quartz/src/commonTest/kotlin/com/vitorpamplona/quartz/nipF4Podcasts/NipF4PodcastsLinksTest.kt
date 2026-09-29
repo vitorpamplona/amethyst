@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nipF4Podcasts
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.RoleProps
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent

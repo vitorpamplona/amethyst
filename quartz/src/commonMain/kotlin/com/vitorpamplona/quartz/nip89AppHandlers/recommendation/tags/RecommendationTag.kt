@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.nip89AppHandlers.recommendation.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.props.PlatformProps
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
-import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag

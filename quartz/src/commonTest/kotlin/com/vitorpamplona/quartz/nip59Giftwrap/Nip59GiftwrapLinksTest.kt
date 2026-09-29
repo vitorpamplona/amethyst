@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip59Giftwrap
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlin.test.Test

@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.nipB7Blossom
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.LinkFree
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64

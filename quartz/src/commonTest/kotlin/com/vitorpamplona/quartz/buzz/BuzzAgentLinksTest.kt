@@ -51,12 +51,12 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepFailedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepStartedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.AuditProps
-import com.vitorpamplona.quartz.nip01Core.links.props.FrameProps
-import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.AuditProps
+import com.vitorpamplona.quartz.graph.props.FrameProps
+import com.vitorpamplona.quartz.graph.props.StatusProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

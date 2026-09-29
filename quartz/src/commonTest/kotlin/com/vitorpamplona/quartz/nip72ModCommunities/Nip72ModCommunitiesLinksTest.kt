@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip72ModCommunities
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
-import com.vitorpamplona.quartz.nip01Core.links.props.WotProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.RoleProps
+import com.vitorpamplona.quartz.graph.props.WotProps
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent

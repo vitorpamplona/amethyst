@@ -22,14 +22,14 @@ package com.vitorpamplona.quartz.buzz.relayAdmin
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.relayAdmin.tags.RoleTag
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkProvider
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.links
+import com.vitorpamplona.quartz.graph.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils

@@ -24,10 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.nns.tags.IPv4Tag
 import com.vitorpamplona.quartz.experimental.nns.tags.IPv6Tag
 import com.vitorpamplona.quartz.experimental.nns.tags.VersionTag
+import com.vitorpamplona.quartz.graph.LinkFree
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 

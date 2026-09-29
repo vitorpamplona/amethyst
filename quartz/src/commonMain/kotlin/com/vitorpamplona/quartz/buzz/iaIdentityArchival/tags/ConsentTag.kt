@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags
 
+import com.vitorpamplona.quartz.graph.props.ActorProps
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip01Core.links.props.ActorProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.ensure

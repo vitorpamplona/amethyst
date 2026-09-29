@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.oaOwnerAttestation
 
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.tags.AuthTag
+import com.vitorpamplona.quartz.graph.props.OwnerProps
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -28,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
-import com.vitorpamplona.quartz.nip01Core.links.props.OwnerProps
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 

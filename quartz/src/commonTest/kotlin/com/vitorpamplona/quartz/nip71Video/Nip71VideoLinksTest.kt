@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip71Video
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.CreditProps
-import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.CreditProps
+import com.vitorpamplona.quartz.graph.props.ParticipantProps
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import kotlin.test.Test

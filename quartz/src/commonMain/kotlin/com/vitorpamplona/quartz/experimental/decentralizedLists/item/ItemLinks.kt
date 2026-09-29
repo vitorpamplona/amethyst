@@ -22,11 +22,11 @@ package com.vitorpamplona.quartz.experimental.decentralizedLists.item
 
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
+import com.vitorpamplona.quartz.graph.props.ItemProps
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.each
-import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag

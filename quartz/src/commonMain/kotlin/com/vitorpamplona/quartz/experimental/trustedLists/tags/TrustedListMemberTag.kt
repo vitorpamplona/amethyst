@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.tags
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
+import com.vitorpamplona.quartz.graph.props.MemberProps
 
 /**
  * Kind-agnostic view of a Trusted List member.

@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip15Marketplace
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.AuctionProps
-import com.vitorpamplona.quartz.nip01Core.links.props.BidProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.AuctionProps
+import com.vitorpamplona.quartz.graph.props.BidProps
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent

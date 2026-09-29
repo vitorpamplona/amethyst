@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.concord.cord03Channels
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.LinkFree
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 
 /**
  * A Concord **timer notice** (CORD-08 §4, `kind:1740`): the inline "Alice set disappearing messages

@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.graph.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.utils.ensure
 
 /**

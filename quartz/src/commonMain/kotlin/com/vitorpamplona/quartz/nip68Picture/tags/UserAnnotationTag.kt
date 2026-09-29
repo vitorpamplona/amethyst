@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip68Picture.tags
 
+import com.vitorpamplona.quartz.graph.props.PositionProps
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.links.props.PositionProps
 
 class UserAnnotationTag(
     val pubkey: HexKey,

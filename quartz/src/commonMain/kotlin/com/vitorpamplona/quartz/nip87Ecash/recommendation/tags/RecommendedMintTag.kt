@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip87Ecash.recommendation.tags
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
+import com.vitorpamplona.quartz.graph.props.PlatformProps
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent

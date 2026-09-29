@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip85TrustedAssertions
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.ServiceProps
-import com.vitorpamplona.quartz.nip01Core.links.props.SubjectProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.ServiceProps
+import com.vitorpamplona.quartz.graph.props.SubjectProps
 import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent

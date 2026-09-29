@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.nip84Highlights.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag

@@ -45,12 +45,12 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.CollaborationProps
-import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
-import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.CollaborationProps
+import com.vitorpamplona.quartz.graph.props.ParticipantProps
+import com.vitorpamplona.quartz.graph.props.StatusProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent

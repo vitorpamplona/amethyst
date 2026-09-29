@@ -1,6 +1,6 @@
 # A link vocabulary: what each kind's references MEAN
 
-Status: **implemented** in `nip01Core/links/` (2026-09-29): the model below, `Relation` (every
+Status: **implemented** in the `graph` package (2026-09-29): the model below, `Relation` (every
 constant), `LinkBuilder`, `Event.allLinks()`, and `links()` on every `EventFactory` class, held by
 `LinkCoverageTest`. Decided in review: links
 always start at an event (no user-to-user shortcuts); the author of acted-on content gets its OWN
@@ -60,7 +60,7 @@ fun Event.allLinks(): List<Link<*>>   // AUTHOR, ADDRESS, the every-kind tags, t
 ```
 
 **Props are typed.** Each relation declares the one props class its links carry
-(`nip01Core/links/props/`: `ReportProps`, `ZapProps`, `MemberProps`, `SubjectProps` with every
+(`graph/props/`: `ReportProps`, `ZapProps`, `MemberProps`, `SubjectProps` with every
 NIP-85 metric, …), so the builder rejects a mismatched pairing at compile time and a consumer
 reads a relation's schema from its declaration. The props classes hold plain values only, so the
 core depends on no NIP. A single role and a list of roles are one `roles: List<String>`.
@@ -277,10 +277,15 @@ Decided:
 
 Open:
 
-1. **Decided: where it lives.** `nip01Core/links/` (the interface, the value classes, the
-   relation constants, the builder) plus one `links()` per class, beside its tags.
-   `Event.allLinks()` adds the every-kind tags (`client`, `zap`, emoji sets). The hint providers
-   could later be derived from `links()`, which carry the same ids plus their meaning.
+1. **Decided: where it lives.** A top-level `com.vitorpamplona.quartz.graph` package (the
+   interface, the value classes, the relation constants and their props, the builder), plus one
+   `links()` per class, beside its tags. It is not NIP-01: the vocabulary spans every NIP and no NIP
+   defines it, so it sits beside `utils` and the protocol families rather than inside a NIP.
+   `Event.allLinks()` adds the every-kind tags (`client`, `zap`, emoji sets). Known wrinkle: the
+   package imports a few NIP Tag classes back (NIP-18 quotes, NIP-19 mentions, the NIP-30/57/89
+   every-kind tags) while every NIP imports it; moving those helpers next to their tags would
+   break the cycle. The hint providers could later be derived from `links()`, which carry the same
+   ids plus their meaning.
 2. **Vocabulary stability.** Adding a relation or classifying a kind is additive. Renaming or
    re-splitting one breaks graph queries, so this review is the cheap moment.
 
@@ -406,7 +411,7 @@ implementing (each is detailed in its appendix row):
 
 1. **Done.** This review: the vocabulary, the model, the open questions, the per-class
    [appendix](2026-09-29-graph-link-vocabulary-appendix.md).
-2. **Done.** Quartz: `nip01Core/links/`, the every-kind tags (`Event.allLinks()`), the coverage
+2. **Done.** Quartz: the `graph` package, the every-kind tags (`Event.allLinks()`), the coverage
    test, and `links()` on every class, each class that links with a golden test beside its
    package (`<Package>LinksTest`). The Quartz bugs above landed first (#4267).
 3. neo4j-eventstore: derive from `links()`, schema 2.0, rewrite `docs/schema.md` and the reference

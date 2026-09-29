@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip51Lists
 
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.LinkProps
+import com.vitorpamplona.quartz.graph.props.MuteProps
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
-import com.vitorpamplona.quartz.nip01Core.links.props.MuteProps
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent

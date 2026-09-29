@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip56Reports.tags
 
-import com.vitorpamplona.quartz.nip01Core.links.props.ReportProps
+import com.vitorpamplona.quartz.graph.props.ReportProps
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 interface BaseReportTag {

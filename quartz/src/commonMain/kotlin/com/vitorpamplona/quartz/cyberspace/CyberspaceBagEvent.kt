@@ -21,12 +21,12 @@
 package com.vitorpamplona.quartz.cyberspace
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.LinkFree
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
-import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.serialization.json.JsonArray
 import kotlin.io.encoding.Base64

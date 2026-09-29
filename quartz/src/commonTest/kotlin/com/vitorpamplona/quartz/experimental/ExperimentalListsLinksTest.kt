@@ -36,12 +36,12 @@ import com.vitorpamplona.quartz.experimental.trustedLists.addressables.Addressab
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.ItemProps
-import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
-import com.vitorpamplona.quartz.nip01Core.links.props.OrderProps
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.ItemProps
+import com.vitorpamplona.quartz.graph.props.MemberProps
+import com.vitorpamplona.quartz.graph.props.OrderProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

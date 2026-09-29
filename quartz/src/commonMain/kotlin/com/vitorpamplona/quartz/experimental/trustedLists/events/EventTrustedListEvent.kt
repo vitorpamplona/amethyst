@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.experimental.trustedLists.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.tags.EventMemberTag
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -30,9 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag

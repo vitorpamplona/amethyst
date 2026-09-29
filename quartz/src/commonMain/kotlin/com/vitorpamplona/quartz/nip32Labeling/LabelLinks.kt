@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip32Labeling
 
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelNamespaceTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
 

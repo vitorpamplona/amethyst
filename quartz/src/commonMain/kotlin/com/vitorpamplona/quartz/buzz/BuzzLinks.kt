@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.buzz
 
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.each
+import com.vitorpamplona.quartz.graph.props.NoProps
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.each
-import com.vitorpamplona.quartz.nip01Core.links.props.NoProps
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 
 /**

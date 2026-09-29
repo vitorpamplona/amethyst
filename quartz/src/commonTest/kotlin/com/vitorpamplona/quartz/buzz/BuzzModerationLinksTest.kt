@@ -33,16 +33,16 @@ import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminChangeRoleEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.props.ActorProps
+import com.vitorpamplona.quartz.graph.props.ModerationProps
+import com.vitorpamplona.quartz.graph.props.OwnerProps
+import com.vitorpamplona.quartz.graph.props.ResolutionProps
+import com.vitorpamplona.quartz.graph.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.props.ActorProps
-import com.vitorpamplona.quartz.nip01Core.links.props.ModerationProps
-import com.vitorpamplona.quartz.nip01Core.links.props.OwnerProps
-import com.vitorpamplona.quartz.nip01Core.links.props.ResolutionProps
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

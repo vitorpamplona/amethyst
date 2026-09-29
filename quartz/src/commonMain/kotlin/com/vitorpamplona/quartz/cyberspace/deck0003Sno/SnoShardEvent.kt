@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.cyberspace.deck0003Sno
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
 import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
+import com.vitorpamplona.quartz.graph.LinkFree
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 
 /**
  * DECK-0003 §3.2 — an object hidden at a place: a `kind 3330` bag item, whose

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.buzz.threading
 
+import com.vitorpamplona.quartz.graph.LinkBuilder
+import com.vitorpamplona.quartz.graph.Relation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 
 /**

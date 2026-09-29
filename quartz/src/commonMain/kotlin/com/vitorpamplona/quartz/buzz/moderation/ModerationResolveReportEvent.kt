@@ -25,14 +25,14 @@ import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.ActionTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.ReportTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.StatusTag
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkProvider
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.links
+import com.vitorpamplona.quartz.graph.props.ResolutionProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.props.ResolutionProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 

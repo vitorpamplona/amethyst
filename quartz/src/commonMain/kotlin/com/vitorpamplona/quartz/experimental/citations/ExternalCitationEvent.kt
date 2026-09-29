@@ -22,13 +22,13 @@ package com.vitorpamplona.quartz.experimental.citations
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.citations.tags.CitationTags
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.Relation
+import com.vitorpamplona.quartz.graph.links
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag

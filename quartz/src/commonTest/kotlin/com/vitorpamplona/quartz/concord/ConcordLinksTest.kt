@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.concord
 
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
-import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
-import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.graph.Link
+import com.vitorpamplona.quartz.graph.LinkTarget
+import com.vitorpamplona.quartz.graph.Relation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

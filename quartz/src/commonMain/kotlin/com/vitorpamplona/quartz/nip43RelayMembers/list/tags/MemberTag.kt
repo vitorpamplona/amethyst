@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.nip43RelayMembers.list.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.graph.props.MemberProps
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 import com.vitorpamplona.quartz.utils.ensure
 
 /**

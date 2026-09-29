@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip85TrustedAssertions.tags
 
+import com.vitorpamplona.quartz.graph.props.SubjectProps
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
-import com.vitorpamplona.quartz.nip01Core.links.props.SubjectProps
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 
 /**
