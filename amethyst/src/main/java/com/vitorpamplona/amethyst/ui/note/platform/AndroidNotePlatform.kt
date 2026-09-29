@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRende
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent as AppRenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame as AppRenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent as AppRenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent as AppRenderGitPatchEvent
@@ -432,6 +433,17 @@ object AndroidNotePlatform : NotePlatform {
         canPreview = canPreview,
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+
+    @Composable
+    override fun RenderCalendarRSVPEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = AppRenderCalendarRSVPEvent(
+        note = baseNote,
         accountViewModel = accountViewModel,
         nav = nav,
     )

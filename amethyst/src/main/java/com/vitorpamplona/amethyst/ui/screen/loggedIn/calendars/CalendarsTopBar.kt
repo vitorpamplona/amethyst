@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,17 +85,12 @@ fun CalendarsTopBar(
             )
         }
 
-        Row(
+        CalendarsViewModeTabs(
+            current = viewMode,
+            onChange = onViewModeChange,
+            trailing = trailing,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        ) {
-            CalendarsViewModeTabs(
-                current = viewMode,
-                onChange = onViewModeChange,
-                modifier = Modifier.weight(1f),
-            )
-            trailing?.invoke()
-        }
+        )
     }
 }
 
@@ -120,13 +116,19 @@ private fun CalendarsTopNavFilterBar(
 private fun CalendarsViewModeTabs(
     current: CalendarsViewMode,
     onChange: (CalendarsViewMode) -> Unit,
+    trailing: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    // The trailing control scrolls with the lenses instead of being pinned beside them: pinned,
+    // it took its width out of the scrolling part, and once the lenses outgrew what was left
+    // (on an 800px tablet, after "Friends going" joined them) the last lens sat half-hidden
+    // against it with nothing to say the row scrolls. A chip cut by the screen edge does.
     Row(
         modifier =
             modifier
                 .horizontalScroll(rememberScrollState())
                 .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         CalendarsViewMode.entries.forEach { mode ->
             FilterChip(
@@ -143,5 +145,6 @@ private fun CalendarsViewModeTabs(
                 shape = MaterialTheme.shapes.small,
             )
         }
+        trailing?.invoke()
     }
 }

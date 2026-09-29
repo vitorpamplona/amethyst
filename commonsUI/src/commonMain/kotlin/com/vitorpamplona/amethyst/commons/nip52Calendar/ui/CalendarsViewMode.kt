@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.nip52Calendar.ui
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_view_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_view_feed
+import com.vitorpamplona.amethyst.commons.resources.calendar_view_follows_going
 import com.vitorpamplona.amethyst.commons.resources.calendar_view_month
 import com.vitorpamplona.amethyst.commons.resources.calendar_view_week
 import org.jetbrains.compose.resources.StringResource
@@ -31,11 +32,15 @@ import org.jetbrains.compose.resources.StringResource
  * Lenses on the same appointment timeline. Calendar *collections* (kind 31924) live on their
  * own screen ([CalendarCollectionsScreen]) since they're a sibling feed, not a different view
  * of the appointment data.
+ *
+ * [FOLLOWS_GOING] is the one lens not drawn from the appointment timeline: it is built from the
+ * RSVPs of the people in the selected list, showing the upcoming events they said they'd attend.
  */
 enum class CalendarsViewMode(
     val labelRes: StringResource,
 ) {
     FEED(Res.string.calendar_view_feed),
+    FOLLOWS_GOING(Res.string.calendar_view_follows_going),
     MONTH(Res.string.calendar_view_month),
     WEEK(Res.string.calendar_view_week),
     DAY(Res.string.calendar_view_day),

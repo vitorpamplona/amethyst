@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -38,9 +40,22 @@ import org.junit.Test
  *
  * `LocalCache` is a process-wide object and JUnit 4's method order is hash-based, so every test
  * below uses its own author and identifier.
+ *
+ * Events go in through [consumePinned], which takes each event's note from the cache *before*
+ * consuming it and keeps it for the test's lifetime. `LocalCache` holds notes weakly
+ * (LargeSoftCache), so a note nothing references can be collected between two consumes — the
+ * older rating then lands on a fresh, empty slot — or before the read-back. In the app the
+ * screen showing the rating is that strong referent.
  */
 class EntityRatingIngestionTest {
     private val publisher = "b1".repeat(32)
+
+    private val pinned = mutableListOf<Note>()
+
+    private fun consumePinned(event: Event): Boolean {
+        pinned.add(LocalCache.getOrCreateNote(event))
+        return LocalCache.justConsume(event, null, true)
+    }
 
     private fun rating(
         id: String,
@@ -75,7 +90,7 @@ class EntityRatingIngestionTest {
         val author = "b2".repeat(32)
         val event = rating("b3".repeat(32), author, "consumed-book", 5)
 
-        assertTrue("LocalCache must accept kind 34259", LocalCache.justConsume(event, null, true))
+        assertTrue("LocalCache must accept kind 34259", consumePinned(event))
 
         val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
         assertNotNull("the rating must land in the addressable index", note)
@@ -88,8 +103,8 @@ class EntityRatingIngestionTest {
         val first = rating("b5".repeat(32), author, "replaced-book", 1, createdAt = 1_000_000L)
         val second = rating("b6".repeat(32), author, "replaced-book", 5, createdAt = 2_000_000L)
 
-        LocalCache.justConsume(first, null, true)
-        LocalCache.justConsume(second, null, true)
+        consumePinned(first)
+        consumePinned(second)
 
         val note = LocalCache.getAddressableNoteIfExists(first.addressTag())
         assertEquals("the later rating wins the (pubkey, d) slot", second.id, note?.event?.id)
@@ -102,8 +117,8 @@ class EntityRatingIngestionTest {
         val newer = rating("b8".repeat(32), author, "ordered-book", 5, createdAt = 2_000_000L)
         val older = rating("b9".repeat(32), author, "ordered-book", 1, createdAt = 1_000_000L)
 
-        LocalCache.justConsume(newer, null, true)
-        LocalCache.justConsume(older, null, true)
+        consumePinned(newer)
+        consumePinned(older)
 
         val note = LocalCache.getAddressableNoteIfExists(newer.addressTag())
         assertEquals(newer.id, note?.event?.id)
@@ -114,8 +129,8 @@ class EntityRatingIngestionTest {
         val one = rating("c1".repeat(32), "c2".repeat(32), "shared-book", 5)
         val two = rating("c3".repeat(32), "c4".repeat(32), "shared-book", 2)
 
-        LocalCache.justConsume(one, null, true)
-        LocalCache.justConsume(two, null, true)
+        consumePinned(one)
+        consumePinned(two)
 
         assertEquals(one.id, LocalCache.getAddressableNoteIfExists(one.addressTag())?.event?.id)
         assertEquals(two.id, LocalCache.getAddressableNoteIfExists(two.addressTag())?.event?.id)
@@ -134,7 +149,7 @@ class EntityRatingIngestionTest {
                 sig = "sig",
             )
 
-        assertTrue("LocalCache must accept kind 30040", LocalCache.justConsume(index, null, true))
+        assertTrue("LocalCache must accept kind 30040", consumePinned(index))
         assertEquals("Wuthering Heights", (LocalCache.getAddressableNoteIfExists(index.addressTag())?.event as PublicationIndexEvent).title())
     }
 
@@ -146,7 +161,7 @@ class EntityRatingIngestionTest {
         val author = "c6".repeat(32)
         val event = rating("c7".repeat(32), author, "new-thread-book", 4)
 
-        LocalCache.justConsume(event, null, true)
+        consumePinned(event)
 
         val note = LocalCache.getAddressableNoteIfExists(event.addressTag())!!
         assertTrue("replyTo must stay empty", note.replyTo.isNullOrEmpty())

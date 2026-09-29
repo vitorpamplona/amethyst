@@ -661,7 +661,10 @@
     <string name="account_backup_encrypted_title">Jelszóval védett másolat</string>
     <string name="account_backup_encrypted_password">Jelszó</string>
     <string name="account_backup_encrypted_body">Egy ncryptsec1…, amely csak az Ön jelszavával működik.</string>
-    <string name="account_backup_password_min_length">Legalább %1$d karakter</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">Legalább %1$d karakter</item>
+        <item quantity="other">Legalább %1$d karakter</item>
+    </plurals>
     <string name="account_backup_encrypted_repeat_password">Jelszó ismét</string>
     <string name="account_backup_encrypted_password_mismatch">A jelszavak nem egyeznek</string>
     <string name="account_backup_encrypt">Kulcs titkosítása</string>
@@ -704,6 +707,8 @@
     <string name="quick_action_request_deletion_gallery_alert_body_v2">Távolítsa el ezt a médiát a galériából.</string>
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy a bejegyzését töröljék azokról az átjátszókról, amelyekhez jelenleg csatlakozik. Nem garantálható, hogy a bejegyzése véglegesen törlődik ezekről az átjátszókról, vagy más átjátszókról, ahol esetleg tárolva van.</string>
+    <string name="quick_action_request_deletion_alert_body_group">Az Amethyst arra fogja kérni a titkosított csoport minden tagját, hogy töröljék ezt az üzenetet. Az alkalmazásoknak el kellene távolítaniuk azt, de nincs rá garancia, hogy minden tag törli a saját példányát.</string>
+    <string name="quick_action_request_deletion_alert_body_private">Az Amethyst titkosított törlési kérelmet küld a beszélgetés résztvevőinek. Az alkalmazásaiknak el kellene távolítaniuk az üzenetet, de nincs garancia arra, hogy minden példány törlődik.</string>
     <string name="quick_action_block_dialog_btn">Letiltás</string>
     <string name="quick_action_delete_dialog_btn">Törlés</string>
     <string name="quick_action_block">Letiltás</string>
@@ -1846,6 +1851,9 @@
     <string name="tor_connection_failed_body">Az Amethystnek nem sikerült befejeznie a Tor előkészítését. Legyen normál (nem Tor) kapcsolat használva a hírfolyam betöltéséhez? A választás egy óráig érvényes, utána a rendszer ismételten megkísérli a Tor hálózathoz való kapcsolódást.</string>
     <string name="tor_continue_without_for_session">Normál kapcsolat használata</string>
     <string name="tor_keep_waiting">Tovább várok</string>
+    <string name="tor_splash_connecting">Kapcsolódás a TOR-hálózathoz…</string>
+    <string name="tor_splash_error">TOR-hálózati hiba: %1$s</string>
+    <string name="tor_splash_explainer">Az Amethyst a TOR-hálózatot használja, hogy elrejtse az IP-címet az átjátszók elől. A Tor elindítása több percig is eltarthat, és internetkapcsolatra van szükség hozzá.</string>
     <string name="notification_settings_categories_explainer">Koppintson egy kategóriára, hogy megnyissa az ahhoz tartozó Android értesítési beállításokat – itt találhatók a hang-, a fontossági-, az értesítési jelölők- és a „Ne zavarjanak” beállítások.</string>
     <string name="notification_channel_status_on">Be</string>
     <string name="notification_channel_status_silent">Néma</string>
@@ -4124,6 +4132,11 @@
     <string name="marmot_admin_granted">Adminisztrátori jogosultságok megadva</string>
     <string name="marmot_admin_revoked">Adminisztrátori jogosultságok visszavonva</string>
     <string name="marmot_change_photo">Fotó módosítása</string>
+    <string name="marmot_out_of_sync_body">A többi tag üzenetei ezen az eszközön már nem olvashatók. Állítsa vissza a csoportot, majd kérje meg az egyik rendszergazdát, hogy távolítsa el Önt a csoportból, majd adja hozzá újra.</string>
+    <string name="marmot_out_of_sync_reset">Visszaállítás</string>
+    <string name="marmot_out_of_sync_confirm_title">Visszaállítja a csoportot?</string>
+    <string name="marmot_out_of_sync_confirm_body">Ez az eszköz elveszíti a tagságát, amíg egy adminisztrátor hozzá nem adja újra. A már meglévő üzenetek itt maradnak.</string>
+    <string name="marmot_awaiting_reinvite">Várakozás a visszavételre. Kérjen meg egy adminisztrátort, hogy távolítsa el Önt, majd adja hozzá újra.</string>
     <string name="marmot_enable_encrypted_media_needs_server">Először adjon hozzá egy Blossom médiakiszolgálót a beállításokban, mert a csoportnak szüksége van egy helyre, ahová a mellékleteket feltöltheti.</string>
     <string name="marmot_encrypted_media_enabled_toast">Ez a csoport mostantól titkosított mellékleteket használ</string>
     <string name="marmot_failed_to_add_user">Nem sikerült hozzáadni a következőt: %1$s: %2$s</string>
@@ -6123,7 +6136,7 @@
     <string name="cordn_requests_accept">Hozzáadás</string>
     <string name="cordn_requests_admin_only">Csak az adminisztrátor fogadhat el. Egy adminisztrátorok nélküli csoportban ez mindenki.</string>
     <string name="cordn_requests_check">Kérelmek ellenőrzése</string>
-    <string name="cordn_requests_decline">Elvetés</string>
+    <string name="cordn_requests_decline">Eltüntetés</string>
     <string name="cordn_requests_failed">Nem sikerült beolvasni a kérelmeket.</string>
     <string name="cordn_requests_none">Senki sem vár a csatlakozásra.</string>
     <string name="cordn_requests_title">Csatlakozási kérelmek</string>

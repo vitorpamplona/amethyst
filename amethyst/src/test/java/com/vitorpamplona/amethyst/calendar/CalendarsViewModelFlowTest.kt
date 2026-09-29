@@ -120,10 +120,14 @@ class CalendarsViewModelFlowTest {
      * Consumes [calendars] and hands back the notes they landed in, so the caller can hold them
      * for the length of the test: `LocalCache.addressables` is a weak cache, and with nothing
      * holding a reference a calendar can be collected out from under the assertions.
+     *
+     * The notes are taken *before* consuming: fetching them afterwards leaves the window between
+     * the consume and the fetch open, and a GC there drops the calendar before it is ever held.
      */
-    private fun consume(vararg calendars: CalendarCollectionEvent): List<AddressableNote?> {
+    private fun consume(vararg calendars: CalendarCollectionEvent): List<AddressableNote> {
+        val held = calendars.map { LocalCache.getOrCreateAddressableNote(it.address()) }
         calendars.forEach { LocalCache.justConsumeMyOwnEvent(it) }
-        return calendars.map { LocalCache.getAddressableNoteIfExists(it.address()) }
+        return held
     }
 
     /**

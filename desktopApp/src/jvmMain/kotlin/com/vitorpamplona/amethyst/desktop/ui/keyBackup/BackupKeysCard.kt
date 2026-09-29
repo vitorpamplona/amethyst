@@ -96,6 +96,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -378,7 +379,7 @@ private fun EncryptedCopy(nsec: String) {
             if (error) {
                 Text(stringResource(Res.string.backup_keys_encrypt_failed))
             } else {
-                Text(stringResource(Res.string.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH))
+                Text(pluralStringResource(Res.plurals.account_backup_password_min_length, Nip49.MIN_PASSWORD_LENGTH, Nip49.MIN_PASSWORD_LENGTH))
             }
         },
         visualTransformation =

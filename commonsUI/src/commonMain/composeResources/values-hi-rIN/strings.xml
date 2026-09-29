@@ -313,7 +313,7 @@
     <string name="geocache_hunt_needs_caches">न्यूनतम एक कोष जोडें।</string>
     <string name="geocache_publish_failed">प्रकाशन असफल। पुनःप्रसारक संयोजन का जाँच करें तथा पुनःप्रयास करें।</string>
     <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
-    <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
+    <string name="podcast_value_split_percent">%1$d प्रतिशत</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
     <string name="relay_monitor_rtt_open">खोलें</string>
     <string name="relay_monitor_rtt_read">पढें</string>
@@ -661,7 +661,10 @@
     <string name="account_backup_encrypted_title">पारणशब्द रक्षित अनुकृति</string>
     <string name="account_backup_encrypted_password">पारणशब्द</string>
     <string name="account_backup_encrypted_body">एक ncryptsec1… जो केवल आपके पारणशब्द से कार्य करता है।</string>
-    <string name="account_backup_password_min_length">न्यूनतम %1$d अक्षर</string>
+    <plurals name="account_backup_password_min_length">
+        <item quantity="one">न्यूनतम %1$d अक्षर</item>
+        <item quantity="other">न्यूनतम %1$d अक्षर</item>
+    </plurals>
     <string name="account_backup_encrypted_repeat_password">पारणशब्द दोहराएँ</string>
     <string name="account_backup_encrypted_password_mismatch">पारणशब्दों में मेल नहीं</string>
     <string name="account_backup_encrypt">रहस्यीकरण कुंचिका</string>
@@ -704,6 +707,8 @@
     <string name="quick_action_request_deletion_gallery_alert_body_v2">इस श्रव्यदृश्याभिलेख को आपके चित्रालय से हटाएँ।</string>
     <string name="quick_action_request_deletion_alert_title">हटाने की याचना</string>
     <string name="quick_action_request_deletion_alert_body">अमेथिस्ट अनुरोध करेगा कि आपका टीका मिटा दिया जाए उन पुनःप्रसारकों से जिनके साथ आप अब जुडे हुए हैं। कोई आश्वासन नहीं कि आपका टीका सर्वदा के लिए मिटा दिया जाएगा उन पुनःप्रसारकों से, अथवा अन्य पुनःप्रसारकों में से जहाँ यह रखा गया हो।</string>
+    <string name="quick_action_request_deletion_alert_body_group">अमेथिस्ट इस रहस्यीकृत समूह में सबसे अनुरोध करेगा इस सन्देश को मिटाने के लिए। उनके क्रमक इसको हटाना चाहिए पर कोई आश्वासन नहीं कि सभी सदस्य अपनी अनुकृति मिटा देंगे।</string>
+    <string name="quick_action_request_deletion_alert_body_private">अमेथिस्ट एक रहस्यीकृत विलोपन अनुरोध इस वार्तालाप में सभी लोगों को भेजेगा। उनके क्रमक सन्देश को हटाना चाहिए पर कोई आश्वासन नहीं कि सभी अनुकृतियाँ मिटा दिए जाएँगे।</string>
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
     <string name="quick_action_delete_dialog_btn">मिटाएँ</string>
     <string name="quick_action_block">बाधित करें</string>
@@ -1846,6 +1851,9 @@
     <string name="tor_connection_failed_body">अमेथिस्ट द्वारा टोर॰ का स्वयम उत्थापन सम्पन्न नहीं हुआ। क्या एक समान्य संयोजन (टोर॰ अतिरिक्त) का प्रयोग करें जिससे कि सूचनावली का आवहन हो सके। इस चयन का स्मरण रखा जाएगा अगले घण्टे तक तथा टोर॰ का पुनःप्रयास किया जाएगा तत्पश्चात।</string>
     <string name="tor_continue_without_for_session">सामान्य संयोजन का प्रयोग करें</string>
     <string name="tor_keep_waiting">प्रतीक्षा करते रहें</string>
+    <string name="tor_splash_connecting">टोर से संयोजन किया जा रहा है…</string>
+    <string name="tor_splash_error">टोर अपक्रम। %1$s</string>
+    <string name="tor_splash_explainer">अमेथिस्ट टोर का उपयोग करता है आपके अंकीय जालपता छिपाने के लिए पुनःप्रसारकों से। टोर को आरम्भ करने के लिए एक मिनुट लग सकता है। इसके लिए संचारजाल अभिगमन आवश्यक।</string>
     <string name="notification_settings_categories_explainer">श्रेणि दबाएँ उसके आण्ड्रोइड सूचना स्थापना विकल्पों को खोलने के लिए। ध्वनि महत्व पदक तथा विघ्नविराम वहाँ हैं।</string>
     <string name="notification_channel_status_on">चालू</string>
     <string name="notification_channel_status_silent">मौन</string>
@@ -3138,7 +3146,7 @@
         <item quantity="other">%1$d पुनःप्रसारक</item>
     </plurals>
     <string name="active_subs_search_keywords">ग्राहकताएँ छलनियाँ पुनःप्रसारक अनुरोध अनु॰ संयोजन क्यों निदानतन्त्र</string>
-    <string name="active_subs_share">%1$dप्रतिशतप्रतिशत सब में से</string>
+    <string name="active_subs_share">%1$d प्रतिशत सब में से</string>
     <string name="active_subs_title">सक्रिय पुनःप्रसारक ग्राहकताएँ</string>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d छलनी आरोपित नहीं अब तक</item>
@@ -4124,6 +4132,11 @@
     <string name="marmot_admin_granted">प्रबन्धन अधिकार दिए गए</string>
     <string name="marmot_admin_revoked">प्रबन्धन अधिकार हटाए गए</string>
     <string name="marmot_change_photo">चित्र परिवर्तन</string>
+    <string name="marmot_out_of_sync_body">अन्य सदस्यों से सन्देश इस यन्त्र पर आगे से पढे नहीं जा सकते। समूह की आपकी अनुकृति को पुनःस्थापित करें। तत्पश्चात एक प्रशासक को पूछें कि आपको हटाएँ तथा पुनःजोडें।</string>
+    <string name="marmot_out_of_sync_reset">पुनःस्थापन</string>
+    <string name="marmot_out_of_sync_confirm_title">क्या इस समूह को पुनःस्थापित करें।</string>
+    <string name="marmot_out_of_sync_confirm_body">इस यन्त्र की सदस्यता रुक जाती है जब तक कि एक प्रशासक आपको पुनःजोडता नहीं। सन्देश जो आपके पास पहले से हैं यहीं रहते हैं।</string>
+    <string name="marmot_awaiting_reinvite">पुनःजोडे जाने की प्रतीक्षा में। एक प्रशासक को पूछें कि आपको हटाएँ तथा पुनःजोडें।</string>
     <string name="marmot_enable_encrypted_media_needs_server">पहले एक ब्लोस्सम श्रव्यदृश्याभिलेख सेवासंगणक जोडें स्थापना विकल्पों में। समूह के लिए कोई स्थान आवश्यक है संलग्न अभिलेखों का आरोहण करने के लिए।</string>
     <string name="marmot_encrypted_media_enabled_toast">यह समूह अब रहस्यीकृत संलग्न अभिलेखों का उपयोग करता है</string>
     <string name="marmot_failed_to_add_user">%1$s जोडने में असफल : %2$s</string>
@@ -5185,7 +5198,7 @@
     <string name="upload_error_voice_message_exception">ध्वनि आरोहण असफल : %1$s</string>
     <string name="upload_error_voice_message_failed">ध्वनि सन्देश आरोहण असफल</string>
     <string name="upload_error_voice_message_nip95_not_supported">निप॰९५ का आलम्बन अभी नहीं है ध्वनि सन्देशों के लिए</string>
-    <string name="uptime">%1$d% समय निरन्तर उपलब्ध</string>
+    <string name="uptime">%1$d प्रतिशत समय निरन्तर उपलब्ध</string>
     <string name="use_internal_tor">सक्रिय टोर उपकरण</string>
     <string name="use_internal_tor_explainer">आन्तरीय संस्करण का प्रयोग करें अथवा ओर्बोट</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता का कोई लैटनिंग पता स्थापित नहीं जिसपर साट्स प्राप्त कर सके</string>
@@ -5539,7 +5552,7 @@
     <string name="browser_pill_info_https">संयोजन रहस्यीकृत</string>
     <string name="browser_pill_info_https_desc">जानकारी जो आप भेजते हैं मार्गमध्य पठन असाध्य।</string>
     <string name="browser_pill_info_http">संयोजन अरहस्यीकृत</string>
-    <string name="browser_pill_info_http_desc">पारणशब्द अथवा भुगतान विवरणों का प्रविष्ट ना करें।</string>
+    <string name="browser_pill_info_http_desc">पारणशब्द अथवा भुगतान विवरणों को प्रविष्ट ना करें।</string>
     <string name="browser_pill_info_tor">टोर पर बहुरहस्यावृत संचार द्वारा</string>
     <string name="browser_pill_info_open">खुला जाल</string>
     <string name="browser_pill_info_certificate">प्रमाणपत्र</string>
@@ -5882,7 +5895,7 @@
     <string name="cordn_action_unpin">टाँका हटाएँ</string>
     <string name="cordn_admin_action_failed">वह परिवर्तन असफल।</string>
     <string name="cordn_admin_coordinator_silent">समायोजक ने उत्तर नहीं दिया। इसलिए कुछ भी परिवर्तित नहीं। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
-    <string name="cordn_admin_no_key_package">%1$s ने कुंचिका पेटली प्रकाशित नहीं की अब तक इस समायोजक के लिए। इसलिए वे जोडे नहीं जा सकते अब तक। उनसे पूछें पहले कोर्डन को खोलने के लिए इस समायोजक पर।</string>
+    <string name="cordn_admin_no_key_package">%1$s ने कुंचिका पोटली प्रकाशित नहीं की अब तक इस समायोजक के लिए। इसलिए वे जोडे नहीं जा सकते अब तक। उनसे पूछें पहले कोर्डन को खोलने के लिए इस समायोजक पर।</string>
     <string name="cordn_admin_no_self_remove">आप अपने को हटा नहीं सकते एक कोर्डन समूह से।</string>
     <string name="cordn_admin_no_welcome">%1$s को समूह में आने की विधि नहीं दे सके। इसलिए जोडने का प्रयास परित्यक्त।</string>
     <string name="cordn_admin_not_a_member">%1$s इस समुह में नहीं है।</string>
@@ -5897,7 +5910,7 @@
     <string name="cordn_backup_passphrase">पारणवाक्याम्श</string>
     <string name="cordn_backup_restore">पुनःस्थापन</string>
     <string name="cordn_backup_restore_body">पुनःस्थापन से इस यन्त्र पर कोर्डन समूह प्रतिस्थापित किए जाएँगे अभिलेखित समूहों के साथ। यह एक संचारयन्त्र पर एक अन्य से विस्थापित करने के लिए है। समूहों को दो यन्त्रों पर एक साथ उपयोग करने की विधि नहीं।</string>
-    <string name="cordn_backup_restore_confirm_body">सभी कोर्डन समूह जो इस यन्त्र पर हैं हटाए जाएँगे तथा अभिलेख में उपलब्ध से प्रतिस्थापित होंगे।\n\nदूसरे संचारयन्त्र में पुनःस्थापन ना करें जब पहला का भी उपयोग हो रहा है। दोनों में समान समूह कुंचिकाएँ होंगी। तथा जब दोनों एक सन्देश भेजेंगे तब समूह सब के लिए टूट जाएगा। मौनतः तथा पूर्ववत करने की विधि के बिना।</string>
+    <string name="cordn_backup_restore_confirm_body">सभी कोर्डन समूह जो इस यन्त्र पर हैं हटाए जाएँगे तथा अभिलेख में उपलब्ध से प्रतिस्थापित होंगे।\n\nदूसरे संचारयन्त्र में पुनःस्थापन ना करें जब पहला का भी उपयोग हो रहा है। दोनों में समान समूह कुंचिकाएँ होंगी। तथा जब दोनों एक सन्देश भेजेंगे तब समूह सब के लिए टूट जाएगा। मौनतः। तथा पूर्ववत करने की विधि के बिना।</string>
     <string name="cordn_backup_restore_confirm_title">क्या इस यन्त्र के कोर्डन समूहों का प्रतिस्थापन करें।</string>
     <string name="cordn_backup_restore_title">पुनःस्थापन</string>
     <string name="cordn_backup_restored">पुनःस्थापित।</string>
@@ -5936,7 +5949,7 @@
     <string name="cordn_coordinators_more">अधिक क्रियाएँ</string>
     <string name="cordn_coordinators_none">कोई समायोजक नहीं अब तक।</string>
     <string name="cordn_coordinators_purge">मिटाएँ</string>
-    <string name="cordn_coordinators_purge_body">हटाने से समूह इस यन्त्र पर रहते हैं। इसलिए समायोजक को पुनःजोडने से समूह भी लौट आते हैं। मिटानेसे समूह मिटते हैं। समूह कुंचिकाएँ तथा पठनस्थान तथा आपके सभी कुंचिका पोटलियाँ सभी चले जाते हैं। तथा नए आमन्त्रण से ही उन समूहों का पुनःप्रवेश कर सकते हैं।\n\nसमायोजक को बताया नहीं जाता। तथा जो उसके पास पहले से था वह उसे रखता है।</string>
+    <string name="cordn_coordinators_purge_body">हटाने से समूह इस यन्त्र पर रहते हैं। इसलिए समायोजक को पुनःजोडने से समूह भी लौट आते हैं। मिटानेसे समूह मिटते हैं। समूह कुंचिकाएँ तथा पठनस्थान तथा आपके सभी कुंचिका पोटलियाँ सभी चले जाते हैं। तथा नए आमन्त्रण से ही उन समूहों में पुनःप्रवेश कर सकते हैं।\n\nसमायोजक को बताया नहीं जाता। तथा जो उसके पास पहले से था वह उसे रखता है।</string>
     <string name="cordn_coordinators_purge_title">क्या इस समायोजक को मिटा दें।</string>
     <string name="cordn_coordinators_relays">%1$s</string>
     <string name="cordn_coordinators_relays_label">उत्तर सक्रिय</string>
@@ -5997,7 +6010,7 @@
     <string name="cordn_create_people_done">हो गया</string>
     <string name="cordn_create_people_empty">कोई भी जोडे नहीं गए अब तक। समूह रिक्त रूप में बनाया जा सकता है तथा आमन्त्रण तत्पश्चात भेजे जा सकते हैं। पर व्यक्तियों को अब नामित करने से पता चलेगा किस समायोजक उन तक अभिगम्य।</string>
     <string name="cordn_create_people_none">कोई नहीं अब तक। दबाएँ लोगों को जोडने के लिए</string>
-    <string name="cordn_create_people_note">लोगों को नामित अब करने से ही पता चलेगा किस समायोजक उन तक अभिगम्य। प्रत्येक को एक स्वागत प्राप्त होता है जो उस समायोजक पर छोडा जाता है। जिसे वे उठाते हैं अगली बार वे अपने क्रमक खोलते हैं।</string>
+    <string name="cordn_create_people_note">लोगों को नामित अब करने से ही पता चलेगा किस समायोजक उन तक अभिगम्य। प्रत्येक को एक स्वागत प्राप्त होता है जो उस समायोजक पर छोडा जाता है। जिसे वे उठाते हैं अगली बार जब वे अपने क्रमक खोलते हैं।</string>
     <plurals name="cordn_create_reach_count">
         <item quantity="one">अभिगम्य %1$d समायोजक पर</item>
         <item quantity="other">अभिगम्य %1$d समायोजकों पर</item>
@@ -6075,7 +6088,7 @@
     <string name="cordn_keypackages_disclosure">प्रकाशन से एक अभिलेख हस्ताक्षरित होता है आपकी अपनी लेखा कुंचिका के साथ। तब समायोजक जान जाता है कि यह लेखा है तथा आमन्त्रणशक्य है। स्थायी रूप से। तथा आप को किसी ने आमन्त्रित किया अथवा नहीं इस पर आश्रित नहीं।</string>
     <string name="cordn_keypackages_explainer">अन्य लोग आपको एक कोर्डन समूह में जोड सकते हैं केवल आपके द्वारा प्रकाशित कुंचिका पोटली को समायोजक तक ले जाने से। कोर्डन में कोई अन्य स्थल नहीं एक को रखने के लिए। इसलिए प्रकाशित नहीं तो कोई भी आपको आमन्त्रण नहीं दे सकते। तथा कुछ भी उनको बताता नहीं कि यह क्यों है।</string>
     <string name="cordn_keypackages_failed">कुंचिका पोटलियाँ पढने में असफल।</string>
-    <string name="cordn_keypackages_last_resort_no">कोई अन्तिम उपाय पोटली नहीं। एकप्रयोग वाले जब समाप्त हो जाते हैं तब आमन्त्रण असफल हो जाते हैं।</string>
+    <string name="cordn_keypackages_last_resort_no">कोई अन्तिम उपाय पोटली नहीं। एकप्रयोग वाले जब समाप्त हो जाते हैं तब से आमन्त्रण असफल हो जाते हैं।</string>
     <string name="cordn_keypackages_last_resort_yes">एक अन्तिम उपाय पोटली प्रकाशित है। इसलिए एक आमन्त्रण तब भी बनाया जा सकता है सभी एकप्रयोग वाले समाप्त होने के पश्चात।</string>
     <plurals name="cordn_keypackages_orphans">
         <item quantity="one">%1$d पोटली जिसे यह यन्त्र नहीं खोल सकता</item>

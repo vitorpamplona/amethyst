@@ -30,6 +30,11 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 // a second round-trip, but they don't drive the timeline DAL.
 val CalendarAppointmentKinds = listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND)
 
+// What an author publishes as the owner of a calendar, as opposed to answering someone else's.
+val CalendarOwnKinds = listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND, CalendarCollectionEvent.KIND)
+
+val CalendarRsvpKinds = listOf(CalendarRSVPEvent.KIND)
+
 val AllCalendarKinds =
     listOf(
         CalendarTimeSlotEvent.KIND,

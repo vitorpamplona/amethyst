@@ -29,6 +29,8 @@ import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.isLatestAnswerIn
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.latestRsvpAnswers
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
@@ -45,12 +47,19 @@ import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -87,6 +96,7 @@ class HomeNewThreadFeedFilter(
                 AddressableNormalVideoEvent.KIND,
                 AddressableShortVideoEvent.KIND,
                 EntityRatingEvent.KIND,
+                CalendarRSVPEvent.KIND,
             )
     }
 
@@ -105,18 +115,19 @@ class HomeNewThreadFeedFilter(
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
 
         val notes =
             LocalCache.notes.filterIntoSet { _, note ->
                 // Avoids processing addressables twice.
-                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds)
+                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
             }
 
         val longFormNotes =
             LocalCache.addressables.filterIntoSet(
                 kinds = ADDRESSABLE_KINDS,
             ) { _, note ->
-                acceptableEvent(note, filterParams, disabledKinds)
+                acceptableEvent(note, filterParams, disabledKinds, latestRsvps)
             }
 
         return sort(notes + longFormNotes)
@@ -124,12 +135,28 @@ class HomeNewThreadFeedFilter(
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
+    /**
+     * The additive merge only ever adds, so a "Going" card already on screen would outlive the
+     * author changing their mind: when a batch carries RSVPs, the old list first loses every
+     * RSVP that is no longer its author's latest answer.
+     */
+    override fun updateListWith(
+        oldList: List<Note>,
+        newItems: Set<Note>,
+    ): List<Note> {
+        if (newItems.none { it.event is CalendarRSVPEvent }) return super.updateListWith(oldList, newItems)
+        val latest = cachedRsvpAnswers()
+        val stillCurrent = oldList.filter { (it.event as? CalendarRSVPEvent)?.isLatestAnswerIn(latest) ?: true }
+        return super.updateListWith(stillCurrent, newItems)
+    }
+
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
         val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
+        val latestRsvps = lazy(LazyThreadSafetyMode.NONE) { cachedRsvpAnswers() }
 
         return collection.filterTo(HashSet()) {
-            acceptableEvent(it, filterParams, disabledKinds)
+            acceptableEvent(it, filterParams, disabledKinds, latestRsvps)
         }
     }
 
@@ -137,6 +164,7 @@ class HomeNewThreadFeedFilter(
         it: Note,
         filterParams: FilterByListParams,
         disabledKinds: Set<Int>,
+        latestRsvps: Lazy<Map<Pair<Address, HexKey>, CalendarRSVPEvent>>,
     ): Boolean {
         val noteEvent = it.event ?: return false
         if (noteEvent.kind in disabledKinds) return false
@@ -174,7 +202,8 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AttestorRecommendationEvent ||
                 noteEvent is AttestorProficiencyEvent ||
                 // A rating with nothing to point at cannot be rendered.
-                (noteEvent is EntityRatingEvent && noteEvent.hasTarget())
+                (noteEvent is EntityRatingEvent && noteEvent.hasTarget()) ||
+                noteEvent.isGoingRsvp(latestRsvps)
         ) &&
             filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()
@@ -190,3 +219,20 @@ class HomeNewThreadFeedFilter(
                 }
             }.sortedByDefaultFeedOrder()
 }
+
+/**
+ * Only "going" RSVPs reach the home feed: the point is to see where your people are going.
+ * Maybes and declines are still visible on the appointment itself, but as posts they are noise.
+ * And only the author's current answer: someone who said "going" and later "can't go" under a
+ * new d tag still has the old RSVP live, and it must not keep saying they are going.
+ */
+private fun Event.isGoingRsvp(latestRsvps: Lazy<Map<Pair<Address, HexKey>, CalendarRSVPEvent>>): Boolean {
+    if (this !is CalendarRSVPEvent || status() != RSVPStatusTag.STATUS.ACCEPTED) return false
+    // An `a` tag at anything but an appointment has no event card to draw next to "Going".
+    val target = calendarEventAddress() ?: return false
+    if (target.kind != CalendarTimeSlotEvent.KIND && target.kind != CalendarDateSlotEvent.KIND) return false
+    return isLatestAnswerIn(latestRsvps.value)
+}
+
+// Built from the cache's RSVP kind index, and only when a pass actually meets an RSVP.
+private fun cachedRsvpAnswers(): Map<Pair<Address, HexKey>, CalendarRSVPEvent> = latestRsvpAnswers(LocalCache.addressables.filterIntoSet(CalendarRSVPEvent.KIND).mapNotNull { it.event as? CalendarRSVPEvent })

@@ -388,6 +388,17 @@ fun RenderGitPullRequestUpdateEvent(
 )
 
 @Composable
+fun RenderCalendarRSVPEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = LocalNotePlatform.current.RenderCalendarRSVPEvent(
+    baseNote = baseNote,
+    accountViewModel = accountViewModel,
+    nav = nav,
+)
+
+@Composable
 fun RenderMeetingSpaceEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,

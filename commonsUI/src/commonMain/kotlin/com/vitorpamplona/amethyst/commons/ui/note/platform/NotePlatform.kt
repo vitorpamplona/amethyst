@@ -37,8 +37,10 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
@@ -289,6 +291,23 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) {}
+
+    // Calendar
+
+    /**
+     * A NIP-52 RSVP with the appointment it answers merged into its frame. Draws the bare
+     * [com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard] by default: the appointment
+     * half still uses the platform's calendar formatting.
+     */
+    @Composable
+    fun RenderCalendarRSVPEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {
+        val event = baseNote.event as? CalendarRSVPEvent ?: return
+        CalendarRsvpCard(event)
+    }
 
     // Meeting rooms (audio spaces)
 

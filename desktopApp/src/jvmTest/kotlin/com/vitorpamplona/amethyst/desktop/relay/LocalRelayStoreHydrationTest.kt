@@ -37,7 +37,6 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -208,14 +207,20 @@ class LocalRelayStoreHydrationTest {
 
             val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
+
+            // Pin the note across hydrate -> assert: the cache holds notes weakly
+            // (LargeSoftCache) and nothing else references a hydrated note here, so a
+            // GC in between would drop it and read as "never hydrated". In the app the
+            // feed showing the note is that strong referent.
+            val pinned = cache.getOrCreateNote(recentNote.id)
+
             try {
                 store.hydrate(cache)
             } finally {
                 store.close()
             }
 
-            val note = cache.getNoteIfExists(recentNote.id)
-            assertNotNull(note, "Recent text note must be hydrated into cache")
+            assertEquals(recentNote.id, pinned.event?.id, "Recent text note must be hydrated into cache")
         }
 
     @Test
@@ -258,15 +263,16 @@ class LocalRelayStoreHydrationTest {
 
             val cache = DesktopLocalCache().apply { accountPubkey = ownerPubKey }
             val store = newStore()
+
+            // Pinned for the same reason as in recentTextNotesWithinSevenDayWindowAreHydrated.
+            val pinned = cache.getOrCreateNote(note.id)
+
             try {
                 store.hydrate(cache)
             } finally {
                 store.close()
             }
 
-            assertFalse(
-                cache.getNoteIfExists(note.id) == null,
-                "Round-trip through hydrate must not drop a valid note",
-            )
+            assertEquals(note.id, pinned.event?.id, "Round-trip through hydrate must not drop a valid note")
         }
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps
 
+import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -57,6 +58,19 @@ class PrivateZapEncryption {
             val ivBech32 = Bech32.encode("iv", Bech32.eight2five(iv), Bech32.Encoding.Bech32)
 
             return encryptedMsgBech32 + "_" + ivBech32
+        }
+
+        /**
+         * Re-encodes a private zap's `anon` payload as a NIP-04 payload. Both are AES-256-CBC
+         * under the same ECDH shared secret, so any signer's `nip04Decrypt(payload, zapRequest.pubKey)`
+         * opens it for the zap recipient, including remote signers that never expose the key.
+         */
+        fun privateZapMessageToNip04(msg: String): String {
+            val parts = msg.split("_")
+            require(parts.size == 2) { "Invalid message format" }
+            val encryptedMsg = Bech32.five2eight(Bech32.decode(parts[0]).second, 0)
+            val iv = Bech32.five2eight(Bech32.decode(parts[1]).second, 0)
+            return EncryptedInfo.encode(encryptedMsg, iv)
         }
 
         fun decryptPrivateZapMessage(

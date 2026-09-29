@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -37,6 +36,11 @@ import kotlin.test.assertTrue
  * desktop equivalent of Amethyst Android's `LocalCache.justVerify` guard
  * and closes the receive-time verification gap flagged in the Quartz
  * security review (item 2.1, finding #1).
+ *
+ * The acceptance tests take the note from the cache *before* consuming and keep it:
+ * [DesktopLocalCache] holds notes weakly (LargeSoftCache), so a note nothing references
+ * can be collected before the read-back and look as if it was never stored. The
+ * rejection tests look notes up without pinning on purpose — pinning would create one.
  */
 class DesktopLocalCacheVerifyTest {
     private val relayUrl = NormalizedRelayUrl("wss://relay.test/")
@@ -102,13 +106,12 @@ class DesktopLocalCacheVerifyTest {
     fun `consume accepts a properly signed event`() {
         val cache = DesktopLocalCache()
         val signed = signedTextNote(content = "authentic")
+        val note = cache.getOrCreateNote(signed.id)
 
         val consumed = cache.consume(signed, relayUrl)
 
         assertTrue(consumed, "Signed event should be accepted")
-        val note = cache.getNoteIfExists(signed.id)
-        assertNotNull(note, "Signed event must reach the cache")
-        assertEquals(signed.id, note.event?.id)
+        assertEquals(signed.id, note.event?.id, "Signed event must reach the cache")
     }
 
     @Test
@@ -141,10 +144,11 @@ class DesktopLocalCacheVerifyTest {
                 content = "synthetic",
                 sig = "0".repeat(128),
             )
+        val note = cache.getOrCreateNote(event.id)
 
         val consumed = cache.consume(event, relayUrl, wasVerified = true)
 
         assertTrue(consumed, "wasVerified=true must skip the signature check")
-        assertNotNull(cache.getNoteIfExists(event.id))
+        assertEquals(event.id, note.event?.id)
     }
 }

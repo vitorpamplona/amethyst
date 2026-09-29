@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
@@ -41,7 +42,7 @@ import platform.Foundation.create
  * to their `NSStringEncoding`; anything else falls back to UTF-8 (matching the
  * "defaults to UTF-8" behaviour of the charset sniffer).
  */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 actual fun decodeBytes(
     bytes: ByteArray,
     charsetName: String?,
@@ -55,7 +56,7 @@ actual fun decodeBytes(
             NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
         }
 
-    return (NSString.create(data, encoding) as String?)
+    return NSString.create(data = data, encoding = encoding)?.toString()
         ?: bytes.decodeToString()
 }
 
