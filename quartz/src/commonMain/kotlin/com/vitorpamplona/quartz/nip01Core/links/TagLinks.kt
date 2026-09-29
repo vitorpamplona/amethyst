@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.links
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
-import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
 import com.vitorpamplona.quartz.nip01Core.links.props.NoProps
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
@@ -92,38 +91,3 @@ fun LinkBuilder.contentMentions(
         else -> Unit
     }
 }
-
-// Raw-slot readers from the first implementation, kept only until every links() reads its tags
-// through their Tag classes. Do not use them in new code.
-
-@Deprecated("Read the tags through their Tag class: each(tags, ETag::parse) { event(relation, it, ETag.TAG_NAME) }")
-fun <P : LinkProps> LinkBuilder.eventTags(
-    relation: Relation<P>,
-    tags: TagArray,
-    name: String = "e",
-    props: P? = null,
-) = tags.fastForEach { if (it.size > 1 && it[0] == name) event(relation, it[1], name, props) }
-
-@Deprecated("Read the tags through their Tag class: each(tags, PTag::parse) { user(relation, it, PTag.TAG_NAME) }")
-fun <P : LinkProps> LinkBuilder.userTags(
-    relation: Relation<P>,
-    tags: TagArray,
-    name: String = "p",
-    props: P? = null,
-) = tags.fastForEach { if (it.size > 1 && it[0] == name) user(relation, it[1], name, props) }
-
-@Deprecated("Read the tags through their Tag class: each(tags, ATag::parse) { address(relation, it, ATag.TAG_NAME) }")
-fun <P : LinkProps> LinkBuilder.addressTags(
-    relation: Relation<P>,
-    tags: TagArray,
-    name: String = "a",
-    props: P? = null,
-) = tags.fastForEach { if (it.size > 1 && it[0] == name) address(relation, it[1], name, props) }
-
-@Deprecated("Read the tags through their Tag class and pass its TAG_NAME: each(tags, XTag::parse) { tag(relation, XTag.TAG_NAME, it) }")
-fun <P : LinkProps> LinkBuilder.valueTags(
-    relation: Relation<P>,
-    tags: TagArray,
-    name: String,
-    props: P? = null,
-) = tags.fastForEach { if (it.size > 1 && it[0] == name) tag(relation, name, it[1], name, props) }

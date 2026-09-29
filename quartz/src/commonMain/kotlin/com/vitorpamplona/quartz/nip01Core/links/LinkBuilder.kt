@@ -140,48 +140,6 @@ class LinkBuilder {
         links.add(Link(relation, LinkTarget.Tag(name, value), via, props.orNull()))
     }
 
-    // TRANSITIONAL raw-Map props overloads (see UntypedPropsShim.kt), deleted before the refactor lands.
-    @Deprecated("Use the relation's typed props class")
-    fun <P : LinkProps> event(
-        relation: Relation<P>,
-        id: String?,
-        via: String? = null,
-        props: Map<String, Any>?,
-    ) = event(relation, id, via, untyped<P>(props))
-
-    @Deprecated("Use the relation's typed props class")
-    fun <P : LinkProps> user(
-        relation: Relation<P>,
-        pubkey: String?,
-        via: String? = null,
-        props: Map<String, Any>?,
-    ) = user(relation, pubkey, via, untyped<P>(props))
-
-    @Deprecated("Use the relation's typed props class")
-    fun <P : LinkProps> address(
-        relation: Relation<P>,
-        address: String?,
-        via: String? = null,
-        props: Map<String, Any>?,
-    ) = address(relation, address, via, untyped<P>(props))
-
-    @Deprecated("Use the relation's typed props class")
-    fun <P : LinkProps> eventOrAddress(
-        relation: Relation<P>,
-        value: String?,
-        via: String? = null,
-        props: Map<String, Any>?,
-    ) = eventOrAddress(relation, value, via, untyped<P>(props))
-
-    @Deprecated("Use the relation's typed props class")
-    fun <P : LinkProps> tag(
-        relation: Relation<P>,
-        name: String,
-        value: String?,
-        via: String? = name,
-        props: Map<String, Any>?,
-    ) = tag(relation, name, value, via, untyped<P>(props))
-
     fun build(): List<Link<*>> = if (links.isEmpty()) emptyList() else links.toList()
 
     /** Props whose every value is absent are no props: `MemberProps()` qualifies nothing. */

@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.links
 
 import java.io.File
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -42,8 +41,6 @@ class LinkCodeReadsTagClassesTest {
             Regex(""""[A-Za-z][A-Za-z0-9_-]{0,2}"""") to "short string literal: use the Tag class TAG_NAME",
         )
 
-    // TRANSITIONAL: enabled once every package reads its tags through Tag classes.
-    @Ignore
     @Test
     fun linkCodeReadsTagsOnlyThroughTheirTagClasses() {
         val root = File("src/commonMain/kotlin/com/vitorpamplona/quartz")
