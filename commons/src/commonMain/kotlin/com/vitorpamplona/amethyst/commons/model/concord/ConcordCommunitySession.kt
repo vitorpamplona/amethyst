@@ -301,6 +301,46 @@ class ConcordCommunitySession(
     private val _state = MutableStateFlow<ConcordCommunityState?>(null)
     val state: StateFlow<ConcordCommunityState?> = _state
 
+    private val _controlDrained = MutableStateFlow(false)
+
+    /**
+     * True once this session's current Control Plane has been swept whole at least once — every
+     * relay page drained and ingested ([markControlDrained]) — so [state] is a fold of the full plane
+     * rather than of whatever the live subscription delivered first.
+     *
+     * Until then the fold may be partial (a cropped first page, an edition below the live `since`
+     * cursor), and a write built on it can erase what it never saw: a Pin List edition replaces the
+     * list entire (CORD-04 §7: never write from a list the fold was not served), a metadata edition
+     * minted without the head resets the name and relays, a registry edit chains onto a stale head.
+     * Writers refuse while this is false; readers may show a partial fold but must not call an
+     * absent entity "none". One way: a session never un-drains (a Refounding builds a new session).
+     */
+    val controlDrained: StateFlow<Boolean> = _controlDrained
+
+    /** Records that the whole current Control Plane has been paged in and ingested (see [controlDrained]). */
+    fun markControlDrained() {
+        _controlDrained.value = true
+    }
+
+    /**
+     * The fold a Control Plane write may be built from: [state] once the plane has drained, else
+     * null. Every writer that lays its edition over a folded head (metadata, timer, registry, pins)
+     * goes through this, the owner included — the owner may act before the fold, but not write over
+     * a head they have not been served.
+     */
+    fun foldForWrite(): ConcordCommunityState? = if (_controlDrained.value) _state.value else null
+
+    // The anti-rollback floors the last fold used, so a writer can chain onto the same floor-aware head.
+    @Volatile
+    private var lastFloors: Map<String, EntityFloor> = emptyMap()
+
+    /**
+     * The per-entity anti-rollback floors (from the prior epochs' Control Planes) the current fold
+     * honors — what a writer passes so it chains onto the head readers fold to, not the head of the
+     * current epoch's editions alone.
+     */
+    fun controlFloors(): Map<String, EntityFloor> = lastFloors
+
     private val _pinHeads = MutableStateFlow<Map<HexKey, ControlEdition>>(emptyMap())
 
     /**
@@ -700,6 +740,7 @@ class ConcordCommunitySession(
                 val wraps = controlWraps.values.toList()
                 val editions = editionsLocked(wraps, controlKeys)
                 val floors = controlFloorsLocked()
+                lastFloors = floors
                 val folded = ConcordCommunityState.fold(editions, communityIdBytes, entry.owner, floors)
 
                 val prevAddresses = channelKeysByAddress.keys.toHashSet()
@@ -924,7 +965,9 @@ class ConcordCommunitySession(
         // An expired message leaves the pinned list too (CORD-08 §3: never display an expired rumor);
         // its proof is still valid, but the rumor's own tag says it is gone.
         val hidden = { pin: ConcordPins.VerifiedPin -> isKilled(pin) || pin.tags.isExpirationBefore(now) }
-        return ConcordPinning.read(_pinHeads.value[channelIdHex], channelIdHex, { pinUnsealKey(channelIdHex, it) }, pinVerifier, hidden, newestEdit)
+        // Not drained yet: the head may simply not have been served, so the result is marked partial
+        // (shown, never written from — CORD-04 §7).
+        return ConcordPinning.read(_pinHeads.value[channelIdHex], channelIdHex, { pinUnsealKey(channelIdHex, it) }, pinVerifier, hidden, newestEdit, complete = _controlDrained.value)
     }
 
     /**

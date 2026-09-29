@@ -92,6 +92,11 @@ class ConcordChannelPins(
     val sealedForm: Boolean,
     /** Entries that failed verification and were dropped alone. */
     val invalidEntries: Int,
+    /**
+     * False while the Control Plane has not been swept whole yet: [head] is whatever the partial fold
+     * holds, so an empty list may only mean "not served yet". No edition may be built from it (§7).
+     */
+    val complete: Boolean = true,
 ) {
     val count: Int get() = pins.size
 
@@ -101,7 +106,10 @@ class ConcordChannelPins(
     val owesRepublish: Boolean get() = killed.isNotEmpty() || pins.any { it.newerEdit != null }
 
     companion object {
-        fun none(channelIdHex: HexKey) = ConcordChannelPins(channelIdHex, null, emptyList(), emptyList(), emptyList(), sealedUnavailable = false, violating = false, sealedForm = false, invalidEntries = 0)
+        fun none(
+            channelIdHex: HexKey,
+            complete: Boolean = true,
+        ) = ConcordChannelPins(channelIdHex, null, emptyList(), emptyList(), emptyList(), sealedUnavailable = false, violating = false, sealedForm = false, invalidEntries = 0, complete = complete)
     }
 }
 
@@ -214,6 +222,9 @@ enum class ConcordPinOutcome {
     UNVERIFIABLE,
     TOO_MANY_PINS,
     TOO_LARGE,
+
+    /** The edition was built but no relay acknowledged it, so it may not have landed. */
+    NOT_CONFIRMED,
 }
 
 class ConcordPinWrite(
@@ -283,8 +294,9 @@ object ConcordPinning {
         verifier: ConcordPinVerifier = ConcordPinVerifier(),
         isKilled: (VerifiedPin) -> Boolean = { false },
         newestEdit: (VerifiedPin) -> ConcordLocalEdit? = { null },
+        complete: Boolean = true,
     ): ConcordChannelPins {
-        if (head == null) return ConcordChannelPins.none(channelIdHex)
+        if (head == null) return ConcordChannelPins.none(channelIdHex, complete)
         val read = ConcordPins.read(head.content, unsealKey)
         val alive = ArrayList<VerifiedPin>()
         val killed = ArrayList<VerifiedPin>()
@@ -316,6 +328,7 @@ object ConcordPinning {
             violating = read.violating,
             sealedForm = ConcordPins.isSealedForm(head.content),
             invalidEntries = invalid,
+            complete = complete,
         )
     }
 
@@ -363,6 +376,9 @@ object ConcordPinning {
         when {
             !ctx.authorized -> ConcordPinOutcome.NOT_AUTHORIZED
             !ctx.controlPlane.canWrite -> ConcordPinOutcome.NO_WRITE_KEY
+            // §7: never write from a list the fold was not served — a partial fold's head (or its
+            // absence) is not the list a replace-entire edition would overwrite.
+            !ctx.pins.complete -> ConcordPinOutcome.NOT_FOLDED
             // §7: a writer MUST NOT build an edition from a list it could not read.
             ctx.pins.sealedUnavailable -> ConcordPinOutcome.LIST_UNAVAILABLE
             ctx.channelIsPrivate && ctx.currentPlane == null -> ConcordPinOutcome.NO_CHANNEL_KEY

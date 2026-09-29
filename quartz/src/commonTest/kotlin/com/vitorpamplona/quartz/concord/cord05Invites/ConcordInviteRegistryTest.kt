@@ -196,6 +196,8 @@ class ConcordInviteRegistryTest {
         assertFalse(state.retiringWouldPrivatize(listOf(link1)))
         assertTrue(state.retiringWouldPrivatize(listOf(link1, link2)))
         assertFalse(ControlFixtures.fold(emptyList(), owner).retiringWouldPrivatize(listOf(link1)), "already Private: nothing flips")
+        // A dissolved community is never Refounded (CORD-02 §9): the last retire is just a retire.
+        assertFalse(state.withDissolved(true).retiringWouldPrivatize(listOf(link1, link2)))
     }
 
     @Test
@@ -259,15 +261,35 @@ class ConcordInviteRegistryTest {
         val livePk = live.pubKey.toHexKey()
         val expiredPk = expired.pubKey.toHexKey()
 
-        // The published registry still lists the expired link and an unrecorded one (link1); a new mint adds link2.
+        // The published registry still lists the expired link and one no list entry backs (link1): the
+        // readable list is authoritative, so both go; the recorded live link heals in; a mint adds link2.
         val next = ConcordInviteRegistry.nextLinks(listOf(expiredPk, link1), doc, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 200, minted = listOf(link2))
-        assertEquals(listOf(link1, link2, livePk).sorted(), next)
+        assertEquals(listOf(link2, livePk).sorted(), next)
 
-        // Retiring the recorded live link and link1 leaves only the mint.
-        assertEquals(listOf(link2), ConcordInviteRegistry.nextLinks(next, doc, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 200, retired = listOf(livePk, link1)))
+        // Retiring the recorded live link, with the next mint recorded too, leaves only that mint.
+        val withMint = ConcordInviteListDocument(entries = doc.entries + entry("05", KeyPair()), tombstones = doc.tombstones)
+        val link3 = withMint.entries.last().signerPubKeyHex()
+        assertEquals(listOf(link3), ConcordInviteRegistry.nextLinks(next, withMint, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 200, retired = listOf(livePk)))
 
         // Before its expiry the link is still live; an unreadable list prunes nothing.
         assertTrue(expiredPk in ConcordInviteRegistry.nextLinks(emptyList(), doc, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 50))
         assertEquals(listOf(expiredPk), ConcordInviteRegistry.nextLinks(listOf(expiredPk), null, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 200))
+    }
+
+    @Test
+    fun aRetiredLinkWhoseEntryTheMergeDroppedIsNotResurrectedFromThePublishedRegistry() {
+        val retired = KeyPair()
+        val kept = KeyPair()
+        val retiredPk = retired.pubKey.toHexKey()
+        val keptPk = kept.pubKey.toHexKey()
+        // After the tombstone merge, the retired link's entry (and its token) is gone from the list:
+        // only the tombstone remains, which no longer names the signer.
+        val merged =
+            ConcordInviteListDocument(
+                entries = listOf(entry("0a", kept)),
+                tombstones = listOf(ConcordInviteListTombstone("0b", ControlFixtures.COMMUNITY_ID_HEX)),
+            )
+        // A later, unrelated registry edit (e.g. the next mint) must not carry the retired signer forward.
+        assertEquals(listOf(keptPk), ConcordInviteRegistry.nextLinks(listOf(retiredPk, keptPk), merged, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 200))
     }
 }

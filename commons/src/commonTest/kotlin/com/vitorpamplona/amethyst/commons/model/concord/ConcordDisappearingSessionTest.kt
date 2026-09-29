@@ -114,7 +114,6 @@ class ConcordDisappearingSessionTest {
                     ConcordActions.buildChannelInlineReply(owner, plane.key, general, plane.epoch, parent, "quote", at, timerSecs = timer),
                     ConcordActions.buildChannelReply(owner, plane.key, general, plane.epoch, parent, "thread", at, timerSecs = timer),
                     ConcordActions.buildChannelImageReply(owner, plane.key, general, plane.epoch, parent, "thread pic", imeta, at, timerSecs = timer),
-                    ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, parent, "edited", at, timerSecs = timer),
                     ConcordActions.buildChannelReaction(owner, plane.key, general, plane.epoch, parent, "+", at, timerSecs = timer),
                 )
             for (wrap in durable) {
@@ -140,6 +139,32 @@ class ConcordDisappearingSessionTest {
             val off = ConcordActions.buildChannelMessage(owner, plane.key, general, plane.epoch, "forever", at, timerSecs = null)
             assertNull(ConcordDisappearing.expirationOf(opened(off, plane.key)))
             assertEquals(listOf("p"), off.tags.map { it[0] })
+        }
+
+    @Test
+    fun anEditKeepsTheOriginalMessagesDeadlineNotNowPlusTimer() =
+        runTest {
+            val (community, session) = session(day)
+            val general = community.generalChannelIdHex
+            val plane = session.currentChannelPlane(general)!!
+            val sentAt = 1_000_000L
+            val original = ChannelChat.message(owner.pubKey, general, plane.epoch, "hi", sentAt, ConcordDisappearing.withExpiration(emptyArray(), sentAt + 7 * day))
+            val editedAt = sentAt + 3 * day
+
+            // Default: the target's own deadline, verbatim, inside and outside.
+            val edit = ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, original, "hi!", editedAt)
+            assertEquals(sentAt + 7 * day, ConcordDisappearing.expirationOf(opened(edit, plane.key)))
+            assertEquals((sentAt + 7 * day).toString(), wrapExpiration(edit))
+
+            // A message sent without a timer stays timer-free when edited, even though a timer is on now.
+            val forever = ChannelChat.message(owner.pubKey, general, plane.epoch, "forever", sentAt)
+            val editForever = ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, forever, "still forever", editedAt)
+            assertNull(ConcordDisappearing.expirationOf(opened(editForever, plane.key)))
+            assertNull(wrapExpiration(editForever))
+
+            // A smuggled expiration in extraTags never overrides the original's.
+            val smuggled = ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, forever, "x", editedAt, arrayOf(arrayOf("expiration", "5")))
+            assertNull(ConcordDisappearing.expirationOf(opened(smuggled, plane.key)))
         }
 
     @Test
