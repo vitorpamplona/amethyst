@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import android.os.Messenger
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -37,7 +38,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * The registry of live relay subscriptions an applet has open, keyed by its `subId`. Each entry
+ * The registry of live relay subscriptions applets have open, keyed by the requesting surface's reply
+ * [Messenger] plus the applet's own `subId`. One broker serves every surface, and each page numbers its
+ * subs from scratch (`s0`, `s1`, …), so the `subId` alone would let one tab's REQ replace — or its
+ * `relay.close` kill — another tab's feed. Each entry
  * holds the exact [INostrClient] that opened it, so teardown unsubscribes from the right account
  * even after an account switch, plus an EOSE latch so a multi-relay subscription emits a single
  * `relay.eose`. Encodes the `relay.event`/`relay.eose`/`relay.closed` pushes and hands them to the
@@ -52,7 +56,12 @@ import java.util.concurrent.atomic.AtomicInteger
 class NappletLiveSubscriptions(
     private val scope: CoroutineScope,
 ) {
-    private val liveSubs = ConcurrentHashMap<String, LiveSub>()
+    private data class Key(
+        val owner: Messenger,
+        val subId: String,
+    )
+
+    private val liveSubs = ConcurrentHashMap<Key, LiveSub>()
     private val liveSeq = AtomicInteger(0)
 
     private class LiveSub(
@@ -77,11 +86,12 @@ class NappletLiveSubscriptions(
     }
 
     /**
-     * Opens a live relay subscription for [nappletSubId], streaming `relay.event`/`relay.eose`/
-     * `relay.closed` envelopes to [push] as events arrive. Replaces any existing subscription for
-     * the same id. With no account/relays/filters it pushes a single empty EOSE to close it.
+     * Opens [owner]'s live relay subscription [nappletSubId], streaming `relay.event`/`relay.eose`/
+     * `relay.closed` envelopes to [push] as events arrive. Replaces any existing subscription [owner] has
+     * under the same id. With no account/relays/filters it pushes a single empty EOSE to close it.
      */
     fun open(
+        owner: Messenger,
         nappletSubId: String,
         filters: List<Filter>,
         account: Account?,
@@ -93,15 +103,16 @@ class NappletLiveSubscriptions(
             return
         }
 
-        close(nappletSubId)
+        val key = Key(owner, nappletSubId)
+        close(owner, nappletSubId)
         // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
         // can't collide with the subscription it's replacing.
         val sub = LiveSub("napplet-$nappletSubId-${liveSeq.incrementAndGet()}", account.client)
-        liveSubs[nappletSubId] = sub
+        liveSubs[key] = sub
         sub.deliveryJob =
             scope.launch {
                 for (delivery in sub.deliveries) {
-                    if (liveSubs[nappletSubId] !== sub) break
+                    if (liveSubs[key] !== sub) break
                     when (delivery) {
                         is Delivery.RelayEvent ->
                             NappletRelayCleartext.forDelivery(delivery.event, account.signer)?.let {
@@ -145,21 +156,30 @@ class NappletLiveSubscriptions(
         runCatching { sub.client.subscribe(sub.clientSubId, relays.associateWith { filters }, listener) }
     }
 
-    /** Stops the live subscription for [nappletSubId], unsubscribing from the client that opened it. */
-    fun close(nappletSubId: String) {
-        val sub = liveSubs.remove(nappletSubId) ?: return
-        sub.deliveries.close()
-        sub.deliveryJob?.cancel()
-        runCatching { sub.client.unsubscribe(sub.clientSubId) }
+    /** Stops [owner]'s live subscription [nappletSubId], unsubscribing from the client that opened it. */
+    fun close(
+        owner: Messenger,
+        nappletSubId: String,
+    ) {
+        liveSubs.remove(Key(owner, nappletSubId))?.let(::stop)
+    }
+
+    /** Stops every subscription [owner] still has open (its surface went away without closing them). */
+    fun closeAllFor(owner: Messenger) {
+        liveSubs.keys
+            .filter { it.owner == owner }
+            .forEach { key -> liveSubs.remove(key)?.let(::stop) }
     }
 
     /** Tears down every open subscription (service teardown). */
     fun closeAll() {
-        liveSubs.values.forEach { sub ->
-            sub.deliveries.close()
-            sub.deliveryJob?.cancel()
-            runCatching { sub.client.unsubscribe(sub.clientSubId) }
-        }
+        liveSubs.values.forEach(::stop)
         liveSubs.clear()
+    }
+
+    private fun stop(sub: LiveSub) {
+        sub.deliveries.close()
+        sub.deliveryJob?.cancel()
+        runCatching { sub.client.unsubscribe(sub.clientSubId) }
     }
 }

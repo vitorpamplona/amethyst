@@ -93,7 +93,7 @@ class NappletBrokerService : Service() {
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
-    // Live relay subscriptions, keyed by the applet's subId. The account comes per-open from the
+    // Live relay subscriptions, keyed by the requesting surface plus the applet's subId. The account comes per-open from the
     // requesting surface's launch token, so a surface's REQs always target the account it acts as.
     private val liveSubscriptions = NappletLiveSubscriptions(scope)
 
@@ -158,7 +158,10 @@ class NappletBrokerService : Service() {
         // client's Messenger keeps a binder alive, which pins that surface's whole Activity (and its
         // WebView) in the `:napplet` process past onDestroy — reclaimable only by killing the process.
         if (msg.what == NappletIpc.MSG_RELEASE_CLIENT) {
-            msg.replyTo?.let { incBus.removeAll(it) }
+            msg.replyTo?.let {
+                incBus.removeAll(it)
+                liveSubscriptions.closeAllFor(it)
+            }
             // Release its foreground lease too; otherwise a destroyed surface keeps the main process
             // pinned resumed until the lease watchdog expires it.
             msg.data?.getString(NappletIpc.KEY_LAUNCH_TOKEN)?.let { token ->
@@ -401,8 +404,8 @@ class NappletBrokerService : Service() {
                         }
                     }
                     is NappletRequestRouter.Outcome.OpenSubscription ->
-                        liveSubscriptions.open(outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
-                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
+                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
+                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId)
                     is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                     is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
                     is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)

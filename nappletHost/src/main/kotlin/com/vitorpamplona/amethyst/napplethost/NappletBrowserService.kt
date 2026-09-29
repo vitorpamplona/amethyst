@@ -66,6 +66,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -127,7 +128,9 @@ class NappletBrowserService : Service() {
         var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
         var desktopSite = false
 
-        var bridgeReplyProxy: JavaScriptReplyProxy? = null
+        // The page on screen's bridge reply proxy, and which document each broker reply belongs to: a
+        // reply for a page the tab has navigated away from must never land in the next one.
+        val bridge = NappletBridgeDocuments<JavaScriptReplyProxy>()
         var fireSeq = 0
 
         // The in-flight `<input type="file">` pick for this surface. The picker itself runs in the main
@@ -191,6 +194,7 @@ class NappletBrowserService : Service() {
         tabs.values.forEach {
             it.fileChooser.cancel()
             cancelPending(it)
+            releasePage(it)
             it.webView?.destroy()
         }
         tabs.clear()
@@ -308,7 +312,7 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
                 val payload = msg.data?.getString(NappletBrowserContract.KEY_IME_PAYLOAD) ?: return true
-                tab.bridgeReplyProxy?.postMessage(payload)
+                runCatching { tab.bridge.currentProxy?.postMessage(payload) }
             }
             NappletBrowserContract.MSG_SET_TOR -> {
                 val tab = tabFor(msg) ?: return true
@@ -449,7 +453,8 @@ class NappletBrowserService : Service() {
     /** A session closed: drop the tab and destroy its own WebView (never a sibling's). */
     fun onSessionClosed(sessionId: String) {
         val tab = tabs.remove(sessionId) ?: return
-        tab.bridgeReplyProxy = null
+        releasePage(tab)
+        tab.bridge.clear()
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
         cancelPending(tab)
@@ -864,6 +869,10 @@ class NappletBrowserService : Service() {
             if (tab.webView === view) {
                 tab.webView = null
                 tab.recoverUrl = lastUrl?.takeIf { it.isNotBlank() && it != ABOUT_BLANK } ?: tab.recoverUrl
+                // The page died with its renderer: its broker subscriptions and pick have no one to serve.
+                releasePage(tab)
+                tab.bridge.clear()
+                tab.fileChooser.cancel()
                 tab.customView?.let { tab.container?.removeView(it) }
                 tab.customView = null
                 tab.customViewCallback = null
@@ -960,7 +969,8 @@ class NappletBrowserService : Service() {
         replyProxy: JavaScriptReplyProxy,
     ) {
         if (!isMainFrame) return
-        tab.bridgeReplyProxy = replyProxy
+        // A new document replaced the page: whatever the old one had open with the broker is dead.
+        if (tab.bridge.onMessage(replyProxy)) releasePage(tab)
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
@@ -995,7 +1005,8 @@ class NappletBrowserService : Service() {
         val host = sourceOrigin.host ?: return
         val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
 
-        val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
+        val pageId = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
+        val id = tab.bridge.brokerIdFor(pageId)
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = tab.replyMessenger
@@ -1014,6 +1025,21 @@ class NappletBrowserService : Service() {
             tab.pendingByOrigin.getOrPut(origin) { mutableListOf() }.add(msg)
             requestBrowserToken(tab, origin)
         }
+    }
+
+    /**
+     * The page on [tab] is gone (navigated away, renderer died, session closed): drop its requests still
+     * waiting for a token or the broker, and have the broker close the live relay / inc subscriptions it
+     * opened — otherwise their events would keep streaming into whatever page comes next.
+     */
+    private fun releasePage(tab: BrowserTab) {
+        tab.pendingByOrigin.clear()
+        // A mint the broker never answered (none is sent while logged out) would otherwise block the
+        // origin for the tab's life; the next page asks again.
+        tab.mintInFlight.clear()
+        pendingBrokerRequests.removeAll { it.what == NappletIpc.MSG_REQUEST && it.replyTo == tab.replyMessenger }
+        val release = Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = tab.replyMessenger }
+        if (brokerMessenger != null) sendToBroker(release)
     }
 
     private fun requestBrowserToken(
@@ -1102,14 +1128,17 @@ class NappletBrowserService : Service() {
         val data = msg.data ?: return true
         when (msg.what) {
             NappletIpc.MSG_RESPONSE -> {
-                val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
+                val brokerId = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                val result = (parseJsonObjectOrNull(payload) ?: JsonObject(emptyMap())).withString("id", id)
-                runCatching { tab.bridgeReplyProxy?.postMessage(result.toString()) }
+                // Null when the page that asked has been navigated away from: drop it rather than hand
+                // one site's answer (a signature, a decryption) to the next.
+                val (pageId, proxy) = tab.bridge.resolve(brokerId) ?: return true
+                val result = (parseJsonObjectOrNull(payload) ?: JsonObject(emptyMap())).withString("id", pageId)
+                runCatching { proxy.postMessage(result.toString()) }
             }
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                runCatching { tab.bridgeReplyProxy?.postMessage(payload) }
+                runCatching { tab.bridge.currentProxy?.postMessage(payload) }
             }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true

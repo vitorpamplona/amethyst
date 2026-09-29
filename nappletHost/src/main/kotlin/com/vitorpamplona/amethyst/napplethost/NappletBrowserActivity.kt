@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
+import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -220,7 +221,10 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     private val pendingBrokerRequests = mutableListOf<Message>()
-    private var bridgeReplyProxy: JavaScriptReplyProxy? = null
+
+    // The page on screen's bridge reply proxy, and which document each broker reply belongs to: a reply
+    // for a page the user has navigated away from must never land in the next one.
+    private val bridge = NappletBridgeDocuments<JavaScriptReplyProxy>()
     private var fireSeq = 0
     private val originTokens = mutableMapOf<String, String>()
     private val pendingByOrigin = mutableMapOf<String, MutableList<Message>>()
@@ -749,6 +753,9 @@ class NappletBrowserActivity : ComponentActivity() {
             Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}); offering a reload of $lastUrl" }
             exitFullscreen()
             destroyWebView()
+            // The page died with its renderer: nothing is left to receive its replies or pushes.
+            releasePage()
+            bridge.clear()
             showCrashView(lastUrl)
             return true
         }
@@ -888,7 +895,8 @@ class NappletBrowserActivity : ComponentActivity() {
         replyProxy: JavaScriptReplyProxy,
     ) {
         if (!isMainFrame) return
-        bridgeReplyProxy = replyProxy
+        // A new document replaced the page: whatever the old one had open with the broker is dead.
+        if (bridge.onMessage(replyProxy)) releasePage()
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
@@ -902,7 +910,8 @@ class NappletBrowserActivity : ComponentActivity() {
         val host = sourceOrigin.host ?: return
         val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
 
-        val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${fireSeq++}" }
+        val pageId = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${fireSeq++}" }
+        val id = bridge.brokerIdFor(pageId)
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = replyMessenger
@@ -954,6 +963,22 @@ class NappletBrowserActivity : ComponentActivity() {
         queueToBroker(msg)
     }
 
+    /**
+     * The page is gone (navigated away, or its renderer died): drop its requests still waiting for a token
+     * or the broker, and have the broker close the live relay / inc subscriptions it opened — otherwise
+     * their events would keep streaming into whatever page comes next. Unlike [releaseFromBroker] this keeps
+     * the surface's foreground lease: the activity itself is still up.
+     */
+    private fun releasePage() {
+        pendingByOrigin.clear()
+        // A mint the broker never answered (none is sent while logged out) would otherwise block the
+        // origin for good; the next page asks again.
+        mintInFlight.clear()
+        pendingBrokerRequests.removeAll { it.what == NappletIpc.MSG_REQUEST }
+        val broker = brokerMessenger ?: return
+        runCatching { broker.send(Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = replyMessenger }) }
+    }
+
     /** Sends now when the broker is bound, else queues until it is. */
     private fun queueToBroker(msg: Message) {
         if (brokerMessenger != null) sendToBroker(msg) else pendingBrokerRequests.add(msg)
@@ -971,14 +996,17 @@ class NappletBrowserActivity : ComponentActivity() {
         val data = msg.data ?: return true
         when (msg.what) {
             NappletIpc.MSG_RESPONSE -> {
-                val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
+                val brokerId = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                val result = (parseJsonObjectOrNull(payload) ?: JsonObject(emptyMap())).withString("id", id)
-                bridgeReplyProxy?.postMessage(result.toString())
+                // Null when the page that asked has been navigated away from: drop it rather than hand
+                // one site's answer (a signature, a decryption) to the next.
+                val (pageId, proxy) = bridge.resolve(brokerId) ?: return true
+                val result = (parseJsonObjectOrNull(payload) ?: JsonObject(emptyMap())).withString("id", pageId)
+                runCatching { proxy.postMessage(result.toString()) }
             }
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                bridgeReplyProxy?.postMessage(payload)
+                runCatching { bridge.currentProxy?.postMessage(payload) }
             }
             NappletIpc.MSG_WEB_FAVORITE_STATE -> {
                 val url = data.getString(NappletIpc.KEY_FAVORITE_URL) ?: return true
