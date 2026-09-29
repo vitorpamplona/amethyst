@@ -27,12 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.tags.ChallengeEventTag
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -61,8 +62,8 @@ class LiveChessGameAcceptEvent(
     /** The accepted challenge (`e`) and the challenger (`p`). */
     override fun links(): List<Link<*>> =
         links {
-            eventTags(Relation.ACCEPTED, tags)
-            userTags(Relation.OPPONENT, tags)
+            each(tags, ChallengeEventTag::parse) { event(Relation.ACCEPTED, it, ChallengeEventTag.TAG_NAME) }
+            each(tags, OpponentTag::parse) { user(Relation.OPPONENT, it, OpponentTag.TAG_NAME) }
         }
 
     companion object {

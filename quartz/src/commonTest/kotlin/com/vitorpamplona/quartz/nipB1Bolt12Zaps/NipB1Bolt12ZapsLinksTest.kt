@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipB1Bolt12Zaps
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import kotlin.test.Test
@@ -54,7 +55,7 @@ class NipB1Bolt12ZapsLinksTest {
                 "",
                 sig,
             )
-        val msats = mapOf("msats" to 21_000L)
+        val msats = ZapProps(21_000L)
         assertEquals(
             listOf(
                 Link(Relation.ZAP_RECIPIENT, LinkTarget.User(recipient), "p", msats),
@@ -71,7 +72,7 @@ class NipB1Bolt12ZapsLinksTest {
         val article = "30023:$recipient:post"
         val event =
             Bolt12ZapIntentEvent(id, payer, 1, arrayOf(arrayOf("p", recipient), arrayOf("amount", "5000"), arrayOf("a", article), arrayOf("k", "30023")), "", sig)
-        val msats = mapOf("msats" to 5_000L)
+        val msats = ZapProps(5_000L)
         assertEquals(
             listOf(
                 Link(Relation.ZAP_RECIPIENT, LinkTarget.User(recipient), "p", msats),

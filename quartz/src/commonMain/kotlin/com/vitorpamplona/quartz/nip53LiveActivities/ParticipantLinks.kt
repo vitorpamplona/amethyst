@@ -21,25 +21,13 @@
 package com.vitorpamplona.quartz.nip53LiveActivities
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 
 /**
  * NIP-53 participants: `["p", <pubkey>, <relay>, <role>, <proof>]`. The role (Host, Speaker,
  * Moderator…) and the proof of agreement to participate ride on the link as written.
  */
-internal fun LinkBuilder.participantLinks(tags: TagArray) =
-    tags.fastForEach {
-        if (it.size < 2 || it[0] != "p") return@fastForEach
-        val role = it.getOrNull(3)?.ifBlank { null }
-        val proof = it.getOrNull(4)?.ifBlank { null }
-        val props =
-            when {
-                role != null && proof != null -> mapOf("role" to role, "proof" to proof)
-                role != null -> mapOf("role" to role)
-                proof != null -> mapOf("proof" to proof)
-                else -> null
-            }
-        user(Relation.PARTICIPANT, it[1], "p", props)
-    }
+internal fun LinkBuilder.participantLinks(tags: TagArray) = each(tags, ParticipantTag::parse) { user(Relation.PARTICIPANT, it, ParticipantTag.TAG_NAME, it.linkProps()) }

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nipC7Chats
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -33,11 +32,12 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -106,21 +107,24 @@ class ChatEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val parent = tags.lastOrNull { it.size > 1 && it[0] == QTag.TAG_NAME }
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    QTag.TAG_NAME ->
-                        if (it === parent) {
-                            eventOrAddress(Relation.PARENT, it[1], "q")
-                            user(Relation.PARENT_AUTHOR, it.getOrNull(3), "q")
-                        } else {
-                            eventOrAddress(Relation.QUOTE, it[1], "q")
-                        }
-                    "p" -> user(Relation.MENTION, it[1], "p")
+            val quotes = tags.mapNotNull(QTag::parse)
+            val parent = quotes.lastOrNull()
+            quotes.forEach {
+                val relation = if (it === parent) Relation.PARENT else Relation.QUOTE
+                when (it) {
+                    is QEventTag -> event(relation, it, QTag.TAG_NAME)
+                    is QAddressableTag -> address(relation, it, QTag.TAG_NAME)
                 }
             }
-            valueTags(Relation.GROUP, tags, "h")
+            val parentAuthor =
+                when (parent) {
+                    is QEventTag -> parent.author
+                    is QAddressableTag -> parent.address.pubKeyHex
+                    else -> null
+                }
+            user(Relation.PARENT_AUTHOR, parentAuthor, QTag.TAG_NAME)
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
+            each(tags, GroupIdTag::parse) { tag(Relation.GROUP, GroupIdTag.TAG_NAME, it) }
             contentMentions(citedNIP19())
         }
 

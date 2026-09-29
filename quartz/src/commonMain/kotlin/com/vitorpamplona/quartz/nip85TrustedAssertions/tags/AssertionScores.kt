@@ -21,31 +21,22 @@
 package com.vitorpamplona.quartz.nip85TrustedAssertions.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip01Core.links.props.SubjectProps
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 
 /**
  * The scores a NIP-85 event, address or external-id assertion (30383-30385) states about its
- * subject, keyed by their NIP-85 tag names (`rank`, `comment_cnt`, `zap_amount`, …): the props of
- * its `SUBJECT` link. The first of each wins, as the classes' accessors read them. Null when the
- * assertion states none.
+ * subject, each read by its metric tag ([RankTag], [CommentCountTag], …): the props of its
+ * `SUBJECT` link. The first of each wins, as the classes' accessors read them.
  */
-internal fun TagArray.contentAssertionScores(): Map<String, Any>? {
-    val scores = LinkedHashMap<String, Any>()
-    fastForEach { tag ->
-        if (tag.size < 2 || tag[0] in scores) return@fastForEach
-        val value: Number? =
-            when (tag[0]) {
-                RankTag.TAG_NAME -> RankTag.parse(tag)
-                CommentCountTag.TAG_NAME -> CommentCountTag.parse(tag)
-                QuoteCountTag.TAG_NAME -> QuoteCountTag.parse(tag)
-                RepostCountTag.TAG_NAME -> RepostCountTag.parse(tag)
-                ReactionCountTag.TAG_NAME -> ReactionCountTag.parse(tag)
-                ZapCountTag.TAG_NAME -> ZapCountTag.parse(tag)
-                ZapAmountTag.TAG_NAME -> ZapAmountTag.parse(tag)
-                else -> null
-            }
-        if (value != null) scores[tag[0]] = value
-    }
-    return scores.ifEmpty { null }
-}
+internal fun TagArray.contentSubjectProps() =
+    SubjectProps(
+        rank = fastFirstNotNullOfOrNull(RankTag::parse),
+        commentCount = fastFirstNotNullOfOrNull(CommentCountTag::parse),
+        quoteCount = fastFirstNotNullOfOrNull(QuoteCountTag::parse),
+        repostCount = fastFirstNotNullOfOrNull(RepostCountTag::parse),
+        reactionCount = fastFirstNotNullOfOrNull(ReactionCountTag::parse),
+        zapCount = fastFirstNotNullOfOrNull(ZapCountTag::parse),
+        zapAmount = fastFirstNotNullOfOrNull(ZapAmountTag::parse),
+    )

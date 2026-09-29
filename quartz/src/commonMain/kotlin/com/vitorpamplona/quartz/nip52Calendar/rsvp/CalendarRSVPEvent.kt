@@ -30,10 +30,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.props.RsvpProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -101,18 +100,10 @@ class CalendarRSVPEvent(
     /** NIP-52: the calendar event responded to, by address and optionally by id, and its author. The RSVP status and free/busy flag ride on the calendar event links. */
     override fun links(): List<Link<*>> =
         links {
-            val status = statusValue()
-            val freeBusy = freebusy()?.value
-            val props =
-                when {
-                    status != null && freeBusy != null -> mapOf("status" to status, "fb" to freeBusy)
-                    status != null -> mapOf("status" to status)
-                    freeBusy != null -> mapOf("fb" to freeBusy)
-                    else -> null
-                }
-            addressTags(Relation.CALENDAR_EVENT, tags, props = props)
-            eventTags(Relation.CALENDAR_EVENT, tags, props = props)
-            userTags(Relation.CALENDAR_EVENT_AUTHOR, tags)
+            val props = RsvpProps(statusValue(), freebusy()?.value)
+            each(tags, ATag::parse) { address(Relation.CALENDAR_EVENT, it, ATag.TAG_NAME, props) }
+            each(tags, ETag::parse) { event(Relation.CALENDAR_EVENT, it, ETag.TAG_NAME, props) }
+            each(tags, PTag::parse) { user(Relation.CALENDAR_EVENT_AUTHOR, it, PTag.TAG_NAME) }
         }
 
     companion object {

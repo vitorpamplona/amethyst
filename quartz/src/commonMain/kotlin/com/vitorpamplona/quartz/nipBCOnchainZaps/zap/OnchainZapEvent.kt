@@ -32,19 +32,19 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.tags.BitcoinTxIdTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -118,12 +118,12 @@ class OnchainZapEvent(
     /** NIP-BC: the recipient and the zapped content; the sender is the author. The amount is the sender's claim until it is checked on chain, and `i` names the transaction. */
     override fun links(): List<Link<*>> =
         links {
-            val props = claimedAmountInSats()?.let { mapOf("msats" to it * 1000) }
-            userTags(Relation.ZAP_RECIPIENT, tags, props = props)
-            eventTags(Relation.ZAPPED, tags, props = props)
-            addressTags(Relation.ZAPPED, tags, props = props)
-            valueTags(Relation.TAG, tags, "i")
-            valueTags(Relation.TAG, tags, "k")
+            val props = ZapProps(claimedAmountInSats()?.let { it * 1000 })
+            each(tags, PTag::parse) { user(Relation.ZAP_RECIPIENT, it, PTag.TAG_NAME, props) }
+            each(tags, ETag::parse) { event(Relation.ZAPPED, it, ETag.TAG_NAME, props) }
+            each(tags, ATag::parse) { address(Relation.ZAPPED, it, ATag.TAG_NAME, props) }
+            each(tags, BitcoinTxIdTag::parseScope) { tag(Relation.TAG, BitcoinTxIdTag.TAG_NAME, it) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

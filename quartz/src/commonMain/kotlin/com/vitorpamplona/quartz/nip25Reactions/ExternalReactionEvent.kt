@@ -28,8 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyKindTag
@@ -84,8 +84,8 @@ class ExternalReactionEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            valueTags(Relation.REACTED, tags, "i")
-            valueTags(Relation.TAG, tags, "k")
+            each(tags, ExternalTargetTag::parse) { tag(Relation.REACTED, ExternalTargetTag.TAG_NAME, it) }
+            each(tags, ReplyKindTag::parse) { tag(Relation.TAG, ReplyKindTag.TAG_NAME, it) }
         }
 
     companion object {

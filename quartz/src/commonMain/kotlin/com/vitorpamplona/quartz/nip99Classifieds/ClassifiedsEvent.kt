@@ -31,12 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -150,9 +148,9 @@ class ClassifiedsEvent(
     /** NIP-99 gives its `e`/`a`/`p` tags no role: they are the notes, listings and people the description cites. */
     override fun links(): List<Link<*>> =
         links {
-            eventTags(Relation.MENTION, tags)
-            addressTags(Relation.MENTION, tags)
-            userTags(Relation.MENTION, tags)
+            each(tags, ETag::parse) { event(Relation.MENTION, it, ETag.TAG_NAME) }
+            each(tags, ATag::parse) { address(Relation.MENTION, it, ATag.TAG_NAME) }
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
             hashtags(tags)
             contentMentions(content)
         }

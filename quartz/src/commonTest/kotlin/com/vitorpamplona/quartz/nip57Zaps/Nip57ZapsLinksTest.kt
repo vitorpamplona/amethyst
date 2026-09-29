@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip57Zaps
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -59,7 +60,7 @@ class Nip57ZapsLinksTest {
                 "great article",
                 sig,
             )
-        val msats = mapOf("msats" to 21000L)
+        val msats = ZapProps(21000L)
 
         assertEquals(
             listOf(
@@ -89,7 +90,7 @@ class Nip57ZapsLinksTest {
                 "",
                 sig,
             )
-        val msats = mapOf("msats" to 100_000_000L)
+        val msats = ZapProps(100_000_000L)
 
         assertEquals(
             listOf(

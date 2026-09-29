@@ -28,9 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -94,8 +93,8 @@ class TextTrackEvent(
     /** The video this track belongs to and its language (`l`). */
     override fun links(): List<Link<*>> =
         links {
-            addressTags(Relation.VIDEO, tags)
-            valueTags(Relation.TAG, tags, "l")
+            each(tags, ATag::parse) { address(Relation.VIDEO, it, ATag.TAG_NAME) }
+            each(tags, LanguageTag::parse) { tag(Relation.TAG, LanguageTag.TAG_NAME, it) }
         }
 
     companion object {

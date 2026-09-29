@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.ServiceProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -34,7 +36,7 @@ data class ServiceProviderTag(
     val service: ServiceType,
     val pubkey: HexKey,
     val relayUrl: NormalizedRelayUrl,
-) {
+) : PubKeyReferenceTag {
     init {
         // [parse] refuses a kind outside NIP-85's own, so a constructed one
         // would write a tag this class can never read back. Callers address an
@@ -44,6 +46,16 @@ data class ServiceProviderTag(
         // side inside what the read side admits.
         require(service.kind in ASSERTION_KINDS) { "Not a NIP-85 assertion kind: ${service.kind}" }
     }
+
+    override val pubKey get() = pubkey
+
+    override val relayHint get() = relayUrl
+
+    /** The tag's name is the service it delegates (`30382:rank`): unlike most tags, it varies. */
+    fun tagName() = service.toValue()
+
+    /** The service the provider is trusted for, on the link to the provider. */
+    fun linkProps() = ServiceProps(service.toValue())
 
     fun toTagArray() = assemble(service, pubkey, relayUrl)
 

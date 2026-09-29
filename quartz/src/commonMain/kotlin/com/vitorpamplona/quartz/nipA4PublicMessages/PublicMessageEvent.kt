@@ -31,11 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.links.quotes
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
@@ -108,7 +109,7 @@ class PublicMessageEvent(
     /** NIP-A4: `p` tags are the receivers, never mentions; mentions come only from the content. */
     override fun links(): List<Link<*>> =
         links {
-            userTags(Relation.RECIPIENT, tags)
+            each(tags, PTag::parse) { user(Relation.RECIPIENT, it, PTag.TAG_NAME) }
             quotes(tags)
             contentMentions(citedNIP19())
         }

@@ -39,8 +39,15 @@ data class ModeratorTag(
 ) : PubKeyReferenceTag {
     fun toTagArray() = assemble(pubKey, relayHint, role)
 
+    /**
+     * NIP-72 lists moderators as `p` tags with the `moderator` role. A `p` with no role is one
+     * too, as the community's `moderators()` reads every `p`; any other role is not.
+     */
+    fun isModerator() = role.isNullOrBlank() || role.equals(MODERATOR_ROLE, ignoreCase = true)
+
     companion object {
         const val TAG_NAME = "p"
+        const val MODERATOR_ROLE = "moderator"
 
         fun parse(tag: Tag): ModeratorTag? {
             ensure(tag.has(1)) { return null }

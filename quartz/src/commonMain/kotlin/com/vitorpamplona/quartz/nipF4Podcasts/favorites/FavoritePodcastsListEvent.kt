@@ -27,8 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -61,7 +61,7 @@ class FavoritePodcastsListEvent(
     suspend fun privateFavorites(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
 
     /** The public favorites; the encrypted ones stay private. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.FAVORITE, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, UserTag::parseKey) { user(Relation.FAVORITE, it, UserTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 10054

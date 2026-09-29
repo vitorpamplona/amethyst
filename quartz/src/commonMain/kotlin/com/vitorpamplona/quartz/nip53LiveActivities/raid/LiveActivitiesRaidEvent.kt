@@ -92,8 +92,8 @@ class LiveActivitiesRaidEvent(
     /** The `root`-marked stream is the one raiding, the `mention`-marked one its target. */
     override fun links(): List<Link<*>> =
         links {
-            address(Relation.ROOT, fromAddress(), "a")
-            address(Relation.RAIDED, toAddress(), "a")
+            address(Relation.ROOT, fromActivity(), ATag.TAG_NAME)
+            address(Relation.RAIDED, toActivity(), ATag.TAG_NAME)
         }
 
     companion object {

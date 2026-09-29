@@ -26,12 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -79,10 +79,8 @@ class InterestListEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size > 1 && tag[0] == "t") tag(Relation.SUBSCRIBED, "t", tag[1].lowercase())
-            }
-            publicInterestSets().forEach { address(Relation.SUBSCRIBED, it.address, "a") }
+            each(tags, HashtagTag::parse) { tag(Relation.SUBSCRIBED, HashtagTag.TAG_NAME, it.lowercase()) }
+            publicInterestSets().forEach { address(Relation.SUBSCRIBED, it, AddressBookmark.TAG_NAME) }
         }
 
     companion object {

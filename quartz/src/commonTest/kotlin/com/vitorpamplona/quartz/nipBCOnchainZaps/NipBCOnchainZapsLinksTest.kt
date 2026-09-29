@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipBCOnchainZaps
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -54,7 +55,7 @@ class NipBCOnchainZapsLinksTest {
                 "",
                 sig,
             )
-        val msats = mapOf("msats" to 100_000L)
+        val msats = ZapProps(100_000L)
         assertEquals(
             listOf(
                 Link(Relation.ZAP_RECIPIENT, LinkTarget.User(recipient), "p", msats),

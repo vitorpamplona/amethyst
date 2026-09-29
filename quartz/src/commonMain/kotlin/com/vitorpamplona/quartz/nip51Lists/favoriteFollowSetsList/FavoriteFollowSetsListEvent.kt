@@ -73,7 +73,7 @@ class FavoriteFollowSetsListEvent(
     suspend fun privateFavoriteFollowSets(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.favoriteFollowSetBookmarks()
 
     /** NIP-51 kind 10021: the follow sets (kind 30000 `a` tags) the user favorited; other `a` kinds are skipped, as [publicFavoriteFollowSets] does. */
-    override fun links(): List<Link<*>> = links { publicFavoriteFollowSets().forEach { address(Relation.FAVORITE, it.address, "a") } }
+    override fun links(): List<Link<*>> = links { publicFavoriteFollowSets().forEach { address(Relation.FAVORITE, it, AddressBookmark.TAG_NAME) } }
 
     companion object {
         const val KIND = 10021

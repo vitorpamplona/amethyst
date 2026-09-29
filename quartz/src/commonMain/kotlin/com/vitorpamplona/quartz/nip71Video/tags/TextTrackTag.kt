@@ -20,7 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip71Video.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -49,8 +55,31 @@ data class TextTrackTag(
             else -> arrayOf(TAG_NAME, ref)
         }
 
+    /**
+     * [ref] as the address of a caption event: a `kind:pubkey:d` coordinate or an `naddr`. Null
+     * when it is a URL or names an event.
+     */
+    fun address(): Address? {
+        if (ref.firstOrNull()?.isDigit() == true) return Address.parse(ref)
+        return (nip19Entity() as? NAddress)?.address()
+    }
+
+    /** [ref] as the id of a caption event: a hex id, a `note` or an `nevent`. */
+    fun eventId(): HexKey? {
+        if (ref.length == 64) return ref
+        return when (val entity = nip19Entity()) {
+            is NEvent -> entity.hex
+            is NNote -> entity.hex
+            else -> null
+        }
+    }
+
+    private fun nip19Entity() = if (NIP19_PREFIXES.any { ref.startsWith(it) }) Nip19Parser.uriToRoute(ref)?.entity else null
+
     companion object {
         const val TAG_NAME = "text-track"
+
+        private val NIP19_PREFIXES = listOf("nostr:", "nevent1", "naddr1", "note1")
 
         fun parse(tag: Array<String>): TextTrackTag? {
             ensure(tag.has(1)) { return null }

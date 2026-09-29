@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip32Labeling
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -34,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.links.props.LabelProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelNamespaceTag
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -133,24 +134,19 @@ class LabelEvent(
     /**
      * NIP-32: every `e`/`a`/`p`/`t`/`r` is a label TARGET (`LABELED`), so a 1985's `t` and `r` are
      * never its own topics. Each target carries the labels in `labels`: one `<namespace>:<label>`
-     * per `l` tag (`ugc` when unmarked). The `l`/`L` values are `TAG`s. With no
+     * per `l` tag (`ugc` when unmarked, [LabelTag.qualified]). The `l`/`L` values are `TAG`s. With no
      * target tag the labels apply to the label event itself, which is no link.
      */
     override fun links(): List<Link<*>> =
         links {
-            val labels = labels().map { "${it.namespace}:${it.label}" }
-            val props = if (labels.isEmpty()) null else LabelProps(labels)
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "e" -> event(Relation.LABELED, tag[1], "e", props)
-                    "a" -> address(Relation.LABELED, tag[1], "a", props)
-                    "p" -> user(Relation.LABELED, tag[1], "p", props)
-                    "t" -> tag(Relation.LABELED, "t", tag[1].lowercase(), props = props)
-                    "r" -> tag(Relation.LABELED, "r", tag[1], props = props)
-                    "l", "L" -> tag(Relation.TAG, tag[0], tag[1])
-                }
-            }
+            labelTags(tags)
+
+            val props = LabelProps(labels().map(LabelTag::qualified))
+            each(tags, ETag::parse) { event(Relation.LABELED, it, ETag.TAG_NAME, props) }
+            each(tags, PTag::parse) { user(Relation.LABELED, it, PTag.TAG_NAME, props) }
+            each(tags, ATag::parse) { address(Relation.LABELED, it, ATag.TAG_NAME, props) }
+            each(tags, HashtagTag::parse) { tag(Relation.LABELED, HashtagTag.TAG_NAME, it.lowercase(), props = props) }
+            each(tags, ReferenceTag::parse) { tag(Relation.LABELED, ReferenceTag.TAG_NAME, it, props = props) }
         }
 
     companion object {

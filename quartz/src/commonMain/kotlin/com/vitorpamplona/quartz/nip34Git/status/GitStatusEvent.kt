@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip34Git.status
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -30,12 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip34Git.commitLinks
 import com.vitorpamplona.quartz.nip34Git.gitPeopleLinks
+import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
 import com.vitorpamplona.quartz.nip34Git.repositoryLinks
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -91,10 +92,7 @@ abstract class GitStatusEvent(
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)
 
     /** Earliest unique commit or merge/applied commit IDs, encoded as plain `r` tags. */
-    fun referenceCommits(): List<String> =
-        tags.mapNotNull { tag ->
-            if (tag.size > 1 && tag[0] == "r" && tag[1].isNotEmpty()) tag[1] else null
-        }
+    fun referenceCommits(): List<String> = tags.mapNotNull(EucTag::parseReference)
 
     /**
      * NIP-34 statuses: the `e` marked `root` is the issue, PR or patch, the `e` marked `reply` the
@@ -105,22 +103,21 @@ abstract class GitStatusEvent(
         links {
             var rootAuthor: HexKey? = null
             var parentAuthor: HexKey? = null
-            tags.fastForEach {
-                val thread = MarkedETag.parseAllThreadTags(it) ?: return@fastForEach
-                when (thread.marker) {
+            each(tags, MarkedETag::parseAllThreadTags) {
+                when (it.marker) {
                     MarkedETag.MARKER.ROOT -> {
-                        event(Relation.ROOT, thread.eventId, "e")
-                        if (rootAuthor == null) rootAuthor = LinkBuilder.normalizedHex(thread.author)
+                        event(Relation.ROOT, it, MarkedETag.TAG_NAME)
+                        if (rootAuthor == null) rootAuthor = LinkBuilder.normalizedHex(it.author)
                     }
                     MarkedETag.MARKER.REPLY -> {
-                        event(Relation.PARENT, thread.eventId, "e")
-                        if (parentAuthor == null) parentAuthor = LinkBuilder.normalizedHex(thread.author)
+                        event(Relation.PARENT, it, MarkedETag.TAG_NAME)
+                        if (parentAuthor == null) parentAuthor = LinkBuilder.normalizedHex(it.author)
                     }
-                    else -> event(Relation.MENTION, thread.eventId, "e")
+                    else -> event(Relation.MENTION, it, MarkedETag.TAG_NAME)
                 }
             }
             gitPeopleLinks(tags, repositoryLinks(tags), rootAuthor, parentAuthor)
-            valueTags(Relation.TAG, tags, "r")
+            commitLinks(tags)
         }
 
     companion object {

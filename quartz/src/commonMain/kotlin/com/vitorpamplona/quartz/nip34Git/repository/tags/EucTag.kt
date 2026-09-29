@@ -43,6 +43,18 @@ class EucTag {
             return tag[1]
         }
 
+        /**
+         * The commit of any `r` tag, marked or not: patches, pull requests and statuses name the
+         * target repository by the plain `["r", <commit>]` shape, the `"euc"` marker being only on
+         * the 30617 announcement.
+         */
+        fun parseReference(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
         fun assemble(commit: String) = arrayOf(TAG_NAME, commit, MARKER)
     }
 }

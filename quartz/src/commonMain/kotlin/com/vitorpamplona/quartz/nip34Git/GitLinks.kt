@@ -22,9 +22,12 @@ package com.vitorpamplona.quartz.nip34Git
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
 
 /**
  * NIP-34 names the repository an event is about in its `a` tags (one per maintainer's
@@ -33,12 +36,9 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
  */
 internal fun LinkBuilder.repositoryLinks(tags: TagArray): Set<HexKey> {
     val owners = mutableSetOf<HexKey>()
-    tags.fastForEach {
-        if (it.size < 2 || it[0] != "a") return@fastForEach
-        val address = LinkBuilder.normalizedAddress(it[1]) ?: return@fastForEach
-        address(Relation.REPOSITORY, address, "a")
-        val pubKeyStart = address.indexOf(':') + 1
-        owners.add(address.substring(pubKeyStart, pubKeyStart + 64))
+    each(tags, ATag::parse) {
+        address(Relation.REPOSITORY, it, ATag.TAG_NAME)
+        LinkBuilder.normalizedHex(it.pubKeyHex)?.let { owner -> owners.add(owner) }
     }
     return owners
 }
@@ -54,21 +54,23 @@ internal fun LinkBuilder.gitPeopleLinks(
     owners: Set<HexKey>,
     rootAuthor: HexKey? = null,
     parentAuthor: HexKey? = null,
-) = tags.fastForEach {
-    if (it.size < 2 || it[0] != "p") return@fastForEach
-    val key = LinkBuilder.normalizedHex(it[1]) ?: return@fastForEach
+) = each(tags, PTag::parseKey) {
+    val key = LinkBuilder.normalizedHex(it) ?: return@each
     var named = false
     if (key in owners) {
-        user(Relation.REPOSITORY_OWNER, key, "p")
+        user(Relation.REPOSITORY_OWNER, key, PTag.TAG_NAME)
         named = true
     }
     if (key == rootAuthor) {
-        user(Relation.ROOT_AUTHOR, key, "p")
+        user(Relation.ROOT_AUTHOR, key, PTag.TAG_NAME)
         named = true
     }
     if (key == parentAuthor) {
-        user(Relation.PARENT_AUTHOR, key, "p")
+        user(Relation.PARENT_AUTHOR, key, PTag.TAG_NAME)
         named = true
     }
-    if (!named) user(Relation.MENTION, key, "p")
+    if (!named) user(Relation.MENTION, key, PTag.TAG_NAME)
 }
+
+/** The earliest unique commit NIP-34 names the target repository by, as a [Relation.TAG]. */
+internal fun LinkBuilder.commitLinks(tags: TagArray) = each(tags, EucTag::parseReference) { tag(Relation.TAG, EucTag.TAG_NAME, it) }

@@ -25,14 +25,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
@@ -107,6 +108,12 @@ class JesterEvent(
     /** Get opponent pubkey (p-tag, for private games) */
     fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
+    /** The first `e` tag: the game's start event, or [JesterProtocol.START_POSITION_HASH] on the start event itself. */
+    fun startTag(): ETag? = tags.firstNotNullOfOrNull(ETag::parse)
+
+    /** The second `e` tag: the previous move. */
+    fun headTag(): ETag? = tags.mapNotNull(ETag::parse).getOrNull(1)
+
     /** Get all e-tags */
     fun eTags(): List<String> = tags.filter { it.size >= 2 && it[0] == "e" }.map { it[1] }
 
@@ -117,17 +124,9 @@ class JesterEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            var position = 0
-            tags.fastForEach {
-                if (it.size < 2 || it[0] != "e") return@fastForEach
-                val index = position++
-                if (it[1] == JesterProtocol.START_POSITION_HASH) return@fastForEach
-                when (index) {
-                    0 -> event(Relation.ROOT, it[1], "e")
-                    1 -> event(Relation.PARENT, it[1], "e")
-                }
-            }
-            userTags(Relation.OPPONENT, tags)
+            event(Relation.ROOT, startTag()?.takeUnless { it.eventId == JesterProtocol.START_POSITION_HASH }, ETag.TAG_NAME)
+            event(Relation.PARENT, headTag()?.takeUnless { it.eventId == JesterProtocol.START_POSITION_HASH }, ETag.TAG_NAME)
+            each(tags, PTag::parse) { user(Relation.OPPONENT, it, PTag.TAG_NAME) }
         }
 
     companion object {

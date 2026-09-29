@@ -35,6 +35,7 @@ class ReportedEventTag(
     override val eventId: HexKey,
     override val relay: NormalizedRelayUrl? = null,
     override val type: ReportType? = null,
+    override val rawType: String? = null,
 ) : BaseReportTag,
     GenericETag {
     /** NIP-56 `e` tags carry no author slot — slot 3 is the report type. */
@@ -45,9 +46,14 @@ class ReportedEventTag(
     companion object {
         const val TAG_NAME = "e"
 
+        /**
+         * [defaultReportType] and [defaultRawType] are the report's own type, for a tag that
+         * writes none.
+         */
         fun parse(
             tag: Array<String>,
             defaultReportType: ReportType? = null,
+            defaultRawType: String? = null,
         ): ReportedEventTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
@@ -57,6 +63,7 @@ class ReportedEventTag(
                 tag[1],
                 ReportTagLayout.relayHint(tag),
                 ReportTagLayout.reportType(tag, defaultReportType),
+                ReportTagLayout.rawReportType(tag) ?: defaultRawType,
             )
         }
 

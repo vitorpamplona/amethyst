@@ -31,10 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -42,11 +40,13 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
+import com.vitorpamplona.quartz.nip34Git.commitLinks
 import com.vitorpamplona.quartz.nip34Git.gitPeopleLinks
 import com.vitorpamplona.quartz.nip34Git.pr.tags.CurrentCommitTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.MergeBaseTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
 import com.vitorpamplona.quartz.nip34Git.repositoryLinks
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -94,17 +94,17 @@ class GitPullRequestUpdateEvent(
     // Tolerant of both the multi-value and legacy repeated `clone` forms; deduped.
     fun cloneUrls(): List<String> = tags.flatMap(CloneTag::parseAll).distinct()
 
-    fun earliestUniqueCommit(): String? = tags.firstOrNull { it.size > 1 && it[0] == "r" && it[1].isNotEmpty() }?.get(1)
+    fun earliestUniqueCommit(): String? = tags.firstNotNullOfOrNull(EucTag::parseReference)
 
     fun mergeBase(): String? = tags.firstNotNullOfOrNull(MergeBaseTag::parse)
 
     /** NIP-34 names the updated pull request with NIP-22 root tags: `E` and its author `P`. */
     override fun links(): List<Link<*>> =
         links {
-            eventTags(Relation.ROOT, tags, "E")
-            userTags(Relation.ROOT_AUTHOR, tags, "P")
+            each(tags, RootEventTag::parseKey) { event(Relation.ROOT, it, RootEventTag.TAG_NAME) }
+            each(tags, RootAuthorTag::parseKey) { user(Relation.ROOT_AUTHOR, it, RootAuthorTag.TAG_NAME) }
             gitPeopleLinks(tags, repositoryLinks(tags))
-            valueTags(Relation.TAG, tags, "r")
+            commitLinks(tags)
         }
 
     companion object {

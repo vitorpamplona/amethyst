@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -61,7 +62,7 @@ class PrivateZapEvent(
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     /** The decrypted request of a private zap: the same `e`/`a`/`p`/`k` as the public request it hides in. */
-    override fun links(): List<Link<*>> = zapLinks(tags, null)
+    override fun links(): List<Link<*>> = links { zapLinks(tags, null) }
 
     companion object {
         const val KIND = 9733

@@ -23,16 +23,17 @@ package com.vitorpamplona.quartz.nip38UserStatus
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -65,15 +66,10 @@ class UserStatusEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "p" -> user(Relation.LINKED, tag[1], "p")
-                    "e" -> event(Relation.LINKED, tag[1], "e")
-                    "a" -> address(Relation.LINKED, tag[1], "a")
-                    "r" -> tag(Relation.TAG, "r", tag[1])
-                }
-            }
+            each(tags, ReferenceTag::parse) { tag(Relation.TAG, ReferenceTag.TAG_NAME, it) }
+            each(tags, PTag::parse) { user(Relation.LINKED, it, PTag.TAG_NAME) }
+            each(tags, ETag::parse) { event(Relation.LINKED, it, ETag.TAG_NAME) }
+            each(tags, ATag::parse) { address(Relation.LINKED, it, ATag.TAG_NAME) }
         }
 
     companion object {

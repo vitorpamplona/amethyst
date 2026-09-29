@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -35,10 +36,12 @@ import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 data class ContactTag(
-    val pubKey: HexKey,
-) {
+    override val pubKey: HexKey,
+) : PubKeyReferenceTag {
     var relayUri: NormalizedRelayUrl? = null
     var petname: String? = null
+
+    override val relayHint get() = relayUri
 
     constructor(
         pubKey: HexKey,

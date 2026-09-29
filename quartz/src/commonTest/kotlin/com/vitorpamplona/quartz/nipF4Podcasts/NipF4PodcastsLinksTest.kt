@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipF4Podcasts
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
@@ -49,7 +50,7 @@ class NipF4PodcastsLinksTest {
         val event = PodcastMetadataEvent(id, podcast, 1, arrayOf(arrayOf("p", host, "host"), arrayOf("p", editor, "janitor")), "", sig)
         assertEquals(
             listOf(
-                Link(Relation.PODCAST_AUTHOR, LinkTarget.User(host), "p", mapOf("role" to "host")),
+                Link(Relation.PODCAST_AUTHOR, LinkTarget.User(host), "p", RoleProps(listOf("host"))),
                 Link(Relation.PODCAST_AUTHOR, LinkTarget.User(editor), "p"),
             ),
             event.links(),

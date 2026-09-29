@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -131,7 +133,7 @@ class ZapReceiptEvent(
      * (from the `bolt11` invoice) on the `ZAPPED` and `ZAP_RECIPIENT` links, and adds the zap
      * sender as `P`. The zap request embedded in `description` is JSON and is not read here.
      */
-    override fun links(): List<Link<*>> = zapLinks(tags, satsToMsats(amount)?.let { mapOf("msats" to it) }, withSender = true)
+    override fun links(): List<Link<*>> = links { zapLinks(tags, ZapProps(satsToMsats(amount)), withSender = true) }
 
     companion object {
         const val KIND = 9735

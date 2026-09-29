@@ -30,9 +30,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.props.AuctionProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -66,8 +66,9 @@ class BidEvent(
     /** NIP-15: the auction is named by its event id (a 30020 version) and the bid amount is the content. The `p` is Quartz's notification of the auction's merchant. */
     override fun links(): List<Link<*>> =
         links {
-            eventTags(Relation.AUCTION, tags, props = amount()?.let { mapOf("amount" to it) })
-            userTags(Relation.AUCTION_AUTHOR, tags)
+            val props = AuctionProps(amount())
+            each(tags, ETag::parse) { event(Relation.AUCTION, it, ETag.TAG_NAME, props) }
+            each(tags, PTag::parse) { user(Relation.AUCTION_AUTHOR, it, PTag.TAG_NAME) }
         }
 
     companion object {

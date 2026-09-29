@@ -94,8 +94,8 @@ class OldBookmarkListEvent(
     override fun links(): List<Link<*>> =
         links {
             when (dTag()) {
-                "pin" -> eventsAndAddresses(Relation.PIN, tags)
-                "communities" -> eventsAndAddresses(Relation.SUBSCRIBED, tags)
+                PIN_D_TAG -> eventsAndAddresses(Relation.PIN, tags)
+                COMMUNITIES_D_TAG -> eventsAndAddresses(Relation.SUBSCRIBED, tags)
                 else -> eventsAndAddresses(Relation.BOOKMARK, tags)
             }
         }
@@ -103,6 +103,8 @@ class OldBookmarkListEvent(
     companion object {
         const val KIND = 30001
         const val DEFAULT_D_TAG_BOOKMARKS = "bookmark"
+        const val PIN_D_TAG = "pin"
+        const val COMMUNITIES_D_TAG = "communities"
 
         fun createBookmarkAddress(pubKey: HexKey) = Address(KIND, pubKey, DEFAULT_D_TAG_BOOKMARKS)
 

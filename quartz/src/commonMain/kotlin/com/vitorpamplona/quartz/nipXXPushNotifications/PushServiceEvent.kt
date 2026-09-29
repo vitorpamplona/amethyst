@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import kotlinx.serialization.json.Json
 
 /**
@@ -58,7 +59,7 @@ abstract class PushServiceEvent(
      * The push service the payload is encrypted to (the `p`), as marmot's token records name
      * theirs. The `app` tag is an application id, not a reference; the payload is private.
      */
-    override fun links(): List<Link<*>> = links { user(Relation.NOTIFICATION_SERVER, pushService(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.NOTIFICATION_SERVER, pushService(), PTag.TAG_NAME) }
 
     fun pushService() = tags.pushService()
 

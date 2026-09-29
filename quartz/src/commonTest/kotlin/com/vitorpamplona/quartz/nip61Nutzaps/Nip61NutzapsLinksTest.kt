@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip61Nutzaps
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,7 +53,7 @@ class Nip61NutzapsLinksTest {
                 "thanks",
                 sig,
             )
-        val msats = mapOf("msats" to 121_000L)
+        val msats = ZapProps(121_000L)
         assertEquals(
             listOf(
                 Link(Relation.ZAPPED, LinkTarget.Event(zapped), "e", msats),

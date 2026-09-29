@@ -26,8 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.props.ChessResultProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip64Chess.GameResult
@@ -73,16 +74,8 @@ class LiveChessGameEndEvent(
     /** The opponent and the winner, when there is one. The result and the termination reason ride on both. */
     override fun links(): List<Link<*>> =
         links {
-            val result = result()
-            val termination = termination()
-            val props =
-                when {
-                    result != null && termination != null -> mapOf("result" to result, "termination" to termination)
-                    result != null -> mapOf("result" to result)
-                    termination != null -> mapOf("termination" to termination)
-                    else -> null
-                }
-            userTags(Relation.OPPONENT, tags, props = props)
+            val props = ChessResultProps(result(), termination())
+            each(tags, OpponentTag::parse) { user(Relation.OPPONENT, it, OpponentTag.TAG_NAME, props) }
             user(Relation.WINNER, winnerPubkey(), WinnerTag.TAG_NAME, props)
         }
 

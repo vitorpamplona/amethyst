@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -33,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -82,14 +82,10 @@ class ProfileBadgesEvent(
         links {
             acceptedBadges().forEach { badge ->
                 if (badge.badgeDefinition.kind == AcceptedBadgeSetEvent.KIND) return@forEach
-                address(Relation.BADGE_DEFINITION, badge.badgeDefinition.toTag(), "a")
-                event(Relation.BADGE_AWARD, badge.badgeAward.eventId, "e")
+                address(Relation.BADGE_DEFINITION, badge.badgeDefinition, ATag.TAG_NAME)
+                event(Relation.BADGE_AWARD, badge.badgeAward, ETag.TAG_NAME)
             }
-            tags.fastForEach { tag ->
-                if (tag.size > 1 && tag[0] == "a" && ATag.parse(tag)?.kind == AcceptedBadgeSetEvent.KIND) {
-                    address(Relation.BADGE_SET, tag[1], "a")
-                }
-            }
+            each(tags, ATag::parse) { if (it.kind == AcceptedBadgeSetEvent.KIND) address(Relation.BADGE_SET, it, ATag.TAG_NAME) }
         }
 
     companion object {

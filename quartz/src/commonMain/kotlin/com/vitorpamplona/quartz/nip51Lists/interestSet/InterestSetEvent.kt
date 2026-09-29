@@ -25,10 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -80,9 +80,7 @@ class InterestSetEvent(
     /** NIP-51: the hashtags that make up the interest (`t`, the same lowercased node `HASHTAG` uses) are its `MEMBER`s. */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size > 1 && tag[0] == "t") tag(Relation.MEMBER, "t", tag[1].lowercase())
-            }
+            each(tags, HashtagTag::parse) { tag(Relation.MEMBER, HashtagTag.TAG_NAME, it.lowercase()) }
         }
 
     companion object {

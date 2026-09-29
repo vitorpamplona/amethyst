@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -93,7 +94,7 @@ class GenericRepostEvent(
             null
         }
 
-    override fun links(): List<Link<*>> = repostLinks(tags)
+    override fun links(): List<Link<*>> = links { repostLinks(tags) }
 
     companion object {
         const val KIND = 16

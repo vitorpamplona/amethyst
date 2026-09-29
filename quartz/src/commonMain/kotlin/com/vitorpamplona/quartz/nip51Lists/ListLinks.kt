@@ -21,37 +21,43 @@
 package com.vitorpamplona.quartz.nip51Lists
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.props.LinkProps
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
 
 // The shapes NIP-51 lists share. Only public tags are read: private (NIP-44 encrypted) entries
 // are invisible to anyone but the owner, so they never become links.
 
-/** The `e` and `a` items of a bookmark-like list, in tag order, as [relation]. */
+/** The `e` and `a` items ([BookmarkIdTag]) of a bookmark-like list, in tag order, as [relation]. */
 internal fun <P : LinkProps> LinkBuilder.eventsAndAddresses(
     relation: Relation<P>,
     tags: TagArray,
-) = tags.fastForEach { tag ->
-    if (tag.size < 2) return@fastForEach
-    when (tag[0]) {
-        "e" -> event(relation, tag[1], "e")
-        "a" -> address(relation, tag[1], "a")
+) = each(tags, BookmarkIdTag::parse) {
+    when (it) {
+        is EventBookmark -> event(relation, it, EventBookmark.TAG_NAME)
+        is AddressBookmark -> address(relation, it, AddressBookmark.TAG_NAME)
     }
 }
 
 /**
- * A mute list's entries, each a `MUTE`: people (`p`), threads (`e`), hashtags (`t`, the same
- * lowercased node `HASHTAG` uses) and words (`word`, lowercase as NIP-51 writes them).
+ * A mute list's entries ([MuteTag]), each a `MUTE`: people (`p`), threads (`e`), hashtags (`t`,
+ * the same lowercased node `HASHTAG` uses) and words (`word`, lowercase as NIP-51 writes them).
  */
 internal fun LinkBuilder.mutes(tags: TagArray) =
-    tags.fastForEach { tag ->
-        if (tag.size < 2) return@fastForEach
-        when (tag[0]) {
-            "p" -> user(Relation.MUTE, tag[1], "p")
-            "e" -> event(Relation.MUTE, tag[1], "e")
-            "t" -> tag(Relation.MUTE, "t", tag[1].lowercase())
-            "word" -> tag(Relation.MUTE, "word", tag[1].lowercase())
+    each(tags, MuteTag::parse) {
+        when (it) {
+            is UserTag -> user(Relation.MUTE, it, UserTag.TAG_NAME)
+            is EventTag -> event(Relation.MUTE, it, EventTag.TAG_NAME)
+            is HashtagTag -> tag(Relation.MUTE, HashtagTag.TAG_NAME, it.hashtag.lowercase())
+            is WordTag -> tag(Relation.MUTE, WordTag.TAG_NAME, it.word.lowercase())
         }
     }

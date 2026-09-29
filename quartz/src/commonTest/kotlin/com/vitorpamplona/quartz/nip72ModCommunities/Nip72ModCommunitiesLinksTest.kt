@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip72ModCommunities
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
+import com.vitorpamplona.quartz.nip01Core.links.props.WotProps
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -140,9 +142,9 @@ class Nip72ModCommunitiesLinksTest {
             listOf(
                 Link(Relation.COMMUNITY, LinkTarget.Address(community), "a"),
                 Link(Relation.TAG, LinkTarget.Tag("k", "1"), "k"),
-                Link(Relation.ALLOWED, LinkTarget.User(member), "p", mapOf("role" to "contributor")),
+                Link(Relation.ALLOWED, LinkTarget.User(member), "p", RoleProps(listOf("contributor"))),
                 Link(Relation.DENIED, LinkTarget.User(moderator), "p"),
-                Link(Relation.WOT_ROOT, LinkTarget.User(owner), "wot", mapOf("depth" to 2)),
+                Link(Relation.WOT_ROOT, LinkTarget.User(owner), "wot", WotProps(2)),
             ),
             event.links(),
         )

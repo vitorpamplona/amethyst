@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -45,10 +46,10 @@ import com.vitorpamplona.quartz.utils.ensure
  */
 @Immutable
 data class GitAuthorTag(
-    val pubKey: HexKey,
-    val relayHint: NormalizedRelayUrl? = null,
+    override val pubKey: HexKey,
+    override val relayHint: NormalizedRelayUrl? = null,
     val petname: String? = null,
-) {
+) : PubKeyReferenceTag {
     fun toNProfile(): String = NProfile.create(pubKey, relayHint?.let { listOf(it) } ?: emptyList())
 
     fun toNPub(): String = pubKey.hexToByteArray().toNpub()

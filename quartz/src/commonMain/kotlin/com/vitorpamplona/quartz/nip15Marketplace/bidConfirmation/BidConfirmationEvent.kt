@@ -25,15 +25,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.props.BidProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -75,26 +75,21 @@ class BidConfirmationEvent(
 
     fun status() = confirmationData()?.status
 
+    /** NIP-15 orders the `e` tags: the bid first, then its auction. */
+    fun bid(): ETag? = tags.firstNotNullOfOrNull(ETag::parse)
+
+    fun auction(): ETag? = tags.mapNotNull(ETag::parse).getOrNull(1)
+
     /**
      * NIP-15 orders the `e` tags: the bid first, then its auction. The `p` is the bidder, which
      * Quartz adds to notify them. The confirmation's status rides on the bid link.
      */
     override fun links(): List<Link<*>> =
         links {
-            val bidProps =
-                confirmationData()?.let { data ->
-                    val extension = data.durationExtension
-                    if (extension != null) mapOf("status" to data.status, "duration_extension" to extension) else mapOf("status" to data.status)
-                }
-            var position = 0
-            tags.fastForEach {
-                if (it.size < 2 || it[0] != "e") return@fastForEach
-                when (position++) {
-                    0 -> event(Relation.BID, it[1], "e", bidProps)
-                    1 -> event(Relation.AUCTION, it[1], "e")
-                }
-            }
-            userTags(Relation.BID_AUTHOR, tags)
+            val data = confirmationData()
+            event(Relation.BID, bid(), ETag.TAG_NAME, BidProps(data?.status, data?.durationExtension))
+            event(Relation.AUCTION, auction(), ETag.TAG_NAME)
+            each(tags, PTag::parse) { user(Relation.BID_AUTHOR, it, PTag.TAG_NAME) }
         }
 
     companion object {

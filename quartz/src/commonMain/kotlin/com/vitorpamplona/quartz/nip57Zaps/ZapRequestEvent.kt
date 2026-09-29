@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -42,6 +44,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.tags.AmountTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -84,6 +87,9 @@ class ZapRequestEvent(
 
     fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
+    /** The requested amount ([AmountTag]), in millisats. */
+    fun amountMillisats() = tags.firstNotNullOfOrNull(AmountTag::parse)
+
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 
     /**
@@ -109,12 +115,9 @@ class ZapRequestEvent(
 
     /**
      * NIP-57 Appendix A: the `e`/`a` is the `ZAPPED` content and the `p` the `ZAP_RECIPIENT`, both
-     * with the requested `msats` (the `amount` tag) when there is one; `k` is the zapped kind.
+     * with the requested `msats` ([amountMillisats]) when there is one; `k` is the zapped kind.
      */
-    override fun links(): List<Link<*>> {
-        val msats = tags.firstNotNullOfOrNull { tag -> if (tag.size > 1 && tag[0] == "amount") tag[1].toLongOrNull()?.takeIf { it > 0 } else null }
-        return zapLinks(tags, msats?.let { mapOf("msats" to it) })
-    }
+    override fun links(): List<Link<*>> = links { zapLinks(tags, ZapProps(amountMillisats())) }
 
     companion object {
         const val KIND = 9734

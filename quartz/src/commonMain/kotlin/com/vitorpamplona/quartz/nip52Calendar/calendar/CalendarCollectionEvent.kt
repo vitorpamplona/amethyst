@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -74,7 +74,7 @@ class CalendarCollectionEvent(
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     /** NIP-52: a calendar is a set of `a` references to the date and time slots it includes. */
-    override fun links(): List<Link<*>> = links { addressTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, ATag::parse) { address(Relation.MEMBER, it, ATag.TAG_NAME) } }
 
     companion object {
         const val KIND = 31924

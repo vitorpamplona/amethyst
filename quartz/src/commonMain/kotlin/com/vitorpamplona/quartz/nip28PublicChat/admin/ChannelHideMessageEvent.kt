@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -70,8 +71,8 @@ class ChannelHideMessageEvent(
     /** The channel ([channel], the `root`-marked `e`) is the `ROOT`; every other `e` is `HIDDEN`. */
     override fun links(): List<Link<*>> =
         links {
-            event(Relation.ROOT, channelId(), "e")
-            eventsToHide().forEach { event(Relation.HIDDEN, it, "e") }
+            event(Relation.ROOT, channel(), MarkedETag.TAG_NAME)
+            eventsToHide().forEach { event(Relation.HIDDEN, it, ETag.TAG_NAME) }
         }
 
     companion object {

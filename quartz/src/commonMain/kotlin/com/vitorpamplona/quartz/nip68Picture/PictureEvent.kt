@@ -27,18 +27,20 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip68Picture.tags.LocationTag
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -86,12 +88,12 @@ class PictureEvent(
     /** NIP-68 names its `p` tags "tagged users", and an imeta `annotate-user` places one at a point in the image. */
     override fun links(): List<Link<*>> =
         links {
-            userTags(Relation.TAGGED, tags)
+            each(tags, PTag::parse) { user(Relation.TAGGED, it, PTag.TAG_NAME) }
             imetaTags().forEach { image ->
-                image.annotations.forEach { user(Relation.TAGGED, it.pubkey, "imeta", mapOf("x" to it.x, "y" to it.y)) }
+                image.annotations.forEach { user(Relation.TAGGED, it.pubkey, IMetaTag.TAG_NAME, it.linkProps()) }
             }
             hashtags(tags)
-            valueTags(Relation.TAG, tags, "g")
+            each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
         }
 
     companion object {

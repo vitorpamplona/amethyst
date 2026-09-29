@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -32,7 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -108,26 +109,17 @@ class CommunityDefinitionEvent(
 
     /**
      * NIP-72: a `p` with the `moderator` role is a `MODERATOR`. A `p` with no role is one too, as
-     * [moderators] reads every `p`; a `p` with any other role is only a `MENTION`. NIP-72 defines
+     * [moderators] reads every `p` ([ModeratorTag.isModerator]); a `p` with any other role is only
+     * a `MENTION`. NIP-72 defines
      * no `e`/`a`/`q` here: the ones Quartz reads as hints are mentions and quotes. The `relay`
      * tags are URLs.
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "p" -> {
-                        val role = tag.getOrNull(3)
-                        val isModerator = role.isNullOrBlank() || role.equals("moderator", ignoreCase = true)
-                        user(if (isModerator) Relation.MODERATOR else Relation.MENTION, tag[1], "p")
-                    }
-
-                    "e" -> event(Relation.MENTION, tag[1], "e")
-                    "a" -> address(Relation.MENTION, tag[1], "a")
-                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
-                }
-            }
+            each(tags, ModeratorTag::parse) { user(if (it.isModerator()) Relation.MODERATOR else Relation.MENTION, it, ModeratorTag.TAG_NAME) }
+            each(tags, ETag::parse) { event(Relation.MENTION, it, ETag.TAG_NAME) }
+            each(tags, ATag::parse) { address(Relation.MENTION, it, ATag.TAG_NAME) }
+            quotes(tags)
         }
 
     companion object {

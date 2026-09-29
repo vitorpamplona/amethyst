@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -108,7 +108,7 @@ class ChannelCreateEvent(
      * NIP-28 gives kind 40 no tags (its metadata and relays live in the content JSON); the `a`
      * tags Quartz reads as address hints are mentions, since nothing gives them another meaning.
      */
-    override fun links(): List<Link<*>> = links { addressTags(Relation.MENTION, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, ATag::parse) { address(Relation.MENTION, it, ATag.TAG_NAME) } }
 
     companion object {
         const val KIND = 40

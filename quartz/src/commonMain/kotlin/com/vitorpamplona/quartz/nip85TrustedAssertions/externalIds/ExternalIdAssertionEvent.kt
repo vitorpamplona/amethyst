@@ -27,13 +27,16 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip22Comments.tags.ReplyIdentifierTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.tags.ExternalIdKindTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.CommentCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ReactionCountTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.contentAssertionScores
+import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.contentSubjectProps
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -55,14 +58,17 @@ class ExternalIdAssertionEvent(
 
     fun reactionCount() = tags.firstNotNullOfOrNull(ReactionCountTag::parse)
 
+    /** The NIP-73 kinds of the identifier ([ExternalIdKindTag]). */
+    fun externalIdKinds() = tags.mapNotNull(ExternalIdKindTag::parse)
+
     /**
      * NIP-85: the `d` is the SUBJECT, the NIP-73 identifier this assertion scores (the same node a
      * NIP-73 `i` names), with the scores as props; the `k` tags are its NIP-73 kinds.
      */
     override fun links(): List<Link<*>> =
         links {
-            tag(Relation.SUBJECT, "i", aboutExternalId(), "d", tags.contentAssertionScores())
-            valueTags(Relation.TAG, tags, "k")
+            tag(Relation.SUBJECT, ReplyIdentifierTag.TAG_NAME, aboutExternalId(), DTag.TAG_NAME, tags.contentSubjectProps())
+            each(tags, ExternalIdKindTag::parse) { tag(Relation.TAG, ExternalIdKindTag.TAG_NAME, it) }
         }
 
     companion object {

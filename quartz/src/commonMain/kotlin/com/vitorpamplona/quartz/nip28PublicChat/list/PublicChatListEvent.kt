@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -71,7 +71,7 @@ class PublicChatListEvent(
     override fun linkedEventIds() = tags.mapNotNull(ChannelTag::parseId)
 
     /** NIP-51: the public chats (kind 40 channels) the user follows are `SUBSCRIBED`. */
-    override fun links(): List<Link<*>> = links { eventTags(Relation.SUBSCRIBED, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, ChannelTag::parse) { event(Relation.SUBSCRIBED, it, ChannelTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 10005

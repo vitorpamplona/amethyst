@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip87Ecash
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -54,8 +55,8 @@ class Nip87EcashLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.RECOMMENDED, LinkTarget.Address(mint), "a", mapOf("platform" to "cashu")),
-                Link(Relation.RECOMMENDED, LinkTarget.Address(federation), "a", mapOf("platform" to "fedimint")),
+                Link(Relation.RECOMMENDED, LinkTarget.Address(mint), "a", PlatformProps("cashu")),
+                Link(Relation.RECOMMENDED, LinkTarget.Address(federation), "a", PlatformProps("fedimint")),
                 Link(Relation.TAG, LinkTarget.Tag("k", "38172"), "k"),
             ),
             event.links(),

@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -109,7 +109,11 @@ class FollowSetEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            if (dTag() == "mute") mutes(tags) else userTags(Relation.MEMBER, tags)
+            if (dTag() == BLOCK_LIST_D_TAG) {
+                mutes(tags)
+            } else {
+                each(tags, UserTag::parse) { user(Relation.MEMBER, it, UserTag.TAG_NAME) }
+            }
         }
 
     companion object {

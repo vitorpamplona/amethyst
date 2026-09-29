@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nip72ModCommunities.rules.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -38,8 +41,18 @@ data class PubkeyRuleTag(
     val pubkey: HexKey,
     val policy: Policy,
     val role: String?,
-) {
+) : PubKeyReferenceTag {
     enum class Policy { ALLOW, DENY }
+
+    override val pubKey get() = pubkey
+
+    /** A rule names no relay. */
+    override val relayHint: NormalizedRelayUrl? get() = null
+
+    fun isAllowed() = policy == Policy.ALLOW
+
+    /** The role the rule grants, on the link to the pubkey it names. */
+    fun linkProps() = RoleProps(listOfNotNull(role))
 
     fun toTagArray() = assemble(pubkey, policy, role)
 

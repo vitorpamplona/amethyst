@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipF4Podcasts.metadata.tags
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -41,6 +42,9 @@ class AuthorTag(
     val role: String? = null,
 ) {
     fun toTagArray() = assemble(pubKey, role)
+
+    /** The author's role, as the link's props. */
+    fun linkProps() = RoleProps(listOfNotNull(role))
 
     companion object {
         const val TAG_NAME = "p"

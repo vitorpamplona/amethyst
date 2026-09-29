@@ -23,12 +23,14 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAddressTag
+import com.vitorpamplona.quartz.nip22Comments.tags.ReplyIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
@@ -72,6 +74,12 @@ class VoiceReplyEvent(
     /** The root scope's author (NIP-22 `P`). */
     fun rootAuthorKey(): HexKey? = tags.firstNotNullOfOrNull(RootAuthorTag::parseKey)
 
+    /** Whether the reply names its NIP-22 root scope (`E`, `A` or `I`), not only its parent. */
+    fun hasRootScope() = tags.any { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) }
+
+    /** Whether the parent is a voice message (`k` 1222): then a reply without a root scope replies to the root. */
+    fun repliesToVoiceMessage() = tags.any { ReplyKindTag.isKind(it, VoiceEvent.KIND.toString()) }
+
     /**
      * The root-scope tags a reply to this event inherits, or null when this event names no root.
      *
@@ -82,10 +90,11 @@ class VoiceReplyEvent(
      * `E` / `P` (identical layouts). An older reply to a reply has lost its root: null.
      */
     fun rootScopeTags(): List<Array<String>>? {
-        val scope = tags.filter { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) || RootKindTag.match(it) || RootAuthorTag.match(it) }
-        if (scope.any { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) }) return scope
+        if (hasRootScope()) {
+            return tags.filter { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) || RootKindTag.match(it) || RootAuthorTag.match(it) }
+        }
 
-        if (tags.none { ReplyKindTag.match(it) && it[1] == VoiceEvent.KIND.toString() }) return null
+        if (!repliesToVoiceMessage()) return null
         val parentTag = tags.lastOrNull { ReplyEventTag.parseKey(it) != null } ?: return null
         val authorTag = tags.lastOrNull { ReplyAuthorTag.parseKey(it) != null }
         return listOfNotNull(
@@ -103,27 +112,22 @@ class VoiceReplyEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val native = tags.any { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) }
-            rootScopeTags()?.forEach {
-                val via = if (native) it[0] else it[0].lowercase()
-                when (it[0]) {
-                    RootEventTag.TAG_NAME -> event(Relation.ROOT, it[1], via)
-                    RootAddressTag.TAG_NAME -> address(Relation.ROOT, it[1], via)
-                    RootIdentifierTag.TAG_NAME -> tag(Relation.ROOT, it[0], it[1], via)
-                    RootKindTag.TAG_NAME -> if (native) tag(Relation.TAG, it[0], it[1])
-                    RootAuthorTag.TAG_NAME -> user(Relation.ROOT_AUTHOR, it[1], via)
-                }
+            if (hasRootScope()) {
+                each(tags, RootEventTag::parseKey) { event(Relation.ROOT, it, RootEventTag.TAG_NAME) }
+                each(tags, RootAddressTag::parseAddressId) { address(Relation.ROOT, it, RootAddressTag.TAG_NAME) }
+                each(tags, RootIdentifierTag.Companion::parse) { tag(Relation.ROOT, RootIdentifierTag.TAG_NAME, it) }
+                each(tags, RootKindTag::parse) { tag(Relation.TAG, RootKindTag.TAG_NAME, it) }
+                each(tags, RootAuthorTag::parseKey) { user(Relation.ROOT_AUTHOR, it, RootAuthorTag.TAG_NAME) }
+            } else if (repliesToVoiceMessage()) {
+                // An older reply to a voice message: its parent is also its root (see rootScopeTags).
+                event(Relation.ROOT, replyingTo(), ReplyEventTag.TAG_NAME)
+                user(Relation.ROOT_AUTHOR, tags.lastNotNullOfOrNull(ReplyAuthorTag::parseKey), ReplyAuthorTag.TAG_NAME)
             }
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "e" -> event(Relation.PARENT, it[1], "e")
-                    "a" -> address(Relation.PARENT, it[1], "a")
-                    "i" -> tag(Relation.PARENT, "i", it[1])
-                    "k" -> tag(Relation.TAG, "k", it[1])
-                    "p" -> user(Relation.PARENT_AUTHOR, it[1], "p")
-                }
-            }
+            each(tags, ReplyEventTag::parseKey) { event(Relation.PARENT, it, ReplyEventTag.TAG_NAME) }
+            each(tags, ReplyAddressTag::parseAddressId) { address(Relation.PARENT, it, ReplyAddressTag.TAG_NAME) }
+            each(tags, ReplyIdentifierTag::parse) { tag(Relation.PARENT, ReplyIdentifierTag.TAG_NAME, it) }
+            each(tags, ReplyKindTag::parse) { tag(Relation.TAG, ReplyKindTag.TAG_NAME, it) }
+            each(tags, ReplyAuthorTag::parseKey) { user(Relation.PARENT_AUTHOR, it, ReplyAuthorTag.TAG_NAME) }
         }
 
     companion object {

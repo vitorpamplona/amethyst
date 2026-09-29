@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -34,8 +33,10 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag
@@ -107,15 +108,11 @@ class CommunityPostApprovalEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "a" -> address(if (CommunityTag.parseAddressId(tag) != null) Relation.COMMUNITY else Relation.APPROVED, tag[1], "a")
-                    "e" -> event(Relation.APPROVED, tag[1], "e")
-                    "p" -> user(Relation.APPROVED_AUTHOR, tag[1], "p")
-                    "k" -> tag(Relation.TAG, "k", tag[1])
-                }
-            }
+            each(tags, CommunityTag::parse) { address(Relation.COMMUNITY, it, CommunityTag.TAG_NAME) }
+            each(tags, ApprovedEventTag::parse) { event(Relation.APPROVED, it, ApprovedEventTag.TAG_NAME) }
+            each(tags, ApprovedAddressTag::parse) { address(Relation.APPROVED, it, ApprovedAddressTag.TAG_NAME) }
+            each(tags, PTag::parse) { user(Relation.APPROVED_AUTHOR, it, PTag.TAG_NAME) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

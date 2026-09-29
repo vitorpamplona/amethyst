@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip84Highlights
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -61,8 +62,8 @@ class Nip84HighlightsLinksTest {
             listOf(
                 Link(Relation.HIGHLIGHTED, LinkTarget.Address(article), "a"),
                 Link(Relation.HIGHLIGHTED, LinkTarget.Event(version), "e"),
-                Link(Relation.HIGHLIGHTED_AUTHOR, LinkTarget.User(author), "p", mapOf("role" to "author")),
-                Link(Relation.HIGHLIGHTED_AUTHOR, LinkTarget.User(editor), "p", mapOf("role" to "editor")),
+                Link(Relation.HIGHLIGHTED_AUTHOR, LinkTarget.User(author), "p", RoleProps(listOf("author"))),
+                Link(Relation.HIGHLIGHTED_AUTHOR, LinkTarget.User(editor), "p", RoleProps(listOf("editor"))),
                 Link(Relation.HIGHLIGHTED_AUTHOR, LinkTarget.User("b4".repeat(32)), "p"),
                 Link(Relation.MENTION, LinkTarget.User(mentioned), "p"),
             ),

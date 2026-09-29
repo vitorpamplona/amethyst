@@ -27,13 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.links.quotes
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
@@ -41,6 +42,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.BtihTag
+import com.vitorpamplona.quartz.nip35Torrents.tags.ExternalIdTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.FileTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.InfoHashTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.TrackerTag
@@ -111,11 +113,11 @@ class TorrentEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            valueTags(Relation.TAG, tags, "i")
+            each(tags, ExternalIdTag::parse) { tag(Relation.TAG, ExternalIdTag.TAG_NAME, it) }
             hashtags(tags)
             quotes(tags)
-            userTags(Relation.MENTION, tags)
-            valueTags(Relation.TAG, tags, "r")
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
+            each(tags, ReferenceTag::parse) { tag(Relation.TAG, ReferenceTag.TAG_NAME, it) }
         }
 
     companion object {

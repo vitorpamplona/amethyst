@@ -40,6 +40,13 @@ class DefaultReportTag {
             return ReportType.parseOrNull(tag[1], tag)
         }
 
+        /** The type as written ([ReportTagLayout.normalizeRawType]). */
+        fun parseRaw(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return ReportTagLayout.normalizeRawType(tag[1])
+        }
+
         fun assemble(type: ReportType? = null) = arrayOfNotNull(TAG_NAME, type?.code)
     }
 }

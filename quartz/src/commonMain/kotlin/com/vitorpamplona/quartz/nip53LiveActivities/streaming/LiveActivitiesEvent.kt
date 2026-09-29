@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.participantLinks
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.GoalTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.PinnedEventTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.RecordingTag
@@ -147,7 +148,7 @@ class LiveActivitiesEvent(
      * zap.stream convention: a NIP-75 zap goal (kind 9041) is attached to a live stream
      * via a flat tag `["goal", "<hex event id>"]` on the 30311 event.
      */
-    fun goalEventId(): HexKey? = tags.firstOrNull { it.size > 1 && it[0] == GOAL_TAG && it[1].isNotEmpty() }?.get(1)
+    fun goalEventId(): HexKey? = tags.firstNotNullOfOrNull(GoalTag::parse)
 
     fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
         if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {
@@ -172,13 +173,13 @@ class LiveActivitiesEvent(
     override fun links(): List<Link<*>> =
         links {
             participantLinks(tags)
-            eventTags(Relation.PIN, tags, "pinned")
-            eventTags(Relation.GOAL, tags, GOAL_TAG)
+            each(tags, PinnedEventTag::parse) { event(Relation.PIN, it, PinnedEventTag.TAG_NAME) }
+            each(tags, GoalTag::parse) { event(Relation.GOAL, it, GoalTag.TAG_NAME) }
         }
 
     companion object {
         const val KIND = 30311
-        const val GOAL_TAG = "goal"
+        const val GOAL_TAG = GoalTag.TAG_NAME
 
         suspend fun create(
             signer: NostrSigner,

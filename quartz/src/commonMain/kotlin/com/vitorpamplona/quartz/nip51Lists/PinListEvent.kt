@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
@@ -57,7 +57,7 @@ class PinListEvent(
     fun isPinned(eventId: HexKey): Boolean = tags.any { EventBookmark.isTagged(it, eventId) }
 
     /** NIP-51: the notes pinned to the profile. */
-    override fun links(): List<Link<*>> = links { eventTags(Relation.PIN, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, EventBookmark::parse) { event(Relation.PIN, it, EventBookmark.TAG_NAME) } }
 
     companion object {
         const val KIND = 10001

@@ -32,8 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -95,7 +95,7 @@ class ContactListEvent(
     }
 
     /** NIP-02: every `p` is a `FOLLOW`, the social graph. The legacy relay map in the content is not a reference. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.FOLLOW, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, ContactTag::parse) { user(Relation.FOLLOW, it, ContactTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 3

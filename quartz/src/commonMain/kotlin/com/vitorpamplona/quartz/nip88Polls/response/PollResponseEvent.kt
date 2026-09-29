@@ -30,9 +30,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip01Core.links.props.PollResponseProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
@@ -68,9 +68,9 @@ class PollResponseEvent(
     /** NIP-88: the poll, with the chosen option ids (in tag order) on the link. The `p` is Quartz's notification of the poll's author. */
     override fun links(): List<Link<*>> =
         links {
-            val responses = responses()
-            eventTags(Relation.POLL, tags, props = if (responses.isEmpty()) null else mapOf("responses" to responses))
-            userTags(Relation.POLL_AUTHOR, tags)
+            val props = PollResponseProps(responses())
+            each(tags, PollTag::parse) { event(Relation.POLL, it, PollTag.TAG_NAME, props) }
+            each(tags, PTag::parse) { user(Relation.POLL_AUTHOR, it, PTag.TAG_NAME) }
         }
 
     companion object {

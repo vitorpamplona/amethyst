@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip15Marketplace
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.AuctionProps
+import com.vitorpamplona.quartz.nip01Core.links.props.BidProps
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
@@ -44,7 +46,7 @@ class Nip15MarketplaceLinksTest {
         val event = BidEvent(id, bidder, 1, arrayOf(arrayOf("e", auction, "wss://relay.example/"), arrayOf("p", merchant)), "150", sig)
         assertEquals(
             listOf(
-                Link(Relation.AUCTION, LinkTarget.Event(auction), "e", mapOf("amount" to 150.0)),
+                Link(Relation.AUCTION, LinkTarget.Event(auction), "e", AuctionProps(150.0)),
                 Link(Relation.AUCTION_AUTHOR, LinkTarget.User(merchant), "p"),
             ),
             event.links(),
@@ -64,7 +66,7 @@ class Nip15MarketplaceLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.BID, LinkTarget.Event(bid), "e", mapOf("status" to "accepted", "duration_extension" to 300L)),
+                Link(Relation.BID, LinkTarget.Event(bid), "e", BidProps("accepted", 300L)),
                 Link(Relation.AUCTION, LinkTarget.Event(auction), "e"),
                 Link(Relation.BID_AUTHOR, LinkTarget.User(bidder), "p"),
             ),

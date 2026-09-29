@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -39,12 +38,15 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -64,6 +66,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip54Wiki.tags.WikiReferenceTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -179,22 +182,20 @@ class WikiArticleEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "a", "e" -> {
-                        val relation =
-                            when (it.getOrNull(3)) {
-                                MarkedETag.MARKER.FORK.code -> Relation.FORK
-                                "defer" -> Relation.DEFER
-                                else -> Relation.MENTION
-                            }
-                        if (it[0] == "a") address(relation, it[1], "a") else event(relation, it[1], "e")
+            each(tags, WikiReferenceTag::parse) {
+                val relation =
+                    when (it.marker) {
+                        WikiReferenceTag.FORK_MARKER -> Relation.FORK
+                        WikiReferenceTag.DEFER_MARKER -> Relation.DEFER
+                        else -> Relation.MENTION
                     }
-                    "p" -> user(Relation.MENTION, it[1], "p")
-                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
+                when (it) {
+                    is WikiReferenceTag.EventRef -> event(relation, it, ETag.TAG_NAME)
+                    is WikiReferenceTag.AddressRef -> address(relation, it, ATag.TAG_NAME)
                 }
             }
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
+            quotes(tags)
             hashtags(tags)
             contentMentions(citedNIP19())
         }

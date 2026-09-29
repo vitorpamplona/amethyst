@@ -70,7 +70,7 @@ class MeetingRoomPresenceEvent(
     fun onstage() = tags.firstNotNullOfOrNull(OnstageTag::parse)
 
     /** NIP-53 presence: `["a", <room>, <relay>, "root"]`. Quartz writes it without the marker, so the room is the `a` either way. */
-    override fun links(): List<Link<*>> = links { address(Relation.ROOT, interactiveRoom()?.address, "a") }
+    override fun links(): List<Link<*>> = links { address(Relation.ROOT, interactiveRoom(), MeetingSpaceTag.TAG_NAME) }
 
     companion object Companion {
         const val KIND = 10312

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip53LiveActivities.chat
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -36,8 +35,10 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -57,6 +58,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.tags.ActivityTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -146,16 +148,14 @@ class LiveActivitiesChatMessageEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val activity = tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" } ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "a" -> address(if (it === activity) Relation.ROOT else Relation.MENTION, it[1], "a")
-                    "e" -> event(if (it.getOrNull(3) == MarkedETag.MARKER.MENTION.code) Relation.MENTION else Relation.PARENT, it[1], "e")
-                    "p" -> user(Relation.MENTION, it[1], "p")
-                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
-                }
+            val activities = tags.mapNotNull(ActivityTag::parse)
+            val activity = activities.firstOrNull { it.isRoot() } ?: activities.firstOrNull()
+            activities.forEach { address(if (it === activity) Relation.ROOT else Relation.MENTION, it, ActivityTag.TAG_NAME) }
+            each(tags, MarkedETag::parseAllThreadTags) {
+                event(if (it.marker == MarkedETag.MARKER.MENTION) Relation.MENTION else Relation.PARENT, it, MarkedETag.TAG_NAME)
             }
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
+            quotes(tags)
             hashtags(tags)
             contentMentions(citedNIP19())
         }

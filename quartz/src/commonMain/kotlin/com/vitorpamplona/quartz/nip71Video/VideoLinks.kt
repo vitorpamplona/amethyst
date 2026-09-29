@@ -24,14 +24,12 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip71Video.credits.CreditTarget
-
-private const val MENTION_LABEL = "mention"
-private const val INSPIRED_BY_LABEL = "inspired-by"
+import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
+import com.vitorpamplona.quartz.nip71Video.tags.TextTrackTag
 
 /**
  * The links every NIP-71 video kind (21, 22, 34235, 34236) shares.
@@ -48,44 +46,31 @@ internal fun LinkBuilder.videoLinks(
 ) {
     video.credits().forEach { credit ->
         val label = credit.label
-        val creditProps = label?.let { mapOf("credit" to it) }
         when (val target = credit.target) {
             is CreditTarget.Person ->
                 when (label) {
-                    null -> user(Relation.PARTICIPANT, target.pubKey, "p")
-                    MENTION_LABEL -> user(Relation.MENTION, target.pubKey, "p")
-                    INSPIRED_BY_LABEL -> user(Relation.CREDITED, target.pubKey, "p", creditProps)
-                    else -> user(Relation.PARTICIPANT, target.pubKey, "p", mapOf("role" to label))
+                    null -> user(Relation.PARTICIPANT, target.pubKey, PTag.TAG_NAME)
+                    VideoCredit.MENTION_LABEL -> user(Relation.MENTION, target.pubKey, PTag.TAG_NAME)
+                    VideoCredit.INSPIRED_BY_LABEL -> user(Relation.CREDITED, target.pubKey, PTag.TAG_NAME, credit.creditProps())
+                    else -> user(Relation.PARTICIPANT, target.pubKey, PTag.TAG_NAME, credit.roleProps())
                 }
             is CreditTarget.Video ->
-                if (label == null || label == MENTION_LABEL) {
-                    address(Relation.MENTION, target.address.toTag(), "a")
+                if (label == null || label == VideoCredit.MENTION_LABEL) {
+                    address(Relation.MENTION, target.address, ATag.TAG_NAME)
                 } else {
-                    address(Relation.CREDITED, target.address.toTag(), "a", creditProps)
+                    address(Relation.CREDITED, target.address, ATag.TAG_NAME, credit.creditProps())
                 }
             is CreditTarget.Event ->
-                if (label == MENTION_LABEL) {
-                    event(Relation.MENTION, target.eventId, "e")
+                if (label == VideoCredit.MENTION_LABEL) {
+                    event(Relation.MENTION, target.eventId, ETag.TAG_NAME)
                 } else {
-                    event(Relation.CREDITED, target.eventId, "e", creditProps)
+                    event(Relation.CREDITED, target.eventId, ETag.TAG_NAME, credit.creditProps())
                 }
         }
     }
-    video.textTrack().forEach { textTrackLink(it.ref) }
-    hashtags(tags)
-}
-
-private fun LinkBuilder.textTrackLink(ref: String) {
-    val via = "text-track"
-    when {
-        LinkBuilder.normalizedAddress(ref) != null -> address(Relation.TEXT_TRACK, ref, via)
-        ref.length == 64 -> event(Relation.TEXT_TRACK, ref, via)
-        ref.startsWith("nostr:") || ref.startsWith("nevent1") || ref.startsWith("naddr1") || ref.startsWith("note1") ->
-            when (val entity = Nip19Parser.uriToRoute(ref)?.entity) {
-                is NEvent -> event(Relation.TEXT_TRACK, entity.hex, via)
-                is NNote -> event(Relation.TEXT_TRACK, entity.hex, via)
-                is NAddress -> address(Relation.TEXT_TRACK, entity.aTag(), via)
-                else -> Unit
-            }
+    video.textTrack().forEach {
+        address(Relation.TEXT_TRACK, it.address(), TextTrackTag.TAG_NAME)
+        event(Relation.TEXT_TRACK, it.eventId(), TextTrackTag.TAG_NAME)
     }
+    hashtags(tags)
 }

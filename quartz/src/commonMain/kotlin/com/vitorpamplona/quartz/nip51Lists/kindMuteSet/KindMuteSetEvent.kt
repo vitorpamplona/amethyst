@@ -29,9 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.links.props.MuteProps
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -61,13 +61,17 @@ class KindMuteSetEvent(
 
     suspend fun privateMutedUsers(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
 
+    /** The kind this set mutes its users for: its `d`. */
+    fun mutedKind() = dTag().toIntOrNull()
+
     /**
      * NIP-51: the `p`s muted for one kind, which the `d` names; it rides as `muted_kind`, since a
      * mute of one kind is not a full mute.
      */
     override fun links(): List<Link<*>> =
         links {
-            userTags(Relation.MUTE, tags, props = dTag().toIntOrNull()?.let { MuteProps(it) })
+            val props = MuteProps(mutedKind())
+            each(tags, UserTag::parse) { user(Relation.MUTE, it, UserTag.TAG_NAME, props) }
         }
 
     companion object {

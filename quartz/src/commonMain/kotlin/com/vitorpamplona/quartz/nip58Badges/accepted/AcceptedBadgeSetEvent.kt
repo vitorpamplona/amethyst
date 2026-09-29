@@ -97,8 +97,8 @@ class AcceptedBadgeSetEvent(
     override fun links(): List<Link<*>> =
         links {
             acceptedBadges().forEach { badge ->
-                address(Relation.BADGE_DEFINITION, badge.badgeDefinition.toTag(), "a")
-                event(Relation.BADGE_AWARD, badge.badgeAward.eventId, "e")
+                address(Relation.BADGE_DEFINITION, badge.badgeDefinition, ATag.TAG_NAME)
+                event(Relation.BADGE_AWARD, badge.badgeAward, ETag.TAG_NAME)
             }
         }
 

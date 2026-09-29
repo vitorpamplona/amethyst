@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nip72ModCommunities.rules.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.WotProps
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -39,7 +42,15 @@ import com.vitorpamplona.quartz.utils.ensure
 data class WotTag(
     val rootPubkey: HexKey,
     val depth: Int,
-) {
+) : PubKeyReferenceTag {
+    override val pubKey get() = rootPubkey
+
+    /** A gate names no relay. */
+    override val relayHint: NormalizedRelayUrl? get() = null
+
+    /** How many hops from [rootPubkey] a poster must be, on the link to that root. */
+    fun linkProps() = WotProps(depth)
+
     fun toTagArray() = assemble(rootPubkey, depth)
 
     companion object {

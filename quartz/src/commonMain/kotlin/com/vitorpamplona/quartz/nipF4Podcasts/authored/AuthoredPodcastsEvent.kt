@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
@@ -65,7 +65,7 @@ class AuthoredPodcastsEvent(
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     /** NIP-F4: the podcasts this user authors, the counter-claim a podcast's 10154 authors are verified against. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.AUTHORED, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, UserTag::parseKey) { user(Relation.AUTHORED, it, UserTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 10064

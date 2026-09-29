@@ -28,10 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -65,7 +66,7 @@ class ThreadEvent(
     fun title() = tags.title() ?: tags.firstTagValue("subject")
 
     /** A thread posted in a NIP-29 group names it in `h`. Replies are NIP-22 comments that point here. */
-    override fun links(): List<Link<*>> = links { valueTags(Relation.GROUP, tags, "h") }
+    override fun links(): List<Link<*>> = links { each(tags, GroupIdTag::parse) { tag(Relation.GROUP, GroupIdTag.TAG_NAME, it) } }
 
     companion object {
         const val KIND = 11

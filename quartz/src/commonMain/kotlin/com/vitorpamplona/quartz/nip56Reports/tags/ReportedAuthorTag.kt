@@ -35,6 +35,7 @@ class ReportedAuthorTag(
     override val pubKey: HexKey,
     override val relayHint: NormalizedRelayUrl? = null,
     override val type: ReportType? = null,
+    override val rawType: String? = null,
 ) : BaseReportTag,
     PubKeyReferenceTag {
     fun toTagArray() = assemble(pubKey, relayHint, type)
@@ -42,9 +43,11 @@ class ReportedAuthorTag(
     companion object {
         const val TAG_NAME = "p"
 
+        /** See [ReportedEventTag.parse] for the defaults. */
         fun parse(
             tag: Array<String>,
             defaultReportType: ReportType? = null,
+            defaultRawType: String? = null,
         ): ReportedAuthorTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
@@ -54,6 +57,7 @@ class ReportedAuthorTag(
                 tag[1],
                 ReportTagLayout.relayHint(tag),
                 ReportTagLayout.reportType(tag, defaultReportType),
+                ReportTagLayout.rawReportType(tag) ?: defaultRawType,
             )
         }
 

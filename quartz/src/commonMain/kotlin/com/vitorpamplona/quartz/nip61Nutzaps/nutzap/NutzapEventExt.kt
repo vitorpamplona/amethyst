@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip61Nutzaps.nutzap
 
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.tags.UnitTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -50,6 +51,16 @@ fun NutzapEvent.claimedSatsTotal(): Long =
             0L
         }
     }
+
+/**
+ * [claimedSatsTotal] in millisats, when the nutzap claims any and is sat-denominated (NUT-00's
+ * default): other units are minor units of a fiat currency, with no msat value.
+ */
+fun NutzapEvent.claimedMsats(): Long? {
+    if ((unit() ?: UnitTag.SAT) != UnitTag.SAT) return null
+    val sats = claimedSatsTotal()
+    return if (sats > 0) sats * 1000 else null
+}
 
 @Serializable
 private class NutzapProofAmount(

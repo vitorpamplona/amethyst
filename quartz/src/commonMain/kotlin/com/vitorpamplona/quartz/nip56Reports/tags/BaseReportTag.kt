@@ -20,8 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip56Reports.tags
 
+import com.vitorpamplona.quartz.nip01Core.links.props.ReportProps
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 interface BaseReportTag {
     val type: ReportType?
+
+    /**
+     * The type as written (trimmed and lowercased), which [type] folds into
+     * [ReportType.OTHER] when Quartz does not know it.
+     */
+    val rawType: String?
+
+    /** The report's category on the link to what this tag reports: [type]'s code and [rawType]. */
+    fun linkProps() = ReportProps(type?.code, rawType)
 }

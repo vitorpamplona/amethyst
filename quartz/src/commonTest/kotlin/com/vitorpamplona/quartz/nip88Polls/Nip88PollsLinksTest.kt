@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip88Polls
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.PollResponseProps
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,7 +48,7 @@ class Nip88PollsLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.POLL, LinkTarget.Event(poll), "e", mapOf("responses" to listOf("yes", "maybe"))),
+                Link(Relation.POLL, LinkTarget.Event(poll), "e", PollResponseProps(listOf("yes", "maybe"))),
                 Link(Relation.POLL_AUTHOR, LinkTarget.User(pollAuthor), "p"),
             ),
             event.links(),

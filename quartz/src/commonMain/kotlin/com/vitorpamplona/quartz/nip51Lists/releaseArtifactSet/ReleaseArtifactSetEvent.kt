@@ -26,19 +26,20 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.appId
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.assets
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.channel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.version
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -132,14 +133,9 @@ class ReleaseArtifactSetEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "e" -> event(Relation.CURATED, tag[1], "e")
-                    "a" -> address(Relation.APP, tag[1], "a")
-                    "i" -> tag(Relation.TAG, "i", tag[1])
-                }
-            }
+            each(tags, AppIdTag::parse) { tag(Relation.TAG, AppIdTag.TAG_NAME, it) }
+            each(tags, EventBookmark::parse) { event(Relation.CURATED, it, EventBookmark.TAG_NAME) }
+            each(tags, AddressBookmark::parse) { address(Relation.APP, it, AddressBookmark.TAG_NAME) }
         }
 
     companion object {

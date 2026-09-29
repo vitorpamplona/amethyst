@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventUpdate
@@ -59,7 +59,7 @@ class EmojiListEvent(
     fun emojiPackIds() = tags.mapNotNull(ATag::parseAddressId)
 
     /** NIP-51: the `a` pointers to the emoji sets (kind 30030) the user picked. Loose `emoji` tags are URLs. */
-    override fun links(): List<Link<*>> = links { addressTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, ATag::parse) { address(Relation.MEMBER, it, ATag.TAG_NAME) } }
 
     companion object {
         const val KIND = 10030

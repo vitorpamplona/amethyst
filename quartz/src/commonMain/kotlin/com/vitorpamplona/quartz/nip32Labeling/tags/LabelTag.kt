@@ -38,6 +38,9 @@ data class LabelTag(
 ) {
     fun toTagArray() = assemble(label, namespace)
 
+    /** `<namespace>:<label>`: one label, told apart from the same word in another namespace. */
+    fun qualified() = "$namespace:$label"
+
     companion object {
         const val TAG_NAME = "l"
         const val DEFAULT_NAMESPACE = "ugc"

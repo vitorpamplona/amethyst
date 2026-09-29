@@ -33,9 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -107,9 +106,9 @@ class LiveActivitiesClipEvent(
     /** The clipped stream, its host (not necessarily the stream's signer, which may be a provider) and the clip's video URL (`r`). */
     override fun links(): List<Link<*>> =
         links {
-            address(Relation.CLIPPED, activityAddress(), "a")
-            userTags(Relation.CLIPPED_AUTHOR, tags)
-            valueTags(Relation.TAG, tags, "r")
+            address(Relation.CLIPPED, activity(), ATag.TAG_NAME)
+            each(tags, PTag::parse) { user(Relation.CLIPPED_AUTHOR, it, PTag.TAG_NAME) }
+            each(tags, ReferenceTag::parse) { tag(Relation.TAG, ReferenceTag.TAG_NAME, it) }
         }
 
     companion object {

@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nipCCGeocaching.verification.tags.FinderCacheTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -73,8 +74,8 @@ class GeocacheVerificationEvent(
     override fun links(): List<Link<*>> =
         links {
             val finderCache = finderCache() ?: return@links
-            user(Relation.FINDER, finderCache.finderPubKey, "a")
-            address(Relation.VERIFIED, finderCache.cache, "a")
+            user(Relation.FINDER, finderCache.finderPubKey, FinderCacheTag.TAG_NAME)
+            address(Relation.VERIFIED, finderCache.cache, FinderCacheTag.TAG_NAME)
         }
 
     companion object {

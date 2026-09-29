@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.MaintainersTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.NameTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.RelaysTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.UpstreamTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.WebTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -121,10 +122,10 @@ class GitRepositoryEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            maintainers().forEach { user(Relation.MAINTAINER, it, "maintainers") }
+            maintainers().forEach { user(Relation.MAINTAINER, it, MaintainersTag.TAG_NAME) }
             hashtags(tags)
-            tag(Relation.TAG, "r", earliestUniqueCommit())
-            addressTags(Relation.FORK, tags, "u")
+            tag(Relation.TAG, EucTag.TAG_NAME, earliestUniqueCommit())
+            each(tags, UpstreamTag::parse) { address(Relation.FORK, it, UpstreamTag.TAG_NAME) }
         }
 
     companion object {

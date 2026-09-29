@@ -24,11 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -111,22 +111,13 @@ class CommunityRulesEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "a" -> address(Relation.COMMUNITY, CommunityTag.parseAddressId(tag), "a")
-
-                    "p" -> {
-                        val rule = PubkeyRuleTag.parse(tag) ?: return@fastForEach
-                        val relation = if (rule.policy == PubkeyRuleTag.Policy.ALLOW) Relation.ALLOWED else Relation.DENIED
-                        user(relation, rule.pubkey, "p", rule.role?.let { mapOf("role" to it) })
-                    }
-
-                    "wot" -> WotTag.parse(tag)?.let { user(Relation.WOT_ROOT, it.rootPubkey, "wot", mapOf("depth" to it.depth)) }
-
-                    "k" -> KindRuleTag.parse(tag)?.let { tag(Relation.TAG, "k", it.kind.toString()) }
-                }
+            each(tags, CommunityTag::parse) { address(Relation.COMMUNITY, it, CommunityTag.TAG_NAME) }
+            each(tags, KindRuleTag::parse) { tag(Relation.TAG, KindRuleTag.TAG_NAME, it.kind.toString()) }
+            each(tags, PubkeyRuleTag::parse) {
+                // DENIED qualifies nothing: a deny rule's role, if it writes one, is no link prop.
+                if (it.isAllowed()) user(Relation.ALLOWED, it, PubkeyRuleTag.TAG_NAME, it.linkProps()) else user(Relation.DENIED, it, PubkeyRuleTag.TAG_NAME)
             }
+            each(tags, WotTag::parse) { user(Relation.WOT_ROOT, it, WotTag.TAG_NAME, it.linkProps()) }
         }
 
     companion object {

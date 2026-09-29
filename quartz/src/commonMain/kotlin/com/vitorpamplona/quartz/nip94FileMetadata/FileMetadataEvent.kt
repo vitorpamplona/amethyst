@@ -28,8 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -105,7 +105,7 @@ class FileMetadataEvent(
     fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
 
     /** NIP-94 carries no event, address or user; its only reference is the torrent infohash in `i`. */
-    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { each(tags, TorrentInfoHash::parse) { tag(Relation.TAG, TorrentInfoHash.TAG_NAME, it) } }
 
     companion object {
         const val KIND = 1063

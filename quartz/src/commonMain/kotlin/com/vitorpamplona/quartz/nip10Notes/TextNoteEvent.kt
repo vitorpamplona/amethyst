@@ -24,10 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
 import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -39,11 +37,17 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedATag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
@@ -57,7 +61,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -145,8 +149,9 @@ class TextNoteEvent(
      * - `PARENT` is the `reply`-marked `e`, else the root (a reply to the root), else the last
      *   positional one. Every other `e` is a `MENTION` (the legacy `mention` marker, or the
      *   positional ones in between), except a `fork`-marked one.
-     * - `a` tags follow the same markers. An `a` to a NIP-72 community is the `COMMUNITY` the note
-     *   is posted in, never a thread root; any other unmarked `a` is a `MENTION`.
+     * - `a` tags follow the same markers ([MarkedATag], [markedRootAddress]). An `a` to a NIP-72
+     *   community is the `COMMUNITY` the note is posted in, never a thread root; any other unmarked
+     *   `a` is a `MENTION`.
      * - A `p` is the `PARENT_AUTHOR` only when it is the author the parent tag itself names (the
      *   `e`'s pubkey slot, or an `a`'s coordinate): NIP-10 adds the replied-to author to the `p`s,
      *   but every thread member rides there too, and nothing else tells them apart.
@@ -154,55 +159,34 @@ class TextNoteEvent(
     override fun links(): List<Link<*>> =
         links {
             val parentTag = markedReply() ?: markedRoot() ?: unmarkedReply()
-            val rootId = root()?.eventId ?: markedReply()?.eventId
-            val parentId = parentTag?.eventId
+            val rootTag = root() ?: markedReply()
+            val rootAddress = markedRootAddress() ?: markedReplyAddress().takeIf { rootTag == null }
+            val parentAddress = markedReplyAddress() ?: markedRootAddress().takeIf { parentTag == null }
+            val parentAuthor = parentTag?.author ?: parentAddress?.address?.pubKeyHex
 
-            var rootAddress: String? = null
-            var replyAddress: String? = null
-            tags.fastForEach { tag ->
-                if (tag.size > 3 && tag[0] == "a" && CommunityTag.parseAddressId(tag) == null) {
-                    when (tag[3]) {
-                        MarkedETag.MARKER.ROOT.code -> if (rootAddress == null) rootAddress = tag[1]
-                        MarkedETag.MARKER.REPLY.code -> replyAddress = tag[1]
-                    }
+            event(Relation.ROOT, rootTag, MarkedETag.TAG_NAME)
+            address(Relation.ROOT, rootAddress, MarkedATag.TAG_NAME)
+            event(Relation.PARENT, parentTag, MarkedETag.TAG_NAME)
+            address(Relation.PARENT, parentAddress, MarkedATag.TAG_NAME)
+
+            each(tags, MarkedETag::parseAllThreadTags) {
+                when {
+                    it.marker == MarkedETag.MARKER.FORK -> event(Relation.FORK, it, MarkedETag.TAG_NAME)
+                    it.eventId != rootTag?.eventId && it.eventId != parentTag?.eventId -> event(Relation.MENTION, it, MarkedETag.TAG_NAME)
                 }
             }
-            val rootA = rootAddress ?: replyAddress.takeIf { rootId == null }
-            val parentA = replyAddress ?: rootAddress.takeIf { parentId == null }
-            val parentAuthor = parentTag?.author ?: parentA?.let { Address.parse(it)?.pubKeyHex }
-
-            event(Relation.ROOT, rootId, "e")
-            address(Relation.ROOT, rootA, "a")
-            event(Relation.PARENT, parentId, "e")
-            address(Relation.PARENT, parentA, "a")
-
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "e" -> {
-                        if (MarkedETag.parseForkedEventId(tag) != null) {
-                            event(Relation.FORK, tag[1], "e")
-                        } else if (tag[1] != rootId && tag[1] != parentId) {
-                            event(Relation.MENTION, tag[1], "e")
-                        }
-                    }
-
-                    "a" -> {
-                        if (CommunityTag.parseAddressId(tag) != null) {
-                            address(Relation.COMMUNITY, tag[1], "a")
-                        } else if (tag.getOrNull(3) == MarkedETag.MARKER.FORK.code) {
-                            address(Relation.FORK, tag[1], "a")
-                        } else if (tag[1] != rootA && tag[1] != parentA) {
-                            address(Relation.MENTION, tag[1], "a")
-                        }
-                    }
-
-                    "p" -> user(if (tag[1] == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
-                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
-                    "t" -> tag(Relation.HASHTAG, "t", tag[1].lowercase())
-                    "r", "g" -> tag(Relation.TAG, tag[0], tag[1])
+            each(tags, PTag::parse) { user(if (it.pubKey == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, it, PTag.TAG_NAME) }
+            quotes(tags)
+            each(tags, MarkedATag::parse) {
+                when {
+                    it.address.kind == CommunityDefinitionEvent.KIND -> address(Relation.COMMUNITY, it, MarkedATag.TAG_NAME)
+                    it.marker == MarkedETag.MARKER.FORK -> address(Relation.FORK, it, MarkedATag.TAG_NAME)
+                    it.address != rootAddress?.address && it.address != parentAddress?.address -> address(Relation.MENTION, it, MarkedATag.TAG_NAME)
                 }
             }
+            hashtags(tags)
+            each(tags, ReferenceTag::parse) { tag(Relation.TAG, ReferenceTag.TAG_NAME, it) }
+            each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
 
             contentMentions(citedNIP19())
         }

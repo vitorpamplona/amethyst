@@ -28,8 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -58,7 +58,7 @@ class GoodWikiAuthorListEvent(
     suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
 
     /** NIP-51: the user's "recommended wiki authors" are `RECOMMENDED`. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.RECOMMENDED, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, UserTag::parse) { user(Relation.RECOMMENDED, it, UserTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 10101

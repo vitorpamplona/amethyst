@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.CreditProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -46,7 +48,19 @@ data class VideoCredit(
      * Null when the tag names a participant without saying in what capacity.
      */
     val label: String?,
-)
+) {
+    /** The label as the credit a link names someone or something with. */
+    fun creditProps() = CreditProps(label)
+
+    /** The label as a participant's role. */
+    fun roleProps() = ParticipantProps(listOfNotNull(label))
+
+    companion object {
+        /** A passing mention, not a credit. */
+        const val MENTION_LABEL = "mention"
+        const val INSPIRED_BY_LABEL = "inspired-by"
+    }
+}
 
 @Immutable
 sealed interface CreditTarget {

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -34,15 +35,23 @@ class ReportedAddressTag(
     val address: Address,
     val relay: NormalizedRelayUrl? = null,
     override val type: ReportType? = null,
-) : BaseReportTag {
+    override val rawType: String? = null,
+) : BaseReportTag,
+    AddressReferenceTag {
+    override val relayHint get() = relay
+
+    override fun toAddressId() = address.toValue()
+
     fun toTagArray() = assemble(address, relay, type)
 
     companion object {
         const val TAG_NAME = "a"
 
+        /** See [ReportedEventTag.parse] for the defaults. */
         fun parse(
             tag: Array<String>,
             defaultReportType: ReportType? = null,
+            defaultRawType: String? = null,
         ): ReportedAddressTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
@@ -56,6 +65,7 @@ class ReportedAddressTag(
                 address,
                 ReportTagLayout.relayHint(tag),
                 ReportTagLayout.reportType(tag, defaultReportType),
+                ReportTagLayout.rawReportType(tag) ?: defaultRawType,
             )
         }
 

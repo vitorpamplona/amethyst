@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -174,9 +174,9 @@ class MeetingRoomEvent(
     /** NIP-53: a meeting's `a` is the space (30312) it takes place in. */
     override fun links(): List<Link<*>> =
         links {
-            address(Relation.PARENT, interactiveRoom()?.address, "a")
+            address(Relation.PARENT, interactiveRoom(), MeetingSpaceTag.TAG_NAME)
             participantLinks(tags)
-            eventTags(Relation.PIN, tags, "pinned")
+            each(tags, PinnedEventTag::parse) { event(Relation.PIN, it, PinnedEventTag.TAG_NAME) }
         }
 
     companion object {

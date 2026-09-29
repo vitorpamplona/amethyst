@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -86,7 +86,7 @@ class MediaStarterPackEvent(
     fun followIdSet() = tags.followIdSet()
 
     /** NIP-51: the people in the pack are its `MEMBER`s. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.MEMBER, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, UserTag::parse) { user(Relation.MEMBER, it, UserTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 39092

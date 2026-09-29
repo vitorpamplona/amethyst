@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ServiceProps
+import com.vitorpamplona.quartz.nip01Core.links.props.SubjectProps
 import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
@@ -68,7 +70,7 @@ class Nip85TrustedAssertionsLinksTest {
                     Relation.SUBJECT,
                     LinkTarget.User(subject),
                     "d",
-                    mapOf<String, Any>("rank" to 89, "followers" to 1200, "hops" to 2, "first_created_at" to 1672531200L),
+                    SubjectProps(rank = 89, followers = 1200, hops = 2, firstCreatedAt = 1672531200L),
                 ),
                 Link(Relation.HASHTAG, LinkTarget.Tag("t", "bitcoin"), "t"),
             ),
@@ -100,7 +102,7 @@ class Nip85TrustedAssertionsLinksTest {
                     Relation.SUBJECT,
                     LinkTarget.Event(note),
                     "d",
-                    mapOf<String, Any>("rank" to 70, "comment_cnt" to 12, "zap_amount" to 21000L),
+                    SubjectProps(rank = 70, commentCount = 12, zapAmount = 21000L),
                 ),
             ),
             event.links(),
@@ -132,7 +134,7 @@ class Nip85TrustedAssertionsLinksTest {
 
         assertEquals(
             listOf(
-                Link(Relation.SUBJECT, LinkTarget.Tag("i", "isbn:9780765382030"), "d", mapOf("reaction_cnt" to 5)),
+                Link(Relation.SUBJECT, LinkTarget.Tag("i", "isbn:9780765382030"), "d", SubjectProps(reactionCount = 5)),
                 Link(Relation.TAG, LinkTarget.Tag("k", "isbn"), "k"),
             ),
             event.links(),
@@ -160,9 +162,9 @@ class Nip85TrustedAssertionsLinksTest {
 
         assertEquals(
             listOf(
-                Link(Relation.SERVICE_PROVIDER, LinkTarget.User(provider), "30382:rank", mapOf("service" to "30382:rank")),
-                Link(Relation.SERVICE_PROVIDER, LinkTarget.User(provider), "30382:followers", mapOf("service" to "30382:followers")),
-                Link(Relation.SERVICE_PROVIDER, LinkTarget.User(other), "30383:rank", mapOf("service" to "30383:rank")),
+                Link(Relation.SERVICE_PROVIDER, LinkTarget.User(provider), "30382:rank", ServiceProps("30382:rank")),
+                Link(Relation.SERVICE_PROVIDER, LinkTarget.User(provider), "30382:followers", ServiceProps("30382:followers")),
+                Link(Relation.SERVICE_PROVIDER, LinkTarget.User(other), "30383:rank", ServiceProps("30383:rank")),
             ),
             event.links(),
         )

@@ -92,7 +92,7 @@ class GeocacheFoundLogEvent(
     fun hasVerificationAttached() = tags.hasEmbeddedVerification()
 
     /** NIP-CC: the cache found. Whether the log carries its cache's verification rides on the link; the verification itself is an embedded event, not a reference. */
-    override fun links(): List<Link<*>> = links { address(Relation.FOUND, geocache(), "a", FoundProps(verified = hasVerificationAttached())) }
+    override fun links(): List<Link<*>> = links { address(Relation.FOUND, geocache(), GeocacheTag.TAG_NAME, FoundProps(verified = hasVerificationAttached())) }
 
     companion object {
         const val KIND = 7516

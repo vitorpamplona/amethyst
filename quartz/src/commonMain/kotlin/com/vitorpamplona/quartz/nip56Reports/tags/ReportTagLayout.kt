@@ -72,4 +72,20 @@ internal object ReportTagLayout {
 
         return ReportType.parseOrNull(tag[slot], tag) ?: default
     }
+
+    /**
+     * The type this tag writes itself, as written ([normalizeRawType]), read from the slot
+     * [reportType] reads. Null when the tag writes none: no event-level fallback here.
+     */
+    fun rawReportType(tag: Array<String>): String? {
+        if (!tag.has(2)) return null
+        val slot = if (tag[2].isBlank() || relayHint(tag) != null) 3 else 2
+        return tag.getOrNull(slot)?.let(::normalizeRawType)
+    }
+
+    /**
+     * A type as written, trimmed and lowercased. Clients coin their own types, which
+     * [ReportType.parseOrNull] folds into [ReportType.OTHER]; this keeps what they said.
+     */
+    fun normalizeRawType(value: String) = value.trim().lowercase().ifEmpty { null }
 }

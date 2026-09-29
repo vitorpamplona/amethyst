@@ -25,8 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 
 open class BaseChessEvent(
     id: HexKey,
@@ -43,5 +44,5 @@ open class BaseChessEvent(
     fun opponentPubkey() = tags.opponentKey()
 
     /** Every live chess event names the other player in its `p` tag. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.OPPONENT, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, OpponentTag::parse) { user(Relation.OPPONENT, it, OpponentTag.TAG_NAME) } }
 }

@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.CommentCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.QuoteCountTag
@@ -36,7 +37,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ReactionCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.RepostCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ZapAmountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ZapCountTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.contentAssertionScores
+import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.contentSubjectProps
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -70,7 +71,7 @@ class EventAssertionEvent(
      * NIP-85: the `d` is the SUBJECT, the event this assertion scores (not the assertion's own
      * identity), with the scores as props. An `e` equal to the `d` is only its relay hint.
      */
-    override fun links(): List<Link<*>> = links { event(Relation.SUBJECT, aboutEvent(), "d", tags.contentAssertionScores()) }
+    override fun links(): List<Link<*>> = links { event(Relation.SUBJECT, aboutEvent(), DTag.TAG_NAME, tags.contentSubjectProps()) }
 
     companion object {
         const val KIND = 30383

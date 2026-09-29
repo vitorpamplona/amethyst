@@ -24,17 +24,18 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.tags.RecommendedMintTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -69,17 +70,8 @@ class MintRecommendationEvent(
     /** NIP-87: the recommended mint's announcement (38172 cashu or 38173 fedimint) and the recommended kind (`k`). */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2 || it[0] != "a") return@fastForEach
-                val platform =
-                    when {
-                        it[1].startsWith("${CashuMintEvent.KIND}:") -> "cashu"
-                        it[1].startsWith("${FedimintEvent.KIND}:") -> "fedimint"
-                        else -> return@fastForEach
-                    }
-                address(Relation.RECOMMENDED, it[1], "a", mapOf("platform" to platform))
-            }
-            valueTags(Relation.TAG, tags, "k")
+            each(tags, RecommendedMintTag::parse) { address(Relation.RECOMMENDED, it, RecommendedMintTag.TAG_NAME, it.linkProps()) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

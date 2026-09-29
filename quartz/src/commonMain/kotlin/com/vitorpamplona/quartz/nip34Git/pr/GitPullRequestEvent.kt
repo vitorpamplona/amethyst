@@ -31,10 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -43,12 +42,14 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
+import com.vitorpamplona.quartz.nip34Git.commitLinks
 import com.vitorpamplona.quartz.nip34Git.gitPeopleLinks
 import com.vitorpamplona.quartz.nip34Git.pr.tags.BranchNameTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.CurrentCommitTag
 import com.vitorpamplona.quartz.nip34Git.pr.tags.MergeBaseTag
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
+import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
 import com.vitorpamplona.quartz.nip34Git.repositoryLinks
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -101,7 +102,7 @@ class GitPullRequestEvent(
 
     fun repositoryAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
 
-    fun earliestUniqueCommit(): String? = tags.firstOrNull { it.size > 1 && it[0] == "r" && it[1].isNotEmpty() }?.get(1)
+    fun earliestUniqueCommit(): String? = tags.firstNotNullOfOrNull(EucTag::parseReference)
 
     fun currentCommit(): String? = tags.firstNotNullOfOrNull(CurrentCommitTag::parse)
 
@@ -124,9 +125,9 @@ class GitPullRequestEvent(
     override fun links(): List<Link<*>> =
         links {
             gitPeopleLinks(tags, repositoryLinks(tags))
-            eventTags(Relation.REVISED, tags)
+            each(tags, ETag::parse) { event(Relation.REVISED, it, ETag.TAG_NAME) }
             hashtags(tags)
-            valueTags(Relation.TAG, tags, "r")
+            commitLinks(tags)
         }
 
     companion object {

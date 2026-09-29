@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
@@ -103,7 +104,7 @@ class ChannelMetadataEvent(
     }
 
     /** NIP-28 tags the channel a metadata update is for with the `root` marker: its `ROOT`. */
-    override fun links(): List<Link<*>> = links { event(Relation.ROOT, channelId(), "e") }
+    override fun links(): List<Link<*>> = links { event(Relation.ROOT, channel(), MarkedETag.TAG_NAME) }
 
     companion object {
         const val KIND = 41

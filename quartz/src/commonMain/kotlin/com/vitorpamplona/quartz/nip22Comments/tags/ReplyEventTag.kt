@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
+import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -35,10 +36,16 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 class ReplyEventTag(
     val ref: EventReference,
-) {
+) : GenericETag {
     constructor(eventId: String, relayHint: NormalizedRelayUrl?, pubkey: String?) : this(EventReference(eventId, pubkey, relayHint))
 
-    fun toTagArray() = assemble(ref)
+    override val eventId get() = ref.eventId
+
+    override val relay get() = ref.relayHint
+
+    override val author get() = ref.author
+
+    override fun toTagArray() = assemble(ref)
 
     companion object {
         const val TAG_NAME = "e"

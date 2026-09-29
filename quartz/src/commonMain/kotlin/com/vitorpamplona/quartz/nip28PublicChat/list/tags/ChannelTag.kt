@@ -26,19 +26,20 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class ChannelTag(
-    val eventId: HexKey,
-    val relay: NormalizedRelayUrl? = null,
-    val author: HexKey? = null,
-) {
+    override val eventId: HexKey,
+    override val relay: NormalizedRelayUrl? = null,
+    override val author: HexKey? = null,
+) : GenericETag {
     fun toNEvent(): String = NEvent.create(eventId, author, null, relay)
 
-    fun toTagArray() = assemble(eventId, relay, author)
+    override fun toTagArray() = assemble(eventId, relay, author)
 
     fun toTagIdOnly() = assemble(eventId, null, null)
 

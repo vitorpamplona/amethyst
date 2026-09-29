@@ -26,20 +26,19 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.props.ReportProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip32Labeling.labelTags
 import com.vitorpamplona.quartz.nip56Reports.tags.DefaultReportTag
 import com.vitorpamplona.quartz.nip56Reports.tags.HashSha256Tag
-import com.vitorpamplona.quartz.nip56Reports.tags.ReportTagLayout
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAddressTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAuthorTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedEventTag
@@ -93,6 +92,24 @@ class ReportEvent(
         return reportType
     }
 
+    /**
+     * The report's default type as written, found the way [defaultReportType] finds the type:
+     * the legacy `report` tag, else the first `p`/`e`/`a` that writes one.
+     */
+    private fun defaultReportRawType(): String? =
+        tags.firstNotNullOfOrNull(DefaultReportTag::parseRaw)
+            ?: tags.firstNotNullOfOrNull {
+                ReportedAuthorTag.parse(it)?.rawType
+                    ?: ReportedEventTag.parse(it)?.rawType
+                    ?: ReportedAddressTag.parse(it)?.rawType
+            }
+
+    /**
+     * Whether the report names any content: an event, an address or a blob. One that names none
+     * is a complaint about the person its `p` names; otherwise that `p` is the content's author.
+     */
+    fun isAboutContent() = tags.fastAny { ReportedEventTag.parseId(it) != null || ReportedAddressTag.parseAddressId(it) != null || HashSha256Tag.parse(it) != null }
+
     fun reportedPost() = tags.mapNotNull { ReportedEventTag.parse(it, defaultReportType()) }
 
     fun reportedAddresses() = tags.mapNotNull { ReportedAddressTag.parse(it, defaultReportType()) }
@@ -110,73 +127,31 @@ class ReportEvent(
         }
 
     /**
-     * NIP-56. What a report is ABOUT decides the relation of its `p`: when the report names no
-     * event, address or blob it is a complaint about the person (`REPORTED_USER`); otherwise the
-     * `p` is the reported content's author (`REPORTED_AUTHOR`). The split is by the presence of
-     * `e`/`a`/`x`, never by whether the `p` writes its own type: Quartz's own [build] writes the
-     * type on both. `e`/`a`/`x` are the `REPORTED` content (`x`: a blob hash).
+     * NIP-56. What a report is ABOUT decides the relation of its `p` ([isAboutContent]): when the
+     * report names no event, address or blob it is a complaint about the person
+     * (`REPORTED_USER`); otherwise the `p` is the reported content's author (`REPORTED_AUTHOR`).
+     * The split is by the presence of `e`/`a`/`x`, never by whether the `p` writes its own type:
+     * Quartz's own [build] writes the type on both. `e`/`a`/`x` are the `REPORTED` content (`x`: a
+     * blob hash).
      *
-     * Every one of them carries `report`, the category as Quartz reads it (the tag's own type,
-     * else the report's default, as a [ReportType] code), and `report_raw`, the type as written
-     * (trimmed and lowercased; clients invent types that fold into `other`).
+     * Every one of them carries the tag's [BaseReportTag.linkProps]: `report`, the category as
+     * Quartz reads it (the tag's own type, else the report's default, as a [ReportType] code), and
+     * `report_raw`, the type as written (trimmed and lowercased; clients invent types that fold
+     * into `other`), else the report's default as written.
      */
-    override fun links(): List<Link<*>> {
-        val defaultType = defaultReportType()
-        var defaultRaw: String? = null
-        var ownDefaultRaw: String? = null
-        var aboutContent = false
-        tags.fastForEach { tag ->
-            if (tag.size < 2) return@fastForEach
-            when (tag[0]) {
-                DefaultReportTag.TAG_NAME -> if (defaultRaw == null) defaultRaw = rawReportType(tag[1])
-                "e" -> if (LinkBuilder.normalizedHex(tag[1]) != null) aboutContent = true
-                "a" -> if (LinkBuilder.normalizedAddress(tag[1]) != null) aboutContent = true
-                "x" -> if (HashSha256Tag.parse(tag) != null) aboutContent = true
-            }
-            if (ownDefaultRaw == null && (tag[0] == "p" || tag[0] == "e" || tag[0] == "a")) ownDefaultRaw = ownRawReportType(tag)
+    override fun links(): List<Link<*>> =
+        links {
+            val defaultType = defaultReportType()
+            val defaultRaw = defaultReportRawType()
+            val personRelation = if (isAboutContent()) Relation.REPORTED_AUTHOR else Relation.REPORTED_USER
+
+            each(tags, { ReportedEventTag.parse(it, defaultType, defaultRaw) }) { event(Relation.REPORTED, it, ReportedEventTag.TAG_NAME, it.linkProps()) }
+            each(tags, { ReportedAuthorTag.parse(it, defaultType, defaultRaw) }) { user(personRelation, it, ReportedAuthorTag.TAG_NAME, it.linkProps()) }
+            each(tags, { ReportedAddressTag.parse(it, defaultType, defaultRaw) }) { address(Relation.REPORTED, it, ReportedAddressTag.TAG_NAME, it.linkProps()) }
+            each(tags, { HashSha256Tag.parse(it, defaultType, defaultRaw) }) { tag(Relation.REPORTED, HashSha256Tag.TAG_NAME, it.hash, props = it.linkProps()) }
+
+            labelTags(tags)
         }
-        val fallbackRaw = defaultRaw ?: ownDefaultRaw
-
-        fun props(
-            type: ReportType?,
-            raw: String?,
-        ): ReportProps? {
-            val text = raw ?: fallbackRaw
-            return if (type == null && text == null) null else ReportProps(type?.code, text)
-        }
-
-        return links {
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "p" -> {
-                        val relation = if (aboutContent) Relation.REPORTED_AUTHOR else Relation.REPORTED_USER
-                        user(relation, tag[1], "p", props(ReportedAuthorTag.parse(tag, defaultType)?.type, ownRawReportType(tag)))
-                    }
-
-                    "e" -> event(Relation.REPORTED, tag[1], "e", props(ReportedEventTag.parse(tag, defaultType)?.type, ownRawReportType(tag)))
-
-                    "a" -> address(Relation.REPORTED, tag[1], "a", props(ReportedAddressTag.parse(tag, defaultType)?.type, ownRawReportType(tag)))
-
-                    "x" -> {
-                        val hash = HashSha256Tag.parse(tag, defaultType) ?: return@fastForEach
-                        tag(Relation.REPORTED, "x", hash.hash, props = props(hash.type, tag.getOrNull(2)?.let(::rawReportType)))
-                    }
-
-                    "l", "L" -> tag(Relation.TAG, tag[0], tag[1])
-                }
-            }
-        }
-    }
-
-    /** The type a `p`/`e`/`a` writes itself, by [ReportTagLayout]: slot 3 when slot 2 is blank or a relay hint, else slot 2. */
-    private fun ownRawReportType(tag: Array<String>): String? {
-        if (tag.size < 3) return null
-        val slot = if (tag[2].isBlank() || ReportTagLayout.relayHint(tag) != null) 3 else 2
-        return tag.getOrNull(slot)?.let(::rawReportType)
-    }
-
-    private fun rawReportType(value: String) = value.trim().lowercase().ifEmpty { null }
 
     companion object {
         const val KIND = 1984

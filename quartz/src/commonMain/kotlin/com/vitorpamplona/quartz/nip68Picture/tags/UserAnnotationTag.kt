@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip68Picture.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.props.PositionProps
 
 class UserAnnotationTag(
     val pubkey: HexKey,
@@ -28,6 +29,9 @@ class UserAnnotationTag(
     val y: Int,
 ) {
     override fun toString() = "$pubkey:$x:$y"
+
+    /** Where the person is tagged, as the link's props. */
+    fun linkProps() = PositionProps(x, y)
 
     companion object {
         const val TAG_NAME = "annotate-user"

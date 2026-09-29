@@ -109,7 +109,7 @@ class PodcastMetadataEvent(
     /** NIP-F4: the people the podcast (the signer) claims as its authors, with their role. The claim holds only when their 10064 names the podcast back. */
     override fun links(): List<Link<*>> =
         links {
-            claimedAuthors().forEach { author -> user(Relation.PODCAST_AUTHOR, author.pubKey, "p", author.role?.let { mapOf("role" to it) }) }
+            claimedAuthors().forEach { user(Relation.PODCAST_AUTHOR, it.pubKey, AuthorTag.TAG_NAME, it.linkProps()) }
         }
 
     companion object {

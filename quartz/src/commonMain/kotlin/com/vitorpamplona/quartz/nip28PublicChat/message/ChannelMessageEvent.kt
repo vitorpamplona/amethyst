@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip28PublicChat.message
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -36,7 +35,9 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -152,23 +153,19 @@ class ChannelMessageEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val channelId = channelId()
-            val parentTag = reply()?.takeIf { it.eventId != channelId }
-            val parentId = parentTag?.eventId
+            val channelTag = channel()
+            val parentTag = reply()?.takeIf { it.eventId != channelTag?.eventId }
             val parentAuthor = parentTag?.author
 
-            event(Relation.ROOT, channelId, "e")
-            event(Relation.PARENT, parentId, "e")
+            event(Relation.ROOT, channelTag, MarkedETag.TAG_NAME)
+            event(Relation.PARENT, parentTag, MarkedETag.TAG_NAME)
 
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "e" -> if (tag[1] != channelId && tag[1] != parentId) event(Relation.MENTION, tag[1], "e")
-                    "a" -> address(Relation.MENTION, tag[1], "a")
-                    "p" -> user(if (tag[1] == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
-                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
-                }
+            each(tags, ETag::parse) {
+                if (it.eventId != channelTag?.eventId && it.eventId != parentTag?.eventId) event(Relation.MENTION, it, ETag.TAG_NAME)
             }
+            each(tags, PTag::parse) { user(if (it.pubKey == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, it, PTag.TAG_NAME) }
+            quotes(tags)
+            each(tags, ATag::parse) { address(Relation.MENTION, it, ATag.TAG_NAME) }
 
             contentMentions(citedNIP19())
         }

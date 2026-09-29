@@ -26,15 +26,21 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class EventTag(
-    val eventId: HexKey,
+    override val eventId: HexKey,
     val relayHint: NormalizedRelayUrl? = null,
     val pubKeyHint: HexKey? = null,
-) : MuteTag {
+) : MuteTag,
+    GenericETag {
+    override val relay get() = relayHint
+
+    override val author get() = pubKeyHint
+
     override fun toTagArray() = assemble(eventId, relayHint, pubKeyHint)
 
     override fun toTagIdOnly() = assemble(eventId, null, null)

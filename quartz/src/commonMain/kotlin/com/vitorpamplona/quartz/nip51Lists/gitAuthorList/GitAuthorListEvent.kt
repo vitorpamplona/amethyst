@@ -28,8 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -58,7 +58,7 @@ class GitAuthorListEvent(
     suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(GitAuthorTag::parse)
 
     /** NIP-51: a follow list of code authors, so its `p`s are `SUBSCRIBED` (`FOLLOW` is kind 3 only). */
-    override fun links(): List<Link<*>> = links { userTags(Relation.SUBSCRIBED, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, GitAuthorTag::parse) { user(Relation.SUBSCRIBED, it, GitAuthorTag.TAG_NAME) } }
 
     companion object {
         const val KIND = 10017

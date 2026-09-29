@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip52Calendar
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
+import com.vitorpamplona.quartz.nip01Core.links.props.RsvpProps
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
@@ -53,7 +55,7 @@ class Nip52CalendarLinksTest {
             )
         val expected =
             listOf(
-                Link(Relation.PARTICIPANT, LinkTarget.User(host), "p", mapOf("role" to "host")),
+                Link(Relation.PARTICIPANT, LinkTarget.User(host), "p", ParticipantProps(listOf("host"))),
                 Link(Relation.PARTICIPANT, LinkTarget.User(guest), "p"),
                 Link(Relation.CALENDAR, LinkTarget.Address(calendar), "a"),
                 Link(Relation.HASHTAG, LinkTarget.Tag("t", "meetup"), "t"),
@@ -96,7 +98,7 @@ class Nip52CalendarLinksTest {
                 "",
                 sig,
             )
-        val props = mapOf("status" to "accepted", "fb" to "busy")
+        val props = RsvpProps("accepted", "busy")
         assertEquals(
             listOf(
                 Link(Relation.CALENDAR_EVENT, LinkTarget.Address(slot), "a", props),

@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -66,7 +66,7 @@ class FavoriteAlgoFeedsListEvent(
     suspend fun privateFavoriteAlgoFeeds(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
 
     /** The feed DVMs (kind 31990 `a` tags) the user marked as favorites. */
-    override fun links(): List<Link<*>> = links { addressTags(Relation.FAVORITE, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, AddressBookmark::parse) { address(Relation.FAVORITE, it, AddressBookmark.TAG_NAME) } }
 
     companion object {
         const val KIND = 10090

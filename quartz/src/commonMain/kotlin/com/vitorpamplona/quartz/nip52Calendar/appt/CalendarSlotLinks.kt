@@ -21,12 +21,14 @@
 package com.vitorpamplona.quartz.nip52Calendar.appt
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.SlotParticipantTag
 
 /**
  * The links of a NIP-52 date or time slot (31922, 31923): its participants, with the optional
@@ -34,13 +36,9 @@ import com.vitorpamplona.quartz.nip01Core.links.valueTags
  * (`a`); its topics, geohash and web references.
  */
 internal fun LinkBuilder.calendarSlotLinks(tags: TagArray) {
-    tags.fastForEach {
-        if (it.size < 2 || it[0] != "p") return@fastForEach
-        val role = it.getOrNull(3)?.ifBlank { null }
-        user(Relation.PARTICIPANT, it[1], "p", role?.let { mapOf("role" to role) })
-    }
-    addressTags(Relation.CALENDAR, tags)
+    each(tags, SlotParticipantTag::parse) { user(Relation.PARTICIPANT, it, SlotParticipantTag.TAG_NAME, it.linkProps()) }
+    each(tags, ATag::parse) { address(Relation.CALENDAR, it, ATag.TAG_NAME) }
     hashtags(tags)
-    valueTags(Relation.TAG, tags, "g")
-    valueTags(Relation.TAG, tags, "r")
+    each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
+    each(tags, ReferenceTag::parse) { tag(Relation.TAG, ReferenceTag.TAG_NAME, it) }
 }

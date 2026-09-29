@@ -27,6 +27,9 @@ class UnitTag {
     companion object {
         const val TAG_NAME = "unit"
 
+        /** NUT-00's base unit, and the one a nutzap without a `unit` tag is denominated in. */
+        const val SAT = "sat"
+
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

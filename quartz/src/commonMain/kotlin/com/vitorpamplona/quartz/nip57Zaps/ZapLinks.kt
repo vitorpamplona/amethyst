@@ -21,10 +21,15 @@
 package com.vitorpamplona.quartz.nip57Zaps
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
-import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip57Zaps.tags.ZapSenderTag
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.toDoubleValue
 import com.vitorpamplona.quartz.utils.toLongValue
@@ -33,25 +38,20 @@ import com.vitorpamplona.quartz.utils.toLongValue
  * The NIP-57 tags a zap request, its receipt and a decrypted private zap share: the `e`/`a` is
  * the `ZAPPED` content and the `p` the `ZAP_RECIPIENT` (NIP-57's "recipient"), each with
  * [props] (the `msats`, when the kind knows them); `k` is the zapped kind. With [withSender], the
- * receipt's `P` is the `ZAP_SENDER`: NIP-57 copies it from the zap request's pubkey.
+ * receipt's `P` ([ZapSenderTag]) is the `ZAP_SENDER`: NIP-57 copies it from the zap request's
+ * pubkey.
  */
-internal fun zapLinks(
+internal fun LinkBuilder.zapLinks(
     tags: TagArray,
-    props: Map<String, Any>?,
+    props: ZapProps?,
     withSender: Boolean = false,
-): List<Link<*>> =
-    links {
-        tags.fastForEach { tag ->
-            if (tag.size < 2) return@fastForEach
-            when (tag[0]) {
-                "e" -> event(Relation.ZAPPED, tag[1], "e", props)
-                "a" -> address(Relation.ZAPPED, tag[1], "a", props)
-                "p" -> user(Relation.ZAP_RECIPIENT, tag[1], "p", props)
-                "P" -> if (withSender) user(Relation.ZAP_SENDER, tag[1], "P")
-                "k" -> tag(Relation.TAG, "k", tag[1])
-            }
-        }
-    }
+) {
+    each(tags, PTag::parse) { user(Relation.ZAP_RECIPIENT, it, PTag.TAG_NAME, props) }
+    if (withSender) each(tags, ZapSenderTag::parse) { user(Relation.ZAP_SENDER, it, ZapSenderTag.TAG_NAME) }
+    each(tags, ETag::parse) { event(Relation.ZAPPED, it, ETag.TAG_NAME, props) }
+    each(tags, ATag::parse) { address(Relation.ZAPPED, it, ATag.TAG_NAME, props) }
+    each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
+}
 
 private val MSATS_PER_SAT = BigDecimal(1000)
 

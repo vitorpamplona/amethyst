@@ -40,7 +40,10 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.quotes
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -235,6 +238,20 @@ class CommentEvent(
 
     fun rootAddress() = tags.mapNotNull(RootAddressTag::parseAddress)
 
+    /**
+     * The authors the parent tags themselves name: the pubkey slot of an `e` ([ReplyEventTag]),
+     * the coordinate's pubkey of an `a` ([ReplyAddressTag]). Only a `p` among these is the
+     * parent's author; NIP-22 also adds a `p` for every pubkey the content mentions.
+     */
+    fun parentTagAuthors(): Set<HexKey> {
+        val authors = HashSet<HexKey>()
+        tags.fastForEach { tag ->
+            ReplyEventTag.parse(tag)?.author?.let { authors.add(it) }
+            ReplyAddressTag.parseAddress(tag)?.let { authors.add(it.pubKeyHex) }
+        }
+        return authors
+    }
+
     fun rootAddressId() = tags.mapNotNull(RootAddressTag::parseAddressId)
 
     fun replyingToAddressId(): String? =
@@ -269,34 +286,26 @@ class CommentEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val parentAuthors = HashSet<String>()
-            tags.fastForEach { tag ->
-                when {
-                    tag.size > 3 && tag[0] == "e" -> parentAuthors.add(tag[3])
-                    tag.size > 1 && tag[0] == "a" -> Address.parse(tag[1])?.let { parentAuthors.add(it.pubKeyHex) }
-                }
+            // An external id is one node whichever case named it: the target is always an `i`.
+            each(tags, RootEventTag::parse) { event(Relation.ROOT, it, RootEventTag.TAG_NAME) }
+            each(tags, RootAddressTag::parse) {
+                address(Relation.ROOT, it, RootAddressTag.TAG_NAME)
+                if (Address.isOfKind(it.addressId, CommunityDefinitionEvent.KIND_STR)) address(Relation.COMMUNITY, it, RootAddressTag.TAG_NAME)
             }
+            each(tags, RootIdentifierTag.Companion::parse) { tag(Relation.ROOT, ReplyIdentifierTag.TAG_NAME, it, RootIdentifierTag.TAG_NAME) }
+            each(tags, RootKindTag::parse) { tag(Relation.TAG, ReplyKindTag.TAG_NAME, it, RootKindTag.TAG_NAME) }
+            each(tags, RootAuthorTag::parse) { user(Relation.ROOT_AUTHOR, it, RootAuthorTag.TAG_NAME) }
 
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "E" -> event(Relation.ROOT, tag[1], "E")
-                    "A" -> {
-                        address(Relation.ROOT, tag[1], "A")
-                        if (Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) address(Relation.COMMUNITY, tag[1], "A")
-                    }
-                    "I" -> tag(Relation.ROOT, "i", tag[1], "I")
-                    "K" -> tag(Relation.TAG, "k", tag[1], "K")
-                    "P" -> user(Relation.ROOT_AUTHOR, tag[1], "P")
-                    "e" -> event(Relation.PARENT, tag[1], "e")
-                    "a" -> address(Relation.PARENT, tag[1], "a")
-                    "i" -> tag(Relation.PARENT, "i", tag[1])
-                    "k" -> tag(Relation.TAG, "k", tag[1])
-                    "p" -> user(if (tag[1] in parentAuthors) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
-                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
-                    "t" -> tag(Relation.HASHTAG, "t", tag[1].lowercase())
-                }
-            }
+            each(tags, ReplyEventTag::parse) { event(Relation.PARENT, it, ReplyEventTag.TAG_NAME) }
+            each(tags, ReplyAddressTag::parse) { address(Relation.PARENT, it, ReplyAddressTag.TAG_NAME) }
+            each(tags, ReplyIdentifierTag::parse) { tag(Relation.PARENT, ReplyIdentifierTag.TAG_NAME, it) }
+            each(tags, ReplyKindTag::parse) { tag(Relation.TAG, ReplyKindTag.TAG_NAME, it) }
+
+            val parentAuthors = parentTagAuthors()
+            each(tags, ReplyAuthorTag::parse) { user(if (it.pubKey in parentAuthors) Relation.PARENT_AUTHOR else Relation.MENTION, it, ReplyAuthorTag.TAG_NAME) }
+
+            quotes(tags)
+            hashtags(tags)
 
             contentMentions(citedNIP19())
         }

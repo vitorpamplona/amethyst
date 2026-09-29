@@ -30,11 +30,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -147,12 +145,12 @@ class Bolt12ZapEvent(
     /** NIP-B1: the recipient (`p`), the payer (`P`, absent on anonymous zaps) and the zapped content. The amount is verified against the payer proof, not by links. */
     override fun links(): List<Link<*>> =
         links {
-            val props = amount()?.let { mapOf("msats" to it) }
-            userTags(Relation.ZAP_RECIPIENT, tags, props = props)
-            userTags(Relation.ZAP_SENDER, tags, PayerTag.TAG_NAME)
-            eventTags(Relation.ZAPPED, tags, props = props)
-            addressTags(Relation.ZAPPED, tags, props = props)
-            valueTags(Relation.TAG, tags, "k")
+            val props = ZapProps(amount())
+            each(tags, PTag::parse) { user(Relation.ZAP_RECIPIENT, it, PTag.TAG_NAME, props) }
+            each(tags, PayerTag::parse) { user(Relation.ZAP_SENDER, it, PayerTag.TAG_NAME) }
+            each(tags, ETag::parse) { event(Relation.ZAPPED, it, ETag.TAG_NAME, props) }
+            each(tags, ATag::parse) { address(Relation.ZAPPED, it, ATag.TAG_NAME, props) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

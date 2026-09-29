@@ -30,12 +30,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
+import com.vitorpamplona.quartz.nip01Core.links.props.ZapProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -84,11 +84,10 @@ class NutzapEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val sats = claimedSatsTotal()
-            val props = if (sats > 0 && (unit() ?: "sat") == "sat") mapOf("msats" to sats * 1000) else null
-            eventTags(Relation.ZAPPED, tags, props = props)
-            userTags(Relation.ZAP_RECIPIENT, tags, props = props)
-            valueTags(Relation.TAG, tags, "k")
+            val props = ZapProps(claimedMsats())
+            each(tags, ETag::parse) { event(Relation.ZAPPED, it, ETag.TAG_NAME, props) }
+            each(tags, PTag::parse) { user(Relation.ZAP_RECIPIENT, it, PTag.TAG_NAME, props) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

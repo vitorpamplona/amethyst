@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip53LiveActivities
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
@@ -150,7 +151,7 @@ class Nip53LiveActivitiesLinksTest {
         assertEquals(
             listOf(
                 Link(Relation.PARENT, LinkTarget.Address(space), "a"),
-                Link(Relation.PARTICIPANT, LinkTarget.User(host), "p", mapOf("role" to "host", "proof" to "proof")),
+                Link(Relation.PARTICIPANT, LinkTarget.User(host), "p", ParticipantProps(listOf("host"), "proof")),
                 Link(Relation.PARTICIPANT, LinkTarget.User(viewer), "p"),
                 Link(Relation.PIN, LinkTarget.Event(message), "pinned"),
             ),
@@ -162,7 +163,7 @@ class Nip53LiveActivitiesLinksTest {
     fun spaceAndStreamCarryParticipantRoles() {
         val goal = "4".repeat(64)
         val space = MeetingSpaceEvent(id, host, 1, arrayOf(arrayOf("d", "space"), arrayOf("p", viewer, "wss://relay.example/", "admin")), "", sig)
-        assertEquals(listOf(Link(Relation.PARTICIPANT, LinkTarget.User(viewer), "p", mapOf("role" to "admin"))), space.links())
+        assertEquals(listOf(Link(Relation.PARTICIPANT, LinkTarget.User(viewer), "p", ParticipantProps(listOf("admin")))), space.links())
 
         val stream =
             LiveActivitiesEvent(
@@ -175,7 +176,7 @@ class Nip53LiveActivitiesLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.PARTICIPANT, LinkTarget.User(host), "p", mapOf("role" to "Host")),
+                Link(Relation.PARTICIPANT, LinkTarget.User(host), "p", ParticipantProps(listOf("Host"))),
                 Link(Relation.PIN, LinkTarget.Event(message), "pinned"),
                 Link(Relation.GOAL, LinkTarget.Event(goal), "goal"),
             ),

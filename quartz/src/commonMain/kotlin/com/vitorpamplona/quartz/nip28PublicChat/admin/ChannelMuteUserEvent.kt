@@ -28,12 +28,13 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -61,8 +62,8 @@ class ChannelMuteUserEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            event(Relation.ROOT, channelId(), "e")
-            userTags(Relation.CHANNEL_MUTED, tags)
+            event(Relation.ROOT, channel(), MarkedETag.TAG_NAME)
+            each(tags, PTag::parse) { user(Relation.CHANNEL_MUTED, it, PTag.TAG_NAME) }
         }
 
     companion object {

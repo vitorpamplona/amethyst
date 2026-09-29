@@ -31,8 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -71,7 +71,7 @@ class GeohashListEvent(
     suspend fun decryptGeohashes(signer: NostrSigner): List<String> = publicGeohashes() + (decryptPrivateGeohashes(signer) ?: emptyList())
 
     /** The followed locations: every public `g` geohash is `SUBSCRIBED`. */
-    override fun links(): List<Link<*>> = links { valueTags(Relation.SUBSCRIBED, tags, "g") }
+    override fun links(): List<Link<*>> = links { each(tags, GeoHashTag::parse) { tag(Relation.SUBSCRIBED, GeoHashTag.TAG_NAME, it) } }
 
     companion object {
         const val KIND = 10081

@@ -31,8 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -83,7 +85,7 @@ class WebBookmarkEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tag(Relation.BOOKMARK, "r", url(), via = "d")
+            tag(Relation.BOOKMARK, ReferenceTag.TAG_NAME, url(), via = DTag.TAG_NAME)
             hashtags(tags)
         }
 

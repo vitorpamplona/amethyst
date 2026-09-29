@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -33,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -85,23 +86,18 @@ class ReactionEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            val eventId = tags.lastNotNullOfOrNull(ETag::parseId)
-            val address = tags.lastNotNullOfOrNull(ATag::parseAddressId)
-            val author = tags.lastNotNullOfOrNull(PTag::parseKey)
+            val reacted = tags.lastNotNullOfOrNull(ETag::parse)
+            val reactedAddress = tags.lastNotNullOfOrNull(ATag::parse)
+            val author = tags.lastNotNullOfOrNull(PTag::parse)
 
-            event(Relation.REACTED, eventId, "e")
-            address(Relation.REACTED, address, "a")
-            user(Relation.REACTED_AUTHOR, author, "p")
+            event(Relation.REACTED, reacted, ETag.TAG_NAME)
+            address(Relation.REACTED, reactedAddress, ATag.TAG_NAME)
+            user(Relation.REACTED_AUTHOR, author, PTag.TAG_NAME)
 
-            tags.fastForEach { tag ->
-                if (tag.size < 2) return@fastForEach
-                when (tag[0]) {
-                    "e" -> if (tag[1] != eventId) event(Relation.MENTION, tag[1], "e")
-                    "a" -> if (tag[1] != address) address(Relation.MENTION, tag[1], "a")
-                    "p" -> if (tag[1] != author) user(Relation.MENTION, tag[1], "p")
-                    "k" -> tag(Relation.TAG, "k", tag[1])
-                }
-            }
+            each(tags, ETag::parse) { if (it.eventId != reacted?.eventId) event(Relation.MENTION, it, ETag.TAG_NAME) }
+            each(tags, ATag::parse) { if (it.toAddressId() != reactedAddress?.toAddressId()) address(Relation.MENTION, it, ATag.TAG_NAME) }
+            each(tags, PTag::parse) { if (it.pubKey != author?.pubKey) user(Relation.MENTION, it, PTag.TAG_NAME) }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

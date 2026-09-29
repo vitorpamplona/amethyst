@@ -29,20 +29,24 @@ import com.vitorpamplona.quartz.utils.ensure
 class HashSha256Tag(
     val hash: HexKey,
     override val type: ReportType? = null,
+    override val rawType: String? = null,
 ) : BaseReportTag {
     companion object {
         const val TAG_NAME = "x"
 
+        /** A blob's type is always in slot 2. See [ReportedEventTag.parse] for the defaults. */
         fun parse(
             tag: Array<String>,
             defaultReportType: ReportType? = null,
+            defaultRawType: String? = null,
         ): HashSha256Tag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
             val type = tag.getOrNull(2)?.let { ReportType.parseOrNull(it, tag) } ?: defaultReportType
-            return HashSha256Tag(tag[1], type)
+            val rawType = tag.getOrNull(2)?.let(ReportTagLayout::normalizeRawType) ?: defaultRawType
+            return HashSha256Tag(tag[1], type, rawType)
         }
 
         fun assemble(

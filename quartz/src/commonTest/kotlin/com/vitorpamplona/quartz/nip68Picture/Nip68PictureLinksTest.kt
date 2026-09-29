@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip68Picture
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.PositionProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -52,7 +53,7 @@ class Nip68PictureLinksTest {
         assertEquals(
             listOf(
                 Link(Relation.TAGGED, LinkTarget.User(tagged), "p"),
-                Link(Relation.TAGGED, LinkTarget.User(annotated), "imeta", mapOf("x" to 10, "y" to 20)),
+                Link(Relation.TAGGED, LinkTarget.User(annotated), "imeta", PositionProps(10, 20)),
                 Link(Relation.HASHTAG, LinkTarget.Tag("t", "cats"), "t"),
                 Link(Relation.TAG, LinkTarget.Tag("g", "u4pruy"), "g"),
             ),

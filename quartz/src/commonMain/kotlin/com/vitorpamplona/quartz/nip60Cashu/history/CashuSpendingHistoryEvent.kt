@@ -25,14 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -145,17 +144,16 @@ class CashuSpendingHistoryEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                val reference = TokenReference.parseFromTag(it) ?: return@fastForEach
+            each(tags, TokenReference::parseFromTag) {
                 val relation =
-                    when (reference.marker) {
+                    when (it.marker) {
                         TokenReference.MARKER_REDEEMED -> Relation.REDEEMED
                         TokenReference.MARKER_CREATED -> Relation.CREATED
                         else -> Relation.DESTROYED
                     }
-                event(relation, reference.eventId, "e")
+                event(relation, it.eventId, TokenReference.TAG_NAME)
             }
-            userTags(Relation.REDEEMED_AUTHOR, tags)
+            each(tags, PTag::parse) { user(Relation.REDEEMED_AUTHOR, it, PTag.TAG_NAME) }
         }
 
     companion object {

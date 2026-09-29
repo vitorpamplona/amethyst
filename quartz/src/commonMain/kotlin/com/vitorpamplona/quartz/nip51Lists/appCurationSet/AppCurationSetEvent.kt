@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -80,7 +80,7 @@ class AppCurationSetEvent(
     fun apps() = tags.mapNotNull(AddressBookmark::parse)
 
     /** NIP-51: the curated software applications (kind 32267 `a` tags) are `CURATED`. */
-    override fun links(): List<Link<*>> = links { addressTags(Relation.CURATED, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, AddressBookmark::parse) { address(Relation.CURATED, it, AddressBookmark.TAG_NAME) } }
 
     companion object {
         const val KIND = 30267

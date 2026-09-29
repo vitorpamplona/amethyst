@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip71Video
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.CreditProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import kotlin.test.Test
@@ -62,10 +64,10 @@ class Nip71VideoLinksTest {
         val expected =
             listOf(
                 Link(Relation.PARTICIPANT, LinkTarget.User(participant), "p"),
-                Link(Relation.PARTICIPANT, LinkTarget.User(collaborator), "p", mapOf("role" to "Collaborator")),
-                Link(Relation.CREDITED, LinkTarget.User(inspiration), "p", mapOf("credit" to "inspired-by")),
+                Link(Relation.PARTICIPANT, LinkTarget.User(collaborator), "p", ParticipantProps(listOf("Collaborator"))),
+                Link(Relation.CREDITED, LinkTarget.User(inspiration), "p", CreditProps("inspired-by")),
                 Link(Relation.MENTION, LinkTarget.User(mentioned), "p"),
-                Link(Relation.CREDITED, LinkTarget.Address(audio), "a", mapOf("credit" to "audio")),
+                Link(Relation.CREDITED, LinkTarget.Address(audio), "a", CreditProps("audio")),
                 Link(Relation.MENTION, LinkTarget.Event(cited), "e"),
                 Link(Relation.TEXT_TRACK, LinkTarget.Address(subtitles), "text-track"),
                 Link(Relation.TEXT_TRACK, LinkTarget.Event(track), "text-track"),

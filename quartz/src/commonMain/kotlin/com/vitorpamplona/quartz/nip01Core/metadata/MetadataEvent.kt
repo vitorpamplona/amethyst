@@ -33,8 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
@@ -200,7 +200,7 @@ class MetadataEvent(
      * The NIP-39 identity claims mirrored as `i` tags (`github:<user>`, …) are external ids. The
      * profile JSON's own values (names, pictures, `about`) are not references.
      */
-    override fun links(): List<Link<*>> = links { valueTags(Relation.TAG, tags, "i") }
+    override fun links(): List<Link<*>> = links { each(tags, IdentityClaimTag::parse) { tag(Relation.TAG, IdentityClaimTag.TAG_NAME, it.platformIdentity()) } }
 
     companion object {
         const val KIND = 0

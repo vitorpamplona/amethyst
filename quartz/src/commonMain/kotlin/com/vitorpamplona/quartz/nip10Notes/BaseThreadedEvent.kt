@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedATag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -63,6 +64,16 @@ open class BaseThreadedEvent(
     fun unmarkedReply() = tags.lastNotNullOfOrNull(MarkedETag::parseUnmarkedReply)
 
     fun reply() = markedReply() ?: unmarkedReply()
+
+    /**
+     * The first `root`-marked `a` ([MarkedATag]): the thread's root when it is an addressable
+     * event. A NIP-72 community's `a` never counts, even marked: a note is posted in a community,
+     * it does not reply to it.
+     */
+    fun markedRootAddress() = tags.firstNotNullOfOrNull { tag -> MarkedATag.parseRoot(tag)?.takeUnless { it.address.kind == CommunityDefinitionEvent.KIND } }
+
+    /** The last `reply`-marked `a` ([MarkedATag]), skipping a community's as [markedRootAddress] does. */
+    fun markedReplyAddress() = tags.lastNotNullOfOrNull { tag -> MarkedATag.parseReply(tag)?.takeUnless { it.address.kind == CommunityDefinitionEvent.KIND } }
 
     fun threadTags() = tags.mapNotNull(MarkedETag::parseAllThreadTags)
 

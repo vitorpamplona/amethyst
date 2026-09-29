@@ -30,11 +30,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
+import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventKindTag
 import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
@@ -67,8 +67,8 @@ class OtsEvent(
     /** NIP-03: the `e` is the event the proof timestamps, the `k` its kind. */
     override fun links(): List<Link<*>> =
         links {
-            eventTags(Relation.TIMESTAMPED, tags)
-            valueTags(Relation.TAG, tags, "k")
+            each(tags, TargetEventTag::parse) { event(Relation.TIMESTAMPED, it, TargetEventTag.TAG_NAME) }
+            each(tags, TargetEventKindTag::parse) { tag(Relation.TAG, TargetEventKindTag.TAG_NAME, it.toString()) }
         }
 
     companion object {

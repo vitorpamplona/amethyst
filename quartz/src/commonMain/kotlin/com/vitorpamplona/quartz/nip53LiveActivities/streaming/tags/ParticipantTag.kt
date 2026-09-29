@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.props.ParticipantProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
@@ -79,6 +80,9 @@ data class ParticipantTag(
             ROLE.HOST, ROLE.MODERATOR, ROLE.SPEAKER -> true
             ROLE.PARTICIPANT, null -> false
         }
+
+    /** The role and proof as written (blank ones are absent), as the link's props. */
+    fun linkProps() = ParticipantProps(listOfNotNull(role?.ifBlank { null }), proof?.ifBlank { null })
 
     companion object {
         const val TAG_NAME = "p"
