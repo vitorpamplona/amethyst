@@ -115,9 +115,14 @@ class EmbeddedWebAppController(
     // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
     private var createOnShow = false
 
-    // A parked tab can be hidden (paused) before the service even binds, so the pause is remembered and
-    // replayed right after each session is created.
+    // What the provider was last told (see [syncPageState]). Remembered so both are replayed right after each
+    // session is created: a parked tab can be hidden before the service even binds.
     private var wantPaused = false
+    private var wantAttended = true
+
+    // The app is on screen / has been in the background long enough to pause even the visible tab.
+    private var appVisible = true
+    private var backgroundIdle = false
 
     /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
     override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
@@ -268,9 +273,8 @@ class EmbeddedWebAppController(
     override fun teardown() = unbind()
 
     override fun onShown() {
-        wantPaused = false
-        send(NappletBrowserContract.MSG_RESUME) {}
         val deferredRecovery = recovery.onShown()
+        syncPageState()
         if (createOnShow) {
             createOnShow = false
             sendCreateSession()
@@ -280,11 +284,40 @@ class EmbeddedWebAppController(
     }
 
     override fun onHidden() {
-        // A warm tab parked off-screen keeps no animations, media or geolocation running (napplets are
-        // paused the same way).
-        wantPaused = true
-        send(NappletBrowserContract.MSG_PAUSE) {}
         recovery.onHidden()
+        syncPageState()
+    }
+
+    override fun onAppVisibility(visible: Boolean) {
+        appVisible = visible
+        syncPageState()
+    }
+
+    override fun onBackgroundIdle(idle: Boolean) {
+        backgroundIdle = idle
+        syncPageState()
+    }
+
+    /**
+     * Tells the provider what the page may do now:
+     * - paused while parked off-screen, or once the app has sat in the background as long as the relays get
+     *   (EmbeddedTabHost.BACKGROUND_PAUSE_MS) — no animations, media or geolocation keep running;
+     * - attended only while it's the visible tab AND the app is on screen. The provider holds the page's
+     *   NIP-07 sign / encrypt / decrypt while it isn't, so a parked or backgrounded site can't sign (even with
+     *   "allow always") while nobody is looking. That one applies at once: it's about who is watching, not
+     *   about saving work.
+     */
+    private fun syncPageState() {
+        val pause = !recovery.isShown || backgroundIdle
+        if (pause != wantPaused) {
+            wantPaused = pause
+            send(if (pause) NappletBrowserContract.MSG_PAUSE else NappletBrowserContract.MSG_RESUME) {}
+        }
+        val attended = recovery.isShown && appVisible
+        if (attended != wantAttended) {
+            wantAttended = attended
+            send(NappletBrowserContract.MSG_SET_ATTENDED) { putBoolean(NappletBrowserContract.KEY_ENABLED, attended) }
+        }
     }
 
     /**
@@ -427,6 +460,7 @@ class EmbeddedWebAppController(
         if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
         if (desktopSite) setDesktopSite(true)
         if (wantPaused) send(NappletBrowserContract.MSG_PAUSE) {}
+        if (!wantAttended) send(NappletBrowserContract.MSG_SET_ATTENDED) { putBoolean(NappletBrowserContract.KEY_ENABLED, false) }
     }
 
     private fun onServiceMessage(msg: Message): Boolean {

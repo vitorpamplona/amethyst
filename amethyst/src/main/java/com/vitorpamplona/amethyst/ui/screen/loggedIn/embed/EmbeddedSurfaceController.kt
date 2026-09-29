@@ -57,6 +57,22 @@ interface EmbeddedSurfaceController {
         // Optional hook: default no-op. Controllers that don't pause/resume applet JS need no action.
     }
 
+    /**
+     * The app left the screen ([visible] false) or came back. Even the visible tab has nobody looking at it
+     * while the app is in the background, so a controller stops anything that acts for the user right away.
+     */
+    fun onAppVisibility(visible: Boolean) {
+        // Optional hook: default no-op (napplet screens pause on their own lifecycle).
+    }
+
+    /**
+     * The app has been in the background long enough that the rest of it winds down too (relays disconnect
+     * at the same point): [idle] true pauses even the visible tab's page; false when the app returns.
+     */
+    fun onBackgroundIdle(idle: Boolean) {
+        // Optional hook: default no-op (napplet screens pause on their own lifecycle).
+    }
+
     /** Permanently close the session (unbind the service); used on eviction. */
     fun teardown()
 

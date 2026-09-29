@@ -203,6 +203,14 @@ object NappletBrowserContract {
      */
     const val MSG_CLOSE_SESSION = 36
 
+    /**
+     * Client → provider: whether the user is looking at this tab ([KEY_ENABLED]) — it's the visible tab AND
+     * the app is on screen. While not, the provider holds the page's requests that act for the user or use
+     * their key (NIP-07 sign / encrypt / decrypt) and sends them once the user is back, so a parked or
+     * backgrounded site can't sign — even with "allow always" — while nobody is watching. Reads still flow.
+     */
+    const val MSG_SET_ATTENDED = 37
+
     const val KEY_CAN_GO_FORWARD = "canGoForward"
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"

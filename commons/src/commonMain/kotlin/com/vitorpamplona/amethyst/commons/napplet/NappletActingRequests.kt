@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 /**
- * The napplet requests that ACT for the user — publish, pay, upload, notify, broadcast to other
- * napplets — as opposed to reading. A host holds these while its napplet is off-screen: pausing the
- * WebView stops animations and media but not JavaScript, so without this an "allow always" napplet
- * parked in the bottom bar could keep publishing or paying while the user looks elsewhere. Reads keep
- * flowing, so a preloaded napplet still fills itself in.
+ * The napplet / website requests that ACT for the user or use their key — publish, pay, upload, notify,
+ * broadcast to other napplets, and a website's NIP-07 sign / encrypt / decrypt — as opposed to reading.
+ * A host holds these while the user isn't looking at the surface (it's parked off-screen, or the app is in
+ * the background): pausing the WebView stops animations and media but not JavaScript, so without this an
+ * "allow always" napplet or site could keep publishing, paying, signing or decrypting while the user looks
+ * elsewhere. Reads (`getPublicKey`, relay queries, …) keep flowing, so a preloaded surface still fills in.
  */
 object NappletActingRequests {
     private val ACTING =
@@ -36,6 +37,10 @@ object NappletActingRequests {
             "upload.upload",
             "notify.create",
             "inc.emit",
+            // NIP-07 (website posture). Decrypt counts too: it hands the page plaintext it couldn't read.
+            "nostr.signEvent",
+            "nostr.nip44Encrypt",
+            "nostr.nip44Decrypt",
         )
 
     fun actsForUser(requestType: String?): Boolean = requestType in ACTING

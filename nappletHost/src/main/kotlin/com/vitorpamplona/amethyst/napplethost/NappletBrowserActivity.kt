@@ -87,9 +87,11 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
+import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
@@ -227,6 +229,11 @@ class NappletBrowserActivity : ComponentActivity() {
     private val originTokens = mutableMapOf<String, String>()
     private val pendingByOrigin = mutableMapOf<String, MutableList<Message>>()
     private val mintInFlight = mutableSetOf<String>()
+
+    // The page's requests that act for the user (NIP-07 sign / encrypt / decrypt) made while this window was in
+    // the background, as (origin, request): sent on the next resume, so a site can't sign — even with
+    // "allow always" — while nobody is looking at it.
+    private val heldWhileAway = mutableListOf<Pair<String, Message>>()
 
     /**
      * Back walks out of fullscreen video, then the find bar, then the page's history, then leaves. Enabled
@@ -398,6 +405,9 @@ class NappletBrowserActivity : ComponentActivity() {
         super.onResume()
         webView?.onResume()
         resumed = true
+        val held = heldWhileAway.toList()
+        heldWhileAway.clear()
+        held.forEach { (origin, request) -> dispatchToBroker(origin, request) }
         heartbeatHandler.removeCallbacks(heartbeat)
         heartbeat.run()
     }
@@ -928,6 +938,19 @@ class NappletBrowserActivity : ComponentActivity() {
                     }
             }
 
+        // In the background: a sign / encrypt / decrypt waits until the user is back on this window.
+        if (!resumed && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
+            heldWhileAway += origin to msg
+            return
+        }
+        dispatchToBroker(origin, msg)
+    }
+
+    /** Sends [msg] with [origin]'s launch token, minting the token first if the origin has none yet. */
+    private fun dispatchToBroker(
+        origin: String,
+        msg: Message,
+    ) {
         val token = originTokens[origin]
         if (token != null) {
             msg.data.putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
@@ -982,6 +1005,7 @@ class NappletBrowserActivity : ComponentActivity() {
      */
     private fun releasePage() {
         pendingByOrigin.clear()
+        heldWhileAway.clear()
         // A mint the broker never answered (none is sent while logged out) would otherwise block the
         // origin for good; the next page asks again.
         mintInFlight.clear()

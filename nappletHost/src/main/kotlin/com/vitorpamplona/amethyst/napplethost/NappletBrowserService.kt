@@ -60,9 +60,11 @@ import androidx.webkit.WebViewCompat
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
@@ -112,6 +114,11 @@ class NappletBrowserService : Service() {
         // The client's last pause/resume. A parked tab can be paused before its WebView exists (the WebView
         // is only built when the surface opens), so the flag is applied to every WebView built for the tab.
         var paused = false
+
+        // Whether the user is looking at this tab (see NappletBrowserContract.MSG_SET_ATTENDED), and the page's
+        // requests that act for the user held while they aren't: (origin, request), sent when they're back.
+        var attended = true
+        val heldWhileAway = mutableListOf<Pair<String, Message>>()
 
         // The session's root view (holds the WebView, and the page's fullscreen view when it has one).
         var container: FrameLayout? = null
@@ -251,6 +258,15 @@ class NappletBrowserService : Service() {
                 }
             }
             NappletBrowserContract.MSG_CLOSE_SESSION -> tabFor(msg)?.let(::closeTab)
+            NappletBrowserContract.MSG_SET_ATTENDED -> {
+                val tab = tabFor(msg) ?: return true
+                tab.attended = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, true) ?: true
+                if (tab.attended) {
+                    val held = tab.heldWhileAway.toList()
+                    tab.heldWhileAway.clear()
+                    held.forEach { (origin, request) -> dispatchToBroker(tab, origin, request) }
+                }
+            }
             NappletBrowserContract.MSG_PAUSE ->
                 tabFor(msg)?.let {
                     it.paused = true
@@ -1041,6 +1057,21 @@ class NappletBrowserService : Service() {
                     }
             }
 
+        // Nobody is looking at this tab (it's parked, or the app is in the background): a sign / encrypt /
+        // decrypt waits until they are, even when "allow always" would let it through without a prompt.
+        if (!tab.attended && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
+            tab.heldWhileAway += origin to msg
+            return
+        }
+        dispatchToBroker(tab, origin, msg)
+    }
+
+    /** Sends [msg] with [origin]'s launch token, minting the token first if the origin has none yet. */
+    private fun dispatchToBroker(
+        tab: BrowserTab,
+        origin: String,
+        msg: Message,
+    ) {
         val token = tab.originTokens[origin]
         if (token != null) {
             msg.data.putString(NappletIpc.KEY_LAUNCH_TOKEN, token)
@@ -1077,6 +1108,7 @@ class NappletBrowserService : Service() {
         closing: Boolean = false,
     ) {
         tab.pendingByOrigin.clear()
+        tab.heldWhileAway.clear()
         // A mint the broker never answered (none is sent while logged out) would otherwise block the
         // origin for the tab's life; the next page asks again.
         tab.mintInFlight.clear()

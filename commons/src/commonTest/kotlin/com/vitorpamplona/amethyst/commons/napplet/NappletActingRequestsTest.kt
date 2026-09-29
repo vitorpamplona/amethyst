@@ -27,13 +27,22 @@ import kotlin.test.assertTrue
 class NappletActingRequestsTest {
     @Test
     fun actingRequestsAreHeld() {
-        listOf("relay.publish", "relay.publishEncrypted", "value.payInvoice", "upload.upload", "notify.create", "inc.emit")
-            .forEach { assertTrue(NappletActingRequests.actsForUser(it), it) }
+        listOf(
+            "relay.publish",
+            "relay.publishEncrypted",
+            "value.payInvoice",
+            "upload.upload",
+            "notify.create",
+            "inc.emit",
+            "nostr.signEvent",
+            "nostr.nip44Encrypt",
+            "nostr.nip44Decrypt",
+        ).forEach { assertTrue(NappletActingRequests.actsForUser(it), it) }
     }
 
     @Test
     fun readsFlow() {
-        listOf("identity.getPublicKey", "relay.query", "relay.subscribe", "relay.close", "storage.get", "resource.bytes", "theme.get", null)
+        listOf("identity.getPublicKey", "identity.getRelays", "relay.query", "relay.subscribe", "relay.close", "storage.get", "resource.bytes", "theme.get", null)
             .forEach { assertFalse(NappletActingRequests.actsForUser(it), it.toString()) }
     }
 }

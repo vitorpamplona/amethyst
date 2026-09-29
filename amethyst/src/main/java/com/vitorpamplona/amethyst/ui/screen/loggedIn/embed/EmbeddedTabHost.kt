@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -112,8 +114,50 @@ object EmbeddedTabHost {
     ): EmbeddedSurfaceController {
         warm.firstOrNull { it.id == id }?.let { return it.controller }
         val controller = factory()
+        // A session built while the app is in the background (a rebuild, a preload) starts in that state.
+        if (!appVisible) controller.onAppVisibility(false)
+        if (backgroundIdle) controller.onBackgroundIdle(true)
         warm.add(Warm(id, controller))
         return controller
+    }
+
+    // ---- the app in the background ----
+
+    /**
+     * How long the app sits in the background before even the visible tab's page is paused. The same grace
+     * the rest of the app gets: relays disconnect 30 s after the UI stops (RelayProxyClientConnector's
+     * `WhileSubscribed(30000)`), so a quick trip to another app (a 2FA code, a password manager) doesn't
+     * interrupt a page, while one left behind stops running.
+     */
+    const val BACKGROUND_PAUSE_MS = 30_000L
+
+    private var appVisible = true
+    private var backgroundIdle = false
+    private val backgroundTimer = Handler(Looper.getMainLooper())
+    private val goIdle =
+        Runnable {
+            backgroundIdle = true
+            warm.forEach { it.controller.onBackgroundIdle(true) }
+        }
+
+    /** The app's UI stopped (went to the background). */
+    fun onAppStopped() {
+        if (!appVisible) return
+        appVisible = false
+        warm.forEach { it.controller.onAppVisibility(false) }
+        backgroundTimer.postDelayed(goIdle, BACKGROUND_PAUSE_MS)
+    }
+
+    /** The app's UI started again. */
+    fun onAppStarted() {
+        backgroundTimer.removeCallbacks(goIdle)
+        if (appVisible) return
+        appVisible = true
+        warm.forEach { it.controller.onAppVisibility(true) }
+        if (backgroundIdle) {
+            backgroundIdle = false
+            warm.forEach { it.controller.onBackgroundIdle(false) }
+        }
     }
 
     /** True if a warm session already exists for [id] (used by the preloader to skip re-acquiring). */

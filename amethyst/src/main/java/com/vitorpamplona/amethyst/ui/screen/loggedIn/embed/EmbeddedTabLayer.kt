@@ -84,6 +84,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.EmbeddedLoadOverlay
@@ -150,6 +153,22 @@ private fun EmbeddedImeBridge.sendFieldOp(
 @Composable
 fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
     val activeId = EmbeddedTabHost.activeId
+
+    // Tell the warm tabs when the app leaves the screen and when it comes back. The host stops them acting for
+    // the user right away and pauses their pages on the same schedule the relays wind down on.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> EmbeddedTabHost.onAppStopped()
+                    Lifecycle.Event.ON_START -> EmbeddedTabHost.onAppStarted()
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Keep only bottom-row apps warm (plus the active tab, even mid-removal). A favorite removed from
     // the bar drops its warm session here.
