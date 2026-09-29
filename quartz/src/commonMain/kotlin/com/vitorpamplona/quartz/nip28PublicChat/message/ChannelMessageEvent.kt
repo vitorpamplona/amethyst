@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip28PublicChat.message
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -31,6 +32,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -68,7 +74,8 @@ class ChannelMessageEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -135,6 +142,35 @@ class ChannelMessageEvent(
         tagArray<ChannelMessageEvent> {
             channel()?.let { markedETag(it) }
             reply()?.let { markedETag(it) }
+        }
+
+    /**
+     * NIP-28: the channel is the `root`-marked `e`, so it is the `ROOT` ([channel]); the replied-to
+     * message is the `reply`-marked one, the `PARENT` ([reply], never the channel itself). NIP-28
+     * adds the replied-to author as a `p`: it is the `PARENT_AUTHOR` when the parent tag names that
+     * same author (Quartz writes it in the `e`'s pubkey slot), else a `MENTION`, as on kind 1.
+     */
+    override fun links(): List<Link> =
+        links {
+            val channelId = channelId()
+            val parentTag = reply()?.takeIf { it.eventId != channelId }
+            val parentId = parentTag?.eventId
+            val parentAuthor = parentTag?.author
+
+            event(Relation.ROOT, channelId, "e")
+            event(Relation.PARENT, parentId, "e")
+
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> if (tag[1] != channelId && tag[1] != parentId) event(Relation.MENTION, tag[1], "e")
+                    "a" -> address(Relation.MENTION, tag[1], "a")
+                    "p" -> user(if (tag[1] == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
+                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
+                }
+            }
+
+            contentMentions(citedNIP19())
         }
 
     companion object {

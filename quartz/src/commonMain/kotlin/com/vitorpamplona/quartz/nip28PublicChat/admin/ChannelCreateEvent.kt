@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -50,7 +55,8 @@ class ChannelCreateEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }
 
     // The read path. The parse happens once and its fields are handed over one by
@@ -97,6 +103,12 @@ class ChannelCreateEvent(
         cache = newInfo
         return newInfo
     }
+
+    /**
+     * NIP-28 gives kind 40 no tags (its metadata and relays live in the content JSON); the `a`
+     * tags Quartz reads as address hints are mentions, since nothing gives them another meaning.
+     */
+    override fun links(): List<Link> = links { addressTags(Relation.MENTION, tags) }
 
     companion object {
         const val KIND = 40

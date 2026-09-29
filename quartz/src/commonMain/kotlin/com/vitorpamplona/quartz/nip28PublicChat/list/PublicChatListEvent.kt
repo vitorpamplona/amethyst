@@ -29,6 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -51,7 +56,8 @@ class PublicChatListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DiffableEvent<PublicChatListDiff>,
-    EventHintProvider {
+    EventHintProvider,
+    LinkProvider {
     override fun diffFrom(older: Event): PublicChatListDiff? {
         if (older !is PublicChatListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return PublicChatListDiff(
@@ -63,6 +69,9 @@ class PublicChatListEvent(
     override fun eventHints() = tags.mapNotNull(ChannelTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ChannelTag::parseId)
+
+    /** NIP-51: the public chats (kind 40 channels) the user follows are `SUBSCRIBED`. */
+    override fun links(): List<Link> = links { eventTags(Relation.SUBSCRIBED, tags) }
 
     companion object {
         const val KIND = 10005

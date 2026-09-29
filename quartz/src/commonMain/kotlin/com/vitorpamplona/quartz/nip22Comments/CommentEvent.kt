@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -35,6 +36,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -77,7 +83,8 @@ class CommentEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = (listOf(content) + tags.hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, without the join.
@@ -250,6 +257,49 @@ class CommentEvent(
 
         return rootAddress + replyAddress + rootEventIds() + replyEventIds()
     }
+
+    /**
+     * NIP-22: the uppercase tags are the root scope (`E`/`A`/`I` → `ROOT`, `P` → `ROOT_AUTHOR`),
+     * the lowercase ones the parent item (`e`/`a`/`i` → `PARENT`). An external-identifier scope
+     * (`I`/`i`: a URL, a hashtag, a geohash) is the NIP-73 id it names, one node whichever case
+     * named it. A lowercase `p` is the `PARENT_AUTHOR` only when it is the author the parent tag
+     * itself names (the `e`'s pubkey slot, or an `a`'s coordinate): NIP-22 also asks for a `p` per
+     * pubkey mentioned in the content, and those are `MENTION`s. An `A` root at a NIP-72 community
+     * is also the `COMMUNITY` the comment is posted in.
+     */
+    override fun links(): List<Link> =
+        links {
+            val parentAuthors = HashSet<String>()
+            tags.fastForEach { tag ->
+                when {
+                    tag.size > 3 && tag[0] == "e" -> parentAuthors.add(tag[3])
+                    tag.size > 1 && tag[0] == "a" -> Address.parse(tag[1])?.let { parentAuthors.add(it.pubKeyHex) }
+                }
+            }
+
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "E" -> event(Relation.ROOT, tag[1], "E")
+                    "A" -> {
+                        address(Relation.ROOT, tag[1], "A")
+                        if (Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) address(Relation.COMMUNITY, tag[1], "A")
+                    }
+                    "I" -> tag(Relation.ROOT, "i", tag[1], "I")
+                    "K" -> tag(Relation.TAG, "k", tag[1], "K")
+                    "P" -> user(Relation.ROOT_AUTHOR, tag[1], "P")
+                    "e" -> event(Relation.PARENT, tag[1], "e")
+                    "a" -> address(Relation.PARENT, tag[1], "a")
+                    "i" -> tag(Relation.PARENT, "i", tag[1])
+                    "k" -> tag(Relation.TAG, "k", tag[1])
+                    "p" -> user(if (tag[1] in parentAuthors) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
+                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
+                    "t" -> tag(Relation.HASHTAG, "t", tag[1].lowercase())
+                }
+            }
+
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 1111

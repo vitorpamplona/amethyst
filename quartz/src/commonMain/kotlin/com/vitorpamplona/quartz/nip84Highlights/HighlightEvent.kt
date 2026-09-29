@@ -23,12 +23,18 @@ package com.vitorpamplona.quartz.nip84Highlights
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -72,7 +78,8 @@ class HighlightEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(comment(), context(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
@@ -215,6 +222,37 @@ class HighlightEvent(
     fun inPostAddress() = firstTaggedAddress()
 
     fun inPostVersion() = firstTaggedEvent()
+
+    /**
+     * NIP-84: the source is an `e`/`a` (a nostr event), an `i` (a NIP-73 id) or an `r` ("a URL or
+     * text"), each `HIGHLIGHTED`. A `p` names "the original authors" (`HIGHLIGHTED_AUTHOR`, its
+     * `role` — author, editor — riding along when written); in a quote highlight a `p` or `r` with
+     * the `mention` marker is named in the comment instead: a `MENTION`, or a plain URL `TAG`.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> event(Relation.HIGHLIGHTED, tag[1], "e")
+                    "a" -> address(Relation.HIGHLIGHTED, tag[1], "a")
+                    "i" -> tag(Relation.HIGHLIGHTED, "i", tag[1])
+                    "r" -> tag(if (tag.getOrNull(2) == MENTION_MARKER) Relation.TAG else Relation.HIGHLIGHTED, "r", tag[1])
+                    "p" -> {
+                        val role = tag.getOrNull(3)?.ifBlank { null }
+                        when (role) {
+                            MENTION_MARKER -> user(Relation.MENTION, tag[1], "p")
+                            null -> user(Relation.HIGHLIGHTED_AUTHOR, tag[1], "p")
+                            else -> user(Relation.HIGHLIGHTED_AUTHOR, tag[1], "p", mapOf("role" to role))
+                        }
+                    }
+
+                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
+                }
+            }
+
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 9802

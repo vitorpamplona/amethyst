@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -54,7 +56,8 @@ class GenericRepostEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
-    BaseRepostEvent {
+    BaseRepostEvent,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -89,6 +92,8 @@ class GenericRepostEvent(
         } catch (e: Exception) {
             null
         }
+
+    override fun links(): List<Link> = repostLinks(tags)
 
     companion object {
         const val KIND = 16

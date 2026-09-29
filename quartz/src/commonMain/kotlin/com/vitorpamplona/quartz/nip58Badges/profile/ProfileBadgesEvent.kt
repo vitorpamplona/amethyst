@@ -25,14 +25,20 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -47,7 +53,8 @@ class ProfileBadgesEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -65,6 +72,25 @@ class ProfileBadgesEvent(
     fun badgeAwardEvents() = tags.badgeAwardEvents()
 
     fun badgeAwardDefinitions() = tags.badgeAwardDefinitions()
+
+    /**
+     * NIP-58: the profile shows badges as consecutive `a`/`e` pairs ([acceptedBadges]): the badge
+     * definition and the award that granted it. An `a` to a kind 30008 badge set is a
+     * `BADGE_SET` the profile displays whole, never a badge definition.
+     */
+    override fun links(): List<Link> =
+        links {
+            acceptedBadges().forEach { badge ->
+                if (badge.badgeDefinition.kind == AcceptedBadgeSetEvent.KIND) return@forEach
+                address(Relation.BADGE_DEFINITION, badge.badgeDefinition.toTag(), "a")
+                event(Relation.BADGE_AWARD, badge.badgeAward.eventId, "e")
+            }
+            tags.fastForEach { tag ->
+                if (tag.size > 1 && tag[0] == "a" && ATag.parse(tag)?.kind == AcceptedBadgeSetEvent.KIND) {
+                    address(Relation.BADGE_SET, tag[1], "a")
+                }
+            }
+        }
 
     companion object {
         const val KIND = 10008

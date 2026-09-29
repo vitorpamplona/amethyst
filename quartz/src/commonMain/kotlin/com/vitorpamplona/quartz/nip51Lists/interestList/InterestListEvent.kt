@@ -26,8 +26,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -50,7 +55,8 @@ class InterestListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<InterestListDiff> {
+    DiffableEvent<InterestListDiff>,
+    LinkProvider {
     override fun diffFrom(older: Event): InterestListDiff? {
         if (older !is InterestListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return InterestListDiff(
@@ -65,6 +71,19 @@ class InterestListEvent(
     fun publicInterestSets(): List<AddressBookmark> = tags.interestSetPointers()
 
     suspend fun privateInterestSets(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.interestSetPointers()
+
+    /**
+     * NIP-51: the followed hashtags (`t`, the same lowercased node `HASHTAG` uses) and interest
+     * sets (kind 30015 `a` tags; other `a` kinds are skipped, as [publicInterestSets] does) are
+     * `SUBSCRIBED`.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size > 1 && tag[0] == "t") tag(Relation.SUBSCRIBED, "t", tag[1].lowercase())
+            }
+            publicInterestSets().forEach { address(Relation.SUBSCRIBED, it.address, "a") }
+        }
 
     companion object {
         const val KIND = 10015

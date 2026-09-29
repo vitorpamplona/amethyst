@@ -26,6 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -38,6 +43,7 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.mutes
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
@@ -57,7 +63,8 @@ class FollowSetEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // Only the public label/description is indexed; members can live in NIP-44
     // encrypted content and are intentionally never indexed.
     override fun indexableContent() = listOfNotNull(titleOrName(), description()).joinToString("\n")
@@ -94,6 +101,16 @@ class FollowSetEvent(
     fun publicUsersIdSet(): Set<HexKey> = tags.mapNotNullTo(mutableSetOf(), UserTag::parseKey)
 
     suspend fun privateMembers(signer: NostrSigner): List<MuteTag>? = privateTags(signer)?.mapNotNull(MuteTag::parse)
+
+    /**
+     * NIP-51: a follow set's `p`s are its `MEMBER`s. The deprecated `d=mute` form is a mute list
+     * (NIP-51: "use instead kind 10000"), which is why [publicMembers] parses mute entries: there
+     * its `p`/`e`/`t`/`word` entries are `MUTE`s.
+     */
+    override fun links(): List<Link> =
+        links {
+            if (dTag() == "mute") mutes(tags) else userTags(Relation.MEMBER, tags)
+        }
 
     companion object {
         const val KIND = 30000

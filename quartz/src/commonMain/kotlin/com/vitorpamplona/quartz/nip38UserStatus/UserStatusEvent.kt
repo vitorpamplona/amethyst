@@ -23,7 +23,12 @@ package com.vitorpamplona.quartz.nip38UserStatus
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -42,7 +47,8 @@ class UserStatusEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -52,6 +58,23 @@ class UserStatusEvent(
     }
 
     fun firstTaggedUrl() = tags.firstTagValue("r")
+
+    /**
+     * NIP-38: a status may link to a profile, a note or an addressable event (`p`/`e`/`a`), each
+     * `LINKED`, and to a URL (`r`). The `d` is the status type, not a reference.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "p" -> user(Relation.LINKED, tag[1], "p")
+                    "e" -> event(Relation.LINKED, tag[1], "e")
+                    "a" -> address(Relation.LINKED, tag[1], "a")
+                    "r" -> tag(Relation.TAG, "r", tag[1])
+                }
+            }
+        }
 
     companion object {
         const val KIND = 30315

@@ -25,12 +25,18 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -70,7 +76,8 @@ class LongFormContentEvent(
     AddressHintProvider,
     PublishedAtProvider,
     RootScope,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
@@ -149,6 +156,28 @@ class LongFormContentEvent(
             null
         }
     }
+
+    /**
+     * NIP-23: "references to other notes, articles or profiles must be made according to NIP-27
+     * ... optionally adding tags for these", so the `e`/`a`/`p` tags are mentions, like the
+     * `nostr:` URIs in the text. An article has no thread: though it extends [BaseThreadedEvent],
+     * its `e`/`a` are never a root or a parent.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> event(Relation.MENTION, tag[1], "e")
+                    "a" -> address(Relation.MENTION, tag[1], "a")
+                    "p" -> user(Relation.MENTION, tag[1], "p")
+                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
+                    "t" -> tag(Relation.HASHTAG, "t", tag[1].lowercase())
+                }
+            }
+
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 30023

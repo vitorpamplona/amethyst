@@ -32,9 +32,14 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -70,7 +75,8 @@ class ReleaseArtifactSetEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(title(), description(), searchableReleaseNotes()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -118,6 +124,23 @@ class ReleaseArtifactSetEvent(
 
     /** NIP-82: the release notes. */
     fun releaseNotes() = content
+
+    /**
+     * The release's artifacts (`e`: NIP-51 file metadata, NIP-82 kind 3063 assets) are
+     * `CURATED`; the `a` is the software application (`APP`) they release and the NIP-82 `i` its
+     * app id.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> event(Relation.CURATED, tag[1], "e")
+                    "a" -> address(Relation.APP, tag[1], "a")
+                    "i" -> tag(Relation.TAG, "i", tag[1])
+                }
+            }
+        }
 
     companion object {
         const val KIND = 30063

@@ -25,10 +25,15 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -41,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emoji
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 @Immutable
 class ReactionEvent(
@@ -53,7 +59,8 @@ class ReactionEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -69,6 +76,33 @@ class ReactionEvent(
     fun originalPost() = tags.mapNotNull(ETag::parseId)
 
     fun originalAuthor() = tags.mapNotNull(PTag::parseKey)
+
+    /**
+     * NIP-25: "the target event id should be last of the `e` tags" and "the target event pubkey
+     * should be last of the `p` tags", so the LAST `e`/`a` is what was `REACTED` to and the last
+     * `p` its `REACTED_AUTHOR` (not [originalPost]/[originalAuthor], which return all of them).
+     * Earlier ones are copies of the target's thread tags: `MENTION`s. `k` is the target's kind.
+     */
+    override fun links(): List<Link> =
+        links {
+            val eventId = tags.lastNotNullOfOrNull(ETag::parseId)
+            val address = tags.lastNotNullOfOrNull(ATag::parseAddressId)
+            val author = tags.lastNotNullOfOrNull(PTag::parseKey)
+
+            event(Relation.REACTED, eventId, "e")
+            address(Relation.REACTED, address, "a")
+            user(Relation.REACTED_AUTHOR, author, "p")
+
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> if (tag[1] != eventId) event(Relation.MENTION, tag[1], "e")
+                    "a" -> if (tag[1] != address) address(Relation.MENTION, tag[1], "a")
+                    "p" -> if (tag[1] != author) user(Relation.MENTION, tag[1], "p")
+                    "k" -> tag(Relation.TAG, "k", tag[1])
+                }
+            }
+        }
 
     companion object {
         const val KIND = 7

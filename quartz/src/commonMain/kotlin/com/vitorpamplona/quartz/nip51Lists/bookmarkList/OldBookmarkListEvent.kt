@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -38,6 +42,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.eventsAndAddresses
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -53,7 +58,8 @@ class OldBookmarkListEvent(
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // Only the public list title is indexed; bookmarks live in NIP-44
     // encrypted content and are intentionally never indexed.
     override fun indexableContent() = listOfNotNull(title()).joinToString("\n")
@@ -79,6 +85,22 @@ class OldBookmarkListEvent(
     fun publicBookmarks(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
 
     suspend fun privateBookmarks(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
+
+    /**
+     * The deprecated kind 30001 was every list at once, told apart by its `d`: `pin` became the
+     * pin list (10001), `communities` the communities list (10004), anything else (`bookmark`)
+     * the bookmarks (10003). Its `e`/`a` items mean what they mean in the list that replaced it.
+     */
+    override fun links(): List<Link> =
+        links {
+            val relation =
+                when (dTag()) {
+                    "pin" -> Relation.PIN
+                    "communities" -> Relation.SUBSCRIBED
+                    else -> Relation.BOOKMARK
+                }
+            eventsAndAddresses(relation, tags)
+        }
 
     companion object {
         const val KIND = 30001

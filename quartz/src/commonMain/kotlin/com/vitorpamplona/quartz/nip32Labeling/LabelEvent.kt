@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip32Labeling
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -30,6 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -64,7 +69,8 @@ class LabelEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = (listOf(content) + labels().map { it.label }).filter { it.isNotEmpty() }.joinToString("\n")
 
     // The read path. Empty strings are skipped rather than visited: the joined form filters
@@ -122,6 +128,29 @@ class LabelEvent(
         tags
             .filter { it.size >= 2 && it[0] == "r" && it[1].isNotEmpty() }
             .map { it[1] }
+
+    /**
+     * NIP-32: every `e`/`a`/`p`/`t`/`r` is a label TARGET (`LABELED`), so a 1985's `t` and `r` are
+     * never its own topics. Each target carries the labels in `labels`: one `<namespace>:<label>`
+     * per `l` tag (`ugc` when unmarked), newline-separated. The `l`/`L` values are `TAG`s. With no
+     * target tag the labels apply to the label event itself, which is no link.
+     */
+    override fun links(): List<Link> =
+        links {
+            val labels = labels().joinToString("\n") { "${it.namespace}:${it.label}" }
+            val props = if (labels.isEmpty()) null else mapOf("labels" to labels)
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> event(Relation.LABELED, tag[1], "e", props)
+                    "a" -> address(Relation.LABELED, tag[1], "a", props)
+                    "p" -> user(Relation.LABELED, tag[1], "p", props)
+                    "t" -> tag(Relation.LABELED, "t", tag[1].lowercase(), props = props)
+                    "r" -> tag(Relation.LABELED, "r", tag[1], props = props)
+                    "l", "L" -> tag(Relation.TAG, tag[0], tag[1])
+                }
+            }
+        }
 
     companion object {
         const val KIND = 1985

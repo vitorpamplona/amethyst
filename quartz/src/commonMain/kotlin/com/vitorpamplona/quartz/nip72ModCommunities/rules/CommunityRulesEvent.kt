@@ -24,10 +24,16 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.MaxEventSizeTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.MinRulesCreatedAtTag
@@ -58,7 +64,8 @@ class CommunityRulesEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider {
+    AddressHintProvider,
+    LinkProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
@@ -96,6 +103,31 @@ class CommunityRulesEvent(
 
     /** Address (`a` tag) of the community this rules document governs. */
     fun communityAddress(): String? = tags.firstNotNullOfOrNull(ATag::parseAddressId)
+
+    /**
+     * NIP-9B: the `a` is the `COMMUNITY` these rules govern. A `p` rule is `ALLOWED` or `DENIED`
+     * (split because every query filters on it), with its `role` when it names one; a `wot` gate's
+     * pubkey is the `WOT_ROOT` of a web of trust `depth` hops deep; `k` names an allowed kind.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "a" -> address(Relation.COMMUNITY, CommunityTag.parseAddressId(tag), "a")
+
+                    "p" -> {
+                        val rule = PubkeyRuleTag.parse(tag) ?: return@fastForEach
+                        val relation = if (rule.policy == PubkeyRuleTag.Policy.ALLOW) Relation.ALLOWED else Relation.DENIED
+                        user(relation, rule.pubkey, "p", rule.role?.let { mapOf("role" to it) })
+                    }
+
+                    "wot" -> WotTag.parse(tag)?.let { user(Relation.WOT_ROOT, it.rootPubkey, "wot", mapOf("depth" to it.depth)) }
+
+                    "k" -> KindRuleTag.parse(tag)?.let { tag(Relation.TAG, "k", it.kind.toString()) }
+                }
+            }
+        }
 
     companion object {
         const val KIND = 34551

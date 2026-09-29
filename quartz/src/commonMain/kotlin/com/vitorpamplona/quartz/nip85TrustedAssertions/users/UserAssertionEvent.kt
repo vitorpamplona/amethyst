@@ -24,7 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -38,8 +44,25 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.HopsTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PostCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReactionsCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReplyCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountSentTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountSentTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDayReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDaySentTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -51,7 +74,8 @@ class UserAssertionEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // Only the public petname and summary tags are indexed; the rest of the
     // card lives in NIP-44 encrypted content and is intentionally never
     // indexed. (petName()/summary() read the public tag array, so a petname
@@ -106,6 +130,45 @@ class UserAssertionEvent(
     fun petName() = tags.petName()
 
     fun summary() = tags.summary()
+
+    /**
+     * NIP-85: the `d` is the SUBJECT, the user this card is about (not the card's own identity,
+     * so it is linked although it is the `d`). The public scores ride on it, keyed by their NIP-85
+     * tag names (`rank`, `followers`, `hops`, …); `t` are the user's topics. A `p` equal to the
+     * `d` is only its relay hint. The encrypted contact-card fields are invisible.
+     */
+    override fun links(): List<Link> =
+        links {
+            val scores = LinkedHashMap<String, Any>()
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                val value: Number? =
+                    when (tag[0]) {
+                        RankTag.TAG_NAME -> RankTag.parse(tag)
+                        FollowerCountTag.TAG_NAME -> FollowerCountTag.parse(tag)
+                        HopsTag.TAG_NAME -> HopsTag.parse(tag)
+                        FirstCreatedAtTag.TAG_NAME -> FirstCreatedAtTag.parse(tag)
+                        PostCountTag.TAG_NAME -> PostCountTag.parse(tag)
+                        ReplyCountTag.TAG_NAME -> ReplyCountTag.parse(tag)
+                        ReactionsCountTag.TAG_NAME -> ReactionsCountTag.parse(tag)
+                        ZapAmountReceivedTag.TAG_NAME -> ZapAmountReceivedTag.parse(tag)
+                        ZapAmountSentTag.TAG_NAME -> ZapAmountSentTag.parse(tag)
+                        ZapCountReceivedTag.TAG_NAME -> ZapCountReceivedTag.parse(tag)
+                        ZapCountSentTag.TAG_NAME -> ZapCountSentTag.parse(tag)
+                        ZapAvgAmountDayReceivedTag.TAG_NAME -> ZapAvgAmountDayReceivedTag.parse(tag)
+                        ZapAvgAmountDaySentTag.TAG_NAME -> ZapAvgAmountDaySentTag.parse(tag)
+                        ReportsCountReceivedTag.TAG_NAME -> ReportsCountReceivedTag.parse(tag)
+                        ReportsCountSentTag.TAG_NAME -> ReportsCountSentTag.parse(tag)
+                        ActiveHoursStartTag.TAG_NAME -> ActiveHoursStartTag.parse(tag)
+                        ActiveHoursEndTag.TAG_NAME -> ActiveHoursEndTag.parse(tag)
+                        else -> null
+                    }
+                // The first of each wins, as the accessors (rank(), followerCount()…) read them.
+                if (value != null && tag[0] !in scores) scores[tag[0]] = value
+            }
+            user(Relation.SUBJECT, aboutUser(), "d", scores.ifEmpty { null })
+            hashtags(tags)
+        }
 
     companion object {
         const val KIND = 30382

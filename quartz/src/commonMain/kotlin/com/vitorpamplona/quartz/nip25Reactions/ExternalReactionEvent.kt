@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyKindTag
@@ -53,7 +58,8 @@ class ExternalReactionEvent(
     tags: TagArray,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     /** The NIP-73 ids this reaction is aimed at, in tag order. */
     fun externalIds(): List<String> = tags.mapNotNull(ExternalTargetTag::parse)
 
@@ -71,6 +77,16 @@ class ExternalReactionEvent(
 
     /** True when this reaction can be attributed to a target at all. */
     fun hasTarget() = externalIds().isNotEmpty()
+
+    /**
+     * NIP-25 kind 17: every NIP-73 `i` is a `REACTED` external id (a podcast reaction names both
+     * the show and the episode), `k` their kinds. The `i`'s URL hint is not a target.
+     */
+    override fun links(): List<Link> =
+        links {
+            valueTags(Relation.REACTED, tags, "i")
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 17

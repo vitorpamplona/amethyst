@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
@@ -42,12 +47,23 @@ class ChannelMuteUserEvent(
     content: String,
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     fun usersToMute() = tags.taggedUserIds()
+
+    /**
+     * The `p`s are `CHANNEL_MUTED`: channel moderation, not the author's personal mute list. The
+     * channel is the `ROOT` (Quartz adds it; NIP-28's own 44 carries only the `p`).
+     */
+    override fun links(): List<Link> =
+        links {
+            event(Relation.ROOT, channelId(), "e")
+            userTags(Relation.CHANNEL_MUTED, tags)
+        }
 
     companion object {
         const val KIND = 44

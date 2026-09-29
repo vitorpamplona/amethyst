@@ -24,10 +24,16 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.CommentCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ReactionCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.contentAssertionScores
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,7 +45,8 @@ class ExternalIdAssertionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun aboutExternalId() = tags.dTag()
 
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
@@ -47,6 +54,16 @@ class ExternalIdAssertionEvent(
     fun commentCount() = tags.firstNotNullOfOrNull(CommentCountTag::parse)
 
     fun reactionCount() = tags.firstNotNullOfOrNull(ReactionCountTag::parse)
+
+    /**
+     * NIP-85: the `d` is the SUBJECT, the NIP-73 identifier this assertion scores (the same node a
+     * NIP-73 `i` names), with the scores as props; the `k` tags are its NIP-73 kinds.
+     */
+    override fun links(): List<Link> =
+        links {
+            tag(Relation.SUBJECT, "i", aboutExternalId(), "d", tags.contentAssertionScores())
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 30385

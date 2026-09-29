@@ -26,9 +26,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -49,7 +54,8 @@ class CommunityListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DiffableEvent<CommunityListDiff>,
-    AddressHintProvider {
+    AddressHintProvider,
+    LinkProvider {
     override fun diffFrom(older: Event): CommunityListDiff? {
         if (older !is CommunityListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return CommunityListDiff(
@@ -65,6 +71,12 @@ class CommunityListEvent(
     fun publicCommunities() = tags.communities()
 
     fun publicCommunityIds() = tags.communityIds()
+
+    /** NIP-51: the NIP-72 communities (kind 34550 `a` tags) the user belongs to are `SUBSCRIBED`. */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag -> address(Relation.SUBSCRIBED, CommunityTag.parseAddressId(tag), "a") }
+        }
 
     companion object {
         const val KIND = 10004

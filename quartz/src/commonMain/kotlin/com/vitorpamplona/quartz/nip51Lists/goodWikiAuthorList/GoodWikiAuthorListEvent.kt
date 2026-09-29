@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -42,7 +47,8 @@ class GoodWikiAuthorListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
@@ -50,6 +56,9 @@ class GoodWikiAuthorListEvent(
     fun publicAuthors() = tags.mapNotNull(UserTag::parse)
 
     suspend fun privateAuthors(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
+
+    /** NIP-51: the user's "recommended wiki authors" are `RECOMMENDED`. */
+    override fun links(): List<Link> = links { userTags(Relation.RECOMMENDED, tags) }
 
     companion object {
         const val KIND = 10101

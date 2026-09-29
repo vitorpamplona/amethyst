@@ -28,6 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -51,7 +55,8 @@ class FavoriteFollowSetsListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<FavoriteFollowSetsListDiff> {
+    DiffableEvent<FavoriteFollowSetsListDiff>,
+    LinkProvider {
     // A plain replaceable (10000..19999): a stray `d` tag must not split its address.
     override fun dTag() = FIXED_D_TAG
 
@@ -66,6 +71,9 @@ class FavoriteFollowSetsListEvent(
     fun publicFavoriteFollowSets(): List<AddressBookmark> = tags.favoriteFollowSetBookmarks()
 
     suspend fun privateFavoriteFollowSets(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.favoriteFollowSetBookmarks()
+
+    /** NIP-51 kind 10021: the follow sets (kind 30000 `a` tags) the user favorited; other `a` kinds are skipped, as [publicFavoriteFollowSets] does. */
+    override fun links(): List<Link> = links { publicFavoriteFollowSets().forEach { address(Relation.FAVORITE, it.address, "a") } }
 
     companion object {
         const val KIND = 10021

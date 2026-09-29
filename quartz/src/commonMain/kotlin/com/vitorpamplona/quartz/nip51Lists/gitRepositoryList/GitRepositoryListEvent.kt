@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -42,7 +47,8 @@ class GitRepositoryListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider {
+    AddressHintProvider,
+    LinkProvider {
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
@@ -50,6 +56,9 @@ class GitRepositoryListEvent(
     fun publicRepositories() = tags.mapNotNull(AddressBookmark::parse)
 
     suspend fun privateRepositories(signer: NostrSigner) = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
+
+    /** NIP-51: the followed NIP-34 repositories (kind 30617 `a` tags) are `SUBSCRIBED`. */
+    override fun links(): List<Link> = links { addressTags(Relation.SUBSCRIBED, tags) }
 
     companion object {
         const val KIND = 10018

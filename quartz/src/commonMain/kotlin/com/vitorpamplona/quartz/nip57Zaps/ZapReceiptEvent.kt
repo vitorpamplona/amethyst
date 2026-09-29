@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -48,7 +50,8 @@ class ZapReceiptEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // The zap comment lives in the embedded request, which init{} already parses
     // into [zapRequest] — so indexing it adds no extra parse cost.
     override fun indexableContent() = zapRequest?.content.orEmpty()
@@ -122,6 +125,13 @@ class ZapReceiptEvent(
     fun lnInvoice() = tags.firstOrNull { it.size > 1 && it[0] == "bolt11" }?.get(1)
 
     private fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
+
+    /**
+     * NIP-57 Appendix E: the receipt copies the request's `e`/`a`/`p`/`k`, with the paid `msats`
+     * (from the `bolt11` invoice) on the `ZAPPED` and `ZAP_RECIPIENT` links, and adds the zap
+     * sender as `P`. The zap request embedded in `description` is JSON and is not read here.
+     */
+    override fun links(): List<Link> = zapLinks(tags, satsToMsats(amount)?.let { mapOf("msats" to it) }, withSender = true)
 
     companion object {
         const val KIND = 9735

@@ -26,10 +26,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -51,7 +56,8 @@ class CommunityPostApprovalEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(ApprovedEventTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ApprovedEventTag::parseId)
@@ -93,6 +99,24 @@ class CommunityPostApprovalEvent(
     fun approvedEvents(): List<HexKey> = tags.mapNotNull(ApprovedEventTag::parseId)
 
     fun approvedAddresses(): List<Address> = tags.mapNotNull(ApprovedAddressTag::parseAddress)
+
+    /**
+     * NIP-72: the `a` to a kind 34550 is the `COMMUNITY` the approval is for; the other `e`/`a`
+     * is the `APPROVED` post, the `p` its author and `k` its kind. The post's JSON in the content
+     * is the same event as the `e`, not another link.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "a" -> address(if (CommunityTag.parseAddressId(tag) != null) Relation.COMMUNITY else Relation.APPROVED, tag[1], "a")
+                    "e" -> event(Relation.APPROVED, tag[1], "e")
+                    "p" -> user(Relation.APPROVED_AUTHOR, tag[1], "p")
+                    "k" -> tag(Relation.TAG, "k", tag[1])
+                }
+            }
+        }
 
     companion object {
         const val KIND = 4550

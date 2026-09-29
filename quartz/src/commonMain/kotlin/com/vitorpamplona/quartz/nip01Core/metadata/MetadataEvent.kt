@@ -30,6 +30,11 @@ import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ValueChange
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
@@ -71,7 +76,8 @@ class MetadataEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DiffableEvent<MetadataDiff>,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun diffFrom(older: Event): MetadataDiff? {
         if (older !is MetadataEvent || older.pubKey != pubKey) return null
         val before = older.contactMetaData() ?: UserMetadata()
@@ -189,6 +195,12 @@ class MetadataEvent(
                 null
             }
         }
+
+    /**
+     * The NIP-39 identity claims mirrored as `i` tags (`github:<user>`, …) are external ids. The
+     * profile JSON's own values (names, pictures, `about`) are not references.
+     */
+    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, "i") }
 
     companion object {
         const val KIND = 0

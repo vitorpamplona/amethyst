@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -36,6 +39,7 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.mutes
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -50,7 +54,8 @@ class MuteListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DiffableEvent<MuteListDiff>,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun diffFrom(older: Event): MuteListDiff? {
         if (older !is MuteListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return MuteListDiff(
@@ -70,6 +75,9 @@ class MuteListEvent(
     suspend fun privateMutes(signer: NostrSigner): List<MuteTag>? = privateTags(signer)?.mapNotNull(MuteTag::parse)
 
     override fun dTag() = FIXED_D_TAG
+
+    /** NIP-51: every public entry (`p`, `e`, `t`, `word`) is a `MUTE`. */
+    override fun links(): List<Link> = links { mutes(tags) }
 
     companion object {
         const val KIND = 10000

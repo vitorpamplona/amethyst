@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -49,7 +54,8 @@ class GeohashListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<GeohashListDiff> {
+    DiffableEvent<GeohashListDiff>,
+    LinkProvider {
     override fun diffFrom(older: Event): GeohashListDiff? {
         if (older !is GeohashListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return GeohashListDiff(
@@ -63,6 +69,9 @@ class GeohashListEvent(
     suspend fun decryptPrivateGeohashes(signer: NostrSigner) = privateTags(signer)?.geohashList()
 
     suspend fun decryptGeohashes(signer: NostrSigner): List<String> = publicGeohashes() + (decryptPrivateGeohashes(signer) ?: emptyList())
+
+    /** The followed locations: every public `g` geohash is `SUBSCRIBED`. */
+    override fun links(): List<Link> = links { valueTags(Relation.SUBSCRIBED, tags, "g") }
 
     companion object {
         const val KIND = 10081

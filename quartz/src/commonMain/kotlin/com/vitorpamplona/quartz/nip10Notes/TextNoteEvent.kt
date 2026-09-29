@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
 import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -33,6 +35,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -50,6 +57,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -65,7 +73,8 @@ class TextNoteEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     IForkableEvent,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
@@ -128,6 +137,75 @@ class TextNoteEvent(
     override fun forkFromAddress() = tags.firstNotNullOfOrNull(::parseForkedAddress)
 
     override fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseForkedEventId)
+
+    /**
+     * NIP-10, read the way Amethyst threads a note ([root], [replyingTo], [threadRootIdOrSelf]):
+     * - `ROOT` is the `root`-marked `e`, else the first positional one; a lone `reply` marker is
+     *   a direct reply, so its event is the root too.
+     * - `PARENT` is the `reply`-marked `e`, else the root (a reply to the root), else the last
+     *   positional one. Every other `e` is a `MENTION` (the legacy `mention` marker, or the
+     *   positional ones in between), except a `fork`-marked one.
+     * - `a` tags follow the same markers. An `a` to a NIP-72 community is the `COMMUNITY` the note
+     *   is posted in, never a thread root; any other unmarked `a` is a `MENTION`.
+     * - A `p` is the `PARENT_AUTHOR` only when it is the author the parent tag itself names (the
+     *   `e`'s pubkey slot, or an `a`'s coordinate): NIP-10 adds the replied-to author to the `p`s,
+     *   but every thread member rides there too, and nothing else tells them apart.
+     */
+    override fun links(): List<Link> =
+        links {
+            val parentTag = markedReply() ?: markedRoot() ?: unmarkedReply()
+            val rootId = root()?.eventId ?: markedReply()?.eventId
+            val parentId = parentTag?.eventId
+
+            var rootAddress: String? = null
+            var replyAddress: String? = null
+            tags.fastForEach { tag ->
+                if (tag.size > 3 && tag[0] == "a" && CommunityTag.parseAddressId(tag) == null) {
+                    when (tag[3]) {
+                        MarkedETag.MARKER.ROOT.code -> if (rootAddress == null) rootAddress = tag[1]
+                        MarkedETag.MARKER.REPLY.code -> replyAddress = tag[1]
+                    }
+                }
+            }
+            val rootA = rootAddress ?: replyAddress.takeIf { rootId == null }
+            val parentA = replyAddress ?: rootAddress.takeIf { parentId == null }
+            val parentAuthor = parentTag?.author ?: parentA?.let { Address.parse(it)?.pubKeyHex }
+
+            event(Relation.ROOT, rootId, "e")
+            address(Relation.ROOT, rootA, "a")
+            event(Relation.PARENT, parentId, "e")
+            address(Relation.PARENT, parentA, "a")
+
+            tags.fastForEach { tag ->
+                if (tag.size < 2) return@fastForEach
+                when (tag[0]) {
+                    "e" -> {
+                        if (MarkedETag.parseForkedEventId(tag) != null) {
+                            event(Relation.FORK, tag[1], "e")
+                        } else if (tag[1] != rootId && tag[1] != parentId) {
+                            event(Relation.MENTION, tag[1], "e")
+                        }
+                    }
+
+                    "a" -> {
+                        if (CommunityTag.parseAddressId(tag) != null) {
+                            address(Relation.COMMUNITY, tag[1], "a")
+                        } else if (tag.getOrNull(3) == MarkedETag.MARKER.FORK.code) {
+                            address(Relation.FORK, tag[1], "a")
+                        } else if (tag[1] != rootA && tag[1] != parentA) {
+                            address(Relation.MENTION, tag[1], "a")
+                        }
+                    }
+
+                    "p" -> user(if (tag[1] == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
+                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
+                    "t" -> tag(Relation.HASHTAG, "t", tag[1].lowercase())
+                    "r", "g" -> tag(Relation.TAG, tag[0], tag[1])
+                }
+            }
+
+            contentMentions(citedNIP19())
+        }
 
     companion object {
         const val KIND = 1

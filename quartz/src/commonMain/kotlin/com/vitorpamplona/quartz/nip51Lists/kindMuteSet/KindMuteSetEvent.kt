@@ -26,6 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -45,7 +50,8 @@ class KindMuteSetEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
@@ -53,6 +59,15 @@ class KindMuteSetEvent(
     fun publicMutedUsers() = tags.mapNotNull(UserTag::parse)
 
     suspend fun privateMutedUsers(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)
+
+    /**
+     * NIP-51: the `p`s muted for one kind, which the `d` names; it rides as `muted_kind`, since a
+     * mute of one kind is not a full mute.
+     */
+    override fun links(): List<Link> =
+        links {
+            userTags(Relation.MUTE, tags, props = dTag().toIntOrNull()?.let { mapOf("muted_kind" to it) })
+        }
 
     companion object {
         const val KIND = 30007

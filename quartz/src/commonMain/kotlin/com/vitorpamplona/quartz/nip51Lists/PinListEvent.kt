@@ -26,6 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -39,7 +44,8 @@ class PinListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
@@ -49,6 +55,9 @@ class PinListEvent(
     fun pinnedEvents(): List<EventBookmark> = tags.mapNotNull(EventBookmark::parse)
 
     fun isPinned(eventId: HexKey): Boolean = tags.any { EventBookmark.isTagged(it, eventId) }
+
+    /** NIP-51: the notes pinned to the profile. */
+    override fun links(): List<Link> = links { eventTags(Relation.PIN, tags) }
 
     companion object {
         const val KIND = 10001

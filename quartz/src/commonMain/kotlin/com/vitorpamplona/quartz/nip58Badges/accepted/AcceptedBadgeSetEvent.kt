@@ -29,6 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -56,7 +60,8 @@ class AcceptedBadgeSetEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -84,6 +89,18 @@ class AcceptedBadgeSetEvent(
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
+    /**
+     * NIP-58: the set lists badges as consecutive `a`/`e` pairs ([acceptedBadges]): the badge
+     * definition and the award that granted it. An `a` or `e` outside a pair is not a badge.
+     */
+    override fun links(): List<Link> =
+        links {
+            acceptedBadges().forEach { badge ->
+                address(Relation.BADGE_DEFINITION, badge.badgeDefinition.toTag(), "a")
+                event(Relation.BADGE_AWARD, badge.badgeAward.eventId, "e")
+            }
+        }
 
     companion object {
         const val KIND = 30008

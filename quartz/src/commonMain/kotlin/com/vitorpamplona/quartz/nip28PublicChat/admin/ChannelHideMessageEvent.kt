@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
@@ -42,7 +46,8 @@ class ChannelHideMessageEvent(
     content: String,
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -61,6 +66,13 @@ class ChannelHideMessageEvent(
         val channel = channelId()
         return tags.taggedEventIds().filter { it != channel }
     }
+
+    /** The channel ([channel], the `root`-marked `e`) is the `ROOT`; every other `e` is `HIDDEN`. */
+    override fun links(): List<Link> =
+        links {
+            event(Relation.ROOT, channelId(), "e")
+            eventsToHide().forEach { event(Relation.HIDDEN, it, "e") }
+        }
 
     companion object {
         const val KIND = 43

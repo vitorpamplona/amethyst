@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -54,7 +58,8 @@ class FavoriteRelayListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<RelayListDiff> {
+    DiffableEvent<RelayListDiff>,
+    LinkProvider {
     override fun diffFrom(older: Event): RelayListDiff? {
         if (older !is FavoriteRelayListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return RelayListDiff(ListDiff.of(older.publicRelays(), publicRelays(), { it }), privateItemsChangeFrom(older))
@@ -72,6 +77,9 @@ class FavoriteRelayListEvent(
     suspend fun decryptPrivateRelaySets(signer: NostrSigner) = privateTags(signer)?.relaySetPointers()
 
     suspend fun decryptRelaySets(signer: NostrSigner): List<AddressBookmark> = publicRelaySets() + (decryptPrivateRelaySets(signer) ?: emptyList())
+
+    /** NIP-51: the relay sets (kind 30002 `a` tags) among the favorite relays. The relay URLs themselves are not link targets. */
+    override fun links(): List<Link> = links { publicRelaySets().forEach { address(Relation.FAVORITE, it.address, "a") } }
 
     companion object {
         const val KIND = 10012

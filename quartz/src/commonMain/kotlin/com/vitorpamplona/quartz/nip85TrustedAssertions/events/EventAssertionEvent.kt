@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.CommentCountTag
@@ -32,6 +36,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ReactionCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.RepostCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ZapAmountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.ZapCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.tags.contentAssertionScores
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -43,7 +48,8 @@ class EventAssertionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
     fun aboutEvent() = tags.dTag()
 
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
@@ -59,6 +65,12 @@ class EventAssertionEvent(
     fun zapCount() = tags.firstNotNullOfOrNull(ZapCountTag::parse)
 
     fun zapAmount() = tags.firstNotNullOfOrNull(ZapAmountTag::parse)
+
+    /**
+     * NIP-85: the `d` is the SUBJECT, the event this assertion scores (not the assertion's own
+     * identity), with the scores as props. An `e` equal to the `d` is only its relay hint.
+     */
+    override fun links(): List<Link> = links { event(Relation.SUBJECT, aboutEvent(), "d", tags.contentAssertionScores()) }
 
     companion object {
         const val KIND = 30383

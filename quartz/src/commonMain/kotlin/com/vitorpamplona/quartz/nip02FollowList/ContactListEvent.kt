@@ -29,6 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -48,7 +53,8 @@ class ContactListEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DiffableEvent<ContactListDiff>,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LinkProvider {
     override fun diffFrom(older: Event): ContactListDiff? {
         if (older !is ContactListEvent || older.pubKey != pubKey) return null
         return ContactListDiff(
@@ -87,6 +93,9 @@ class ContactListEvent(
 
         return normalized
     }
+
+    /** NIP-02: every `p` is a `FOLLOW`, the social graph. The legacy relay map in the content is not a reference. */
+    override fun links(): List<Link> = links { userTags(Relation.FOLLOW, tags) }
 
     companion object {
         const val KIND = 3

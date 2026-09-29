@@ -25,8 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -44,7 +49,8 @@ class SimpleGroupListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<SimpleGroupListDiff> {
+    DiffableEvent<SimpleGroupListDiff>,
+    LinkProvider {
     override fun diffFrom(older: Event): SimpleGroupListDiff? {
         if (older !is SimpleGroupListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return SimpleGroupListDiff(
@@ -56,6 +62,18 @@ class SimpleGroupListEvent(
     fun publicGroups() = tags.mapNotNull(GroupTag::parse)
 
     suspend fun privateGroups(signer: NostrSigner) = privateTags(signer)?.mapNotNull(GroupTag::parse)
+
+    /**
+     * NIP-51: the NIP-29 groups the user is in are `SUBSCRIBED`. A group is its id, the `h` value
+     * its messages carry, so that is the target; the host relay is not part of it.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                val group = GroupTag.parse(tag) ?: return@fastForEach
+                tag(Relation.SUBSCRIBED, "h", group.groupId, GroupTag.TAG_NAME)
+            }
+        }
 
     companion object {
         const val KIND = 10009

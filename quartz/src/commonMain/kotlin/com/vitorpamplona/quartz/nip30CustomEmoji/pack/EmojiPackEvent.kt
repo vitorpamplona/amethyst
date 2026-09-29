@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip30CustomEmoji.pack
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -48,7 +49,8 @@ class EmojiPackEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    LinkFree {
     override fun indexableContent() = listOfNotNull(titleOrName(), description(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

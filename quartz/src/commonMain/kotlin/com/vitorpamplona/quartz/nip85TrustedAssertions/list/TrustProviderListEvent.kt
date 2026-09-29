@@ -26,8 +26,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -46,7 +51,8 @@ class TrustProviderListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<TrustProviderListDiff> {
+    DiffableEvent<TrustProviderListDiff>,
+    LinkProvider {
     override fun diffFrom(older: Event): TrustProviderListDiff? {
         if (older !is TrustProviderListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return TrustProviderListDiff(
@@ -56,6 +62,19 @@ class TrustProviderListEvent(
     }
 
     fun serviceProviders() = tags.serviceProviders()
+
+    /**
+     * NIP-85: each `<kind>:<tag>` entry names the pubkey the user trusts to sign that assertion,
+     * one `SERVICE_PROVIDER` link per entry with the `service` it provides (`30382:rank`).
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach { tag ->
+                val provider = ServiceProviderTag.parse(tag) ?: return@fastForEach
+                val service = provider.service.toValue()
+                user(Relation.SERVICE_PROVIDER, provider.pubkey, tag[0], mapOf("service" to service))
+            }
+        }
 
     companion object {
         const val KIND = 10040

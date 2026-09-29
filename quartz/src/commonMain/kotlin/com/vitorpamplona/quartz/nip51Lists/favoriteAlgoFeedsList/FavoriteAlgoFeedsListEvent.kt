@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -46,7 +51,8 @@ class FavoriteAlgoFeedsListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<FavoriteAlgoFeedsListDiff> {
+    DiffableEvent<FavoriteAlgoFeedsListDiff>,
+    LinkProvider {
     override fun diffFrom(older: Event): FavoriteAlgoFeedsListDiff? {
         if (older !is FavoriteAlgoFeedsListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return FavoriteAlgoFeedsListDiff(
@@ -58,6 +64,9 @@ class FavoriteAlgoFeedsListEvent(
     fun publicFavoriteAlgoFeeds(): List<AddressBookmark> = tags.mapNotNull(AddressBookmark::parse)
 
     suspend fun privateFavoriteAlgoFeeds(signer: NostrSigner): List<AddressBookmark>? = privateTags(signer)?.mapNotNull(AddressBookmark::parse)
+
+    /** The feed DVMs (kind 31990 `a` tags) the user marked as favorites. */
+    override fun links(): List<Link> = links { addressTags(Relation.FAVORITE, tags) }
 
     companion object {
         const val KIND = 10090

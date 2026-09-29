@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -50,7 +54,8 @@ class ChannelMetadataEvent(
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     override fun indexableContent() = channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }
 
     // The read path. The parse happens once and its fields are handed over one by
@@ -96,6 +101,9 @@ class ChannelMetadataEvent(
         cache = newInfo
         return newInfo
     }
+
+    /** NIP-28 tags the channel a metadata update is for with the `root` marker: its `ROOT`. */
+    override fun links(): List<Link> = links { event(Relation.ROOT, channelId(), "e") }
 
     companion object {
         const val KIND = 41

@@ -27,6 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventTag
@@ -42,7 +48,8 @@ class OtsEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    LinkProvider {
     override fun eventHints() = tags.mapNotNull(TargetEventTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(TargetEventTag::parseId)
@@ -56,6 +63,13 @@ class OtsEvent(
     suspend fun verifyState(resolver: OtsResolver): VerificationState = digestEventId()?.let { verify(otsByteArray(), it, resolver) } ?: VerificationState.Error("Digest Not found")
 
     suspend fun verify(resolver: OtsResolver): Long? = (verifyState(resolver) as? VerificationState.Verified)?.verifiedTime
+
+    /** NIP-03: the `e` is the event the proof timestamps, the `k` its kind. */
+    override fun links(): List<Link> =
+        links {
+            eventTags(Relation.TIMESTAMPED, tags)
+            valueTags(Relation.TAG, tags, "k")
+        }
 
     companion object {
         const val KIND = 1040

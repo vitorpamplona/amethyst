@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -54,7 +56,8 @@ class ZapRequestEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
-    SearchableEvent {
+    SearchableEvent,
+    LinkProvider {
     // content is the public zap comment. Private-zap messages live encrypted in
     // the `anon` tag, not in content, so they are naturally excluded.
     override fun indexableContent() = content
@@ -102,6 +105,15 @@ class ZapRequestEvent(
         } else {
             throw IllegalStateException("This is not a private zap.")
         }
+    }
+
+    /**
+     * NIP-57 Appendix A: the `e`/`a` is the `ZAPPED` content and the `p` the `ZAP_RECIPIENT`, both
+     * with the requested `msats` (the `amount` tag) when there is one; `k` is the zapped kind.
+     */
+    override fun links(): List<Link> {
+        val msats = tags.firstNotNullOfOrNull { tag -> if (tag.size > 1 && tag[0] == "amount") tag[1].toLongOrNull()?.takeIf { it > 0 } else null }
+        return zapLinks(tags, msats?.let { mapOf("msats" to it) })
     }
 
     companion object {
