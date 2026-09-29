@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -64,7 +63,7 @@ fun GeoHashScreen(
     PrepareViewModelsGeoHashScreen(tag, accountViewModel, nav)
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsGeoHashScreen(
     tag: Route.Geohash,

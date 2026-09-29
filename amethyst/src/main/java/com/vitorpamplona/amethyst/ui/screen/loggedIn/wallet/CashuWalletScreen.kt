@@ -159,9 +159,11 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuMeltFlowState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuMintFlowState
@@ -170,6 +172,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuRedeemF
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuSendTokenFlowState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuWalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
@@ -180,9 +183,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.text.NumberFormat
-import java.util.Date
 import androidx.compose.material3.Icon as Material3Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -882,7 +882,7 @@ private fun EvacuateMintDialog(
 private fun BalanceCard(balanceSats: Long) {
     val formatted =
         remember(balanceSats) {
-            NumberFormat.getIntegerInstance().format(balanceSats)
+            formatGrouped(balanceSats)
         }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -990,7 +990,7 @@ private fun MintRow(
 ) {
     val formattedBalance =
         remember(balanceSats) {
-            NumberFormat.getIntegerInstance().format(balanceSats)
+            formatGrouped(balanceSats)
         }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1151,9 +1151,7 @@ private fun HistoryRow(
                 }
                 Text(
                     text =
-                        DateFormat
-                            .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
-                            .format(Date(entry.createdAt * 1000)),
+                        formatDateTime(entry.createdAt * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1163,7 +1161,7 @@ private fun HistoryRow(
             val amount = decoded?.amount
             if (amount != null) {
                 Text(
-                    text = (if (isIncoming) "+" else "−") + NumberFormat.getIntegerInstance().format(amount),
+                    text = (if (isIncoming) "+" else "−") + formatGrouped(amount),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color =

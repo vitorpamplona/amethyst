@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,7 +96,7 @@ import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import kotlinx.collections.immutable.toImmutableList
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun SellProductPreview() {

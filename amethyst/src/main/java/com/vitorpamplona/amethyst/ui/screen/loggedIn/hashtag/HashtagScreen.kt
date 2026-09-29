@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -81,7 +80,7 @@ fun HashtagScreen(
     PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsHashtagScreen(
     tag: Route.Hashtag,

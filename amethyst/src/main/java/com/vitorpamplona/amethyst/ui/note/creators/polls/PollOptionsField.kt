@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.polls
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -154,7 +153,7 @@ fun PollTypeSelector(
     }
 }
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun NewPollClosingPreview() {

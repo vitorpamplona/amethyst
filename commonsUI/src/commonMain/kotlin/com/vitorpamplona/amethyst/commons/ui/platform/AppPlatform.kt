@@ -39,6 +39,9 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
  */
 @Stable
 interface AppPlatform {
+    /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
+    val isCastingAvailable: Boolean get() = false
+
     @Composable
     fun AppBottomBar(
         selectedRoute: Route?,

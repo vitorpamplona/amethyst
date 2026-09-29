@@ -22,7 +22,6 @@
 
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -1286,7 +1285,7 @@ private fun RenderApprovalIfNeeded(
     }
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 private fun RenderClassifiedsReaderForThread(
     noteEvent: ClassifiedsEvent,

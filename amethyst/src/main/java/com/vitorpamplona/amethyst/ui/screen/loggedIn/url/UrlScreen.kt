@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.url
 
-import android.annotation.SuppressLint
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -59,7 +58,7 @@ fun UrlScreen(
     PrepareViewModelsUrlScreen(url, accountViewModel, nav)
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsUrlScreen(
     url: String,

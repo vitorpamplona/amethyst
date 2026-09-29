@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +51,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.Collections
 
 /**
  * Backing ViewModel for the [AgentConsoleScreen] — the workspace owner's read-only
@@ -94,7 +94,7 @@ class AgentConsoleViewModel : ViewModel() {
     private var watchJob: Job? = null
 
     /** Dedups ephemeral frames across relays and re-emissions (accessed off multiple readers). */
-    private val observerSeen = Collections.synchronizedSet(HashSet<HexKey>())
+    private val observerSeen = ConcurrentSet<HexKey>()
 
     /** Binds to [account] scoped to the community [relayUrl] — the console shows that community's fleet. */
     fun bind(
@@ -226,7 +226,7 @@ class AgentConsoleViewModel : ViewModel() {
                             // Observer frames are ephemeral and unbounded over a long session; keep the
                             // dedup set from growing without limit. We only render the newest ~200 rows,
                             // so dropping the seen-history occasionally risks at most a stale duplicate.
-                            if (observerSeen.size > MAX_OBSERVER_ROWS * 4) observerSeen.clear()
+                            if (observerSeen.size() > MAX_OBSERVER_ROWS * 4) observerSeen.clear()
                             val fresh =
                                 events
                                     .filterIsInstance<ObserverFrameEvent>()

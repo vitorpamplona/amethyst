@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -225,7 +224,7 @@ fun ChessRelaySettingsSheet(
     }
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun StatRow(chessViewModel: ChessViewModel) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

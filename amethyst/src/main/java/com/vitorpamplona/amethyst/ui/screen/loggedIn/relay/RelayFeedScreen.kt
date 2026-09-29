@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relay
 
-import android.annotation.SuppressLint
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,7 +58,7 @@ fun RelayFeedScreen(
     PrepareViewModelsRelayFeedScreen(tag, normalizedUrl, accountViewModel, nav)
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsRelayFeedScreen(
     tag: Route.RelayFeed,

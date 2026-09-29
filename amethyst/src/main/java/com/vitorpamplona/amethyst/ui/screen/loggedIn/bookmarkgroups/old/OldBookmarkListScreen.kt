@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old
 
-import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -103,7 +102,7 @@ fun OldBookmarkListScreen(
     RenderOldBookmarkScreen(publicFeedViewModel, privateFeedViewModel, bookmarkState, accountViewModel, nav)
 }
 
-@SuppressLint("LocalContextGetResourceValueCall")
+@Suppress("LocalContextGetResourceValueCall")
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun RenderOldBookmarkScreen(

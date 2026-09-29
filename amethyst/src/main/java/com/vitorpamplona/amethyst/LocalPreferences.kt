@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
@@ -690,7 +689,7 @@ object LocalPreferences {
      * deleted. If we use `apply()` there is a race condition and the file will probably not be
      * deleted
      */
-    @SuppressLint("ApplySharedPref")
+    @Suppress("ApplySharedPref")
     suspend fun deleteAccount(accountInfo: AccountInfo) {
         Log.d("LocalPreferences") { "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}" }
         withContext(Dispatchers.IO) {

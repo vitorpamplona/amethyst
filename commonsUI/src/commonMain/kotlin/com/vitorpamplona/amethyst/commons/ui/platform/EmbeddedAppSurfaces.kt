@@ -18,15 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model.chats
-
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+package com.vitorpamplona.amethyst.commons.ui.platform
 
 /**
- * The Android locale date formatter for the shared [com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard]
- * — passed in so the shared (KMP) card carries no `java.time` dependency. Formats a paging reach point
- * (epoch seconds) to a short month-year label, e.g. "Jun 2026".
+ * Whether favorite apps can be pinned as inline tabs. On Android they render on a cross-process
+ * surface (SurfaceControlViewHost), which needs API 30; other front ends have no such surface yet.
  */
-fun formatHistoryReachDate(epochSeconds: Long): String = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(epochSeconds * 1000))
+expect val supportsEmbeddedAppTabs: Boolean

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
-import android.os.Build
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -34,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_navigate
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_system
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.commons.ui.platform.supportsEmbeddedAppTabs
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -126,9 +126,8 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SOFTWARE_APPS,
-        // Favorites can be pinned as inline tabs that render on a cross-process surface
-        // (SurfaceControlViewHost), which needs API 30+. Gate the whole grid on R+ for that reason.
-        NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
+        // Favorites can be pinned as inline tabs, which need a platform surface for them.
+        NavBarItem.FAVORITE_APPS.takeIf { supportsEmbeddedAppTabs },
         NavBarItem.NAPPLETS,
         NavBarItem.NSITES,
         NavBarItem.FOLLOW_PACKS,

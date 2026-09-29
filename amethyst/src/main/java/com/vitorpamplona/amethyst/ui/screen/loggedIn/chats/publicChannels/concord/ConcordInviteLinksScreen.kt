@@ -74,12 +74,12 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /** What the screen is currently showing. The unreadable case is deliberately not "empty" — see below. */
@@ -258,7 +258,7 @@ private fun InviteLinkRow(
             // a long prefix, so they are useless as labels until well past where the row wraps.
             Text(link.token.take(8), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
             Text(
-                stringRes(Res.string.concord_invite_links_created, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(link.createdAt * 1000))),
+                stringRes(Res.string.concord_invite_links_created, formatDateTime(link.createdAt * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.NONE)),
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(link.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

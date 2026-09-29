@@ -18,27 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
+package com.vitorpamplona.amethyst.commons.model.chats
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.relayClient.geohash.GeohashQueryState
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import platform.Foundation.NSDate
+import platform.Foundation.NSDateFormatter
+import platform.Foundation.dateWithTimeIntervalSince1970
 
-@Suppress("StateFlowValueCalledInComposition")
-@Composable
-fun GeoHashFilterAssemblerSubscription(
-    tag: Route.Geohash,
-    accountViewModel: AccountViewModel,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
-        }
-
-    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)
-}
+// A formatter per call: this runs once per history-card render, and NSDateFormatter is not
+// safe to share across threads.
+actual fun formatHistoryReachDate(epochSeconds: Long): String =
+    NSDateFormatter()
+        .apply { setLocalizedDateFormatFromTemplate("MMMyyyy") }
+        .stringFromDate(NSDate.dateWithTimeIntervalSince1970(epochSeconds.toDouble()))

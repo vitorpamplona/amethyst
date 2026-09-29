@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_remove
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_signed_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_topbar
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_warning
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -110,10 +111,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 // Common event kinds an agent might be restricted to — suggestions for the "Restrict to kind" field;
 // any 0–65535 is still accepted by free numeric entry.
@@ -654,15 +651,18 @@ private fun parseOptionalUnix(input: String): OptionalUnix? {
     return OptionalUnix(parsed)
 }
 
-private val UNIX_ECHO_FORMAT =
-    SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-
-/** A readable UTC rendering of an entered epoch-seconds string, or null when it's blank/out of range. */
+/** A readable UTC rendering (`yyyy-MM-dd HH:mm UTC`) of an entered epoch-seconds string, or null when it's blank/out of range. */
 private fun unixEcho(input: String): String? {
     if (input.isBlank()) return null
     val secs = input.toLongOrNull()?.takeIf { it in 0..4294967295L } ?: return null
-    return UNIX_ECHO_FORMAT.format(Date(secs * 1000))
+    val day = SearchDate.civilFromDays(secs / SECONDS_PER_DAY)
+    val secondOfDay = secs % SECONDS_PER_DAY
+    val hours = (secondOfDay / 3600).toString().padStart(2, '0')
+    val minutes = (secondOfDay % 3600 / 60).toString().padStart(2, '0')
+    return "${day.ymd()} $hours:$minutes UTC"
 }
+
+private const val SECONDS_PER_DAY = 86_400L
 
 /** Serializes the `auth` tag to a JSON array string (values are hex / canonical ASCII). */
 private fun OwnerAttestation.toTagJson(): String = toTag().joinToString(prefix = "[", postfix = "]") { "\"$it\"" }

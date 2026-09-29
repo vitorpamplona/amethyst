@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -52,7 +51,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -76,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -284,30 +283,14 @@ private fun ListActionsMenuButton(
     }
 
     if (isActionListOpen.value) {
-        val context = LocalContext.current
+        val textSharer = rememberTextSharer()
         M3ActionDialog(
             title = stringRes(Res.string.pack_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {
                 M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
-                    val sendIntent =
-                        Intent().apply {
-                            action = Intent.ACTION_SEND
-                            type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                externalLinkForNote(note()),
-                            )
-                            putExtra(
-                                Intent.EXTRA_TITLE,
-                                quickActionShareBrowserLinkStr,
-                            )
-                        }
-
-                    val shareIntent =
-                        Intent.createChooser(sendIntent, quickActionShareStr)
-                    context.startActivity(shareIntent)
+                    textSharer.share(externalLinkForNote(note()), quickActionShareBrowserLinkStr, quickActionShareStr)
                     isActionListOpen.value = false
                 }
                 M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(Res.string.follow_pack_edit_list_metadata)) {

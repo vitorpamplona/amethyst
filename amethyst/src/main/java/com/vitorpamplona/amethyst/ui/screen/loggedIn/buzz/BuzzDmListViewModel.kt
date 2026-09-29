@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +56,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Backing ViewModel for [BuzzDmListScreen] — the user's Buzz direct-message inbox.
@@ -87,7 +87,7 @@ class BuzzDmListViewModel : ViewModel() {
     private var liveJob: Job? = null
 
     /** channelId -> relay it was discovered on (from the 44100 provenance). */
-    private val memberChannels = ConcurrentHashMap<String, NormalizedRelayUrl>()
+    private val memberChannels = ConcurrentMap<String, NormalizedRelayUrl>()
 
     private val _rows = MutableStateFlow<List<DmRow>>(emptyList())
     val rows: StateFlow<List<DmRow>> = _rows.asStateFlow()
@@ -217,7 +217,9 @@ class BuzzDmListViewModel : ViewModel() {
     /** Fetch the NIP-29 directory (39000-39003) of every discovered channel so its `t`/roster load. */
     private suspend fun fetchMetadata(account: Account) {
         val byRelay =
-            memberChannels.entries
+            memberChannels
+                .asMap()
+                .entries
                 .groupBy({ it.value }, { it.key })
                 .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
         if (byRelay.isEmpty()) return
@@ -233,7 +235,9 @@ class BuzzDmListViewModel : ViewModel() {
         val myPubkey = account.userProfile().pubkeyHex
         val hidden = BuzzDmRegistry.hiddenFor(myPubkey)
         val (hiddenDms, visibleDms) =
-            memberChannels.entries
+            memberChannels
+                .asMap()
+                .entries
                 .mapNotNull { (channelId, relay) ->
                     val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(channelId, relay))
                     val metadata = channel.event ?: return@mapNotNull null
@@ -323,7 +327,8 @@ class BuzzDmListViewModel : ViewModel() {
                                 .filterValues { it in scoped }
                         var changed = false
                         memberships.forEach { (channelId, relay) ->
-                            if (memberChannels.put(channelId, relay) == null) changed = true
+                            if (memberChannels[channelId] == null) changed = true
+                            memberChannels[channelId] = relay
                         }
                         // A kind-44101 takes the membership away: drop the row rather than leaving a
                         // conversation the relay no longer lets us read.
@@ -338,7 +343,7 @@ class BuzzDmListViewModel : ViewModel() {
                                 .let { BuzzChannelInvites.latestPerChannel(it) }
                                 .filterValues { it.removed }
                                 .keys
-                        val gone = memberChannels.keys.filter { it in withdrawn }
+                        val gone = memberChannels.asMap().keys.filter { it in withdrawn }
                         if (gone.isNotEmpty()) {
                             gone.forEach { memberChannels.remove(it) }
                             changed = true

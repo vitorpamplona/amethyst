@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
@@ -749,7 +748,7 @@ private fun InviteLinkDialog(
     val concordInviteTitleStr = stringRes(Res.string.concord_invite_title)
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val textSharer = rememberTextSharer()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.concord_invite_title)) },
@@ -768,13 +767,7 @@ private fun InviteLinkDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                val send =
-                    Intent().apply {
-                        action = Intent.ACTION_SEND
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, link)
-                    }
-                context.startActivity(Intent.createChooser(send, concordInviteTitleStr))
+                textSharer.share(link, null, concordInviteTitleStr)
                 onDismiss()
             }) {
                 Text(stringRes(Res.string.quick_action_share))

@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -46,6 +47,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScanne
 
 /** Android's [AppPlatform]: the app's own shell pieces, camera scanner, app launcher and icon caches. */
 object AndroidAppPlatform : AppPlatform {
+    override val isCastingAvailable: Boolean get() = BuildConfig.IS_CASTING_AVAILABLE
+
     @Composable
     override fun AppBottomBar(
         selectedRoute: Route?,

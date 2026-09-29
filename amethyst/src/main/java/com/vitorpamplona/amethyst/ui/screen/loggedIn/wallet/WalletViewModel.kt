@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
@@ -132,11 +131,7 @@ private const val NWC_TIMEOUT_MS = 30_000L
 
 class WalletViewModel : ViewModel() {
     // Error text is resolved here rather than in the screens because a single _error
-    // flow feeds several of them. WalletViewModel only ever runs in the main process,
-    // so Amethyst.instance is always initialised (see AccountViewModel for the same
-    // pattern); the :napplet process never builds a wallet screen.
-    private val appContext get() = Amethyst.instance.appContext
-
+    // flow feeds several of them.
     private suspend fun text(id: StringResource) = loadStringRes(id)
 
     private suspend fun text(
@@ -372,12 +367,13 @@ class WalletViewModel : ViewModel() {
     ) {
         val acc = account ?: return
         val pointer = _debitWallets.value.firstOrNull { it.id == walletId }?.pointer ?: return
+        val moneyOpRelays = accountViewModel?.host?.moneyOpRelays ?: return
         viewModelScope.launch {
             // A malformed budget (e.g. an out-of-spec frequency unit) makes requestBudget throw;
             // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
             val response =
                 try {
-                    ClinkDebitPayer.requestBudget(acc, Amethyst.instance.torEvaluatorFlow, pointer, amountSats, frequency)
+                    ClinkDebitPayer.requestBudget(acc, moneyOpRelays, pointer, amountSats, frequency)
                 } catch (_: IllegalArgumentException) {
                     null
                 }

@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -68,7 +67,7 @@ fun LoadRedirectScreen(
     eventId: String?,
     isPrivate: Boolean,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     if (eventId == null) return
 

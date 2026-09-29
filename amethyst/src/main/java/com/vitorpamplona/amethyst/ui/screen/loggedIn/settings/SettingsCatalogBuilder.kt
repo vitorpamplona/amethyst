@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.ui.platform.UriHandler
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -54,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.event_sync_title
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.home_tabs_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.import_follows_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.media_servers
 import com.vitorpamplona.amethyst.commons.resources.media_servers_search_keywords
@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_settings_title
 import com.vitorpamplona.amethyst.commons.resources.relay_setup
 import com.vitorpamplona.amethyst.commons.resources.relay_setup_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.commons.resources.request_to_vanish
 import com.vitorpamplona.amethyst.commons.resources.request_to_vanish_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_search_keywords
@@ -143,7 +144,7 @@ fun buildSettingsCatalog(
                 listOf(
                     SettingsEntry(
                         titleRes = Res.string.relay_setup,
-                        icon = SettingsIcon.Painter(R.drawable.relays, 4),
+                        icon = SettingsIcon.Painter(Res.drawable.relays, 4),
                         keywordsRes = Res.string.relay_setup_search_keywords,
                     ) { nav.nav(Route.EditRelays) },
                     symEntry(Res.string.event_sync_title, MaterialSymbols.Sync, Res.string.event_sync_search_keywords, Route.EventSync),
@@ -185,7 +186,7 @@ fun buildSettingsCatalog(
                 listOf(
                     SettingsEntry(
                         titleRes = Res.string.privacy_options,
-                        icon = SettingsIcon.Painter(R.drawable.ic_tor, 1),
+                        icon = SettingsIcon.Painter(Res.drawable.ic_tor, 1),
                         keywordsRes = Res.string.privacy_options_search_keywords,
                     ) { nav.nav(Route.PrivacyOptions) },
                     symEntry(Res.string.ui_preferences, MaterialSymbols.Settings, Res.string.ui_preferences_search_keywords, Route.Settings),

@@ -18,27 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
+package com.vitorpamplona.amethyst.commons.model.chats
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.relayClient.geohash.GeohashQueryState
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-
-@Suppress("StateFlowValueCalledInComposition")
-@Composable
-fun GeoHashFilterAssemblerSubscription(
-    tag: Route.Geohash,
-    accountViewModel: AccountViewModel,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
-        }
-
-    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)
-}
+/**
+ * Formats a paging reach point (epoch seconds) to a short, locale-aware month-year label, e.g.
+ * "Jun 2026", for the shared [com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard].
+ */
+expect fun formatHistoryReachDate(epochSeconds: Long): String

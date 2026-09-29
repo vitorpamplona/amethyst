@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.playback.diskCache
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.StatFs
 import androidx.media3.database.StandaloneDatabaseProvider
@@ -34,7 +33,7 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache.Companio
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
-@SuppressLint("UnsafeOptInUsageError")
+@Suppress("UnsafeOptInUsageError")
 class VideoCache {
     companion object {
         // Target fraction of currently-available disk space.

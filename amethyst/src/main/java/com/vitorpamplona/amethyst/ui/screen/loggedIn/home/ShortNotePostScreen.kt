@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -953,7 +952,7 @@ private fun BottomRowActions(
     }
 }
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Preview
 @Composable
 private fun BottomRowActionsPreview() {

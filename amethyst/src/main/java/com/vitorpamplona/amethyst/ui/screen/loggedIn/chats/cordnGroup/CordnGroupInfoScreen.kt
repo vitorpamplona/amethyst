@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -143,6 +142,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 

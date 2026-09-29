@@ -58,7 +58,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.VideoButtonLocation
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.video_player_settings_reorde
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
@@ -125,8 +125,9 @@ fun VideoPlayerSettingsScreen(
 @Composable
 fun VideoPlayerSettingsContent(accountViewModel: AccountViewModel) {
     val buttonItems by accountViewModel.videoPlayerButtonItemsFlow().collectAsStateWithLifecycle()
+    val isCastingAvailable = LocalAppPlatform.current.isCastingAvailable
     val displayedItems =
-        if (BuildConfig.IS_CASTING_AVAILABLE) {
+        if (isCastingAvailable) {
             buttonItems
         } else {
             buttonItems.filter { it.action != VideoPlayerAction.Cast }

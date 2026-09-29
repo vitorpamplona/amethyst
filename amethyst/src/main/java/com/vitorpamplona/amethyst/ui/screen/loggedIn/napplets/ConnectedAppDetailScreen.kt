@@ -84,7 +84,15 @@ import com.vitorpamplona.amethyst.commons.napplet.ui.PolicyCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.symbol
 import com.vitorpamplona.amethyst.commons.nip46RemoteSigner.ui.Nip46ActivityCard
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_allowed
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_ask
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_blocked
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_camera
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_location
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_microphone
+import com.vitorpamplona.amethyst.commons.resources.browser_permission_section
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_capabilities
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_forget
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_op_overrides
@@ -106,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_signer_permissions_revoke_all
+import com.vitorpamplona.amethyst.commons.resources.napplet_untitled
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_activity_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_inbox
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_app_relays_own_hint
@@ -116,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberManifestIconModel
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberWebAppIconModel
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.napplet.NappletBrokerService
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
@@ -129,13 +139,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46Reconne
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.commons.R as CommonsR
+import org.jetbrains.compose.resources.StringResource
 
 private data class ConnectedAppDetailState(
     val title: String,
@@ -154,7 +163,7 @@ fun ConnectedAppDetailScreen(
 ) {
     val capabilityLedger = Amethyst.instance.nappletPermissionLedger
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
-    val untitled = stringRes(CommonsR.string.napplet_untitled)
+    val untitled = stringRes(Res.string.napplet_untitled)
 
     var state by remember { mutableStateOf<ConnectedAppDetailState?>(null) }
     var reload by remember { mutableIntStateOf(0) }
@@ -557,7 +566,7 @@ private const val BROWSER_PREFIX = "browser:"
 private fun SitePermissionsSection(origin: String) {
     val all by WebSitePermissionRegistry.decisions.collectAsStateWithLifecycle()
     val decisions = all[origin].orEmpty()
-    SectionHeader(stringRes(CommonsR.string.browser_permission_section))
+    SectionHeader(stringRes(Res.string.browser_permission_section))
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
@@ -575,9 +584,9 @@ private fun SitePermissionsSection(origin: String) {
                     Text(
                         stringRes(
                             when (permission) {
-                                BrowserSitePermission.CAMERA -> CommonsR.string.browser_permission_camera
-                                BrowserSitePermission.MICROPHONE -> CommonsR.string.browser_permission_microphone
-                                BrowserSitePermission.LOCATION -> CommonsR.string.browser_permission_location
+                                BrowserSitePermission.CAMERA -> Res.string.browser_permission_camera
+                                BrowserSitePermission.MICROPHONE -> Res.string.browser_permission_microphone
+                                BrowserSitePermission.LOCATION -> Res.string.browser_permission_location
                             },
                         ),
                         style = MaterialTheme.typography.bodyMedium,
@@ -603,11 +612,11 @@ private fun SitePermissionsSection(origin: String) {
     }
 }
 
-private fun BrowserSitePermission.Decision.labelRes(): Int =
+private fun BrowserSitePermission.Decision.labelRes(): StringResource =
     when (this) {
-        BrowserSitePermission.Decision.ASK -> CommonsR.string.browser_permission_ask
-        BrowserSitePermission.Decision.ALLOW -> CommonsR.string.browser_permission_allowed
-        BrowserSitePermission.Decision.BLOCK -> CommonsR.string.browser_permission_blocked
+        BrowserSitePermission.Decision.ASK -> Res.string.browser_permission_ask
+        BrowserSitePermission.Decision.ALLOW -> Res.string.browser_permission_allowed
+        BrowserSitePermission.Decision.BLOCK -> Res.string.browser_permission_blocked
     }
 
 @Composable
@@ -800,7 +809,7 @@ private fun CapabilityPermissionDialog(
             TextButton(
                 onClick = { onSetGrant(if (selected == GrantState.ASK) null else selected) },
             ) {
-                Text(stringRes(android.R.string.ok))
+                Text(stringRes(Res.string.confirm))
             }
         },
         dismissButton = {

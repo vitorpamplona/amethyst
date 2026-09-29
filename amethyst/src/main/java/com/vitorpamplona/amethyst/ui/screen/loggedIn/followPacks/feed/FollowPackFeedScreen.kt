@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -106,7 +105,7 @@ fun FollowPackFeedScreen(
     }
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsFollowPackScreen(
     note: AddressableNote,
