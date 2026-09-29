@@ -81,6 +81,8 @@ object NappletEmbedContract {
      * Provider → client: the main-frame load state changed. Carries [KEY_IS_LOADING] (a load is in
      * flight) and [KEY_LOAD_FAILED] (the main frame errored). Lets the main process draw a loading
      * spinner / error+retry overlay over the embedded surface instead of a bare black/white void.
+     * [KEY_RENDERER_GONE] marks a failure caused by the WebView renderer dying: the tab has no WebView
+     * left, so the client must [MSG_RELOAD] (which rebuilds it) — the page on screen is gone, not failed.
      */
     const val MSG_LOAD_STATE = 15
 
@@ -171,6 +173,7 @@ object NappletEmbedContract {
     const val KEY_CAN_GO_BACK = "canGoBack"
     const val KEY_IS_LOADING = "isLoading"
     const val KEY_LOAD_FAILED = "loadFailed"
+    const val KEY_RENDERER_GONE = "rendererGone"
     const val KEY_NOTICE = "notice"
     const val KEY_IME_PAYLOAD = "imePayload"
 

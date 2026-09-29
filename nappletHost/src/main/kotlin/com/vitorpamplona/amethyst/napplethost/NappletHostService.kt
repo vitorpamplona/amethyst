@@ -588,8 +588,8 @@ class NappletHostService : Service() {
 
         /**
          * The renderer died. It is shared by every WebView in `:napplet`, and an unhandled crash kills the
-         * whole process — every other tab included. Drop just this tab's WebView and report the load as
-         * failed; the tab's retry (MSG_RELOAD) rebuilds it in the same surface.
+         * whole process — every other tab included. Drop just this tab's WebView and report it gone
+         * ([NappletEmbedContract.KEY_RENDERER_GONE]); the client's MSG_RELOAD rebuilds it in the same surface.
          */
         override fun onRenderProcessGone(
             view: WebView,
@@ -602,7 +602,7 @@ class NappletHostService : Service() {
                 tab.webView = null
                 tab.bridgeReplyProxy = null
                 tab.loadFailed = true
-                pushLoadState(tab, isLoading = false)
+                pushLoadState(tab, isLoading = false, rendererGone = true)
             }
             return true
         }
@@ -671,6 +671,7 @@ class NappletHostService : Service() {
     private fun pushLoadState(
         tab: NappletTab,
         isLoading: Boolean,
+        rendererGone: Boolean = false,
     ) {
         val message =
             Message.obtain(null, NappletEmbedContract.MSG_LOAD_STATE).apply {
@@ -678,6 +679,7 @@ class NappletHostService : Service() {
                     Bundle().apply {
                         putBoolean(NappletEmbedContract.KEY_IS_LOADING, isLoading)
                         putBoolean(NappletEmbedContract.KEY_LOAD_FAILED, tab.loadFailed)
+                        putBoolean(NappletEmbedContract.KEY_RENDERER_GONE, rendererGone)
                     }
             }
         runCatching { tab.clientMessenger?.send(message) }

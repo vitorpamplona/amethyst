@@ -111,6 +111,9 @@ class NappletBrowserService : Service() {
     ) {
         var webView: WebView? = null
 
+        // The page the renderer was showing when it died, so the rebuild lands back where the user was.
+        var recoverUrl: String? = null
+
         // The session's root view (holds the WebView, and the page's fullscreen view when it has one).
         var container: FrameLayout? = null
         var customView: View? = null
@@ -296,7 +299,11 @@ class NappletBrowserService : Service() {
                 )
             }
             NappletBrowserContract.MSG_EXIT_FULLSCREEN -> tabFor(msg)?.let { exitFullscreen(it) }
-            NappletBrowserContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
+            NappletBrowserContract.MSG_RELOAD -> {
+                val tab = tabFor(msg) ?: return true
+                // A renderer death destroyed this tab's WebView: rebuild it on the page it was showing.
+                if (tab.webView == null) rebuildWebView(tab, tab.recoverUrl ?: tab.url) else tab.webView?.reload()
+            }
             NappletBrowserContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
             NappletBrowserContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
@@ -841,19 +848,22 @@ class NappletBrowserService : Service() {
 
         /**
          * The renderer died. It is shared by every WebView in `:napplet`, and an unhandled crash kills the
-         * whole process — every other tab included. Drop just this tab's WebView and report the load as
-         * failed; the tab's retry (MSG_NAVIGATE) builds a fresh WebView in the same surface.
+         * whole process — every other tab included. Drop just this tab's WebView and report it gone
+         * ([NappletBrowserContract.KEY_RENDERER_GONE]); the client's MSG_RELOAD (or a MSG_NAVIGATE) builds
+         * a fresh WebView in the same surface.
          */
         override fun onRenderProcessGone(
             view: WebView,
             detail: RenderProcessGoneDetail,
         ): Boolean {
             Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}) for an embedded tab" }
+            val lastUrl = view.url
             (view.parent as? ViewGroup)?.removeView(view)
             view.destroy()
             val tab = tab ?: return true
             if (tab.webView === view) {
                 tab.webView = null
+                tab.recoverUrl = lastUrl?.takeIf { it.isNotBlank() && it != ABOUT_BLANK } ?: tab.recoverUrl
                 tab.customView?.let { tab.container?.removeView(it) }
                 tab.customView = null
                 tab.customViewCallback = null
@@ -862,6 +872,7 @@ class NappletBrowserService : Service() {
                 sendToClient(tab, NappletBrowserContract.MSG_LOAD_STATE) {
                     putBoolean(NappletBrowserContract.KEY_IS_LOADING, false)
                     putBoolean(NappletBrowserContract.KEY_LOAD_FAILED, true)
+                    putBoolean(NappletBrowserContract.KEY_RENDERER_GONE, true)
                     putString(NappletBrowserContract.KEY_URL, tab.url)
                 }
             }

@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
@@ -49,6 +50,7 @@ import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedAutoRecovery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
@@ -96,6 +98,15 @@ class EmbeddedWebAppController(
 
     private var hasLoadedReal = false
     private var blankRecovered = false
+
+    // Brings the tab back when its sandbox-side surface dies (see [onSurfaceLost]).
+    private val recovery = EmbeddedAutoRecovery(SystemClock::elapsedRealtime)
+
+    // The remote session behind the current view errored out: only a brand-new session can repaint it.
+    private var sessionDead = false
+
+    // Set after the first connection, so a later onServiceConnected is recognised as `:napplet` coming back.
+    private var everConnected = false
 
     /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
     override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
@@ -150,11 +161,23 @@ class EmbeddedWebAppController(
                 service: IBinder?,
             ) {
                 serviceMessenger = Messenger(service)
+                if (everConnected) {
+                    // `:napplet` died and was restarted. The create below IS the recovery (a fresh process
+                    // has no session under any id), so nothing is left pending; cover the surface until the
+                    // new page paints.
+                    recovery.clearPending()
+                    sessionDead = false
+                    showRecovering()
+                }
+                everConnected = true
                 sendCreateSession()
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
+                // `:napplet` died (the OS reclaimed it, or it crashed). Its WebViews went with it; the
+                // system restarts the bound service and [onServiceConnected] re-creates the session.
                 serviceMessenger = null
+                showRecovering()
             }
         }
 
@@ -171,6 +194,7 @@ class EmbeddedWebAppController(
         }
         // Drop refs so an evicted controller doesn't pin the surface view or the remote messenger.
         serviceMessenger = null
+        sandboxedSdkView?.setEventListener(null)
         sandboxedSdkView = null
         pendingAdapter = null
         adapterDelivered = false
@@ -185,6 +209,12 @@ class EmbeddedWebAppController(
     }
 
     override fun teardown() = unbind()
+
+    override fun onShown() {
+        if (recovery.onShown()) recover()
+    }
+
+    override fun onHidden() = recovery.onHidden()
 
     /**
      * Hands the surface view to the controller; applies the adapter if it already arrived, and re-arms the
@@ -208,6 +238,7 @@ class EmbeddedWebAppController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(backgroundColor)
+        view.setEventListener(surfaceListener(view))
         val adapter = pendingAdapter
         when {
             adapter != null -> {
@@ -217,18 +248,79 @@ class EmbeddedWebAppController(
             }
             // No adapter in hand and one was already spent on a previous (now disposed) view: the session
             // behind it is gone, so this view would stay blank forever. Re-create it.
-            adapterDelivered -> {
-                // Mint a FRESH session id. The disposed view's Session.close() reaches the sandbox
-                // asynchronously (it posts to the sandbox's main thread) and was measured landing ~1 s
-                // AFTER this create: reusing the id let that late close reap the session we had just asked
-                // for — a new WebView was built, destroyed, and the surface stayed black. A new id makes
-                // the stale close target only the corpse it belongs to.
-                sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
-                adapterDelivered = false
-                sendCreateSession()
-            }
+            adapterDelivered -> rearmSession()
             // else: the first session is still in flight; MSG_SESSION_READY will arm this view.
         }
+    }
+
+    /**
+     * Asks the sandbox for a brand-new session; the [NappletBrowserContract.MSG_SESSION_READY] reply arms
+     * the current view with its adapter.
+     *
+     * Mints a FRESH session id. A disposed view's Session.close() reaches the sandbox asynchronously (it
+     * posts to the sandbox's main thread) and was measured landing ~1 s AFTER the create: reusing the id let
+     * that late close reap the session we had just asked for — a new WebView was built, destroyed, and the
+     * surface stayed black. A new id makes the stale close target only the corpse it belongs to.
+     */
+    private fun rearmSession() {
+        sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
+        adapterDelivered = false
+        sessionDead = false
+        sendCreateSession()
+    }
+
+    /**
+     * Watches [view]'s remote session. A session that errors out (its provider failed, or `:napplet` died)
+     * leaves the view holding a dead client that never reopens: it paints nothing, forever, until it is
+     * handed a NEW adapter.
+     */
+    private fun surfaceListener(view: SandboxedSdkView) =
+        object : SandboxedSdkViewEventListener {
+            override fun onUiDisplayed() {
+                // Nothing to do: the load state reports when the page itself paints.
+            }
+
+            override fun onUiError(error: Throwable) {
+                // A view this controller has since moved past (disposed, replaced) is not ours to revive.
+                if (sandboxedSdkView === view) onSurfaceLost(sessionDead = true)
+            }
+
+            override fun onUiClosed() {
+                // Nothing to do: closes are ours (a view disposed, or an adapter replaced on purpose).
+            }
+        }
+
+    /**
+     * The tab's page is gone: its WebView's renderer died ([sessionDead] false — the session lives on, and a
+     * MSG_RELOAD rebuilds the WebView inside it), or the whole remote session errored out ([sessionDead]
+     * true — only a new session can repaint the view). Either way the surface is a black rectangle that would
+     * stay that way, so rebuild it, as [EmbeddedAutoRecovery] allows.
+     */
+    private fun onSurfaceLost(sessionDead: Boolean) {
+        if (sessionDead) this.sessionDead = true
+        hasLoadedReal = false
+        // `:napplet` itself is down: its restart re-creates the session (see [onServiceConnected]).
+        if (serviceMessenger?.binder?.isBinderAlive != true) {
+            showRecovering()
+            return
+        }
+        when (recovery.onLost()) {
+            EmbeddedAutoRecovery.Decision.RECOVER_NOW -> recover()
+            EmbeddedAutoRecovery.Decision.DEFERRED -> showRecovering()
+            EmbeddedAutoRecovery.Decision.GIVE_UP -> publishLoadStatus(EmbeddedLoadStatus(failed = true))
+        }
+    }
+
+    private fun recover() {
+        showRecovering()
+        if (sessionDead) rearmSession() else reload()
+    }
+
+    /** Covers the surface with the loading spinner until the rebuilt page paints. */
+    private fun showRecovering() {
+        hasLoadedReal = false
+        blankRecovered = false
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
     }
 
     private fun sendCreateSession() {
@@ -279,7 +371,11 @@ class EmbeddedWebAppController(
                 val isLoading = msg.data?.getBoolean(NappletBrowserContract.KEY_IS_LOADING, false) ?: false
                 val failed = msg.data?.getBoolean(NappletBrowserContract.KEY_LOAD_FAILED, false) ?: false
                 val loadedUrl = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()
-                onLoadState(isLoading, failed, loadedUrl)
+                if (msg.data?.getBoolean(NappletBrowserContract.KEY_RENDERER_GONE, false) == true) {
+                    onSurfaceLost(sessionDead = false)
+                } else {
+                    onLoadState(isLoading, failed, loadedUrl)
+                }
             }
             NappletBrowserContract.MSG_CONSOLE_LOG -> {
                 val level = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_LEVEL) ?: "LOG"
@@ -396,10 +492,9 @@ class EmbeddedWebAppController(
      * session that never got its URL), this re-navigates to the favorite's real URL.
      */
     override fun retry() {
-        blankRecovered = false
-        hasLoadedReal = false
-        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
-        navigate(startUrl)
+        recovery.clearPending()
+        showRecovering()
+        if (sessionDead) rearmSession() else navigate(startUrl)
     }
 
     private fun onLoadState(

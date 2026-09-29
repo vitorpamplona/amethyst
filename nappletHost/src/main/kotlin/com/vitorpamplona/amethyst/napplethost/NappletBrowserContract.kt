@@ -70,7 +70,9 @@ object NappletBrowserContract {
      * Provider → client: the main-frame load state changed. Carries [KEY_IS_LOADING] (a navigation is in
      * flight), [KEY_LOAD_FAILED] (the main frame errored), and [KEY_URL] (the page it settled on). Lets
      * the main process draw a loading spinner / error overlay over the embedded surface, and recover a
-     * favorite whose session came up on a blank page (re-navigate to its real URL).
+     * favorite whose session came up on a blank page (re-navigate to its real URL). [KEY_RENDERER_GONE]
+     * marks a failure caused by the WebView renderer dying: the tab has no WebView left, so the client
+     * must [MSG_RELOAD] (which rebuilds it on the page it was showing).
      */
     const val MSG_LOAD_STATE = 10
 
@@ -232,6 +234,7 @@ object NappletBrowserContract {
 
     const val KEY_IS_LOADING = "isLoading"
     const val KEY_LOAD_FAILED = "loadFailed"
+    const val KEY_RENDERER_GONE = "rendererGone"
 
     const val KEY_CONSOLE_LEVEL = "consoleLevel"
     const val KEY_CONSOLE_MESSAGE = "consoleMessage"
