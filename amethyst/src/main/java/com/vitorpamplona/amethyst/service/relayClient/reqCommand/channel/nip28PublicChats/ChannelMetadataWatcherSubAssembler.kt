@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.relayClient.channel.nip28PublicChats.filterChannelMetadataUpdatesById
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
@@ -36,14 +36,16 @@ class ChannelMetadataWatcherSubAssembler(
     override fun updateFilter(
         key: ChannelFinderQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        if (key.channel is PublicChatChannel) {
-            key.channel.relays().flatMap {
-                filterChannelMetadataUpdatesById(it, listOf(key.channel), since?.get(it)?.time)
+    ): List<RelayBasedFilter> {
+        val channel = key.channel
+        return if (channel is PublicChatChannel) {
+            channel.relays().flatMap {
+                filterChannelMetadataUpdatesById(it, listOf(channel), since?.get(it)?.time)
             }
         } else {
             emptyList()
         }
+    }
 
     /**
      * Only one key per channel.

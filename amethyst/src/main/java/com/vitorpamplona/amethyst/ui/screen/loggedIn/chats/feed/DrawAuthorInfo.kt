@@ -32,18 +32,18 @@ import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
+import com.vitorpamplona.amethyst.commons.ui.note.InnerUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndRenderUserCards
+import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserDisplayNickname
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.note.InnerUserPicture
-import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderUserCards
-import com.vitorpamplona.amethyst.ui.note.WatchUserFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
 fun DrawAuthorInfo(

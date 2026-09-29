@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.mediaServers.blossomUploadOrder
@@ -39,7 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url
 import com.vitorpamplona.amethyst.commons.resources.upload_cancelled
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader

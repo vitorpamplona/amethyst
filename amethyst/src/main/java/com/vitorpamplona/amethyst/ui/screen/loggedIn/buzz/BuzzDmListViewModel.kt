@@ -23,17 +23,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.membershipNoticeFilter
+import com.vitorpamplona.amethyst.commons.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
-import com.vitorpamplona.amethyst.model.buzz.membershipNotices
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
@@ -296,7 +296,7 @@ class BuzzDmListViewModel : ViewModel() {
      *
      * The 44100/30622 stream itself is **not** subscribed here. `bind` marks this community's relay a
      * joined workspace, which is exactly what
-     * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
+     * [com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
      * keys its always-on `#p=me` subscription on — so opening this screen used to put a second, identical
      * REQ on the same relay. Observing [LocalCache] instead means the screen sees the same events at the
      * same time for free, and the relay sees one subscription.

@@ -52,8 +52,9 @@ Q: Does it vary by platform or by JVM vs non-JVM?
 │  Example: Jackson JSON parsing (JVM library)
 │
 └─ Complex/UI-related
-   → Keep platform-specific
-   Example: Navigation (Activity vs Window too different)
+   → Share it in commonsUI; expect/actual or a slot only for the platform leaf
+   Example: Navigation. One shell in commonsUI, picked by window size
+   (ScreenLayoutSpec); only the Activity / Window entry point is native
 
 Final check:
 Q: Maintenance cost of abstraction < duplication cost?
@@ -85,10 +86,13 @@ val jvmAndroid = create("jvmAndroid") {
 ```
 **Why:** Jackson is JVM-only, works on Android + Desktop, not iOS/web.
 
-**Navigation → platform-specific:**
-- Android: `MainActivity` (Activity + Compose Navigation)
-- Desktop: `Window` + sidebar + MenuBar
-**Why:** UI paradigms fundamentally different.
+**Navigation → shared, entry points → platform-specific:**
+- Shared (`commonsUI`, moving there): the nav host, bottom bar / rail /
+  permanent drawer, chosen by window size via `ScreenLayoutSpec`
+- Android: `MainActivity` hosts it; Desktop: a `Window` (+ MenuBar, tray) hosts it
+**Why:** Android runs on laptops too, and the new Desktop app renders the same
+UI. See `commons/plans/2026-09-27-one-ui-android-desktop.md`. Today's
+`desktopApp` sidebar shell is legacy.
 
 ## Mental Model: Source Sets as Dependency Graph
 
@@ -183,15 +187,15 @@ Quick decision guidelines based on codebase patterns:
 ### Sometimes Abstract
 - **Business logic:** YES - state machines, data processing
 - **ViewModels:** YES - state + business logic shareable (StateFlow/SharedFlow)
-- **Screen layouts:** NO - platform-native (Window vs Activity)
-- **Why:** ViewModels contain platform-agnostic state; Screens render differently per platform
+- **Screen layouts:** YES - shared in `commonsUI`; they adapt to window size, not platform
+- **Why:** One UI for Android (phones to laptops) and Desktop; only entry points differ
 
 ### Rarely Abstract
 - **Complex UI components** (composables with heavy platform dependencies)
 - **Why:** Platform paradigms can differ significantly
 
 ### Never Abstract
-- **Navigation** (Activity vs Window fundamentally different)
+- **Process / window entry points** (Activity, Service, Window, tray)
 - **Permissions** (Android vs iOS APIs incompatible)
 - **Platform UX patterns**
 - **Why:** Too platform-specific, abstraction creates leaky APIs
@@ -203,7 +207,7 @@ Quick decision guidelines based on codebase patterns:
 | PubKeyFormatter, ZapFormatter | ✅ YES | Pure Kotlin, no platform APIs |
 | TimeAgoFormatter | ⚠️ ABSTRACTED | Needs StringProvider for localized strings |
 | ViewModels (state + logic) | ✅ YES | StateFlow/SharedFlow platform-agnostic, Compose Multiplatform lifecycle compatible |
-| Screen layouts (Scaffold, nav) | ❌ NO | Window vs Activity, sidebar vs bottom nav fundamentally different |
+| Screen layouts (Scaffold, nav) | ✅ YES (moving) | One UI; `ScreenLayoutSpec` picks bottom bar / rail / drawer by window size |
 | Image loading (Coil) | ⚠️ ABSTRACTED | Coil 3.x supports KMP, needs expect/actual wrapper |
 
 ## expect/actual Mechanics
@@ -333,8 +337,9 @@ fun validateSignature(...) { ... }  // Duplicated!
 // ❌ BAD
 expect fun NavigationComponent(...)
 ```
-**Why:** Navigation paradigms too different (Activity vs Window)
-**Fix:** Keep platform-specific, accept duplication
+**Why:** It forks the whole navigation UI per platform.
+**Fix:** Write the navigation once in `commonsUI`; put only the platform leaf
+(an Activity result, a file picker) behind expect/actual or a slot
 
 ### 2. Under-Sharing
 **Problem:** Duplicating business logic across platforms
@@ -384,8 +389,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 | **ViewModels** | **commons/commonMain/viewmodels/** | **StateFlow/SharedFlow + logic shareable, Compose MP lifecycle compatible** |
 | UI formatters (pure) | commons/commonMain | Reusable, no dependencies |
 | UI components (simple) | commonsUI/commonMain | Cards, buttons, dialogs (Compose UI never goes in `commons`) |
-| **Screen layouts** | **Platform-specific** | **Window vs Activity, sidebar vs bottom nav** |
-| Navigation | Platform-specific only | Activity vs Window too different |
+| **Screen layouts** | **commonsUI** | **One UI; adapt to window size with `ScreenLayoutSpec`** |
+| Navigation | commonsUI (entry point native) | Nav host + chrome shared; Activity / Window hosts it |
 | Permissions | Platform-specific only | APIs incompatible |
 | Platform UX (menus, etc.) | Platform-specific only | Native feel required |
 

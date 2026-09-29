@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.pip
 
 import android.graphics.Rect
 import android.os.Bundle
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.quartz.utils.ensure
 

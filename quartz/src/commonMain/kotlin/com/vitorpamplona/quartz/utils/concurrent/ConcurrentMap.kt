@@ -93,4 +93,13 @@ expect class ConcurrentMap<K : Any, V : Any>() {
 
     /** A point-in-time copy of the entries — safe to iterate without holding a lock. */
     fun snapshot(): Map<K, V>
+
+    /**
+     * A read-only view to iterate or look up in right away, without copying: the live,
+     * weakly consistent map on JVM/Android (iteration never throws while others write, and may
+     * or may not see those writes), the current immutable copy-on-write state on native. Don't
+     * hold it expecting later writes to show up; use [snapshot] when a caller needs a stable
+     * copy it can keep.
+     */
+    fun asMap(): Map<K, V>
 }

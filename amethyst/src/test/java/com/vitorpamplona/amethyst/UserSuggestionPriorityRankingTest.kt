@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserContext
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.rankPriorityFirst
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.rankPriorityFirst
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test

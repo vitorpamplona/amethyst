@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -43,21 +44,21 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
@@ -253,7 +254,7 @@ class ChatNewMessageViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     override var pickedGeoHash by mutableStateOf<String?>(null)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -462,7 +463,7 @@ class ChatNewMessageViewModel :
         uploadState?.load(list)
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }
@@ -600,7 +601,7 @@ class ChatNewMessageViewModel :
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
-        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
         val message = messageText
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
@@ -792,7 +793,7 @@ class ChatNewMessageViewModel :
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(item.link) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
+                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 

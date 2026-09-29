@@ -26,6 +26,7 @@ import android.os.Build
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
 import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
+import com.vitorpamplona.amethyst.commons.util.AndroidDebugFlag
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
@@ -114,6 +115,9 @@ class Amethyst : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Before anything logs: shared code's debug-only logging (commons `logTime`) reads this
+        // instead of the app's BuildConfig, in both processes.
+        AndroidDebugFlag.enabled = isDebug
         Log.d("AmethystApp") { "onCreate $this" }
 
         // Application.onCreate runs in every process. The sandboxed napplet host

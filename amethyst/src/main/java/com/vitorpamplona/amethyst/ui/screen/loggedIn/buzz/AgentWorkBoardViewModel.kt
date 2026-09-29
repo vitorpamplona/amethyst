@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkBoard
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent

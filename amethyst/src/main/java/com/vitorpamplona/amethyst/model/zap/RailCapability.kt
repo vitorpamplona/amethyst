@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.model.zap
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.commons.model.payments.PayToRailMatcher
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
-import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup

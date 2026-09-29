@@ -29,9 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListR
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
-import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
-import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
-import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesSensitiveContentSettings
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver

@@ -41,6 +41,12 @@ expect object LocalClock {
     /** Today, in the reader's timezone. */
     fun today(): SearchDate
 
+    /**
+     * Which local day a unix second falls on, with the zone read once for the whole counter
+     * rather than per timestamp: for grouping a batch of events by day in one pass.
+     */
+    fun epochDayCounter(): EpochDayCounter
+
     /** Which weekday a week starts on here, 0 = Sunday. */
     fun firstDayOfWeek(): Int
 
@@ -52,4 +58,9 @@ expect object LocalClock {
 
     /** The seven column headings, narrow, indexed 0 = Sunday. The grid rotates them itself. */
     fun narrowWeekdayNames(): List<String>
+}
+
+/** Maps a unix second to the local day it falls on, counted in days since 1970-01-01. */
+fun interface EpochDayCounter {
+    fun epochDay(unixSeconds: Long): Long
 }

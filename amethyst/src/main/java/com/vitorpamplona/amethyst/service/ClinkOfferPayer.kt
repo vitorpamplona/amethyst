@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.experimental.clink.client.OfferClient
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse

@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_show_qr
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.firstToFind.FirstToFindResolver

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.search.calendar
 
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -52,6 +53,12 @@ actual object LocalClock {
         LocalDate.now(zone()).let {
             SearchDate(it.year, it.monthValue, it.dayOfMonth)
         }
+
+    actual fun epochDayCounter(): EpochDayCounter {
+        val rules = zone().rules
+        val offsets = ZoneOffsets { rules.getOffset(Instant.ofEpochSecond(it)).totalSeconds.toLong() }
+        return EpochDayCounter { ZoneMath.epochDayAt(it, offsets) }
+    }
 
     // WeekFields counts DayOfWeek 1..7 from Monday; this API counts 0..6 from Sunday.
     actual fun firstDayOfWeek(): Int = WeekFields.of(Locale.getDefault()).firstDayOfWeek.value % 7

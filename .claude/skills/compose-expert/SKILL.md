@@ -1,6 +1,6 @@
 ---
 name: compose-expert
-description: Advanced Compose Multiplatform UI patterns for shared composables. Use when working with visual UI components, state management patterns (remember, derivedStateOf, produceState), recomposition optimization (@Stable/@Immutable visual usage), Material3 theming, custom ImageVector icons, or determining whether to share UI in commonMain vs keep platform-specific. Delegates navigation to android-expert/desktop-expert. Complements kotlin-expert (handles Kotlin language aspects of state/annotations).
+description: Advanced Compose Multiplatform UI patterns for shared composables. Use when working with visual UI components, state management patterns (remember, derivedStateOf, produceState), recomposition optimization (@Stable/@Immutable visual usage), Material3 theming, custom ImageVector icons, or determining whether to share UI in commonMain vs keep platform-specific. Delegates platform entry points (Activity, Window, tray) to android-expert/desktop-expert; the navigation shell itself is shared UI. Complements kotlin-expert (handles Kotlin language aspects of state/annotations).
 ---
 
 # Compose Multiplatform Expert
@@ -34,12 +34,17 @@ Visual UI patterns for sharing composables across Android and Desktop.
 - **Theme utilities**: Color calculations, style helpers
 - **Material3 components**: Any UI using Material primitives
 
+**Screens and navigation are shared too.** Android also ships on laptops and the new
+Desktop app renders the same UI, so screens, the nav host and the bottom bar / rail /
+permanent drawer all belong in `commonsUI`. They adapt to the window with
+`ScreenLayoutSpec` / `LocalScreenLayout`, not per platform. See
+`commons/plans/2026-09-27-one-ui-android-desktop.md`.
+
 ### Keep Platform-Specific
 
-- **Navigation structure**: Bottom nav (Android) vs Sidebar (Desktop)
-- **Screen layouts**: Platform-specific scaffolding
-- **System integrations**: File pickers, notifications, share sheets
-- **Platform UX**: Gestures, keyboard shortcuts, window management
+- **Entry points**: Android `Activity`/`Service`, Desktop `Window`, tray, menu bar
+- **System integrations**: File pickers, notifications, share sheets, camera, media3, WebView
+- **Platform leaves inside shared UI**: behind expect/actual or a slot the shim fills
 
 ### Decision Framework
 
@@ -563,12 +568,14 @@ fun FeedList(items: List<Item>) {
 4. Add caching if generated dynamically
 5. Wrap in @Composable for easy use
 
-### Navigation (Delegate)
+### Navigation
 
-For navigation patterns:
-- Android bottom nav → `android-expert`
-- Desktop sidebar → `desktop-expert`
-- Multi-window → `desktop-expert`
+The navigation shell is shared (`ScreenLayoutSpec` picks bottom bar, rail or permanent
+drawer by window size) and is moving to `commonsUI` with `AppNavigation`. Delegate only
+the platform leaves:
+- Activity / intent plumbing → `android-expert`
+- Window, tray, menu bar, multi-window → `desktop-expert`
+- Today's legacy `desktopApp` sidebar shell → `desktop-expert` (to be replaced)
 
 ## Related Skills
 

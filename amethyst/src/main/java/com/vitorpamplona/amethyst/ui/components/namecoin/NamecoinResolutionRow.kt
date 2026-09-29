@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -101,7 +101,7 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
 /**
  * Lightweight syntactic check: does this look like something we should
  * route to Namecoin? Mirrors [com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver.isNamecoinIdentifier]
- * but tolerates a leading `@` (matches the dropdown's [com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState.userSearchTermOrNull]).
+ * but tolerates a leading `@` (matches the dropdown's [com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState.userSearchTermOrNull]).
  *
  * Accepted shapes:
  *  - `host.bit` and `user@host.bit` (domain namespace)

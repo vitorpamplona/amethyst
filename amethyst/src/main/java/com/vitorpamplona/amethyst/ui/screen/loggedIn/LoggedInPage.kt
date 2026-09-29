@@ -40,11 +40,13 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer_description
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
@@ -53,7 +55,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
@@ -69,18 +70,17 @@ fun LoggedInPage(
     accountSessionManager: AccountSessionManager,
 ) {
     val accountViewModel: AccountViewModel =
-        viewModel(
-            key = "AccountViewModel",
-            factory =
-                AccountViewModel.Factory(
-                    account = account,
-                    settings = Amethyst.instance.uiState,
-                    torSettings = Amethyst.instance.torPrefs.value,
-                    dataSources = Amethyst.instance.sources,
-                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder,
-                    nip05ClientBuilder = { Amethyst.instance.nip05Client },
-                ),
-        )
+        viewModel(key = "AccountViewModel") {
+            AccountViewModel(
+                account = account,
+                settings = Amethyst.instance.uiState,
+                torSettings = Amethyst.instance.torPrefs.value,
+                dataSources = Amethyst.instance.sources,
+                httpClientBuilder = Amethyst.instance.roleBasedHttpClientBuilder,
+                nip05ClientBuilder = { Amethyst.instance.nip05Client },
+                host = AndroidAccountViewModelHost(Amethyst.instance),
+            )
+        }
 
     LaunchedEffect(Unit) {
         accountViewModel.firstRoute = route

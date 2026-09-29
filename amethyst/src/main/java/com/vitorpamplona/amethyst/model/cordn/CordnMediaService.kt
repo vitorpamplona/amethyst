@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.model.cordn
 
 import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnEncryptedMedia

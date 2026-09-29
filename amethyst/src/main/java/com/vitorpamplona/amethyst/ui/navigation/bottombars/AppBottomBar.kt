@@ -63,8 +63,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size27Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.onSurface65
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /** Content height of the [AppBottomBar] (the 50.dp Column inside [RenderBottomMenu]),
  * exclusive of the system navigation-bar inset. Used by FAB callers that want to

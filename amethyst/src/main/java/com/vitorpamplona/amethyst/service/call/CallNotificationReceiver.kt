@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.call
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope

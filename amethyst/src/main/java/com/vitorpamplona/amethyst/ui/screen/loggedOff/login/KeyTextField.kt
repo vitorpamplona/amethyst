@@ -44,17 +44,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.hide_password
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.login_with_qr_code
 import com.vitorpamplona.amethyst.commons.resources.nsec_npub_hex_private_key
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 
 @Composable
@@ -113,7 +113,7 @@ fun KeyTextField(
             }
             IconButton(onClick = { dialogOpen = true }) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 5),
+                    painter = painterRes(Res.drawable.ic_qrcode, 5),
                     contentDescription = stringRes(Res.string.login_with_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

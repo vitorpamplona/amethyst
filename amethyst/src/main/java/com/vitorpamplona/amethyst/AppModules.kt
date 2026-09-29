@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
@@ -63,6 +65,8 @@ import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
+import com.vitorpamplona.amethyst.commons.service.georelay.GeohashRelays
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
@@ -78,7 +82,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
@@ -115,7 +119,6 @@ import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
@@ -199,6 +202,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -239,6 +243,13 @@ class AppModules(
 
     private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val trimLevelEvents = _trimLevelEvents.asSharedFlow()
+
+    /**
+     * Fires when memory is tight enough that feeds should drop the strong Note references they
+     * hold: the process is on the system LRU list, the strongest level the OS still delivers
+     * since API 34, or the heap watchdog raised the same level itself.
+     */
+    val memoryPressureEvents: Flow<Unit> = trimLevelEvents.filter { it >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND }.map { }
 
     /**
      * The app-wide DataStore files — the ones that belong to the install rather
@@ -769,6 +780,8 @@ class AppModules(
     // event, which is why this sits next to the cache rather than in a later init block.
     init {
         cache.appHost = AmethystLocalCacheHost(this, isDebug)
+        // Geohash chats route through the live georelays directory, fetched over this app's clients.
+        GeohashRelays.liveRelayLoader = { GeoRelayCsvLoader { okHttpClients.getHttpClient(false) }.fetch() }
     }
 
     // NIP-BC onchain zap verification backend. Wired up once at app init so
@@ -1035,6 +1048,13 @@ class AppModules(
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
+            appVersion = BuildConfig.VERSION_NAME,
+            encryptionKeyCache = keyCache,
+            saveSettings = { LocalPreferences.saveToEncryptedStorage(it) },
+            // A provider: notificationDispatcher is declared further down this class.
+            marmotNotifier = { notificationDispatcher },
+            nip46Consent = Nip46ConsentBridge,
+            geohashIdentityStore = { AndroidGeohashIdentityStore(it) },
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },

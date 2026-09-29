@@ -32,8 +32,6 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import kotlin.time.DurationUnit
-import kotlin.time.measureTimedValue
 
 @Suppress("SENSELESS_COMPARISON")
 val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
@@ -235,36 +233,6 @@ fun debugState(context: Context) {
         Log.d(STATE_DUMP_TAG) { "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB " }
     }
 }
-
-inline fun <T> logTime(
-    debugMessage: String,
-    minToReportMs: Int = 1,
-    block: () -> T,
-): T =
-    if (isDebug) {
-        val (result, elapsed) = measureTimedValue(block)
-        if (elapsed.inWholeMilliseconds > minToReportMs) {
-            Log.d("DEBUG-TIME") { "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage" }
-        }
-        result
-    } else {
-        block()
-    }
-
-inline fun <T> logTime(
-    debugMessage: (T) -> String,
-    minToReportMs: Int = 1,
-    block: () -> T,
-): T =
-    if (isDebug) {
-        val (result, elapsed) = measureTimedValue(block)
-        if (elapsed.inWholeMilliseconds > minToReportMs) {
-            Log.d("DEBUG-TIME") { "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}" }
-        }
-        result
-    } else {
-        block()
-    }
 
 fun debug(
     tag: String,

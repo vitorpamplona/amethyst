@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
 import android.util.LruCache
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener

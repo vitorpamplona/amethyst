@@ -25,8 +25,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelHistoryFilterAssembler
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelHistoryQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Mount on the open Concord Channel screen to keep its backward-history pager bound and armed. The

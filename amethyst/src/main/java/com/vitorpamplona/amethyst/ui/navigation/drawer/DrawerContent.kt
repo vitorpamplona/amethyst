@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.drawer
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -89,16 +90,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsFollowerCount
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserStatuses
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.drafts
@@ -107,12 +112,14 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_feeds
 import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.longs
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.relay_setup
+import com.vitorpamplona.amethyst.commons.resources.relays
 import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
@@ -122,6 +129,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -145,18 +154,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.profileContentHeaderModifier
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAssertionsFollowerCount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
@@ -297,8 +300,8 @@ fun ProfileContentTemplate(
                 modifier = bannerModifier,
             )
         } else {
-            AsyncImage(
-                model = R.drawable.profile_banner,
+            Image(
+                painter = painterRes(Res.drawable.profile_banner, 3),
                 contentDescription = stringRes(Res.string.profile_banner),
                 contentScale = ContentScale.Crop,
                 modifier = bannerModifier,
@@ -1004,7 +1007,7 @@ fun IconRowRelays(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterRes(R.drawable.relays, 4),
+            painter = painterRes(Res.drawable.relays, 4),
             contentDescription = stringRes(Res.string.relay_setup),
             modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurface,
@@ -1101,7 +1104,7 @@ fun BottomContent(
                 },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 2),
+                    painter = painterRes(Res.drawable.ic_qrcode, 2),
                     contentDescription = stringRes(id = Res.string.show_npub_as_a_qr_code),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,

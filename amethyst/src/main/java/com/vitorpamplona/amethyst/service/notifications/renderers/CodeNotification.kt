@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_issue
@@ -39,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channe
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_draft
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_open
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher

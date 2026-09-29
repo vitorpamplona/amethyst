@@ -31,11 +31,11 @@ import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.ClinkDebitPayer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
@@ -377,7 +377,7 @@ class AmethystAppFunctions {
      * account, no follows, or no relays configured.
      */
     private suspend fun fetchFollowFeed(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         sinceSecs: Long?,
         limit: Int,
     ): List<TextNoteEvent> {
@@ -1370,7 +1370,7 @@ class AmethystAppFunctions {
     }
 
     private suspend fun zapUserViaLightning(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         recipientPub: HexKey,
         sats: Long,
         comment: String,
@@ -1440,7 +1440,7 @@ class AmethystAppFunctions {
     }
 
     private suspend fun zapUserViaOnchain(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         recipientPub: HexKey,
         sats: Long,
         comment: String,
@@ -1677,7 +1677,7 @@ class AmethystAppFunctions {
      */
     private suspend fun fetchProfileForZap(
         client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient,
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         pubkey: HexKey,
     ): String? {
         val relays =
@@ -1715,7 +1715,7 @@ class AmethystAppFunctions {
      * [PayOutcome.errorMessage]) on rejection or timeout.
      */
     private suspend fun payViaDefaultSourceOrNull(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         bolt11: String,
         zappedNote: com.vitorpamplona.amethyst.commons.model.Note?,
     ): PayOutcome? =
@@ -1727,11 +1727,11 @@ class AmethystAppFunctions {
 
     /** Pays [bolt11] via a CLINK debit pointer, mapping the kind-21002 reply to a [PayOutcome]. */
     private suspend fun payViaClinkDebit(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         pointer: NDebit,
         bolt11: String,
     ): PayOutcome {
-        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        val response = ClinkDebitPayer.payInvoice(account, Amethyst.instance.torEvaluatorFlow, pointer, bolt11)
         return when {
             response == null ->
                 PayOutcome(false, null, "CLINK debit wallet didn't respond within ${ClinkDebitPayer.DEFAULT_TIMEOUT_MS / 1000}s")
@@ -1746,7 +1746,7 @@ class AmethystAppFunctions {
      * seconds; bounded by [NWC_PAYMENT_TIMEOUT_MS] so a hung wallet can't stall dispatch.
      */
     private suspend fun payViaNwc(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         bolt11: String,
         zappedNote: com.vitorpamplona.amethyst.commons.model.Note?,
     ): PayOutcome {
@@ -1836,7 +1836,7 @@ class AmethystAppFunctions {
      * a clarifying prompt to the user.
      */
     private fun verifyExpectedRecipient(
-        account: com.vitorpamplona.amethyst.model.Account,
+        account: com.vitorpamplona.amethyst.commons.model.Account,
         target: HexKey,
         expectedDisplayName: String?,
         requireFollow: Boolean,

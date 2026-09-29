@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.NotificationsPerKeyKinds2
 import com.vitorpamplona.amethyst.commons.relayClient.event.watchers.RepliesAndReactionsKinds2
 import com.vitorpamplona.amethyst.commons.relayClient.event.watchers.RootScopedRepliesKinds

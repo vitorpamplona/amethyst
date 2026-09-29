@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.cache
 
-import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
+import com.vitorpamplona.amethyst.desktop.model.BlossomServerListState
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal

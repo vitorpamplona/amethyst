@@ -22,17 +22,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
+import com.vitorpamplona.amethyst.commons.model.buzz.buzzChannelTypes
+import com.vitorpamplona.amethyst.commons.model.buzz.classifyBuzzChannel
+import com.vitorpamplona.amethyst.commons.model.buzz.membershipNoticeFilter
+import com.vitorpamplona.amethyst.commons.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.buzz.buzzChannelTypes
-import com.vitorpamplona.amethyst.model.buzz.classifyBuzzChannel
-import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
-import com.vitorpamplona.amethyst.model.buzz.membershipNotices
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.map
  *
  * The deployed relay does not expose a queryable DM list; it addresses each member a kind-44100
  * member-added notification (`#p` = me). Those arrive through the ordinary subscription pipeline —
- * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
+ * [com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
  * owns the one `#p=me` REQ per workspace relay — so this reads them back out of [LocalCache], fetches
  * each discovered channel's 39000-39003 directory (so its `t`=dm marker + participants land), and
  * records the ones that turn out to be DMs into [BuzzDmChannels]. The companion
@@ -58,7 +58,7 @@ import kotlinx.coroutines.flow.map
  *
  * Everything else somebody added the viewer to is a named channel; it must NOT be silently subscribed,
  * so it stays out of [BuzzDmChannels] and surfaces as a prompt instead — see
- * [com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState], which projects the
+ * [com.vitorpamplona.amethyst.commons.model.buzz.ChannelInvitesState], which projects the
  * same cached notices.
  *
  * ### Recompute, don't accumulate

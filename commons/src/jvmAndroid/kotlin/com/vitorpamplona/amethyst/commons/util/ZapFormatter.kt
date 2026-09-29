@@ -54,7 +54,7 @@ private val dfN = ThreadLocal.withInitial { DecimalFormat("#") }
  * - 2500000 -> "3.0M"
  * - 10000000000 -> "10G"
  */
-fun showAmount(amount: BigDecimal?): String {
+actual fun showAmount(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < MinDisplayableAmount) return ""
     if (amount < TenKilo) return dfN.get()!!.format(amount)

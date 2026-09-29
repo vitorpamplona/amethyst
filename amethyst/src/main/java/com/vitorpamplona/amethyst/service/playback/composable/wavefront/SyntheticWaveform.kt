@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.wavefront
 
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
 
 private const val SYNTHETIC_WAVEFORM_SAMPLES = 96
-private const val TWO_PI = (Math.PI * 2).toFloat()
+private const val TWO_PI = (PI * 2).toFloat()
 
 /**
  * Builds a stable, decorative waveform from a [seed] (usually an event id). ExoPlayer drives
@@ -57,7 +58,7 @@ fun syntheticWaveformFor(seed: String): WaveformData {
         List(SYNTHETIC_WAVEFORM_SAMPLES) { index ->
             val phase = index.toFloat() / SYNTHETIC_WAVEFORM_SAMPLES
             // Optional gentle fade so some taper at the ends, others stay even.
-            val envelope = 1f - envelopeStrength * (1f - sin(phase * Math.PI).toFloat())
+            val envelope = 1f - envelopeStrength * (1f - sin(phase * PI).toFloat())
             val carrier = sin(phase * TWO_PI * carrierCycles + phaseOffset) * carrierWeight
             val noise = (rng.nextFloat() - 0.5f) * 2f * noiseStrength
             ((baseline + carrier + noise) * envelope).coerceIn(0.05f, 1.0f)

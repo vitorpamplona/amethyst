@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
 
 /**

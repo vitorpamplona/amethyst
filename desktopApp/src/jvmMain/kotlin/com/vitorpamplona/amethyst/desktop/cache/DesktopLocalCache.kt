@@ -386,7 +386,7 @@ class DesktopLocalCache : ICacheProvider {
     /**
      * Consumes a kind 10063 (NIP-B7) Blossom media server list event. Stores
      * the newest per-author copy in [addressableNotes] so state holders like
-     * [com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState]
+     * [com.vitorpamplona.amethyst.desktop.model.BlossomServerListState]
      * observe it via their flows. This is the same event the Amethyst mobile
      * app uses for the media server list. Emits nothing to the event stream —
      * the UI doesn't render kind 10063s directly.

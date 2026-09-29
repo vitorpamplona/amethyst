@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import kotlinx.coroutines.test.runTest
+import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -106,5 +107,5 @@ class CordnHandoffStateTest {
             assertTrue(first.handedOff.value)
         }
 
-    private fun state() = CordnHandoffState(FileCordnHandoffStore(folder.root))
+    private fun state() = CordnHandoffState(FileCordnHandoffStore(folder.root.toOkioPath()))
 }

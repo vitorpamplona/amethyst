@@ -36,6 +36,7 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
@@ -51,7 +52,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Standalone activity that owns the lifetime of an audio-room session. The
- * lobby ([com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestJoinCard])
+ * lobby ([com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.NestJoinCard])
  * launches this activity when the user taps "Join audio room"; finishing it
  * tears down the MoQ session, the broadcaster (if any), and the foreground
  * notification.

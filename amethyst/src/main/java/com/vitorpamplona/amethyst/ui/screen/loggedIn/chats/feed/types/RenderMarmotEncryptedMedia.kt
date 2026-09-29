@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -37,12 +36,12 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2
@@ -128,7 +127,7 @@ fun RenderEncryptedMediaV2(
     }
 
     val cipher = remember(reference, mediaSecret) { EncryptedMediaV2Cipher(mediaSecret, reference) }
-    Amethyst.instance.keyCache.add(url, cipher, reference.mediaType)
+    accountViewModel.account.encryptionKeyCache.add(url, cipher, reference.mediaType)
 
     val description = event.alt()
 
@@ -252,7 +251,7 @@ private fun RenderMip04Content(
                 filename = meta.filename,
             )
         }
-    Amethyst.instance.keyCache.add(meta.url, cipher, meta.mimeType)
+    accountViewModel.account.encryptionKeyCache.add(meta.url, cipher, meta.mimeType)
 
     val description = note.event?.alt()
 

@@ -21,19 +21,25 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
+import com.vitorpamplona.amethyst.commons.model.InMemoryGeohashIdentityStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -83,14 +89,21 @@ class NotificationFeedFilterModeOverrideTest {
             Account(
                 settings = AccountSettings(keyPair = keyPair),
                 signer = NostrSignerInternal(keyPair),
-                geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+                geolocationFlow = { MutableStateFlow<LocationResult>(LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
                 cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
-                okHttpClientForMoney = { OkHttpClient() },
+                cashuMintTransport = OkHttpMintTransport { OkHttpClient() },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
                 cache = LocalCache,
                 client = client,
                 scope = scope,
+                appVersion = "test",
+                encryptionKeyCache = EncryptionKeyCache(),
+                saveSettings = {},
+                marmotNotifier = { MarmotGroupNotifier.None },
+                nip46Consent = Nip46ConsentPrompter.Unanswered,
+                geohashIdentityStore = InMemoryGeohashIdentityStore(),
+                marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
             )
     }
 

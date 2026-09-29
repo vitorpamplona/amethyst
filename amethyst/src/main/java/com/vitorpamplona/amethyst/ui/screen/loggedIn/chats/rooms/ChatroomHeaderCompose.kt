@@ -33,7 +33,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +44,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.concordCommunityHasUnreadFlow
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
+import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -52,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordServerRoomNote
@@ -65,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
@@ -72,6 +76,10 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreview
 import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
 import com.vitorpamplona.amethyst.commons.model.relayGroupChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayNameChip
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteHasEvent
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderByParentFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_messages
 import com.vitorpamplona.amethyst.commons.resources.channel_created
@@ -114,10 +122,20 @@ import com.vitorpamplona.amethyst.commons.ui.components.NewItemsBubble
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContentOrNull
+import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
@@ -127,34 +145,17 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
-import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
-import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
-import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupPreviewText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupTitle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordCommunityHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
@@ -1280,23 +1281,6 @@ private fun RowScope.LastMessagePreview(
             modifier = Modifier.weight(1f),
         )
     }
-}
-
-@Composable
-fun LoadUser(
-    baseUserHex: String,
-    content: @Composable (User?) -> Unit,
-) {
-    var user by
-        remember(baseUserHex) { mutableStateOf(LocalCache.getUserIfExists(baseUserHex)) }
-
-    if (user == null) {
-        LaunchedEffect(key1 = baseUserHex) {
-            user = LocalCache.checkGetOrCreateUser(baseUserHex)
-        }
-    }
-
-    content(user)
 }
 
 @Composable

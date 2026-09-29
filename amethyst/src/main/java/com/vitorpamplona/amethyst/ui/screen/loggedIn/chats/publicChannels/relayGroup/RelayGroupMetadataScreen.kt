@@ -66,9 +66,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -108,13 +108,14 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.LoadRelayGroupChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -144,7 +145,7 @@ fun RelayGroupCreateScreen(
     // on the relay advertising NIP-29 in its NIP-11 `supported_nips`. Tri-state: null = still checking,
     // false = confirmed unsupported (or unreachable), true = advertised.
     val nip29Support by produceState<Boolean?>(initialValue = null, relay) {
-        Amethyst.instance.nip11Cache.loadRelayInfo(
+        LocalCache.appHost.nip11Cache.loadRelayInfo(
             relay = relay,
             onInfo = { info -> value = info.supported_nips?.any { it == "29" } ?: false },
             onError = { _, _, _ -> value = false },
@@ -216,7 +217,7 @@ private fun RelayGroupMetadataScaffold(
     // NIP-29 §Subgroups relay support detection: `"nip29": { "subgroups": true }` in the NIP-11.
     val subgroupsSupported by produceState(initialValue = false, viewModel.relay) {
         val relay = viewModel.relay ?: return@produceState
-        Amethyst.instance.nip11Cache.loadRelayInfo(
+        LocalCache.appHost.nip11Cache.loadRelayInfo(
             relay = relay,
             onInfo = { info -> value = info.nip29?.subgroups == true },
             onError = { _, _, _ -> value = false },

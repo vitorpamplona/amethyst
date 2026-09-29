@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.commons.service.Bolt12LightningFallback
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

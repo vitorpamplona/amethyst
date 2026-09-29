@@ -72,6 +72,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -99,10 +100,14 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_private
 import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
+import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.DisplayBlankAuthor
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -113,9 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.showAmount
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.ZapPaymentHandler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
@@ -152,7 +155,6 @@ fun ZapCustomDialog(
     accountViewModel: AccountViewModel,
     baseNote: Note,
 ) {
-    val context = LocalContext.current
     val postViewModel: ZapOptionViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) { postViewModel.load(accountViewModel.account) }
@@ -372,7 +374,6 @@ fun ZapCustomDialog(
                         postViewModel.value()!! * 1000L,
                         null,
                         postViewModel.customMessage.text,
-                        context,
                         onError = onError,
                         onProgress = onProgress,
                         onPayViaIntent = onPayViaIntent,
@@ -493,8 +494,9 @@ fun DisplayPayable(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = Size10dp),
     ) {
-        if (payable.info.user != null) {
-            BaseUserPicture(payable.info.user, Size55dp, accountViewModel = accountViewModel)
+        val payee = payable.info.user
+        if (payee != null) {
+            BaseUserPicture(payee, Size55dp, accountViewModel = accountViewModel)
         } else {
             DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
         }
@@ -502,8 +504,8 @@ fun DisplayPayable(
         Spacer(modifier = DoubleHorzSpacer)
 
         Column(modifier = Modifier.weight(1f)) {
-            if (payable.info.user != null) {
-                UsernameDisplay(payable.info.user, accountViewModel = accountViewModel)
+            if (payee != null) {
+                UsernameDisplay(payee, accountViewModel = accountViewModel)
             } else {
                 Text(
                     text = stringRes(id = Res.string.wallet_number, index + 1),

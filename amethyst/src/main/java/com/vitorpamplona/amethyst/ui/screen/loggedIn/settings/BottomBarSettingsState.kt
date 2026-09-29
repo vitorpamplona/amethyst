@@ -25,8 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.commons.model.navigation.stableKey
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 
 /**
  * Pure list transforms for the bottom-bar pinned list. Kept free of Compose/Android so the pin,

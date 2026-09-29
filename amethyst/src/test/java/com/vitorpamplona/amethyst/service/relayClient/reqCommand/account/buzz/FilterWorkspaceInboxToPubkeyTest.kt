@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz
 
+import com.vitorpamplona.amethyst.commons.model.buzz.MembershipNotificationKinds
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.buzz.filterWorkspaceInboxToPubkey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

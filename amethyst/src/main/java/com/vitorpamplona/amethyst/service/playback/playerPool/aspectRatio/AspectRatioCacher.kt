@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.playerPool.aspectRatio
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
-import com.vitorpamplona.amethyst.model.MutableMediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.model.MutableMediaAspectRatioCache
 
 class AspectRatioCacher(
     val cache: MutableMediaAspectRatioCache,

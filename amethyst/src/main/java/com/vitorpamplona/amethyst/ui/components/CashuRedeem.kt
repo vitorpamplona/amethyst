@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -68,8 +67,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
@@ -131,7 +130,7 @@ fun CashuPreviewPreview() {
     ThemeComparisonColumn {
         CashuPreviewNew(
             token = CashuToken("token", "https://mint.example.com", 32400, listOf(), "sat", "Thanks for the coffee!"),
-            melt = { _, _, _ -> },
+            melt = { _, _ -> },
             toast = { _, _ -> },
         )
     }
@@ -159,7 +158,7 @@ private fun cashuAmountLabel(
 @Composable
 fun CashuPreviewNew(
     token: CashuToken,
-    melt: (CashuToken, Context, (String, String) -> Unit) -> Unit,
+    melt: (CashuToken, (String, String) -> Unit) -> Unit,
     toast: (String, String) -> Unit,
 ) {
     val cashuStr = stringRes(Res.string.cashu)
@@ -213,7 +212,7 @@ fun CashuPreviewNew(
             Button(
                 onClick = {
                     isRedeeming = true
-                    melt(token, context) { title, message ->
+                    melt(token) { title, message ->
                         toast(title, message)
                         isRedeeming = false
                     }

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.buildMip04IMetaTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 

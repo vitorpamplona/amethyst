@@ -115,4 +115,43 @@ class TextFragmentParserTest {
             TextFragmentParser.stripTextFragment("https://example.com/post#section"),
         )
     }
+
+    @Test
+    fun buildUrlRoundTripsThroughParse() {
+        val url =
+            TextFragmentParser.buildUrl(
+                baseUrl = "https://example.com/post",
+                exact = "-5 degrees, & falling: 100%+ sure — ok",
+                prefix = "the forecast said",
+                suffix = "by the weekend",
+            )
+        val fragment = TextFragmentParser.parse(url)
+        assertEquals("-5 degrees, & falling: 100%+ sure — ok", fragment?.start)
+        assertEquals("the forecast said", fragment?.prefix)
+        assertEquals("by the weekend", fragment?.suffix)
+        assertNull(fragment?.end)
+    }
+
+    @Test
+    fun buildUrlKeepsTheWordsNearestTheQuote() {
+        val url =
+            TextFragmentParser.buildUrl(
+                baseUrl = "https://example.com/post#intro",
+                exact = "quote",
+                prefix = "one two three four five six",
+                suffix = "alpha beta\ngamma delta epsilon",
+            )
+        assertEquals("https://example.com/post#intro&:~:text=three%20four%20five%20six-,quote,-alpha%20beta%20gamma%20delta", url)
+        val fragment = TextFragmentParser.parse(url)
+        assertEquals("three four five six", fragment?.prefix)
+        assertEquals("alpha beta gamma delta", fragment?.suffix)
+    }
+
+    @Test
+    fun buildUrlEncodesSpacesAsPercent20AndHyphens() {
+        assertEquals(
+            "https://example.com#:~:text=a%20b%2Dc%2C",
+            TextFragmentParser.buildUrl("https://example.com", "a b-c,"),
+        )
+    }
 }

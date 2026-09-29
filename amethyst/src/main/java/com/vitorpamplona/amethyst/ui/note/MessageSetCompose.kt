@@ -39,15 +39,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_dm
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
+import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MessageSetCard
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -122,7 +125,7 @@ fun MessageSetCompose(
 fun MessageIconBox() {
     Box(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) {
         Icon(
-            painter = painterRes(R.drawable.ic_dm, 4),
+            painter = painterRes(Res.drawable.ic_dm, 4),
             null,
             modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
             tint = MaterialTheme.colorScheme.primary,

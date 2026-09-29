@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.util
 
-// Debug flag for commons module - kept false to avoid application dependencies
-// Application-level modules (amethyst, desktopApp) can implement their own debug timing
-actual val isDebug: Boolean = false
+/**
+ * The Android side of [isDebug]. `commons` can't see the app's `BuildConfig`, so the app sets this
+ * once at startup (`Amethyst.onCreate`) from its own debug flag. Until then, and in any process that
+ * never sets it, debug-only logging stays off.
+ */
+object AndroidDebugFlag {
+    @Volatile
+    var enabled: Boolean = false
+}
+
+actual val isDebug: Boolean get() = AndroidDebugFlag.enabled

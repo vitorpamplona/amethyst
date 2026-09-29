@@ -55,9 +55,9 @@ import com.vitorpamplona.amethyst.commons.resources.concord_edit_relays_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_save
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 /**
  * Edit a Concord community's metadata (name / description / icon). Reuses the shared
  * [ConcordMetadataFields] hero + fields, prefilled from the folded Control Plane, and
- * saves a new metadata edition via [com.vitorpamplona.amethyst.model.Account.editConcordMetadata]
+ * saves a new metadata edition via [com.vitorpamplona.amethyst.commons.model.Account.editConcordMetadata]
  * — honored on fold only when this account holds MANAGE_METADATA (or is the owner).
  */
 @OptIn(ExperimentalMaterial3Api::class)

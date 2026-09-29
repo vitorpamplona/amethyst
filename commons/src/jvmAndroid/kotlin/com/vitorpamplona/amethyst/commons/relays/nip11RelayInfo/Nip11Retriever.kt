@@ -31,20 +31,14 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 
+/** The OkHttp [Nip11Fetcher]. */
 class Nip11Retriever(
     val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
-) {
-    enum class ErrorCode {
-        FAIL_TO_ASSEMBLE_URL,
-        FAIL_TO_REACH_SERVER,
-        FAIL_TO_PARSE_RESULT,
-        FAIL_WITH_HTTP_STATUS,
-    }
-
-    suspend fun loadRelayInfo(
+) : Nip11Fetcher {
+    override suspend fun loadRelayInfo(
         relay: NormalizedRelayUrl,
         onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (NormalizedRelayUrl, ErrorCode, String?) -> Unit,
+        onError: (NormalizedRelayUrl, Nip11ErrorCode, String?) -> Unit,
     ) = withContext(Dispatchers.IO) {
         val url = relay.toHttp()
         val request =
@@ -57,7 +51,7 @@ class Nip11Retriever(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("RelayInfoFail", "Invalid URL ${relay.url}", e)
-                onError(relay, ErrorCode.FAIL_TO_ASSEMBLE_URL, e.message)
+                onError(relay, Nip11ErrorCode.FAIL_TO_ASSEMBLE_URL, e.message)
                 return@withContext
             }
 
@@ -71,10 +65,10 @@ class Nip11Retriever(
                         if (body.startsWith("{")) {
                             onInfo(Nip11RelayInformation.fromJson(body))
                         } else {
-                            onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, body)
+                            onError(relay, Nip11ErrorCode.FAIL_TO_PARSE_RESULT, body)
                         }
                     } else {
-                        onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
+                        onError(relay, Nip11ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
@@ -83,13 +77,16 @@ class Nip11Retriever(
                         "Resulting Message from Relay ${relay.url} in not parseable: $body",
                         e,
                     )
-                    onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
+                    onError(relay, Nip11ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("RelayInfoFail", "Failed to fetch NIP-11 from ${relay.url}", e)
-            onError(relay, ErrorCode.FAIL_TO_REACH_SERVER, e.message ?: e::class.simpleName)
+            onError(relay, Nip11ErrorCode.FAIL_TO_REACH_SERVER, e.message ?: e::class.simpleName)
         }
     }
 }
+
+/** A [Nip11CachedRetriever] over OkHttp, the client picked per relay. */
+fun Nip11CachedRetriever(okHttpClient: (NormalizedRelayUrl) -> OkHttpClient): Nip11CachedRetriever = Nip11CachedRetriever(Nip11Retriever(okHttpClient))

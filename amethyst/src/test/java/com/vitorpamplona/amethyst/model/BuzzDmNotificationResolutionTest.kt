@@ -87,7 +87,7 @@ class BuzzDmNotificationResolutionTest {
     )
 
     // Attach a 40002 by consuming it (which materializes the group channel) and then set its 39000
-    // metadata directly — the real 39000 consume gates on Amethyst.instance.nip11Cache, which isn't
+    // metadata directly — the real 39000 consume gates on LocalCache.appHost.nip11Cache, which isn't
     // available in a plain JVM test (see BuzzWorkspaceChannelTest). We still drive the real resolver.
     private fun consumeMessageInto(
         channelId: String,

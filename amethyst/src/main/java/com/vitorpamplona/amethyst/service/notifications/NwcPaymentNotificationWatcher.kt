@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.service.notifications.renderers.NwcPaymentNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
  * account's connected NWC wallets.
  *
  * The relay subscription that receives these events is NOT here — it lives in
- * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip47WalletConnect.NwcNotificationsEoseManager],
+ * [com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip47WalletConnect.NwcNotificationsEoseManager],
  * grouped with the account's always-on zap/notification inbox subscriptions so it
  * shares their lifecycle (open while logged in, warm in the background). That
  * manager decrypts each notification and publishes non-zap payments to

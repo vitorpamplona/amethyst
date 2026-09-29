@@ -27,6 +27,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -70,16 +71,17 @@ class FileCordnStoresTest {
             it.delete()
             it.mkdirs()
         }
+    private val rootPath = root.toOkioPath()
     private val cipher = XorCipher()
 
     private val account = "a".repeat(64)
     private val coordinator = "b".repeat(64)
 
-    private fun dir() = CordnStorageLayout.directoryFor(root, account, coordinator)
+    private fun dir() = CordnStorageLayout.directoryFor(rootPath, account, coordinator)
 
     private fun groups() = FileCordnGroupStore(dir(), cipher)
 
-    private fun coordinators() = FileCordnCoordinatorStore(CordnStorageLayout.accountDirectoryFor(root, account), cipher)
+    private fun coordinators() = FileCordnCoordinatorStore(CordnStorageLayout.accountDirectoryFor(rootPath, account), cipher)
 
     private fun relay(url: String) = RelayUrlNormalizer.normalizeOrNull(url)!!
 
@@ -110,7 +112,12 @@ class FileCordnStoresTest {
             val state = "ratchet-tree-and-epoch-secrets".encodeToByteArray()
             groups().saveGroup("g1", state)
 
-            val onDisk = dir().walkTopDown().filter { it.isFile }.toList()
+            val onDisk =
+                dir()
+                    .toFile()
+                    .walkTopDown()
+                    .filter { it.isFile }
+                    .toList()
             assertTrue(onDisk.isNotEmpty(), "nothing was written at all")
             onDisk.forEach {
                 val raw = it.readBytes()
@@ -138,7 +145,7 @@ class FileCordnStoresTest {
 
             val escaped = File(root, "cordn/etc").exists() || File(root.parentFile, "etc").exists()
             assertTrue(!escaped, "the write escaped the store directory")
-            assertTrue(dir().walkTopDown().any { it.isFile }, "it was not written anywhere at all")
+            assertTrue(dir().toFile().walkTopDown().any { it.isFile }, "it was not written anywhere at all")
         }
 
     @Test
@@ -159,7 +166,7 @@ class FileCordnStoresTest {
         runTest {
             // The rule the layout exists for. Two coordinators can both serve
             // gid "shared" as unrelated groups with different ratchet trees.
-            val other = CordnStorageLayout.directoryFor(root, account, "c".repeat(64))
+            val other = CordnStorageLayout.directoryFor(rootPath, account, "c".repeat(64))
             FileCordnGroupStore(dir(), cipher).saveGroup("shared", byteArrayOf(1))
             FileCordnGroupStore(other, cipher).saveGroup("shared", byteArrayOf(2))
 
@@ -170,7 +177,7 @@ class FileCordnStoresTest {
     @Test
     fun `two accounts on one device do not see each other`() =
         runTest {
-            val theirs = CordnStorageLayout.directoryFor(root, "d".repeat(64), coordinator)
+            val theirs = CordnStorageLayout.directoryFor(rootPath, "d".repeat(64), coordinator)
             groups().saveGroup("g1", byteArrayOf(1))
 
             assertTrue(FileCordnGroupStore(theirs, cipher).listGroups().isEmpty())
@@ -179,8 +186,8 @@ class FileCordnStoresTest {
 
     @Test
     fun `a non-hex pubkey never becomes a directory`() {
-        assertFailsWith<IllegalArgumentException> { CordnStorageLayout.directoryFor(root, "../escape", coordinator) }
-        assertFailsWith<IllegalArgumentException> { CordnStorageLayout.directoryFor(root, account, "../escape") }
+        assertFailsWith<IllegalArgumentException> { CordnStorageLayout.directoryFor(rootPath, "../escape", coordinator) }
+        assertFailsWith<IllegalArgumentException> { CordnStorageLayout.directoryFor(rootPath, account, "../escape") }
     }
 
     @Test
@@ -248,7 +255,7 @@ class FileCordnStoresTest {
             // encoding — swap it for something that passes names through and
             // this fails, which is the regression worth catching.
             keyPackages().save("ref1", byteArrayOf(1))
-            File(dir(), "keypackages/${CordnStorageLayout.encodeKey("ref2")}.tmp").writeBytes(byteArrayOf(2))
+            File(dir().toFile(), "keypackages/${CordnStorageLayout.encodeKey("ref2")}.tmp").writeBytes(byteArrayOf(2))
 
             assertEquals(listOf("ref1"), keyPackages().list())
         }
@@ -259,8 +266,8 @@ class FileCordnStoresTest {
             // Ignoring one unreadable name is better than failing the listing
             // and hiding every real group behind it.
             groups().saveGroup("g1", byteArrayOf(1))
-            File(dir(), "groups/not-base64-@@@").mkdirs()
-            File(dir(), "groups/not-base64-@@@/state").writeBytes(byteArrayOf(0))
+            File(dir().toFile(), "groups/not-base64-@@@").mkdirs()
+            File(dir().toFile(), "groups/not-base64-@@@/state").writeBytes(byteArrayOf(0))
 
             assertEquals(listOf("g1"), groups().listGroups())
         }
@@ -298,7 +305,7 @@ class FileCordnStoresTest {
 
             assertContentEquals(byteArrayOf(2, 2), store.loadGroup("g1"))
             assertTrue(
-                dir().walkTopDown().none { it.name.endsWith(".tmp") },
+                dir().toFile().walkTopDown().none { it.name.endsWith(".tmp") },
                 "a temp file survived the rename",
             )
         }
@@ -314,7 +321,7 @@ class FileCordnStoresTest {
             coordinators().save(configs)
 
             assertEquals(configs, coordinators().load())
-            val onDisk = File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators").readBytes()
+            val onDisk = File(CordnStorageLayout.accountDirectoryFor(rootPath, account).toFile(), "coordinators").readBytes()
             assertFalse(onDisk.decodeToString().contains(coordinator), "the pubkey went to disk in the clear")
         }
 
@@ -340,7 +347,7 @@ class FileCordnStoresTest {
     fun `an unreadable list loses the coordinators rather than the login`() =
         runTest {
             coordinators().save(listOf(CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")))))
-            File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators").writeBytes(byteArrayOf(9, 9, 9))
+            File(CordnStorageLayout.accountDirectoryFor(rootPath, account).toFile(), "coordinators").writeBytes(byteArrayOf(9, 9, 9))
 
             assertEquals(emptyList(), coordinators().load())
         }
@@ -350,8 +357,8 @@ class FileCordnStoresTest {
         runTest {
             // If it lived inside a coordinator's own directory, removing that
             // coordinator would delete the record of every other one with it.
-            val listFile = File(CordnStorageLayout.accountDirectoryFor(root, account), "coordinators")
-            assertEquals(dir().parentFile, listFile.parentFile)
+            val listFile = File(CordnStorageLayout.accountDirectoryFor(rootPath, account).toFile(), "coordinators")
+            assertEquals(dir().toFile().parentFile, listFile.parentFile)
         }
 
     @Test
@@ -363,15 +370,15 @@ class FileCordnStoresTest {
             // same gid and deleting a level too high takes both.
             val other = "e".repeat(64)
             groups().saveGroup("shared-gid", byteArrayOf(1, 2, 3))
-            FileCordnGroupStore(CordnStorageLayout.directoryFor(root, account, other), cipher)
+            FileCordnGroupStore(CordnStorageLayout.directoryFor(rootPath, account, other), cipher)
                 .saveGroup("shared-gid", byteArrayOf(4, 5, 6))
 
-            CordnStorageLayout.directoryFor(root, account, coordinator).deleteRecursively()
+            CordnStorageLayout.directoryFor(rootPath, account, coordinator).toFile().deleteRecursively()
 
             assertNull(groups().loadGroup("shared-gid"))
             assertContentEquals(
                 byteArrayOf(4, 5, 6),
-                FileCordnGroupStore(CordnStorageLayout.directoryFor(root, account, other), cipher).loadGroup("shared-gid"),
+                FileCordnGroupStore(CordnStorageLayout.directoryFor(rootPath, account, other), cipher).loadGroup("shared-gid"),
             )
         }
 
@@ -385,7 +392,7 @@ class FileCordnStoresTest {
             coordinators().save(listOf(CoordinatorConfig(coordinator, listOf(relay("wss://one.example.com")))))
             groups().saveGroup("gid", byteArrayOf(1))
 
-            CordnStorageLayout.directoryFor(root, account, coordinator).deleteRecursively()
+            CordnStorageLayout.directoryFor(rootPath, account, coordinator).toFile().deleteRecursively()
 
             assertEquals(1, coordinators().load().size)
         }
@@ -415,7 +422,7 @@ class FileCordnStoresTest {
             store.saveRoomState("gid", CordnRoomState(draft = "the secret plan", lastReadCursor = 7))
 
             assertEquals(CordnRoomState("the secret plan", 7), store.loadRoomState("gid"))
-            val onDisk = File(dir(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").readBytes()
+            val onDisk = File(dir().toFile(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").readBytes()
             assertFalse(onDisk.decodeToString().contains("the secret plan"), "a draft went to disk in the clear")
         }
 
@@ -430,7 +437,7 @@ class FileCordnStoresTest {
             store.saveRoomState("gid", CordnRoomState(draft = "typed"))
             store.saveRoomState("gid", CordnRoomState())
 
-            assertFalse(File(dir(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").exists())
+            assertFalse(File(dir().toFile(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").exists())
             assertEquals(CordnRoomState(), store.loadRoomState("gid"))
         }
 
@@ -440,7 +447,7 @@ class FileCordnStoresTest {
             val store = groups()
             store.saveGroup("gid", byteArrayOf(1))
             store.saveRoomState("gid", CordnRoomState(draft = "typed", lastReadCursor = 3))
-            File(dir(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").writeBytes(byteArrayOf(7, 7, 7))
+            File(dir().toFile(), "groups/${CordnStorageLayout.encodeKey("gid")}/room").writeBytes(byteArrayOf(7, 7, 7))
 
             assertEquals(CordnRoomState(), store.loadRoomState("gid"))
             assertNotNull(store.loadGroup("gid"))

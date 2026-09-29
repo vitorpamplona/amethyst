@@ -20,11 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nipB7Blossom
 
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -32,25 +39,17 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
-/**
- * Shared, platform-agnostic state holder for the user's Blossom media server
- * list (NIP-B7 / kind 10063 [BlossomServersEvent]).
- *
- * This is the same event kind the Amethyst mobile app reads through its own
- * `BlossomServerListState`: it loads the addressable event from the injected
- * [ICacheProvider] and exposes the declared server URLs as a [StateFlow]. Both
- * the Android and Desktop front ends can consume this so a server list
- * configured on one client shows up on the other.
- */
 class BlossomServerListState(
     val signer: NostrSigner,
     val cache: ICacheProvider,
     val scope: CoroutineScope,
+    val settings: AccountSettings,
 ) {
-    // Creates a long-term reference for this note so that the GC doesn't collect the note itself
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val blossomListNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
 
     fun getBlossomServersAddress() = BlossomServersEvent.createAddress(signer.pubKey)
@@ -59,17 +58,46 @@ class BlossomServerListState(
 
     fun getBlossomServersList(): BlossomServersEvent? = blossomListNote.event as? BlossomServersEvent
 
-    fun normalizeServers(note: Note): List<String> = (note.event as? BlossomServersEvent)?.servers() ?: emptyList()
+    fun normalizeServers(note: Note): List<String> {
+        val event = note.event as? BlossomServersEvent
+        return event?.servers() ?: emptyList()
+    }
 
-    val flow: StateFlow<List<String>> =
+    fun host(url: String): String =
+        try {
+            Rfc3986.host(url).removePrefix("cdn.").removePrefix("blossom.")
+        } catch (e: Exception) {
+            url.removePrefix("cdn.").removePrefix("blossom.")
+        }
+
+    val flow =
         getBlossomServersListFlow()
-            .map { normalizeServers(it.note) }
-            .onStart { emit(normalizeServers(blossomListNote)) }
-            .flowOn(Dispatchers.IO)
+            .map {
+                normalizeServers(it.note)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 emptyList(),
+            )
+
+    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
+
+    val hostNameFlow: StateFlow<List<ServerName>> =
+        flow
+            .map { blossoms ->
+                mergeServerList(blossoms)
+            }.onStart {
+                emit(mergeServerList(flow.value))
+            }.onEach { servers ->
+                resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
+                    settings.changeDefaultFileServer(it)
+                }
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                DEFAULT_MEDIA_SERVERS,
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {
@@ -88,4 +116,51 @@ class BlossomServerListState(
             )
         }
     }
+
+    suspend fun createBlossomUploadAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer, servers)
+
+    suspend fun createBlossomMediaAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createMediaAuth(hash, size, alt, signer, servers)
+
+    suspend fun createBlossomDeleteAuth(
+        hash: HexKey,
+        alt: String,
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer, servers)
+
+    suspend fun createBlossomListAuth(
+        alt: String,
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createListAuth(signer, alt, servers)
 }
+
+/**
+ * Decides whether the persisted default file server must be reset, and to what.
+ *
+ * Returns the new default server, or `null` when no change should happen.
+ *
+ * The guard on [rawList] being non-empty is what prevents the startup race: before the user's
+ * [BlossomServersEvent] (kind 10063) loads from cache/relay, [rawList] is empty and [merged] is the
+ * transient [DEFAULT_MEDIA_SERVERS] fallback. Resetting against that fallback would clobber the
+ * locally-saved pick on every launch. Only reset once a real, loaded list is in hand and it no
+ * longer contains the current pick (e.g. the user removed it from their list).
+ */
+fun resetTargetOrNull(
+    rawList: List<String>,
+    merged: List<ServerName>,
+    current: ServerName,
+): ServerName? =
+    if (rawList.isNotEmpty() && merged.none { it == current }) {
+        merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
+    } else {
+        null
+    }

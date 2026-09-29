@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplet.gateways
 
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent

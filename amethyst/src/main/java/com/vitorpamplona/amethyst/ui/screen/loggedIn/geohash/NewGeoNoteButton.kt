@@ -25,16 +25,16 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_compose
 import com.vitorpamplona.amethyst.commons.resources.new_community_note
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
 fun NewGeoPostButton(
@@ -51,7 +51,7 @@ fun NewGeoPostButton(
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_compose, 1),
+            painter = painterRes(Res.drawable.ic_compose, 1),
             contentDescription = stringRes(id = Res.string.new_community_note),
             modifier = Size26Modifier,
             tint = MaterialTheme.colorScheme.onPrimary,

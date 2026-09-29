@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -158,13 +159,18 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuMeltFlowState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuMintFlowState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuRebalanceFlowState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuRedeemFlowState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuSendTokenFlowState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuWalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
-import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
@@ -623,7 +629,7 @@ private fun CashuHistoryFooter(
 /**
  * Banner that surfaces unfinished mint quotes — tappable to resume the
  * receive flow with the stored invoice. Driven by
- * [com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState.pendingQuotes].
+ * [com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState.pendingQuotes].
  *
  * Replaces the earlier auto-popup behaviour which re-surfaced the Receive
  * dialog on every entry to the screen.

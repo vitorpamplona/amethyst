@@ -109,6 +109,18 @@ class ZoneMathTest {
     }
 
     @Test
+    fun anEpochDayCountsLocalDaysAcrossAClockChange() {
+        // 2026-03-08 is day 20520. Local midnight in New York is 05:00Z before the change.
+        assertEquals(20520L, ZoneMath.epochDayAt(1772946000L, newYork))
+        assertEquals(20519L, ZoneMath.epochDayAt(1772945999L, newYork))
+        // 23:59:59 EDT on 03-08 is 03:59:59Z the next UTC day: still 03-08 here.
+        assertEquals(20520L, ZoneMath.epochDayAt(1773028799L, newYork))
+        assertEquals(20521L, ZoneMath.epochDayAt(1773028800L, newYork))
+        // Before 1970 the day still floors, not truncates toward zero.
+        assertEquals(-1L, ZoneMath.epochDayAt(-1L, TestZone(0L)))
+    }
+
+    @Test
     fun anInstantNamesTheCivilDayItFallsOnHere() {
         // One second either side of local midnight in New York.
         assertEquals(SearchDate(2026, 3, 8), ZoneMath.dayAt(1772946000L, newYork))

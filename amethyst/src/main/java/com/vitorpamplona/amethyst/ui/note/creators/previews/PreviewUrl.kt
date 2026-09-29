@@ -42,18 +42,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
-import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 
 @Composable
 fun PreviewUrl(
@@ -246,7 +247,7 @@ private fun MyLoadUrlPreviewDirect(
                         )
 
                         Text(
-                            text = state.previewInfo.verifiedUrl?.host ?: state.previewInfo.title,
+                            text = state.previewInfo.verifiedHost ?: state.previewInfo.title,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -257,7 +258,7 @@ private fun MyLoadUrlPreviewDirect(
 
             else -> {
                 Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.aspectRatio(1f)) {
-                    ClickableUrl(urlText, url)
+                    ClickableUrlOrBlossom(urlText, url)
                 }
             }
         }
@@ -320,7 +321,7 @@ private fun MyLoadUrlPreviewDirectFillWidth(
             }
 
             else -> {
-                ClickableUrl(urlText, url)
+                ClickableUrlOrBlossom(urlText, url)
             }
         }
     }

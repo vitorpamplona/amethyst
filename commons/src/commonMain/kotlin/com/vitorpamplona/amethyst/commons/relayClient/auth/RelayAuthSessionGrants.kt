@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.update
  * as long as the user is plausibly still doing the thing they answered for.
  *
  * Deliberately **not** persisted: it is dropped when the process dies (this object lives on
- * [com.vitorpamplona.amethyst.model.Account], which is built per process) and when the account is
+ * [com.vitorpamplona.amethyst.commons.model.Account], which is built per process) and when the account is
  * logged out, so the next cold start asks again. That is the whole difference from
  * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision.ALLOW], which the "remember"
  * switch writes to disk.

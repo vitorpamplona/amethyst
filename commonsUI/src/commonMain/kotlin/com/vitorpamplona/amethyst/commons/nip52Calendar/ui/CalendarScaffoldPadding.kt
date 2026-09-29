@@ -27,7 +27,7 @@ import androidx.compose.ui.composed
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 
 /**
- * Applies the surrounding [com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold]'s reserved
+ * Applies the surrounding [com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold]'s reserved
  * top/bottom space as padding. The scaffold places content at y=0 by design — it lets feeds
  * scroll *behind* the disappearing bar — but the month/week/day views are static-headered grids,
  * so without this modifier the grid header would render under the top app bar. Outside a

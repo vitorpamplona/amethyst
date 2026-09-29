@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.article
 import com.vitorpamplona.amethyst.commons.resources.content_warning_with_reason
@@ -53,12 +54,11 @@ import com.vitorpamplona.amethyst.commons.resources.share_as_qr_kind_picture
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr_thumbnail_hidden_sensitive
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.GalleryThumbnail
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
@@ -84,7 +84,7 @@ private val ThumbShape = RoundedCornerShape(9.dp)
  *
  * The height is fixed on purpose: it keeps the QR code in the same screen position for every
  * note, so the screen is predictable to hold up to a scanner. That is why this does not use
- * [com.vitorpamplona.amethyst.ui.note.NoteCompose] — see the design spec for the full reasoning,
+ * [com.vitorpamplona.amethyst.commons.ui.note.NoteCompose] — see the design spec for the full reasoning,
  * but in short, `isQuotedNote` never reaches the media renderer and note images render at their
  * natural aspect ratio with no height ceiling.
  */

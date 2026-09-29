@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.send_payment_failed
@@ -39,12 +41,11 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_request_timed_out_spo
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_load_more_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_transactions_not_supported
+import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
-import com.vitorpamplona.amethyst.service.ClinkDebitPayer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
@@ -375,7 +376,7 @@ class WalletViewModel : ViewModel() {
             // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
             val response =
                 try {
-                    ClinkDebitPayer.requestBudget(acc, pointer, amountSats, frequency)
+                    ClinkDebitPayer.requestBudget(acc, Amethyst.instance.torEvaluatorFlow, pointer, amountSats, frequency)
                 } catch (_: IllegalArgumentException) {
                     null
                 }

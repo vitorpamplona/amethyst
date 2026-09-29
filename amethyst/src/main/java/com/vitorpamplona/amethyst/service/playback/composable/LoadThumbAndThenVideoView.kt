@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

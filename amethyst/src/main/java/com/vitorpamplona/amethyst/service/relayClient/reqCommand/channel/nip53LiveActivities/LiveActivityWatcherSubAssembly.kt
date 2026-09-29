@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relayClient.channel.nip53LiveActivities.filterLiveStreamUpdatesByAddress
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
@@ -40,14 +40,16 @@ class LiveActivityWatcherSubAssembly(
     override fun updateFilter(
         key: ChannelFinderQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        if (key.channel is LiveActivitiesChannel) {
-            key.channel.relays().flatMap {
-                filterLiveStreamUpdatesByAddress(it, listOf(key.channel), since?.get(it)?.time)
+    ): List<RelayBasedFilter> {
+        val channel = key.channel
+        return if (channel is LiveActivitiesChannel) {
+            channel.relays().flatMap {
+                filterLiveStreamUpdatesByAddress(it, listOf(channel), since?.get(it)?.time)
             }
         } else {
             emptyList()
         }
+    }
 
     /**
      * Only one key per channel.

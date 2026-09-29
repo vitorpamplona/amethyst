@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.blossom
 
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof

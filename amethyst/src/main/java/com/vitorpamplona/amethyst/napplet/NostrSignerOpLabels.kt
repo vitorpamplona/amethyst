@@ -38,9 +38,9 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper

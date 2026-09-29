@@ -47,18 +47,18 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.CheckHiddenFeedWatchBlockAndReport
+import com.vitorpamplona.amethyst.commons.ui.note.ClickableNote
+import com.vitorpamplona.amethyst.commons.ui.note.LongPressToQuickAction
+import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
-import com.vitorpamplona.amethyst.ui.note.ClickableNote
-import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
-import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
-import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderPublicChatChannelThumb
 
 @Composable

@@ -4,8 +4,8 @@
 
 | Consumer       | Kind                         | Uses from `commons`                          |
 |----------------|------------------------------|----------------------------------------------|
-| `amethyst`     | Android app (touch-first)    | everything (models, state, ViewModels) + `commonsUI` |
-| `desktopApp`   | Desktop JVM app (mouse-first)| everything (models, state, ViewModels) + `commonsUI` |
+| `amethyst`     | Android app (phones, tablets, laptops) | everything (models, state, ViewModels) + `commonsUI` |
+| `desktopApp`   | Desktop JVM app              | everything (models, state, ViewModels) + `commonsUI`; today's mouse-first screens are to be replaced by the shared UI |
 | `cli` (`amy`)  | Headless JVM CLI (no UI)     | everything — `commons` is headless by construction; it never sees `commonsUI` |
 | `nappletHost`  | Android WebView sandbox      | napplet contract + `commonsUI` (for the shell/shim Compose resources) |
 | iOS (future)   | iOS app                      | everything + `commonsUI`; expected to share most UI with Android |
@@ -15,17 +15,21 @@
 
 - **`quartz/`** — Nostr protocol: events, NIPs, crypto, relay framing. No app
   state, no UI, no caches of "what this user follows."
-- **`commons/`** — everything an Amethyst *client* needs that isn't a
-  platform-native screen, navigation shell, **or Compose UI**: domain models
+- **`commons/`** — everything an Amethyst *client* needs that isn't
+  platform-specific **or Compose UI**: domain models
   (`Note`, `User`), in-memory state holders, ViewModels, the relay-subscription
   client, shared business services.
 - **`commonsUI/`** — the Compose UI components that more than one front end
   renders, plus everything only they need (icons, theme, Coil fetchers,
   markdown, the `composeResources` strings/fonts and the generated `Res`).
   Depends on `commons` as `api`. See `commonsUI/ARCHITECTURE.md`.
-- **`amethyst/` & `desktopApp/`** — platform-native screens, navigation
-  (bottom-nav vs sidebar), gestures, system integration. They assemble
-  `commons` pieces; they should not re-implement them.
+- **`amethyst/` & `desktopApp/`** — platform shims: the Activity / Window
+  entry points, services, system integration, and the platform implementations
+  of shared ports. They assemble `commons` pieces; they should not
+  re-implement them. **Screens and navigation are being moved into
+  `commonsUI`** so Android (which now also runs on laptops) and a new JVM
+  Desktop app render one UI; see
+  [`plans/2026-09-27-one-ui-android-desktop.md`](plans/2026-09-27-one-ui-android-desktop.md).
 
 > The goal is **"write it once in `commons`"**. Before adding a manager, cache,
 > filter, ViewModel, or composable to an app module, check whether it already
@@ -223,9 +227,10 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 
 ### Where does my code go? (quick guide)
 1. **Pure Nostr protocol** (events/NIPs/crypto)? → not here, it's `quartz`.
-2. **A composable** rendered by ≥2 front ends, or that you want iOS to share? →
-   `commonsUI`, in `ui/<area>` or `<feature>/ui` (same package tree as here).
-   Also anything that imports Coil, `Res`, or a `foundation`/`ui` state type.
+2. **A composable** (screens and navigation chrome included)? → `commonsUI`, in
+   `ui/<area>` or `<feature>/ui` (same package tree as here). Also anything that
+   imports Coil, `Res`, or a `foundation`/`ui` state type. Only the platform
+   entry points and system integrations stay in `amethyst/`/`desktopApp/`.
 3. **A ViewModel / `StateFlow` state holder**? → `viewmodels` or `state` (or
    `<feature>` if feature-scoped). Keep it CLI-safe where practical.
 4. **Relay subscription / filter assembly**? → `relayClient`.

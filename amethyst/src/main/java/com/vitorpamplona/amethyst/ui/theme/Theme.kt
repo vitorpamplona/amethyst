@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.theme
 import android.app.Activity
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,6 +39,11 @@ import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
+import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
@@ -46,6 +52,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColors
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
+import com.vitorpamplona.amethyst.ui.components.AndroidRichTextPlatform
+import com.vitorpamplona.amethyst.ui.components.DefaultInlineQuoteRenderer
+import com.vitorpamplona.amethyst.ui.components.FlavorTranslationPlatform
+import com.vitorpamplona.amethyst.ui.note.platform.AndroidNotePlatform
+import com.vitorpamplona.amethyst.ui.platform.AndroidAppPlatform
 
 val chartLightColors =
     VicoTheme(
@@ -120,8 +131,19 @@ fun AmethystTheme(
         // ImageLoaderSetup registers the avatar thumbnail cache and the local Blossom bridge.
         profilePictureCache = true,
         colors = colors,
-        content = content,
-    )
+    ) {
+        // The platform halves of the shared note and rich-text renderers: media, LaTeX, payments,
+        // link previews, the quoted-note card, the note types built on platform engines and the
+        // flavour's translator. Every Activity root goes through this theme.
+        CompositionLocalProvider(
+            LocalRichTextPlatform provides AndroidRichTextPlatform,
+            LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
+            LocalTranslationPlatform provides FlavorTranslationPlatform,
+            LocalNotePlatform provides AndroidNotePlatform,
+            LocalAppPlatform provides AndroidAppPlatform,
+            content = content,
+        )
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {

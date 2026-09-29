@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import com.vitorpamplona.amethyst.commons.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -35,7 +35,7 @@ import org.junit.Test
  * A 31923 appointment lands in `LocalCache` as TWO objects: the canonical `AddressableNote` under
  * its address, and a version note under the event id. Only the first is handed to feeds when the
  * event arrives, and only the first survives the cache sweep that runs on every app switch — so a
- * feed must query the addressables, which is what [com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter]
+ * feed must query the addressables, which is what [com.vitorpamplona.amethyst.commons.calendars.dal.CalendarAppointmentsFeedFilter]
  * now does. Scanning `LocalCache.notes` instead gave the calendar views a second identity for the
  * same appointment and made them flicker events in and out around every trip to the background.
  *

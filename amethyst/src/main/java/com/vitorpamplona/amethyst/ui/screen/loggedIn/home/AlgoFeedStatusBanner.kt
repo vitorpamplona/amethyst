@@ -40,7 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.algoFeeds.FavoriteAlgoFeedsSnapshot
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_retry
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_error
@@ -49,17 +51,15 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_processing
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_requesting
 import com.vitorpamplona.amethyst.commons.resources.dvm_home_status_requesting_all
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline_banner
+import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
-import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmPaymentActions
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 
 @Composable

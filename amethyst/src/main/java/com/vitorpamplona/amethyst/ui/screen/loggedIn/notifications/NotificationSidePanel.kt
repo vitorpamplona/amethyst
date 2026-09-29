@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size12dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * The docked notification feed shown on very wide windows, to the right of the center pane.

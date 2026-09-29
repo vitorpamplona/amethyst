@@ -40,13 +40,13 @@ class Nip11RetrieverTest {
                 }
             val relay = NormalizedRelayUrl("ws://127.0.0.1:14591/")
 
-            var errorCode: Nip11Retriever.ErrorCode? = null
+            var errorCode: Nip11ErrorCode? = null
             retriever.loadRelayInfo(
                 relay = relay,
                 onInfo = { fail("Expected an error, got relay info") },
                 onError = { _, code, _ -> errorCode = code },
             )
 
-            assertEquals(Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER, errorCode)
+            assertEquals(Nip11ErrorCode.FAIL_TO_REACH_SERVER, errorCode)
         }
 }

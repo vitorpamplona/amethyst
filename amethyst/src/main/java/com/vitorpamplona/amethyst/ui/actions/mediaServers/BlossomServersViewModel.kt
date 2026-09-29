@@ -25,11 +25,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.mediaServers.MediaServerHealthProbe
 import com.vitorpamplona.amethyst.commons.mediaServers.ServerHealth
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.Dispatchers

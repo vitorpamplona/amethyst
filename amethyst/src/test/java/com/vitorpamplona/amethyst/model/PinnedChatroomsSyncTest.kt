@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.AccountChatPreferencesInternal
+import com.vitorpamplona.amethyst.commons.model.toChatroomKeys
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import org.junit.Assert.assertEquals

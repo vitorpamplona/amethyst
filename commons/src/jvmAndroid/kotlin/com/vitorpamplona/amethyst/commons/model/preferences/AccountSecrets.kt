@@ -152,33 +152,6 @@ fun readLegacyAccountSecrets(source: LegacyPreferenceSource) =
         legacyZapPaymentRequestServer = source.getString(LegacyAccountSecretNames.ZAP_PAYMENT_REQUEST_SERVER),
     )
 
-/**
- * The account's location-chat identity: the seed its per-geohash throwaway keys
- * come from, and the handle it posts under.
- *
- * # Why this is not two more fields on [AccountSecrets]
- *
- * Every account save mirrors a whole [AccountSecrets], built field by field from
- * `AccountSettings` — which does not hold these, because they are owned by
- * `GeohashChatIdentityState` rather than by the settings object. Folding them in
- * would make each save write null over them, and the group save uses
- * `putOrRemove`, so null *deletes*. The seed would vanish on the next unrelated
- * save and every geohash identity the user has would silently change. A separate
- * group with its own save path cannot be wiped by a save that does not know
- * about it.
- *
- * # Why encrypted
- *
- * The whole point of the seed is that the identities derived from it are
- * unlinkable to the npub. Anyone who can read it can link every cell the user
- * has ever posted in, to each other and to the device, which is exactly what the
- * feature exists to prevent. It was in an encrypted file before; it stays in one.
- */
-data class GeohashIdentitySecrets(
-    val deviceSeed: String? = null,
-    val nickname: String? = null,
-)
-
 /** Keys for [GeohashIdentitySecrets] inside an [EncryptedDataStore]. */
 internal object GeohashIdentityKeys {
     val deviceSeed = stringPreferencesKey(LegacyAccountSecretNames.GEOHASH_DEVICE_SEED)

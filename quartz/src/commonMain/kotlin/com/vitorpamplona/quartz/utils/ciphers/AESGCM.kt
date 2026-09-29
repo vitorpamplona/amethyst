@@ -22,6 +22,9 @@ package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.RandomInstance
 
+/** The name AES-GCM ciphers report, and that NIP-17 file messages carry as their `encryption-algorithm`. */
+const val AES_GCM_NAME = "aes-gcm"
+
 expect class AESGCM(
     keyBytes: ByteArray = RandomInstance.bytes(32),
     nonce: ByteArray = RandomInstance.bytes(16),

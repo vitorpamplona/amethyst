@@ -57,7 +57,7 @@ enum class UserAuthChoice {
      * Do not authenticate, and switch the asking account's top-level policy to
      * [RelayAuthPolicy.NEVER], so no relay is ever
      * answered again. The account-wide counterpart of [BLOCK], confirmed the same way — and, like
-     * every route through [com.vitorpamplona.amethyst.model.Account.changeDefaultRelayAuthPolicy],
+     * every route through [com.vitorpamplona.amethyst.commons.model.Account.changeDefaultRelayAuthPolicy],
      * it drops this run's session grants, which would otherwise outrank the policy it just set.
      */
     NEVER_ALLOW_EVERYWHERE,

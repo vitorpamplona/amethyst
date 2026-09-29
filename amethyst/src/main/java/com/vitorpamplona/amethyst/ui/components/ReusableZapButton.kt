@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.donate_now
 import com.vitorpamplona.amethyst.commons.resources.draft_note
@@ -56,24 +56,23 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.no_zap_amount_setup_long_press_to_change
 import com.vitorpamplona.amethyst.commons.resources.thank_you
+import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.service.ZapPaymentHandler
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -138,7 +137,6 @@ fun ReusableZapButton(
             handleZapClick(
                 baseNote = baseNote,
                 accountViewModel = accountViewModel,
-                context = context,
                 zapAmountChoices = config.zapAmountChoices,
                 onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onZappingProgress = { progress ->
@@ -310,7 +308,6 @@ fun ReusableZapButton(
 private fun handleZapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    context: Context,
     zapAmountChoices: List<Long>?,
     onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
@@ -353,7 +350,6 @@ private fun handleZapClick(
                     amount * 1000,
                     null,
                     "",
-                    context,
                     showErrorIfNoLnAddress = false,
                     onError = onError,
                     onProgress = { onZappingProgress(it) },

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Account
 
 class HiddenWordsFeedFilter(
     val account: Account,

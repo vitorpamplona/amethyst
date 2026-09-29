@@ -38,6 +38,9 @@ interface Nip95BlobStore {
     /** Whether a blob is already stored under [id]. */
     fun exists(id: String): Boolean
 
+    /** Where the blob for [id] lives (or would), for a media player or image loader to read. */
+    fun path(id: String): Path
+
     /** Stores [bytes] under [id]. Returns false when the write failed. */
     fun store(
         id: String,
@@ -59,6 +62,8 @@ class FileSystemNip95BlobStore(
     constructor(directoryPath: String) : this(directoryPath.toPath())
 
     override fun exists(id: String): Boolean = fileSystem.exists(directory / id)
+
+    override fun path(id: String): Path = directory / id
 
     override fun store(
         id: String,

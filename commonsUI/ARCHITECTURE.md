@@ -17,10 +17,29 @@ therefore useless to the headless `cli`:
   its `LazyListState`, `ChatNewMessageState` with `TextFieldValue`,
   `EmojiSuggestionState` with `TextFieldState`).
 
+Its end state is **the whole app UI**: every screen, the navigation host and the
+navigation chrome for every window size (bottom bar, rail, permanent drawer), with
+`amethyst` and a new JVM `desktopApp` as thin shims around it. Screens still in
+`amethyst/` are waiting on their own app-only helpers and the app root, not staying
+there by design. `AccountViewModel` lives here (`commons.viewmodels`) rather than in
+`commons` because it toasts through compose-resources strings; it reaches the
+platform through `AccountViewModelHost`. See `commons/plans/2026-09-27-one-ui-android-desktop.md`.
+
 It depends on `:commons` (and `:quartz`) as **`api`**, so a consumer that adds
 `:commonsUI` sees the headless layer transitively. `amethyst`, `desktopApp`,
 `nappletHost` and `benchmark` depend on it; `cli`, `geode`, `marmotBench`
 must never.
+
+## Platform slots
+
+Shared composables that need something only a front end can draw or do get it from a
+CompositionLocal the front end installs at its root (Android in `AmethystTheme`):
+`LocalRichTextPlatform` (rich-text leaves, markdown), `LocalInlineQuoteRenderer`,
+`LocalTranslationPlatform`, and `LocalNotePlatform` (media players, map, platform-engine note
+types, reactions/zap row, post editor; call it through the same-named shims in
+`commons.ui.note.platform`). Each default draws nothing or plain text, so previews and a front
+end still wiring its pieces never crash. Small platform verbs are expect/actuals instead:
+`rememberTextSharer`, `rememberShortNotice`, `rememberBlossomUriOpener`, `rememberViewModel`.
 
 ## Same packages as `commons`
 

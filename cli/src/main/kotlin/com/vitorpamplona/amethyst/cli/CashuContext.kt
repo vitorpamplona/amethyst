@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -79,7 +80,7 @@ class CashuContext(
             // keypackage — is the CLI's closest analog, so the wallet lands
             // on the same broad relay set the app would use, not just outbox.
             publish = { event -> ctx.publish(event, ctx.anyRelays()) },
-            okHttpClient = { ctx.okhttp },
+            mintTransport = OkHttpMintTransport { ctx.okhttp },
             secretFactory =
                 DeterministicSecretFactory(
                     seedProvider = { cachedSeed },

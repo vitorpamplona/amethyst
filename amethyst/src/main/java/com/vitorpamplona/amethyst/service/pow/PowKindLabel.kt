@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.pow
 
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.boost
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.pow_kind_chat_message
@@ -30,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.resources.private_message
 import com.vitorpamplona.amethyst.commons.resources.reaction
 import com.vitorpamplona.amethyst.commons.resources.voice_post
 import com.vitorpamplona.amethyst.commons.resources.voice_reply
+import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -39,24 +39,6 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
-import org.jetbrains.compose.resources.StringResource
-
-/**
- * The one user-facing label for "what is being mined": shared by the
- * broadcast banner, the mining foreground notification, and failure toasts
- * so a job is described the same way everywhere it appears.
- */
-fun powKindLabelRes(kind: Int): StringResource =
-    when (kind) {
-        ReactionEvent.KIND -> Res.string.reaction
-        RepostEvent.KIND, GenericRepostEvent.KIND -> Res.string.boost
-        VoiceEvent.KIND -> Res.string.voice_post
-        VoiceReplyEvent.KIND -> Res.string.voice_reply
-        ReportEvent.KIND -> Res.string.pow_kind_report
-        GiftWrapEvent.KIND -> Res.string.private_message
-        ChannelMessageEvent.KIND, LiveActivitiesChatMessageEvent.KIND -> Res.string.pow_kind_chat_message
-        else -> Res.string.post
-    }
 
 /**
  * Android-resource twin of [powKindLabelRes], for [com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService].

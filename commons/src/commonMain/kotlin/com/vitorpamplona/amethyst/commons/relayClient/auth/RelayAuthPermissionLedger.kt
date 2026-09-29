@@ -57,7 +57,7 @@ class RelayAuthPermissionLedger(
      *
      * Required, with no default, because it is shared state: one account's grants have to be the
      * same object on every AUTH path (the foreground screen and the background notification
-     * consumer both decide off this ledger — see [com.vitorpamplona.amethyst.model.Account]). A
+     * consumer both decide off this ledger — see [com.vitorpamplona.amethyst.commons.model.Account]). A
      * default would let a ledger built without one quietly get a private set instead, so answers
      * given on one path would not be seen on the other and the dialog would come back anyway.
      */

@@ -37,6 +37,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking

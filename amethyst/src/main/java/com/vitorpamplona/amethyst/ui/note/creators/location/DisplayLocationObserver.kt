@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
 import com.vitorpamplona.amethyst.commons.resources.loading_location
@@ -37,18 +38,17 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.service.location.LocationState
 
 @Composable
 fun DisplayLocationObserver(viewModel: ILocationGrabber) {
     val location by viewModel.locationFlow().collectAsStateWithLifecycle()
 
     when (val myLocation = location) {
-        is LocationState.LocationResult.Success -> {
+        is LocationResult.Success -> {
             DisplayLocationInTitle(geohash = myLocation.geoHash.toString())
         }
 
-        LocationState.LocationResult.LackPermission -> {
+        LocationResult.LackPermission -> {
             Text(
                 text = stringRes(Res.string.lack_location_permissions),
                 fontSize = 12.sp,
@@ -56,7 +56,7 @@ fun DisplayLocationObserver(viewModel: ILocationGrabber) {
             )
         }
 
-        LocationState.LocationResult.Loading -> {
+        LocationResult.Loading -> {
             Text(
                 text = stringRes(Res.string.loading_location),
                 fontSize = 12.sp,

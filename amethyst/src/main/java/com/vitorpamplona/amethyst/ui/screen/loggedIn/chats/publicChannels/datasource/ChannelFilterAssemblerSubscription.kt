@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
 fun ChannelFilterAssemblerSubscription(

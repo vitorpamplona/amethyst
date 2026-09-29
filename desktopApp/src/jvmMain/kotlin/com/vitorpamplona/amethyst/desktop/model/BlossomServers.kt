@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.model
 /**
  * Fallback media server used when the account has published no kind-10063
  * Blossom server list yet. The list itself is read reactively from the account's
- * [com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState]
+ * [com.vitorpamplona.amethyst.desktop.model.BlossomServerListState]
  * (`iAccount.blossomServerList.flow`); this is only the empty-list default.
  */
 const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"

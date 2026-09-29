@@ -64,9 +64,12 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
-import com.vitorpamplona.amethyst.model.DefaultSignerPermissions
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.ExternalSignerLogin
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.getExternalSignersInstalled
 import com.vitorpamplona.quartz.utils.Log
@@ -196,3 +199,15 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
         )
     }
 }
+
+/** What Amethyst asks a NIP-55 signer app to pre-approve when the user logs in with it. */
+val DefaultSignerPermissions =
+    listOf(
+        Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
+        Permission(CommandType.SIGN_EVENT, DraftWrapEvent.KIND),
+        Permission(CommandType.NIP04_ENCRYPT),
+        Permission(CommandType.NIP04_DECRYPT),
+        Permission(CommandType.NIP44_DECRYPT),
+        Permission(CommandType.NIP44_DECRYPT),
+        Permission(CommandType.DECRYPT_ZAP_EVENT),
+    )

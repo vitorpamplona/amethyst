@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
  * other signal in the auth path — a NIP-29 group's content is `#h`-scoped and never names the user,
  * and a Concord plane is authored by and addressed to derived stream keys — so this is what feeds
  * them to [RelayAuthPermissionLedger] and [RelayAuthFirstParty]. Pure, so the id/url matching is
- * testable without an [com.vitorpamplona.amethyst.model.Account].
+ * testable without an [com.vitorpamplona.amethyst.commons.model.Account].
  *
  * Everything here is per account, deliberately: these lists come off *this* account's own list events,
  * so one account's rooms can never grant another account's identity away. That rules out the

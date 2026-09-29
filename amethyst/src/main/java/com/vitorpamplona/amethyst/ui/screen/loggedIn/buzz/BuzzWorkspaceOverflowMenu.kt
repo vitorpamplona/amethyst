@@ -41,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.actions.BuzzInviteMinter
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -58,7 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_invite_share
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -153,7 +152,7 @@ fun BuzzWorkspaceOverflowMenu(
                             BuzzInviteMinter.mint(
                                 relay = relay,
                                 ttlSecs = null,
-                                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForPushRegistration,
+                                okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForPushRegistration,
                                 httpAuth = accountViewModel.account::createHTTPAuthorization,
                             )
                     } catch (e: Exception) {

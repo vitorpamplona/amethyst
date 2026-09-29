@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 
 /**
- * Volatile, non-persistent [RelayAuthPermissionStore]. Used as the default for [com.vitorpamplona.amethyst.model.Account]
+ * Volatile, non-persistent [RelayAuthPermissionStore]. Used as the default for [com.vitorpamplona.amethyst.commons.model.Account]
  * instances built without a disk-backed store (Compose previews, unit tests, the mock account view
  * models) so nothing on the auth path has to null-check the store.
  */

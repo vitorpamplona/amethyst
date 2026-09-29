@@ -187,9 +187,9 @@ class LocalBlossomCacheRedirectInterceptor(
         private val BLOSSOM_LAST_SEGMENT_REGEX = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
 
         /** Marks a request as a media download the local cache may serve. Stripped before sending. */
-        const val MEDIA_HEADER = "X-Amethyst-Local-Blossom"
-        const val MEDIA = "media"
-        const val PROFILE_PICTURE = "profile-picture"
+        const val MEDIA_HEADER = LocalBlossomCacheHeaders.MEDIA_HEADER
+        const val MEDIA = LocalBlossomCacheHeaders.MEDIA
+        const val PROFILE_PICTURE = LocalBlossomCacheHeaders.PROFILE_PICTURE
     }
 }
 

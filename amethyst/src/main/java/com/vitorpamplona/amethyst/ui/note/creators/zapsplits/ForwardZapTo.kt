@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_use
 import com.vitorpamplona.amethyst.commons.resources.zap_split_search_and_add_user_placeholder
 import com.vitorpamplona.amethyst.commons.resources.zap_split_title
 import com.vitorpamplona.amethyst.commons.ui.components.OutlinedThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ZapSplitIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -55,10 +57,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlin.math.round
 
 @Composable

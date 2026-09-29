@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11Fetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +66,12 @@ interface LocalCacheHost {
      */
     val nip95Blobs: Nip95BlobStore?
 
+    /**
+     * Relays' NIP-11 documents, shared by the cache (relay `self` keys) and the screens that show
+     * relay details. The default fetches nothing.
+     */
+    val nip11Cache: Nip11CachedRetriever get() = OfflineNip11Cache
+
     /** Per-relay counters the anti-spam filter reports duplicate events to. */
     val relayStats: RelayStats?
 
@@ -71,6 +80,13 @@ interface LocalCacheHost {
      * relay-signed NIP-29 group metadata. `null` means unknown, which accepts the event.
      */
     fun relaySelfPubKey(relay: NormalizedRelayUrl): HexKey? = null
+
+    /**
+     * The relay's NIP-11 document as far as the shell has it in memory. Never fetches: `null`
+     * (or a document with nothing in it) means "not loaded yet", which callers must treat as
+     * unknown rather than as "unsupported".
+     */
+    fun relayInfo(relay: NormalizedRelayUrl): Nip11RelayInformation? = null
 
     /**
      * LNURL-pay endpoint metadata the shell has already resolved for [lnurlpUrl], used to
@@ -96,3 +112,5 @@ interface LocalCacheHost {
         override val relayStats: RelayStats? = null
     }
 }
+
+private val OfflineNip11Cache = Nip11CachedRetriever(Nip11Fetcher.Offline)

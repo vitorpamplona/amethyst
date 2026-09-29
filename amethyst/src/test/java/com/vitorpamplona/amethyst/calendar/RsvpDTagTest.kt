@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
-import com.vitorpamplona.amethyst.ui.note.types.rsvpAddressFor
-import com.vitorpamplona.amethyst.ui.note.types.rsvpDTagFor
+import com.vitorpamplona.amethyst.commons.ui.note.types.rsvpAddressFor
+import com.vitorpamplona.amethyst.commons.ui.note.types.rsvpDTagFor
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import org.junit.Assert.assertEquals

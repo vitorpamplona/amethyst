@@ -86,6 +86,6 @@ actual class AESGCM actual constructor(
         }
 
     companion object {
-        const val NAME = "aes-gcm"
+        const val NAME = AES_GCM_NAME
     }
 }

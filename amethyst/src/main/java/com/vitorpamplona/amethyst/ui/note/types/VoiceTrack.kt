@@ -45,6 +45,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -53,17 +54,19 @@ import com.vitorpamplona.amethyst.commons.resources.pause
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.VoiceHeightModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedSaveButton
 import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedShareButton
 import com.vitorpamplona.amethyst.service.playback.composable.controls.MuteButton
@@ -76,13 +79,9 @@ import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 
 @Composable
@@ -318,26 +317,6 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
             tint = Color.White,
         )
     }
-}
-
-/**
- * Extracts AudioMeta from an event's IMeta tags if it has audio content with waveform.
- * Returns the first audio IMeta that has a waveform, or null if none found.
- */
-fun Event.getAudioMetaWithWaveform(): AudioMeta? {
-    val audioMetas = imetas().map { AudioMeta.parse(it) }
-    return audioMetas.firstOrNull { meta ->
-        meta.waveform != null &&
-            (meta.mimeType == null || meta.mimeType?.startsWith("audio/") == true)
-    }
-}
-
-/**
- * Checks if the event content is primarily an audio attachment (content is just the audio URL).
- */
-fun Event.isAudioOnlyContent(): Boolean {
-    val audioMeta = getAudioMetaWithWaveform() ?: return false
-    return content.trim() == audioMeta.url
 }
 
 /**

@@ -25,7 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
+import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 
 @Composable
 fun WatchScrollToTop(

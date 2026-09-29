@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyAccountSec
 import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
@@ -329,7 +329,7 @@ object LocalPreferences {
      * `amethyst/plans/2026-09-23-encrypted-storage-retirement.md`.
      *
      * `internal` rather than private because the mirror is not all in this
-     * file: [com.vitorpamplona.amethyst.model.GeohashChatIdentityState] writes
+     * file: [com.vitorpamplona.amethyst.commons.model.GeohashChatIdentityState] writes
      * the location-chat identity into its own legacy file and reads this to
      * know when to stop. Private, it would have kept writing after the flip
      * and the switch would only half work.

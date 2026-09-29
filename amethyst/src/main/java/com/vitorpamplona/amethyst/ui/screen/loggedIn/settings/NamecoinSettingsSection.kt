@@ -86,8 +86,9 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_test_results
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_success
 import com.vitorpamplona.amethyst.commons.resources.namecoin_testing
 import com.vitorpamplona.amethyst.commons.resources.namecoin_tls_info
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
@@ -514,7 +515,7 @@ private fun DiagnosticCard(
                 val context = LocalContext.current
                 val formatted =
                     remember(lastTestTimestamp, context) {
-                        formatMediumDateTime(lastTestTimestamp / 1000L, context)
+                        formatDateTime(lastTestTimestamp, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
                     }
                 val successCount = testResults.count { it.success }
                 val totalCount = testResults.size

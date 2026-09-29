@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import com.vitorpamplona.amethyst.commons.model.AccountNavigationPreferencesInternal
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
+import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
-import com.vitorpamplona.amethyst.model.AccountNavigationPreferencesInternal
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -31,7 +31,7 @@ import org.junit.Test
 /**
  * Locks the per-account bottom-bar persistence: the pinned list now lives inside the NIP-78
  * app-specific data blob ([AccountNavigationPreferencesInternal], one field of
- * [com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal]) rather than the app-global
+ * [com.vitorpamplona.amethyst.commons.model.AccountSyncedSettingsInternal]) rather than the app-global
  * DataStore, so every account keeps its own bar and it syncs across the user's devices.
  */
 class BottomBarPersistenceTest {

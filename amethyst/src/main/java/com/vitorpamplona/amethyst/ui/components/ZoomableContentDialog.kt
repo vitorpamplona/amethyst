@@ -65,6 +65,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_image
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_pdf
@@ -80,17 +81,17 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewerControlsVisibility
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
-import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.filter
@@ -424,7 +425,7 @@ internal suspend fun saveMediaToGallery(
             },
         )
     } else if (content is MediaPreloadedContent) {
-        content.localFile?.let {
+        content.localJavaFile?.let {
             MediaSaverToDisk.save(
                 it,
                 content.mimeType,
@@ -566,7 +567,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                content.localFile?.let {
+                content.localJavaFile?.let {
                     val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(it.toUri().toString())
 
                     val modifier =

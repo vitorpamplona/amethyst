@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
 import com.vitorpamplona.amethyst.commons.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.model.Account
 
 class MutedThreadsFeedFilter(
     val account: Account,

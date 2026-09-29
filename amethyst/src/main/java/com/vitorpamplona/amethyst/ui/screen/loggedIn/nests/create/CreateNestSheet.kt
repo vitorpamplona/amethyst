@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_create_cancel
 import com.vitorpamplona.amethyst.commons.resources.nest_create_field_endpoint
@@ -71,11 +72,10 @@ import com.vitorpamplona.amethyst.commons.resources.nest_create_when
 import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import kotlinx.coroutines.launch
 import android.text.format.DateFormat as AndroidDateFormat
 

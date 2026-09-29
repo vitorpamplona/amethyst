@@ -35,6 +35,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -47,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
@@ -70,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -77,7 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -91,8 +94,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
@@ -365,7 +366,7 @@ open class ShortNotePostViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
-    var location: StateFlow<LocationState.LocationResult>? = null
+    var location: StateFlow<LocationResult>? = null
 
     override var pickedGeoHash by mutableStateOf<String?>(null)
     var wantsExclusiveGeoPost by mutableStateOf(false)
@@ -1382,7 +1383,7 @@ open class ShortNotePostViewModel :
         val geoHash =
             if (wantsToAddGeoHash) {
                 // A map-picked geohash wins over the live GPS fix.
-                pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+                pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()
             } else {
                 null
             }
@@ -1820,7 +1821,7 @@ open class ShortNotePostViewModel :
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(item.link) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
+                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 
@@ -2004,7 +2005,7 @@ open class ShortNotePostViewModel :
         }
     }
 
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {
             location = locationManager().geohashStateFlow
         }

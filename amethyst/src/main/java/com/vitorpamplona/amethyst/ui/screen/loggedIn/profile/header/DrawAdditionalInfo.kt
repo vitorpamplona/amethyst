@@ -55,17 +55,22 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copy_nprofile_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_npub_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.github
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.mastodon
 import com.vitorpamplona.amethyst.commons.resources.show_nprofile_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.telegram
 import com.vitorpamplona.amethyst.commons.resources.twitter
 import com.vitorpamplona.amethyst.commons.resources.website
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.commons.ui.note.lastSeenSentence
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
@@ -74,14 +79,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.UserExternalIdentitiesViewModel
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
-import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
@@ -213,7 +215,7 @@ fun DrawAdditionalInfo(
                 onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 1),
+                    painter = painterRes(Res.drawable.ic_qrcode, 1),
                     contentDescription = stringRes(id = Res.string.show_nprofile_as_a_qr_code),
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,

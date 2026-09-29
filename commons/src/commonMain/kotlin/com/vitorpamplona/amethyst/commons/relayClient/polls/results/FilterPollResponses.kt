@@ -42,7 +42,7 @@ private const val VOTE_LIMIT = 1000
  * Every vote cast on [poll], from the relays a vote could plausibly be on.
  *
  * NIP-88 tells respondents to publish to the relays the poll itself nominates, and
- * [com.vitorpamplona.amethyst.model.EventBroadcaster] obeys that on the way out — those relays are
+ * [com.vitorpamplona.amethyst.commons.model.EventBroadcaster] obeys that on the way out — those relays are
  * usually neither the author's inbox nor where we happened to see the poll, so they have to be
  * asked explicitly or the tally silently under-counts.
  */

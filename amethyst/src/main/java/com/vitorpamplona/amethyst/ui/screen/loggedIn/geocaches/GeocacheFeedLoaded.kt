@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_empty_finds
@@ -66,13 +67,12 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.ui.note.types.RenderGeocache
-import com.vitorpamplona.amethyst.ui.note.types.RenderGeocacheFoundLog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
@@ -135,7 +135,7 @@ private fun GeocacheFeedColumn(
     val here =
         if (kind == GeocacheListKind.NEARBY && useLocation) {
             val fix by accountViewModel.account.geolocationFlow().collectAsStateWithLifecycle(null)
-            (fix as? LocationState.LocationResult.Success)?.geoHash
+            (fix as? LocationResult.Success)?.geoHash
         } else {
             null
         }

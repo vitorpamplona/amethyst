@@ -26,6 +26,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.health.HealthConnectRationaleScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**

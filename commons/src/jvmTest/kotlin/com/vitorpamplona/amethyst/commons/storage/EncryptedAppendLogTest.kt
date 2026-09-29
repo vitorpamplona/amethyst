@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.storage
 
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -61,39 +62,39 @@ class EncryptedAppendLogTest {
     fun `entries survive a round trip through a fresh reader`() {
         val file = tempFile()
         val writer = cipher()
-        writer.append(file, "first")
-        writer.append(file, "second")
-        writer.append(file, "third")
+        writer.append(file.toOkioPath(), "first")
+        writer.append(file.toOkioPath(), "second")
+        writer.append(file.toOkioPath(), "third")
 
         // A second instance reads only what reached the disk.
-        assertContentEquals(listOf("first", "second", "third"), cipher().readAll(file))
+        assertContentEquals(listOf("first", "second", "third"), cipher().readAll(file.toOkioPath()))
     }
 
     @Test
     fun `an empty log reads as empty rather than failing`() {
-        assertContentEquals(emptyList(), cipher().readAll(tempFile()))
+        assertContentEquals(emptyList(), cipher().readAll(tempFile().toOkioPath()))
     }
 
     @Test
     fun `contains answers without reading the file back`() {
         val file = tempFile()
         val log = cipher()
-        log.append(file, "hello")
+        log.append(file.toOkioPath(), "hello")
 
-        assertTrue(log.contains(file, "hello"))
-        assertFalse(log.contains(file, "goodbye"))
+        assertTrue(log.contains(file.toOkioPath(), "hello"))
+        assertFalse(log.contains(file.toOkioPath(), "goodbye"))
     }
 
     @Test
     fun `a rewrite replaces the whole log`() {
         val file = tempFile()
         val log = cipher()
-        log.append(file, "a")
-        log.append(file, "b")
-        log.rewrite(file, listOf("b"))
+        log.append(file.toOkioPath(), "a")
+        log.append(file.toOkioPath(), "b")
+        log.rewrite(file.toOkioPath(), listOf("b"))
 
-        assertContentEquals(listOf("b"), cipher().readAll(file))
-        assertFalse(cipher().contains(file, "a"))
+        assertContentEquals(listOf("b"), cipher().readAll(file.toOkioPath()))
+        assertFalse(cipher().contains(file.toOkioPath(), "a"))
     }
 
     @Test
@@ -101,9 +102,9 @@ class EncryptedAppendLogTest {
         val file = tempFile()
         val log = cipher(compactAfter = 4)
         val written = (1..20).map { "entry-$it" }
-        written.forEach { log.append(file, it) }
+        written.forEach { log.append(file.toOkioPath(), it) }
 
-        assertContentEquals(written, cipher().readAll(file))
+        assertContentEquals(written, cipher().readAll(file.toOkioPath()))
         // Folding every four appends leaves ~5 segments rather than 20, which is
         // the bound on read cost that matters here.
         assertTrue(file.length() < 20 * SEGMENT_OVERHEAD_CEILING, "log should have been compacted, was ${file.length()} bytes")
@@ -116,10 +117,10 @@ class EncryptedAppendLogTest {
 
         // The first append lays the header down; the next four are the loose run
         // that the fourth of them collapses.
-        (1..5).forEach { log.append(file, "first-run-$it") }
+        (1..5).forEach { log.append(file.toOkioPath(), "first-run-$it") }
         val afterFirstFold = file.readBytes()
 
-        (1..4).forEach { log.append(file, "second-run-$it") }
+        (1..4).forEach { log.append(file.toOkioPath(), "second-run-$it") }
         val afterSecondFold = file.readBytes()
 
         // The SEGMENTS the first fold produced must survive verbatim. If they
@@ -135,7 +136,7 @@ class EncryptedAppendLogTest {
             afterSecondFold.copyOfRange(HEADER_LEN, afterFirstFold.size).toList(),
             "folding the tail must copy the already-folded segments as ciphertext",
         )
-        assertContentEquals((1..5).map { "first-run-$it" } + (1..4).map { "second-run-$it" }, cipher().readAll(file))
+        assertContentEquals((1..5).map { "first-run-$it" } + (1..4).map { "second-run-$it" }, cipher().readAll(file.toOkioPath()))
     }
 
     @Test
@@ -145,7 +146,7 @@ class EncryptedAppendLogTest {
         // Exactly what the old writer produced: one encrypted blob, no magic.
         file.writeBytes(legacyBlob(listOf("old-one", "old-two")))
 
-        assertContentEquals(listOf("old-one", "old-two"), cipher().readAll(file))
+        assertContentEquals(listOf("old-one", "old-two"), cipher().readAll(file.toOkioPath()))
     }
 
     @Test
@@ -155,9 +156,9 @@ class EncryptedAppendLogTest {
         file.writeBytes(legacyBlob(listOf("old-one", "old-two")))
 
         val log = cipher()
-        log.append(file, "new-one")
+        log.append(file.toOkioPath(), "new-one")
 
-        assertContentEquals(listOf("old-one", "old-two", "new-one"), cipher().readAll(file))
+        assertContentEquals(listOf("old-one", "old-two", "new-one"), cipher().readAll(file.toOkioPath()))
         // and the upgraded file is in the new format, so the next append is cheap
         assertTrue(file.readBytes().decodeToString().startsWith("MRMTLOG3"))
     }
@@ -166,31 +167,31 @@ class EncryptedAppendLogTest {
     fun `a torn final append costs only the torn entry`() {
         val file = tempFile()
         val log = cipher()
-        log.append(file, "kept-one")
-        log.append(file, "kept-two")
+        log.append(file.toOkioPath(), "kept-one")
+        log.append(file.toOkioPath(), "kept-two")
 
         // Simulate process death partway through writing the third segment.
         val intact = file.readBytes()
-        log.append(file, "lost")
+        log.append(file.toOkioPath(), "lost")
         val torn = file.readBytes()
         file.writeBytes(torn.copyOfRange(0, intact.size + 6))
 
-        assertContentEquals(listOf("kept-one", "kept-two"), cipher().readAll(file))
+        assertContentEquals(listOf("kept-one", "kept-two"), cipher().readAll(file.toOkioPath()))
     }
 
     @Test
     fun `a segment that cannot be decrypted does not hide the rest`() {
         val file = tempFile()
         val log = cipher()
-        log.append(file, "before")
-        log.append(file, "after")
+        log.append(file.toOkioPath(), "before")
+        log.append(file.toOkioPath(), "after")
 
         // Corrupt the first segment's nonce marker so decrypt returns null for it.
         val bytes = file.readBytes()
         bytes[HEADER_LEN + 4] = 0
         file.writeBytes(bytes)
 
-        assertContentEquals(listOf("after"), cipher().readAll(file))
+        assertContentEquals(listOf("after"), cipher().readAll(file.toOkioPath()))
     }
 
     @Test
@@ -201,21 +202,21 @@ class EncryptedAppendLogTest {
         // writes and never read one back again — silently write-only, for good.
         val file = tempFile()
         val log = cipher()
-        log.append(file, "kept-one")
-        log.append(file, "kept-two")
+        log.append(file.toOkioPath(), "kept-one")
+        log.append(file.toOkioPath(), "kept-two")
 
         val intact = file.readBytes()
-        log.append(file, "lost")
+        log.append(file.toOkioPath(), "lost")
         val torn = file.readBytes()
         file.writeBytes(torn.copyOfRange(0, intact.size + 6))
 
         val reopened = cipher()
-        assertContentEquals(listOf("kept-one", "kept-two"), reopened.readAll(file))
+        assertContentEquals(listOf("kept-one", "kept-two"), reopened.readAll(file.toOkioPath()))
 
-        reopened.append(file, "three")
+        reopened.append(file.toOkioPath(), "three")
         assertContentEquals(
             listOf("kept-one", "kept-two", "three"),
-            cipher().readAll(file),
+            cipher().readAll(file.toOkioPath()),
             "an append after a torn tail must be readable by the next reader",
         )
     }
@@ -230,11 +231,11 @@ class EncryptedAppendLogTest {
         repeat(12) { session ->
             // A fresh instance per session, as a cold process gets.
             val log = cipher(compactAfter = 4)
-            repeat(3) { log.append(file, "s$session-m$it") }
+            repeat(3) { log.append(file.toOkioPath(), "s$session-m$it") }
         }
 
         val expected = (0 until 12).flatMap { session -> (0 until 3).map { "s$session-m$it" } }
-        assertContentEquals(expected, cipher().readAll(file))
+        assertContentEquals(expected, cipher().readAll(file.toOkioPath()))
 
         // 36 entries at a fold every 4 appends: a handful of segments, not 36.
         assertTrue(
@@ -256,8 +257,8 @@ class EncryptedAppendLogTest {
                 decrypt = { null },
             )
 
-        runCatching { log.append(file, "never-written") }
-        assertFalse(log.contains(file, "never-written"), "a write that failed must not count as persisted")
+        runCatching { log.append(file.toOkioPath(), "never-written") }
+        assertFalse(log.contains(file.toOkioPath(), "never-written"), "a write that failed must not count as persisted")
     }
 
     @Test
@@ -265,9 +266,9 @@ class EncryptedAppendLogTest {
         val file = tempFile()
         val log = cipher()
         val awkward = listOf("", "emoji 👩‍👧 here", "a\nb\tc", "\"quoted\": {\"json\": 1}")
-        awkward.forEach { log.append(file, it) }
+        awkward.forEach { log.append(file.toOkioPath(), it) }
 
-        assertEquals(awkward, cipher().readAll(file))
+        assertEquals(awkward, cipher().readAll(file.toOkioPath()))
     }
 
     /** The pre-segment on-disk shape: `encrypt(uint32 count, (uint32 len, bytes)*)`. */

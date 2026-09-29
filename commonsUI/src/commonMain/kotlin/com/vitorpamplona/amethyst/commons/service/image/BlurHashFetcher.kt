@@ -30,10 +30,6 @@ import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
 
-data class BlurhashWrapper(
-    val blurhash: String,
-)
-
 @Stable
 class BlurHashFetcher(
     private val options: Options,

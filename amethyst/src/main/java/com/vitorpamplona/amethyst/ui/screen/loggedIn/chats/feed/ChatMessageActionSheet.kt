@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_edit_message
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
@@ -77,9 +78,22 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.show_less
+import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
+import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction
+import com.vitorpamplona.amethyst.commons.ui.note.deletionRequestBody
+import com.vitorpamplona.amethyst.commons.ui.note.elements.AddHashtagLabelDialog
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ConcordBanConfirmationDialog
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DropDownParams
+import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteActionHandlers
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
+import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
@@ -87,26 +101,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.amethyst.service.ZapPaymentHandler
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
-import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
-import com.vitorpamplona.amethyst.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
-import com.vitorpamplona.amethyst.ui.note.deletionRequestBody
-import com.vitorpamplona.amethyst.ui.note.elements.AddHashtagLabelDialog
-import com.vitorpamplona.amethyst.ui.note.elements.ConcordBanConfirmationDialog
-import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
-import com.vitorpamplona.amethyst.ui.note.elements.NoteActionHandlers
-import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
-import com.vitorpamplona.amethyst.ui.note.elements.noteActionSections
-import com.vitorpamplona.amethyst.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.ui.note.observeZapRailCapability
 import com.vitorpamplona.amethyst.ui.note.payViaIntentOrManualSplit
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -670,7 +670,6 @@ private fun QuickZapAmountRow(
                     amountInSats * 1000,
                     null,
                     "",
-                    context,
                     true,
                     onError,
                     { },

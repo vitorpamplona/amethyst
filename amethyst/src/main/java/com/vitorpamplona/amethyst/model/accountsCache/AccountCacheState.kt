@@ -26,21 +26,28 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46Clien
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
 import com.vitorpamplona.amethyst.commons.marmot.InMemoryMlsGroupStateStore
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
+import com.vitorpamplona.amethyst.commons.model.GeohashIdentityStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidIngestDedupStore
 import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
+import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
+import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -48,9 +55,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,18 +68,31 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
 class AccountCacheState(
-    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
-    val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
+    val okHttpClientForMoney: (String) -> OkHttpClient,
     val contentResolverFn: () -> ContentResolver,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
+    /** The running app's version name, handed to every [Account] it builds. */
+    val appVersion: String,
+    /** App-wide media decryption keys, shared by every [Account]. */
+    val encryptionKeyCache: EncryptionKeyCache,
+    /** Persists an account's settings (the app's encrypted storage). */
+    val saveSettings: suspend (AccountSettings) -> Unit,
+    /** Announces Marmot Welcomes and group messages; shared by every [Account]. */
+    val marmotNotifier: () -> MarmotGroupNotifier,
+    /** The NIP-46 consent dialogs, shared by every [Account]. */
+    val nip46Consent: Nip46ConsentPrompter,
+    /** Builds the store for one account's geohash-chat identity, keyed by its pubkey. */
+    val geohashIdentityStore: (HexKey) -> GeohashIdentityStore,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
@@ -341,10 +363,18 @@ class AccountCacheState(
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
             cashuMintDirectoryFilterAssembler = cashuMintDirectoryFilterAssembler,
-            okHttpClientForMoney = okHttpClientForMoney,
+            cashuMintTransport = OkHttpMintTransport(okHttpClientForMoney),
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,
+            appVersion = appVersion,
+            encryptionKeyCache = encryptionKeyCache,
+            saveSettings = saveSettings,
+            marmotNotifier = marmotNotifier,
+            nip46Consent = nip46Consent,
+            geohashIdentityStore = geohashIdentityStore(signer.pubKey),
+            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
+            cordnBlobCipher = { KeyStoreCordnBlobCipher() },
             scope =
                 CoroutineScope(
                     Dispatchers.IO +
@@ -356,7 +386,7 @@ class AccountCacheState(
             // The same per-account directory the Marmot stores use. cordn
             // scopes itself further by coordinator underneath it, because a
             // gid is unique only within one (spec/00.md §4).
-            cordnFilesDir = accountDir,
+            cordnFilesDir = accountDir.toOkioPath(),
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,
@@ -392,3 +422,14 @@ class AccountCacheState(
         const val CLIENT_TAG_NAME = "Amethyst"
     }
 }
+
+/**
+ * The app's raw-QUIC transport for Marmot agent text stream previews (`transports/quic.md`).
+ * Preview brokers are commonly self-signed and the binding expects that; the platform trust
+ * store is still the default answer, and a deployment that pins does it here.
+ */
+fun defaultMarmotStreamTransport(scope: CoroutineScope): MarmotQuicTransport =
+    QuicAgentTextStreamTransport(
+        parentScope = scope,
+        certificateValidator = JdkCertificateValidator(),
+    )

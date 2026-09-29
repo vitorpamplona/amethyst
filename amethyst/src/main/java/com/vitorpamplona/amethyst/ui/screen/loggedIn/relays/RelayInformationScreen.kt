@@ -72,12 +72,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accepts_up_to
 import com.vitorpamplona.amethyst.commons.resources.access_control
@@ -158,8 +158,16 @@ import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.RenderRelayIcon
+import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.graspLink
+import com.vitorpamplona.amethyst.commons.ui.note.nipLink
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.KindChip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Height25Modifier
@@ -170,23 +178,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
-import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
-import com.vitorpamplona.amethyst.ui.note.UserCompose
-import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.graspLink
-import com.vitorpamplona.amethyst.ui.note.nipLink
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssemblerSubscription
-import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessage
@@ -198,13 +195,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -270,7 +261,7 @@ fun RelayInformationScreen(
 
         val messages =
             remember(relay) {
-                Amethyst.instance.relayStats
+                accountViewModel.host.relayStats
                     .get(url = relay)
                     .messages
                     .snapshot()
@@ -279,7 +270,7 @@ fun RelayInformationScreen(
                     .toImmutableList()
             }
 
-        RelayInformationBody(relay, relayInfo, discoveryEvents, Amethyst.instance.relayStats.get(relay), messages, pad, accountViewModel, nav)
+        RelayInformationBody(relay, relayInfo, discoveryEvents, accountViewModel.host.relayStats.get(relay), messages, pad, accountViewModel, nav)
     }
 }
 
@@ -473,58 +464,6 @@ fun RelayInformationBody(
 // ---------------------------------------------------------------------------
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
-
-val posts = setOf(0, 1, 6, 7, 16, 30023)
-val settings = setOf(3, 10002, 10000, 10001, 10003, 10004, 30000)
-val dms = setOf(4, GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, 10050)
-val zaps = setOf(9734, 9735, 9041, 17375, 23194, 23195)
-val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionRequestEvent.KIND, RequestToVanishEvent.KIND)
-
-@Composable
-fun KindChip(kind: Int) {
-    val nameResId = kindDisplayName(kind)
-    val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "k$kind")
-    val (bg, fg) =
-        when (kind) {
-            in posts -> {
-                MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-            }
-
-            //
-            in settings -> {
-                MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-            }
-
-            // dms
-            in dms -> {
-                MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-            }
-
-            // zaps
-            in zaps -> {
-                MaterialTheme.colorScheme.background to MaterialTheme.colorScheme.bitcoinColor
-            }
-
-            in reports -> {
-                MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.redColorOnSecondSurface
-            }
-
-            else -> {
-                MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-            }
-        }
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = bg,
-    ) {
-        Text(
-            text = name,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
-            color = fg,
-        )
-    }
-}
 
 @Composable
 private fun FilterAttributeChip(

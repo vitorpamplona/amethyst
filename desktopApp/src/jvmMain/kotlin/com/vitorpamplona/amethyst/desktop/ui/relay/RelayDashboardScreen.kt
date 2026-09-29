@@ -39,8 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
+import com.vitorpamplona.amethyst.desktop.model.Nip65RelayListState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event

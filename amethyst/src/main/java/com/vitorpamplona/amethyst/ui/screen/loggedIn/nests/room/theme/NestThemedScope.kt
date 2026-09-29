@@ -39,8 +39,8 @@ import androidx.compose.ui.text.font.FontFamily
 import coil3.asDrawable
 import coil3.compose.AsyncImage
 import coil3.imageLoader
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomTheme
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

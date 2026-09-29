@@ -23,14 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.events_from_you
 import com.vitorpamplona.amethyst.commons.resources.events_to_you
 import com.vitorpamplona.amethyst.commons.util.replace
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
@@ -104,7 +104,7 @@ class Nip65RelayListViewModel : ViewModel() {
     fun loadRelayDocuments() {
         viewModelScope.launch(Dispatchers.IO) {
             _homeRelays.value.forEach { item ->
-                Amethyst.instance.nip11Cache.loadRelayInfo(
+                LocalCache.appHost.nip11Cache.loadRelayInfo(
                     relay = item.relay,
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
@@ -114,7 +114,7 @@ class Nip65RelayListViewModel : ViewModel() {
             }
 
             _notificationRelays.value.forEach { item ->
-                Amethyst.instance.nip11Cache.loadRelayInfo(
+                LocalCache.appHost.nip11Cache.loadRelayInfo(
                     relay = item.relay,
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
@@ -129,7 +129,7 @@ class Nip65RelayListViewModel : ViewModel() {
         _homeCountResults.value = emptyMap()
         _notifCountResults.value = emptyMap()
 
-        val client = Amethyst.instance.client
+        val client = accountViewModel.account.client
 
         _homeRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {

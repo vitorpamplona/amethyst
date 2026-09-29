@@ -109,7 +109,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,11 +119,26 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
+import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReactionCount
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReactions
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReferences
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReplyCount
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteRepostCount
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReposts
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteRepostsBy
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.boost
 import com.vitorpamplona.amethyst.commons.resources.close_all_reactions_to_this_post
@@ -151,6 +165,7 @@ import com.vitorpamplona.amethyst.commons.resources.quote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
 import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
+import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
@@ -158,20 +173,29 @@ import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandLessIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.OutlinedZapIcon
+import com.vitorpamplona.amethyst.commons.ui.note.RenderBoostGallery
+import com.vitorpamplona.amethyst.commons.ui.note.RenderLikeGallery
+import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction
+import com.vitorpamplona.amethyst.commons.ui.note.RenderZapGallery
 import com.vitorpamplona.amethyst.commons.ui.note.RepostIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ShareIcon
 import com.vitorpamplona.amethyst.commons.ui.note.VoiceReplyIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -208,36 +232,18 @@ import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
-import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.ReactionRowAction
-import com.vitorpamplona.amethyst.model.ReactionRowItem
+import com.vitorpamplona.amethyst.commons.util.showCount
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
-import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReferences
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostCount
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReposts
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
-import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
-import com.vitorpamplona.amethyst.ui.note.types.EditState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.paymentTargetStyleFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -517,11 +523,6 @@ fun LoadAndDisplayZapraiser(
         }
     }
 }
-
-@Immutable data class ZapraiserStatus(
-    val progress: Float,
-    val left: String,
-)
 
 @Composable
 fun RenderZapRaiser(
@@ -1323,7 +1324,6 @@ fun ZapReaction(
                         zapClick(
                             baseNote,
                             accountViewModel,
-                            context,
                             onZapStarts = { zapStartingTime = TimeUtils.now() },
                             onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
                             onMultipleChoices = {
@@ -1483,7 +1483,6 @@ fun ZapReaction(
 fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    context: Context,
     onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
@@ -1531,7 +1530,6 @@ fun zapClick(
                     choices.first() * 1000,
                     null,
                     "",
-                    context,
                     onError = onError,
                     onProgress = { onZappingProgress(it) },
                     onPayViaIntent = onPayViaIntent,
@@ -2067,55 +2065,6 @@ private fun ActionableReactionButton(
 }
 
 @Composable
-fun RenderReaction(reactionType: String) {
-    if (reactionType.startsWith(":")) {
-        val noStartColon = reactionType.removePrefix(":")
-        val url = noStartColon.substringAfter(":")
-
-        InLineIconRenderer(
-            persistentListOf(
-                CustomEmoji.ImageUrlType(url),
-            ),
-            style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
-            maxLines = 1,
-            fontSize = 22.sp,
-        )
-    } else {
-        when (reactionType) {
-            "+" -> {
-                LikedIcon(modifier = Size28Modifier)
-            }
-
-            "-" -> {
-                Text(
-                    text = "\uD83D\uDC4E",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    fontSize = 22.sp,
-                )
-            }
-
-            else -> {
-                if (EmojiCoder.isCoded(reactionType)) {
-                    AnimatedBorderTextCornerRadius(
-                        reactionType,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 20.sp,
-                    )
-                } else {
-                    Text(
-                        reactionType,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                        fontSize = 22.sp,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -2324,7 +2273,6 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onReloadNutzap: (Long) -> Unit = {},
 ) {
-    val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
 
     Popup(
@@ -2348,7 +2296,6 @@ fun ZapAmountChoicePopup(
                         amountInSats * 1000,
                         null,
                         "",
-                        context,
                         true,
                         onError,
                         onProgress,
@@ -2907,16 +2854,4 @@ private fun ZapChipPreviewRow(
         onReloadNutzap = {},
         onChangeAmount = {},
     )
-}
-
-fun showCount(count: Int?): String {
-    if (count == null) return ""
-    if (count == 0) return ""
-
-    return when {
-        count >= 1000000000 -> "${(count / 1000000000f).roundToInt()}G"
-        count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
-        count >= 10000 -> "${(count / 1000f).roundToInt()}k"
-        else -> "$count"
-    }
 }

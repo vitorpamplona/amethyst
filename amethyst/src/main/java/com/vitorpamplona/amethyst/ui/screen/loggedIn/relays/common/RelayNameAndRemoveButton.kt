@@ -36,18 +36,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.paid_relay
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.tor_relay
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
 
@@ -92,7 +92,7 @@ fun RelayNameAndRemoveButton(
 
             if (item.forcesTor) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_tor, 2),
+                    painter = painterRes(Res.drawable.ic_tor, 2),
                     contentDescription = stringRes(id = Res.string.tor_relay),
                     modifier =
                         Modifier

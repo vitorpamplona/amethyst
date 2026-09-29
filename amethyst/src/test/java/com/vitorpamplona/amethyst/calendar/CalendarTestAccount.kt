@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavFilter
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow

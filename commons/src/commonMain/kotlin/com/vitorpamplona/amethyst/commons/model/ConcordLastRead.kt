@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 /**
  * The per-account last-read route key for one Concord channel — the string
- * [com.vitorpamplona.amethyst.model.Account.markAsRead]/`loadLastReadFlow` are keyed by.
+ * [com.vitorpamplona.amethyst.commons.model.Account.markAsRead]/`loadLastReadFlow` are keyed by.
  * Shared by the write side (the open channel marks messages read as they show) and the
  * read side (the hub's unread indicators) so the two can never drift apart.
  */

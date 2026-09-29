@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.service.playback.composable.audioSquare
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

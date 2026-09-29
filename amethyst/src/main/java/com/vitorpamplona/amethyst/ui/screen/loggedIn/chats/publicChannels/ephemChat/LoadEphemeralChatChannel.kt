@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephem
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
+import com.vitorpamplona.amethyst.commons.ui.note.produceStateIfNotNull
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
 @Composable

@@ -116,12 +116,23 @@ kotlin {
                 // JVM-only and lives in jvmAndroid; iOS will pull coil-ktor
                 // when that target wires its actual.
                 implementation(libs.coil.compose)
+                // NetworkHeaders on avatar requests (the local Blossom cache marker). Multiplatform,
+                // Apache-2.0; already on the JVM classpath through coil-network-okhttp.
+                implementation(libs.coil.network.core)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 
+                // Charts (Vico 3, Compose Multiplatform, Apache-2.0): the notification
+                // summary builds its chart model off the main thread. `api` because the
+                // model is part of that state holder's public surface.
+                api(libs.vico.charts.compose)
+
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
+
+                // JSON trees for the LNURL-pay replies the payment stack reads.
+                implementation(libs.kotlinx.serialization.json)
 
                 // Compose Multiplatform Resources (strings, fonts, napplet shell files)
                 implementation(libs.jetbrains.compose.components.resources)
@@ -146,6 +157,8 @@ kotlin {
                 // artifact jvmMain already uses, and it rasterises in software,
                 // so it needs no display.
                 implementation(compose.desktop.currentOs)
+                // RouteForPointerTest stubs an Account (already the app's and androidHostTest's mock lib).
+                implementation(libs.mockk)
             }
         }
 

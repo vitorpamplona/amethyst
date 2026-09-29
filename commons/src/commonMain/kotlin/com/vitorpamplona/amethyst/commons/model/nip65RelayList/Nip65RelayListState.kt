@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip65RelayList
 
+import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.relayListOrDefaultsWhenUnknown
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -42,11 +45,11 @@ import kotlinx.coroutines.launch
 
 class Nip65RelayListState(
     val signer: NostrSigner,
-    val cache: ICacheProvider,
+    val cache: LocalCache,
     val scope: CoroutineScope,
-    val settings: Nip65RelayListRepository,
+    val settings: AccountSettings,
 ) {
-    // Creates a long-term reference for this note so that the GC doesn't collect the note itself
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val nip65ListNote = cache.getOrCreateAddressableNote(getNIP65RelayListAddress())
 
     fun getNIP65RelayListAddress() = AdvertisedRelayListEvent.createAddress(signer.pubKey)
@@ -57,17 +60,38 @@ class Nip65RelayListState(
 
     fun nip65Event(note: Note) = note.event as? AdvertisedRelayListEvent ?: settings.backupNIP65RelayList
 
-    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: settings.defaultOutboxRelays
+    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.eventFinderRelays) { it.writeRelaysNorm()?.toSet() }
 
-    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: settings.defaultInboxRelays
+    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.bootstrapInbox) { it.readRelaysNorm()?.toSet() }
 
     fun normalizeNIP65WriteRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: emptySet()
 
     fun normalizeNIP65ReadRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: emptySet()
 
-    fun normalizeNIP65AllRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: settings.defaultOutboxRelays
+    fun normalizeNIP65AllRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: Constants.eventFinderRelays
 
     fun normalizeNIP65AllRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: emptySet()
+
+    /**
+     * The app defaults currently standing in for a user we have no kind:10002 for — empty as soon
+     * as one exists, including an empty one.
+     *
+     * Uses the same `nip65Event(note) == null` predicate the substitution itself uses, so the two
+     * cannot drift: whatever is listed here is exactly what the app is guessing on the user's
+     * behalf. See [relayListOrDefaultsWhenUnknown].
+     */
+    fun assumedDefaults(note: Note): Set<NormalizedRelayUrl> = if (nip65Event(note) == null) Constants.bootstrapInbox + Constants.eventFinderRelays else emptySet()
+
+    val assumedDefaultsFlow =
+        getNIP65RelayListFlow()
+            .map { assumedDefaults(it.note) }
+            .onStart { emit(assumedDefaults(nip65ListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                assumedDefaults(nip65ListNote),
+            )
 
     val outboxFlow =
         getNIP65RelayListFlow()

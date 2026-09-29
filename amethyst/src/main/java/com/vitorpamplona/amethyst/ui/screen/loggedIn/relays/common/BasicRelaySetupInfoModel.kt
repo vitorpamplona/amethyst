@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.ui.CountFilter
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.util.replace
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +78,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     fun loadRelayDocuments() {
         viewModelScope.launch(Dispatchers.IO) {
             _relays.value.forEach { item ->
-                Amethyst.instance.nip11Cache.loadRelayInfo(
+                LocalCache.appHost.nip11Cache.loadRelayInfo(
                     relay = item.relay,
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)

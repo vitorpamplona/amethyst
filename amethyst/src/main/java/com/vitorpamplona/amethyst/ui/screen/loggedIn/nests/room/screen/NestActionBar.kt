@@ -92,7 +92,9 @@ import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.zap_description
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
@@ -101,9 +103,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapCustomDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.zapClick
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPopup
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
@@ -492,7 +492,6 @@ private fun NestZapButton(
                 zapClick(
                     baseNote = roomNote,
                     accountViewModel = accountViewModel,
-                    context = context,
                     onZapStarts = {},
                     onZappingProgress = { progress -> scope.launch { zappingProgress = progress } },
                     onMultipleChoices = { scope.launch { wantsToZap = true } },

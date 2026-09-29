@@ -1,5 +1,14 @@
 # Full sweep: `amethyst/` → `:commons` migration candidates
 
+> **Direction change (2026-09-27): one UI.** Android now ships on laptops, so every
+> screen and the navigation shell move to `commonsUI`, `amethyst` becomes an Android
+> shim, and a new JVM `desktopApp` replaces the current one with the same UI. See
+> [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md). That
+> supersedes, below: the STAY list's screens/navigation entries, "decompose `Account`,
+> shrink `AccountViewModel`" (both now **move**), Wave 2 part B (dropped), and the
+> "Desktop phase" merges of Desktop's own forks (dropped). This file stays the log of
+> what moved; Wave 4 is planned and measured in the new plan.
+
 > **Execution status (updated 2026-08-30, same branch):** Waves 0-1 are DONE
 > on this branch — the 12 shim deletions, the 38-file relayClient batch
 > (with `AccountScopedQuery` generalized to `IAccount`), the okhttp stack →
@@ -297,10 +306,15 @@ formatters).
 
 ## STAY (correctly platform-native)
 
-- **Navigation shell & screens**: `*Screen.kt`, `*TopBar.kt`, `New*Button.kt`,
+> **Revised 2026-09-27.** The navigation shell and the screens no longer stay: they move
+> to `commonsUI` (see the one-UI plan). What is listed below is what remains
+> platform-native. The media, capture and service entries stay as *implementations*;
+> the screens that render them reach them through ports or slots.
+
+- ~~**Navigation shell & screens**: `*Screen.kt`, `*TopBar.kt`, `New*Button.kt`,
   `INav`/`Route`/`RouteMaker`/`AppNavigation`, drawer/bottom-bar,
   `AccountScreen`/`AccountSessionManager`/`LoggedInPage`, `loggedOff/`,
-  `settings/` screens (~480 files import INav/Route — by design).
+  `settings/` screens.~~ Moving to `commonsUI` (`RouteMaker` to `commons`).
 - **Process/DI roots**: `Amethyst.kt`, `AppModules.kt`, `EncryptedStorage`,
   `LocalPreferences`, `DebugUtils`, `model/accountsCache`,
   `model/preferences/` (the one genuinely-Android model package: DataStore/
@@ -807,7 +821,11 @@ Options, for the maintainer to pick:
     `ui/theme/Shape.kt` into `commons/ui/theme/Sizes.kt`, plus
     `painterRes`/`TimeAgo`/`NewItemsBubble` decisions — the audit's
     "strings-only" tally under-counted transitive deps.
-- **Wave 4: Account/AccountViewModel decomposition** — long-tail.
+- **Wave 4: Account/AccountViewModel** — **re-scoped 2026-09-27** from
+  "decomposition" to **moving both to `commons`**. Measured and sequenced in
+  [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md): the
+  `Account` group is 77 files / ~23.9k lines inside `model/`, with 5 hard-blocked files
+  and 14 exit edges to cut.
 
 ### Environment notes for the next session (hard-won)
 
@@ -923,6 +941,10 @@ and `RailCapability` use it, `OnchainZapResolver` does not.
 
 
 ### Wave 2 part B — compatibility analysis and the road to deleting `DesktopLocalCache` (2026-09-19)
+
+> **Dropped 2026-09-27.** The new desktop app uses `LocalCache` and `Account` directly;
+> the current `desktopApp` keeps its fork until it is retired. The analysis below is
+> kept for the record.
 
 Part A moved the cache. Part B is retiring the Desktop fork. The naive framing
 ("repoint ~70 consumers and delete 1,177 lines") is wrong; what follows is the
@@ -1751,3 +1773,29 @@ first. None of the findings below came from the move; all are on `main`.
   drops it, so a refresh only spins for a second.
 - `ScheduledFlag` still reads `TimeUtils.now()` once, so a card composed before the start
   time keeps the date after it passes.
+
+## 2026-09-28 — cordn file stores and `EncryptedAppendLog` to `commonMain`
+
+`cordn/FileCordnStores.kt` (`CordnStorageLayout` and the group, key-package,
+coordinator and handoff stores), `cordn/FileBackedCordnScopeFactory.kt`,
+`cordn/CordnMigrationStores.kt` and `storage/EncryptedAppendLog.kt` moved from
+jvmAndroid to commonMain. They take an okio `Path` plus a `FileSystem`
+(default `platformFileSystem`), the `ScheduledPostStore` shape.
+
+These files hold encrypted MLS group state that cannot be re-derived, so the
+format is pinned first: `CordnStorageFormatGoldenTest` was committed against the
+`java.io` implementation, asserting the exact tree of paths and the exact bytes
+of every file, and passes unchanged on the okio one. Notes on the port:
+
+- `ByteBuffer` framing (the cursor file) is okio `Buffer.writeLong`/`readLong`;
+  both are big-endian.
+- `java.util.Base64` in the migration snapshot is `kotlin.io.encoding.Base64.Default`
+  with `PaddingOption.PRESENT_OPTIONAL`, the same shape as the napplet move.
+- `File.delete()`/`deleteRecursively()` returned false instead of throwing, and
+  `renameTo` fell back to copy-and-delete. okio throws; the File behaviour is kept
+  by `deleteQuietly`, `deleteRecursivelyQuietly` and `moveOrCopy` in
+  `commons/util/FileSystemExt.kt`. One deliberate difference: the recursive delete
+  removes symlinks instead of following them.
+- The log's `fsync`s are `FileHandle.flush()`, which is `FileDescriptor.sync()`
+  on the JVM and Android.
+- `EncryptedMarmotMessageStore` stays in jvmAndroid and passes `toOkioPath()` to the log.

@@ -21,22 +21,17 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.BuzzInviteLinkSegment
-import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
 import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
@@ -52,24 +47,26 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.components.BechLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBuzzInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ConcordInviteCard
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
+import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.TagLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions
-import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRenderer
-import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextInteractions
+import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextViewer as CommonsRichTextViewer
 
 /**
  * The Android implementation of the shared [RichTextSegmentRenderer] contract: it
@@ -79,7 +76,7 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextViewer as CommonsR
  * leaves need but that the cross-platform contract deliberately keeps out of its
  * method signatures.
  *
- * Recreate one per [CommonsBackedRichTextViewer] call (it captures per-call state);
+ * Recreate one per [RichTextViewer] call (it captures per-call state);
  * it is cheap and [remember]ed against its inputs so the CompositionLocal doesn't
  * churn its readers.
  */
@@ -118,7 +115,7 @@ class AmethystRichTextSegmentRenderer(
                 }
             }
         } else {
-            ClickableUrl(segment.segmentText, segment.segmentText)
+            ClickableUrlOrBlossom(segment.segmentText, segment.segmentText)
         }
     }
 
@@ -193,7 +190,7 @@ class AmethystRichTextSegmentRenderer(
         url: String,
         displayText: String,
         modifier: Modifier,
-    ) = ClickableUrl(displayText, url)
+    ) = ClickableUrlOrBlossom(displayText, url)
 
     @Composable
     override fun Email(
@@ -240,7 +237,7 @@ class AmethystRichTextSegmentRenderer(
         if (canPreview) {
             NowhereLinkCard(segment)
         } else {
-            ClickableUrl(segment.segmentText, segment.segmentText)
+            ClickableUrlOrBlossom(segment.segmentText, segment.segmentText)
         }
     }
 
@@ -255,63 +252,37 @@ class AmethystRichTextSegmentRenderer(
 }
 
 /**
- * Renders rich text through the shared cross-platform [CommonsRichTextViewer] core.
- * This is the production plain-text path that [RichTextViewer] delegates to: it
- * parses with the existing [CachedRichTextParser], keeps the markdown path native,
- * and for plain rich text provides the Android segment renderer
- * ([AmethystRichTextSegmentRenderer]) plus the universal interactions into the two
- * CompositionLocals the core reads.
- *
- * The core renders text, custom emoji, and hashtags (with their shared inline
- * icons) itself; every divergent segment routes back to Amethyst's existing
- * leaves through the renderer. Note: url/email/phone open via the platform URI
- * handler rather than Amethyst's per-type Clickable* composables, so their tap
- * behavior is the generic open action (rendering is unchanged clickable text).
+ * Android's [RichTextPlatform]: its segment renderer ([AmethystRichTextSegmentRenderer]) and its
+ * markdown renderer. Installed in the app theme, so every screen's rich text gets them.
  */
-@Composable
-fun CommonsBackedRichTextViewer(
-    content: String,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    modifier: Modifier,
-    tags: ImmutableListOfLists<String>,
-    backgroundColor: MutableState<Color>,
-    callbackUri: String? = null,
-    authorPubKey: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    Column(modifier = modifier) {
-        if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
-            RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
-            return@Column
-        }
+object AndroidRichTextPlatform : RichTextPlatform {
+    override fun segmentRenderer(
+        accountViewModel: AccountViewModel,
+        nav: INav,
+        backgroundColor: MutableState<Color>,
+        callbackUri: String?,
+        canPreview: Boolean,
+    ): RichTextSegmentRenderer = AmethystRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
 
-        val state by remember(content, tags) {
-            mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri, authorPubKey))
-        }
+    @Composable
+    override fun Markdown(
+        content: String,
+        tags: ImmutableListOfLists<String>,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        callbackUri: String?,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
 
-        val renderer =
-            remember(accountViewModel, nav, backgroundColor, callbackUri, canPreview) {
-                AmethystRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
-            }
-
-        val interactions =
-            remember(nav) {
-                RichTextInteractions(
-                    onClickHashtag = { nav.nav(Route.Hashtag(it.lowercase())) },
-                )
-            }
-
-        CompositionLocalProvider(
-            LocalRichTextSegmentRenderer provides renderer,
-            LocalRichTextInteractions provides interactions,
-        ) {
-            CommonsRichTextViewer(
-                state = state,
-                canPreview = canPreview,
-                quotesLeft = quotesLeft,
-            )
-        }
-    }
+    @Composable
+    override fun SecretMessage(
+        content: RichTextViewerState,
+        callbackUri: String?,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = CoreSecretMessage(content, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
 }

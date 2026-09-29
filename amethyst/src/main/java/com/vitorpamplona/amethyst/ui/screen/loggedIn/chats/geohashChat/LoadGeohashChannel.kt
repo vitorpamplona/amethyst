@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
-import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
+import com.vitorpamplona.amethyst.commons.ui.note.produceStateIfNotNull
 
 /**
  * Resolves the [GeohashChatChannel] for [geohash] from LocalCache, creating an

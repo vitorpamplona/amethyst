@@ -52,7 +52,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -67,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
@@ -76,19 +76,22 @@ import com.vitorpamplona.amethyst.commons.resources.feed_is_empty
 import com.vitorpamplona.amethyst.commons.resources.home_tab_everything
 import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.refresh
-import com.vitorpamplona.amethyst.commons.service.OnlineChecker
-import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfModal
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -97,13 +100,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
@@ -341,13 +338,13 @@ fun HomeScreenFloatingButton(
                 .collectAsStateWithLifecycle()
 
             when (val myLocation = location) {
-                is LocationState.LocationResult.Success -> {
+                is LocationResult.Success -> {
                     NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
                 }
 
-                is LocationState.LocationResult.LackPermission -> { }
+                is LocationResult.LackPermission -> { }
 
-                is LocationState.LocationResult.Loading -> { }
+                is LocationResult.Loading -> { }
             }
         }
 
@@ -590,51 +587,6 @@ fun HomeFeedEmpty(onRefresh: () -> Unit) {
         Text(stringRes(Res.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringRes(Res.string.refresh)) }
-    }
-}
-
-@Composable
-fun CheckIfVideoIsOnline(
-    url: String,
-    accountViewModel: AccountViewModel,
-    whenOnline: @Composable (Boolean) -> Unit,
-) {
-    val online by produceState(
-        initialValue = OnlineChecker.isOnlineCached(url),
-        key1 = url,
-    ) {
-        val isOnline = accountViewModel.checkVideoIsOnline(url)
-        if (value != isOnline) {
-            value = isOnline
-        }
-    }
-
-    whenOnline(online)
-}
-
-@Composable
-fun CrossfadeCheckIfVideoIsOnline(
-    url: String,
-    accountViewModel: AccountViewModel,
-    whenOnline: @Composable () -> Unit,
-) {
-    val online by produceState(
-        initialValue = OnlineChecker.isOnlineCached(url),
-        key1 = url,
-    ) {
-        val isOnline = accountViewModel.checkVideoIsOnline(url)
-        if (value != isOnline) {
-            value = isOnline
-        }
-    }
-
-    CrossfadeIfEnabled(
-        targetState = online,
-        label = "CheckIfUrlIsOnline",
-    ) {
-        if (it) {
-            whenOnline()
-        }
     }
 }
 

@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.map
 /**
  * Resolves the "Mine" top-nav selection to an author filter scoped to the logged-in user's own
  * pubkey, pinned to the user's own relays — their outbox, private-storage, local and proxy relays
- * (see [com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountMineRelayState]). Unlike the
+ * (see [com.vitorpamplona.amethyst.commons.model.nip01UserMetadata.AccountMineRelayState]). Unlike the
  * follow filters, "Mine" doesn't need per-author outbox resolution from cache: the only author is
  * the user, and the user's relays are already known from their own account state — so we pin the
  * fixed set directly via [AuthorsByProxyTopNavFilter] (it associates each given relay with the

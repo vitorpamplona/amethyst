@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryRelayDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.historySubtitle
 import com.vitorpamplona.amethyst.commons.ui.feeds.incompleteSubtitle
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -78,12 +78,12 @@ enum class DmReplyProtocol {
 
 /**
  * The inner-quote placeholder for a reply whose target message has not been paged in yet — used in
- * place of the generic [com.vitorpamplona.amethyst.ui.note.BlankNote] ("post not found") that the main
+ * place of the generic [com.vitorpamplona.amethyst.commons.ui.note.BlankNote] ("post not found") that the main
  * feeds show. A reply target inside a conversation isn't *missing*, it's simply older than the window
  * loaded so far; for gift wraps it can't even be fetched by id. So instead of declaring it lost, this
  * card actively walks the conversation's history backward — kicking the protocol's `loadMore` each time
  * the previous page settles — until either the target decrypts (the surrounding
- * [com.vitorpamplona.amethyst.ui.note.WatchNoteEvent] crossfades the real message in and disposes this)
+ * [com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent] crossfades the real message in and disposes this)
  * or that protocol's history runs dry, at which point it settles into the terminal "not found" text.
  *
  * It runs regardless of scroll position (no oldest-end gate like the scroll-driven loader) precisely so
