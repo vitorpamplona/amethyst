@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -78,7 +79,9 @@ object ConcordSubscriptionPlanner {
             // the entry, per epoch, exactly as it was delivered.
             val cp = ConcordActions.controlPlaneKeysFor(e)
             val historical =
-                e.heldRoots
+                // Losing-fork roots of a healed race are kept for their messages only (CORD-06 §3).
+                ConcordRefounding
+                    .canonicalHeldRoots(e.heldRoots)
                     .filter { it.epoch < e.rootEpoch }
                     .sortedByDescending { it.epoch }
                     .take(ConcordActions.MAX_BACKFILL_EPOCHS)
@@ -104,10 +107,13 @@ object ConcordSubscriptionPlanner {
             val guestbook = ConcordActions.guestbookPlane(root, communityId, e.rootEpoch)
             val nextRekey = ConcordActions.nextBaseRekeyPlane(root, communityId, e.rootEpoch)
             val dissolved = ConcordDissolution.planeKey(e.id)
-            listOf(
+            val sibling = ConcordActions.siblingBaseRekeyPlane(e)
+            listOfNotNull(
                 ConcordPlaneSub(channelId = null, pubKeyHex = guestbook.publicKeyHex, relays = relays),
                 ConcordPlaneSub(channelId = null, pubKeyHex = nextRekey.publicKeyHex, relays = relays),
                 ConcordPlaneSub(channelId = null, pubKeyHex = dissolved.publicKeyHex, relays = relays),
+                // The current epoch's own rekey address, so a racing sibling can heal us (CORD-06 §3).
+                sibling?.let { ConcordPlaneSub(channelId = null, pubKeyHex = it.publicKeyHex, relays = relays) },
             )
         }
 

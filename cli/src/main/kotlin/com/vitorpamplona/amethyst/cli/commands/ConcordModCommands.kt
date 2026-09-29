@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
+import com.vitorpamplona.amethyst.cli.stores.StoredPendingRefounding
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
@@ -36,6 +37,9 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
+import com.vitorpamplona.quartz.concord.cord06Rekey.IncompleteControlPlaneException
+import com.vitorpamplona.quartz.concord.cord06Rekey.PendingRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -286,6 +290,11 @@ object ConcordModCommands {
                     .toSet()
             if (removed.isEmpty()) return Output.error("bad_args", "--remove needs at least one user")
 
+            // Death wins every race (CORD-02 §9): no epoch advance past a tombstone is honored.
+            if (ConcordCommands.isDissolved(ctx, sc)) {
+                return Output.error("dissolved", "community '$handle' has been dissolved; a Refounding cannot cross the tombstone (CORD-02 §9)")
+            }
+
             val loaded = load(ctx, sc, dataDir)
             val (cp, editions) = loaded
             val state = ConcordCommunityState.fold(editions, sc.communityId.hexToByteArray(), sc.owner)
@@ -306,7 +315,21 @@ object ConcordModCommands {
             // split epoch it takes the current control_root (CORD-02 §2).
             writeGuard(cp)?.let { return it }
 
+            // The rotation cites the Grant it acts under (CORD-06 §3 "Authority"), or no receiver
+            // honors it; the owner cites nothing.
+            val citation = ConcordReceive.rotationCitation(ConcordCommands.entryFor(loaded.community), editions, me)
+            if (citation == null && !authority.isOwner(me)) {
+                return Output.error("forbidden", "no Grant of yours in this community's fold to cite; receivers would drop the rotation (CORD-06 §3)")
+            }
+
             val relays = ConcordCommands.relaysFor(ctx, sc)
+
+            // 0. Acquire the WHOLE plane before the first publish (CORD-06 §3: a Refounder that cannot
+            //    fold every Control event must abort). Paged to completion, not a single capped REQ.
+            val swept = ctx.drainAllPages(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }).map { it.second }
+            if (swept.isEmpty()) {
+                return Output.error("control_plane_unreadable", "could not page this community's Control Plane; refusing to compact a partial plane (CORD-06 §3)")
+            }
 
             // 1. Ban the removed on the CURRENT plane, so the compacted snapshot — and therefore the
             //    new epoch — carries the ban. Each edition chains onto the updated banlist head.
@@ -334,45 +357,67 @@ object ConcordModCommands {
 
             // 3. Build: new root + fresh control_root, compacted plane, per-recipient blobs (staff
             //    get the 136-byte form carrying the secret, everyone else the 104-byte pubkey one).
-            val newRoot = RandomInstance.bytes(32)
-            val newControlRoot = RandomInstance.bytes(32)
-            // Compact from what we KNOW the plane holds: the wraps we drained plus the bans we just
+            //    The keys are RESERVED and persisted before anything is published, so a retried
+            //    `refound` re-delivers the same root instead of minting a sibling (CORD-06 §3).
+            val priorRoot = sc.root.hexToByteArray()
+            val keys =
+                ConcordRefounding.reserveKeys(
+                    loaded.community.pendingRefounding?.let { PendingRefounding(sc.communityId, it.rootEpoch, it.prevCommit, it.newRoot.hexToByteArray(), it.newControlRoot.hexToByteArray()) },
+                    sc.communityId,
+                    sc.rootEpoch,
+                    priorRoot,
+                )
+            val reserved = loaded.community.copy(pendingRefounding = StoredPendingRefounding(keys.rootEpoch, keys.prevCommit, keys.newRoot.toHexKey(), keys.newControlRoot.toHexKey()))
+            ConcordStore(dataDir.concordFile).upsert(reserved)
+            // Compact from what we KNOW the plane holds: the paged sweep plus the bans we just
             // published. Re-draining alone would race the relay's indexing, and a relay that has not
             // yet echoed the ban back (or that ACKed and stored nothing) would produce a new epoch
             // whose roster never banned the member we are removing.
-            val drained = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
-            val controlWraps = (drained + banWraps).distinctBy { it.id }
+            val controlWraps = (swept + banWraps).distinctBy { it.id }
             val build =
-                ConcordActions.buildRefounding(
-                    rotatorSigner = ctx.signer,
-                    communityId = sc.communityId,
-                    priorRoot = sc.root.hexToByteArray(),
-                    newRoot = newRoot,
-                    newControlRoot = newControlRoot,
-                    rootEpoch = sc.rootEpoch,
-                    priorControlWraps = controlWraps,
-                    priorControlKeys = cp,
-                    recipientsXOnly = recipients,
-                    staffXOnly = authority.staffMembers(),
-                    createdAt = TimeUtils.now(),
-                    ownerPubKey = sc.owner,
-                )
+                try {
+                    ConcordActions.buildRefounding(
+                        rotatorSigner = ctx.signer,
+                        communityId = sc.communityId,
+                        priorRoot = priorRoot,
+                        newRoot = keys.newRoot,
+                        newControlRoot = keys.newControlRoot,
+                        rootEpoch = sc.rootEpoch,
+                        priorControlWraps = controlWraps,
+                        priorControlKeys = cp,
+                        recipientsXOnly = recipients,
+                        staffXOnly = authority.staffMembers(),
+                        createdAt = TimeUtils.now(),
+                        ownerPubKey = sc.owner,
+                        authority = citation,
+                        // Every head our own fold honors (bans included) must survive the compaction.
+                        mustCarry = ConcordRefounding.headVersions(chain, sc.communityId.hexToByteArray(), sc.owner),
+                    )
+                } catch (e: IncompleteControlPlaneException) {
+                    return Output.error("control_plane_incomplete", "${e.missing.size} Control Plane head(s) could not be carried into the new epoch; aborted before publishing the rotation (CORD-06 §3)")
+                }
 
-            // 4. The compacted plane (the new epoch's state) then the blobs (the key that opens it).
-            build.controlWraps.forEach { ctx.publish(it, relays) }
-            build.rekeyWraps.forEach { ctx.publish(it, relays) }
+            // 4. The root roll FIRST, every chunk confirmed; the compacted plane only after it
+            //    (CORD-06 §3). A chunk no relay took aborts with nothing adopted — the reserved keys
+            //    make re-running this command re-deliver the same root.
+            for (wrap in build.rekeyWraps) {
+                if (ctx.publish(wrap, relays).values.none { it.accepted }) {
+                    return Output.error("rekey_not_published", "a rekey chunk was not accepted by any relay; re-run to resume with the same keys")
+                }
+            }
+            val compactionFailures = build.controlWraps.count { wrap -> ctx.publish(wrap, relays).values.none { it.accepted } }
 
             // 5. Adopt the new epoch ourselves — the same pure rewrite Amethyst uses, banking the
-            //    epoch we are leaving for the anti-rollback floor.
+            //    epoch we are leaving for the anti-rollback floor — and drop the reservation.
             val adopted =
                 ConcordReceive.withAdoptedRoot(
                     ConcordCommands.entryFor(loaded.community),
-                    newRoot,
+                    keys.newRoot,
                     build.newEpoch,
                     build.newControlKeys.address.hexToByteArray(),
-                    newControlRoot,
+                    keys.newControlRoot,
                 )
-            val stored = ConcordCommands.storedFrom(loaded.community, adopted)
+            val stored = ConcordCommands.storedFrom(loaded.community, adopted).copy(pendingRefounding = null)
             ConcordStore(dataDir.concordFile).upsert(stored)
 
             // 6. Refresh every link we minted, at its OWN coordinate, so it now resolves to the new
@@ -400,7 +445,7 @@ object ConcordModCommands {
                     // grants, icon, label — survive the rotation, and so a coordinate whose newest
                     // event is a revocation tombstone is left revoked instead of being re-opened.
                     val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.bundleFilter(link.signerPubKeyHex())) }).map { it.second }
-                    val live = ConcordActions.classifyInvite(wraps, token) as? InviteBundleStatus.Live ?: return@runCatching
+                    val live = ConcordActions.classifyInvite(wraps, link.signerPubKeyHex(), token) as? InviteBundleStatus.Live ?: return@runCatching
                     val moved =
                         live.invite.copy(
                             communityRoot = stored.root,
@@ -422,6 +467,7 @@ object ConcordModCommands {
                     "recipients" to recipients.size,
                     "control_wraps" to build.controlWraps.size,
                     "rekey_wraps" to build.rekeyWraps.size,
+                    "compaction_failures" to compactionFailures,
                     "invites_refreshed" to refreshed,
                 ),
             )

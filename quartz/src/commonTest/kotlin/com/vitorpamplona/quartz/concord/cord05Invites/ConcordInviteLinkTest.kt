@@ -32,6 +32,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConcordInviteLinkTest {
@@ -67,9 +68,10 @@ class ConcordInviteLinkTest {
     }
 
     @Test
-    fun buildUrlCarriesEveryRelayOfAnOversizedList() {
-        // A community with five relays used to crash the mint ("at most 3 relays, was 5").
-        // There is no cap below the format's own, so all five make the round trip.
+    fun buildUrlTruncatesAnOversizedListToTheBootstrapCap() {
+        // A community with five relays used to crash the mint ("at most 3 relays, was 5"), and was
+        // then fixed by carrying all five — which the reference client's decoder refuses. The
+        // fragment only has to find the bundle (CORD-05 §3), so the first three make the trip.
         val relays =
             listOf(
                 "wss://one.example",
@@ -80,7 +82,7 @@ class ConcordInviteLinkTest {
             )
         val parsed = ConcordInviteLink.parseUrl(ConcordInviteLink.buildUrl("https://vector.chat", signer, token, relays))
         assertNotNull(parsed)
-        assertEquals(relays, parsed.fragment.relays)
+        assertEquals(relays.take(3), parsed.fragment.relays)
         assertContentEquals(token, parsed.fragment.token)
     }
 
@@ -92,18 +94,6 @@ class ConcordInviteLinkTest {
         assertNotNull(parsed)
         assertTrue(parsed.fragment.usedStockRelays)
         assertEquals(InviteRelayDictionary.STOCK, parsed.fragment.relays)
-    }
-
-    @Test
-    fun encodesTheLargestRelayListTheCountByteCanHold() {
-        // 255 is the format ceiling, not a policy one: the relay count is a single byte.
-        val relays = List(255) { "wss://relay$it.example" }
-        val frag = ConcordInviteLink.decodeFragment(ConcordInviteLink.encodeFragment(token, relays))
-        assertEquals(relays, frag.relays)
-        assertContentEquals(token, frag.token)
-
-        // One more would silently wrap the count byte to 0 and strand every relay, so it throws.
-        assertFailsWith<IllegalArgumentException> { ConcordInviteLink.encodeFragment(token, relays + "wss://overflow.example") }
     }
 
     @Test
@@ -133,5 +123,33 @@ class ConcordInviteLinkTest {
         assertEquals(32, k.size)
         assertContentEquals(k, ConcordKeyDerivation.inviteBundleKey(token))
         assertFalse(k.toHexKey() == ConcordKeyDerivation.inviteBundleKey(ByteArray(16) { 0x09 }).toHexKey())
+    }
+
+    // ---- I11: at most 3 bootstrap relays (CORD-05 §3) -------------------------------------
+
+    @Test
+    fun encodingTruncatesToThreeBootstrapRelays() {
+        val token = ByteArray(16) { 7 }
+        val relays = listOf("wss://a.example", "wss://b.example", "wss://c.example", "wss://d.example", "wss://e.example")
+        val decoded = ConcordInviteLink.decodeFragment(ConcordInviteLink.encodeFragment(token, relays))
+        assertEquals(relays.take(ConcordInviteLink.MAX_BOOTSTRAP_RELAYS), decoded.relays)
+    }
+
+    @Test
+    fun theStockSetIsExemptFromTheCap() {
+        val decoded = ConcordInviteLink.decodeFragment(ConcordInviteLink.encodeFragment(ByteArray(16), InviteRelayDictionary.STOCK))
+        assertEquals(InviteRelayDictionary.STOCK, decoded.relays)
+        assertTrue(decoded.usedStockRelays)
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun decodingRefusesMoreThanThreeBootstrapRelays() {
+        // version 4, flags 0, count 4, four dictionary ids, then the token — what a non-conforming
+        // encoder would emit and the reference client's decoder throws on.
+        val bytes = byteArrayOf(4, 0, 4, 1, 2, 3, 4) + ByteArray(16)
+        val fragment = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
+        assertFailsWith<IllegalArgumentException> { ConcordInviteLink.decodeFragment(fragment) }
+        assertNull(ConcordInviteLink.parseUrl("https://x/invite/" + ConcordInviteLink.buildUrl("https://x", "aa".repeat(32), ByteArray(16)).substringAfter("/invite/").substringBefore('#') + "#" + fragment))
     }
 }

@@ -57,6 +57,9 @@ data class StoredCommunity(
     // A private channel is read and written ONLY on the plane its own key derives; without one it
     // is unreadable and `send` refuses rather than fall back to the root-derived plane.
     val privateChannels: List<StoredPrivateChannel> = emptyList(),
+    // Keys reserved for a Refounding this account started but has not yet adopted (CORD-06 §3): a
+    // retried `refound` must re-deliver the SAME root, never mint a sibling that splits the members.
+    val pendingRefounding: StoredPendingRefounding? = null,
 )
 
 /** A held Private Channel key at its channel epoch, mirroring quartz `PrivateChannelKey`. */
@@ -65,6 +68,14 @@ data class StoredPrivateChannel(
     val key: String = "",
     val epoch: Long = 0,
     val name: String = "",
+)
+
+/** A Refounding's reserved keys, mirroring quartz `PendingRefounding`. */
+data class StoredPendingRefounding(
+    val rootEpoch: Long = 0,
+    val prevCommit: String = "",
+    val newRoot: String = "",
+    val newControlRoot: String = "",
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */

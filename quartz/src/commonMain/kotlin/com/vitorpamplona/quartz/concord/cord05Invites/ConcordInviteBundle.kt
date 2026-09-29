@@ -26,9 +26,11 @@ import com.vitorpamplona.quartz.concord.cord04Roles.control.vsk
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -94,6 +96,52 @@ class MintedInviteLink(
 object ConcordInviteBundle {
     const val KIND = ConcordInviteBundleEvent.KIND
 
+    /**
+     * A bundle naming more Channels than this is refused before anything is allocated for it
+     * (CORD-05 §1: "reject a bundle carrying more than a sane channel count (Vector's ceiling is
+     * 256)"). A bundle is attacker-crafted input reached by following a link.
+     */
+    const val MAX_BUNDLE_CHANNELS = 256
+
+    /**
+     * A bundle's `relays` are truncated to the Community's relay cap before anything connects to
+     * them (CORD-05 §1, CORD-02 §6's "up to 5"): a hostile link must not be a connect storm.
+     */
+    const val MAX_COMMUNITY_RELAYS = 5
+
+    /**
+     * Bounds an attacker-crafted [invite] (CORD-05 §1 MUST): null when it names more than
+     * [MAX_BUNDLE_CHANNELS] Channels, otherwise the invite with `relays` de-duplicated and
+     * truncated to [MAX_COMMUNITY_RELAYS]. Every redeem path — link bundle, Direct Invite —
+     * goes through [validate], which applies this.
+     */
+    fun bound(invite: CommunityInvite): CommunityInvite? {
+        if (invite.channels.size > MAX_BUNDLE_CHANNELS) return null
+        val relays =
+            invite.relays
+                .filter { it.isNotBlank() }
+                .distinct()
+                .take(MAX_COMMUNITY_RELAYS)
+        return if (relays == invite.relays) invite else invite.copy(relays = relays)
+    }
+
+    /**
+     * True when [event] is really the bundle coordinate `(33301, linkSigner, d="")` (CORD-05 §2):
+     * the right kind, authored by [linkSignerPubKey], an empty `d`, and a valid signature. A relay
+     * filter is a hint, not a proof — a relay (or anyone who can write to one) could otherwise
+     * serve a forged newer `vsk 9` and revoke a link it never owned.
+     */
+    fun isAtCoordinate(
+        event: Event,
+        linkSignerPubKey: HexKey,
+    ): Boolean {
+        if (event.kind != KIND) return false
+        if (!event.pubKey.equals(linkSignerPubKey, ignoreCase = true)) return false
+        val d = event.tags.firstOrNull { it.isNotEmpty() && it[0] == "d" }?.getOrNull(1) ?: ""
+        if (d != "") return false
+        return event.verify()
+    }
+
     private fun json(invite: CommunityInvite) = ConcordJson.instance.encodeToString(CommunityInvite.serializer(), invite)
 
     /** Builds a kind-33301 bundle event carrying [invite], encrypted under [token] and signed by [linkSignerPrivKey]. */
@@ -125,7 +173,10 @@ object ConcordInviteBundle {
         createdAt: Long,
     ): Event = NostrSignerSync(KeyPair(privKey = linkSignerPrivKey)).sign(ConcordInviteBundleEvent.buildRevocation(createdAt))
 
-    /** Decrypts a kind-33301 bundle [event] with the link [token], or null if it isn't a valid bundle. */
+    /**
+     * Decrypts a kind-33301 bundle [event] with the link [token], or null if it isn't a valid bundle.
+     * The result is already [bound]ed (CORD-05 §1), so an over-long relay list never reaches a caller.
+     */
     fun parse(
         event: Event,
         token: ByteArray,
@@ -133,7 +184,7 @@ object ConcordInviteBundle {
         if (event.kind != KIND) return null
         return try {
             val bundleKey = ConcordKeyDerivation.inviteBundleKey(token)
-            ConcordJson.decodeOrNull<CommunityInvite>(Nip44.v2.decrypt(event.content, bundleKey))
+            ConcordJson.decodeOrNull<CommunityInvite>(Nip44.v2.decrypt(event.content, bundleKey))?.let { bound(it) }
         } catch (_: Exception) {
             null
         }
@@ -152,11 +203,25 @@ object ConcordInviteBundle {
      * milliseconds) resolves to [InviteBundleStatus.Expired] rather than
      * [InviteBundleStatus.Live], so the expiry is actually enforced at the one place
      * every redeeming client already funnels through.
+     *
+     * Only events really at the coordinate count ([isAtCoordinate]: kind, author ==
+     * [linkSignerPubKey], `d == ""`, valid signature) — the relay filter is not trusted, so a
+     * forged newer revocation cannot kill a link, nor a forged bundle hijack one.
      */
     fun classify(
         wraps: List<Event>,
+        linkSignerPubKey: HexKey,
         token: ByteArray,
         nowMs: Long = TimeUtils.nowMillis(),
+    ): InviteBundleStatus {
+        val genuine = wraps.filter { isAtCoordinate(it, linkSignerPubKey) }
+        return classifyGenuine(genuine, token, nowMs)
+    }
+
+    private fun classifyGenuine(
+        wraps: List<Event>,
+        token: ByteArray,
+        nowMs: Long,
     ): InviteBundleStatus {
         val newest = wraps.maxByOrNull { it.createdAt } ?: return InviteBundleStatus.Absent
         if (newest.tags.vsk() == ControlEntityKind.INVITE_REVOKED) return InviteBundleStatus.Revoked
@@ -197,6 +262,7 @@ object ConcordInviteBundle {
      * member. Raise with the Concord/Armada authors before diverging.
      */
     fun validate(invite: CommunityInvite): Boolean {
+        if (invite.channels.size > MAX_BUNDLE_CHANNELS) return false
         val owner = invite.owner.hexToByteArrayOrNull() ?: return false
         val salt = invite.ownerSalt.hexToByteArrayOrNull() ?: return false
         return ConcordKeyDerivation.communityId(owner, salt).toHexKey() == invite.communityId

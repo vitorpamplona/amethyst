@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
@@ -280,6 +281,19 @@ object ConcordActions {
         communityId: ByteArray,
         rootEpoch: Long,
     ): GroupKey = ConcordKeyDerivation.baseRekeyAddress(communityRoot, communityId, rootEpoch + 1)
+
+    /**
+     * The base-rekey address the rotation INTO [entry]'s current epoch rode on, derived from the
+     * prior epoch's (canonical) held root — or null when we hold none (a fresh joiner at this
+     * epoch). Watching it after adopting is what lets the same-epoch race heal (CORD-06 §3): a
+     * racing sibling rotation sealed under the same prior root arrives here, and a strictly lower
+     * one replaces the root we adopted.
+     */
+    fun siblingBaseRekeyPlane(entry: ConcordCommunityListEntry): GroupKey? {
+        if (entry.rootEpoch <= 0) return null
+        val prior = ConcordRefounding.canonicalHeldRoots(entry.heldRoots).firstOrNull { it.epoch == entry.rootEpoch - 1 } ?: return null
+        return ConcordKeyDerivation.baseRekeyAddress(prior.key.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
+    }
 
     // ---- relay filters (what to REQ) -----------------------------------------
 
@@ -551,6 +565,8 @@ object ConcordActions {
         name: String,
         relays: List<String>,
         controlPk: HexKey? = null,
+        creator: HexKey? = null,
+        label: String? = null,
     ): CommunityInvite =
         CommunityInvite(
             communityId = communityIdHex,
@@ -561,6 +577,10 @@ object ConcordActions {
             controlPk = controlPk,
             relays = relays,
             name = name,
+            // Optional attribution (CORD-05 §1): echoed in the joiner's Guestbook Join, so link
+            // holders can count per-link usage. Inside the token-encrypted bundle only.
+            creatorNpub = creator,
+            label = label,
         )
 
     /** Mints a shareable public invite link + bundle event (see [ConcordInviteBundle.mintLink]). */
@@ -620,15 +640,25 @@ object ConcordActions {
     fun bareInviteRef(url: String): String? = ConcordInviteLink.bareForm(url)
 
     /**
-     * Merges a stranded membership forward onto a higher-epoch [bundle] resolved at
-     * its own stored invite link, or null when there is nothing to recover. See
-     * [ConcordStrandedRecovery].
+     * True when a live [bundle] resolved at [entry]'s own stored invite link says a Refounding
+     * left us behind (a higher epoch, and we are not banned). Detection only: a bundle may never
+     * move a held community's base on its own (CORD-06 §2) — see [ConcordStrandedRecovery].
      */
-    fun recoverStranded(
+    fun isStranded(
         entry: ConcordCommunityListEntry,
         bundle: CommunityInvite,
         bannedAtCurrentEpoch: Boolean,
-    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.mergeForward(entry, bundle, bannedAtCurrentEpoch)
+    ): Boolean = ConcordStrandedRecovery.isStranded(entry, bundle, bannedAtCurrentEpoch)
+
+    /**
+     * The entry after the user **explicitly** re-accepts the invite link a stranded [entry] was
+     * joined through, or null when not stranded. Only ever from a user action — never a sweep.
+     */
+    fun rejoinStranded(
+        entry: ConcordCommunityListEntry,
+        bundle: CommunityInvite,
+        bannedAtCurrentEpoch: Boolean,
+    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.rejoinForward(entry, bundle, bannedAtCurrentEpoch)
 
     /** Decrypts + validates a fetched bundle event with the link token; null if invalid. */
     fun openBundle(
@@ -641,13 +671,15 @@ object ConcordActions {
      * [InviteBundleStatus] (live / expired / revoked / unreadable / absent) per CORD-05
      * §2, so a redeeming client honours a `vsk=9` revocation tombstone and an
      * `expires_at` in the past, and reports why a link can't be opened instead of
-     * retrying blindly. [nowMs] is unix milliseconds.
+     * retrying blindly. [nowMs] is unix milliseconds. Only events genuinely at the link's
+     * coordinate count — signed by [linkSignerPubKey], `d == ""` — never what a relay claims is.
      */
     fun classifyInvite(
         wraps: List<Event>,
+        linkSignerPubKey: HexKey,
         token: ByteArray,
         nowMs: Long = TimeUtils.nowMillis(),
-    ): InviteBundleStatus = ConcordInviteBundle.classify(wraps, token, nowMs)
+    ): InviteBundleStatus = ConcordInviteBundle.classify(wraps, linkSignerPubKey, token, nowMs)
 
     /**
      * The Control Plane keys described by a redeemed [invite] so the joiner can
@@ -735,6 +767,8 @@ object ConcordActions {
         staffXOnly: Set<HexKey>,
         createdAt: Long,
         ownerPubKey: HexKey,
+        authority: AuthorityCitation? = null,
+        mustCarry: Map<String, Long> = emptyMap(),
     ): RefoundingBuild =
         ConcordRefounding.build(
             rotatorSigner = rotatorSigner,
@@ -749,6 +783,8 @@ object ConcordActions {
             staffXOnly = staffXOnly,
             createdAt = createdAt,
             ownerPubKey = ownerPubKey,
+            authority = authority,
+            mustCarry = mustCarry,
         )
 
     /**
@@ -757,7 +793,9 @@ object ConcordActions {
      * scope, epoch and continuity against the [priorRoot] the member holds — and,
      * on a staff blob, that the delivered `control_root` derives to the delivered
      * `control_pk` (CORD-06 §1). Returns the new root + Control keys + rotator
-     * (for the caller to authorize) or null if not re-keyed.
+     * or null if not re-keyed. [accept] is the caller's authority check (see
+     * [ConcordReceive.isHonoredRotation]); racing rotations it admits converge on
+     * the lowest new root (CORD-06 §3).
      */
     suspend fun openBaseRekey(
         wraps: List<Event>,
@@ -766,5 +804,6 @@ object ConcordActions {
         communityId: HexKey,
         priorRoot: ByteArray,
         rootEpoch: Long,
-    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch)
+        accept: (ReceivedRefounding) -> Boolean = { true },
+    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch, accept)
 }

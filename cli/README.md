@@ -679,9 +679,12 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord channels COMMUNITY` | List a community's channels; `readable` is false for a private channel whose key this account does not hold (CORD-03 §1). |
 | `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). A private channel posts on its own key's plane; without a held key it fails with `no_channel_key` instead of falling back to the community-wide plane. |
 | `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane (public channels; a private channel reads its held key's plane). |
-| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link. |
+| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link (at most 3 bootstrap relays ride in the fragment, CORD-05 §3; the bundle names this account as creator). |
 | `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, then records it in your Invite List. |
-| `amy concord join URL` | Redeem an invite link and save the community. |
+| `amy concord join URL` | Redeem an invite link, save the community, and publish a Guestbook Join echoing the link's attribution (CORD-05 §1/§6). |
+| `amy concord rekey [COMMUNITY]` | Follow a Refounding we were re-keyed for. Honors only a BAN-holding rotator whose `vac` cites a Grant our fold has synced (the owner cites none); racing rotations converge on the lowest root (CORD-06 §3). |
+| `amy concord recover [COMMUNITY] [--rejoin]` | Report whether a Refounding left us behind (our joined-through link resolves to a higher epoch). A bundle never moves the base on its own (CORD-06 §2); `--rejoin` explicitly re-accepts the link. Ban-gated, fails closed. |
+| `amy concord refound COMMUNITY --remove U[,U…]` | CORD-06 Refounding. Aborts unless the whole Control Plane folds; publishes the rekey chunks first (each confirmed), the compacted plane after; reserves its keys so a re-run resumes with the same root; refused for a dissolved community. |
 | `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04). |
 | `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`; also `MANAGE_ROLES`, `MANAGE_CHANNELS`, `MANAGE_METADATA`, `MANAGE_MESSAGES`, `CREATE_INVITE`, `VIEW_AUDIT_LOG`, `MENTION_EVERYONE`, `PIN_MESSAGES`). |
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |

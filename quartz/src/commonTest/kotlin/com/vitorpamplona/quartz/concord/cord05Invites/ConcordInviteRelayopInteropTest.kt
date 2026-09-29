@@ -61,7 +61,7 @@ class ConcordInviteRelayopInteropTest {
         assertEquals("https://blossom.primal.net/a85a6b8f68cf602591b16846e1605f8034587b7220b44d7076d09f5e3bf5af71.jpg", invite.icon?.url)
         assertEquals(false, invite.icon?.isResolvable())
 
-        val status = ConcordInviteBundle.classify(listOf(event), token)
+        val status = ConcordInviteBundle.classify(listOf(event), event.pubKey, token)
         assertIs<InviteBundleStatus.Live>(status)
         assertEquals("3rd times a charm?", status.invite.name)
     }
