@@ -199,4 +199,23 @@ class OwnerAttestationTest {
         // Exactly four elements.
         assertNull(AuthTag.parse(arrayOf("auth", attestation.ownerPubKey, "", attestation.sig, "extra")))
     }
+
+    @Test
+    fun verifiedOwnerOfAProfileNeedsExactlyOneApplicableAuthTag() {
+        val ownerPub = owner.pubKey.toHexKey()
+        val tag = OwnerAttestation.sign(agentPub, "", owner.privKey!!).toTag()
+        assertEquals(ownerPub, OwnerAttestation.verifiedOwnerOf(agentPub, 0, 1_000, arrayOf(arrayOf("name", "x"), tag)))
+
+        // No first-valid-tag fallback: a second auth tag, even a malformed one, voids it.
+        assertNull(OwnerAttestation.verifiedOwnerOf(agentPub, 0, 1_000, arrayOf(tag, arrayOf("auth", "junk"))))
+        // It must authorize this author.
+        assertNull(OwnerAttestation.verifiedOwnerOf(KeyPair().pubKey.toHexKey(), 0, 1_000, arrayOf(tag)))
+
+        // Every condition must apply to the profile event itself, kind= included.
+        val kindOne = OwnerAttestation.sign(agentPub, "kind=1", owner.privKey!!).toTag()
+        assertNull(OwnerAttestation.verifiedOwnerOf(agentPub, 0, 1_000, arrayOf(kindOne)))
+        val expired = OwnerAttestation.sign(agentPub, "created_at<500", owner.privKey!!).toTag()
+        assertNull(OwnerAttestation.verifiedOwnerOf(agentPub, 0, 1_000, arrayOf(expired)))
+        assertEquals(ownerPub, OwnerAttestation.verifiedOwnerOf(agentPub, 0, 400, arrayOf(expired)))
+    }
 }

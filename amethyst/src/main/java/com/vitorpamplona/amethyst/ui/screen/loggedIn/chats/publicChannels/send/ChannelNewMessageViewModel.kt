@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.quartz.buzz.stream.BuzzChatMessage
+import com.vitorpamplona.quartz.buzz.stream.BuzzEditTagOverlay
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.mentions
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -113,6 +114,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -180,6 +182,11 @@ open class ChannelNewMessageViewModel :
     // the next send publishes a kind-40003 edit targeting this note instead of a new
     // message. Only ever set for own messages on a Buzz-dialect relay (see editBuzzMessage).
     val editingBuzzMessage = mutableStateOf<Note?>(null)
+
+    // The custom emoji the message being edited currently renders with. Buzz replaces a message's
+    // emoji set with the edit's whenever the edit carries any, so an edit re-sends the ones still
+    // used in the text alongside any newly picked ones.
+    private var editingBuzzEmojis: List<EmojiUrlTag> = emptyList()
 
     // Explicit @-mentions resolved by the last createTemplate, used by sendPostSync for the Buzz
     // auto-invite. Kept off the draft path on purpose (see createTemplate / sendPostSync).
@@ -303,12 +310,21 @@ open class ChannelNewMessageViewModel :
         replyTo.value = null
         replyMode.value = ReplyMode.INLINE
         editingBuzzMessage.value = note
-        message.setTextAndPlaceCursorAtEnd(note.latestBuzzEdit()?.event?.content ?: note.event?.content ?: "")
+        val latestEdit = note.latestBuzzEdit()?.event
+        message.setTextAndPlaceCursorAtEnd(latestEdit?.content ?: note.event?.content ?: "")
+        // Start from what the message shows now: an edit fully replaces its attachments on Buzz,
+        // so the ones still referenced in the text must go out again with the edit.
+        val currentTags = BuzzEditTagOverlay.apply(note.event?.tags ?: emptyArray(), latestEdit?.tags)
+        iMetaAttachments.reset()
+        iMetaAttachments.addAll(currentTags.imetas())
+        editingBuzzEmojis = currentTags.emojis()
         draftTag.newVersion()
     }
 
     fun clearBuzzEdit() {
         editingBuzzMessage.value = null
+        editingBuzzEmojis = emptyList()
+        iMetaAttachments.reset()
         message.setTextAndPlaceCursorAtEnd("")
         draftTag.newVersion()
     }
@@ -809,11 +825,20 @@ open class ChannelNewMessageViewModel :
                 // `build_edit` (buzz-sdk builders.rs) — the relay validates edits and the author
                 // match. LocalCache overlays the newest edit last-write-wins, so the edited row
                 // re-renders with this content.
+                // Buzz's clients render an edit with the original's tags overlaid by the edit's
+                // (BuzzEditTagOverlay): attachments come ONLY from the edit, and custom emoji from
+                // the edit whenever it has any. So the edit carries every attachment and emoji the
+                // new text still uses, like Buzz's own `build_message_edit`, or they would vanish.
                 val target = editingBuzzMessage.value!!
+                val editEmojis =
+                    (emojis + editingBuzzEmojis.filter { tagger.message.contains(":${it.code}:") })
+                        .distinctBy { it.code }
                 StreamMessageEditEvent.build(channel.groupId.id, target.idHex, tagger.message) {
                     // Carry `p` mentions for anyone cited in the edited text, so a mention added
                     // (or kept) by an edit still notifies the member and resolves its `nostr:` ref.
                     mentions(tagger.pTags?.map { it.pubkeyHex }.orEmpty())
+                    imetas(usedAttachments)
+                    emojis(editEmojis)
                 }
             }
 

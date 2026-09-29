@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.isBuzzEditableBy
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
@@ -280,22 +281,24 @@ fun ChatMessageActionSheet(
 
             // Editing my own chat message. Two surfaces publish an edit today, gated by type:
             //  - Buzz: kind-9 message in a Buzz-dialect relay group (or a legacy kind-40002 one)
-            //    → a kind-40003 edit.
+            //    → a kind-40003 edit, by its author or the author's agent owner.
             //  - Concord: kind-9 channel message or kind-1111 thread reply (carries a
             //    ConcordChannel gatherer) → a kind-3302 edit wrapped on the channel plane.
             // Both restrict to my own messages; a note is only ever one of the two, so at
             // most one tile shows and both route through the same edit callback.
             val isMine = note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
+            // Buzz lets the owner of an agent edit the agent's messages too, and credits a
+            // relay-signed message to the member it names, so its own rule decides.
             val canEditBuzz =
                 onWantsToEditChatMessage != null &&
-                    isMine &&
                     (
                         note.event is StreamMessageV2Event ||
                             (
                                 note.event is ChatEvent &&
                                     note.inGatherers?.any { it is RelayGroupChannel && BuzzRelayDialect.isBuzz(it.groupId.relayUrl) } == true
                             )
-                    )
+                    ) &&
+                    note.isBuzzEditableBy(accountViewModel.userProfile().pubkeyHex)
             val canEditConcord =
                 onWantsToEditChatMessage != null &&
                     (note.event is ChatEvent || note.event is CommentEvent) &&

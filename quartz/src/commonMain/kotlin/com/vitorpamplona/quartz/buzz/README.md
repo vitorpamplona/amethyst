@@ -122,6 +122,13 @@ Last reconciled against `block/buzz` `4ef23609b` (2026-09-29); the previous full
   `build_message`): `h`, NIP-10 thread markers, `p` mentions, `broadcast` for a reply that also shows
   in the channel. That is what Buzz's own clients write; kind 40002 is read-only now, kept so older
   messages still render. `broadcast` means the same on either kind.
+- **Edits (40003)** apply to any channel message kind. The relay stores them as-is; clients resolve
+  them: the newest edit by the message's author, or by the owner that author declares through a
+  verified NIP-OA `auth` tag on its kind-0 profile (`OwnerAttestation.verifiedOwnerOf`), wins. A
+  relay-signed message counts as written by its `actor` (else `p`). The edit's tags overlay the
+  original's (`stream/BuzzEditTagOverlay`): attachments only from the edit, custom emoji from the
+  edit when it has any, added `p` mentions merged. So an edit re-sends every attachment and emoji
+  the new text still uses.
 - **Put-user (9000)** without a `role` tag is "no role change" on Buzz; a plain add sends none.
 - **Compare-and-swap writes**: canvas (40100) and workflow definitions (30620) take
   `["expected-revision", <head id>]` and the relay answers `conflict:` on a stale head. A workflow's

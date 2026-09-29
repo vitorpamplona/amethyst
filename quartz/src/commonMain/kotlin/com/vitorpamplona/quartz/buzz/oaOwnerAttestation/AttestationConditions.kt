@@ -126,6 +126,33 @@ data class AttestationConditions(
         }
 
         /**
+         * True when every clause in [conditions] applies to an event of [kind] signed at
+         * [createdAt]: `kind=` must match and both time bounds hold (strictly). Unlike
+         * [timeBoundsAllow], `kind=` counts - this is the check for an attestation carried on an
+         * event (e.g. an agent's kind-0 profile), not for connection admission. Any clause it
+         * does not recognize fails. Mirrors `profile_valid_oa_owner_pubkey` in Buzz's
+         * `desktop/src-tauri/src/nostr_convert.rs`.
+         */
+        fun appliesToEvent(
+            conditions: String,
+            kind: Int,
+            createdAt: Long,
+        ): Boolean {
+            if (conditions.isEmpty()) return true
+            for (clause in conditions.split("&")) {
+                val ok =
+                    when {
+                        clause.startsWith("kind=") -> clause.removePrefix("kind=").toIntOrNull() == kind
+                        clause.startsWith("created_at<") -> clause.removePrefix("created_at<").toLongOrNull()?.let { createdAt < it } ?: false
+                        clause.startsWith("created_at>") -> clause.removePrefix("created_at>").toLongOrNull()?.let { createdAt > it } ?: false
+                        else -> false
+                    }
+                if (!ok) return false
+            }
+            return true
+        }
+
+        /**
          * The last second at which [conditions] still admit an authentication (the tightest
          * `created_at<` bound minus one), or null when there is no upper bound.
          */

@@ -146,6 +146,35 @@ data class OwnerAttestation(
             return sign(agentPubKey, conditions.encode(), priv)
         }
 
+        /**
+         * The owner an agent's event declares through NIP-OA, or null. The event must carry
+         * **exactly one** `auth` tag (a malformed second one still counts, so there is no
+         * first-valid-tag fallback), it must verify for the event's own author [pubKey], and every
+         * condition must apply to this event ([AttestationConditions.appliesToEvent]).
+         *
+         * Buzz reads an agent's owner this way off the agent's kind-0 profile: that owner may edit
+         * the agent's channel messages, and names the agent in the UI. The event's own signature
+         * is the caller's to have checked. Ground truth: `profile_valid_oa_owner_pubkey` in Buzz's
+         * `desktop/src-tauri/src/nostr_convert.rs`.
+         */
+        fun verifiedOwnerOf(
+            pubKey: HexKey,
+            kind: Int,
+            createdAt: Long,
+            tags: Array<Array<String>>,
+        ): HexKey? {
+            var authTag: Array<String>? = null
+            for (tag in tags) {
+                if (tag.isEmpty() || tag[0] != AuthTag.TAG_NAME) continue
+                if (authTag != null) return null
+                authTag = tag
+            }
+            val attestation = AuthTag.parse(authTag ?: return null) ?: return null
+            if (!attestation.verify(pubKey)) return null
+            if (!AttestationConditions.appliesToEvent(attestation.conditions, kind, createdAt)) return null
+            return attestation.ownerPubKey
+        }
+
         /** Parses a NIP-OA `auth` tag; see [AuthTag.parse]. Does not verify the signature. */
         fun parse(tag: Tag): OwnerAttestation? = AuthTag.parse(tag)
     }
