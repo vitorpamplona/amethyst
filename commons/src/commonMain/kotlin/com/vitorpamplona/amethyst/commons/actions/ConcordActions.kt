@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -32,15 +34,21 @@ import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordStrandedRecovery
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.OpenedDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -50,11 +58,17 @@ import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -316,8 +330,15 @@ object ConcordActions {
      */
     fun bundlesFilter(linkSignerPubKeyHexes: List<HexKey>): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = linkSignerPubKeyHexes)
 
-    /** Pending direct invites addressed to the given member (indexed by k=3313). */
-    fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())))
+    /**
+     * Pending direct invites addressed to the given member (indexed by k=3313, CORD-05 §6). [since]
+     * should come from [ConcordDirectInvite.inboxSince]: wraps are backdated up to two days, so a
+     * cursor at the newest wrap seen would miss invites published after it.
+     */
+    fun directInvitesFilter(
+        memberPubKeyHex: HexKey,
+        since: Long? = null,
+    ): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())), since = since)
 
     // ---- community lifecycle --------------------------------------------------
 
@@ -354,6 +375,41 @@ object ConcordActions {
 
     // ---- channel chat ---------------------------------------------------------
 
+    /**
+     * [extraTags] plus the CORD-08 §2 `expiration` a rumor of [kind] created at [createdAt] must carry
+     * while the community's timer is [timerSecs] — none when the timer is off or the kind is exempt
+     * (deletes, timer notices, ephemeral kinds). Inside the signed rumor, so it is authoritative.
+     */
+    private fun withTimer(
+        extraTags: Array<Array<String>>,
+        kind: Int,
+        createdAt: Long,
+        timerSecs: Long?,
+    ): Array<Array<String>> = ConcordDisappearing.withExpiration(extraTags, ConcordDisappearing.expirationFor(kind, createdAt, timerSecs))
+
+    /**
+     * Seals [rumor] (encrypted 20013) and wraps it on the [channel] plane. The wrap repeats the
+     * rumor's own `expiration`, if any, so NIP-40 relays delete the ciphertext (CORD-08 §2).
+     */
+    private suspend fun wrapChat(
+        rumor: Event,
+        channel: GroupKey,
+        authorSigner: NostrSigner,
+    ): Event = ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true, outerTags = ConcordDisappearing.wrapTagsFor(rumor))
+
+    /**
+     * Builds a CORD-08 §4 timer-notice wrap (kind 1740) announcing [timerSecs] (`0` = off) on the
+     * [channel] plane. A notice never expires, whatever the timer.
+     */
+    suspend fun buildChannelTimerNotice(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        timerSecs: Long,
+        createdAt: Long,
+    ): Event = wrapChat(ConcordDisappearing.timerNotice(authorSigner.pubKey, channelId, epoch, timerSecs, createdAt), channel, authorSigner)
+
     /** Builds an encrypted-seal channel message wrap to publish on the [channel] plane. */
     suspend fun buildChannelMessage(
         authorSigner: NostrSigner,
@@ -363,9 +419,10 @@ object ConcordActions {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt, withTimer(extraTags, ChatEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -381,9 +438,10 @@ object ConcordActions {
         imetas: List<IMetaTag>,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt, withTimer(extraTags, ChatEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /** Builds an encrypted-seal inline quote-reply wrap (kind-9 message quoting [parent] via `q`) on the [channel] plane. */
@@ -396,9 +454,10 @@ object ConcordActions {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt, withTimer(extraTags, ChatEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /** Builds an encrypted-seal thread-reply wrap (kind-1111 NIP-22 comment on [parent]) on the [channel] plane. */
@@ -411,9 +470,10 @@ object ConcordActions {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt, withTimer(extraTags, CommentEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -430,9 +490,10 @@ object ConcordActions {
         imetas: List<IMetaTag>,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.imageReply(authorSigner.pubKey, channelId, epoch, text, imetas, parent, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.imageReply(authorSigner.pubKey, channelId, epoch, text, imetas, parent, createdAt, withTimer(extraTags, CommentEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -449,9 +510,10 @@ object ConcordActions {
         newText: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, withTimer(extraTags, ConcordChatEditEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -469,7 +531,7 @@ object ConcordActions {
         createdAt: Long,
     ): Event {
         val rumor = ChannelChat.delete(authorSigner.pubKey, channelId, epoch, targets, createdAt)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
@@ -482,9 +544,10 @@ object ConcordActions {
         reaction: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt, withTimer(extraTags, ReactionEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -538,10 +601,24 @@ object ConcordActions {
     /**
      * Opens one channel [wrap] and returns its rumor only when it passes the Chat ingest gate
      * ([ChannelChat.acceptOpened]): an encrypted 20013 seal, a Chat kind (never another plane's
-     * kind), a strict `channel`/`epoch` binding, and a well-formed `ms`. Anything else is dropped
-     * here, before it can reach the store.
+     * kind), a strict `channel`/`epoch` binding, and a well-formed `ms`. A rumor whose own
+     * `expiration` is at or before [now] is refused too (CORD-08 §3: never stored). Anything else is
+     * dropped here, before it can reach the store.
      */
     fun openChannelRumor(
+        wrap: Event,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        now: Long = TimeUtils.now(),
+    ): Event? = openChannelRumorAnyExpiry(wrap, channel, channelId, epoch)?.takeUnless { ConcordDisappearing.isExpired(it, now) }
+
+    /**
+     * [openChannelRumor] without the CORD-08 expiry refusal, for a caller that must tell an expired
+     * rumor apart from garbage — the session, which purges an expired rumor's wrap instead of merely
+     * skipping it. Such a caller owns the refusal.
+     */
+    fun openChannelRumorAnyExpiry(
         wrap: Event,
         channel: GroupKey,
         channelId: HexKey,
@@ -582,6 +659,95 @@ object ConcordActions {
             creatorNpub = creator,
             label = label,
         )
+
+    /**
+     * The §1 bundle a Direct Invite hands [recipient] for the community [entry] holds (CORD-05 §6):
+     * the current base, epoch and `control_pk`, the relays, a name/icon preview, the optional
+     * [expiresAtMs] (unix ms) and [creator] attribution — and exactly the Private Channel keys the
+     * recipient's Roles entitle them to in [authority] ([ConcordInviteVend.vendableChannels], Armada's
+     * `VendAudience` "member" rule). A key the recipient isn't entitled to is never whispered, even
+     * though nothing on the wire could stop it.
+     */
+    fun directInviteFor(
+        entry: ConcordCommunityListEntry,
+        authority: AuthorityResolver,
+        recipient: HexKey,
+        creator: HexKey,
+        expiresAtMs: Long? = null,
+        name: String = entry.name,
+        icon: ImagePointer? = null,
+    ): CommunityInvite =
+        CommunityInvite(
+            communityId = entry.id,
+            owner = entry.owner,
+            ownerSalt = entry.ownerSalt,
+            communityRoot = entry.root,
+            rootEpoch = entry.rootEpoch,
+            controlPk = entry.controlPk,
+            channels = ConcordInviteVend.toInviteChannels(ConcordInviteVend.vendableChannels(entry.privateChannels, authority, recipient)),
+            relays = entry.relays.take(ConcordInviteBundle.MAX_COMMUNITY_RELAYS),
+            name = name.ifBlank { entry.name },
+            icon = icon,
+            expiresAt = expiresAtMs,
+            creatorNpub = creator,
+        )
+
+    /**
+     * The Direct Invite [sender] may hand [recipient] for the held [entry] whose Control Plane folds
+     * to [state] (CORD-05 §6), or why not. No community permission gates a Direct Invite — none
+     * could — but a dissolved community, a [sender] its roster bans (like minting a link), and a
+     * banned [recipient] (whose join would be refused anyway) are refused; the bundle's name/icon
+     * preview comes from the folded metadata.
+     */
+    fun draftDirectInvite(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+        sender: HexKey,
+        recipient: HexKey,
+        expiresAtMs: Long? = null,
+    ): ConcordDirectInviteDraft {
+        val to = recipient.lowercase()
+        if (!HEX64.matches(to)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.INVALID_RECIPIENT)
+        if (state.dissolved || state.authority.isBanned(sender)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.NOT_MEMBER)
+        if (state.authority.isBanned(to)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.RECIPIENT_BANNED)
+        return ConcordDirectInviteDraft.Ready(
+            directInviteFor(
+                entry = entry,
+                authority = state.authority,
+                recipient = to,
+                creator = sender.lowercase(),
+                expiresAtMs = expiresAtMs,
+                name = state.metadata?.name ?: entry.name,
+                icon = state.metadata?.icon,
+            ),
+        )
+    }
+
+    /** Giftwraps [invite] to [recipient] as a Direct Invite (see [ConcordDirectInvite.build]). */
+    suspend fun buildDirectInvite(
+        senderSigner: NostrSigner,
+        recipient: HexKey,
+        invite: CommunityInvite,
+        createdAt: Long = TimeUtils.now(),
+    ): GiftWrapEvent = ConcordDirectInvite.build(senderSigner, recipient, invite, createdAt)
+
+    /** Opens + validates a Direct Invite wrap addressed to [recipientSigner] (see [ConcordDirectInvite.open]). */
+    suspend fun openDirectInvite(
+        wrap: Event,
+        recipientSigner: NostrSigner,
+    ): OpenedDirectInvite? = ConcordDirectInvite.open(wrap, recipientSigner)
+
+    /**
+     * Where a Direct Invite reaches a member, and where that member scans for one (CORD-05 §6):
+     * their kind-10050 DM relays, else their NIP-65 read relays, else the stock Concord set every
+     * client ships (Armada `inviteDeliveryRelays`). Send and scan share this so both sides meet. The
+     * stock set is fallback-only: a curated private inbox is never also fanned out to public relays.
+     */
+    fun directInviteDeliveryRelays(lists: RecipientRelayFetcher.Lists?): Set<NormalizedRelayUrl> {
+        val inbox = lists?.dmInboxOrFallback().orEmpty()
+        if (inbox.isNotEmpty()) return inbox.toSet()
+        return InviteRelayDictionary.STOCK.mapNotNullTo(LinkedHashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+    }
 
     /** Mints a shareable public invite link + bundle event (see [ConcordInviteBundle.mintLink]). */
     fun mintInviteLink(

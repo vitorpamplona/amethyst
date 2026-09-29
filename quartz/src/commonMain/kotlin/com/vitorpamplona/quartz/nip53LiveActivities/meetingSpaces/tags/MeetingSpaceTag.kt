@@ -37,10 +37,18 @@ class MeetingSpaceTag(
 
     fun toTagArray() = assemble(address, relayHint)
 
+    /**
+     * The form a kind 10312 presence uses: NIP-53 marks the room it points at as its `root`
+     * (`["a", <room>, <relay>, "root"]`). A meeting room (30313) references its space WITHOUT a
+     * marker, so this is not [toTagArray].
+     */
+    fun toRootTagArray() = arrayOf(TAG_NAME, address.toValue(), relayHint?.url ?: "", ROOT_MARKER)
+
     fun toTagIdOnly() = assemble(address, null)
 
     companion object Companion {
         const val TAG_NAME = "a"
+        const val ROOT_MARKER = "root"
 
         fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 

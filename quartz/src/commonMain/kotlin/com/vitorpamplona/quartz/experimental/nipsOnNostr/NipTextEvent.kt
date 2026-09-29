@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.experimental.nipsOnNostr
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
 import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.tags.ForkTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -113,7 +113,7 @@ class NipTextEvent(
 
     override fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
 
-    override fun forkFromAddress() = tags.firstNotNullOfOrNull(ForkTag::parseAddress)
+    override fun forkFromAddress() = tags.firstNotNullOfOrNull(::parseForkedAddress)
 
     override fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseForkedEventId)
 

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip87Ecash.cashu
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -36,14 +36,12 @@ class CashuMintEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun mintUrl() = tags.mintUrl()
 
     fun nuts() = tags.nuts()
 
     fun network() = tags.network()
-
-    fun dTag() = tags.dTag()
 
     companion object {
         const val KIND = 38172

@@ -55,10 +55,16 @@ object ConcordPinLists {
         if (channelIds.isEmpty()) return emptyMap()
         val channelByCoordinate = channelIds.associateBy { coordinate(communityIdHex, it) }
         val lists = editions.filter { it.entityKind == ControlEntityKind.PIN_LIST && it.entityIdHex in channelByCoordinate }
-        if (lists.isEmpty()) return emptyMap()
+        val pinFloors = floors.filterKeys { it in channelByCoordinate }
+        if (lists.isEmpty() && pinFloors.isEmpty()) return emptyMap()
+        // The same anti-rollback treatment the community fold gives every other entity: the editions
+        // handed in are one epoch's, so they are the compaction snapshot, and a list that cannot
+        // connect to its floor keeps the head we already folded rather than jumping.
+        val snapshot = editions.mapTo(HashSet(editions.size)) { it.rumorId }
+        val pool = EditionFold.admissible(lists, pinFloors, snapshot = snapshot)
         return EditionFold
             // Same gate every other entity folds under: well-formed, owner or a PIN_MESSAGES holder, vac satisfied.
-            .foldGated(lists, floors, rank = authority::tieBreakRank) { authority.admits(it, ConcordPermissions.PIN_MESSAGES) }
+            .foldGated(pool, pinFloors, snapshot = snapshot, rank = authority::tieBreakRank) { authority.admits(it, ConcordPermissions.PIN_MESSAGES) }
             .mapNotNull { (coordinate, head) -> channelByCoordinate[coordinate]?.let { it to head } }
             .toMap()
     }

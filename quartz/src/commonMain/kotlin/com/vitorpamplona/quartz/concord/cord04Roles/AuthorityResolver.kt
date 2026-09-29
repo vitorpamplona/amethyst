@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
@@ -290,8 +291,11 @@ data class AuthorityResolver private constructor(
                 ControlEntityKind.ROLE -> ConcordJson.decodeOrNull<RoleEntity>(edition.content)?.isWellFormedAt(edition.entityIdHex) == true
                 ControlEntityKind.GRANT -> grantAt(edition, communityId) != null
                 ControlEntityKind.BANLIST -> edition.entityIdHex == banlistEidHex && ConcordJson.decodeBanlist(edition.content) != null
+                // CORD-05 §5: the coordinate binds to the author, so each creator owns exactly their own
+                // list; the content must be a JSON array (a malformed one falls back to the previous head).
                 ControlEntityKind.INVITE_REGISTRY ->
-                    edition.entityIdHex == ConcordKeyDerivation.inviteLinksCoordinate(communityId, edition.author.hexToByteArray()).toHexKey()
+                    edition.entityIdHex == ConcordKeyDerivation.inviteLinksCoordinate(communityId, edition.author.hexToByteArray()).toHexKey() &&
+                        ConcordInviteRegistry.isWellFormed(edition.content)
                 else -> true
             }
 

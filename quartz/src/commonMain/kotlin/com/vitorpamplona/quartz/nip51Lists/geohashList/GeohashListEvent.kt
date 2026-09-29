@@ -198,8 +198,8 @@ class GeohashListEvent(
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): GeohashListEvent {
-            val privateTagArray = publicGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray()
-            val publicTagArray = privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray()
+            val publicTagArray = publicGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray()
+            val privateTagArray = privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, publicTagArray, privateTagArray)
         }
 

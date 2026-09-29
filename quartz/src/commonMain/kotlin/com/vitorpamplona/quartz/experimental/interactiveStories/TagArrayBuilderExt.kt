@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.interactiveStories
 
 import com.vitorpamplona.quartz.experimental.interactiveStories.tags.ReadStatusTag
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.RootSceneTag
 import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -51,7 +52,9 @@ fun TagArrayBuilder<InteractiveStoryReadingStateEvent>.storyImage(imageUrl: Stri
 
 fun TagArrayBuilder<InteractiveStoryReadingStateEvent>.storyImages(imageUrls: List<String>) = addAll(imageUrls.map { ImageTag.assemble(it) })
 
-fun TagArrayBuilder<InteractiveStoryReadingStateEvent>.rootScene(scene: ATag) = addUnique(scene.toATagArray())
+// The root is the uppercase `A` (RootSceneTag): written as a lowercase `a`, the current scene
+// (also an `a`) replaced it and root() found nothing.
+fun TagArrayBuilder<InteractiveStoryReadingStateEvent>.rootScene(scene: ATag) = addUnique(RootSceneTag.assemble(scene.toTag(), scene.relay))
 
 fun TagArrayBuilder<InteractiveStoryReadingStateEvent>.currentScene(scene: ATag) = addUnique(scene.toATagArray())
 

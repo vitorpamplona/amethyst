@@ -101,6 +101,7 @@ import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
@@ -345,6 +346,7 @@ import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
+import com.vitorpamplona.quartz.nip71Video.views.VideoViewEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -439,6 +441,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
 
 interface EventBuilder {
     fun build(
@@ -467,6 +472,7 @@ class EventFactory {
             when (kind) {
                 AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordChatEditEvent.KIND -> ConcordChatEditEvent(id, pubKey, createdAt, tags, content, sig)
+                ConcordTimerNoticeEvent.KIND -> ConcordTimerNoticeEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 CvmServerAnnouncementEvent.KIND -> CvmServerAnnouncementEvent(id, pubKey, createdAt, tags, content, sig)
                 CvmToolsListEvent.KIND -> CvmToolsListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -896,6 +902,10 @@ class EventFactory {
                 AddressableNormalVideoEvent.KIND -> AddressableNormalVideoEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableShortVideoEvent.KIND -> AddressableShortVideoEvent(id, pubKey, createdAt, tags, content, sig)
                 TextTrackEvent.KIND -> TextTrackEvent(id, pubKey, createdAt, tags, content, sig)
+                VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
+                PushRegistrationEvent.KIND -> PushRegistrationEvent(id, pubKey, createdAt, tags, content, sig)
+                PushDeregistrationEvent.KIND -> PushDeregistrationEvent(id, pubKey, createdAt, tags, content, sig)
+                PushPreferencesEvent.KIND -> PushPreferencesEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoCollaborationEvent.KIND -> VideoCollaborationEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoNormalEvent.KIND -> VideoNormalEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoShortEvent.KIND -> VideoShortEvent(id, pubKey, createdAt, tags, content, sig)

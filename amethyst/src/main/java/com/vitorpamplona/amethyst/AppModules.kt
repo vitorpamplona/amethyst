@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
+import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
@@ -1070,6 +1071,8 @@ class AppModules(
                 // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
                 // first Buzz-relay AUTH rather than after it.
                 BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
+                // Concord Direct Invites the user declined (CORD-05 §6) stay declined across restarts.
+                ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
             },
         )
 
