@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.mls.tree.BinaryTree
  * ```
  */
 class SecretTree(
-    private val encryptionSecret: ByteArray,
+    encryptionSecret: ByteArray,
     private val leafCount: Int,
 ) {
     /** Per-sender ratchet state: (handshake generation, handshake secret, app generation, app secret) */
@@ -69,6 +69,22 @@ class SecretTree(
 
     /** Same cache for the HANDSHAKE ratchet. */
     private val handshakeSkippedKeys = mutableMapOf<Pair<Int, Int>, ByteArray>()
+
+    /**
+     * Tree-node secrets not expanded yet, by node index. Starts as
+     * `{root: encryptionSecret}`. Deriving a leaf replaces each node on the
+     * way down with its other child, the way RFC 9420 §9 describes and ts-mls
+     * keeps it (`intermediateNodes`).
+     *
+     * A state imported from another implementation usually no longer has the
+     * root: once a sender has been derived, only the siblings along its path
+     * are left. [importNodeSecrets] takes that map and later senders are
+     * derived from their nearest known ancestor.
+     */
+    private val nodeSecrets =
+        mutableMapOf<Int, ByteArray>().also {
+            if (encryptionSecret.isNotEmpty()) it[BinaryTree.root(leafCount)] = encryptionSecret
+        }
 
     private companion object {
         /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
@@ -366,8 +382,9 @@ class SecretTree(
         }
 
     /**
-     * Derive the leaf secret from the encryption secret by walking DOWN the
-     * binary tree from the root to the target leaf (RFC 9420 §9).
+     * Derive the leaf secret by walking DOWN the binary tree from the nearest
+     * ancestor in [nodeSecrets] (the root, in a fresh tree) to the target
+     * leaf (RFC 9420 §9).
      *
      * At each step we pick left or right based on which subtree contains the
      * target. In an MLS left-balanced tree the left-subtree node indices are
@@ -393,23 +410,32 @@ class SecretTree(
      */
     private fun getLeafSecret(leafIndex: Int): ByteArray {
         val targetNode = BinaryTree.leafToNode(leafIndex)
-        val rootIdx = BinaryTree.root(leafCount)
-        var currentSecret = encryptionSecret
-        var currentNode = rootIdx
+        nodeSecrets.remove(targetNode)?.let { return it }
 
-        while (currentNode != targetNode) {
-            val goLeft = targetNode < currentNode
-            val label = if (goLeft) "left" else "right"
-            currentSecret =
-                MlsCryptoProvider.expandWithLabel(
-                    currentSecret,
-                    "tree",
-                    label.encodeToByteArray(),
-                    MlsCryptoProvider.HASH_OUTPUT_LENGTH,
-                )
-            currentNode = if (goLeft) BinaryTree.left(currentNode) else BinaryTree.right(currentNode)
+        val path = mutableListOf(BinaryTree.root(leafCount))
+        while (path.last() != targetNode) {
+            val node = path.last()
+            path.add(if (targetNode < node) BinaryTree.left(node) else BinaryTree.right(node))
         }
 
+        // Start from the nearest ancestor whose secret is still known.
+        val start = path.indexOfLast { it in nodeSecrets }
+        require(start >= 0) { "No secret-tree node secret left to derive leaf $leafIndex" }
+
+        var currentSecret = nodeSecrets.remove(path[start])!!
+        for (k in start until path.size - 1) {
+            val node = path[k]
+            val left = MlsCryptoProvider.expandWithLabel(currentSecret, "tree", "left".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            val right = MlsCryptoProvider.expandWithLabel(currentSecret, "tree", "right".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            // keep the other child's secret for the senders under it
+            if (path[k + 1] == BinaryTree.left(node)) {
+                nodeSecrets[BinaryTree.right(node)] = right
+                currentSecret = left
+            } else {
+                nodeSecrets[BinaryTree.left(node)] = left
+                currentSecret = right
+            }
+        }
         return currentSecret
     }
 
@@ -450,6 +476,15 @@ class SecretTree(
 
     /** Same for the HANDSHAKE ratchet. */
     fun exportSkippedHandshakeSecrets(): Map<Pair<Int, Int>, ByteArray> = handshakeSkippedKeys.toMap()
+
+    /** Tree-node secrets not expanded yet, by node index (ts-mls `intermediateNodes`). */
+    fun exportNodeSecrets(): Map<Int, ByteArray> = nodeSecrets.toMap()
+
+    /** Replaces the unexpanded node secrets, e.g. with a state saved by another implementation. */
+    fun importNodeSecrets(secrets: Map<Int, ByteArray>) {
+        nodeSecrets.clear()
+        nodeSecrets.putAll(secrets)
+    }
 
     /** Restores skipped-generation secrets, up to the usual cache bound per ratchet. */
     fun importSkippedSecrets(
