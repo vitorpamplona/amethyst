@@ -31,9 +31,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_EXTENSION
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.AVIF_EXTENSION
-import com.vitorpamplona.amethyst.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper

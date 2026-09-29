@@ -18,26 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-// RFC 9081 defines image/avif for both still and animated AVIF.
-// image/avif-sequence is NOT IANA-registered and is intentionally not handled.
-const val AVIF_MIME = "image/avif"
-const val AVIF_EXTENSION = "avif"
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
-fun isAvif(contentType: String?): Boolean = contentType?.equals(AVIF_MIME, ignoreCase = true) == true
+// No picker wired on this platform yet: report a cancel so callers close their picker state.
 
-/**
- * AVIF-only fallback for upload filename extensions.
- *
- * Returns `"avif"` when [contentType] is `image/avif`, `null` for everything else.
- * Callers chain this after `MimeTypeMap.getSingleton().getExtensionFromMimeType(...)`
- * because older Android versions of MimeTypeMap don't know AVIF, and some upload
- * servers reject extension-less filenames. This helper is intentionally not a
- * general MIME-to-extension utility — handle non-AVIF types via MimeTypeMap.
- */
-fun extensionFromMimeType(contentType: String?): String? =
-    when {
-        isAvif(contentType) -> AVIF_EXTENSION
-        else -> null
-    }
+@Composable
+actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {
+    LaunchedEffect(Unit) { onImageUri(persistentListOf()) }
+}
+
+@Composable
+actual fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit) {
+    LaunchedEffect(Unit) { onImageUri(null) }
+}

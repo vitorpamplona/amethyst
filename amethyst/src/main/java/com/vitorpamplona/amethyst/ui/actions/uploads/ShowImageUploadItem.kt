@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.uploading_state_hashing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_ready
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_processing
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes

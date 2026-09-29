@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.net.Uri
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import io.mockk.mockk
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

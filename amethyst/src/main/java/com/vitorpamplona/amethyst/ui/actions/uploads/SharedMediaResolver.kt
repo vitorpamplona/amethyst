@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.content.Context
 import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

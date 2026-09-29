@@ -18,16 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,22 +30,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.service.uploads.isAvif
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
-import java.util.concurrent.atomic.AtomicBoolean
 
 @Stable
 class SelectedMedia(
-    val uri: Uri,
+    val uri: MediaUri,
     val mimeType: String?,
 ) {
     fun isImage() = mimeType?.startsWith("image")
@@ -161,64 +153,10 @@ private fun GallerySelectButton(
     }
 }
 
+/** Opens the platform's photo/video picker (up to 10 items); reports an empty list on cancel. */
 @Composable
-fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit = {}) {
-    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
-    val resolver = LocalContext.current.contentResolver
+expect fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit = {})
 
-    val launcher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickMultipleVisualMedia(10),
-            onResult = { uris: List<Uri> ->
-                onImageUri(
-                    uris
-                        .map {
-                            SelectedMedia(it, resolver.getType(it))
-                        }.toImmutableList(),
-                )
-                hasLaunched.set(false)
-            },
-        )
-
-    @Composable
-    fun LaunchGallery() {
-        SideEffect {
-            if (!hasLaunched.getAndSet(true)) {
-                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-            }
-        }
-    }
-
-    LaunchGallery()
-}
-
+/** Opens the platform's photo/video picker for one item; reports null on cancel. */
 @Composable
-fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit = {}) {
-    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
-    val resolver = LocalContext.current.contentResolver
-
-    val launcher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickVisualMedia(),
-            onResult = { uri: Uri? ->
-                if (uri != null) {
-                    onImageUri(SelectedMedia(uri, resolver.getType(uri)))
-                } else {
-                    onImageUri(null)
-                }
-
-                hasLaunched.set(false)
-            },
-        )
-
-    @Composable
-    fun LaunchGallery() {
-        SideEffect {
-            if (!hasLaunched.getAndSet(true)) {
-                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-            }
-        }
-    }
-
-    LaunchGallery()
-}
+expect fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit = {})

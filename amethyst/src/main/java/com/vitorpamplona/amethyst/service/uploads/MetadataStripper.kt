@@ -29,6 +29,7 @@ import android.media.MediaMuxer
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
+import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import java.io.File

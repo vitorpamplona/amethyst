@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_EXTENSION
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
+import com.vitorpamplona.amethyst.commons.service.uploads.extensionFromMimeType
+import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

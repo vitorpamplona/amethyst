@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 
 class SelectedMediaProcessing(
