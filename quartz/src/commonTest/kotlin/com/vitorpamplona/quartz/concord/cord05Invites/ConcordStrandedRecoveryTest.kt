@@ -75,14 +75,14 @@ class ConcordStrandedRecoveryTest {
         name = "Gamers",
     )
 
-    // ---- merge forward --------------------------------------------------------
+    // ---- explicit re-join (the user accepts the link again) ---------------------
 
     @Test
-    fun higherEpochBundleMergesForwardKeepingAnchorAndHistory() {
+    fun anExplicitRejoinOfAHigherEpochBundleKeepsAnchorAndHistory() {
         val prior = HeldRoot(0L, "aa".repeat(32))
         val stranded = entry(epoch = 1, heldRoots = listOf(prior))
 
-        val merged = ConcordStrandedRecovery.mergeForward(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = false)
+        val merged = ConcordStrandedRecovery.rejoinForward(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = false)
         assertNotNull(merged, "a higher-epoch bundle at our own invite link means we were left behind")
 
         // adopted the new epoch's access root
@@ -98,22 +98,21 @@ class ConcordStrandedRecoveryTest {
         assertTrue(merged.heldRoots.any { it.epoch == 0L && it.key == prior.key })
         assertTrue(merged.heldRoots.any { it.epoch == 1L && it.key == "bb".repeat(32) })
 
-        // identity is untouched and we record where we were dropped
+        // identity is untouched
         assertEquals(communityId, merged.id)
         assertEquals(stranded.addedAt, merged.addedAt)
-        assertEquals(1L, merged.excludedAtEpoch)
     }
 
     @Test
     fun sameEpochBundleIsANoOp() {
-        assertNull(ConcordStrandedRecovery.mergeForward(entry(epoch = 5), bundle(epoch = 5), bannedAtCurrentEpoch = false))
+        assertNull(ConcordStrandedRecovery.rejoinForward(entry(epoch = 5), bundle(epoch = 5), bannedAtCurrentEpoch = false))
         assertFalse(ConcordStrandedRecovery.isStranded(entry(epoch = 5), bundle(epoch = 5), bannedAtCurrentEpoch = false))
     }
 
     @Test
     fun lowerEpochBundleIsANoOp() {
         // Epoch-monotonic: a stale bundle must never walk the membership backwards.
-        assertNull(ConcordStrandedRecovery.mergeForward(entry(epoch = 7), bundle(epoch = 3), bannedAtCurrentEpoch = false))
+        assertNull(ConcordStrandedRecovery.rejoinForward(entry(epoch = 7), bundle(epoch = 3), bannedAtCurrentEpoch = false))
     }
 
     @Test
@@ -121,12 +120,12 @@ class ConcordStrandedRecoveryTest {
         // Direct invites and legacy entries have no anchor — expected, not an error.
         val noAnchor = entry(epoch = 1, ref = null)
         assertFalse(ConcordStrandedRecovery.isStranded(noAnchor, bundle(epoch = 9), bannedAtCurrentEpoch = false))
-        assertNull(ConcordStrandedRecovery.mergeForward(noAnchor, bundle(epoch = 9), bannedAtCurrentEpoch = false))
+        assertNull(ConcordStrandedRecovery.rejoinForward(noAnchor, bundle(epoch = 9), bannedAtCurrentEpoch = false))
     }
 
     @Test
     fun bundleForAnotherCommunityIsIgnored() {
-        assertNull(ConcordStrandedRecovery.mergeForward(entry(epoch = 1), bundle(epoch = 9, id = "99".repeat(32)), bannedAtCurrentEpoch = false))
+        assertNull(ConcordStrandedRecovery.rejoinForward(entry(epoch = 1), bundle(epoch = 9, id = "99".repeat(32)), bannedAtCurrentEpoch = false))
     }
 
     // ---- the bare `<naddr>#<fragment>` anchor form ----------------------------
@@ -260,8 +259,24 @@ class ConcordStrandedRecoveryTest {
         // very epoch a Refounding rotated them out of. See A2 in docs/concord-soft-ban-audit.md.
         val stranded = entry(epoch = 1)
         assertFalse(ConcordStrandedRecovery.isStranded(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = true))
-        assertNull(ConcordStrandedRecovery.mergeForward(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = true))
+        assertNull(ConcordStrandedRecovery.rejoinForward(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = true))
         // ...and the legitimate case still works, so the gate is not just "recovery off".
-        assertNotNull(ConcordStrandedRecovery.mergeForward(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = false))
+        assertNotNull(ConcordStrandedRecovery.rejoinForward(stranded, bundle(epoch = 5), bannedAtCurrentEpoch = false))
+    }
+
+    /**
+     * S4: detection is all a bundle may do on its own. The class exposes no function that moves a
+     * held community's base from a bundle without the user re-accepting the link — a link creator
+     * could otherwise relocate every member who joined through their link onto a root they chose.
+     */
+    @Test
+    fun aHostileHigherEpochBundleIsOnlyDetectedNeverAdoptedBySweep() {
+        val held = entry(epoch = 1)
+        val hostile = bundle(epoch = 2, root = "ee".repeat(32))
+        // The sweep's question: are we stranded? Yes — and that is all it learns.
+        assertTrue(ConcordStrandedRecovery.isStranded(held, hostile, bannedAtCurrentEpoch = false))
+        // The held entry itself is untouched by detection.
+        assertEquals("bb".repeat(32), held.root)
+        assertEquals(1L, held.rootEpoch)
     }
 }

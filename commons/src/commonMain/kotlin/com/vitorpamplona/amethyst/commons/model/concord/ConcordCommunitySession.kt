@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -139,6 +140,13 @@ class ConcordCommunitySession(
     private val nextBaseRekeyKey: GroupKey = ConcordActions.nextBaseRekeyPlane(root, communityIdBytes, entry.rootEpoch)
 
     /**
+     * The rekey address the rotation INTO this epoch rode on (from the prior held root), or null
+     * for a joiner who holds no prior root. A racing sibling rotation to this same epoch lands
+     * here; the app drains it for the down-only heal (CORD-06 §3).
+     */
+    private val siblingBaseRekeyKey: GroupKey? = ConcordActions.siblingBaseRekeyPlane(entry)
+
+    /**
      * The dissolution tombstone address (CORD-02 §9): derived from the community id alone, so it
      * is the same for every epoch and every member past or present.
      */
@@ -163,6 +171,9 @@ class ConcordCommunitySession(
     /** The next-epoch base-rekey stream address to watch for an inbound Refounding. */
     val nextBaseRekeyAddress: HexKey get() = nextBaseRekeyKey.publicKeyHex
 
+    /** The current epoch's own base-rekey address (see [siblingBaseRekeyKey]), or null. */
+    val siblingBaseRekeyAddress: HexKey? get() = siblingBaseRekeyKey?.publicKeyHex
+
     /**
      * The Control Plane of every **prior** epoch we still hold a root for (address ->
      * key + epoch), newest-held first and bounded like the channel backfill.
@@ -176,7 +187,9 @@ class ConcordCommunitySession(
      * survives a process restart without any new storage.
      */
     private val historicalControlKeys: Map<HexKey, Pair<ControlPlaneKeys, Long>> =
-        entry.heldRoots
+        // Losing-fork roots of a healed race carry no Control Plane of the community's (CORD-06 §3).
+        ConcordRefounding
+            .canonicalHeldRoots(entry.heldRoots)
             .filter { it.epoch < entry.rootEpoch }
             .sortedByDescending { it.epoch }
             .take(ConcordActions.MAX_BACKFILL_EPOCHS)
@@ -238,6 +251,7 @@ class ConcordCommunitySession(
     private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>() // channelIdHex -> (wrapId -> wrap)
     private val guestbookWraps = LinkedHashMap<HexKey, Event>()
     private val baseRekeyWraps = LinkedHashMap<HexKey, Event>()
+    private val siblingRekeyWraps = LinkedHashMap<HexKey, Event>()
 
     // channel plane pubkey -> (channelIdHex, key), refreshed on each control re-fold.
     private var channelKeysByAddress = HashMap<HexKey, Pair<HexKey, GroupKey>>()
@@ -328,6 +342,7 @@ class ConcordCommunitySession(
         address == controlPlaneAddress ||
             address == guestbookAddress ||
             address == nextBaseRekeyAddress ||
+            address == siblingBaseRekeyAddress ||
             address == dissolvedAddress ||
             address in historicalControlKeys ||
             lock.withLock { address in channelKeysByAddress || address in historicalChannelKeysByAddress }
@@ -354,6 +369,12 @@ class ConcordCommunitySession(
 
     /** The buffered kind-3303 base-rotation wraps seen at [nextBaseRekeyAddress], for the account to drain. */
     fun pendingBaseRekeyWraps(): List<Event> = lock.withLock { baseRekeyWraps.values.toList() }
+
+    /** The base-rekey [GroupKey] of the rotation into this epoch (sibling heal), or null. */
+    fun siblingBaseRekeyKey(): GroupKey? = siblingBaseRekeyKey
+
+    /** The buffered kind-3303 wraps seen at [siblingBaseRekeyAddress], for the account's heal drain. */
+    fun pendingSiblingRekeyWraps(): List<Event> = lock.withLock { siblingRekeyWraps.values.toList() }
 
     /**
      * Every stream key whose kind-1059 wraps this session reads: the Control Plane plus
@@ -389,7 +410,7 @@ class ConcordCommunitySession(
      * The auxiliary plane keys (Guestbook, next base-rekey, and the CORD-02 §9 dissolution address)
      * for their own isolated AUTH.
      */
-    fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey, dissolvedKey)
+    fun auxStreamKeys(): List<GroupKey> = listOfNotNull(guestbookKey, nextBaseRekeyKey, dissolvedKey, siblingBaseRekeyKey)
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlKeys) }
@@ -487,6 +508,11 @@ class ConcordCommunitySession(
                 // drain runs off the revision tick, so a buffered rekey must bump (rare — a rekey,
                 // not a message).
                 lock.withLock { baseRekeyWraps[wrap.id] = wrap }
+                return ConcordIngestOutcome.STRUCTURAL
+            }
+            siblingBaseRekeyAddress -> {
+                // Same as above for a racing rotation into THIS epoch (the down-only heal).
+                lock.withLock { siblingRekeyWraps[wrap.id] = wrap }
                 return ConcordIngestOutcome.STRUCTURAL
             }
             else -> {

@@ -53,6 +53,17 @@ data class StoredCommunity(
     // rekey has no message to miss: re-resolving this link is the only way back. Blank for a direct
     // invite or a community joined before amy stored it.
     val inviteRef: String = "",
+    // Keys reserved for a Refounding this account started but has not yet adopted (CORD-06 §3): a
+    // retried `refound` must re-deliver the SAME root, never mint a sibling that splits the members.
+    val pendingRefounding: StoredPendingRefounding? = null,
+)
+
+/** A Refounding's reserved keys, mirroring quartz `PendingRefounding`. */
+data class StoredPendingRefounding(
+    val rootEpoch: Long = 0,
+    val prevCommit: String = "",
+    val newRoot: String = "",
+    val newControlRoot: String = "",
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */

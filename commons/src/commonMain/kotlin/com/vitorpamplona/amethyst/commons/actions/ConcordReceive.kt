@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
@@ -29,6 +30,9 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRotationAuthority
+import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -107,6 +111,71 @@ object ConcordReceive {
     ): Boolean = authority.isOwner(rotator) || authority.hasPermission(rotator, ConcordPermissions.BAN)
 
     /**
+     * Whether a received base rotation may be adopted (CORD-06 §3 "Authority"): its rotator holds
+     * BAN (or is the owner) in our fold, AND it cites the Grant it acts under (`vac`) at a version
+     * our fold has synced — so a just-demoted admin's rotation is never honored by a client that
+     * lags the demotion, and a rotation citing a Grant we have not seen yet waits for it. The owner
+     * cites nothing. [editions] are the current epoch's Control editions the citation is checked
+     * against.
+     */
+    fun isHonoredRotation(
+        entry: ConcordCommunityListEntry,
+        editions: Collection<ControlEdition>,
+        authority: AuthorityResolver,
+        received: ReceivedRefounding,
+    ): Boolean {
+        if (!isAuthorizedRotator(authority, received.rotator)) return false
+        val heads = ConcordRotationAuthority.headsOf(editions, entry.owner)
+        return ConcordRotationAuthority.citationSatisfied(entry.id, received.rotator, entry.owner, received.authority, heads)
+    }
+
+    /**
+     * The `vac` citation [actor] stamps on a rotation it launches (CORD-06 §3): their own Grant's
+     * head in our fold, or null for the owner (who cites nothing).
+     */
+    fun rotationCitation(
+        entry: ConcordCommunityListEntry,
+        editions: Collection<ControlEdition>,
+        actor: HexKey,
+    ): AuthorityCitation? = ConcordRotationAuthority.citationFor(entry.id, actor, entry.owner, ConcordRotationAuthority.headsOf(editions, entry.owner))
+
+    /**
+     * The down-only same-epoch heal (CORD-06 §3): [entry] holds a root at its current epoch, and
+     * [sibling] is a rotation to that same epoch (from the same prior root) that we did not adopt.
+     * Returns the entry moved onto the sibling when its root is **strictly lower** — the losing
+     * (higher) root we held is kept as a held root of the same epoch, so the messages sent into
+     * that fork stay readable — or null when the sibling does not win.
+     *
+     * The losing root keeps no control material: its Control Plane is the losing fork's
+     * compaction, not the community's ([ConcordRefounding.canonicalHeldRoots] never folds it).
+     */
+    fun withHealedRoot(
+        entry: ConcordCommunityListEntry,
+        sibling: ReceivedRefounding,
+    ): ConcordCommunityListEntry? {
+        if (sibling.newEpoch != entry.rootEpoch) return null
+        if (!ConcordRefounding.healsTo(entry.root.hexToByteArray(), sibling.newRoot)) return null
+        return ConcordCommunityListEntry(
+            id = entry.id,
+            owner = entry.owner,
+            ownerSalt = entry.ownerSalt,
+            root = sibling.newRoot.toHexKey(),
+            rootEpoch = entry.rootEpoch,
+            // The control pair is the winner's blob's, never inherited from the losing fork.
+            controlPk = sibling.newControlPk?.toHexKey(),
+            controlRoot = sibling.newControlRoot?.toHexKey(),
+            heldRoots = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root)).distinctBy { it.epoch to it.key.lowercase() },
+            privateChannels = entry.privateChannels,
+            relays = entry.relays,
+            name = entry.name,
+            addedAt = entry.addedAt,
+            inviteRef = entry.inviteRef,
+            excludedAtEpoch = entry.excludedAtEpoch,
+            residue = entry.residue,
+        )
+    }
+
+    /**
      * The entry that results from adopting a base rotation to [newEpoch] — a pure rewrite, so the
      * caller can diff, persist and publish it however its platform does.
      *
@@ -133,7 +202,9 @@ object ConcordReceive {
             rootEpoch = newEpoch,
             controlPk = newControlPk?.toHexKey(),
             controlRoot = newControlRoot?.toHexKey(),
-            heldRoots = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch },
+            // Keyed by (epoch, key), not epoch alone: a healed race leaves a losing fork's root at the
+            // same epoch, kept so its messages stay readable (CORD-06 §3).
+            heldRoots = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch to it.key.lowercase() },
             privateChannels = entry.privateChannels,
             relays = entry.relays,
             name = entry.name,

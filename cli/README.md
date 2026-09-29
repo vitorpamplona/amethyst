@@ -679,9 +679,12 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord channels COMMUNITY` | List a community's channels. |
 | `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). |
 | `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane. |
-| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link. |
+| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link (at most 3 bootstrap relays ride in the fragment, CORD-05 §3; the bundle names this account as creator). |
 | `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, then records it in your Invite List. |
-| `amy concord join URL` | Redeem an invite link and save the community. |
+| `amy concord join URL` | Redeem an invite link, save the community, and publish a Guestbook Join echoing the link's attribution (CORD-05 §1/§6). |
+| `amy concord rekey [COMMUNITY]` | Follow a Refounding we were re-keyed for. Honors only a BAN-holding rotator whose `vac` cites a Grant our fold has synced (the owner cites none); racing rotations converge on the lowest root (CORD-06 §3). |
+| `amy concord recover [COMMUNITY] [--rejoin]` | Report whether a Refounding left us behind (our joined-through link resolves to a higher epoch). A bundle never moves the base on its own (CORD-06 §2); `--rejoin` explicitly re-accepts the link. Ban-gated, fails closed. |
+| `amy concord refound COMMUNITY --remove U[,U…]` | CORD-06 Refounding. Aborts unless the whole Control Plane folds; publishes the rekey chunks first (each confirmed), the compacted plane after; reserves its keys so a re-run resumes with the same root; refused for a dissolved community. |
 | `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04). |
 | `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`). |
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |

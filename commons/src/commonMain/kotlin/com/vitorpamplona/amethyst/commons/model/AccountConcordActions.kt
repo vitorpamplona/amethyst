@@ -52,6 +52,10 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
+import com.vitorpamplona.quartz.concord.cord06Rekey.IncompleteControlPlaneException
+import com.vitorpamplona.quartz.concord.cord06Rekey.PendingRefounding
+import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -59,7 +63,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
@@ -77,6 +83,9 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
@@ -97,6 +106,9 @@ private const val RECOVERY_CHECK_INTERVAL_MS = 15 * 60 * 1000L
  * Raising it raises the cost of the attack it exists to bound, not the safety.
  */
 private const val MAX_REFOUNDING_RECIPIENTS = 5_000
+
+/** A lowercase 32-byte hex key (the Guestbook `invite` tag's creator). */
+private val HEX64 = Regex("^[0-9a-f]{64}$")
 
 /**
  * Concord (encrypted communities) orchestration for an [Account]: join/create/
@@ -293,7 +305,7 @@ class AccountConcordActions(
                             val token = link.token.hexToByteArray()
                             // Classify per coordinate, never over the pooled set: one link's newer
                             // revocation tombstone must not decide another link's status.
-                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), token) as? InviteBundleStatus.Live ?: return@runCatching false
+                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), author, token) as? InviteBundleStatus.Live ?: return@runCatching false
                             val moved =
                                 current.invite.copy(
                                     communityRoot = entry.root,
@@ -351,7 +363,11 @@ class AccountConcordActions(
                 // The joiner can never derive the Control Plane address, so the bundle carries
                 // it (CORD-05 §1). Null on a legacy community, which has none to carry.
                 controlPk = entry.controlPk,
+                // Attribution the joiner echoes in their Guestbook Join (CORD-05 §1).
+                creator = account.signer.pubKey,
             )
+        // The fragment carries at most 3 bootstrap relays (CORD-05 §3); the codec truncates a longer
+        // list (the stock set stays a single flag), and the bundle keeps the full relay set.
         val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), entry.relays)
 
         val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
@@ -496,7 +512,7 @@ class AccountConcordActions(
         // stale openable copy) so we honour revocation and can tell the user *why* a link won't open
         // instead of stranding them on a spinner that retries a link we can never redeem.
         val bundle =
-            when (val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)) {
+            when (val status = ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token)) {
                 is InviteBundleStatus.Live -> status.invite
                 is InviteBundleStatus.Expired -> return ConcordInviteResult.Expired
                 InviteBundleStatus.Revoked -> return ConcordInviteResult.Revoked
@@ -508,10 +524,25 @@ class AccountConcordActions(
         // Guestbook JOIN (kind 3306) would spam the community relays with a fresh join every time an
         // old invite is reopened, so short-circuit to Joined — the screen forwards to the community
         // either way ("take me there", not "join again").
-        if (account.concordChannelList.liveCommunities.value
-                .any { it.id == bundle.communityId }
-        ) {
-            return ConcordInviteResult.Joined(bundle.communityId)
+        //
+        // The one exception is a membership a Refounding left behind: the background sweep only
+        // DETECTS that (a bundle may never move a held community's base on its own, CORD-06 §2), so
+        // the user explicitly re-accepting the link is the way forward — the same trust decision as
+        // their first join, taken by them.
+        val held =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == bundle.communityId }
+        var rejoined: ConcordCommunityListEntry? = null
+        if (held != null) {
+            val heldState =
+                account.concordSessions
+                    .sessionFor(held.id)
+                    ?.state
+                    ?.value
+            // Death wins every race (CORD-02 §9): nothing moves a dissolved community forward.
+            if (heldState == null || heldState.dissolved) return ConcordInviteResult.Joined(bundle.communityId)
+            rejoined = ConcordActions.rejoinStranded(held, bundle, heldState.authority.isBanned(account.signer.pubKey))
+                ?: return ConcordInviteResult.Joined(bundle.communityId)
         }
 
         // Refuse a link that readmits us after we were removed. A Refounding re-mints every
@@ -550,6 +581,19 @@ class AccountConcordActions(
             return ConcordInviteResult.Banned
         }
 
+        // Invite attribution (CORD-05 §1): the joiner echoes the link's creator + label in their
+        // Guestbook Join, which is what makes per-link usage counters possible.
+        val inviteCreator = bundle.creatorNpub?.lowercase()?.takeIf { HEX64.matches(it) }
+        val inviteLabel = bundle.label?.takeIf { inviteCreator != null && it.isNotBlank() }
+
+        if (rejoined != null) {
+            if (!adoptedConcordRotations.add("${rejoined.id}:${rejoined.rootEpoch}")) return ConcordInviteResult.Joined(bundle.communityId)
+            Log.i("Concord") { "Stranded rejoin by explicit invite: ${rejoined.id} -> epoch ${rejoined.rootEpoch}" }
+            joinConcordCommunity(rejoined, inviteCreator, inviteLabel)
+            _strandedConcordCommunities.value -= rejoined.id
+            return ConcordInviteResult.Joined(bundle.communityId)
+        }
+
         val entry =
             ConcordCommunityListEntry(
                 id = bundle.communityId,
@@ -568,7 +612,7 @@ class AccountConcordActions(
                 // recoverStrandedConcordCommunities().
                 inviteRef = ConcordActions.bareInviteRef(url),
             )
-        joinConcordCommunity(entry)
+        joinConcordCommunity(entry, inviteCreator, inviteLabel)
         return ConcordInviteResult.Joined(bundle.communityId)
     }
 
@@ -1081,6 +1125,12 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         val state = session.state.value ?: return false
+        // Death wins every race (CORD-02 §9): no epoch advance past a tombstone is honored, so a
+        // Refounding of a dissolved community would only strand whoever follows it.
+        if (state.dissolved) {
+            Log.w("Concord") { "Refusing to refound ${session.entry.id}: the community was dissolved (CORD-02 §9)" }
+            return false
+        }
         val authority = state.authority
         // hasPermission, not effectivePermissions: a Refounding is the hardest action in the protocol
         // and this guard used to ignore the banlist, so a banned BAN-holder could launch one from the
@@ -1102,6 +1152,19 @@ class AccountConcordActions(
         // compaction), so on a split epoch it takes the current control_root (CORD-02 §2). A
         // rank-qualified refounder whose secret hasn't arrived yet must wait for re-delivery.
         val cp = controlKeysForWrite(session) ?: return false
+        val entry = session.entry
+        val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (publishTo.isEmpty()) return false
+
+        // 0. Acquire the whole Control Plane BEFORE the first publish (CORD-06 §3: "If the Refounder
+        //    cannot reliably fold all Control events, the Refounding must be aborted"). The live
+        //    buffer is whatever the subscription happened to deliver; a paged sweep that a majority
+        //    of the community's relays drained is what makes the compaction the whole plane.
+        val swept = sweepConcordControlPlane(cp.address, publishTo)
+        if (swept == null) {
+            Log.w("Concord") { "Refounding ${entry.id} aborted: too few relays served the whole Control Plane" }
+            return false
+        }
 
         // 1. Ban the removed members on the current Control Plane so the compacted snapshot —
         //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
@@ -1121,7 +1184,7 @@ class AccountConcordActions(
         //
         //    Still a floor, not a census (see allMembers): a member who joined without a Guestbook
         //    motion, holds no role, and has never posted leaves no trace to find, so a Refounding
-        //    cannot re-key them. Stranded recovery is what gets those members back.
+        //    cannot re-key them.
         val recipients =
             (session.allMembers() + account.signer.pubKey)
                 .mapTo(HashSet()) { it.lowercase() }
@@ -1131,52 +1194,113 @@ class AccountConcordActions(
                 }.let { candidates -> boundRecipients(candidates, authority) }
 
         // 3. Build the refounding: new root, compacted Control Plane, per-recipient rekey blobs.
-        val entry = session.entry
-        val newRoot = RandomInstance.bytes(32)
-        // A fresh control_root is minted beside the new root at every Refounding (CORD-02 §2),
-        // so a demoted staffer's retained secret dies with the epoch — and a legacy community
-        // upgrades to the split as a side effect of its next ban (CORD-06 §3).
-        val newControlRoot = RandomInstance.bytes(32)
+        //    The keys are RESERVED per (epoch, prior root): a retry after a failed publish re-delivers
+        //    the same root instead of minting a sibling that would split the members (CORD-06 §3).
+        //    A fresh control_root rides beside the new root at every Refounding (CORD-02 §2), so a
+        //    demoted staffer's retained secret dies with the epoch — and a legacy community upgrades
+        //    to the split as a side effect of its next ban (CORD-06 §3).
+        val priorRoot = entry.root.hexToByteArray()
+        val keys = ConcordRefounding.reserveKeys(pendingConcordRefoundings[entry.id], entry.id, entry.rootEpoch, priorRoot)
+        pendingConcordRefoundings[entry.id] = keys
+        val editions = session.controlEditions()
+        // The rotation cites the Grant it acts under (CORD-06 §3 "Authority"); the owner cites none.
+        // A non-owner with no Grant in our own fold has nothing to cite, so no receiver would honor it.
+        val citation = ConcordReceive.rotationCitation(entry, editions, account.signer.pubKey)
+        if (citation == null && !authority.isOwner(account.signer.pubKey)) {
+            Log.w("Concord") { "Refounding ${entry.id} aborted: no Grant of ours to cite (CORD-06 §3)" }
+            return false
+        }
         // The staff set the new secret goes to: the owner plus everyone holding a
         // Control-writing bit (CORD-04 §3). They get the 136-byte blob, every other
         // recipient the 104-byte one carrying the pubkey alone. (The builder mints a
         // blob per recipient, so staff who aren't recipients are simply never reached.)
         val staff = authority.staffMembers()
         val build =
-            ConcordActions.buildRefounding(
-                rotatorSigner = account.signer,
-                communityId = communityId,
-                priorRoot = entry.root.hexToByteArray(),
-                newRoot = newRoot,
-                newControlRoot = newControlRoot,
-                rootEpoch = entry.rootEpoch,
-                priorControlWraps = session.controlPlaneWraps(),
-                priorControlKeys = cp,
-                recipientsXOnly = recipients,
-                staffXOnly = staff,
-                createdAt = TimeUtils.now(),
-                ownerPubKey = entry.owner,
-            )
+            try {
+                ConcordActions.buildRefounding(
+                    rotatorSigner = account.signer,
+                    communityId = communityId,
+                    priorRoot = priorRoot,
+                    newRoot = keys.newRoot,
+                    newControlRoot = keys.newControlRoot,
+                    rootEpoch = entry.rootEpoch,
+                    priorControlWraps = (session.controlPlaneWraps() + swept).distinctBy { it.id },
+                    priorControlKeys = cp,
+                    recipientsXOnly = recipients,
+                    staffXOnly = staff,
+                    createdAt = TimeUtils.now(),
+                    ownerPubKey = entry.owner,
+                    authority = citation,
+                    // Every head our own fold honors must survive into the new epoch.
+                    mustCarry = ConcordRefounding.headVersions(editions, entry.owner),
+                )
+            } catch (e: IncompleteControlPlaneException) {
+                Log.w("Concord", "Refounding ${entry.id} aborted: the Control Plane could not be folded in full", e)
+                return false
+            }
 
-        // 4. Publish the compacted Control Plane (the new epoch's state) then the rekey blobs
-        //    (the key that unlocks it) to the community relays.
-        val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (publishTo.isNotEmpty()) {
-            build.controlWraps.forEach { account.client.publish(it, publishTo) }
-            build.rekeyWraps.forEach { account.client.publish(it, publishTo) }
+        // 4. The root roll FIRST, each chunk confirmed (CORD-06 §3): the compacted plane is
+        //    republished only after the rekey blobs are known to have landed. A chunk no relay
+        //    accepted aborts here with nothing adopted; the reserved keys make the retry idempotent.
+        for (wrap in build.rekeyWraps) {
+            if (!runCatching { account.client.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) {
+                Log.w("Concord") { "Refounding ${entry.id} aborted: a rekey chunk was not accepted by any relay; retrying reuses the same root" }
+                return false
+            }
         }
 
-        // 5. Adopt the new epoch ourselves. This rebuilds our session under the new root and
-        //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
-        val adopted = adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
+        // 5. The compacted Control Plane, at the new epoch's address. The root roll is committed, so
+        //    a head that fails to land is reported, not rolled back — members already hold the new
+        //    root, and the next Refounding re-compacts from the same signed heads.
+        var compactionLanded = true
+        for (wrap in build.controlWraps) {
+            if (!runCatching { account.client.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) compactionLanded = false
+        }
+        if (!compactionLanded) Log.w("Concord") { "Refounding ${entry.id}: some compacted Control Plane heads were not accepted at epoch ${build.newEpoch}" }
 
-        // 6. Move every link we minted to the new epoch. Without this the Refounding orphans them,
+        // 6. Adopt the new epoch ourselves. This rebuilds our session under the new root and
+        //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
+        val adopted = adoptConcordRoot(entry, keys.newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), keys.newControlRoot)
+        pendingConcordRefoundings.remove(entry.id)
+
+        // 7. Move every link we minted to the new epoch. Without this the Refounding orphans them,
         //    and a member it left out — no rekey blob, no message to miss — has no way back at all.
         //    Uses the entry adoption just wrote: `liveCommunities` decrypts asynchronously, so
         //    reading it here would hand us the epoch we just left and re-mint every link onto it.
         val moved = adopted?.let { refreshConcordInviteLinks(it) } ?: 0
         Log.i("Concord") { "Refounding ${entry.id}: refreshed $moved invite link(s) to epoch ${build.newEpoch}" }
-        return true
+        return compactionLanded
+    }
+
+    // Keys reserved for a Refounding in flight, per community (CORD-06 §3): a retry of the same
+    // rotation reuses them. Process-local — a restart mid-rotation mints afresh, which is why the
+    // rekey chunks are all confirmed before anything is adopted.
+    private val pendingConcordRefoundings = ConcurrentMap<String, PendingRefounding>()
+
+    /**
+     * Pages the whole Control Plane at [address] off every relay in [relays], or null when fewer
+     * than a majority of them drained it (a dead relay must not block rotation forever, but too few
+     * would compact a partial plane and roll the community back for everyone who follows).
+     */
+    private suspend fun sweepConcordControlPlane(
+        address: HexKey,
+        relays: Set<NormalizedRelayUrl>,
+    ): List<Event>? {
+        val filter = ConcordActions.planeFilter(address)
+        val perRelay =
+            coroutineScope {
+                relays
+                    .map { relay ->
+                        async {
+                            val events = ArrayList<Event>()
+                            val result = runCatching { account.client.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
+                            if (result?.end == PagedFetchResult.End.DRAINED) events else null
+                        }
+                    }.awaitAll()
+            }
+        val drained = perRelay.filterNotNull()
+        if (drained.size < relays.size / 2 + 1) return null
+        return drained.flatten().distinctBy { it.id }
     }
 
     /**
@@ -1269,43 +1393,79 @@ class AccountConcordActions(
      *
      * A rotation carries only (newRoot, newEpoch, rotator); there is no recipient list,
      * so a receiver cannot tell who was left out, and a BAN-holder can evict anyone (the
-     * owner included) by omission — nothing on this receive path can prevent it. The
-     * cure is after the fact: see [recoverStrandedConcordCommunities], which re-resolves
-     * the invite link the membership was joined through and merges forward.
+     * owner included) by omission — nothing on this receive path can prevent it.
+     * [recoverStrandedConcordCommunities] detects it; re-opening the invite link rejoins.
+     *
+     * Also runs the same-epoch race heal (CORD-06 §3): racing rotations converge on the
+     * lowest authorized root, and a sibling seen after we adopted replaces our root only
+     * when strictly lower. Nothing is adopted for a dissolved community (CORD-02 §9).
      */
     internal suspend fun drainConcordRekeys() {
         if (!account.isWriteable()) return
         for (session in account.concordSessions.sessions()) {
-            val wraps = session.pendingBaseRekeyWraps()
-            if (wraps.isEmpty()) continue
             val entry = session.entry
-            val received =
+            val state = session.state.value ?: continue
+            // Death wins every race (CORD-02 §9): no epoch advance past a tombstone is honored.
+            if (state.dissolved) continue
+            val authority = state.authority
+            val editions = session.controlEditions()
+            // Authority is the roster plus the cited Grant, never key possession (CORD-06 §3):
+            // hasPermission (not effectivePermissions, which ignores the banlist) and a `vac` our
+            // fold has synced, so a just-demoted admin's rotation is not honored while we lag.
+            val honored = { r: ReceivedRefounding -> ConcordReceive.isHonoredRotation(entry, editions, authority, r) }
+
+            val wraps = session.pendingBaseRekeyWraps()
+            if (wraps.isNotEmpty()) {
+                // Racing authorized rotations converge on the lowest new root (CORD-06 §3).
+                val received =
+                    ConcordActions.openBaseRekey(
+                        wraps = wraps,
+                        baseRekey = session.nextBaseRekeyKey(),
+                        recipientSigner = account.signer,
+                        communityId = entry.id,
+                        priorRoot = entry.root.hexToByteArray(),
+                        rootEpoch = entry.rootEpoch,
+                        accept = honored,
+                    )
+                if (received != null && received.newEpoch > entry.rootEpoch) {
+                    val adopted = adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+                    // A rotation we did not launch superseded the one we may have had in flight.
+                    pendingConcordRefoundings.remove(entry.id)
+                    // Move our own links onto the epoch we just adopted. Rotating is not the only way
+                    // to end up on a new epoch — being re-keyed is the common one — and a link creator
+                    // who is merely re-keyed would otherwise leave every link they handed out pointing
+                    // at the dead root.
+                    adopted?.let { next ->
+                        val moved = refreshConcordInviteLinks(next)
+                        if (moved > 0) Log.i("Concord") { "Rekey ${next.id}: refreshed $moved invite link(s) to epoch ${received.newEpoch}" }
+                    }
+                    continue
+                }
+            }
+
+            // The same-epoch heal (CORD-06 §3): a racing rotation into the epoch we hold, sealed under
+            // the same prior root, wins only when its root is strictly lower. Our losing root stays
+            // held so the messages sent into that fork stay readable.
+            val siblingKey = session.siblingBaseRekeyKey() ?: continue
+            val siblingWraps = session.pendingSiblingRekeyWraps()
+            if (siblingWraps.isEmpty()) continue
+            val prior = ConcordRefounding.canonicalHeldRoots(entry.heldRoots).firstOrNull { it.epoch == entry.rootEpoch - 1 } ?: continue
+            val sibling =
                 ConcordActions.openBaseRekey(
-                    wraps = wraps,
-                    baseRekey = session.nextBaseRekeyKey(),
+                    wraps = siblingWraps,
+                    baseRekey = siblingKey,
                     recipientSigner = account.signer,
                     communityId = entry.id,
-                    priorRoot = entry.root.hexToByteArray(),
-                    rootEpoch = entry.rootEpoch,
+                    priorRoot = prior.key.hexToByteArray(),
+                    rootEpoch = prior.epoch,
+                    accept = honored,
                 ) ?: continue
-            if (received.newEpoch <= entry.rootEpoch) continue
-            val authority = session.state.value?.authority ?: continue
-
-            // hasPermission, not effectivePermissions: the latter ignores the banlist, so a BAN-holder
-            // who has themselves been banned could still rotate the whole community.
-            val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
-            if (!authorized) continue
-            val adopted = adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
-
-            // Move our own links onto the epoch we just adopted. Rotating is not the only way to end
-            // up on a new epoch — being re-keyed is the common one — and a link creator who is merely
-            // re-keyed would otherwise leave every link they handed out pointing at the dead root,
-            // which is exactly the orphaning this branch exists to stop. Stranded recovery reads the
-            // bundle's epoch, so a link nobody re-mints is a member nobody can recover.
-            adopted?.let { next ->
-                val moved = refreshConcordInviteLinks(next)
-                if (moved > 0) Log.i("Concord") { "Rekey ${next.id}: refreshed $moved invite link(s) to epoch ${received.newEpoch}" }
-            }
+            val healed = ConcordReceive.withHealedRoot(entry, sibling) ?: continue
+            if (!adoptedConcordRotations.add("${healed.id}:${healed.rootEpoch}:${healed.root}")) continue
+            Log.i("Concord") { "Rekey race ${entry.id}: epoch ${entry.rootEpoch} converged on the lower sibling root" }
+            account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(healed))
+            announceConcordGuestbookJoin(healed, inviteCreator = null, inviteLabel = null)
+            refreshConcordInviteLinks(healed)
         }
     }
 
@@ -1341,6 +1501,14 @@ class AccountConcordActions(
         }
     }
 
+    private val _strandedConcordCommunities = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Communities whose own invite link resolves to a higher epoch than we hold — a Refounding left
+     * us behind (see [recoverStrandedConcordCommunities]). Re-opening that link rejoins them.
+     */
+    val strandedConcordCommunities: StateFlow<Set<String>> = _strandedConcordCommunities.asStateFlow()
+
     // Last time we re-resolved each community's invite_ref, so the recovery sweep rides the
     // Concord revision tick (which fires on every structural change) without turning it into a
     // relay-fetch loop.
@@ -1354,20 +1522,18 @@ class AccountConcordActions(
      * included, and [drainConcordRekeys] cannot prevent it: there is no message to
      * miss detecting.
      *
-     * The way back is the invite link the membership was joined through
+     * The signal is the invite link the membership was joined through
      * ([ConcordCommunityListEntry.inviteRef], persisted by [joinConcordViaInvite] and
      * carried through every rotation by [adoptConcordRoot]). The community keeps
      * re-minting its bundle at that same addressable coordinate, so a bundle there at
-     * a **strictly higher** epoch than ours proves we were left behind — and carries
-     * the new root. Same or lower epoch is a no-op. Memberships with no link (direct
-     * invites, legacy entries) are inert here; that is expected, not an error.
+     * a **strictly higher** epoch than ours says we were left behind. Memberships with
+     * no link (direct invites, legacy entries) are inert here.
      *
-     * The merge itself ([ConcordActions.recoverStranded]) is epoch-monotonic and keeps
-     * both the `invite_ref` anchor (so the *next* exclusion is recoverable too) and the
-     * entry's [HeldRoot]s (so prior-epoch history the member legitimately holds stays
-     * derivable). We then re-announce the Guestbook at the new epoch, exactly as an
-     * ordinary rotation does, so the recovered member is visible to whoever refounds
-     * next instead of being silently dropped again.
+     * Detection ONLY ([strandedConcordCommunities]). The bundle is not proof of
+     * continuity — nothing binds `community_root` to `community_id` — so adopting its
+     * root here would let any link creator relocate every member who joined through
+     * their link (CORD-06 §2: the base advances only by a verifiable rekey). The way
+     * forward is the user explicitly re-opening the link ([joinConcordViaInvite]).
      *
      * Called on the Concord revision tick, but rate-limited per community
      * ([RECOVERY_CHECK_INTERVAL_MS]) — a tick with nothing to do costs a map lookup.
@@ -1381,6 +1547,21 @@ class AccountConcordActions(
             if (last != null && now - last < RECOVERY_CHECK_INTERVAL_MS) continue
             lastConcordRecoveryCheck[entry.id] = now
 
+            // Fails CLOSED: no fold, no verdict — a banned member's cold-start window must not read
+            // as "not banned". Retried on the next sweep once the roster is known.
+            val state =
+                account.concordSessions
+                    .sessionFor(entry.id)
+                    ?.state
+                    ?.value
+            if (state == null) {
+                Log.i("Concord") { "Stranded check deferred for ${entry.id}: control plane not folded yet" }
+                lastConcordRecoveryCheck.remove(entry.id)
+                continue
+            }
+            // Death wins every race (CORD-02 §9): a dissolved community is never "behind".
+            if (state.dissolved) continue
+
             val parsed = ConcordActions.parseInviteLink(inviteRef) ?: continue
             val relays =
                 (
@@ -1391,36 +1572,14 @@ class AccountConcordActions(
 
             val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
             val wraps = account.client.fetchAll(filters = filters)
-            // Only a live bundle recovers: an expired/revoked link is not a rotation we missed.
-            val bundle = (ConcordActions.classifyInvite(wraps, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
+            // Only a live bundle counts: an expired/revoked link is not a rotation we missed.
+            val bundle = (ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
 
-            // A removed member holds the link's unlock token forever, so without this the sweep
-            // walks them straight back into the epoch they were rotated out of — see A2 in
-            // docs/concord-soft-ban-audit.md. Read off the epoch we are LEAVING, which is the last
-            // one whose Control Plane we can still fold.
-            //
-            // Fails CLOSED. `?.isBanned(..) == true` reads "not banned" for a session that does not
-            // exist yet or whose first fold has not landed, and this sweep runs on the revision tick
-            // — so a banned member's own client would have hit that window on cold start and
-            // recovered itself, which is precisely the bypass this gate exists to stop. No verdict
-            // means no recovery; the next sweep retries once the roster is known.
-            val authority =
-                account.concordSessions
-                    .sessionFor(entry.id)
-                    ?.state
-                    ?.value
-                    ?.authority
-            if (authority == null) {
-                Log.i("Concord") { "Stranded-recovery check deferred for ${entry.id}: control plane not folded yet" }
-                lastConcordRecoveryCheck.remove(entry.id)
-                continue
-            }
-            val bannedHere = authority.isBanned(account.signer.pubKey)
-            val merged = ConcordActions.recoverStranded(entry, bundle, bannedHere) ?: continue
-            if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
-            Log.i("Concord") { "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}" }
-            account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(merged))
-            announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
+            // Detection only (CORD-06 §2): the bundle is not proof of continuity, so it never moves
+            // our base. The user re-accepting the link is the way forward (joinConcordViaInvite).
+            val stranded = ConcordActions.isStranded(entry, bundle, state.authority.isBanned(account.signer.pubKey))
+            _strandedConcordCommunities.value = if (stranded) _strandedConcordCommunities.value + entry.id else _strandedConcordCommunities.value - entry.id
+            if (stranded) Log.i("Concord") { "Stranded: ${entry.id} is at epoch ${entry.rootEpoch}, its invite link at ${bundle.rootEpoch}; re-open the link to rejoin" }
         }
     }
 
@@ -1541,7 +1700,13 @@ class AccountConcordActions(
         if (relays.isEmpty()) return null
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
         val wraps = account.client.fetchAll(filters = filters)
-        return wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
+        // Resolved like a join (newest per coordinate, signer-verified): a revoked link previews as
+        // nothing, never as the stale bundle a relay still serves. An expired one still renders.
+        return when (val status = ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token)) {
+            is InviteBundleStatus.Live -> status.invite
+            is InviteBundleStatus.Expired -> status.invite
+            else -> null
+        }
     }
 
     /**
