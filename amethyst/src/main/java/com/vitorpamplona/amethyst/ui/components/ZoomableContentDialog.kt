@@ -53,15 +53,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -279,44 +282,40 @@ private fun DialogContent(
                             // is clipped below.
                             val startScale = coverScale(src, zoomed)
                             val p = progress()
-
-                            transformOrigin = TransformOrigin(0f, 0f)
-                            scaleX = lerp(startScale, 1f, p)
-                            scaleY = lerp(startScale, 1f, p)
-                            translationX = lerp(src.center.x - startScale * zoomed.center.x, 0f, p)
-                            translationY = lerp(src.center.y - startScale * zoomed.center.y, 0f, p)
-                        } else {
-                            // No source bounds: fall back to a plain fade.
-                            alpha = progress()
-                        }
-                    }.drawWithContent {
-                        val src = sourceBounds
-                        val img = imageBounds
-                        val p = progress()
-                        if (p < 1f && src != null && img != null && src.hasArea() && img.hasArea()) {
-                            // The thumbnail may be a crop of the image (e.g. a square gallery
-                            // cell showing a 4:3 photo). Clip to a window that morphs from the
-                            // thumbnail's rect into the image's own bounds, so the transition
-                            // opens from and closes into exactly what was on screen. Skipped at
-                            // p = 1 so pager neighbours aren't clipped while swiping.
-                            val zoomed = img.zoomedBy(currentZoomState)
-                            val startScale = coverScale(src, zoomed)
                             val scale = lerp(startScale, 1f, p)
                             val tx = lerp(src.center.x - startScale * zoomed.center.x, 0f, p)
                             val ty = lerp(src.center.y - startScale * zoomed.center.y, 0f, p)
 
-                            // The visible window in window coordinates, mapped back into this
-                            // layer's pre-transform coordinates.
-                            clipRect(
-                                left = (lerp(src.left, zoomed.left, p) - tx) / scale,
-                                top = (lerp(src.top, zoomed.top, p) - ty) / scale,
-                                right = (lerp(src.right, zoomed.right, p) - tx) / scale,
-                                bottom = (lerp(src.bottom, zoomed.bottom, p) - ty) / scale,
-                            ) {
-                                this@drawWithContent.drawContent()
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = tx
+                            translationY = ty
+
+                            if (p < 1f) {
+                                // The thumbnail may be a crop of the image (e.g. a square gallery
+                                // cell showing a 4:3 photo). Clip to a window that morphs from the
+                                // thumbnail's rect into the whole viewport, so the transition opens
+                                // from and closes into exactly what was on screen. The viewport (not
+                                // the measured image) is the end state so there is nothing to snap
+                                // when the clip turns off at p = 1, where pager neighbours must show.
+                                // Window coordinates, mapped back into this layer's pre-transform
+                                // space. A layer outline, not a draw-phase clip, so animating it
+                                // doesn't re-record the pager's display list every frame.
+                                shape =
+                                    RectClipShape(
+                                        Rect(
+                                            left = (lerp(src.left, 0f, p) - tx) / scale,
+                                            top = (lerp(src.top, 0f, p) - ty) / scale,
+                                            right = (lerp(src.right, size.width, p) - tx) / scale,
+                                            bottom = (lerp(src.bottom, size.height, p) - ty) / scale,
+                                        ),
+                                    )
+                                clip = true
                             }
                         } else {
-                            drawContent()
+                            // No source bounds: fall back to a plain fade.
+                            alpha = progress()
                         }
                     },
         ) {
@@ -478,6 +477,17 @@ private fun coverScale(
     source: Rect,
     image: Rect,
 ): Float = maxOf(source.width / image.width, source.height / image.height)
+
+/** Clips a layer to a fixed [rect] in its own coordinates, regardless of the layer's size. */
+private class RectClipShape(
+    private val rect: Rect,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline = Outline.Rectangle(rect)
+}
 
 @Composable
 private fun RenderImageOrVideo(
