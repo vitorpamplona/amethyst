@@ -200,4 +200,24 @@ class ConcordCommunitySessionTest {
             community.genesisWraps.forEach { session.ingest(it) }
             assertTrue(session.state.value!!.dissolved)
         }
+
+    @Test
+    fun noWriteIsBuiltFromAFoldThatHasNotDrained() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val session = ConcordCommunitySession(entryFor(community), owner.pubKey)
+            assertEquals(null, session.foldForWrite(), "nothing folded")
+
+            // The live subscription delivered part of the plane: readable, but not a base for a write.
+            session.ingest(community.genesisWraps.first())
+            assertTrue(session.state.value != null)
+            assertFalse(session.controlDrained.value)
+            assertEquals(null, session.foldForWrite())
+
+            // The sweep paged the whole plane in and flagged it: writes may chain onto this fold.
+            community.genesisWraps.forEach { session.ingest(it) }
+            session.markControlDrained()
+            assertEquals(session.state.value, session.foldForWrite())
+            assertTrue(session.controlFloors().isEmpty(), "no prior epoch held, no floor")
+        }
 }

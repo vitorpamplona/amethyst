@@ -143,6 +143,18 @@ class ConcordListResidue(
         return ConcordListResidue(extras, tombstones.filterNot { it === prior } + next, unparsedEntries)
     }
 
+    /** The latest `removed_at` (unix ms) per community this residue tombstones. */
+    fun removals(): Map<String, Long> {
+        val out = HashMap<String, Long>()
+        for (t in tombstones) {
+            val id = (t["community_id"] as? JsonPrimitive)?.contentOrNull ?: continue
+            val at = (t["removed_at"] as? JsonPrimitive)?.longOrNull ?: continue
+            val prev = out[id]
+            if (prev == null || at > prev) out[id] = at
+        }
+        return out
+    }
+
     /** The latest `removed_at` this residue holds for [communityId], or null when it was never left. */
     fun removedAt(communityId: String): Long? =
         tombstones

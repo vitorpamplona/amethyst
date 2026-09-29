@@ -106,10 +106,13 @@ object ConcordPins {
         val sealedUnavailable: Boolean,
         /** True when the content broke a cap or the format, so every reader treats it as empty. */
         val violating: Boolean,
+        /** True when the content is the sealed form (`{"epoch","sealed"}`) — the same answer as [isSealedForm]. */
+        val sealedForm: Boolean = false,
     ) {
         companion object {
             val EMPTY = PinListRead(emptyList(), sealedUnavailable = false, violating = false)
             val VIOLATING = PinListRead(emptyList(), sealedUnavailable = false, violating = true)
+            val VIOLATING_SEALED = PinListRead(emptyList(), sealedUnavailable = false, violating = true, sealedForm = true)
         }
     }
 
@@ -137,18 +140,23 @@ object ConcordPins {
         val entries = root["entries"]
         if (entries != null) return entriesOf(entries)
 
+        // From here the content is the sealed form exactly when [isSealedForm] says so — reported on
+        // the read so a caller need not parse the content a second time.
+        val sealedForm = root["sealed"] != null
+        val violating = if (sealedForm) PinListRead.VIOLATING_SEALED else PinListRead.VIOLATING
         val epoch = (root["epoch"] as? JsonPrimitive)?.takeIf { it.isString }?.content
         val sealed = (root["sealed"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-        if (epoch == null || sealed == null || !DECIMAL.matches(epoch)) return PinListRead.VIOLATING
-        val epochValue = epoch.toLongOrNull() ?: return PinListRead.VIOLATING
-        val key = unsealKey(epochValue) ?: return PinListRead(emptyList(), sealedUnavailable = true, violating = false)
+        if (epoch == null || sealed == null || !DECIMAL.matches(epoch)) return violating
+        val epochValue = epoch.toLongOrNull() ?: return violating
+        val key = unsealKey(epochValue) ?: return PinListRead(emptyList(), sealedUnavailable = true, violating = false, sealedForm = true)
         val inner =
             try {
                 parse(Nip44.v2.decrypt(sealed, key)) as? JsonObject
             } catch (_: Exception) {
                 null
-            } ?: return PinListRead.VIOLATING
-        return entriesOf(inner["entries"] ?: return PinListRead.VIOLATING)
+            } ?: return violating
+        val read = entriesOf(inner["entries"] ?: return violating)
+        return PinListRead(read.entries, read.sealedUnavailable, read.violating, sealedForm = true)
     }
 
     private fun entriesOf(element: JsonElement): PinListRead {

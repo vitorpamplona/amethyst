@@ -76,7 +76,10 @@ class ConcordSessionRegistry(
             for ((id, entry) in wanted) {
                 val existing = sessions[id]
                 if (existing == null || existing.entry.root != entry.root || existing.entry.rootEpoch != entry.rootEpoch) {
-                    sessions[id] = ConcordCommunitySession(entry, myPubKey, onRumor)
+                    // CORD-08 §3: the disappearing messages the old session tracked are already in the
+                    // store, and the new session never sees their wraps again — carry their deadlines
+                    // over, or nothing would ever purge them.
+                    sessions[id] = ConcordCommunitySession(entry, myPubKey, onRumor).also { fresh -> existing?.let { fresh.carryExpiring(it.trackedExpiring()) } }
                     created += id
                 } else {
                     // Same epoch, but the Control Plane write key may have just arrived — a

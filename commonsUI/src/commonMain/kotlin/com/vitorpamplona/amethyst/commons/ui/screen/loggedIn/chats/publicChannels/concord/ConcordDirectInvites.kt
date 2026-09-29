@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -84,6 +87,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserS
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
@@ -178,29 +183,48 @@ private fun sendResultMessage(result: ConcordDirectInviteSendResult) =
     }
 
 /**
- * The Direct Invites waiting for this account (CORD-05 §6), as cards with Accept / Decline — shown
- * at the top of the Concord communities list. Renders nothing when there are none.
+ * Sweeps the inbox relays for Direct Invites once when the hub opens (wraps the DM pipeline sees
+ * arrive on their own). Call it once per screen, outside any lazy list: inside a lazy item it would
+ * re-run every time the item scrolled back into view.
+ */
+@Composable
+fun RefreshConcordDirectInvites(accountViewModel: AccountViewModel) {
+    val concord = accountViewModel.account.concord
+    LaunchedEffect(concord) {
+        try {
+            concord.refreshConcordDirectInvites()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("ConcordDirectInvites", "Direct Invite sweep failed", e)
+        }
+    }
+}
+
+/**
+ * The Direct Invites waiting for this account (CORD-05 §6), as lazy items with Accept / Decline —
+ * shown at the top of the Concord communities list. Adds nothing when there are none.
  *
- * Opening the hub sweeps the inbox relays once; wraps the DM pipeline sees arrive on their own.
  * The preview is the bundle's own name and a robohash of the community id — **no** icon fetch, no
  * relay connection to the community, no Join happens before the user taps Accept. The sender is
  * shown by whatever name the cache already has, without fetching their profile.
  */
-@Composable
-fun ConcordPendingDirectInvites(
+fun LazyListScope.concordPendingDirectInvites(
+    invites: List<ConcordDirectInviteView>,
     accountViewModel: AccountViewModel,
     nav: INav,
-    modifier: Modifier = Modifier,
 ) {
-    val concord = accountViewModel.account.concord
-    LaunchedEffect(concord) { runCatching { concord.refreshConcordDirectInvites() } }
-
-    val invites by concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
     if (invites.isEmpty()) return
-
-    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringRes(Res.string.concord_direct_invites_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        invites.forEach { invite ->
+    item(key = "concord-direct-invites-title") {
+        Text(
+            stringRes(Res.string.concord_direct_invites_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
+        )
+    }
+    items(invites, key = { "concord-direct-invite-" + it.wrapId }) { invite ->
+        Box(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
             ConcordDirectInviteCard(invite, accountViewModel, nav)
         }
     }
@@ -220,7 +244,20 @@ private fun ConcordDirectInviteCard(
     val subtitle =
         when {
             invite.expired -> stringRes(Res.string.concord_direct_invite_expired)
-            invite.catchUp -> stringRes(Res.string.concord_direct_invite_catch_up, invite.channelNames.joinToString(", ") { "#$it" })
+            invite.catchUp -> {
+                // Only the channels it newly adds, named as the held community folds them.
+                val names =
+                    remember(invite) {
+                        val folded =
+                            accountViewModel.account.concordSessions
+                                .sessionFor(invite.communityId)
+                                ?.state
+                                ?.value
+                                ?.channels
+                        invite.newChannelNames { id -> folded?.get(id)?.definition?.name }
+                    }
+                stringRes(Res.string.concord_direct_invite_catch_up, names.joinToString(", ") { "#$it" })
+            }
             else -> stringRes(Res.string.concord_direct_invite_from, senderName)
         }
 

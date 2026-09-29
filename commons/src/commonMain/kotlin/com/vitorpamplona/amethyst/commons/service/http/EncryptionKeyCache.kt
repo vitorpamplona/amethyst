@@ -49,6 +49,11 @@ class EncryptionKeyCache {
     ) = add(url, DecryptInformation(cipher, expectedMimeType))
 
     fun get(url: String): DecryptInformation? = cache.get(url)
+
+    /** Forgets [url]'s key, e.g. when the message that carried it expired (CORD-08). */
+    fun remove(url: String) {
+        cache.remove(url)
+    }
 }
 
 class DecryptInformation(

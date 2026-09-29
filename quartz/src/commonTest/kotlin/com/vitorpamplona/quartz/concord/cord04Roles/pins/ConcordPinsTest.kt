@@ -167,6 +167,12 @@ class ConcordPinsTest {
             val noKey = ConcordPins.read(sealed) { null }
             assertTrue(noKey.sealedUnavailable, "unreadable is not empty: a writer must not build on it")
             assertTrue(noKey.entries.isEmpty())
+
+            // The read reports the form itself, matching isSealedForm, so nobody parses twice.
+            for (content in listOf(sealed, ConcordPins.serializePublic(listOf(entry)), "not json", """{"sealed":1}""", """{"epoch":"x","sealed":"y"}""")) {
+                assertEquals(ConcordPins.isSealedForm(content), ConcordPins.read(content) { plane.conversationKey }.sealedForm, content)
+                assertEquals(ConcordPins.isSealedForm(content), ConcordPins.read(content) { null }.sealedForm, content)
+            }
         }
 
     @Test

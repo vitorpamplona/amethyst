@@ -96,7 +96,8 @@ object ConcordSubscriptionPlanner {
      * The off-channel planes every joined community subscribes to upfront (known
      * from the entry alone): the Guestbook Plane (membership motions) and the
      * next-epoch base-rekey address (so an inbound Refounding is received live,
-     * CORD-06), and the dissolution tombstone address (CORD-02 §9). All are kind-1059
+     * CORD-06), the dissolution tombstone address (CORD-02 §9), and every held Private Channel's
+     * next channel-rekey addresses (CORD-06 §2). All are kind-1059
      * wraps authored by their derived stream address.
      */
     fun auxiliaryPlaneSubs(entries: List<ConcordCommunityListEntry>): List<ConcordPlaneSub> =
@@ -114,7 +115,10 @@ object ConcordSubscriptionPlanner {
                 ConcordPlaneSub(channelId = null, pubKeyHex = dissolved.publicKeyHex, relays = relays),
                 // The current epoch's own rekey address, so a racing sibling can heal us (CORD-06 §3).
                 sibling?.let { ConcordPlaneSub(channelId = null, pubKeyHex = it.publicKeyHex, relays = relays) },
-            )
+            ) +
+                // Each held Private Channel's next channel-rekey addresses (CORD-06 §2), so a rotation
+                // that moves the key forward — or cuts us — is received live.
+                ConcordPrivateChannels.watchKeys(e).keys.map { ConcordPlaneSub(channelId = null, pubKeyHex = it, relays = relays) }
         }
 
     /**

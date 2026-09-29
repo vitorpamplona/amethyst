@@ -67,6 +67,9 @@ data class ConcordCommunityState(
      */
     val inviteRegistries: Map<HexKey, List<HexKey>> = emptyMap(),
 ) {
+    /** The ids of the live (non-deleted) Private Channels (CORD-03), lowercase hex. */
+    val privateChannelIds: Set<HexKey> by lazy { channels.filterValues { it.definition.private }.keys.mapTo(HashSet()) { it.lowercase() } }
+
     /** The aggregate active-set of live public links: every honored registry's link signers (CORD-05 §5). */
     val liveInviteLinks: Set<HexKey> by lazy { inviteRegistries.values.flatMapTo(HashSet()) { it } }
 
@@ -114,9 +117,11 @@ data class ConcordCommunityState(
     /**
      * Whether retiring [linkSigners] would flip the community Private (CORD-05 §2): it is Public
      * now and no live link would remain. Retiring the last live link is a Refounding (CORD-06).
+     * Never for a [dissolved] community: death wins every race (CORD-02 §9), so there is nothing
+     * left to Refound and a revoke there is only a revoke.
      */
     fun retiringWouldPrivatize(linkSigners: Collection<HexKey>): Boolean {
-        if (!isPublic) return false
+        if (dissolved || !isPublic) return false
         val retiring = linkSigners.mapTo(HashSet()) { it.lowercase() }
         return liveInviteLinks.all { it in retiring }
     }
