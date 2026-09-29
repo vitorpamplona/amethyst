@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.amethyst.commons.relays.MutableTime
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
+import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -242,5 +243,46 @@ class ConcordSubscriptionPlannerTest {
             val otherFilter = filters.map { it.filter }.single { guestbookPk in it.authors.orEmpty() }
             assertTrue(generalPk in otherFilter.authors.orEmpty(), "channel plane missing from the non-control filter")
             assertTrue(controlPk !in otherFilter.authors.orEmpty(), "Control Plane leaked into the Guestbook/channel filter")
+        }
+
+    @Test
+    fun aJustJoinedCommunityIsFetchedWithoutTheRelaysSinceCursor() =
+        runTest {
+            // Regression: joining a community on a relay that already carries another one asked for its
+            // Control Plane `since` that relay's EOSE cursor, so the genesis editions (older than the
+            // cursor) never arrived and the community showed "No channels yet" until an app restart.
+            fun entryOf(c: NewConcordCommunity) =
+                com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry(
+                    id = c.communityIdHex,
+                    owner = c.ownerPubKey,
+                    ownerSalt = c.ownerSalt.toHexKey(),
+                    root = c.communityRoot.toHexKey(),
+                    rootEpoch = c.rootEpoch,
+                    controlPk = c.controlPkHex,
+                    relays = listOf("wss://r.example"),
+                    name = "x",
+                )
+            val folded = ConcordCommunityFactory.create(owner, "Folded", createdAt = 1L, relays = listOf("wss://r.example"))
+            val joined = ConcordCommunityFactory.create(owner, "Joined", createdAt = 1L, relays = listOf("wss://r.example"))
+            val foldedEntry = entryOf(folded)
+            val joinedEntry = entryOf(joined)
+            val foldedState = ConcordActions.foldCommunity(folded.genesisWraps, folded.controlPlane, folded.communityId, folded.ownerPubKey)
+            val relay = RelayUrlNormalizer.normalizeOrNull("wss://r.example")!!
+
+            val filters =
+                ConcordSubscriptionPlanner.controlIsolatedFilters(
+                    listOf(foldedEntry, joinedEntry),
+                    since = mutableMapOf(relay to MutableTime(1234L)),
+                    stateOf = { if (it.id == foldedEntry.id) foldedState else null },
+                )
+
+            val joinedControl = filters.map { it.filter }.single { joined.controlPlane.address in it.authors.orEmpty() }
+            assertNull(joinedControl.since, "an unfolded community's Control Plane must be fetched in full")
+            val joinedGuestbook = ConcordActions.guestbookPlane(joined.communityRoot, joined.communityId, joined.rootEpoch).publicKeyHex
+            assertNull(filters.map { it.filter }.single { joinedGuestbook in it.authors.orEmpty() }.since)
+
+            // The already-folded community keeps its incremental cursor.
+            val foldedControl = filters.map { it.filter }.single { folded.controlPlane.address in it.authors.orEmpty() }
+            assertEquals(1234L, foldedControl.since)
         }
 }

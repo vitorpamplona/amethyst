@@ -258,16 +258,22 @@ object ConcordSubscriptionPlanner {
         accountPubKey: HexKey? = null,
         stateOf: (ConcordCommunityListEntry) -> ConcordCommunityState?,
     ): List<RelayBasedFilter> {
-        val controlSubs = controlPlaneSubs(entries)
+        // A community whose Control Plane hasn't folded yet (just joined, or its editions never
+        // arrived) is fetched without the relay's `since`: that cursor was set by the OTHER
+        // communities on the relay, and applying it here skips every edition older than it — the
+        // genesis included — so the community showed no channels until a restart dropped the cursor.
+        val (folded, unfolded) = entries.partition { stateOf(it) != null }
 
         val otherSubs = ArrayList<ConcordPlaneSub>()
-        otherSubs += auxiliaryPlaneSubs(entries)
-        for (entry in entries) {
-            val state = stateOf(entry) ?: continue
-            otherSubs += channelPlaneSubs(entry, state)
+        otherSubs += auxiliaryPlaneSubs(folded)
+        for (entry in folded) {
+            otherSubs += channelPlaneSubs(entry, stateOf(entry) ?: continue)
         }
 
-        return relayBasedFilters(controlSubs, since, accountPubKey).orEmpty() + relayBasedFilters(otherSubs, since, accountPubKey).orEmpty()
+        return relayBasedFilters(controlPlaneSubs(folded), since, accountPubKey).orEmpty() +
+            relayBasedFilters(otherSubs, since, accountPubKey).orEmpty() +
+            relayBasedFilters(controlPlaneSubs(unfolded), null, accountPubKey).orEmpty() +
+            relayBasedFilters(auxiliaryPlaneSubs(unfolded), null, accountPubKey).orEmpty()
     }
 
     /**

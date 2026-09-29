@@ -92,9 +92,17 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
+
+/** How long a join waits for the new community's session before handing it the wraps it fetched. */
+private const val SESSION_WAIT_MS = 10_000L
 
 /**
  * How often a joined Concord community's stored invite link is re-resolved to check whether
@@ -137,9 +145,22 @@ class AccountConcordActions(
         entry: ConcordCommunityListEntry,
         inviteCreator: HexKey? = null,
         inviteLabel: String? = null,
+        fetchedWraps: List<Event> = emptyList(),
     ) {
         if (!persistConcordEntry(entry)) return
+        // The session is built asynchronously from the Community List flow. Every wrap that reaches
+        // the cache before it exists is kept as an unclaimed note, and the live subscription's copy
+        // of the same wrap is then deduplicated away, so the community showed "No channels yet"
+        // until a restart emptied the cache. Wait for the session, then hand it what we fetched.
+        awaitConcordSession(entry.id)
+        fetchedWraps.forEach { account.concordSessions.ingest(it) }
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+    }
+
+    private suspend fun awaitConcordSession(communityId: HexKey) {
+        withTimeoutOrNull(SESSION_WAIT_MS) {
+            account.concordSessions.revision.first { account.concordSessions.sessionFor(communityId) != null }
+        }
     }
 
     /**
@@ -147,9 +168,17 @@ class AccountConcordActions(
      * only means "no List" once the relays have been asked (CORD-02 §8 — a write built on an
      * unloaded List replaces fragments another device published).
      */
-    private suspend fun ensureConcordListLoaded() {
-        if (!account.concordChannelList.relaysConfirmed) importConcordCommunities()
+    suspend fun preloadConcordList() {
+        if (account.concordChannelList.relaysConfirmed) return
+        // Single-flight: the import is a ~30s drain of every stock/outbox relay. A join starts it
+        // as soon as it begins, and the join's own List write then waits for that same fetch
+        // instead of starting a second one.
+        concordListImport.withLock {
+            if (!account.concordChannelList.relaysConfirmed) importConcordCommunities()
+        }
     }
+
+    private val concordListImport = Mutex()
 
     /**
      * Read-modify-writes the Community List through [change] and publishes the fragments it
@@ -157,7 +186,7 @@ class AccountConcordActions(
      * written safely yet (fragments unreadable or not loaded) or a fragment would pass the ceiling.
      */
     private suspend fun writeConcordList(change: suspend (ConcordChannelListState) -> List<Event>): Boolean {
-        ensureConcordListLoaded()
+        preloadConcordList()
         return try {
             account.sendMyPublicAndPrivateOutbox(change(account.concordChannelList))
             true
@@ -227,6 +256,7 @@ class AccountConcordActions(
                 name = name,
                 addedAt = TimeUtils.nowMillis(),
             ),
+            fetchedWraps = community.genesisWraps,
         )
         return community.communityIdHex
     }
@@ -540,6 +570,11 @@ class AccountConcordActions(
         if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
         val parsed = ConcordActions.parseInviteLink(url) ?: return ConcordInviteResult.InvalidLink
 
+        // Joining ends in a Community List write, which first needs the List loaded (a slow drain of
+        // every stock and outbox relay). Start it now so it overlaps the bundle and plane fetches
+        // below instead of running after them.
+        account.scope.launch { preloadConcordList() }
+
         val relays =
             (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value).toSet()
         if (relays.isEmpty()) return ConcordInviteResult.NotReachable
@@ -628,7 +663,7 @@ class AccountConcordActions(
         if (rejoined != null) {
             if (!adoptedConcordRotations.add("${rejoined.id}:${rejoined.rootEpoch}")) return ConcordInviteResult.Joined(bundle.communityId)
             Log.i("Concord") { "Stranded rejoin by explicit invite: ${rejoined.id} -> epoch ${rejoined.rootEpoch}" }
-            joinConcordCommunity(rejoined, inviteCreator, inviteLabel)
+            joinConcordCommunity(rejoined, inviteCreator, inviteLabel, planeWraps)
             _strandedConcordCommunities.value -= rejoined.id
             return ConcordInviteResult.Joined(bundle.communityId)
         }
@@ -654,7 +689,7 @@ class AccountConcordActions(
                 // recoverStrandedConcordCommunities().
                 inviteRef = ConcordActions.bareInviteRef(url),
             )
-        joinConcordCommunity(entry, inviteCreator, inviteLabel)
+        joinConcordCommunity(entry, inviteCreator, inviteLabel, planeWraps)
         return ConcordInviteResult.Joined(bundle.communityId)
     }
 
