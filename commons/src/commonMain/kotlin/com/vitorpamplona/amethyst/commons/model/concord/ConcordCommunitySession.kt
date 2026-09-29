@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordLocalEdit
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinSource
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinVerifier
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
+import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -283,6 +284,14 @@ class ConcordCommunitySession(
     private val baseRekeyWraps = LinkedHashMap<HexKey, Event>()
     private val siblingRekeyWraps = LinkedHashMap<HexKey, Event>()
 
+    // Channel-rekey addresses (CORD-06 §2) for each held Private Channel's next epochs, under the
+    // current root and the prior one (a Refounding seals its channel rekeys under the prior root,
+    // CORD-06 §3) -> key. Re-derived whenever the held channel keys change, since each adoption
+    // moves the window forward.
+    @Volatile
+    private var channelRekeyKeys: Map<HexKey, GroupKey> = ConcordPrivateChannels.watchKeys(entry)
+    private val channelRekeyWraps = LinkedHashMap<HexKey, Event>()
+
     // Current channel plane pubkey -> plane (channel id, key, bound epoch), refreshed on each control
     // re-fold. A Public Channel's plane derives from the root at the root epoch; a Private one's from
     // its held channel key at the channel epoch (CORD-03 §1). A Private Channel we hold no key for has
@@ -429,6 +438,7 @@ class ConcordCommunitySession(
             address == nextBaseRekeyAddress ||
             address == siblingBaseRekeyAddress ||
             address == dissolvedAddress ||
+            address in channelRekeyKeys ||
             address in historicalControlKeys ||
             lock.withLock { address in channelKeysByAddress || address in historicalChannelKeysByAddress }
 
@@ -514,7 +524,13 @@ class ConcordCommunitySession(
      * The auxiliary plane keys (Guestbook, next base-rekey, and the CORD-02 §9 dissolution address)
      * for their own isolated AUTH.
      */
-    fun auxStreamKeys(): List<GroupKey> = listOfNotNull(guestbookKey, nextBaseRekeyKey, dissolvedKey, siblingBaseRekeyKey)
+    fun auxStreamKeys(): List<GroupKey> = listOfNotNull(guestbookKey, nextBaseRekeyKey, dissolvedKey, siblingBaseRekeyKey) + channelRekeyKeys.values
+
+    /** The channel-rekey addresses this session watches (CORD-06 §2), for the auxiliary subscription. */
+    fun channelRekeyAddresses(): Set<HexKey> = channelRekeyKeys.keys
+
+    /** The buffered kind-3303 wraps seen at [channelRekeyAddresses], for the account's channel-rekey drain. */
+    fun pendingChannelRekeyWraps(): List<Event> = lock.withLock { channelRekeyWraps.values.toList() }
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlKeys) }
@@ -580,6 +596,7 @@ class ConcordCommunitySession(
                 // Control material may already have swapped in an entry carrying the new keys.
                 if (privateKeySet(newEntry) == derivedPrivateKeys) return false
                 entry = newEntry
+                channelRekeyKeys = ConcordPrivateChannels.watchKeys(newEntry)
                 true
             }
         // Nothing folded yet: the first control wrap derives the planes from the swapped-in entry.
@@ -644,6 +661,14 @@ class ConcordCommunitySession(
             siblingBaseRekeyAddress -> {
                 // Same as above for a racing rotation into THIS epoch (the down-only heal).
                 lock.withLock { siblingRekeyWraps[wrap.id] = wrap }
+                return ConcordIngestOutcome.STRUCTURAL
+            }
+            in channelRekeyKeys -> {
+                // Buffer only, like the base rekeys: opening a blob takes the account signer, and the
+                // rotator's authority is judged against the fold at drain time.
+                lock.withLock {
+                    if (channelRekeyWraps.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
+                }
                 return ConcordIngestOutcome.STRUCTURAL
             }
             else -> {

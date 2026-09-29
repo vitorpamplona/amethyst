@@ -3631,15 +3631,23 @@
         <item quantity="one">%1$d channel</item>
         <item quantity="other">%1$d channels</item>
     </plurals>
+    <string name="concord_channel_access_role_label">Access role name</string>
     <string name="concord_channel_create">New channel</string>
     <string name="concord_channel_delete">Delete channel</string>
     <string name="concord_channel_delete_confirm">Delete</string>
     <string name="concord_channel_delete_message">Delete #%1$s? This can't be undone and the channel can't be recreated with the same id.</string>
     <string name="concord_channel_delete_title">Delete channel?</string>
+    <string name="concord_channel_make_private">Make private</string>
+    <string name="concord_channel_make_private_message">#%1$s gets its own key from now on, and the "%2$s" role decides who can read it. Nobody holds that role yet: grant it to the members who should have access. Messages already posted stay readable to everyone in the community.</string>
+    <string name="concord_channel_make_public">Make public</string>
+    <string name="concord_channel_make_public_message">Every member of the community will be able to read #%1$s from now on. Messages posted while it was private stay readable only to the members who held its key.</string>
     <string name="concord_channel_name_label">Channel name</string>
     <string name="concord_channel_no_messages">No messages yet</string>
+    <string name="concord_channel_private_hint">Only members holding its access role can read it. Grant the role to let them in; revoking it rotates the channel key.</string>
+    <string name="concord_channel_private_toggle">Private channel</string>
     <string name="concord_channel_rename">Rename channel</string>
     <string name="concord_channel_rename_save">Rename</string>
+    <string name="concord_channel_rotate_key">Rotate key</string>
     <string name="concord_channels_empty">No channels yet.</string>
     <string name="concord_create_action">Create</string>
     <string name="concord_create_relays">Relays</string>

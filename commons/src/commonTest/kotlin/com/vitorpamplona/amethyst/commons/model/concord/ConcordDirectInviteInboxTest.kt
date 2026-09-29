@@ -27,10 +27,12 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
+import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteChannel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -97,6 +99,13 @@ class ConcordDirectInviteInboxTest {
         )
 
     private fun stateOf(c: NewConcordCommunity): ConcordCommunityState = ConcordCommunityState.fold(ConcordActions.controlEditions(c.genesisWraps, c.controlPlane), c.communityId, c.ownerPubKey)
+
+    /** [c]'s fold with [vip] defined as a live Private Channel. */
+    private suspend fun stateWithVip(c: NewConcordCommunity): ConcordCommunityState {
+        val editions = ConcordActions.controlEditions(c.genesisWraps, c.controlPlane).toMutableList()
+        editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineChannel(owner, c.controlPlane, c.communityId, vip.hexToByteArray(), ChannelEntity(name = "vip", private = true), editions, createdAt = 2L, owner = c.ownerPubKey)), c.controlPlane)
+        return ConcordCommunityState.fold(editions, c.communityId, c.ownerPubKey)
+    }
 
     @Test
     fun aValidWrapIsParkedWithItsVerifiedSenderAndDedupedByWrapId() =
@@ -225,6 +234,31 @@ class ConcordDirectInviteInboxTest {
             assertEquals(listOf("vip"), byWrap.getValue(catchUp.wrapId).newChannelNames())
             // Named by the held fold when it knows the channel.
             assertEquals(listOf("VIP lounge"), byWrap.getValue(catchUp.wrapId).newChannelNames { if (it == vip) "VIP lounge" else null })
+        }
+
+    @Test
+    fun aCatchUpThatAcceptWouldRefuseIsNotOffered() =
+        runTest {
+            val c = community()
+            val editions = ConcordActions.controlEditions(c.genesisWraps, c.controlPlane).toMutableList()
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineChannel(owner, c.controlPlane, c.communityId, vip.hexToByteArray(), ChannelEntity(name = "vip", private = true), editions, 2L, owner = c.ownerPubKey)), c.controlPlane)
+            val state = ConcordCommunityState.fold(editions, c.communityId, c.ownerPubKey)
+            val grant = listOf(InviteChannel(vip, "db".repeat(32), 0, "vip"))
+            val inbox = ConcordDirectInviteInbox(me)
+            // A plain member hands over a key: accept refuses it (not staff), so it is not a card.
+            val fromMember = assertNotNull(inbox.offer(ConcordActions.buildDirectInvite(sender, me.pubKey, inviteFor(c, channels = grant))))
+            val fromOwner = assertNotNull(inbox.offer(ConcordActions.buildDirectInvite(owner, me.pubKey, inviteFor(c, channels = grant))))
+            val held = listOf(heldEntryOf(c))
+
+            val views = ConcordDirectInviteInbox.visible(inbox.pending.value.values, held, heldStateOf = { state })
+            assertEquals(listOf(fromOwner.wrapId), views.map { it.wrapId })
+            assertIs<DirectInviteAcceptPlan.CatchUp>(ConcordDirectInviteInbox.acceptPlan(fromOwner, held.single(), state, me.pubKey))
+            assertEquals(DirectInviteAcceptPlan.NothingNew, ConcordDirectInviteInbox.acceptPlan(fromMember, held.single(), state, me.pubKey))
+
+            // Before the fold is in, the verdict is unknown: both stay (accept waits for the roster).
+            assertEquals(2, ConcordDirectInviteInbox.visible(inbox.pending.value.values, held).size)
+            // A dissolved community takes no keys at all.
+            assertTrue(ConcordDirectInviteInbox.visible(inbox.pending.value.values, held, heldStateOf = { state.withDissolved(true) }).isEmpty())
         }
 
     @Test
@@ -389,17 +423,23 @@ class ConcordDirectInviteInboxTest {
         runTest {
             val c = community()
             val held = heldEntryOf(c)
-            val state = stateOf(c)
+            val state = stateWithVip(c)
             val grant = listOf(InviteChannel(vip, "db".repeat(32), 0, "vip"))
 
-            // Same base, new key: a catch-up that keeps the held base and anchor.
-            val catchUp = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(sender, me.pubKey, inviteFor(c, channels = grant)), me))
+            // Same base, new key, from staff (the owner): a catch-up that keeps the held base and anchor.
+            val catchUp = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(owner, me.pubKey, inviteFor(c, channels = grant)), me))
             val plan = assertIs<DirectInviteAcceptPlan.CatchUp>(ConcordDirectInviteInbox.acceptPlan(catchUp, held, state, me.pubKey))
             assertEquals(held.root, plan.entry.root)
             assertEquals(held.rootEpoch, plan.entry.rootEpoch)
             assertEquals(held.controlPk, plan.entry.controlPk)
             assertEquals("anchor", plan.entry.inviteRef)
             assertEquals(listOf(vip), plan.entry.privateChannels.map { it.channelId })
+            assertEquals(listOf(vip), plan.channelIds)
+
+            // A plain keyholder can't plant a key, and a channel the fold doesn't know as Private isn't one.
+            val fromMember = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(sender, me.pubKey, inviteFor(c, channels = grant)), me))
+            assertEquals(DirectInviteAcceptPlan.NothingNew, ConcordDirectInviteInbox.acceptPlan(fromMember, held, state, me.pubKey))
+            assertEquals(DirectInviteAcceptPlan.NothingNew, ConcordDirectInviteInbox.acceptPlan(catchUp, held, stateOf(c), me.pubKey))
 
             // No fold yet: the ban verdict is unknown, so it waits.
             assertEquals(DirectInviteAcceptPlan.RosterNotLoaded, ConcordDirectInviteInbox.acceptPlan(catchUp, held, null, me.pubKey))
@@ -407,6 +447,11 @@ class ConcordDirectInviteInboxTest {
             // Already holding that key: nothing new.
             val holding = held.let { ConcordCommunityListEntry(it.id, it.owner, it.ownerSalt, it.root, it.rootEpoch, it.controlPk, privateChannels = listOf(PrivateChannelKey(vip, "db".repeat(32), 0, "vip")), relays = it.relays, name = it.name) }
             assertEquals(DirectInviteAcceptPlan.NothingNew, ConcordDirectInviteInbox.acceptPlan(catchUp, holding, state, me.pubKey))
+
+            // Even from staff, a bundle never REPLACES a held key — not at a higher, nor an absurd, epoch.
+            // A held key moves only through a channel rekey, whose prevcommit proves continuity.
+            val hijack = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(owner, me.pubKey, inviteFor(c, channels = listOf(InviteChannel(vip, "ee".repeat(32), 1_000_000_000L, "vip")))), me))
+            assertEquals(DirectInviteAcceptPlan.NothingNew, ConcordDirectInviteInbox.acceptPlan(hijack, holding, state, me.pubKey))
 
             // A different base for a held community is never adopted, keys or not.
             val baseMove = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(sender, me.pubKey, inviteFor(c, root = "99".repeat(32), channels = grant)), me))
