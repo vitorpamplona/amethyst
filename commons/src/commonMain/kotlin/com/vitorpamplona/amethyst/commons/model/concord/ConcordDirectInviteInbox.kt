@@ -75,9 +75,14 @@ sealed interface DirectInviteAcceptPlan {
     /** A community we don't hold: run the shared join path. */
     data object Join : DirectInviteAcceptPlan
 
-    /** A held community: store [entry] — the held one plus the newly granted Private Channel keys. */
+    /**
+     * A held community: store [entry] — the held one plus the newly granted Private Channel keys
+     * ([channelIds]). A writer re-applies [channelIds] to the entry it reads inside the List write
+     * ([ConcordInviteVend.adoptCatchUp] with `only`), never [entry] itself, which is a snapshot.
+     */
     class CatchUp(
         val entry: ConcordCommunityListEntry,
+        val channelIds: List<HexKey>,
     ) : DirectInviteAcceptPlan
 
     /** A held community the bundle adds nothing to (or can't: a different base, or dissolved). */
@@ -216,9 +221,11 @@ class ConcordDirectInviteInbox(
          *  - not held → [DirectInviteAcceptPlan.Join] (the shared join path, which still ban-gates
          *    against the community's own Control Plane);
          *  - held on the SAME base with new Private Channel keys → [DirectInviteAcceptPlan.CatchUp],
-         *    the held entry with only those keys merged in — never moving the base (Armada
-         *    `catchUpChannelIds`) — unless the held roster bans [me]; refused while the roster isn't
-         *    folded ([DirectInviteAcceptPlan.RosterNotLoaded]);
+         *    the held entry with only those keys ADDED — never moving the base, never replacing a
+         *    held key (Armada `catchUpChannelIds`) — and only from a sender who is staff in the held
+         *    fold, for channels it knows as live Private Channels
+         *    ([ConcordInviteVend.admissibleCatchUpIds]); refused when the held roster bans [me], and
+         *    while it isn't folded ([DirectInviteAcceptPlan.RosterNotLoaded]);
          *  - held otherwise (nothing new, a different base, dissolved) → [DirectInviteAcceptPlan.NothingNew].
          */
         fun acceptPlan(
@@ -230,12 +237,15 @@ class ConcordDirectInviteInbox(
         ): DirectInviteAcceptPlan {
             if (opened.isExpired(nowMs)) return DirectInviteAcceptPlan.Expired
             if (held == null) return DirectInviteAcceptPlan.Join
-            val adopted = ConcordInviteVend.adoptCatchUp(held, opened.invite) ?: return DirectInviteAcceptPlan.NothingNew
+            if (ConcordInviteVend.catchUpChannelIds(held, opened.invite).isEmpty()) return DirectInviteAcceptPlan.NothingNew
             if (heldState == null) return DirectInviteAcceptPlan.RosterNotLoaded
             // Death wins every race (CORD-02 §9): a dissolved community takes no new keys.
             if (heldState.dissolved) return DirectInviteAcceptPlan.NothingNew
             if (heldState.authority.isBanned(me)) return DirectInviteAcceptPlan.Banned
-            return DirectInviteAcceptPlan.CatchUp(adopted)
+            val ids = ConcordInviteVend.admissibleCatchUpIds(held, opened.invite, heldState.authority, heldState.privateChannelIds, opened.sender)
+            if (ids.isEmpty()) return DirectInviteAcceptPlan.NothingNew
+            val adopted = ConcordInviteVend.adoptCatchUp(held, opened.invite, ids) ?: return DirectInviteAcceptPlan.NothingNew
+            return DirectInviteAcceptPlan.CatchUp(adopted, ids)
         }
 
         /**
