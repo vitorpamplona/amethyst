@@ -66,8 +66,11 @@ Rules the vocabulary follows:
    complaint about the person) is not `REPORTED_AUTHOR` (the author of reported content), and
    `FOLLOW` (the kind 3 social graph) is not `SUBSCRIBED` (every other follow-like list).
 5. **Nothing is invisible before it is classified.** A class that implements no `LinkProvider`
-   gets a default derived from its hint providers: every linked id becomes a `REFERENCE` link
-   with `via` = the tag it came from. Classifying a kind later is an additive change.
+   gets a default `REFERENCE` link (with `via` = the tag it came from) for every id its hint
+   providers name AND every generic reference tag whose value has the right shape: `e`/`E`/`q`
+   with a 64-hex id, `p`/`P` with a 64-hex key, `a`/`A` with a valid address. The shape half is
+   not optional: most kinds Quartz types implement no hint provider (measured below), and without
+   it their references would vanish. Classifying a kind later is an additive change.
 6. **Values that qualify a link ride on it** (`props`): a report's type, an assertion's rank, a
    zap request's amount. They are what a query filters on after choosing the relation.
 7. **Names are Nostr's own words for the slot.** A relation names what the TARGET is to the
@@ -272,9 +275,36 @@ These were already catalogued in neo4j-eventstore's `docs/appendix-providers.md`
 New: two classes claim kind **1010**, `experimental/edits/TextNoteModificationEvent` and
 `nip51Lists/goodWikiRelayList/GoodWikiRelayListEvent`. `EventFactory` can only type one of them.
 
+## Coverage
+
+Measured on 2026-09-29: `EventFactory` types **410** classes. The measurement is a text scan, so
+the split below is approximate; an exact per-class table is plan step 2a.
+- **~150 are classified above.** That covers the NIPs the graph already interprets.
+- **~110 carry no references.** Settings, metadata, relay and server lists, key packages,
+  ephemeral auth. They need nothing beyond `AUTHOR` (and `ADDRESS`).
+- **~150 carry references and are not classified yet.** Only 12 of them implement a hint
+  provider; the rest reach the graph only through the shape half of rule 5. The largest groups:
+  - `buzz/` (~65 kinds: streams, workflows, jobs, huddles, forums, DMs, moderation);
+  - NIP-29 groups (9000–9010, 39000–39005);
+  - NIP-43 and buzz relay membership;
+  - NIP-47 wallet connect and NIP-46 remote signer traffic;
+  - WebRTC calls (25050–25055);
+  - NIP-71 videos (21, 22, 34235, 34236);
+  - file metadata (1063, 1065);
+  - chess (64, Jester);
+  - clink, cashu, contextvm, marmot;
+  - app data and handlers (78, 30078, 31990);
+  - music playlists, interactive stories, attestations, workouts, geocaching, list items
+    (9999 / 39999), torrents (2003).
+
+**Enforced, not hoped for:** a Quartz test walks every `EventFactory` kind and fails unless the
+class is one of: classified (implements `LinkProvider`), explicitly `REFERENCE`-only, or
+explicitly link-free. A new kind then cannot land without a decision about its links.
+
 ## Plan
 
 1. This review: the vocabulary, the model, the open questions. Done except the two open points.
+   - 2a. The exact per-class coverage table (all 410), generated, as an appendix to this plan.
 2. Quartz: `nip01Core/links/` and the default from the hint providers; then `links()` for the
    kinds the graph already interprets (NIP-10, 18, 22, 25, 56, 57, 85, 51, 58, 72, 09), each with
    a golden test. The upstream fixes above land with them.
