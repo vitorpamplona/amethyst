@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.concord.cord02Community
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -321,6 +322,8 @@ object ConcordCommunityList {
         @SerialName(EXTRAS) val extras: JsonObject = NoExtras,
     )
 
+    // `name` is always written: Armada refuses to serialize a list entry whose name is not a string.
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     private class JoinMaterialWire(
         @SerialName("community_id") val communityId: String,
@@ -335,7 +338,7 @@ object ConcordCommunityList {
             WireChannel,
         > = emptyList(),
         val relays: List<String> = emptyList(),
-        val name: String = "",
+        @EncodeDefault val name: String = "",
         @SerialName("held_roots") val heldRoots: List<
             @Serializable(WireHeldRootSerializer::class)
             WireHeldRoot,

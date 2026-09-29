@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -83,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.blossom_import_sources_secti
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_start_button
 import com.vitorpamplona.amethyst.commons.resources.blossom_import_title
 import com.vitorpamplona.amethyst.commons.resources.delete_media_server
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -123,7 +122,7 @@ fun BlossomImportScreen(
     // kind-10063 list arrives from a relay just after the screen opens (common on cold start).
     val targetServers by accountViewModel.account.blossomServers.flow
         .collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val longNotice = rememberLongNotice()
 
     Scaffold(
         topBar = {
@@ -254,9 +253,7 @@ fun BlossomImportScreen(
                                 when (vm.importSelected()) {
                                     is ImportStart.Started -> nav.popBack()
                                     ImportStart.Busy ->
-                                        Toast
-                                            .makeText(context, blossomImportBusyStr, Toast.LENGTH_LONG)
-                                            .show()
+                                        longNotice.show(blossomImportBusyStr)
                                     ImportStart.Empty -> {}
                                 }
                             },

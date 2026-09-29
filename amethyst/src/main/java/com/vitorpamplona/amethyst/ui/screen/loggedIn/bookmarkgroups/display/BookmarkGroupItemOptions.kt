@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display
 
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -29,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -60,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeEditDraftTo
@@ -171,7 +170,7 @@ fun BookmarkGroupItemOptionsMenu(
         onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboard.current
-        val actContext = LocalContext.current
+        val sharer = rememberTextSharer()
         val scope = rememberCoroutineScope()
 
         // Bookmark Management section
@@ -240,23 +239,7 @@ fun BookmarkGroupItemOptionsMenu(
                 }
             }
             M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
-                val sendIntent =
-                    Intent().apply {
-                        action = Intent.ACTION_SEND
-                        type = "text/plain"
-                        putExtra(
-                            Intent.EXTRA_TEXT,
-                            externalLinkForNote(note),
-                        )
-                        putExtra(
-                            Intent.EXTRA_TITLE,
-                            quickActionShareBrowserLinkStr,
-                        )
-                    }
-
-                val shareIntent =
-                    Intent.createChooser(sendIntent, quickActionShareStr)
-                actContext.startActivity(shareIntent)
+                sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
                 onDismiss()
             }
         }

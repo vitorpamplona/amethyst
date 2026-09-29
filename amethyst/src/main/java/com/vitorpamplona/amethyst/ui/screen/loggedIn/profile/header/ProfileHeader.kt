@@ -49,7 +49,6 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataViewModel
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
@@ -69,8 +70,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.userProfileBorderModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.UserExternalIdentitiesViewModel
-import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataViewModel
-import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import kotlinx.coroutines.launch
@@ -194,7 +193,6 @@ private fun ProfilePictureUploadButton(
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     postViewModel.init(accountViewModel)
-    val context = LocalContext.current
 
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
@@ -202,7 +200,7 @@ private fun ProfilePictureUploadButton(
             onImageUri = { media ->
                 showGallerySelect = false
                 if (media != null) {
-                    postViewModel.uploadPictureAndSave(media, context, accountViewModel.toastManager::toast)
+                    postViewModel.uploadPictureAndSave(media, accountViewModel.host.mediaUploader, accountViewModel.toastManager::toast)
                 }
             },
         )

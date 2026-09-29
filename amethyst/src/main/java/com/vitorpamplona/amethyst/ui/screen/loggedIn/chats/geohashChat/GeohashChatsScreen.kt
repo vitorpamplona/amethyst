@@ -69,16 +69,16 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * The dedicated top-level list of the user's joined Bitchat-interoperable location channels — the
- * geohash-chat analogue of [com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScreen]
+ * geohash-chat analogue of [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.publicChats.PublicChatsScreen]
  * (NIP-28) and the Relay Groups / Concord home screens. Reached from the drawer's "Feeds" section and
  * pinnable as a bottom-bar tab. Each row opens the cell's chat; the "+" opens [NewGeohashChatScreen] to
  * join more (near me / manual / teleport).

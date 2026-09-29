@@ -20,29 +20,15 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.wavefront
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
-import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.components.wavefront.FakeWaveformAnimation
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -50,7 +36,6 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
-import kotlin.math.sin
 
 @Composable
 fun FakeWaveformAnimation(
@@ -97,60 +82,3 @@ fun pollCurrentPosition(controller: Player) =
         emit(controller.currentPosition)
     }.flowOn(Dispatchers.IO)
         .conflate()
-
-@Preview
-@Composable
-fun FakeWaveformAnimationPreview() {
-    val state =
-        remember {
-            mutableFloatStateOf((500 % 1000.0f) / 1000.0f)
-        }
-    ThemeComparisonColumn {
-        FakeWaveformAnimation(state, 50, Modifier.width(200.dp))
-    }
-}
-
-@Composable
-fun FakeWaveformAnimation(
-    waveformProgress: MutableFloatState,
-    barCount: Int = 50,
-    modifier: Modifier = Modifier,
-) {
-    val barBrush =
-        Brush.linearGradient(
-            colors = listOf(Color(0xff2598cf), Color(0xff652d80)),
-            start = Offset(0.2f * 128f, 0f),
-            end = Offset(0.2f * 128f + 128f, 0f),
-        )
-
-    Canvas(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .requiredHeight(48.dp)
-                .padding(horizontal = 10.dp),
-    ) {
-        val barWidth = 3.dp.toPx()
-        val barPadding = 2.dp.toPx()
-        val barRadius = 2.dp.toPx()
-        val totalBarWidth = barWidth + barPadding
-        val startX = (size.width - (barCount * totalBarWidth - barPadding)) / 2f
-
-        for (i in 0 until barCount) {
-            val phase = (i.toFloat() / barCount) * 2f * Math.PI.toFloat()
-            val wave = sin(waveformProgress.floatValue * 2f * Math.PI.toFloat() + phase)
-            val barFraction = ((wave + 1f) / 2f)
-            val barHeight = size.height * barFraction
-            val x = startX + i * totalBarWidth
-            val y = (size.height - barHeight) / 2f
-
-            drawRoundRect(
-                brush = barBrush,
-                topLeft = Offset(x, y),
-                size = Size(barWidth, barHeight),
-                cornerRadius = CornerRadius(barRadius, barRadius),
-                style = Fill,
-            )
-        }
-    }
-}

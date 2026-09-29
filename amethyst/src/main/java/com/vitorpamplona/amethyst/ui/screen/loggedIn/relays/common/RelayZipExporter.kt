@@ -26,6 +26,7 @@ import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry

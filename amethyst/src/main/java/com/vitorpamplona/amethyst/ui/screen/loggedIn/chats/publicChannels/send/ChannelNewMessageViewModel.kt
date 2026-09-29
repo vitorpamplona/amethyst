@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -59,18 +58,20 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
@@ -495,11 +496,11 @@ open class ChannelNewMessageViewModel :
 
     fun upload(
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onceUploaded: suspend () -> Unit,
     ) {
         try {
-            uploadUnsafe(onError, context, onceUploaded)
+            uploadUnsafe(onError, uploader, onceUploaded)
         } catch (_: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -512,7 +513,7 @@ open class ChannelNewMessageViewModel :
 
     fun uploadUnsafe(
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onceUploaded: suspend () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -526,10 +527,10 @@ open class ChannelNewMessageViewModel :
                 myMultiOrchestrator.upload(
                     uploadState.caption,
                     uploadState.contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(uploadState.mediaQualitySlider),
+                    CompressorQuality.fromSlider(uploadState.mediaQualitySlider),
                     uploadState.selectedServer,
                     account,
-                    context,
+                    uploader,
                     stripMetadata = uploadState.stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
@@ -537,16 +538,17 @@ open class ChannelNewMessageViewModel :
             if (results.allGood) {
                 val urls =
                     results.successful.mapNotNull { upload ->
-                        if (upload.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(upload.result.bytes, headerInfo = upload.result.fileHeader, uploadState.caption, uploadState.contentWarningReason)
+                        val uploaded = upload.result
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason)
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                             note?.toNostrUri()
-                        } else if (upload.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            iMetaAttachments.add(upload.result, uploadState.caption, uploadState.contentWarningReason)
+                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            iMetaAttachments.add(uploaded, uploadState.caption, uploadState.contentWarningReason)
 
-                            upload.result.url
+                            uploaded.url
                         } else {
                             null
                         }

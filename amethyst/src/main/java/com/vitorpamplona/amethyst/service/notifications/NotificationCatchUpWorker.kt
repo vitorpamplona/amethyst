@@ -31,7 +31,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first

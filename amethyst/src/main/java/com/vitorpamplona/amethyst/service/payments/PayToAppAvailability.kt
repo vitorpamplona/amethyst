@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.payments
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -196,7 +195,7 @@ object PayToAppAvailability {
         }.getOrNull()
     }
 
-    @SuppressLint("QueryPermissionsNeeded")
+    @Suppress("QueryPermissionsNeeded")
     private fun queryActivities(
         pm: PackageManager,
         intent: Intent,
@@ -208,7 +207,7 @@ object PayToAppAvailability {
         }.getOrDefault(emptyList())
 
     /** Packages that answer a URL nobody can own — i.e. general-purpose browsers. */
-    @SuppressLint("QueryPermissionsNeeded")
+    @Suppress("QueryPermissionsNeeded")
     private fun browserPackages(pm: PackageManager): Set<String> = queryActivities(pm, viewIntent(CONTROL_URL)).mapNotNull { it.packageName() }.toSet()
 
     /**

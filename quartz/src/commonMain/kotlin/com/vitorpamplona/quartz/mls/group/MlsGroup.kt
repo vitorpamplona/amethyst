@@ -125,6 +125,8 @@ class MlsGroup private constructor(
     private var interimTranscriptHash: ByteArray,
     private val pskStore: MutableMap<String, ByteArray> = mutableMapOf(),
     private val pendingProposals: MutableList<PendingProposal> = mutableListOf(),
+    /** Receiver data of the last [RETAIN_EPOCHS] epochs, oldest first. See [decryptFormerEpoch]. */
+    private val retainedEpochs: ArrayDeque<RetainedEpochReceiverData> = ArrayDeque(),
     private val sentKeys: MutableMap<Int, com.vitorpamplona.quartz.mls.schedule.KeyNonceGeneration> = mutableMapOf(),
     /** Staged keys from proposeSigningKeyRotation — only promoted on successful commit */
     private var pendingSigningKey: ByteArray? = null,
@@ -290,6 +292,10 @@ class MlsGroup private constructor(
             // restart that forgot it would leave the leaver in the tree with
             // the group's keys and nobody holding the proposal to evict them.
             pendingProposals = pendingProposals.toList(),
+            skippedApplicationSecrets = secretTree.exportSkippedApplicationSecrets(),
+            skippedHandshakeSecrets = secretTree.exportSkippedHandshakeSecrets(),
+            retainedEpochs = retainedEpochs.toList(),
+            nodeSecrets = secretTree.exportNodeSecrets(),
         )
     }
 
@@ -395,6 +401,33 @@ class MlsGroup private constructor(
         // stale key look usable at the next resolution scan.
         pathPrivateKeys.keys.retainAll(fullPath.toSet())
     }
+
+    /** The current epoch's receiver data. Taken before a commit changes anything, kept once it has applied. */
+    private fun captureRetainedEpoch(): RetainedEpochReceiverData {
+        val w = TlsWriter()
+        tree.encodeTls(w)
+        return RetainedEpochReceiverData(
+            epoch = epoch,
+            senderDataSecret = epochSecrets.senderDataSecret,
+            encryptionSecret = epochSecrets.encryptionSecret,
+            exporterSecret = epochSecrets.exporterSecret,
+            resumptionPsk = epochSecrets.resumptionPsk,
+            groupContext = groupContext,
+            treeBytes = w.toByteArray(),
+            senderRatchetStates = secretTree.exportSenderStates(),
+            skippedApplicationSecrets = secretTree.exportSkippedApplicationSecrets(),
+            nodeSecrets = secretTree.exportNodeSecrets(),
+        )
+    }
+
+    private fun pushRetainedEpoch(retained: RetainedEpochReceiverData) {
+        retainedEpochs.removeAll { it.epoch == retained.epoch }
+        retainedEpochs.addLast(retained)
+        while (retainedEpochs.size > RETAIN_EPOCHS) retainedEpochs.removeFirst()
+    }
+
+    /** Receiver data of the retained former epochs, oldest first. */
+    fun retainedEpochs(): List<RetainedEpochReceiverData> = retainedEpochs.toList()
 
     /**
      * Extract retained epoch secrets for late-message decryption.
@@ -667,6 +700,7 @@ class MlsGroup private constructor(
      * Returns the Commit bytes to send to the group, plus optional Welcome for new members.
      */
     fun commit(): CommitResult {
+        val retainedForThisEpoch = captureRetainedEpoch()
         val proposals = pendingProposals.toList()
 
         // The application's gate on who may commit what. RFC 9420 has none of
@@ -1026,6 +1060,7 @@ class MlsGroup private constructor(
         epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret, pskSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
+        pushRetainedEpoch(retainedForThisEpoch)
 
         // Compute confirmation_tag and interim_transcript_hash
         val confirmationTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
@@ -1305,25 +1340,23 @@ class MlsGroup private constructor(
             null
         }
 
+    /** The AEAD-opened content of a PrivateMessage: who sent it and the PrivateMessageContent bytes. */
+    private class OpenedPrivateMessage(
+        val senderLeafIndex: Int,
+        val plaintext: ByteArray,
+    )
+
     /**
-     * Decrypt an application message from a PrivateMessage (RFC 9420 Section 6.3).
-     * @throws IllegalArgumentException if the message format is invalid
-     * @throws javax.crypto.AEADBadTagException if decryption fails
+     * Sender-data decryption, ratchet key lookup and content AEAD for a PrivateMessage against the given
+     * epoch material (RFC 9420 §6.3). Shared by [decrypt] (current epoch) and [decryptFormerEpoch].
      */
-    fun decrypt(messageBytes: ByteArray): DecryptedMessage {
-        val mlsMsg = MlsMessage.decodeTls(TlsReader(messageBytes))
-        require(mlsMsg.wireFormat == WireFormat.PRIVATE_MESSAGE) { "Expected PrivateMessage" }
-
-        val privMsg = PrivateMessage.decodeTls(TlsReader(mlsMsg.payload))
-
-        // Verify epoch and group ID match current state (RFC 9420 Section 6.1)
-        require(privMsg.epoch == epoch) {
-            "Message epoch ${privMsg.epoch} doesn't match current epoch $epoch"
-        }
-        require(privMsg.groupId.contentEquals(groupId)) {
-            "Message group ID doesn't match current group"
-        }
-
+    private fun openPrivateMessage(
+        privMsg: PrivateMessage,
+        senderDataSecret: ByteArray,
+        tree: RatchetTree,
+        secretTree: SecretTree,
+        allowOwnSentKeys: Boolean,
+    ): OpenedPrivateMessage {
         // Derive sender data key/nonce using ciphertext sample (RFC 9420 §6.3.1)
         // RFC 9420 §6.3.2: ciphertext_sample is the first KDF.Nh bytes
         // (32 for HKDF-SHA256), not AEAD.Nk (16). Using AEAD.Nk here made
@@ -1332,14 +1365,14 @@ class MlsGroup private constructor(
             privMsg.ciphertext.copyOfRange(0, minOf(privMsg.ciphertext.size, MlsCryptoProvider.HASH_OUTPUT_LENGTH))
         val senderDataKey =
             MlsCryptoProvider.expandWithLabel(
-                epochSecrets.senderDataSecret,
+                senderDataSecret,
                 "key",
                 ciphertextSample,
                 MlsCryptoProvider.AEAD_KEY_LENGTH,
             )
         val senderDataNonce =
             MlsCryptoProvider.expandWithLabel(
-                epochSecrets.senderDataSecret,
+                senderDataSecret,
                 "nonce",
                 ciphertextSample,
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
@@ -1369,7 +1402,7 @@ class MlsGroup private constructor(
         // outgoing, so every B→A commit quartz receives lands here with
         // content_type == COMMIT.
         val kng =
-            if (senderLeafIndex == myLeafIndex && sentKeys.containsKey(generation)) {
+            if (allowOwnSentKeys && senderLeafIndex == myLeafIndex && sentKeys.containsKey(generation)) {
                 sentKeys.remove(generation)!!
             } else {
                 when (privMsg.contentType) {
@@ -1393,49 +1426,126 @@ class MlsGroup private constructor(
         val contentAad = buildPrivateContentAAD(privMsg.groupId, privMsg.epoch, privMsg.contentType, privMsg.authenticatedData)
         val pmcPlaintext = MlsCryptoProvider.aeadDecrypt(kng.key, guardedNonce, contentAad, privMsg.ciphertext)
 
+        return OpenedPrivateMessage(senderLeafIndex, pmcPlaintext)
+    }
+
+    /** Parses and signature-checks an APPLICATION PrivateMessageContent against the given tree/context. */
+    private fun applicationFromOpened(
+        privMsg: PrivateMessage,
+        opened: OpenedPrivateMessage,
+        tree: RatchetTree,
+        groupContext: GroupContext,
+    ): DecryptedMessage {
+        val pmcReader = TlsReader(opened.plaintext)
+        val senderLeafIndex = opened.senderLeafIndex
+        val applicationData = pmcReader.readOpaqueVarInt()
+        val signature = pmcReader.readOpaqueVarInt()
+        while (pmcReader.hasRemaining) {
+            require(pmcReader.readBytes(1)[0] == 0.toByte()) {
+                "PrivateMessageContent padding must be zero"
+            }
+        }
+
+        val senderLeaf =
+            requireNotNull(tree.getLeaf(senderLeafIndex)) {
+                "Sender leaf is blank at index $senderLeafIndex"
+            }
+        require(
+            MlsCryptoProvider.verifyWithLabel(
+                senderLeaf.signatureKey,
+                "FramedContentTBS",
+                buildApplicationFramedContentTbs(
+                    groupId = privMsg.groupId,
+                    epoch = privMsg.epoch,
+                    senderLeafIndex = senderLeafIndex,
+                    authenticatedData = privMsg.authenticatedData,
+                    applicationData = applicationData,
+                    groupContext = groupContext,
+                ),
+                signature,
+            ),
+        ) { "FramedContentTBS signature verification failed" }
+
+        return DecryptedMessage(
+            senderLeafIndex = senderLeafIndex,
+            contentType = privMsg.contentType,
+            content = applicationData,
+            epoch = privMsg.epoch,
+            authenticatedData = privMsg.authenticatedData,
+        )
+    }
+
+    /**
+     * Opens an APPLICATION message sealed in a retained former epoch: one from
+     * a member that had not yet seen the latest commit (RFC 9420 §15.2 asks
+     * receivers to keep recent epochs' keys for exactly this).
+     *
+     * Same checks as [decrypt] against that epoch's tree and GroupContext,
+     * signature included, and the epoch's ratchet is written back so a
+     * generation opens only once. Handshake messages from a former epoch are
+     * refused, as is an epoch no longer retained.
+     */
+    fun decryptFormerEpoch(messageBytes: ByteArray): DecryptedMessage {
+        val mlsMsg = MlsMessage.decodeTls(TlsReader(messageBytes))
+        require(mlsMsg.wireFormat == WireFormat.PRIVATE_MESSAGE) { "Expected PrivateMessage" }
+        val privMsg = PrivateMessage.decodeTls(TlsReader(mlsMsg.payload))
+        require(privMsg.epoch < epoch) { "Message epoch ${privMsg.epoch} is not a former epoch (current $epoch)" }
+        require(privMsg.contentType == ContentType.APPLICATION) { "Only application messages can be read from a former epoch" }
+        require(privMsg.groupId.contentEquals(groupId)) { "Message group ID doesn't match current group" }
+
+        val index = retainedEpochs.indexOfFirst { it.epoch == privMsg.epoch }
+        require(index >= 0) {
+            "Message epoch ${privMsg.epoch} is no longer retained (oldest kept: ${retainedEpochs.firstOrNull()?.epoch ?: "none"})"
+        }
+        val retained = retainedEpochs[index]
+        val formerTree = RatchetTree.decodeTls(TlsReader(retained.treeBytes))
+        val formerSecrets = SecretTree(retained.encryptionSecret, formerTree.leafCount)
+        formerSecrets.importSenderStates(retained.senderRatchetStates)
+        formerSecrets.importSkippedSecrets(retained.skippedApplicationSecrets, emptyMap())
+        if (retained.nodeSecrets.isNotEmpty()) formerSecrets.importNodeSecrets(retained.nodeSecrets)
+
+        val opened = openPrivateMessage(privMsg, retained.senderDataSecret, formerTree, formerSecrets, allowOwnSentKeys = false)
+        val decrypted = applicationFromOpened(privMsg, opened, formerTree, retained.groupContext)
+        retainedEpochs[index] =
+            retained.copy(
+                senderRatchetStates = formerSecrets.exportSenderStates(),
+                skippedApplicationSecrets = formerSecrets.exportSkippedApplicationSecrets(),
+                nodeSecrets = formerSecrets.exportNodeSecrets(),
+            )
+        return decrypted
+    }
+
+    /** Exporter secrets of the retained former epochs, by epoch, for keys an application derives per epoch. */
+    fun formerExporterSecrets(): Map<Long, ByteArray> = retainedEpochs.associate { it.epoch to it.exporterSecret }
+
+    /**
+     * Decrypt an application message from a PrivateMessage (RFC 9420 Section 6.3).
+     * @throws IllegalArgumentException if the message format is invalid
+     * @throws javax.crypto.AEADBadTagException if decryption fails
+     */
+    fun decrypt(messageBytes: ByteArray): DecryptedMessage {
+        val mlsMsg = MlsMessage.decodeTls(TlsReader(messageBytes))
+        require(mlsMsg.wireFormat == WireFormat.PRIVATE_MESSAGE) { "Expected PrivateMessage" }
+
+        val privMsg = PrivateMessage.decodeTls(TlsReader(mlsMsg.payload))
+
+        // Verify epoch and group ID match current state (RFC 9420 Section 6.1)
+        require(privMsg.epoch == epoch) {
+            "Message epoch ${privMsg.epoch} doesn't match current epoch $epoch"
+        }
+        require(privMsg.groupId.contentEquals(groupId)) {
+            "Message group ID doesn't match current group"
+        }
+
+        val opened = openPrivateMessage(privMsg, epochSecrets.senderDataSecret, tree, secretTree, allowOwnSentKeys = true)
+        val senderLeafIndex = opened.senderLeafIndex
         // Parse PrivateMessageContent (RFC 9420 §6.3.1). The layout depends on
         // content_type — application payloads carry `opaque application_data<V>`
         // whereas commit / proposal payloads carry the struct directly (no
         // outer length prefix).
-        val pmcReader = TlsReader(pmcPlaintext)
+        val pmcReader = TlsReader(opened.plaintext)
         when (privMsg.contentType) {
-            ContentType.APPLICATION -> {
-                val applicationData = pmcReader.readOpaqueVarInt()
-                val signature = pmcReader.readOpaqueVarInt()
-                while (pmcReader.hasRemaining) {
-                    require(pmcReader.readBytes(1)[0] == 0.toByte()) {
-                        "PrivateMessageContent padding must be zero"
-                    }
-                }
-
-                val senderLeaf =
-                    requireNotNull(tree.getLeaf(senderLeafIndex)) {
-                        "Sender leaf is blank at index $senderLeafIndex"
-                    }
-                require(
-                    MlsCryptoProvider.verifyWithLabel(
-                        senderLeaf.signatureKey,
-                        "FramedContentTBS",
-                        buildApplicationFramedContentTbs(
-                            groupId = privMsg.groupId,
-                            epoch = privMsg.epoch,
-                            senderLeafIndex = senderLeafIndex,
-                            authenticatedData = privMsg.authenticatedData,
-                            applicationData = applicationData,
-                            groupContext = groupContext,
-                        ),
-                        signature,
-                    ),
-                ) { "FramedContentTBS signature verification failed" }
-
-                return DecryptedMessage(
-                    senderLeafIndex = senderLeafIndex,
-                    contentType = privMsg.contentType,
-                    content = applicationData,
-                    epoch = privMsg.epoch,
-                    authenticatedData = privMsg.authenticatedData,
-                )
-            }
+            ContentType.APPLICATION -> return applicationFromOpened(privMsg, opened, tree, groupContext)
 
             ContentType.COMMIT -> {
                 // PrivateMessageContent for a Commit: the Commit struct
@@ -1689,6 +1799,7 @@ class MlsGroup private constructor(
         val interimSnapshot = interimTranscriptHash
         val pendingSnapshot = pendingProposals.toList()
         val sentKeysSnapshot = sentKeys.toMap()
+        val retainedSnapshot = retainedEpochs.toList()
 
         try {
             processCommitInner(commitBytes, senderLeafIndex, confirmationTag, signature, wireFormat)
@@ -1703,6 +1814,8 @@ class MlsGroup private constructor(
             pendingProposals.addAll(pendingSnapshot)
             sentKeys.clear()
             sentKeys.putAll(sentKeysSnapshot)
+            retainedEpochs.clear()
+            retainedEpochs.addAll(retainedSnapshot)
             throw t
         }
     }
@@ -1714,6 +1827,7 @@ class MlsGroup private constructor(
         signature: ByteArray,
         wireFormat: WireFormat,
     ) {
+        val retainedForThisEpoch = captureRetainedEpoch()
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
         // External commits (containing ExternalInit) have a sender that is not
@@ -2107,6 +2221,7 @@ class MlsGroup private constructor(
         epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, effectiveInitSecret, pskSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
+        pushRetainedEpoch(retainedForThisEpoch)
 
         // Verify confirmation tag (RFC 9420 Section 6.1). Every commit on
         // the wire MUST carry a confirmation_tag that matches what the
@@ -3222,6 +3337,13 @@ class MlsGroup private constructor(
         /** MLS extensions draft `app_data_update` proposal type. */
         const val APP_DATA_UPDATE_PROPOSAL_TYPE = 0x0008
 
+        /**
+         * How many former epochs [decryptFormerEpoch] can still read. Each one
+         * keeps that epoch's decryption secrets, so this is a forward-secrecy
+         * trade (RFC 9420 §15.2); 4 matches ts-mls's `retainKeysForEpochs`.
+         */
+        const val RETAIN_EPOCHS = 4
+
         /** How far back a fresh KeyPackage LeafNode's `not_before` is set. */
         private const val LIFETIME_SKEW_SECONDS = 3_600L
 
@@ -4039,6 +4161,8 @@ class MlsGroup private constructor(
             val tree = RatchetTree.decodeTls(TlsReader(state.treeBytes))
             val secretTree = SecretTree(state.encryptionSecret, tree.leafCount)
             secretTree.importSenderStates(state.senderRatchetStates)
+            secretTree.importSkippedSecrets(state.skippedApplicationSecrets, state.skippedHandshakeSecrets)
+            if (state.nodeSecrets.isNotEmpty()) secretTree.importNodeSecrets(state.nodeSecrets)
 
             return MlsGroup(
                 groupContext = state.groupContext,
@@ -4052,6 +4176,7 @@ class MlsGroup private constructor(
                 interimTranscriptHash = state.interimTranscriptHash,
                 pathPrivateKeys = state.pathPrivateKeys.toMutableMap(),
                 pendingProposals = state.pendingProposals.toMutableList(),
+                retainedEpochs = ArrayDeque(state.retainedEpochs),
                 policy = policy,
             )
         }

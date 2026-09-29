@@ -27,6 +27,7 @@ import android.os.Bundle
 import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
@@ -212,17 +213,6 @@ object FavoriteAppLauncher {
         }
     }
 
-    /**
-     * The addressable coordinate `kind:pubkey:dtag` used to key an nsite/napplet favorite. Stored
-     * instead of the content hash so the favorite survives routine code/manifest updates.
-     */
-    fun coordinateOf(event: Event): String {
-        val dTag =
-            when (event) {
-                is NamedNappletEvent -> event.identifier()
-                is NamedSiteEvent -> event.identifier()
-                else -> ""
-            }
-        return "${event.kind}:${event.pubKey}:$dTag"
-    }
+    /** See [favoriteCoordinateOf]. */
+    fun coordinateOf(event: Event): String = favoriteCoordinateOf(event)
 }

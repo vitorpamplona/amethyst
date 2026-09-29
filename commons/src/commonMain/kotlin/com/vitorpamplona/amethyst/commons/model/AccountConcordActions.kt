@@ -125,14 +125,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
+
+/** How long a join waits for the new community's session before handing it the wraps it fetched. */
+private const val SESSION_WAIT_MS = 10_000L
 
 /**
  * How often a joined Concord community's stored invite link is re-resolved to check whether
@@ -181,9 +187,38 @@ class AccountConcordActions(
         entry: ConcordCommunityListEntry,
         inviteCreator: HexKey? = null,
         inviteLabel: String? = null,
-    ) {
-        if (!persistConcordEntry(entry)) return
+        fetchedWraps: List<Event> = emptyList(),
+    ): Boolean {
+        // False when the List could not take the membership (not loaded, or every held fragment is
+        // full while others are missing, CORD-02 §8). Callers must say so: the community would
+        // otherwise look joined now and be gone after a restart.
+        if (!persistConcordEntry(entry)) return false
+        // The session is built asynchronously from the Community List flow. Every wrap that reaches
+        // the cache before it exists is kept as an unclaimed note, and the live subscription's copy
+        // of the same wrap is then deduplicated away, so the community showed "No channels yet"
+        // until a restart emptied the cache. Wait for the session, then hand it what we fetched.
+        awaitConcordSession(entry.id)
+        fetchedWraps.forEach { account.concordSessions.ingest(it) }
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+        return true
+    }
+
+    /** The community's current name: its folded metadata, else the name it was joined under. */
+    private fun currentConcordName(
+        session: ConcordCommunitySession?,
+        entry: ConcordCommunityListEntry,
+    ): String =
+        session
+            ?.state
+            ?.value
+            ?.metadata
+            ?.name
+            ?.takeIf { it.isNotBlank() } ?: entry.name
+
+    private suspend fun awaitConcordSession(communityId: HexKey) {
+        withTimeoutOrNull(SESSION_WAIT_MS) {
+            account.concordSessions.revision.first { account.concordSessions.sessionFor(communityId) != null }
+        }
     }
 
     /**
@@ -191,9 +226,17 @@ class AccountConcordActions(
      * only means "no List" once the relays have been asked (CORD-02 §8 — a write built on an
      * unloaded List replaces fragments another device published).
      */
-    private suspend fun ensureConcordListLoaded() {
-        if (!account.concordChannelList.relaysConfirmed) importConcordCommunities()
+    suspend fun preloadConcordList() {
+        if (account.concordChannelList.relaysConfirmed) return
+        // Single-flight: the import is a ~30s drain of every stock/outbox relay. A join starts it
+        // as soon as it begins, and the join's own List write then waits for that same fetch
+        // instead of starting a second one.
+        concordListImport.withLock {
+            if (!account.concordChannelList.relaysConfirmed) importConcordCommunities()
+        }
     }
+
+    private val concordListImport = Mutex()
 
     /**
      * Read-modify-writes the Community List through [change] and publishes the fragments it
@@ -201,7 +244,7 @@ class AccountConcordActions(
      * written safely yet (fragments unreadable or not loaded) or a fragment would pass the ceiling.
      */
     private suspend fun writeConcordList(change: suspend (ConcordChannelListState) -> List<Event>): Boolean {
-        ensureConcordListLoaded()
+        preloadConcordList()
         return try {
             account.sendMyPublicAndPrivateOutbox(change(account.concordChannelList))
             true
@@ -250,7 +293,7 @@ class AccountConcordActions(
      * Create a new Concord community: mint its genesis (metadata + #general),
      * publish the owner-signed genesis wraps to [relays] (or our outbox), and add
      * the secret-bearing entry to the Community List (kind 33302). Returns the new
-     * community id, or null if not writeable.
+     * community id, or null if not writeable or no relay accepted the genesis.
      */
     suspend fun createConcordCommunity(
         name: String,
@@ -269,25 +312,38 @@ class AccountConcordActions(
         val community = ConcordActions.createCommunity(account.signer, name, TimeUtils.now(), description, relayUrls, icon)
 
         val publishTo = relayUrls.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
-        community.genesisWraps.forEach { account.client.publish(it, publishTo) }
+        // The genesis is the community: with no relay holding it, nobody (us included, after a
+        // restart) can ever fold it. It used to be fired and forgotten, then the community saved
+        // anyway, so a genesis a relay refused or an app killed mid-send left a community in the
+        // List that could never load again. Confirm every genesis wrap before saving it.
+        val landed =
+            coroutineScope {
+                community.genesisWraps.map { async { account.client.publishAndConfirm(it, publishTo) } }.awaitAll()
+            }
+        if (!landed.all { it }) {
+            Log.w("Concord") { "createConcordCommunity: no relay in $publishTo accepted the genesis; not creating ${community.communityIdHex}" }
+            return null
+        }
 
-        joinConcordCommunity(
-            ConcordCommunityListEntry(
-                id = community.communityIdHex,
-                owner = community.ownerPubKey,
-                ownerSalt = community.ownerSalt.toHexKey(),
-                root = community.communityRoot.toHexKey(),
-                rootEpoch = community.rootEpoch,
-                // The creator is the founding staff member (CORD-02 §2): it keeps the write
-                // secret and publishes only the derived pubkey to everyone else.
-                controlPk = community.controlPkHex,
-                controlRoot = community.controlRoot.toHexKey(),
-                relays = relayUrls,
-                name = name,
-                addedAt = TimeUtils.nowMillis(),
-            ),
-        )
-        return community.communityIdHex
+        val saved =
+            joinConcordCommunity(
+                ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    // The creator is the founding staff member (CORD-02 §2): it keeps the write
+                    // secret and publishes only the derived pubkey to everyone else.
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
+                    relays = relayUrls,
+                    name = name,
+                    addedAt = TimeUtils.nowMillis(),
+                ),
+                fetchedWraps = community.genesisWraps,
+            )
+        return community.communityIdHex.takeIf { saved }
     }
 
     // ---- CORD-05 Invite List (kind 13303) -------------------------------------
@@ -459,6 +515,7 @@ class AccountConcordActions(
                                     rootEpoch = entry.rootEpoch,
                                     controlPk = entry.controlPk,
                                     relays = entry.relays,
+                                    name = currentConcordName(account.concordSessions.sessionFor(entry.id), entry),
                                 )
                             // Confirmed: a link counted as moved but never stored is a link its
                             // holders can no longer redeem, reported as a success.
@@ -505,7 +562,9 @@ class AccountConcordActions(
                 ownerSaltHex = entry.ownerSalt,
                 communityRootHex = entry.root,
                 rootEpoch = entry.rootEpoch,
-                name = entry.name,
+                // The folded metadata, not the List entry: the entry keeps the name it was joined
+                // under, so a renamed community's invites previewed its old name.
+                name = currentConcordName(session, entry),
                 relays = entry.relays,
                 // The joiner can never derive the Control Plane address, so the bundle carries
                 // it (CORD-05 §1). Null on a legacy community, which has none to carry.
@@ -674,6 +733,11 @@ class AccountConcordActions(
         if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
         val parsed = ConcordActions.parseInviteLink(url) ?: return ConcordInviteResult.InvalidLink
 
+        // Joining ends in a Community List write, which first needs the List loaded (a slow drain of
+        // every stock and outbox relay). Start it now so it overlaps the bundle and plane fetches
+        // below instead of running after them.
+        account.scope.launch { preloadConcordList() }
+
         val relays =
             (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value).toSet()
         if (relays.isEmpty()) return ConcordInviteResult.NotReachable
@@ -793,7 +857,7 @@ class AccountConcordActions(
         if (rejoined != null) {
             if (!adoptedConcordRotations.add("${rejoined.id}:${rejoined.rootEpoch}")) return ConcordInviteResult.Joined(bundle.communityId)
             Log.i("Concord") { "Stranded rejoin by explicit invite: ${rejoined.id} -> epoch ${rejoined.rootEpoch}" }
-            joinConcordCommunity(rejoined, creator, label)
+            if (!joinConcordCommunity(rejoined, creator, label, planeWraps)) return ConcordInviteResult.NotSaved
             _strandedConcordCommunities.value -= rejoined.id
             return ConcordInviteResult.Joined(bundle.communityId)
         }
@@ -817,7 +881,7 @@ class AccountConcordActions(
                 // Anchor for stranded recovery (null for a Direct Invite, which has no link).
                 inviteRef = inviteRef,
             )
-        joinConcordCommunity(entry, creator, label)
+        if (!joinConcordCommunity(entry, creator, label, planeWraps)) return ConcordInviteResult.NotSaved
         return ConcordInviteResult.Joined(bundle.communityId)
     }
 
@@ -1539,6 +1603,13 @@ class AccountConcordActions(
                 publishConcordWrap(session.entry, roleWrap)
                 roleId.toHexKey()
             }
+
+        // An Admin role published before Amethyst wrote `role_id` into Role content is invisible
+        // to Armada, which then drops this Grant too. Re-issue it at the same id to heal it.
+        if (existing != null && existing.value.roleId.isNullOrEmpty()) {
+            val healWrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleIdHex.hexToByteArray(), existing.value, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+            publishConcordWrap(session.entry, healWrap)
+        }
 
         // Admin carries every management bit, so this Grant makes its member staff: it must
         // deliver the control_root alongside the rank (CORD-04 §3), or the new admin holds

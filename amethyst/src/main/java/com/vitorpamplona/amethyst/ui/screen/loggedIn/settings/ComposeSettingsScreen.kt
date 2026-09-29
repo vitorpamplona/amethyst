@@ -96,6 +96,12 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsStepper
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSubControlRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

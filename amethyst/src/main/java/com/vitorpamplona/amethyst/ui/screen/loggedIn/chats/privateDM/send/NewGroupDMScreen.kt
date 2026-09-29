@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -88,6 +87,10 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
@@ -118,9 +121,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPa
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -181,7 +181,7 @@ fun NewGroupDMScreen(
 
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    BackHandler {
+    PlatformBackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             onUiThread { postViewModel.cancel() }
@@ -236,7 +236,6 @@ fun GroupDMScreenContent(
     nav: INav,
 ) {
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f)) {
@@ -308,7 +307,7 @@ fun GroupDMScreenContent(
                             onAdd = { _, server, _, _, _, _, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
-                                    context,
+                                    accountViewModel.host.mediaUploader,
                                     onceUploaded = { },
                                 )
                                 accountViewModel.account.settings.changeDefaultFileServer(server)

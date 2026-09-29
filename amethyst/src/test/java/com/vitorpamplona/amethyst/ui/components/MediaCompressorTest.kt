@@ -24,7 +24,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Looper
 import com.davotoula.lightcompressor.VideoCompressor
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import id.zelory.compressor.Compressor

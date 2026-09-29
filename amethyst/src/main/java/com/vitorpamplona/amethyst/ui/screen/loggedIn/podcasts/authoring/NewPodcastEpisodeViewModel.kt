@@ -29,10 +29,13 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.PodcastComposerMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -153,11 +156,11 @@ class NewPodcastEpisodeViewModel : ViewModel() {
             return
         }
         audioMedia.value = MultiOrchestrator(persistentListOf(uri))
-        pickedAudioName.value = uri.uri.lastPathSegment?.substringAfterLast('/')
+        pickedAudioName.value = uri.uri.lastPathSegmentOrNull()?.substringAfterLast('/')
 
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            val probed = PodcastComposerMedia.probeAudio(appContext, uri.uri) ?: return@launch
+            val probed = PodcastAudioProbe.probeAudio(appContext, uri.uri) ?: return@launch
             withContext(Dispatchers.Main.immediate) {
                 probed.durationSeconds?.let { durationSeconds.value = it.toString() }
                 if (title.value.isBlank()) probed.title?.let { title.value = it }
@@ -173,10 +176,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
     /** Valid with a title and a resolvable audio source (picked file or a pasted URL). */
     fun isValid(): Boolean = title.value.isNotBlank() && (audioMedia.value != null || audioUrl.value.isNotBlank())
 
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return
 
         val server = selectedServer.value
@@ -205,9 +205,9 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 existingCoverUrl = coverUrl.value.trim().ifBlank { null },
                 existingAudioUrl = audioUrl.value.trim(),
                 server = server,
-                quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value),
+                quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
-                appContext = context.applicationContext,
+                uploader = accountViewModel.host.mediaUploader,
             )
 
         isSending.value = true
@@ -265,9 +265,9 @@ class NewPodcastEpisodeViewModel : ViewModel() {
         val existingCoverUrl: String?,
         val existingAudioUrl: String,
         val server: ServerName,
-        val quality: com.vitorpamplona.amethyst.service.uploads.CompressorQuality,
+        val quality: CompressorQuality,
         val stripMetadata: Boolean,
-        val appContext: Context,
+        val uploader: MediaUploader,
     )
 
     private suspend fun performParallelUploads(snapshot: Snapshot): Pair<String?, String?> =
@@ -294,7 +294,7 @@ class NewPodcastEpisodeViewModel : ViewModel() {
             quality = snapshot.quality,
             stripMetadata = snapshot.stripMetadata,
             alt = snapshot.title.ifBlank { null },
-            context = snapshot.appContext,
+            uploader = snapshot.uploader,
             onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
         )
 

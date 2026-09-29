@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
+import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
@@ -533,6 +535,15 @@ fun ZapReaction(
     showCounter = showCounter,
     nav = nav,
 )
+
+@Composable
+fun ReusableZapButton(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    config: ZapButtonConfig = ZapButtonConfig(),
+    callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
+) = LocalNotePlatform.current.ReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
 
 @Composable
 fun EditPostView(

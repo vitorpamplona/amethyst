@@ -59,7 +59,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
@@ -80,6 +79,8 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.BechLink
 import com.vitorpamplona.amethyst.commons.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -102,8 +103,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -121,8 +120,6 @@ fun EditPostView(
 ) {
     val postViewModel: EditPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
-
-    val context = LocalContext.current
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -280,7 +277,7 @@ fun EditPostView(
                                             accountViewModel.account.settings.defaultFileServer,
                                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                                             onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context, stripMetadata)
+                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
                                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                                             },
                                             onDelete = postViewModel::deleteMediaToUpload,

@@ -132,9 +132,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
@@ -153,8 +155,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
@@ -1036,15 +1036,17 @@ private fun ConcordServerRoomCompose(
     // Community name/icon from the folded Control Plane (bumped via the session revision).
     val revision by accountViewModel.account.concordSessions.revision
         .collectAsStateWithLifecycle()
-    val metadata =
+    val session =
         remember(row.communityId, revision) {
-            accountViewModel.account.concordSessions
-                .sessionFor(row.communityId)
-                ?.state
-                ?.value
-                ?.metadata
+            accountViewModel.account.concordSessions.sessionFor(row.communityId)
         }
-    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.concord_home_title)
+    val metadata = remember(session, revision) { session?.state?.value?.metadata }
+    // Before the Control Plane folds there is no metadata; the name the community was joined under
+    // still tells the user which one it is.
+    val name =
+        metadata?.name?.takeIf { it.isNotBlank() }
+            ?: session?.entry?.name?.takeIf { it.isNotBlank() }
+            ?: stringRes(Res.string.concord_home_title)
 
     val author = row.newestMessage?.author
     val noteEvent = row.newestMessage?.event

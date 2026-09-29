@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.res.Configuration
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -48,6 +47,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -182,7 +182,7 @@ private fun ModalDrawerShell(
         gesturesEnabled = drawerGesturesEnabled,
         drawerContent = {
             DrawerContent(nav, openSheet, accountViewModel)
-            BackHandler(enabled = nav.drawerState.isOpen, nav::closeDrawer)
+            PlatformBackHandler(enabled = nav.drawerState.isOpen, nav::closeDrawer)
         },
         content = {
             if (showRail) {

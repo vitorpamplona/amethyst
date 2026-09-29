@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.logging
 
-import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
@@ -166,7 +165,7 @@ class StackSampler(
     companion object {
         const val SEPARATOR: String = "\r\n"
 
-        @SuppressLint("SimpleDateFormat")
+        @Suppress("SimpleDateFormat")
         val TIME_FORMATTER: SimpleDateFormat = SimpleDateFormat("MM-dd HH:mm:ss.SSS")
     }
 }

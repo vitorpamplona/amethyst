@@ -67,7 +67,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -106,10 +105,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocacheLabelRes
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheGeohash
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.CacheSize
@@ -142,7 +141,6 @@ fun NewGeocacheScreen(
 ) {
     val model: NewGeocacheViewModel = viewModel()
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     remember(editKind, editPubKeyHex, editDTag, prefillGeohash) {
         model.init(accountViewModel)
@@ -158,7 +156,7 @@ fun NewGeocacheScreen(
 
     val photoPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) scope.launch { model.uploadImage(uri, null, context) }
+            if (uri != null) scope.launch { model.uploadImage(uri, null, accountViewModel.host.mediaUploader) }
         }
 
     Scaffold(

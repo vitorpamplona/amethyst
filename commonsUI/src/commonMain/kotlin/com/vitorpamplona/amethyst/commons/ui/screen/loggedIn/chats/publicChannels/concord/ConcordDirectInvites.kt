@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_banned
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_expired
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_invalid
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
 import com.vitorpamplona.amethyst.commons.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -289,6 +290,7 @@ private fun ConcordDirectInviteCard(
                                 is ConcordInviteResult.Expired -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_expired)
                                 is ConcordInviteResult.Banned -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_banned)
                                 is ConcordInviteResult.InvalidLink -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_invalid)
+                                is ConcordInviteResult.NotSaved -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_not_saved)
                                 else -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_direct_invite_accept_failed)
                             }
                         } finally {

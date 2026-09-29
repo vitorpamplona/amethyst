@@ -25,10 +25,12 @@ import android.net.Uri
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
@@ -78,6 +80,7 @@ class MarmotFileUploader(
         exporterSecret: ByteArray,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        uploader: MediaUploader,
         /**
          * Produce `encrypted-media-v2` references instead of MIP-04 ones.
          * Decided by the group's policy component, not by the uploader.
@@ -88,7 +91,7 @@ class MarmotFileUploader(
         viewState.mediaUploadTracker.startUpload(multiOrchestrator.hasNonMedia())
 
         val results = mutableListOf<Mip04UploadResult>()
-        val quality = MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider)
+        val quality = CompressorQuality.fromSlider(viewState.mediaQualitySlider)
 
         val count = multiOrchestrator.size()
         for (i in 0 until count) {
@@ -130,13 +133,13 @@ class MarmotFileUploader(
                 encrypt = cipher,
                 server = viewState.selectedServer,
                 account = account,
-                context = context,
+                uploader = uploader,
                 stripMetadata = viewState.stripMetadata,
             )
 
             val state = item.orchestrator.progressState.value
-            if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                val serverResult = state.result
+            val serverResult = (state as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult
+            if (serverResult != null) {
                 // The reference is built from what the cipher recorded while
                 // encrypting the bytes the pipeline actually uploaded — after
                 // compression and metadata stripping — because that is what the

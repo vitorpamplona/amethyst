@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.cashu
 
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import kotlinx.collections.immutable.ImmutableList
@@ -34,8 +33,6 @@ import kotlinx.collections.immutable.toImmutableList
  */
 class CashuParser {
     fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
-        checkNotInMainThread()
-
         val parsed =
             CashuTokenB64Parser.parse(cashuToken)
                 ?: return GenericLoadable.Error("Could not parse this cashu token")
