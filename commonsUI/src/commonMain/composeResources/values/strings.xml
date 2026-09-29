@@ -3614,7 +3614,7 @@
     <string name="concord_channel_rename_save">Rename</string>
     <string name="concord_channels_empty">No channels yet.</string>
     <string name="concord_create_action">Create</string>
-    <string name="concord_create_failed">No relay accepted the new community, so it was not created. Check the relays and try again.</string>
+    <string name="concord_create_failed">The community could not be created: no relay accepted it, or your community list could not be updated. Check the relays and try again.</string>
     <string name="concord_create_relays">Relays</string>
     <string name="concord_create_relays_desc">Relays that store this community's encrypted messages. Leave empty to use your own.</string>
     <string name="concord_create_title">New Concord Channel</string>
@@ -3627,6 +3627,7 @@
     <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
     <string name="concord_invite_failed_incompatible">This invite link can't be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_invalid">This invite link is invalid or can't be opened with this account.</string>
+    <string name="concord_invite_failed_not_saved">The invite works, but your community list could not be updated, so you were not joined. Try again in a moment.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_invite_links_action">Invite links…</string>
     <string name="concord_invite_links_title">Invite links</string>

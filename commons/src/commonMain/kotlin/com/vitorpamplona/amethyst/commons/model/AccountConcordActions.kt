@@ -146,8 +146,11 @@ class AccountConcordActions(
         inviteCreator: HexKey? = null,
         inviteLabel: String? = null,
         fetchedWraps: List<Event> = emptyList(),
-    ) {
-        if (!persistConcordEntry(entry)) return
+    ): Boolean {
+        // False when the List could not take the membership (not loaded, or every held fragment is
+        // full while others are missing, CORD-02 §8). Callers must say so: the community would
+        // otherwise look joined now and be gone after a restart.
+        if (!persistConcordEntry(entry)) return false
         // The session is built asynchronously from the Community List flow. Every wrap that reaches
         // the cache before it exists is kept as an unclaimed note, and the live subscription's copy
         // of the same wrap is then deduplicated away, so the community showed "No channels yet"
@@ -155,6 +158,7 @@ class AccountConcordActions(
         awaitConcordSession(entry.id)
         fetchedWraps.forEach { account.concordSessions.ingest(it) }
         announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+        return true
     }
 
     /** The community's current name: its folded metadata, else the name it was joined under. */
@@ -264,24 +268,25 @@ class AccountConcordActions(
             return null
         }
 
-        joinConcordCommunity(
-            ConcordCommunityListEntry(
-                id = community.communityIdHex,
-                owner = community.ownerPubKey,
-                ownerSalt = community.ownerSalt.toHexKey(),
-                root = community.communityRoot.toHexKey(),
-                rootEpoch = community.rootEpoch,
-                // The creator is the founding staff member (CORD-02 §2): it keeps the write
-                // secret and publishes only the derived pubkey to everyone else.
-                controlPk = community.controlPkHex,
-                controlRoot = community.controlRoot.toHexKey(),
-                relays = relayUrls,
-                name = name,
-                addedAt = TimeUtils.nowMillis(),
-            ),
-            fetchedWraps = community.genesisWraps,
-        )
-        return community.communityIdHex
+        val saved =
+            joinConcordCommunity(
+                ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    // The creator is the founding staff member (CORD-02 §2): it keeps the write
+                    // secret and publishes only the derived pubkey to everyone else.
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
+                    relays = relayUrls,
+                    name = name,
+                    addedAt = TimeUtils.nowMillis(),
+                ),
+                fetchedWraps = community.genesisWraps,
+            )
+        return community.communityIdHex.takeIf { saved }
     }
 
     // ---- CORD-05 Invite List (kind 13303) -------------------------------------
@@ -689,7 +694,7 @@ class AccountConcordActions(
         if (rejoined != null) {
             if (!adoptedConcordRotations.add("${rejoined.id}:${rejoined.rootEpoch}")) return ConcordInviteResult.Joined(bundle.communityId)
             Log.i("Concord") { "Stranded rejoin by explicit invite: ${rejoined.id} -> epoch ${rejoined.rootEpoch}" }
-            joinConcordCommunity(rejoined, inviteCreator, inviteLabel, planeWraps)
+            if (!joinConcordCommunity(rejoined, inviteCreator, inviteLabel, planeWraps)) return ConcordInviteResult.NotSaved
             _strandedConcordCommunities.value -= rejoined.id
             return ConcordInviteResult.Joined(bundle.communityId)
         }
@@ -715,7 +720,7 @@ class AccountConcordActions(
                 // recoverStrandedConcordCommunities().
                 inviteRef = ConcordActions.bareInviteRef(url),
             )
-        joinConcordCommunity(entry, inviteCreator, inviteLabel, planeWraps)
+        if (!joinConcordCommunity(entry, inviteCreator, inviteLabel, planeWraps)) return ConcordInviteResult.NotSaved
         return ConcordInviteResult.Joined(bundle.communityId)
     }
 
