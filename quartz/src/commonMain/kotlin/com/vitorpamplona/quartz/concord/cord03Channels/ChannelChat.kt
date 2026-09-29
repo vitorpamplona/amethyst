@@ -436,10 +436,19 @@ object ChannelChat {
     fun isChatKind(kind: Int): Boolean = kind in CHAT_KINDS
 
     /**
+     * Every rumor kind a Chat Plane carries (CORD-02 Appendix B): the chat kinds plus the WebXDC
+     * signal ([ConcordWebxdc], kind 3310), which rides the plane under the same binding but is never
+     * a chat row — so it is kept out of [CHAT_KINDS], and only a caller that routes it apart (the
+     * session's WebXDC buffer) opens a plane with this set.
+     */
+    val PLANE_KINDS: Set<Int> = CHAT_KINDS + ConcordWebxdc.KIND
+
+    /**
      * The Chat Plane ingest gate for a wrap already opened under [channelId]'s key at [epoch]:
      * returns its rumor only when every Chat rule holds, else null (drop it).
      *  - the seal is the encrypted kind 20013 (CORD-02 §5: a plaintext 20014 seal is Control-only);
-     *  - the rumor kind is a Chat kind ([CHAT_KINDS]), never another plane's;
+     *  - the rumor kind is one of [kinds] — by default the Chat kinds ([CHAT_KINDS]), never another
+     *    plane's; [PLANE_KINDS] also admits the WebXDC signal for a caller that routes it apart;
      *  - the binding is strict: exactly one `channel` and one `epoch`, equal to the plane's
      *    ([isBoundTo], CORD-03 §3);
      *  - its `ms` tag, if any, is well formed (CORD-02 §4/§5 — a malformed one is dropped, never
@@ -449,10 +458,11 @@ object ChannelChat {
         opened: OpenedStreamEvent,
         channelId: HexKey,
         epoch: Long,
+        kinds: Set<Int> = CHAT_KINDS,
     ): Event? {
         if (opened.sealKind != ConcordStreamEnvelope.KIND_SEAL_ENCRYPTED) return null
         val rumor = opened.rumor
-        if (!isChatKind(rumor.kind)) return null
+        if (rumor.kind !in kinds) return null
         if (!isBoundTo(rumor, channelId, epoch)) return null
         if (orderingMs(rumor) == null) return null
         return rumor

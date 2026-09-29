@@ -623,14 +623,16 @@ object ConcordActions {
     /**
      * [openChannelRumor] without the CORD-08 expiry refusal, for a caller that must tell an expired
      * rumor apart from garbage — the session, which purges an expired rumor's wrap instead of merely
-     * skipping it. Such a caller owns the refusal.
+     * skipping it. Such a caller owns the refusal. [kinds] widens the gate to
+     * [ChannelChat.PLANE_KINDS] for a caller that routes the WebXDC signal apart from chat rows.
      */
     fun openChannelRumorAnyExpiry(
         wrap: Event,
         channel: GroupKey,
         channelId: HexKey,
         epoch: Long,
-    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch) }
+        kinds: Set<Int> = ChannelChat.CHAT_KINDS,
+    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch, kinds) }
 
     // ---- invites --------------------------------------------------------------
 

@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordWebxdc
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
@@ -888,7 +889,17 @@ class ConcordCommunitySession(
         val authors = HashSet<HexKey>()
         val now = TimeUtils.now()
         for (wrap in wraps) {
-            val rumor = ConcordActions.openChannelRumorAnyExpiry(wrap, key, channelIdHex, epoch) ?: continue
+            val rumor = ConcordActions.openChannelRumorAnyExpiry(wrap, key, channelIdHex, epoch, ChannelChat.PLANE_KINDS) ?: continue
+            // A WebXDC signal (kind 3310) rides the plane but is never a chat row: held apart for a
+            // WebXDC host, never handed to the store, so it can't reach a feed, a preview or an
+            // unread count. Its author is still observably present (CORD-02 §5).
+            if (ConcordWebxdc.isWebxdc(rumor)) {
+                if (!ConcordDisappearing.isExpired(rumor, now) && holdWebxdc(channelIdHex, rumor)) {
+                    observe(rumor)
+                    authors.add(rumor.pubKey.lowercase())
+                }
+                continue
+            }
             // Pins reopen the carrying wrap to disclose this one message's keys (CORD-04 §7).
             lock.withLock { wrapIdByRumorId[rumor.id] = wrap.id }
             // CORD-08 §3: only the rumor's own tag counts. A rumor carrying one is remembered so the
@@ -899,10 +910,8 @@ class ConcordCommunitySession(
                 trackExpiring(wrap.id, channelIdHex, rumor.id, expiresAt)
                 if (expiresAt <= now) continue
             }
-            val author = rumor.pubKey.lowercase()
-            authors.add(author)
-            val atMs = ChannelChat.orderingMs(rumor) ?: (rumor.createdAt * 1000)
-            lock.withLock { if (atMs > (observedAtMs[author] ?: Long.MIN_VALUE)) observedAtMs[author] = atMs }
+            authors.add(rumor.pubKey.lowercase())
+            observe(rumor)
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
@@ -910,6 +919,54 @@ class ConcordCommunitySession(
         if (authors.isNotEmpty()) {
             _observedAuthors.update { if (it.containsAll(authors)) it else it + authors }
         }
+    }
+
+    /** Records [rumor]'s author as seen at its CORD-02 §4 time (observation counts forward only). */
+    private fun observe(rumor: Event) {
+        val author = rumor.pubKey.lowercase()
+        val atMs = ChannelChat.orderingMs(rumor) ?: (rumor.createdAt * 1000)
+        lock.withLock { if (atMs > (observedAtMs[author] ?: Long.MIN_VALUE)) observedAtMs[author] = atMs }
+    }
+
+    // ── WebXDC signals (kind 3310) ───────────────────────────────────────────
+
+    // Channel id -> its WebXDC signals by rumor id, in arrival order, bounded per channel.
+    private val webxdcByChannel = HashMap<HexKey, LinkedHashMap<HexKey, Event>>()
+
+    private val _webxdcRevision = MutableStateFlow(0L)
+
+    /** Bumps whenever a new WebXDC signal is held — what a WebXDC host re-reads [webxdcSignals] on. */
+    val webxdcRevision: StateFlow<Long> = _webxdcRevision
+
+    /**
+     * [channelIdHex]'s held WebXDC signals (kind 3310: app state updates and realtime peer signals,
+     * [ConcordWebxdc]) not yet expired (CORD-08: app state disappears with the chat plane), oldest
+     * first on the CORD-02 §4 basis. Amethyst has no WebXDC host; this is the plumbing one would read.
+     */
+    fun webxdcSignals(
+        channelIdHex: HexKey,
+        now: Long = TimeUtils.now(),
+    ): List<Event> =
+        lock
+            .withLock { webxdcByChannel[channelIdHex]?.values?.toList() }
+            .orEmpty()
+            .filterNot { ConcordDisappearing.isExpired(it, now) }
+            .sortedBy { ChannelChat.orderingMs(it) ?: (it.createdAt * 1000) }
+
+    /** Holds [rumor] for [channelIdHex]; false when already held. Keeps the newest [MAX_WEBXDC_PER_CHANNEL] arrivals. */
+    private fun holdWebxdc(
+        channelIdHex: HexKey,
+        rumor: Event,
+    ): Boolean {
+        val added =
+            lock.withLock {
+                val held = webxdcByChannel.getOrPut(channelIdHex) { LinkedHashMap() }
+                if (held.put(rumor.id, rumor) != null) return@withLock false
+                while (held.size > MAX_WEBXDC_PER_CHANNEL) held.remove(held.keys.first())
+                true
+            }
+        if (added) _webxdcRevision.update { it + 1 }
+        return added
     }
 
     // ── Disappearing messages (CORD-08) ──────────────────────────────────────
@@ -1033,5 +1090,8 @@ class ConcordCommunitySession(
 
         /** A typing heartbeat is considered current for this many seconds after it's seen. */
         const val TYPING_STALE_SECS = 8L
+
+        /** WebXDC signals held per channel (the reference client scans its newest 2000 for peer signals). */
+        const val MAX_WEBXDC_PER_CHANNEL = 2000
     }
 }
