@@ -136,7 +136,10 @@ fun ConcordCreateScreen(
                                 // Always re-enable — a thrown create would otherwise strand the button.
                                 working = false
                             }
-                        if (communityId != null) nav.newStack(Route.ConcordServer(communityId))
+                        // Replace this form with the new community, as the Marmot and relay-group creators
+                        // do. newStack only popped up to the community route itself, which was not on the
+                        // stack, so Back from the new community reopened a filled-in create form.
+                        if (communityId != null) nav.popUpTo(Route.ConcordServer(communityId), Route.ConcordCreate::class)
                     }
                 },
                 enabled = name.value.isNotBlank() && !working,
