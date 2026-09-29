@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
@@ -109,7 +111,7 @@ class AccountConcordActions(
     private val account: Account,
 ) {
     /**
-     * Add a joined Concord community (secret-bearing entry) to the private kind-13302
+     * Add a joined Concord community (secret-bearing entry) to the private Community List (kind 33302)
      * list, and announce a self-signed Guestbook JOIN so this member is visible to
      * whoever later refounds the community (CORD-06 re-keys the Guestbook membership).
      */
@@ -139,7 +141,7 @@ class AccountConcordActions(
     /**
      * Create a new Concord community: mint its genesis (metadata + #general),
      * publish the owner-signed genesis wraps to [relays] (or our outbox), and add
-     * the secret-bearing entry to the kind-13302 joined list. Returns the new
+     * the secret-bearing entry to the Community List (kind 33302). Returns the new
      * community id, or null if not writeable.
      */
     suspend fun createConcordCommunity(
@@ -450,14 +452,14 @@ class AccountConcordActions(
         return true
     }
 
-    /** Drop a joined Concord community from the private kind-13302 list by its id. */
+    /** Leave a joined Concord community: drop it from the Community List and tombstone it (CORD-02 §8). */
     suspend fun leaveConcordCommunity(communityId: String) = account.sendMyPublicAndPrivateOutbox(account.concordChannelList.unfollow(communityId))
 
     /**
      * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
      * the kind-33301 public bundle from the link's relays (+ our outbox), unlock it
      * with the fragment token, and add the resulting secret-bearing entry to the
-     * kind-13302 joined list.
+     * Community List (kind 33302).
      *
      * Returns a [ConcordInviteResult] that separates the failure modes so the UI can
      * both explain what went wrong and decide whether a retry could ever help — a
@@ -1438,8 +1440,26 @@ class AccountConcordActions(
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_METADATA) ?: return false
-        val metadata = MetadataEntity(name = name, icon = icon, banner = banner, description = description, relays = relays)
+        // Start from the folded metadata so a field this form doesn't edit — the CORD-08 timer, above
+        // all — is carried forward instead of reset (CORD-02 §6 round-trip).
+        val standing = session.state.value?.metadata ?: MetadataEntity()
+        val metadata = standing.copy(name = name, icon = icon, banner = banner, description = description, relays = relays)
         val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /**
+     * Dissolve [communityId] for good (CORD-02 §9): publish the owner-signed, `eid`-bound tombstone
+     * at the community's dissolved address. Owner-only — every verifier ignores anyone else's — and
+     * irreversible: there is no un-dissolve. Returns false when this account is not the owner or
+     * cannot sign.
+     */
+    suspend fun dissolveConcordCommunity(communityId: String): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        if (!session.entry.owner.equals(account.signer.pubKey, ignoreCase = true)) return false
+        val wrap = ConcordDissolution.build(account.signer, communityId)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -1473,14 +1493,14 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_CHANNELS) ?: return false
         // Carry the standing definition forward and change only the name. A ChannelEntity built from
-        // scratch defaults `private` and `voice` to false, so renaming a private channel used to
-        // publish an edition declaring it PUBLIC — and a voice channel became a text channel.
+        // scratch defaults `private` to false, so renaming a private channel used to publish an
+        // edition declaring it PUBLIC. Fields we don't model ride through ConcordModeration.
         val standing =
             session.state.value
                 ?.channels
                 ?.get(channelIdHex)
                 ?.definition
-        val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false)
+        val channel = (standing ?: ChannelEntity()).copy(name = name.trim())
         val wrap = ConcordModeration.defineChannel(account.signer, cp, channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -1502,7 +1522,7 @@ class AccountConcordActions(
                 ?.channels
                 ?.get(channelIdHex)
                 ?.definition
-        val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false, deleted = true)
+        val channel = (standing ?: ChannelEntity()).copy(name = name.trim(), deleted = true)
         val wrap = ConcordModeration.defineChannel(account.signer, cp, channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -1525,21 +1545,18 @@ class AccountConcordActions(
     }
 
     /**
-     * Bootstrap the Concord hub from the network: fetch this account's kind-13302
-     * joined-communities list and fold the newest into [LocalCache], so communities
-     * we joined on another Concord client with this key surface here.
+     * Bootstrap the Concord hub from the network: fetch this account's Community List
+     * fragments (kind 33302, CORD-02 §8) and the retired kind-13302 list, and fold them into
+     * [LocalCache], so communities we joined on another Concord client with this key surface here.
      *
      * We query a wide relay set because different Concord clients publish this
      * private list to different places: the reference clients (Armada/Vector) push
      * it to the Concord **stock relays** (e.g. relay.ditto.pub), while a user may
-     * also have copied it onto their **own** outbox/read relays. Our normal account
-     * subscription never asks for kind 13302, so without this explicit fetch a
-     * community joined on Armada would never appear — even if the list sits on the
-     * user's own outbox.
+     * also have copied it onto their **own** outbox/read relays.
      *
-     * Read-only import: kind 13302 is replaceable, so folding an older copy is a
-     * no-op and this is safe to call on every hub open. Merging our own edits with
-     * a foreign writer's is a separate concern (newest-wins replaceable).
+     * Read-only except for one migration: when the relays hold no fragment at all but a 13302
+     * list exists, its memberships are written out as fragments. Folding an older copy of
+     * either is a no-op, so this is safe to call on every hub open.
      *
      * [extraRelays] are additional relays to query — the bootstrap relays saved on the
      * bottom-bar tabs of pinned communities. A community's private list frequently lives
@@ -1550,17 +1567,29 @@ class AccountConcordActions(
         val stock = InviteRelayDictionary.STOCK.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
         val relays = (stock + account.mineRelays.flow.value + account.outboxRelays.flow.value + extraRelays).toSet()
         if (relays.isEmpty()) return
-        val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(account.signer.pubKey))
+        // The fragmented List (33302) plus the retired single event (13302), read once more as a
+        // rescue source so a membership only it carries is migrated by the next write.
+        val filter = Filter(kinds = listOf(ConcordCommunityListFragmentEvent.KIND, ConcordCommunityListEvent.KIND), authors = listOf(account.signer.pubKey))
         // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
         // the fetch a generous window to drain every relay before we pick the newest copy.
         val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
-        val newest = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
-        val entryCount = newest?.let { runCatching { it.decrypt(account.signer).size }.getOrElse { -1 } } ?: 0
+        val fragments = events.filterIsInstance<ConcordCommunityListFragmentEvent>()
+        val legacy = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
         Log.d("Concord") {
-            "importConcordCommunities: queried ${relays.size} relays, fetched ${events.size} 13302 event(s), " +
-                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}"
+            "importConcordCommunities: queried ${relays.size} relays, fetched ${fragments.size} 33302 fragment(s) " +
+                "and ${if (legacy == null) "no" else "a"} retired 13302 list"
         }
-        newest?.let { account.cache.justConsumeMyOwnEvent(it) }
+        fragments.forEach { account.cache.justConsumeMyOwnEvent(it) }
+        legacy?.let { account.cache.justConsumeMyOwnEvent(it) }
+        // Seed the fragments from the retired event only once the relays confirmed none exist: a
+        // seeding write made while fragments are merely unloaded would replace them (CORD-02 §8).
+        if (fragments.isEmpty() && legacy != null) {
+            val seeded = account.concordChannelList.republish()
+            if (seeded.isNotEmpty()) {
+                Log.d("Concord") { "importConcordCommunities: migrated the 13302 list into ${seeded.size} fragment(s)" }
+                account.sendMyPublicAndPrivateOutbox(seeded)
+            }
+        }
     }
 
     /**

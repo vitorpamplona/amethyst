@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -56,7 +57,7 @@ object ConcordChannelCommands {
                     "banner" to state.metadata?.banner?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
                     "channels" to
                         state.channels.values.map {
-                            mapOf("id" to it.channelIdHex, "name" to it.definition.name, "voice" to it.definition.voice, "private" to it.definition.private)
+                            mapOf("id" to it.channelIdHex, "name" to it.definition.name, "private" to it.definition.private)
                         },
                 ),
             )
@@ -157,8 +158,16 @@ object ConcordChannelCommands {
         // epoch only staff hold that secret (CORD-02 §2); a plain member registers nothing and
         // relies on the relay serving the plane unauthenticated.
         ctx.registerConcordStreamKeys(relays, listOfNotNull(controlPlane.signer?.secretKey))
-        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(controlPlane.address)) }, pendingOnAuthRequired = true).map { it.second }
-        return ConcordActions.foldCommunity(wraps, controlPlane, sc.owner)
+        // The dissolution tombstone lives at its own id-derived address (CORD-02 §9), drained alongside.
+        val dissolvedAddress = ConcordDissolution.planeKey(sc.communityId).publicKeyHex
+        val wraps =
+            ctx
+                .drain(relays.associateWith { listOf(ConcordActions.planeFilterFor(listOf(controlPlane.address, dissolvedAddress))) }, pendingOnAuthRequired = true)
+                .map { it.second }
+        val (graveWraps, controlWraps) = wraps.partition { it.pubKey == dissolvedAddress }
+        return ConcordActions
+            .foldCommunity(controlWraps, controlPlane, sc.owner)
+            .withDissolved(ConcordDissolution.isDissolved(graveWraps, sc.communityId, sc.owner))
     }
 
     /** Resolve a channel handle: the `general` shortcut, a full hex id, or a folded name/id-prefix match. */

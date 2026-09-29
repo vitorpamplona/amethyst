@@ -226,6 +226,16 @@ object ConcordKeyDerivation {
         memberXOnly: ByteArray,
     ): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.GRANT, memberXOnly))
 
+    /**
+     * The dissolution tombstone address for a community (CORD-02 §9, A.6):
+     * `group_key("concord/dissolved", community_id, 0…0)`, no epoch.
+     *
+     * Derived from the public `community_id` alone, so every member past or present finds
+     * the same grave whatever epoch they hold — and so can anyone else, which is why a
+     * tombstone read here is honored only when owner-signed and bound to this id.
+     */
+    fun dissolvedPlaneKey(communityId: ByteArray): GroupKey = groupKey(ConcordLabels.DISSOLVED, communityId, ByteArray(32))
+
     /** The community-wide Banlist entity id: `hkdf32(communityId, "concord/banlist" ‖ 0x00 ‖ ZERO32)`. */
     fun banlistCoordinate(communityId: ByteArray): ByteArray = hkdf32(communityId, buildInfo(ConcordLabels.BANLIST, ByteArray(32)))
 

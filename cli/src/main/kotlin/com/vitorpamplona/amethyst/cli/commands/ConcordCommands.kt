@@ -29,8 +29,11 @@ import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -60,7 +63,7 @@ object ConcordCommands {
         |  concord create --name NAME [--about T]      create an encrypted Concord community
         |          [--relay wss://a,wss://b]            (--relays is accepted as an alias)
         |  concord list                                list joined Concord communities
-        |  concord import                              fetch + decrypt this account's kind:13302
+        |  concord import                              fetch + decrypt this account's kind:33302
         |                                               community list (carries heldRoots, CORD-06)
         |  concord channels COMMUNITY                  list a community's channels
         |  concord send COMMUNITY CHANNEL TEXT         post a message (CHANNEL = general|name|id)
@@ -84,6 +87,8 @@ object ConcordCommands {
         |  concord refound COMMUNITY --remove U[,U]    CORD-06 Refounding: rotate the root (and the
         |                                               control_root) so removed members lose every
         |                                               key — the hard removal a ban cannot give
+        |  concord dissolve COMMUNITY --yes            CORD-02 §9: owner-only, IRREVERSIBLE tombstone
+        |                                               that seals the community read-only for everyone
         """.trimMargin()
 
     suspend fun dispatch(
@@ -93,7 +98,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|refound>",
+            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|refound|dissolve>",
             help = USAGE,
             routes =
                 mapOf(
@@ -114,6 +119,7 @@ object ConcordCommands {
                     "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
                     "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
                     "refound" to { rest -> ConcordModCommands.refound(dataDir, rest) },
+                    "dissolve" to { rest -> ConcordModCommands.dissolve(dataDir, rest) },
                 ),
         )
 
@@ -181,7 +187,8 @@ object ConcordCommands {
     }
 
     /**
-     * Fetch this account's own encrypted kind-13302 Concord community list, decrypt it, and
+     * Fetch this account's own encrypted Concord Community List (the kind-33302 fragments, plus the
+     * retired kind-13302 event as a rescue source), decrypt it, and
      * upsert every community into the local store — crucially carrying each community's
      * `heldRoots` (the prior-epoch access roots Amethyst accumulates across Refoundings, CORD-06).
      * With those persisted, `amy concord read --epoch <n>` can re-derive a pre-refounding Chat
@@ -194,18 +201,20 @@ object ConcordCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = (ctx.outboxRelays() + ctx.bootstrapRelays())
-            val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(ctx.signer.pubKey))
+            // The fragmented List (33302, CORD-02 §8) plus the retired single event (13302), which is
+            // still read as a rescue source for memberships only it carries.
+            val filter = Filter(kinds = listOf(ConcordCommunityListFragmentEvent.KIND, ConcordCommunityListEvent.KIND), authors = listOf(ctx.signer.pubKey))
             val events = ctx.drain(relays.associateWith { listOf(filter) }).map { it.second }
-            val newest =
-                events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
-                    ?: return Output.error("not_found", "no kind-13302 Concord list published by this account").let { 1 }
-
-            val entries =
-                try {
-                    newest.decrypt(ctx.signer)
-                } catch (e: Exception) {
-                    return Output.error("decrypt_failed", "could not decrypt kind-13302: ${e.message}").let { 1 }
-                }
+            val set = ConcordListFragmentSet.resolve(events.filterIsInstance<ConcordCommunityListFragmentEvent>(), ctx.signer)
+            val legacy = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
+            if (set.isEmpty && legacy == null) {
+                return Output.error("not_found", "no Concord Community List (kind 33302 or 13302) published by this account").let { 1 }
+            }
+            val legacyPlaintext = legacy?.decryptPlaintext(ctx.signer)
+            if (set.held.isEmpty() && legacyPlaintext == null) {
+                return Output.error("decrypt_failed", "could not decrypt this account's Concord Community List").let { 1 }
+            }
+            val entries = ConcordCommunityList.decodeDocument(ConcordCommunityList.readWithLegacy(set, legacyPlaintext)).entries
             val store = ConcordStore(dataDir.concordFile)
             val existing = store.load().associateBy { it.communityId }
             val imported =

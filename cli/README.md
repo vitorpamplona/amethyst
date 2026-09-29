@@ -668,13 +668,14 @@ author** — every 46010 gate names its approver in a `p` tag — and matched to
 
 Encrypted, serverless communities (the CORD specs). Community secrets
 persist in `~/.amy/<account>/concord.json`; your joined-community list is
-also carried on-relay as an encrypted kind:13302.
+also carried on-relay as the encrypted, fragmented kind:33302 Community List
+(CORD-02 §8; the retired kind:13302 is still read on import).
 
 | Command | What it does |
 |---|---|
 | `amy concord create --name NAME [--about T] [--relay wss://a,wss://b]` | Create an encrypted Concord community. `--relay` is canonical; `--relays` is accepted as an alias. |
 | `amy concord list` | List joined Concord communities. |
-| `amy concord import` | Fetch + decrypt this account's kind:13302 community list (carries heldRoots, CORD-06). |
+| `amy concord import` | Fetch + decrypt this account's Community List — the kind:33302 fragments plus the retired kind:13302 (carries heldRoots, CORD-06). |
 | `amy concord channels COMMUNITY` | List a community's channels. |
 | `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). |
 | `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane. |
@@ -685,6 +686,7 @@ also carried on-relay as an encrypted kind:13302.
 | `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`). |
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
 | `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
+| `amy concord dissolve COMMUNITY --yes` | Owner only, irreversible: publish the `eid`-bound dissolution tombstone that seals the community read-only (CORD-02 §9). |
 
 ### cordn (MLS over an MCP coordinator)
 

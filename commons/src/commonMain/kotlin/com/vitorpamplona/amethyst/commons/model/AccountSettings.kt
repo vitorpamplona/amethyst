@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -211,6 +212,8 @@ class AccountSettings(
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupRelayGroupList: SimpleGroupListEvent? = null,
     var backupConcordList: ConcordCommunityListEvent? = null,
+    /** The newest kind-33302 Community List fragment per index (CORD-02 §8). */
+    var backupConcordListFragments: List<ConcordCommunityListFragmentEvent> = emptyList(),
     var backupTrustProviderList: TrustProviderListEvent? = null,
     var backupCashuWallet: CashuWalletEvent? = null,
     var backupNutzapInfo: NutzapInfoEvent? = null,
@@ -1380,6 +1383,17 @@ class AccountSettings(
     }
 
     override fun concordList() = backupConcordList
+
+    override fun concordListFragments() = backupConcordListFragments
+
+    override fun updateConcordListFragmentTo(fragment: ConcordCommunityListFragmentEvent) {
+        val index = fragment.index() ?: return
+        val prior = backupConcordListFragments.firstOrNull { it.index() == index }
+        // Newest copy per index, as a relay resolves the coordinate (ties to the lower id).
+        if (prior != null && (prior.createdAt > fragment.createdAt || (prior.createdAt == fragment.createdAt && prior.id <= fragment.id))) return
+        backupConcordListFragments = backupConcordListFragments.filterNot { it.index() == index } + fragment
+        saveAccountSettings()
+    }
 
     override fun updateConcordListTo(newConcordList: ConcordCommunityListEvent?) {
         // The joined list lives entirely in NIP-44-encrypted content (secrets),

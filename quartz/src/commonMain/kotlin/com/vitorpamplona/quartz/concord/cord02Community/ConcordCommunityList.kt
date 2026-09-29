@@ -126,6 +126,22 @@ class ConcordListResidue(
     val tombstones: List<JsonObject> = emptyList(),
     val unparsedEntries: List<JsonObject> = emptyList(),
 ) {
+    /**
+     * This residue with [communityId] tombstoned at [removedAtMs] (CORD-02 §8). There is exactly
+     * one tombstone per community: a later removal replaces an earlier one (keeping its unknown
+     * keys), an earlier one changes nothing.
+     */
+    fun withTombstone(
+        communityId: String,
+        removedAtMs: Long,
+    ): ConcordListResidue {
+        val prior = tombstones.firstOrNull { (it["community_id"] as? JsonPrimitive)?.contentOrNull == communityId }
+        val priorAt = (prior?.get("removed_at") as? JsonPrimitive)?.longOrNull
+        if (priorAt != null && priorAt >= removedAtMs) return this
+        val next = JsonObject((prior ?: NoExtras) + mapOf("community_id" to JsonPrimitive(communityId), "removed_at" to JsonPrimitive(removedAtMs)))
+        return ConcordListResidue(extras, tombstones.filterNot { it === prior } + next, unparsedEntries)
+    }
+
     companion object {
         val EMPTY = ConcordListResidue()
     }
@@ -433,6 +449,39 @@ object ConcordCommunityList {
         val merged = JsonObject(encoded + ("entries" to JsonArray(allEntries)))
         return ConcordJson.instance.encodeToString(JsonObject.serializer(), merged)
     }
+
+    /**
+     * [encode] as a JSON object: the internal document shape [ConcordListFragments] merges and
+     * packs into kind-33302 fragments.
+     */
+    fun encodeInternal(
+        entries: List<ConcordCommunityListEntry>,
+        residue: ConcordListResidue = ConcordListResidue.EMPTY,
+    ): JsonObject = ConcordJson.instance.parseToJsonElement(encode(entries, residue)).jsonObject
+
+    /**
+     * The List as a reader sees it (CORD-02 §8): the union of the kind-33302 fragments in [set]
+     * and, when one exists, the retired kind-13302 document's [legacyPlaintext] — read as a rescue
+     * source, so a membership only the old event carries stays joined until a write migrates it.
+     * A legacy document that does not parse contributes nothing.
+     */
+    fun readWithLegacy(
+        set: ConcordListFragmentSet,
+        legacyPlaintext: String?,
+    ): JsonObject {
+        val legacy =
+            legacyPlaintext?.let {
+                try {
+                    ConcordJson.instance.parseToJsonElement(it) as? JsonObject
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: return set.doc
+        return ConcordListFragments.mergeDocs(legacy, set.doc)
+    }
+
+    /** Decodes an internal document (a merged fragment set, or a legacy 13302 plaintext). */
+    fun decodeDocument(doc: JsonObject): ConcordCommunityListDocument = decodeDocument(ConcordJson.instance.encodeToString(JsonObject.serializer(), doc))
 
     /**
      * Parses the decrypted plaintext JSON document back into live entries, or empty on

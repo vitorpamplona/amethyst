@@ -52,9 +52,6 @@ class ConcordChannel(
     var channelName: String? = null
         private set
 
-    var isVoice: Boolean = false
-        private set
-
     var isPrivate: Boolean = false
         private set
 
@@ -114,7 +111,6 @@ class ConcordChannel(
         val def = state.channels[channelId.channelId]?.definition
         // Channel fields keep their prior value until the channel edition folds.
         val newChannelName = def?.name ?: channelName
-        val newVoice = def?.voice ?: isVoice
         val newPrivate = def?.private ?: isPrivate
         val newCommunityName = state.metadata?.name
         val newCommunityIcon = state.metadata?.icon
@@ -124,7 +120,6 @@ class ConcordChannel(
 
         val changed =
             channelName != newChannelName ||
-                isVoice != newVoice ||
                 isPrivate != newPrivate ||
                 communityName != newCommunityName ||
                 communityIcon != newCommunityIcon ||
@@ -133,7 +128,6 @@ class ConcordChannel(
                 dissolved != newDissolved
 
         channelName = newChannelName
-        isVoice = newVoice
         isPrivate = newPrivate
         communityName = newCommunityName
         communityIcon = newCommunityIcon

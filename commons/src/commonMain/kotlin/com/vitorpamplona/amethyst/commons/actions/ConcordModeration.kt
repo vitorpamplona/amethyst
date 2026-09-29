@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 
@@ -97,6 +98,19 @@ object ConcordModeration {
         return if (head != null) (head.version + 1) to head.hash else 0L to null
     }
 
+    /**
+     * The next edition's content for [entityId]: [value] laid over the current authorized head's
+     * content, so every field the head carries that [serializer] does not model survives the edit
+     * (CORD-02 §6 — renaming never wipes another client's `custom` or a newer protocol field).
+     */
+    private fun <T> contentOver(
+        serializer: KSerializer<T>,
+        value: T,
+        current: List<ControlEdition>,
+        entityId: ByteArray,
+        owner: HexKey,
+    ): String = ConcordJson.encodePreserving(serializer, value, headOf(current, entityId, owner)?.content)
+
     private suspend fun wrap(
         actor: NostrSigner,
         controlPlane: ControlPlaneKeys,
@@ -127,7 +141,7 @@ object ConcordModeration {
         owner: HexKey,
     ): Event {
         val (version, prev) = versioning(current, roleId, owner)
-        val content = ConcordJson.instance.encodeToString(RoleEntity.serializer(), role)
+        val content = contentOver(RoleEntity.serializer(), role, current, roleId, owner)
         return wrap(actor, controlPlane, ControlEntityKind.ROLE, roleId, version, prev, content, createdAt, citation)
     }
 
@@ -149,9 +163,26 @@ object ConcordModeration {
         owner: HexKey,
     ): Event {
         val (version, prev) = versioning(current, channelId, owner)
-        val content = ConcordJson.instance.encodeToString(ChannelEntity.serializer(), channel)
+        val content = contentOver(ChannelEntity.serializer(), channel, current, channelId, owner)
         return wrap(actor, controlPlane, ControlEntityKind.CHANNEL, channelId, version, prev, content, createdAt, citation)
     }
+
+    /**
+     * Sets the community's disappearing-messages timer (CORD-08 §1) to [secs] seconds, or turns it
+     * off when null. It is a metadata edition like any other — same chain, same MANAGE_METADATA
+     * gate — laid over the folded [standing] metadata so nothing else changes.
+     */
+    suspend fun setMessageExpiration(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        standing: MetadataEntity,
+        secs: Long?,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event = editMetadata(actor, controlPlane, communityId, standing.withMessageExpiration(secs), current, createdAt, citation, owner)
 
     /**
      * Replaces the community metadata (name / icon / description / relays). The
@@ -170,7 +201,7 @@ object ConcordModeration {
         owner: HexKey,
     ): Event {
         val (version, prev) = versioning(current, communityId, owner)
-        val content = ConcordJson.instance.encodeToString(MetadataEntity.serializer(), metadata)
+        val content = contentOver(MetadataEntity.serializer(), metadata, current, communityId, owner)
         return wrap(actor, controlPlane, ControlEntityKind.METADATA, communityId, version, prev, content, createdAt, citation)
     }
 
@@ -197,7 +228,7 @@ object ConcordModeration {
     ): Event {
         val entityId = ConcordKeyDerivation.grantCoordinate(communityId, member.hexToByteArray())
         val (version, prev) = versioning(current, entityId, owner)
-        val content = ConcordJson.instance.encodeToString(GrantEntity.serializer(), GrantEntity(member = member, roleIds = roleIds, controlWrap = controlWrap))
+        val content = contentOver(GrantEntity.serializer(), GrantEntity(member = member, roleIds = roleIds, controlWrap = controlWrap), current, entityId, owner)
         return wrap(actor, controlPlane, ControlEntityKind.GRANT, entityId, version, prev, content, createdAt, citation)
     }
 

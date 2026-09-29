@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -92,7 +93,8 @@ object ConcordSubscriptionPlanner {
      * The off-channel planes every joined community subscribes to upfront (known
      * from the entry alone): the Guestbook Plane (membership motions) and the
      * next-epoch base-rekey address (so an inbound Refounding is received live,
-     * CORD-06). Both are kind-1059 wraps authored by their derived stream address.
+     * CORD-06), and the dissolution tombstone address (CORD-02 §9). All are kind-1059
+     * wraps authored by their derived stream address.
      */
     fun auxiliaryPlaneSubs(entries: List<ConcordCommunityListEntry>): List<ConcordPlaneSub> =
         entries.flatMap { e ->
@@ -101,9 +103,11 @@ object ConcordSubscriptionPlanner {
             val relays = normalize(e.relays)
             val guestbook = ConcordActions.guestbookPlane(root, communityId, e.rootEpoch)
             val nextRekey = ConcordActions.nextBaseRekeyPlane(root, communityId, e.rootEpoch)
+            val dissolved = ConcordDissolution.planeKey(e.id)
             listOf(
                 ConcordPlaneSub(channelId = null, pubKeyHex = guestbook.publicKeyHex, relays = relays),
                 ConcordPlaneSub(channelId = null, pubKeyHex = nextRekey.publicKeyHex, relays = relays),
+                ConcordPlaneSub(channelId = null, pubKeyHex = dissolved.publicKeyHex, relays = relays),
             )
         }
 

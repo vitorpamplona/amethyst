@@ -61,6 +61,9 @@ enum class LatestEventSlot(
     EPHEMERAL_LIST("latestEphemeralChatList"),
     RELAY_GROUP_LIST("latestRelayGroupList"),
     CONCORD_LIST("latestConcordList"),
+
+    /** The kind-33302 Community List fragments (CORD-02 §8), one event JSON per line. */
+    CONCORD_LIST_FRAGMENTS("latestConcordListFragments"),
     TRUST_PROVIDER_LIST("latestTrustProviderList"),
     KEY_PACKAGE_RELAY_LIST("latestKeyPackageRelayList"),
     FAVORITE_ALGO_FEEDS_LIST("latestFavoriteAlgoFeedsList"),

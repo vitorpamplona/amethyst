@@ -685,12 +685,7 @@ private fun ConcordServerPickerGroup(
     channels.forEach { channel ->
         val entry = BottomBarEntry.ConcordChannel(community.id, channel.channelIdHex, community.relays)
         val def = channel.definition
-        val icon =
-            when {
-                def.voice -> MaterialSymbols.Mic
-                def.private -> MaterialSymbols.Lock
-                else -> MaterialSymbols.Tag
-            }
+        val icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag
         AvailableRow(
             leading = { LeadingGlyph(icon) },
             label = def.name.ifBlank { channel.channelIdHex.take(8) },

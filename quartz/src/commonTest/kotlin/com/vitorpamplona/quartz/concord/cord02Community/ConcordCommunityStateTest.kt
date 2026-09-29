@@ -59,10 +59,10 @@ class ConcordCommunityStateTest {
         assertEquals("My Server", state.metadata?.name)
         assertEquals("hi", state.metadata?.description)
 
-        // deleted channel excluded; general + voice channel kept
+        // deleted channel excluded; the other two kept (a legacy `voice` key is just an unknown field)
         assertEquals(2, state.channels.size)
         assertEquals("general", state.channels["c1".repeat(32)]?.definition?.name)
-        assertTrue(state.channels["c2".repeat(32)]?.definition?.voice == true)
+        assertEquals("voice-lounge", state.channels["c2".repeat(32)]?.definition?.name)
         assertNull(state.channels["c3".repeat(32)])
 
         assertNotNull(state.roles[adminRole])
@@ -106,13 +106,16 @@ class ConcordCommunityStateTest {
     }
 
     @Test
-    fun dissolutionTombstoneMarksCommunityDissolved() {
+    fun aControlPlaneVsk10EditionDoesNotDissolve() {
+        // CORD-02 §9: the tombstone lives at `dissolved_pk` and must name its community. A vsk-10
+        // edition on the Control Plane skips that binding, so it must never seal the community.
         val editions =
             listOf(
                 edition(ControlEntityKind.METADATA, "00".repeat(32), """{"name":"Doomed"}"""),
                 edition(ControlEntityKind.DISSOLVED, "dd".repeat(32), """{}"""),
             )
         val state = ConcordCommunityState.fold(editions, owner)
-        assertTrue(state.dissolved)
+        assertFalse(state.dissolved)
+        assertTrue(state.withDissolved(true).dissolved)
     }
 }

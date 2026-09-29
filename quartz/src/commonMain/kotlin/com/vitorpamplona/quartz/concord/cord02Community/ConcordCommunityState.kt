@@ -57,6 +57,12 @@ data class ConcordCommunityState(
     val authority: AuthorityResolver,
     val dissolved: Boolean,
 ) {
+    /**
+     * This state with [dissolved] set from the community's dissolution plane
+     * ([ConcordDissolution.isDissolved]). One-way by the caller's contract: there is no un-dissolve.
+     */
+    fun withDissolved(dissolved: Boolean): ConcordCommunityState = if (dissolved == this.dissolved) this else copy(dissolved = dissolved)
+
     companion object {
         /**
          * The permission bit an edition of each entity kind must be authored under.
@@ -133,7 +139,6 @@ data class ConcordCommunityState(
             @Suppress("NAME_SHADOWING")
             val editions = EditionFold.admissible(editions, floors, snapshot = snapshot)
 
-            val heads = EditionFold.fold(editions, floors, snapshot = snapshot).values
             // Resolve authority from the FULL edition set (not the structural heads): the resolver
             // folds each role/grant chain through authorized editions only, so a rogue higher-version
             // edition can't supersede a legit one before authority is even judged.
@@ -179,8 +184,12 @@ data class ConcordCommunityState(
             // so we take the roles the AuthorityResolver actually accepted from the owner outward.
             val roles = authority.roles()
 
-            // Dissolution is owner-only — a rogue tombstone must not appear to kill the community.
-            val dissolved = heads.any { it.entityKind == ControlEntityKind.DISSOLVED && authority.isOwner(it.author) }
+            // Dissolution is NOT read from the Control Plane. The tombstone is chainless and lives at its
+            // own address (CORD-02 §9, [ConcordDissolution]) where it must also name this community in its
+            // `eid`; a vsk-10 edition folded here would skip that binding check, so an owner's tombstone
+            // for another community re-wrapped onto this plane would kill this one. The caller that reads
+            // the dissolved plane sets [dissolved] via [withDissolved].
+            val dissolved = false
 
             return ConcordCommunityState(
                 ownerPubKey = ownerPubKey.lowercase(),

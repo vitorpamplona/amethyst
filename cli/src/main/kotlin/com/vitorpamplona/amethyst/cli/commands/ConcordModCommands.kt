@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -156,6 +157,35 @@ object ConcordModCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int = banOrUnban(dataDir, rest, ban = true)
+
+    /**
+     * Dissolves a community (CORD-02 §9): `dissolve <community> --yes`. Publishes the owner-signed,
+     * `eid`-bound tombstone at the community's dissolved address. Owner-only and irreversible, hence
+     * the mandatory `--yes`.
+     */
+    suspend fun dissolve(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        val confirmed = args.bool("yes")
+        args.rejectUnknown()
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
+        if (!confirmed) return Output.error("confirm", "dissolving '$handle' is irreversible; re-run with --yes")
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            if (!sc.owner.equals(ctx.signer.pubKey, ignoreCase = true)) {
+                return Output.error("not_owner", "only the owner can dissolve '$handle' (CORD-02 §9)")
+            }
+            val wrap = ConcordDissolution.build(ctx.signer, sc.communityId)
+            val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            Output.emit(mapOf("community" to sc.communityId, "dissolved" to true) + RawEventSupport.ackFields(ack))
+            return 0
+        }
+    }
 
     /** Unbans a member: `unban <community> <user>`. */
     suspend fun unban(

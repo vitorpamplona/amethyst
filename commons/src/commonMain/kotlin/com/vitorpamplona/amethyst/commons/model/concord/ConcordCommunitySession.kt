@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -137,8 +138,24 @@ class ConcordCommunitySession(
      */
     private val nextBaseRekeyKey: GroupKey = ConcordActions.nextBaseRekeyPlane(root, communityIdBytes, entry.rootEpoch)
 
+    /**
+     * The dissolution tombstone address (CORD-02 §9): derived from the community id alone, so it
+     * is the same for every epoch and every member past or present.
+     */
+    private val dissolvedKey: GroupKey = ConcordDissolution.planeKey(entry.id)
+
+    /**
+     * Set once a valid owner tombstone bound to this community arrives at [dissolvedAddress]. One
+     * way: there is no un-dissolve, so a later fold can never clear it.
+     */
+    @Volatile
+    private var dissolved = false
+
     /** The Control Plane stream address to subscribe to (known from the entry alone). */
     val controlPlaneAddress: HexKey get() = controlKeys.address
+
+    /** The dissolution tombstone stream address to subscribe to (known from the community id alone). */
+    val dissolvedAddress: HexKey get() = dissolvedKey.publicKeyHex
 
     /** The Guestbook Plane stream address to subscribe to (known from the entry alone). */
     val guestbookAddress: HexKey get() = guestbookKey.publicKeyHex
@@ -311,6 +328,7 @@ class ConcordCommunitySession(
         address == controlPlaneAddress ||
             address == guestbookAddress ||
             address == nextBaseRekeyAddress ||
+            address == dissolvedAddress ||
             address in historicalControlKeys ||
             lock.withLock { address in channelKeysByAddress || address in historicalChannelKeysByAddress }
 
@@ -367,8 +385,11 @@ class ConcordCommunitySession(
                 historicalChannelKeysByAddress.values.map { it.second }
         }
 
-    /** The CORD-06 auxiliary plane keys (Guestbook + next base-rekey) for their own isolated AUTH. */
-    fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey)
+    /**
+     * The auxiliary plane keys (Guestbook, next base-rekey, and the CORD-02 §9 dissolution address)
+     * for their own isolated AUTH.
+     */
+    fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey, dissolvedKey)
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlKeys) }
@@ -448,6 +469,17 @@ class ConcordCommunitySession(
                 }
                 refoldGuestbook()
                 return ConcordIngestOutcome.STRUCTURAL
+            }
+            dissolvedAddress -> {
+                // Anyone holding the (public) community id can sign here, so only an owner-signed,
+                // eid-bound tombstone counts (CORD-02 §9); everything else is noise we still claim.
+                if (dissolved || !ConcordDissolution.isTombstoneWrap(wrap, entry.id, entry.owner)) return ConcordIngestOutcome.NON_STRUCTURAL
+                lock.withLock {
+                    dissolved = true
+                    _state.value = _state.value?.withDissolved(true)
+                }
+                // The state watcher bumps the revision off the changed fold, as for a control wrap.
+                return ConcordIngestOutcome.STRUCTURAL_FOLD
             }
             nextBaseRekeyAddress -> {
                 // Buffer only — decrypting a base-rotation blob needs the account signer, so the
@@ -573,7 +605,7 @@ class ConcordCommunitySession(
                 }
                 historicalChannelKeysByAddress = historical
 
-                _state.value = folded
+                _state.value = folded.withDissolved(dissolved)
                 folded.channels.keys.filterNot { it in prevChannels }
             }
 

@@ -137,6 +137,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
@@ -3837,6 +3838,8 @@ open class EventCache :
                 // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
                 // hub stays empty even after the event arrives.
                 is ConcordCommunityListEvent,
+                // Its successor (CORD-02 §8): the List split into addressable fragments at d = index.
+                is ConcordCommunityListFragmentEvent,
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
