@@ -3614,6 +3614,7 @@
     <string name="concord_channel_rename_save">Rename</string>
     <string name="concord_channels_empty">No channels yet.</string>
     <string name="concord_create_action">Create</string>
+    <string name="concord_create_failed">No relay accepted the new community, so it was not created. Check the relays and try again.</string>
     <string name="concord_create_relays">Relays</string>
     <string name="concord_create_relays_desc">Relays that store this community's encrypted messages. Leave empty to use your own.</string>
     <string name="concord_create_title">New Concord Channel</string>

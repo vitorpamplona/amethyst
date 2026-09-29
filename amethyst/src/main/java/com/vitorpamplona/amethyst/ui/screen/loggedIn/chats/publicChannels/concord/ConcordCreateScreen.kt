@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_create_action
+import com.vitorpamplona.amethyst.commons.resources.concord_create_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_create_relays_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_create_title
@@ -139,7 +140,11 @@ fun ConcordCreateScreen(
                         // Replace this form with the new community, as the Marmot and relay-group creators
                         // do. newStack only popped up to the community route itself, which was not on the
                         // stack, so Back from the new community reopened a filled-in create form.
-                        if (communityId != null) nav.popUpTo(Route.ConcordServer(communityId), Route.ConcordCreate::class)
+                        if (communityId != null) {
+                            nav.popUpTo(Route.ConcordServer(communityId), Route.ConcordCreate::class)
+                        } else {
+                            accountViewModel.toastManager.toast(Res.string.concord_create_title, Res.string.concord_create_failed)
+                        }
                     }
                 },
                 enabled = name.value.isNotBlank() && !working,

@@ -232,7 +232,7 @@ class AccountConcordActions(
      * Create a new Concord community: mint its genesis (metadata + #general),
      * publish the owner-signed genesis wraps to [relays] (or our outbox), and add
      * the secret-bearing entry to the Community List (kind 33302). Returns the new
-     * community id, or null if not writeable.
+     * community id, or null if not writeable or no relay accepted the genesis.
      */
     suspend fun createConcordCommunity(
         name: String,
@@ -251,7 +251,18 @@ class AccountConcordActions(
         val community = ConcordActions.createCommunity(account.signer, name, TimeUtils.now(), description, relayUrls, icon)
 
         val publishTo = relayUrls.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
-        community.genesisWraps.forEach { account.client.publish(it, publishTo) }
+        // The genesis is the community: with no relay holding it, nobody (us included, after a
+        // restart) can ever fold it. It used to be fired and forgotten, then the community saved
+        // anyway, so a genesis a relay refused or an app killed mid-send left a community in the
+        // List that could never load again. Confirm every genesis wrap before saving it.
+        val landed =
+            coroutineScope {
+                community.genesisWraps.map { async { account.client.publishAndConfirm(it, publishTo) } }.awaitAll()
+            }
+        if (!landed.all { it }) {
+            Log.w("Concord") { "createConcordCommunity: no relay in $publishTo accepted the genesis; not creating ${community.communityIdHex}" }
+            return null
+        }
 
         joinConcordCommunity(
             ConcordCommunityListEntry(
