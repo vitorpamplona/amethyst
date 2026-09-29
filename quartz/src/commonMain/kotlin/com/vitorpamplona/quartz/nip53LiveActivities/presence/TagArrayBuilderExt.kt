@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip53LiveActivities.presence
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.MeetingSpaceTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.HandRaisedTag
@@ -30,9 +29,10 @@ import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.MutedTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.OnstageTag
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.tags.PublishingTag
 
-fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: MeetingSpaceTag) = addUnique(rep.toTagArray())
+// NIP-53: a presence points at its room with the `root` marker.
+fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: MeetingSpaceTag) = addUnique(rep.toRootTagArray())
 
-fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: EventHintBundle<MeetingRoomEvent>) = addUnique(rep.toATag().toATagArray())
+fun TagArrayBuilder<MeetingRoomPresenceEvent>.roomMeeting(rep: EventHintBundle<MeetingRoomEvent>) = addUnique(MeetingSpaceTag(rep.event.address(), rep.relay).toRootTagArray())
 
 fun TagArrayBuilder<MeetingRoomPresenceEvent>.handRaised(raised: Boolean) = addUnique(HandRaisedTag.assemble(raised))
 

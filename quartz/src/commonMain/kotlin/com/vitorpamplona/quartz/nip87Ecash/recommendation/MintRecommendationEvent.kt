@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip87Ecash.recommendation
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -39,7 +39,7 @@ class MintRecommendationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
     override fun indexableContent() = content
 
@@ -52,8 +52,6 @@ class MintRecommendationEvent(
     fun mintUrls() = tags.mintUrls()
 
     fun mintEventKind() = tags.mintEventKind()
-
-    fun dTag() = tags.dTag()
 
     fun mintEventAddresses() = tags.mintEventAddresses()
 

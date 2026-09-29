@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.cashu.ops
 
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -28,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
@@ -1094,19 +1092,11 @@ class CashuWalletOps(
      * pointing at the address coordinate (kind:pubkey:dTag) drops all
      * versions on compliant relays. We also include the original event id
      * via DeletionRequestEvent.build so relays that only track by event id still
-     * remove it. MintRecommendationEvent doesn't extend AddressableEvent
-     * today, so we compute and add the `a` tag ourselves.
+     * remove it. MintRecommendationEvent is an AddressableEvent, so
+     * DeletionRequestEvent.build writes that `a` tag itself.
      */
     suspend fun deleteRecommendation(event: MintRecommendationEvent) {
-        // Add the `a` tag when we have a d-tag — kind:38000 is parameterized-
-        // replaceable, so the address coordinate lets compliant relays drop
-        // all versions, not just the specific id. Recommendations without a
-        // d-tag still get a NIP-09 `e`-only delete (the default build path).
-        val dTag = event.dTag()
-        val template =
-            DeletionRequestEvent.build(listOf(event)) {
-                if (dTag != null) aTag(Address(event.kind, event.pubKey, dTag))
-            }
+        val template = DeletionRequestEvent.build(listOf(event))
         val delEvent = signer.sign(template)
         publish(delEvent)
     }

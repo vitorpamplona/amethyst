@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 
 fun NEvent.toEventHint() = relay.map { EventIdHint(hex, it) }
 
@@ -86,12 +85,16 @@ fun List<Entity>.pubKeyHints(): List<PubKeyHint> =
         }
     }.flatten()
 
+/**
+ * The pubkeys cited as `npub` / `nprofile`. An `nsec` is deliberately NOT here: its hex is a
+ * PRIVATE key, so reporting a pasted one as a "linked pubkey" would publish the secret to every
+ * index, hint store and relay filter that consumes this list.
+ */
 fun List<Entity>.pubKeys(): List<HexKey> =
     mapNotNull { entity ->
         when (entity) {
             is NProfile -> entity.hex
             is NPub -> entity.hex
-            is NSec -> entity.hex
             else -> null
         }
     }
