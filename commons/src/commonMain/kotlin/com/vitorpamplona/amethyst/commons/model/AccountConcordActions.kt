@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
@@ -126,6 +127,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -926,7 +928,16 @@ class AccountConcordActions(
                         ?.value
                 },
             )
-        }.stateIn(account.scope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }.stateIn(account.scope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * [pendingConcordDirectInvites] as feed rows: New Requests on Messages and cards on Notifications.
+     * Eager because the feed filters read `.value` directly, with no subscriber of their own.
+     */
+    val pendingConcordDirectInviteNotes: StateFlow<List<ConcordDirectInviteNote>> =
+        pendingConcordDirectInvites
+            .map { list -> list.filterNot { it.catchUp }.map { ConcordDirectInviteNote(it) } }
+            .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
 
     /**
      * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM

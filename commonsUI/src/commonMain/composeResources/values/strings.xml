@@ -3675,6 +3675,7 @@
     <string name="concord_direct_invite_failed_loading">This community is still loading. Try again in a moment.</string>
     <string name="concord_direct_invite_failed_member">You can't invite people to this community.</string>
     <string name="concord_direct_invite_from">Invited by %1$s</string>
+    <string name="concord_direct_invite_label">Invite</string>
     <string name="concord_direct_invite_hint">Name, npub or NIP-05</string>
     <string name="concord_direct_invite_send">Send invite to %1$s</string>
     <string name="concord_direct_invite_sent_to">Invited %1$s</string>

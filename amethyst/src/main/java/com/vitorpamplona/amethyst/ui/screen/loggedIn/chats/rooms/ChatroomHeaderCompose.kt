@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.chats.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -91,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you_by
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_from
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_label
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_server_label
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_no_messages_yet
@@ -195,6 +198,7 @@ fun ChatroomHeaderCompose(
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
             baseNote is ConcordServerRoomNote ||
+            baseNote is ConcordDirectInviteNote ||
             (
                 baseNote.event == null &&
                     baseNote.inGatherers?.any {
@@ -245,6 +249,11 @@ private fun ChatroomEntry(
 
     if (lastMessage is ConcordServerRoomNote) {
         ConcordServerRoomCompose(lastMessage, accountViewModel, nav)
+        return
+    }
+
+    if (lastMessage is ConcordDirectInviteNote) {
+        ConcordDirectInviteRoomCompose(lastMessage, accountViewModel, nav)
         return
     }
 
@@ -1024,6 +1033,43 @@ private fun RelayGroupServerRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.RelayGroupServer(relay.url)) },
+    )
+}
+
+/**
+ * A pending Concord Direct Invite as a New Request: the community's name and image, who sent it, and
+ * a tap into the Concord hub, where the invite waits with Accept / Decline.
+ */
+@Composable
+private fun ConcordDirectInviteRoomCompose(
+    row: ConcordDirectInviteNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val invite = row.invite
+    val senderName = observeUserNameByHex(invite.sender, accountViewModel)
+
+    ChannelName(
+        channelIdHex = invite.communityId,
+        channelPicture = rememberConcordImageModel(invite.icon, accountViewModel),
+        channelTitle = { modifier ->
+            ChannelTitleWithLabelInfo(
+                invite.name.ifBlank { stringRes(Res.string.concord_home_title) },
+                MaterialSymbols.Group,
+                Res.string.concord_direct_invite_label,
+                modifier,
+            )
+        },
+        channelLastTime = row.createdAt(),
+        channelLastContent = stringRes(Res.string.concord_direct_invite_from, senderName),
+        hasNewMessages = true,
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.Concords) },
     )
 }
 

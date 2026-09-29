@@ -94,7 +94,13 @@ class ChatroomListNewFeedFilter(
                     .mapNotNull { LocalCache.getNoteIfExists(it) }
             }
 
-        return (privateMessages + marmotGroups + relayGroupInvites).sortedByDefaultFeedOrder()
+        // Concord Direct Invites (CORD-05 §6) waiting on an answer: a community somebody handed us the
+        // keys to, with the same standing as an unaccepted DM, so it sits here with the other requests.
+        // AccountFeedContentStates rebuilds this feed when the pending set moves.
+        val concordDirectInvites =
+            if (!isEnabled(ChatFeedType.CONCORD)) emptyList() else account.concord.pendingConcordDirectInviteNotes.value
+
+        return (privateMessages + marmotGroups + relayGroupInvites + concordDirectInvites).sortedByDefaultFeedOrder()
     }
 
     override fun updateListWith(

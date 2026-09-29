@@ -269,8 +269,9 @@ fun LazyListScope.concordPendingDirectInvites(
     }
 }
 
+/** One Direct Invite with Decline / Accept: on the Concord hub and as a card on Notifications. */
 @Composable
-private fun ConcordDirectInviteCard(
+fun ConcordDirectInviteCard(
     invite: ConcordDirectInviteView,
     accountViewModel: AccountViewModel,
     nav: INav,
