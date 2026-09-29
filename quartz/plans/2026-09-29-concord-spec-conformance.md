@@ -93,6 +93,44 @@ Ranked security > interop > feature inside each group.
 | F9 | 04 §6 | Kick (kind 3309) | open |
 | F10 | 03 | WebXDC (kind 3310) | open |
 
+## Audit 2 (2026-09-29) — batch A (non-Refounding)
+
+Root cause shared by P1/P13/R7: nothing told a session its Control Plane had finished its
+initial drain. Now `ConcordCommunitySession.controlDrained` is set by
+`syncConcordControlPlanes` once a relay pages the whole current plane (`DRAINED`) and the
+swept wraps are ingested; `foldForWrite()` is the fold writers may build on (null before).
+Batch B can reuse it for the ban/privatize decisions.
+
+| # | Status |
+|---|---|
+| P1 | **fixed** — `ConcordChannelPins.complete`; `ConcordPinning.refusal` → `NOT_FOLDED` until drained; the sheet never says "no pins" before the drain |
+| P2 | **fixed** — `buildChannelEdit(expiration = expirationOf(target))`: an Edit carries the original's deadline verbatim (none if it has none); a smuggled `expiration` in `extraTags` is dropped (Armada `useTransport.ts`; the spec's "computed from the rumor's own created_at" reads otherwise — noted) |
+| P3 | **fixed** — pin writes `publishAndConfirm` (`NOT_CONFIRMED` otherwise) and re-apply the same op atop a concurrent winner, ≤2 retries |
+| P4 | **fixed** — `rememberConcordChannelPins`, the pinned sheet and `ConcordTimerIndicator` re-resolve the session on `concordSessions.revision` |
+| P5 | **fixed** — the pins re-read at the soonest pinned message's NIP-40 deadline (`ConcordChannelPins.nextExpiry`) |
+| P6 | **fixed** — list reads memoized by head rumor id (`ConcordPinVerifier.readList`); `PinListRead.sealedForm` (no second parse); evidence trigger filtered to deletes/Edits naming a pinned rumor; action-sheet pin state via `produceState` on `Dispatchers.Default`. The per-channel verifier cache stays the session-wide 512-entry one |
+| P7 | **fixed** — deadlines kept sorted (binary-searched insert; no PriorityQueue in common code); sweeps pop only what is due; the account sweep waits 2 s past a deadline to coalesce |
+| P8 | **fixed** — bounded (4096) set of swept wrap ids; re-deliveries dropped before opening |
+| P9 | **fixed** — `ConcordSessionRegistry.sync` carries `trackedExpiring()` into the rebuilt session |
+| P10 | **fixed** — sheet and badge leave out banned authors and muted/blocked users (`ConcordPinning.visible`) |
+| P11 | **fixed** — confirm dialog before pinning a message carrying `expiration`; `amy concord pin` refuses (`expiring_message`) without `--force` |
+| P12 | **fixed** — `amy concord pins` hides expired pinned messages |
+| P13 | **fixed** — `editConcordMetadata` / `setConcordMessageExpiration` return false until drained (the owner too) and chain onto the floor-aware head |
+| P14 | **fixed** — `ExpiredConcordRumor.attachmentUrls`; the sweep evicts them from `encryptionKeyCache` |
+| recomputeNextExpiry | **fixed** — computed and assigned under a lock |
+| D3 | **fixed** — `SealEvent.unsealRumorThrowing` + `ConcordDirectInvite.openRumor`/`offerRumor`: the NIP-17 seal handler decrypts once; k=3313 wraps that never open are marked seen (GiftWrap and Seal handlers), so the hub's sweep skips them. Chosen over a persisted cursor: the DM pipeline sees every invite wrap first in the same process, so the sweep re-decrypts nothing it already handled; a cold start still re-sweeps from `since = null` once per process |
+| D4 | **fixed** — ≤256 parked (followed senders outrank strangers, then newer), hidden senders never park and are filtered, followed senders listed first, invites rendered as lazy items (the empty state scrolls) |
+| D5 | **fixed** — an invite whose clamped `sentAt` is at or before the Community List tombstone's `removed_at` stays hidden (`ConcordChannelListState.removedAt`) |
+| D6 | **fixed** — the cursor advances to `min(created_at, now + 15 min)` |
+| D7 | **fixed** — dedupe per (community, sender), ranked by `sentAt` clamped to now |
+| D8 | **fixed** — written off only on a definitive outcome; `openOrRetry` rethrows a transient signer failure (timeout, not approved, backgrounded, not found) and the inbox leaves the wrap for a retry |
+| D10 | **fixed** — declines capped at 4096 (app + amy); `restoreDeclined` is `suspend` under the inbox mutex; the sweep runs once per hub visit outside the lazy list and rethrows cancellation; catch-up cards list only newly adopted channels, by folded name. Also (F7 note): `visible()` hides a catch-up `acceptPlan` would refuse against the held fold |
+| R3 | **fixed** — a readable Invite List is authoritative in `nextLinks` (no resurrected links); registry edits are `publishAndConfirm`ed |
+| R7 | **fixed** — `publishConcordInviteRegistry` skips until drained and chains onto the floor-aware head (`ConcordModeration.setInviteRegistry(floors = session.controlFloors())`) |
+| R8 | **fixed** — no registry edit on a dissolved community; `retiringWouldPrivatize` is false once dissolved, so a revoke there reports `REVOKED` |
+| R9 | **fixed** — after a drain, this account's registry is republished pruned when it lists an elapsed/unbacked link (once per community and epoch per process) |
+| R11 | **fixed** — `invite_links_locator` memoized per (community, author) in `AuthorityResolver` |
+
 ## Spec issues to raise upstream
 
 - CORD-06 §1 counts rekey capacity in blobs ("up to 120 participants per event"), but 120 base
