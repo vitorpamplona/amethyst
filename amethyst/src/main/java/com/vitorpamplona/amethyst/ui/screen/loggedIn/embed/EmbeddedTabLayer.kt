@@ -62,6 +62,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -91,7 +92,10 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.FindInPagePill
 import com.vitorpamplona.amethyst.napplethost.BrowserWebTools
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.math.roundToInt
@@ -534,11 +538,19 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // Source rect (surface px) = bubble px / zoom, so the provider-scaled frame lands ≈ bubble-sized.
         val magSrcW = with(density) { (magBubble.width.toPx() / magZoom).roundToInt() }
         val magSrcH = with(density) { (magBubble.height.toPx() / magZoom).roundToInt() }
+        val magScope = rememberCoroutineScope()
         DisposableEffect(magProbe) {
             magProbe?.onMagnifierFrame = { frame ->
                 if (magnifier.visible) {
                     magnifier.awaitingFrame = false
-                    BitmapFactory.decodeByteArray(frame.bytes, 0, frame.bytes.size)?.let { magnifier.image = it.asImageBitmap() }
+                    // Decode off the main thread: this runs for every frame of a handle drag.
+                    magScope.launch {
+                        val image = withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(frame.bytes, 0, frame.bytes.size)?.asImageBitmap() }
+                        if (image != null && magnifier.visible && frame.requestStampNanos > magnifier.shownFrameStamp) {
+                            magnifier.shownFrameStamp = frame.requestStampNanos
+                            magnifier.image = image
+                        }
+                    }
                 }
             }
             onDispose {

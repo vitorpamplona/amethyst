@@ -62,10 +62,15 @@ class MagnifierUiState {
     var lastRequestUptimeMs: Long = 0L
     var awaitingFrame: Boolean = false
 
+    // Request stamp of the frame on screen. Frames decode off the main thread and can finish out of order,
+    // so an older one must not replace a newer one.
+    var shownFrameStamp: Long = Long.MIN_VALUE
+
     fun hide() {
         visible = false
         image = null
         awaitingFrame = false
+        shownFrameStamp = Long.MIN_VALUE
     }
 }
 

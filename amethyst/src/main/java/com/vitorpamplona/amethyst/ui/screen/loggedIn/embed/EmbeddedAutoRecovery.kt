@@ -50,6 +50,9 @@ class EmbeddedAutoRecovery(
     }
 
     private var shown = false
+
+    /** Whether the tab is the visible one (per the last [onShown] / [onHidden]). */
+    val isShown: Boolean get() = shown
     private var pending = false
     private var lastAutoRecoveryAt: Long? = null
 

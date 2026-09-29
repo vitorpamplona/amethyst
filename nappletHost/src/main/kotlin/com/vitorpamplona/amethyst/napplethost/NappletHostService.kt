@@ -26,7 +26,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -35,7 +34,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -52,7 +50,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
-import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
@@ -70,7 +67,6 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonObject
-import java.io.ByteArrayOutputStream
 
 /**
  * Provider for an **embedded** nsite/napplet tab — the in-app-tab counterpart of [NappletHostActivity].
@@ -298,41 +294,29 @@ class NappletHostService : Service() {
         val tab = tabFor(msg) ?: return
         val wv = tab.webView ?: return
         val data = msg.data ?: return
-        val cx = data.getFloat(NappletEmbedContract.KEY_MAG_X)
-        val cy = data.getFloat(NappletEmbedContract.KEY_MAG_Y)
-        val boxW = data.getInt(NappletEmbedContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024)
-        val boxH = data.getInt(NappletEmbedContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024)
-        val zoom = data.getFloat(NappletEmbedContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f)
         val reqT = data.getLong(NappletEmbedContract.KEY_MAG_REQ_T)
-
-        val outW = (boxW * zoom).toInt().coerceAtLeast(1)
-        val outH = (boxH * zoom).toInt().coerceAtLeast(1)
-        val t0 = SystemClock.elapsedRealtimeNanos()
-        val bitmap = createBitmap(outW, outH)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(tab.bgColor)
-        canvas.scale(zoom, zoom)
-        canvas.translate(-(cx - boxW / 2f), -(cy - boxH / 2f))
-        wv.draw(canvas)
-
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        val bytes = baos.toByteArray()
-        bitmap.recycle()
-        val captureMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0
-
-        val reply =
-            Message.obtain(null, NappletEmbedContract.MSG_MAGNIFIER_FRAME).apply {
-                this.data =
-                    Bundle().apply {
-                        putByteArray(NappletEmbedContract.KEY_MAG_BYTES, bytes)
-                        putInt(NappletEmbedContract.KEY_MAG_W, outW)
-                        putInt(NappletEmbedContract.KEY_MAG_H, outH)
-                        putDouble(NappletEmbedContract.KEY_MAG_CAPTURE_MS, captureMs)
-                        putLong(NappletEmbedContract.KEY_MAG_REQ_T, reqT)
-                    }
-            }
-        runCatching { tab.clientMessenger?.send(reply) }
+        MagnifierCapture.capture(
+            webView = wv,
+            bgColor = tab.bgColor,
+            cx = data.getFloat(NappletEmbedContract.KEY_MAG_X),
+            cy = data.getFloat(NappletEmbedContract.KEY_MAG_Y),
+            boxW = data.getInt(NappletEmbedContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024),
+            boxH = data.getInt(NappletEmbedContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024),
+            zoom = data.getFloat(NappletEmbedContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f),
+        ) { bytes, outW, outH, captureMs ->
+            val reply =
+                Message.obtain(null, NappletEmbedContract.MSG_MAGNIFIER_FRAME).apply {
+                    this.data =
+                        Bundle().apply {
+                            putByteArray(NappletEmbedContract.KEY_MAG_BYTES, bytes)
+                            putInt(NappletEmbedContract.KEY_MAG_W, outW)
+                            putInt(NappletEmbedContract.KEY_MAG_H, outH)
+                            putDouble(NappletEmbedContract.KEY_MAG_CAPTURE_MS, captureMs)
+                            putLong(NappletEmbedContract.KEY_MAG_REQ_T, reqT)
+                        }
+                }
+            runCatching { tab.clientMessenger?.send(reply) }
+        }
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
@@ -360,6 +344,15 @@ class NappletHostService : Service() {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
+        // A session re-opened on this tab (the client's view detached and re-attached) before the old one's
+        // close landed: that session's WebView is still here. Destroy it now — its close will be ignored
+        // (see onSessionClosed), and overwriting it would leak it.
+        tab.webView?.let { stale ->
+            (stale.parent as? ViewGroup)?.removeView(stale)
+            stale.destroy()
+            tab.webView = null
+            tab.bridgeReplyProxy = null
+        }
         tab.container = container
         // A rebuild after a renderer crash: release the previous content server first.
         tab.contentServer?.close()
@@ -404,8 +397,15 @@ class NappletHostService : Service() {
     }
 
     /** A session closed: drop the tab, release its resources, and destroy its own WebView (never a sibling's). */
-    fun onSessionClosed(sessionId: String) {
-        val tab = tabs.remove(sessionId) ?: return
+    fun onSessionClosed(
+        sessionId: String,
+        container: FrameLayout,
+    ) {
+        // Only the session that currently owns the tab may close it. A late close from a session that was
+        // already replaced by a re-open would otherwise reap the live one — its WebView destroyed under a
+        // client that had just been told the session opened, leaving the surface black for good.
+        val tab = tabs[sessionId]?.takeIf { it.container === container } ?: return
+        tabs.remove(sessionId)
         tab.bridgeReplyProxy = null
         WebViewProxyPolicy.release(tab)
         releaseFromBroker(tab)
@@ -551,7 +551,7 @@ class NappletHostService : Service() {
         override fun onPageStarted(
             view: WebView,
             url: String,
-            favicon: android.graphics.Bitmap?,
+            favicon: Bitmap?,
         ) {
             // A new main-frame navigation cleared any prior error.
             tab.loadFailed = false

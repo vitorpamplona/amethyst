@@ -124,6 +124,9 @@ class EmbeddedNostrAppController(
     // Set after the first connection, so a later onServiceConnected is recognised as `:napplet` coming back.
     private var everConnected = false
 
+    // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
+    private var createOnShow = false
+
     /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
     override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
         private set
@@ -146,6 +149,14 @@ class EmbeddedNostrAppController(
     // restart, a rearm), so it is re-sent with every create.
     private var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
 
+    /** The user's text zoom as last set, for a screen coming back to this tab. */
+    val currentTextZoom: Int get() = textZoom
+
+    // Whether the app can go back, kept here rather than in the tab's screen (which leaves composition on
+    // every bottom-bar switch), so coming back keeps Back working inside the app.
+    var lastCanGoBack = false
+        private set
+
     private val _findResult = mutableStateOf<FindResult?>(null)
     override val findResult: State<FindResult?> = _findResult
 
@@ -157,12 +168,17 @@ class EmbeddedNostrAppController(
             ) {
                 serviceMessenger = Messenger(service)
                 if (everConnected) {
-                    // `:napplet` died and was restarted. The create below IS the recovery (a fresh process
-                    // has no session under any id), so nothing is left pending; cover the surface until the
-                    // new page paints.
+                    // `:napplet` died and was restarted. Re-creating the session IS the recovery (a fresh
+                    // process has no session under any id), so nothing else is left pending; cover the
+                    // surface until the new page paints. Only the visible tab rebuilds now: every warm tab
+                    // reconnects at once, and rebuilding them all right after the OS reclaimed that memory
+                    // would just push it back up. The rest re-create when next shown.
                     recovery.clearPending()
                     sessionDead = false
                     showRecovering()
+                    everConnected = true
+                    if (recovery.isShown) sendCreateSession() else createOnShow = true
+                    return
                 }
                 everConnected = true
                 sendCreateSession()
@@ -308,7 +324,13 @@ class EmbeddedNostrAppController(
 
     override fun onShown() {
         resume()
-        if (recovery.onShown()) recover()
+        val deferredRecovery = recovery.onShown()
+        if (createOnShow) {
+            createOnShow = false
+            sendCreateSession()
+        } else if (deferredRecovery) {
+            recover()
+        }
     }
 
     override fun onHidden() {
@@ -355,6 +377,7 @@ class EmbeddedNostrAppController(
             }
             NappletEmbedContract.MSG_STATE -> {
                 val canGoBack = msg.data?.getBoolean(NappletEmbedContract.KEY_CAN_GO_BACK, false) ?: false
+                lastCanGoBack = canGoBack
                 onStateChanged?.invoke(canGoBack)
             }
             NappletEmbedContract.MSG_NOTICE -> {

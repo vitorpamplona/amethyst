@@ -109,6 +109,13 @@ class EmbeddedWebAppController(
     // Set after the first connection, so a later onServiceConnected is recognised as `:napplet` coming back.
     private var everConnected = false
 
+    // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
+    private var createOnShow = false
+
+    // A parked tab can be hidden (paused) before the service even binds, so the pause is remembered and
+    // replayed right after each session is created.
+    private var wantPaused = false
+
     /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
     override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
         private set
@@ -129,6 +136,23 @@ class EmbeddedWebAppController(
     private var useTor = initialUseTor
     private var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
     private var desktopSite = false
+
+    // The page on screen, kept here rather than in the tab's screen: the screen leaves composition whenever
+    // the user switches bottom-bar tabs, and coming back must show where they were (the right address for
+    // share / favorite / site settings, and a Back that goes back in the page instead of leaving the tab).
+    var lastUrl: String? = null
+        private set
+    var lastTitle: String? = null
+        private set
+    var lastCanGoBack = false
+        private set
+    var lastCanGoForward = false
+        private set
+
+    /** The user's per-tab settings as last set, for a screen coming back to this tab. */
+    val isTorOn: Boolean get() = useTor
+    val isDesktopSite: Boolean get() = desktopSite
+    val currentTextZoom: Int get() = textZoom
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
@@ -172,12 +196,17 @@ class EmbeddedWebAppController(
             ) {
                 serviceMessenger = Messenger(service)
                 if (everConnected) {
-                    // `:napplet` died and was restarted. The create below IS the recovery (a fresh process
-                    // has no session under any id), so nothing is left pending; cover the surface until the
-                    // new page paints.
+                    // `:napplet` died and was restarted. Re-creating the session IS the recovery (a fresh
+                    // process has no session under any id), so nothing else is left pending; cover the
+                    // surface until the new page paints. Only the visible tab rebuilds now: every warm tab
+                    // reconnects at once, and rebuilding them all right after the OS reclaimed that memory
+                    // would just push it back up. The rest re-create when next shown.
                     recovery.clearPending()
                     sessionDead = false
                     showRecovering()
+                    everConnected = true
+                    if (recovery.isShown) sendCreateSession() else createOnShow = true
+                    return
                 }
                 everConnected = true
                 sendCreateSession()
@@ -232,10 +261,24 @@ class EmbeddedWebAppController(
     override fun teardown() = unbind()
 
     override fun onShown() {
-        if (recovery.onShown()) recover()
+        wantPaused = false
+        send(NappletBrowserContract.MSG_RESUME) {}
+        val deferredRecovery = recovery.onShown()
+        if (createOnShow) {
+            createOnShow = false
+            sendCreateSession()
+        } else if (deferredRecovery) {
+            recover()
+        }
     }
 
-    override fun onHidden() = recovery.onHidden()
+    override fun onHidden() {
+        // A warm tab parked off-screen keeps no animations, media or geolocation running (napplets are
+        // paused the same way).
+        wantPaused = true
+        send(NappletBrowserContract.MSG_PAUSE) {}
+        recovery.onHidden()
+    }
 
     /**
      * Hands the surface view to the controller; applies the adapter if it already arrived, and re-arms the
@@ -367,6 +410,7 @@ class EmbeddedWebAppController(
         // Messenger keeps order, so these land after the CREATE and are stored on the new tab.
         if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
         if (desktopSite) setDesktopSite(true)
+        if (wantPaused) send(NappletBrowserContract.MSG_PAUSE) {}
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
@@ -387,6 +431,12 @@ class EmbeddedWebAppController(
                 val canGoBack = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, false) ?: false
                 val canGoForward = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_FORWARD, false) ?: false
                 val title = msg.data?.getString(NappletBrowserContract.KEY_TITLE)
+                if (url != "about:blank") {
+                    lastUrl = url
+                    lastTitle = title
+                }
+                lastCanGoBack = canGoBack
+                lastCanGoForward = canGoForward
                 onUrlChanged?.invoke(url, title, canGoBack, canGoForward)
             }
             NappletBrowserContract.MSG_IME_EVENT -> {

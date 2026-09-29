@@ -186,6 +186,16 @@ object NappletBrowserContract {
     /** Leave HTML fullscreen (the user pressed back). */
     const val MSG_EXIT_FULLSCREEN = 33
 
+    /**
+     * Client → provider: the tab left the screen (parked off-screen by the tab layer). The page's WebView is
+     * paused — animations, media and geolocation stop — so warm tabs in the background don't keep burning
+     * CPU and battery. Mirrors [NappletEmbedContract.MSG_PAUSE] for napplets.
+     */
+    const val MSG_PAUSE = 34
+
+    /** Client → provider: the tab is the visible one again; resume its WebView. */
+    const val MSG_RESUME = 35
+
     const val KEY_CAN_GO_FORWARD = "canGoForward"
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"

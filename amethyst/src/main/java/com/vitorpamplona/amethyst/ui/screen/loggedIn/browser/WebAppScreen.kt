@@ -56,6 +56,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -128,23 +129,9 @@ private fun EmbeddedWebAppTab(
     // Matches FavoriteApp.WebApp.id, so warm-keep membership lines up with the bottom-bar favorites.
     val id = "url:$url"
 
-    var currentUrl by remember { mutableStateOf(url) }
-    // The page's own <title>; null until the current document reports one (the sheet shows the host).
-    var pageTitle by remember { mutableStateOf<String?>(null) }
-    var canGoBack by remember { mutableStateOf(false) }
-    var canGoForward by remember { mutableStateOf(false) }
-    var desktopSite by remember { mutableStateOf(false) }
-    var textZoom by remember { mutableIntStateOf(BrowserChrome.DEFAULT_TEXT_ZOOM) }
     var showPageInfo by remember { mutableStateOf(false) }
 
     val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
-    // Start from this site's remembered Tor choice (some sites' servers reject Tor exits, so the user
-    // can opt one out and it must stick). Only meaningful when Tor is actually available.
-    var torOn by remember { mutableStateOf(proxyAvailable && WebAppNetworkRegistry.useTor(url)) }
-
-    val apps by Amethyst.instance.favoriteApps.favorites
-        .collectAsStateWithLifecycle()
-    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
@@ -154,6 +141,23 @@ private fun EmbeddedWebAppTab(
         remember(id, EmbeddedTabHost.rebuildEpoch) {
             EmbeddedTabFactory.acquireWebApp(context, url, backgroundColor)
         }
+
+    // Seeded from the controller, which outlives this screen: switching bottom-bar tabs disposes the screen
+    // but keeps the page, so coming back must show where the page is — not the start URL with no history.
+    var currentUrl by remember(controller) { mutableStateOf(controller.lastUrl ?: url) }
+    // The page's own <title>; null until the current document reports one (the sheet shows the host).
+    var pageTitle by remember(controller) { mutableStateOf(controller.lastTitle) }
+    var canGoBack by remember(controller) { mutableStateOf(controller.lastCanGoBack) }
+    var canGoForward by remember(controller) { mutableStateOf(controller.lastCanGoForward) }
+    var desktopSite by remember(controller) { mutableStateOf(controller.isDesktopSite) }
+    var textZoom by remember(controller) { mutableIntStateOf(controller.currentTextZoom) }
+    // The controller starts from this site's remembered Tor choice (some sites' servers reject Tor exits, so
+    // the user can opt one out and it must stick). Only meaningful when Tor is actually available.
+    var torOn by remember(controller) { mutableStateOf(proxyAvailable && controller.isTorOn) }
+
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
+    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
     val isLoading by controller.isLoading
 
     // Keep the URL/back callback fresh (cheap, needs the latest closure).
@@ -288,16 +292,19 @@ private fun EmbeddedWebAppTab(
     SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
     val bottomBarFlow = accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
+    val entryLifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(id) {
         val token = EmbeddedTabHost.setActive(id)
         EmbeddedTabHost.hold(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfOwner(token)
             EmbeddedTabHost.clearActiveChrome(id)
-            // Only bottom-row apps stay warm; anything else restarts when it leaves — unless a re-navigation
-            // to this same tab already composed a new screen on the same session.
-            val lastHolder = EmbeddedTabHost.release(id)
-            if (lastHolder && id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
+            // Only bottom-row apps stay warm; anything else restarts once the user actually leaves it — not
+            // when a screen is merely pushed on top, and not when a re-navigation to this same tab already
+            // composed a new screen on the same session.
+            if (EmbeddedTabHost.release(id)) {
+                EmbeddedTabHost.releaseWhenGone(id, entryLifecycle) { id in bottomBarFlow.value.favoriteIds() }
+            }
         }
     }
 

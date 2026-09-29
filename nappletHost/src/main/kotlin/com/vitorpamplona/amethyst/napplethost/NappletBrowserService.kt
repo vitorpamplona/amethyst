@@ -26,7 +26,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -36,7 +35,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -53,7 +51,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
-import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
@@ -111,6 +108,10 @@ class NappletBrowserService : Service() {
 
         // The page the renderer was showing when it died, so the rebuild lands back where the user was.
         var recoverUrl: String? = null
+
+        // The client's last pause/resume. A parked tab can be paused before its WebView exists (the WebView
+        // is only built when the surface opens), so the flag is applied to every WebView built for the tab.
+        var paused = false
 
         // The session's root view (holds the WebView, and the page's fullscreen view when it has one).
         var container: FrameLayout? = null
@@ -238,6 +239,16 @@ class NappletBrowserService : Service() {
                     WebViewProxyPolicy.whenApplied { if (tab.webView === wv) wv.loadUrl(url) }
                 }
             }
+            NappletBrowserContract.MSG_PAUSE ->
+                tabFor(msg)?.let {
+                    it.paused = true
+                    it.webView?.onPause()
+                }
+            NappletBrowserContract.MSG_RESUME ->
+                tabFor(msg)?.let {
+                    it.paused = false
+                    it.webView?.onResume()
+                }
             NappletBrowserContract.MSG_FORWARD -> tabFor(msg)?.webView?.let { if (it.canGoForward()) it.goForward() }
             NappletBrowserContract.MSG_STOP -> tabFor(msg)?.webView?.stopLoading()
             NappletBrowserContract.MSG_FIND -> {
@@ -341,48 +352,34 @@ class NappletBrowserService : Service() {
         return true
     }
 
-    // One reusable output bitmap per tab would be ideal, but loupe size is fixed per drag; createBitmap each
-    // frame is cheap next to the draw. Source rect is in view px (== surface px, the SCVH is 1:1).
+    // Source rect is in view px (== surface px, the SCVH is 1:1). See MagnifierCapture for the threading.
     private fun onMagnifierRequest(msg: Message) {
         val tab = tabFor(msg) ?: return
         val wv = tab.webView ?: return
         val data = msg.data ?: return
-        val cx = data.getFloat(NappletBrowserContract.KEY_MAG_X)
-        val cy = data.getFloat(NappletBrowserContract.KEY_MAG_Y)
-        val boxW = data.getInt(NappletBrowserContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024)
-        val boxH = data.getInt(NappletBrowserContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024)
-        val zoom = data.getFloat(NappletBrowserContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f)
         val reqT = data.getLong(NappletBrowserContract.KEY_MAG_REQ_T)
-
-        val outW = (boxW * zoom).toInt().coerceAtLeast(1)
-        val outH = (boxH * zoom).toInt().coerceAtLeast(1)
-        val t0 = SystemClock.elapsedRealtimeNanos()
-        val bitmap = createBitmap(outW, outH)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(tab.bgColor)
-        // Map the source rect (centered on cx,cy in view px) into the zoomed output bitmap.
-        canvas.scale(zoom, zoom)
-        canvas.translate(-(cx - boxW / 2f), -(cy - boxH / 2f))
-        wv.draw(canvas)
-
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        val bytes = baos.toByteArray()
-        bitmap.recycle()
-        val captureMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0
-
-        val reply =
-            Message.obtain(null, NappletBrowserContract.MSG_MAGNIFIER_FRAME).apply {
-                this.data =
-                    Bundle().apply {
-                        putByteArray(NappletBrowserContract.KEY_MAG_BYTES, bytes)
-                        putInt(NappletBrowserContract.KEY_MAG_W, outW)
-                        putInt(NappletBrowserContract.KEY_MAG_H, outH)
-                        putDouble(NappletBrowserContract.KEY_MAG_CAPTURE_MS, captureMs)
-                        putLong(NappletBrowserContract.KEY_MAG_REQ_T, reqT)
-                    }
-            }
-        runCatching { tab.clientMessenger?.send(reply) }
+        MagnifierCapture.capture(
+            webView = wv,
+            bgColor = tab.bgColor,
+            cx = data.getFloat(NappletBrowserContract.KEY_MAG_X),
+            cy = data.getFloat(NappletBrowserContract.KEY_MAG_Y),
+            boxW = data.getInt(NappletBrowserContract.KEY_MAG_BOX_W, 150).coerceIn(16, 1024),
+            boxH = data.getInt(NappletBrowserContract.KEY_MAG_BOX_H, 84).coerceIn(16, 1024),
+            zoom = data.getFloat(NappletBrowserContract.KEY_MAG_ZOOM, 1.6f).coerceIn(1f, 4f),
+        ) { bytes, outW, outH, captureMs ->
+            val reply =
+                Message.obtain(null, NappletBrowserContract.MSG_MAGNIFIER_FRAME).apply {
+                    this.data =
+                        Bundle().apply {
+                            putByteArray(NappletBrowserContract.KEY_MAG_BYTES, bytes)
+                            putInt(NappletBrowserContract.KEY_MAG_W, outW)
+                            putInt(NappletBrowserContract.KEY_MAG_H, outH)
+                            putDouble(NappletBrowserContract.KEY_MAG_CAPTURE_MS, captureMs)
+                            putLong(NappletBrowserContract.KEY_MAG_REQ_T, reqT)
+                        }
+                }
+            runCatching { tab.clientMessenger?.send(reply) }
+        }
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
@@ -410,6 +407,14 @@ class NappletBrowserService : Service() {
         // The session may have been closed between MSG_CREATE_SESSION and this posted call — fail rather
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
+        // A session re-opened on this tab (the client's view detached and re-attached) before the old one's
+        // close landed: that session's WebView is still here. Destroy it now — its close will be ignored
+        // (see onSessionClosed), and overwriting it would leak it.
+        tab.webView?.let { stale ->
+            (stale.parent as? ViewGroup)?.removeView(stale)
+            stale.destroy()
+            tab.webView = null
+        }
         tab.container = container
         val wv = buildTabWebView(context, tab)
         claimRoute(tab) { if (tab.webView === wv) wv.loadUrl(tab.url) }
@@ -455,6 +460,7 @@ class NappletBrowserService : Service() {
         BrowserWebTools.setTextZoom(wv, tab.textZoom)
         if (tab.desktopSite) BrowserWebTools.setDesktopMode(wv, true)
         tab.webView = wv
+        if (tab.paused) wv.onPause()
         return wv
     }
 
@@ -470,8 +476,15 @@ class NappletBrowserService : Service() {
     }
 
     /** A session closed: drop the tab and destroy its own WebView (never a sibling's). */
-    fun onSessionClosed(sessionId: String) {
-        val tab = tabs.remove(sessionId) ?: return
+    fun onSessionClosed(
+        sessionId: String,
+        container: FrameLayout,
+    ) {
+        // Only the session that currently owns the tab may close it. A late close from a session that was
+        // already replaced by a re-open would otherwise reap the live one — its WebView destroyed under a
+        // client that had just been told the session opened, leaving the surface black for good.
+        val tab = tabs[sessionId]?.takeIf { it.container === container } ?: return
+        tabs.remove(sessionId)
         WebViewProxyPolicy.release(tab)
         releasePage(tab, closing = true)
         tab.bridge.clear()

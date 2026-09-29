@@ -27,6 +27,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 
 /**
  * Process-level holder of **warm embedded sessions** — the persistent-surface-layer half of keep-warm.
@@ -167,6 +170,7 @@ object EmbeddedTabHost {
     fun takeKeyboardRestore(id: String): Boolean = keyboardUpOnLeave.remove(id)
 
     fun evict(id: String) {
+        parked.remove(id)
         val w = warm.firstOrNull { it.id == id } ?: return
         if (activeId == id) activeId = null
         keyboardUpOnLeave.remove(id)
@@ -194,6 +198,48 @@ object EmbeddedTabHost {
     /** A screen showing [id] entered composition. Pair with [release]. */
     fun hold(id: String) {
         holders[id] = (holders[id] ?: 0) + 1
+        parked.remove(id)
+    }
+
+    // Non-bar tabs whose screen left composition while their back-stack entry lives on — another screen
+    // was pushed on top (even the tab's own Site settings). They stay warm until that entry is destroyed.
+    private val parked = mutableSetOf<String>()
+
+    /**
+     * The last screen showing [id] left composition. A bottom-bar tab ([keepWarm]) stays warm. Any other tab
+     * goes once its back-stack entry ([entry]'s lifecycle) is destroyed — right away when it already is (the
+     * user left it), or later when merely covered by a pushed screen, so coming back doesn't restart the
+     * page.
+     */
+    fun releaseWhenGone(
+        id: String,
+        entry: Lifecycle,
+        keepWarm: () -> Boolean,
+    ) {
+        if (keepWarm()) return
+
+        fun gone() {
+            parked.remove(id)
+            // A screen may have come back to this tab meanwhile, or it may have joined the bottom bar.
+            if ((holders[id] ?: 0) == 0 && !keepWarm()) evict(id)
+        }
+        if (entry.currentState == Lifecycle.State.DESTROYED) {
+            gone()
+            return
+        }
+        parked.add(id)
+        entry.addObserver(
+            object : LifecycleEventObserver {
+                override fun onStateChanged(
+                    source: LifecycleOwner,
+                    event: Lifecycle.Event,
+                ) {
+                    if (event != Lifecycle.Event.ON_DESTROY) return
+                    entry.removeObserver(this)
+                    gone()
+                }
+            },
+        )
     }
 
     /** A screen showing [id] left composition. Returns true when no other screen still shows it. */
@@ -206,7 +252,7 @@ object EmbeddedTabHost {
     /** Drops every warm session whose id isn't in [keep] (bottom-row membership + the active tab). */
     fun retainOnly(keep: Set<String>) {
         warm
-            .filter { it.id !in keep }
+            .filter { it.id !in keep && it.id !in parked }
             .forEach { evict(it.id) }
     }
 

@@ -153,9 +153,7 @@ private fun EmbeddedNostrAppTab(
     val torOn = if (profile.exposesNetwork && params.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1) > 0) useTor else null
 
     val scope = rememberCoroutineScope()
-    var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
-    var textZoom by remember(coordinate) { mutableIntStateOf(BrowserChrome.DEFAULT_TEXT_ZOOM) }
 
     val apps by Amethyst.instance.favoriteApps.favorites
         .collectAsStateWithLifecycle()
@@ -165,6 +163,10 @@ private fun EmbeddedNostrAppTab(
         remember(id, EmbeddedTabHost.rebuildEpoch, networkEpoch) {
             EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
+    // Seeded from the controller, which outlives this screen (it leaves composition on every bottom-bar
+    // switch), so coming back keeps Back working inside the app and the pill showing the zoom in effect.
+    var canGoBack by remember(controller) { mutableStateOf(controller.lastCanGoBack) }
+    var textZoom by remember(controller) { mutableIntStateOf(controller.currentTextZoom) }
 
     // Keep the controller callbacks fresh (cheap, need the latest closures).
     SideEffect {
@@ -235,16 +237,19 @@ private fun EmbeddedNostrAppTab(
     SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
     val bottomBarFlow = accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
+    val entryLifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(id) {
         val token = EmbeddedTabHost.setActive(id)
         EmbeddedTabHost.hold(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfOwner(token)
             EmbeddedTabHost.clearActiveChrome(id)
-            // Only bottom-row apps stay warm; anything else restarts when it leaves — unless a re-navigation
-            // to this same tab already composed a new screen on the same session.
-            val lastHolder = EmbeddedTabHost.release(id)
-            if (lastHolder && id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
+            // Only bottom-row apps stay warm; anything else restarts once the user actually leaves it — not
+            // when a screen is merely pushed on top, and not when a re-navigation to this same tab already
+            // composed a new screen on the same session.
+            if (EmbeddedTabHost.release(id)) {
+                EmbeddedTabHost.releaseWhenGone(id, entryLifecycle) { id in bottomBarFlow.value.favoriteIds() }
+            }
         }
     }
 
