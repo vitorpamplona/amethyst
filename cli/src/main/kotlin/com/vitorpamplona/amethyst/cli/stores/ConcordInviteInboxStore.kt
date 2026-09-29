@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.stores
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.SecureFileIO
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
 import java.io.File
 
 /** amy's bookkeeping for Concord Direct Invites (CORD-05 §6): the wrap ids the user declined. */
@@ -50,6 +51,8 @@ class ConcordInviteInboxStore(
     fun decline(wrapId: String) {
         val current = load()
         if (wrapId in current.declined) return
-        SecureFileIO.writeTextAtomic(file, Output.mapper.writeValueAsString(current.copy(declined = current.declined + wrapId)))
+        // Bounded like the app's store: the newest declines are kept, a long-expired one is not worth a line.
+        val next = (current.declined + wrapId).takeLast(ConcordDirectInviteInbox.DECLINED_CAP)
+        SecureFileIO.writeTextAtomic(file, Output.mapper.writeValueAsString(current.copy(declined = next)))
     }
 }

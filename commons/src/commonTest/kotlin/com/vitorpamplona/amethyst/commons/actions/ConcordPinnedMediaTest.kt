@@ -65,6 +65,8 @@ class ConcordPinnedMediaTest {
             val rumors = mutableListOf<Event>()
             val session = ConcordCommunitySession(entry, owner.pubKey) { _, _, rumor, _ -> rumors += rumor }
             community.genesisWraps.forEach { session.ingest(it) }
+            // The genesis wraps are the whole plane; pin writes wait for a drained fold (CORD-04 §7).
+            session.markControlDrained()
             val general = community.generalChannelIdHex
             val plane = assertNotNull(session.currentChannelPlane(general))
 

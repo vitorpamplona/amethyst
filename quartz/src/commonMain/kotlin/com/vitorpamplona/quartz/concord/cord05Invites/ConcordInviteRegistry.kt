@@ -115,13 +115,18 @@ object ConcordInviteRegistry {
     /**
      * The link signers [creator]'s next registry edition lists (CORD-05 §5, "a Registry edit
      * accompanies every mint and every retire"): the registry they currently publish ([published],
-     * their honored head), plus every link their Invite List [list] still holds for [communityIdHex],
-     * plus [minted]; minus [retired], and minus every link the list records as tombstoned or past its
-     * `expires_at` at [nowSecs] — an elapsed link can no longer be joined, so it must stop keeping the
-     * community Public. A null [list] (unreadable) contributes nothing and prunes nothing.
+     * their honored head) and [minted], minus [retired].
      *
-     * The Invite List half heals a registry that fell behind: a link minted before any registry was
-     * published (or by a device whose registry edit never landed) is re-listed on the next edit.
+     * When the Invite List [list] is readable it is **authoritative**: the result is exactly the
+     * links it still holds live for [communityIdHex] (not tombstoned, not past `expires_at` at
+     * [nowSecs]) plus [minted]. A registry entry no live list entry backs is dropped — a retired
+     * link's list entry is gone after the tombstone merge (so it can no longer be marked dead by its
+     * token), and carrying the [published] entry forward would resurrect it and keep the community
+     * Public forever. Every link is recorded in the list before its URL is handed out, so nothing
+     * live is lost; and the list half heals a registry that fell behind (a link minted before any
+     * registry was published is re-listed on the next edit).
+     *
+     * A null [list] (unreadable) keeps [published] as is: it contributes nothing and prunes nothing.
      */
     fun nextLinks(
         published: Collection<HexKey>,
@@ -133,8 +138,9 @@ object ConcordInviteRegistry {
     ): List<HexKey> {
         val dead = retired.mapTo(HashSet()) { it.lowercase() }
         val live = LinkedHashSet<HexKey>()
-        published.forEach { live += it.lowercase() }
-        if (list != null) {
+        if (list == null) {
+            published.forEach { live += it.lowercase() }
+        } else {
             val tombstoned = list.tombstones.mapTo(HashSet()) { it.token }
             for (entry in list.entries) {
                 if (!entry.communityId.equals(communityIdHex, ignoreCase = true)) continue

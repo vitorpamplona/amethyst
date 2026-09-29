@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord03Channels.concordEpoch
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitations
@@ -67,6 +68,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
@@ -110,6 +112,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -124,7 +127,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
@@ -136,6 +141,9 @@ private const val CONCORD_ADMIN_ROLE = "Admin"
  * relay-fetch loop.
  */
 private const val RECOVERY_CHECK_INTERVAL_MS = 15 * 60 * 1000L
+
+/** How many times a Pin List write re-applies itself on top of a concurrent edition that won the fold. */
+private const val PIN_REHEAL_RETRIES = 2
 
 /**
  * How many recipients one Refounding will re-key. See `AccountConcordActions.boundRecipients`.
@@ -376,24 +384,30 @@ class AccountConcordActions(
         retired: List<HexKey> = emptyList(),
     ): Boolean {
         val session = account.concordSessions.sessionFor(entry.id) ?: return false
+        // Only from a drained fold: `published` is read off our honored head, and a partial fold
+        // would read "no registry" and chain a fresh v1 over the real one (dropped by every reader).
+        val state = session.foldForWrite() ?: return false
+        // A dissolved community has no future (CORD-02 §9): no registry edit can change anything.
+        if (state.dissolved) return false
         if (!isAuthorizedFor(session, ConcordPermissions.CREATE_INVITE)) return false
         val cp = controlKeysForWrite(session) ?: return false
         val me = account.signer.pubKey
-        val state = session.state.value
-        val published = state?.registryOf(me).orEmpty()
+        val published = state.registryOf(me)
         val next = ConcordInviteRegistry.nextLinks(published, list, entry.id, TimeUtils.now(), minted, retired)
-        val hasHead = state?.inviteRegistries?.containsKey(me.lowercase()) == true
+        val hasHead = state.inviteRegistries.containsKey(me.lowercase())
         if (next == published.sorted() && (hasHead || next.isEmpty())) return false
-        // The writer chains off the same authorized head the fold honors (ConcordModeration.headOf).
+        // The writer chains off the same authorized, floor-aware head the fold honors.
         val wrap =
             try {
-                ConcordModeration.setInviteRegistry(account.signer, cp, entry.id.hexToByteArray(), next, session.controlEditions(), TimeUtils.now(), owner = entry.owner)
+                ConcordModeration.setInviteRegistry(account.signer, cp, entry.id.hexToByteArray(), next, session.controlEditions(), TimeUtils.now(), owner = entry.owner, floors = session.controlFloors())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("Concord", "invite registry build failed for ${entry.id}", e)
                 return false
             }
-        publishConcordWrap(entry, wrap)
-        return true
+        // Confirmed: the registry is the community's Public/Private source of truth (CORD-05 §5).
+        return publishConcordWrapConfirmed(entry, wrap)
     }
 
     /**
@@ -813,15 +827,41 @@ class AccountConcordActions(
      * The Direct Invite inbox: wraps from the dedicated sweep ([refreshConcordDirectInvites]) and
      * from the NIP-17 giftwrap pipeline land here, parked until the user accepts or declines.
      */
-    val directInviteInbox = ConcordDirectInviteInbox(account.signer)
+    val directInviteInbox =
+        ConcordDirectInviteInbox(
+            account.signer,
+            // Muted/blocked senders never park; followed ones outrank strangers when the inbox is full.
+            isHidden = { account.isHidden(it) },
+            isFollowed = { it in account.followingKeySet() },
+        )
 
     /**
-     * The parked Direct Invites a UI should show, newest first: invites for communities we don't
-     * hold, plus catch-ups for ones we do ([ConcordDirectInviteInbox.visible]).
+     * The parked Direct Invites a UI should show, followed senders first, then newest: invites for
+     * communities we don't hold (nor left after they were sent), plus catch-ups for ones we do
+     * ([ConcordDirectInviteInbox.visible]).
      */
     val pendingConcordDirectInvites: StateFlow<List<ConcordDirectInviteView>> =
-        combine(directInviteInbox.pending, account.concordChannelList.liveCommunities) { pending, joined ->
-            ConcordDirectInviteInbox.visible(pending.values, joined)
+        combine(
+            directInviteInbox.pending,
+            account.concordChannelList.liveCommunities,
+            account.concordChannelList.removedAt,
+            account.hiddenUsers.flow,
+            // A fold landing can make a parked catch-up admissible or not (the sender's standing).
+            combine(account.kind3FollowList.flow, account.concordSessions.revision) { follows, _ -> follows },
+        ) { pending, joined, removedAt, _, follows ->
+            ConcordDirectInviteInbox.visible(
+                pending.values,
+                joined,
+                removedAt = removedAt,
+                isFollowed = { it in follows.authors },
+                isHidden = { account.isHidden(it) },
+                heldStateOf = { id ->
+                    account.concordSessions
+                        .sessionFor(id)
+                        ?.state
+                        ?.value
+                },
+            )
         }.stateIn(account.scope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
@@ -1146,7 +1186,8 @@ class AccountConcordActions(
                 .findEmojiTags(newText)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
+        // CORD-08 §2: the Edit keeps the ORIGINAL message's deadline (none if it has none), never now + timer.
+        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags, expiration = ConcordDisappearing.expirationOf(target))
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -1250,6 +1291,31 @@ class AccountConcordActions(
         account.concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) account.client.publish(wrap, relays)
+    }
+
+    /**
+     * [publishConcordWrap] for a Control Plane edition whose caller must know it landed: waits for a
+     * relay OK (`publish` only queues and never reports acceptance) and folds the wrap into the
+     * session only then, so a refused write never shows as done locally. False when no relay of the
+     * community accepted it.
+     */
+    private suspend fun publishConcordWrapConfirmed(
+        entry: ConcordCommunityListEntry,
+        wrap: Event,
+    ): Boolean {
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (relays.isEmpty()) return false
+        val landed =
+            try {
+                account.client.publishAndConfirm(wrap, relays)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("Concord", "Control edition publish failed for ${entry.id}", e)
+                false
+            }
+        if (landed) account.concordSessions.ingest(wrap)
+        return landed
     }
 
     /**
@@ -1751,6 +1817,11 @@ class AccountConcordActions(
     /**
      * Runs one pin write: re-reads the list inside the lock (the previous write was echoed into the
      * session, so this chains onto it), resolves the context, and publishes the edition [op] builds.
+     *
+     * The publish waits for a relay OK ([ConcordPinOutcome.NOT_CONFIRMED] otherwise). Then, like a
+     * ban, the write re-heals: a concurrent curator's edition at the same version may win the fold
+     * (CORD-04 §1), silently dropping this change, so when the refolded head is not ours the same
+     * [op] runs again on top of the winner — at most [PIN_REHEAL_RETRIES] times.
      */
     private suspend fun writeConcordPins(
         communityId: String,
@@ -1759,29 +1830,38 @@ class AccountConcordActions(
     ): ConcordPinOutcome =
         concordPinMutex.withLock {
             if (!account.isWriteable()) return@withLock ConcordPinOutcome.NOT_WRITEABLE
-            val session = account.concordSessions.sessionFor(communityId) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
-            val definition =
-                session.state.value
-                    ?.channels
-                    ?.get(channelIdHex)
-                    ?.definition ?: return@withLock ConcordPinOutcome.NOT_FOLDED
-            val pins = concordChannelPins(communityId, channelIdHex) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
-            val ctx =
-                ConcordPinContext(
-                    actor = account.signer,
-                    controlPlane = session.controlPlaneKeys(),
-                    communityId = communityId.hexToByteArray(),
-                    owner = session.entry.owner,
-                    current = session.controlEditions(),
-                    channelIdHex = channelIdHex,
-                    channelIsPrivate = definition.private,
-                    currentPlane = session.currentChannelPlane(channelIdHex),
-                    pins = pins,
-                    authorized = holdsConcordPinBit(session),
-                )
-            val write = op(session, ctx)
-            write.wrap?.let { publishConcordWrap(session.entry, it) }
-            write.outcome
+            repeat(1 + PIN_REHEAL_RETRIES) {
+                val session = account.concordSessions.sessionFor(communityId) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+                val definition =
+                    session.state.value
+                        ?.channels
+                        ?.get(channelIdHex)
+                        ?.definition ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+                val pins = concordChannelPins(communityId, channelIdHex) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+                val ctx =
+                    ConcordPinContext(
+                        actor = account.signer,
+                        controlPlane = session.controlPlaneKeys(),
+                        communityId = communityId.hexToByteArray(),
+                        owner = session.entry.owner,
+                        current = session.controlEditions(),
+                        channelIdHex = channelIdHex,
+                        channelIsPrivate = definition.private,
+                        currentPlane = session.currentChannelPlane(channelIdHex),
+                        pins = pins,
+                        authorized = holdsConcordPinBit(session),
+                    )
+                val write = op(session, ctx)
+                // A retry that finds the winner already says what we meant (ALREADY_PINNED, NOT_PINNED,
+                // NOTHING_TO_DO) ends here too.
+                val wrap = write.wrap ?: return@withLock write.outcome
+                if (!publishConcordWrapConfirmed(session.entry, wrap)) return@withLock ConcordPinOutcome.NOT_CONFIRMED
+                val ours = ConcordStreamEnvelope.openOrNull(wrap, ctx.controlPlane)?.let { ControlEdition.fromOpened(it) }?.rumorId
+                if (ours == null || session.pinHeads.value[channelIdHex]?.rumorId == ours) return@withLock ConcordPinOutcome.PUBLISHED
+                Log.i("Concord") { "Pin List edit in $communityId lost the fold to a concurrent edition; re-applying on the winner" }
+            }
+            // Landed every time but kept losing the tie-break: it is on the relays, just not the head.
+            ConcordPinOutcome.PUBLISHED
         }
 
     /** Pin Concord message [note] into its channel's Pin List, proving it with its original seal. */
@@ -2424,12 +2504,15 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_METADATA) ?: return false
         // Start from the folded metadata so a field this form doesn't edit — the CORD-08 timer, above
-        // all — is carried forward instead of reset (CORD-02 §6 round-trip).
-        val standing = session.state.value?.metadata ?: MetadataEntity()
+        // all — is carried forward instead of reset (CORD-02 §6 round-trip). Only from a drained fold:
+        // minting over a head we were never served would chain a fresh v1 (or a stale version) that
+        // wipes the name, relays and timer — the owner included, who may otherwise act before the fold.
+        val folded = session.foldForWrite() ?: return false
+        val standing = folded.metadata ?: MetadataEntity()
         val metadata = standing.copy(name = name, icon = icon, banner = banner, description = description, relays = relays)
         // CORD-02 §6 caps are fold gates too: an edition past them would be dropped by every reader.
         if (!ConcordLimits.metadataFits(metadata)) return false
-        val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner, floors = session.controlFloors())
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2449,9 +2532,11 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_METADATA) ?: return false
         val timer = secs?.takeIf { it >= 1 }
-        val standing = session.state.value?.metadata ?: MetadataEntity()
+        // Same rule as editConcordMetadata: never lay the timer over a head we were not served.
+        val folded = session.foldForWrite() ?: return false
+        val standing = folded.metadata ?: MetadataEntity()
         if (standing.messageExpirationSecs() == timer) return false
-        val wrap = ConcordModeration.setMessageExpiration(account.signer, cp, communityId.hexToByteArray(), standing, timer, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.setMessageExpiration(account.signer, cp, communityId.hexToByteArray(), standing, timer, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner, floors = session.controlFloors())
         publishConcordWrap(session.entry, wrap)
         postConcordTimerNotices(session, timer ?: 0)
         return true
@@ -2923,7 +3008,7 @@ class AccountConcordActions(
      *    never asked for again and stays invisible. This sweep uses **no `since`**: it re-fetches the
      *    whole plane every run.
      *  - **Per-filter cap:** a relay caps a REQ's result (~100/filter on relay.dreamith.to), which can
-     *    crop a busy Control Plane. This **pages past the cap** ([fetchAllPagesFromPool] walks `until`
+     *    crop a busy Control Plane. This **pages past the cap** ([fetchAllPages] walks `until`
      *    cursors until a plane is drained), so the fold sees every edition regardless of the cap.
      *
      * Current + every held-prior epoch's Control Plane is swept (the anti-rollback floor folds from the
@@ -2943,9 +3028,74 @@ class AccountConcordActions(
         if (authorsByRelay.isEmpty()) return
         // No `since`, no `limit` → fetchAllPages treats each filter as unbounded and pages until a
         // plane is fully drained (empty page), so the whole Control Plane lands regardless of the cap.
-        val byRelay = authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors.toList())) }
-        var drained = 0
-        account.client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
-        Log.d("Concord") { "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)" }
+        // Paged per relay (8 at a time) rather than through the pool helper, because the drained flag
+        // below needs each relay's ending: only DRAINED proves the relay had nothing more.
+        val gate = Semaphore(8)
+        val perRelay =
+            coroutineScope {
+                authorsByRelay
+                    .map { (relay, authors) ->
+                        async {
+                            gate.withPermit {
+                                val wraps = ArrayList<Event>()
+                                val end =
+                                    try {
+                                        account.client.fetchAllPages(relay, listOf(ConcordActions.planeFilterFor(authors.toList()))) { wraps.add(it) }.end
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        Log.w("Concord", "Control Plane sweep failed on $relay", e)
+                                        null
+                                    }
+                                Triple(authors, end == PagedFetchResult.End.DRAINED, wraps)
+                            }
+                        }
+                    }.awaitAll()
+            }
+        // Fold the swept wraps in before flagging anything drained: the global cache connector also
+        // ingests them, but asynchronously, and the flag must never run ahead of the fold (the session
+        // dedups by wrap id, so the second delivery is a no-op).
+        var swept = 0
+        for ((_, _, wraps) in perRelay) {
+            for (wrap in wraps) {
+                account.concordSessions.ingest(wrap)
+                swept++
+            }
+        }
+        val drainedAddresses = perRelay.filter { it.second }.flatMapTo(HashSet()) { it.first }
+        // One relay drained whole is enough for everyday writes (a dead relay must not freeze pins and
+        // metadata forever); the Refounding compaction keeps its own majority rule.
+        for (entry in entries) {
+            val session = account.concordSessions.sessionFor(entry.id) ?: continue
+            if (session.controlPlaneAddress in drainedAddresses) session.markControlDrained()
+        }
+        Log.d("Concord") { "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), swept $swept control wrap(s), ${drainedAddresses.size} plane(s) drained" }
+        pruneExpiredConcordRegistries(entries)
+    }
+
+    // Communities (at an epoch) whose registry was already checked for elapsed links this process.
+    private val registryPruneChecked = ConcurrentSet<String>()
+
+    /**
+     * CORD-05 §5: once a community's Control Plane has drained, republish this account's Invite
+     * Registry there pruned when it still lists a link the Invite List says has expired (or no longer
+     * holds). Otherwise an elapsed link — which nothing else ever retires — keeps the community Public
+     * forever, and a Private ban would never Refound. Once per community and epoch per process; the
+     * Invite List is read only when some drained community actually has a registry of ours.
+     */
+    private suspend fun pruneExpiredConcordRegistries(entries: List<ConcordCommunityListEntry>) {
+        if (!account.isWriteable()) return
+        val me = account.signer.pubKey
+        val due =
+            entries.filter { entry ->
+                val state = account.concordSessions.sessionFor(entry.id)?.foldForWrite() ?: return@filter false
+                !state.dissolved && state.registryOf(me).isNotEmpty() && registryPruneChecked.add("${entry.id}@${entry.rootEpoch}")
+            }
+        if (due.isEmpty()) return
+        val list = readConcordInviteList() ?: return
+        for (entry in due) {
+            // Publishes only when the pruned list differs from the honored one.
+            if (publishConcordInviteRegistry(entry, list)) Log.i("Concord") { "Pruned elapsed invite links from this account's registry in ${entry.id}" }
+        }
     }
 }

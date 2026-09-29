@@ -79,7 +79,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPendingDirectInvites
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.RefreshConcordDirectInvites
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.concordPendingDirectInvites
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -118,6 +119,11 @@ fun ConcordHomeScreen(
     // login. Pull it from those relays when the hub opens — scoped here so we only reach
     // the stock relays for users who actually use Concord.
     LaunchedEffect(Unit) { accountViewModel.importConcordCommunities() }
+
+    // Direct Invites (CORD-05 §6): one inbox sweep per visit, kept out of the lazy list so it does
+    // not re-run each time the invites scroll back into view.
+    RefreshConcordDirectInvites(accountViewModel)
+    val invites by account.concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
 
     // Per-community expansion, cycled on tap: absent = CLOSED → UNREAD (peek only the channels with
     // new messages) → OPEN (all channels) → CLOSED. Multi-open, so several can be expanded at once.
@@ -160,16 +166,18 @@ fun ConcordHomeScreen(
     ) { padding ->
         if (communities.isEmpty()) {
             // Direct Invites (CORD-05 §6) are how a first community usually arrives, so they show
-            // above the empty state rather than being hidden by it.
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                ConcordPendingDirectInvites(accountViewModel, nav)
-                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringRes(Res.string.concord_home_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 32.dp),
-                    )
+            // above the empty state rather than being hidden by it — in a lazy list, so many scroll.
+            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+                concordPendingDirectInvites(invites, accountViewModel, nav)
+                item(key = "concord-home-empty") {
+                    Box(Modifier.fillParentMaxWidth().fillParentMaxHeight(if (invites.isEmpty()) 1f else 0.5f), contentAlignment = Alignment.Center) {
+                        Text(
+                            stringRes(Res.string.concord_home_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                        )
+                    }
                 }
             }
             return@Scaffold
@@ -194,7 +202,7 @@ fun ConcordHomeScreen(
 
         LazyColumn(Modifier.fillMaxSize().padding(padding)) {
             // Pending Direct Invites (CORD-05 §6), parked until the user accepts or declines.
-            item(key = "concord-direct-invites") { ConcordPendingDirectInvites(accountViewModel, nav) }
+            concordPendingDirectInvites(invites, accountViewModel, nav)
 
             sorted.forEach { entry ->
                 val state =

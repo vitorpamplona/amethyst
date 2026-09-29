@@ -76,9 +76,10 @@ class ConcordPinningTest {
         val community: NewConcordCommunity,
         entry: ConcordCommunityListEntry,
         me: HexKey,
+        drained: Boolean = true,
     ) {
         val rumors = mutableListOf<Event>()
-        val session = ConcordCommunitySession(entry, me) { _, _, rumor, _ -> rumors += rumor }
+        val session = ConcordCommunitySession(entry, me) { _, _, rumor, _ -> rumors += rumor }.also { if (drained) it.markControlDrained() }
 
         fun pins(channelIdHex: HexKey) = ConcordPinEvidence(rumors).let { evidence -> assertNotNull(session.readPins(channelIdHex, evidence::isKilled, evidence::newestEdit)) }
 
@@ -138,6 +139,60 @@ class ConcordPinningTest {
         }
         return h
     }
+
+    @Test
+    fun noPinWriteIsBuiltBeforeTheControlPlaneHasDrained() =
+        runTest {
+            val h = harness()
+            val general = h.community.generalChannelIdHex
+            val message = h.post(alice, general, "ship it", 10L)
+            assertEquals(ConcordPinOutcome.PUBLISHED, h.pin(owner, general, message, 11L).outcome)
+
+            // A second device that has folded only part of the plane: here the genesis without the pin.
+            val partial = Harness(h.community, entryFor(h.community), owner.pubKey, drained = false)
+            h.community.genesisWraps.forEach { partial.session.ingest(it) }
+            val read = partial.pins(general)
+            assertFalse(read.complete, "no head yet reads as not-yet-served, not as an empty list")
+            assertNull(read.head)
+
+            // A replace-entire write from that read would erase the pin it never saw (§7).
+            val refused = ConcordPinning.unpin(partial.ctx(owner, general), message.id, 12L)
+            assertEquals(ConcordPinOutcome.NOT_FOLDED, refused.outcome)
+            assertNull(refused.wrap)
+
+            // Once the plane is drained (the pin landed), writes proceed from the full list.
+            h.session.controlPlaneWraps().forEach { partial.session.ingest(it) }
+            partial.session.markControlDrained()
+            assertTrue(partial.pins(general).complete)
+            assertEquals(ConcordPinOutcome.PUBLISHED, ConcordPinning.unpin(partial.ctx(owner, general), message.id, 12L).outcome)
+        }
+
+    @Test
+    fun aPinThatLosesAConcurrentTieReappliesOnTopOfTheWinner() =
+        runTest {
+            val h = harness()
+            val general = h.community.generalChannelIdHex
+            val one = h.post(alice, general, "one", 10L)
+            val two = h.post(alice, general, "two", 11L)
+
+            // Two curators read the same (empty) head and each write v1 at once.
+            val ctx = h.ctx(owner, general)
+            val a = ConcordPinning.pin(ctx, h.session.pinSource(general, one.id)!!, 12L)
+            val b = ConcordPinning.pin(ctx, h.session.pinSource(general, two.id)!!, 12L)
+            h.session.ingest(a.wrap!!)
+            h.session.ingest(b.wrap!!)
+            val folded = h.pins(general)
+            assertTrue(folded.isPinned(one.id) xor folded.isPinned(two.id), "one edition wins the tie, the other's pin is gone")
+            val loser = if (folded.isPinned(one.id)) two else one
+
+            // The re-heal: the loser runs its write again on the refolded head, chaining onto the winner.
+            val heal = ConcordPinning.pin(h.ctx(owner, general), h.session.pinSource(general, loser.id)!!, 13L)
+            assertEquals(ConcordPinOutcome.PUBLISHED, heal.outcome)
+            h.session.ingest(heal.wrap!!)
+            val healed = h.pins(general)
+            assertTrue(healed.isPinned(one.id) && healed.isPinned(two.id))
+            assertEquals(2L, healed.head!!.version)
+        }
 
     @Test
     fun aPinRoundTripsThroughTheControlPlaneAndUnpinRemovesIt() =

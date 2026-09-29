@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -114,7 +115,6 @@ class ConcordDisappearingSessionTest {
                     ConcordActions.buildChannelInlineReply(owner, plane.key, general, plane.epoch, parent, "quote", at, timerSecs = timer),
                     ConcordActions.buildChannelReply(owner, plane.key, general, plane.epoch, parent, "thread", at, timerSecs = timer),
                     ConcordActions.buildChannelImageReply(owner, plane.key, general, plane.epoch, parent, "thread pic", imeta, at, timerSecs = timer),
-                    ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, parent, "edited", at, timerSecs = timer),
                     ConcordActions.buildChannelReaction(owner, plane.key, general, plane.epoch, parent, "+", at, timerSecs = timer),
                 )
             for (wrap in durable) {
@@ -140,6 +140,32 @@ class ConcordDisappearingSessionTest {
             val off = ConcordActions.buildChannelMessage(owner, plane.key, general, plane.epoch, "forever", at, timerSecs = null)
             assertNull(ConcordDisappearing.expirationOf(opened(off, plane.key)))
             assertEquals(listOf("p"), off.tags.map { it[0] })
+        }
+
+    @Test
+    fun anEditKeepsTheOriginalMessagesDeadlineNotNowPlusTimer() =
+        runTest {
+            val (community, session) = session(day)
+            val general = community.generalChannelIdHex
+            val plane = session.currentChannelPlane(general)!!
+            val sentAt = 1_000_000L
+            val original = ChannelChat.message(owner.pubKey, general, plane.epoch, "hi", sentAt, ConcordDisappearing.withExpiration(emptyArray(), sentAt + 7 * day))
+            val editedAt = sentAt + 3 * day
+
+            // Default: the target's own deadline, verbatim, inside and outside.
+            val edit = ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, original, "hi!", editedAt)
+            assertEquals(sentAt + 7 * day, ConcordDisappearing.expirationOf(opened(edit, plane.key)))
+            assertEquals((sentAt + 7 * day).toString(), wrapExpiration(edit))
+
+            // A message sent without a timer stays timer-free when edited, even though a timer is on now.
+            val forever = ChannelChat.message(owner.pubKey, general, plane.epoch, "forever", sentAt)
+            val editForever = ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, forever, "still forever", editedAt)
+            assertNull(ConcordDisappearing.expirationOf(opened(editForever, plane.key)))
+            assertNull(wrapExpiration(editForever))
+
+            // A smuggled expiration in extraTags never overrides the original's.
+            val smuggled = ConcordActions.buildChannelEdit(owner, plane.key, general, plane.epoch, forever, "x", editedAt, arrayOf(arrayOf("expiration", "5")))
+            assertNull(ConcordDisappearing.expirationOf(opened(smuggled, plane.key)))
         }
 
     @Test
@@ -193,6 +219,79 @@ class ConcordDisappearingSessionTest {
             assertFalse(session.isBuffered(general, live.id))
             assertTrue(session.isBuffered(general, forever.id))
             assertNull(session.nextExpiry.value)
+        }
+
+    @Test
+    fun theSweepPopsOnlyWhatIsDueInDeadlineOrderAndCarriesAttachmentUrls() =
+        runTest {
+            val (community, session) = session(day)
+            val general = community.generalChannelIdHex
+            val plane = session.currentChannelPlane(general)!!
+            val now = TimeUtils.now()
+            val image = listOf(ChannelChat.encryptedImageImeta("https://blossom.example/blob", "image/png", null, null, AESGCM(), null))
+            val late = ConcordActions.buildChannelMessage(owner, plane.key, general, plane.epoch, "late", now, timerSecs = 3 * day)
+            val soon = ConcordActions.buildChannelImageMessage(owner, plane.key, general, plane.epoch, "soon", image, now, timerSecs = day)
+            val mid = ConcordActions.buildChannelMessage(owner, plane.key, general, plane.epoch, "mid", now, timerSecs = 2 * day)
+            listOf(late, soon, mid).forEach { session.ingest(it) }
+            assertEquals(now + day, session.nextExpiry.value, "the head of the deadline order")
+
+            val first = session.sweepExpired(now + 2 * day)
+            assertEquals(listOf(soon.id, mid.id), first.map { it.wrapId }, "due ones only, soonest first")
+            // CORD-08 §3: the image's decryption key must go with the message.
+            assertEquals(listOf("https://blossom.example/blob"), first.first().attachmentUrls)
+            assertEquals(now + 3 * day, session.nextExpiry.value)
+            assertEquals(listOf(late.id), session.sweepExpired(now + 3 * day).map { it.wrapId })
+            assertNull(session.nextExpiry.value)
+        }
+
+    @Test
+    fun aSweptWrapDeliveredAgainIsNotOpenedAgain() =
+        runTest {
+            val captured = mutableListOf<Event>()
+            val (community, session) = session(day, captured)
+            val general = community.generalChannelIdHex
+            val plane = session.currentChannelPlane(general)!!
+            val stale = ConcordActions.buildChannelMessage(owner, plane.key, general, plane.epoch, "stale", TimeUtils.now() - 2 * day, timerSecs = day)
+            session.ingest(stale)
+            assertEquals(listOf(stale.id), session.sweepExpired().map { it.wrapId })
+
+            // A relay serving it again: claimed, dropped unopened — no new deadline, no re-sweep loop.
+            assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, session.ingest(stale))
+            assertNull(session.nextExpiry.value)
+            assertFalse(session.isBuffered(general, stale.id))
+            assertTrue(captured.none { it.content == "stale" })
+        }
+
+    @Test
+    fun aRefoundingCarriesTheTrackedDeadlinesIntoTheNewSession() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val registry = ConcordSessionRegistry()
+            val entry = entryFor(community)
+            registry.sync(listOf(entry), owner.pubKey)
+            val old = registry.sessionFor(community.communityIdHex)!!
+            community.genesisWraps.forEach { old.ingest(it) }
+            val plane = old.currentChannelPlane(community.generalChannelIdHex)!!
+            val now = TimeUtils.now()
+            val live = ConcordActions.buildChannelMessage(owner, plane.key, community.generalChannelIdHex, plane.epoch, "bye", now, timerSecs = day)
+            old.ingest(live)
+
+            // The root rolls: the registry rebuilds the session, which never sees the old wrap again.
+            val rolled =
+                ConcordCommunityListEntry(
+                    id = entry.id,
+                    owner = entry.owner,
+                    ownerSalt = entry.ownerSalt,
+                    root = KeyPair().pubKey.toHexKey(),
+                    rootEpoch = entry.rootEpoch + 1,
+                    relays = entry.relays,
+                    name = entry.name,
+                )
+            registry.sync(listOf(rolled), owner.pubKey)
+            val fresh = registry.sessionFor(community.communityIdHex)!!
+            assertTrue(fresh !== old)
+            assertEquals(now + day, fresh.nextExpiry.value)
+            assertEquals(listOf(live.id), fresh.sweepExpired(now + day).map { it.wrapId })
         }
 
     @Test

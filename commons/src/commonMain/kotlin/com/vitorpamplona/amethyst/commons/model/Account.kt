@@ -383,6 +383,9 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
+/** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
+private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
+
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
@@ -765,6 +768,8 @@ class Account(
         val expired = concordSessions.sweepExpired(now)
         for (rumors in expired.values) {
             for (gone in rumors) {
+                // Its attachments' decryption keys go with it: a cached key would keep the blob readable.
+                gone.attachmentUrls.forEach { encryptionKeyCache.remove(it) }
                 cache.getNoteIfExists(gone.rumorId)?.let { note ->
                     note.detachFromChildren()
                     cache.pruner.unlinkAndRemove(note)
@@ -4225,7 +4230,9 @@ class Account(
         scope.launch(Dispatchers.IO) {
             concordSessions.nextExpiry.collectLatest { at ->
                 if (at == null) return@collectLatest
-                val waitMs = (at - TimeUtils.now()) * 1000
+                // Coalesced: sleep a little past the deadline and sweep everything due by then, so a
+                // burst of messages sent seconds apart expires in one pass instead of one sweep each.
+                val waitMs = (at - TimeUtils.now()) * 1000 + CONCORD_EXPIRY_COALESCE_MS
                 if (waitMs > 0) delay(waitMs)
                 runCatching { sweepExpiredConcordMessages() }.onFailure { Log.w("Concord", "expired-message sweep failed", it) }
             }

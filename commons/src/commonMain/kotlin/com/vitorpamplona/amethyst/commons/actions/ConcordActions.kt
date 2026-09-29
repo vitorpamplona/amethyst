@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
-import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
@@ -507,6 +506,11 @@ object ConcordActions {
      * Builds an encrypted-seal **edit** wrap (kind-3302 [ChannelChat.edit] of [target]) on the
      * [channel] plane. [newText] replaces [target]'s content on receivers that apply the edit overlay;
      * only the original author's edits take effect, so restrict callers to their own messages.
+     *
+     * The Edit carries [expiration] verbatim — by default [target]'s own NIP-40 deadline, and none
+     * when [target] has none — never `now + timer`: an Edit stamped with a fresh deadline would
+     * outlive (or cut short) the message it revises, so the revised words could survive the message
+     * the timer already erased (CORD-08 §2; the reference client keeps `expirationOf(original)`).
      */
     suspend fun buildChannelEdit(
         authorSigner: NostrSigner,
@@ -517,9 +521,10 @@ object ConcordActions {
         newText: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
-        timerSecs: Long? = null,
+        expiration: Long? = ConcordDisappearing.expirationOf(target),
     ): Event {
-        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, withTimer(extraTags, ConcordChatEditEvent.KIND, createdAt, timerSecs))
+        val tags = ConcordDisappearing.withExpiration(extraTags.filterNot { it.isNotEmpty() && it[0] == "expiration" }.toTypedArray(), expiration)
+        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, tags)
         return wrapChat(rumor, channel, authorSigner)
     }
 
