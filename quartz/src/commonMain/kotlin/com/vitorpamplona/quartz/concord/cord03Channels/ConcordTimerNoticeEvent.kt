@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.concord.cord03Channels
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 
 /**
  * A Concord **timer notice** (CORD-08 §4, `kind:1740`): the inline "Alice set disappearing messages
@@ -40,7 +41,10 @@ class ConcordTimerNoticeEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    // Its tags are the channel binding, which no Concord channel message links, and the timer
+    // value: nothing to link.
+    LinkFree {
     /** The announced timer in seconds (`0` = off), or null when the tag is missing or malformed. */
     fun timerSecs(): Long? = ConcordDisappearing.noticeTimerSecs(this)
 
