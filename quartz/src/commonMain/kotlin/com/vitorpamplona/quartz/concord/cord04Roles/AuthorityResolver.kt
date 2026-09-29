@@ -84,6 +84,9 @@ data class AuthorityResolver private constructor(
 
     fun isOwner(pubKey: String): Boolean = pubKey.lowercase() == ownerLower
 
+    /** The owner's pubkey (lowercase hex), proven by the `community_id` rather than any fold. */
+    fun owner(): String = ownerLower
+
     fun isBanned(pubKey: String): Boolean = pubKey.lowercase() in banned
 
     /** The role ids a member currently holds (empty for the owner and for plain members). */

@@ -67,6 +67,9 @@ data class ConcordCommunityState(
      */
     val inviteRegistries: Map<HexKey, List<HexKey>> = emptyMap(),
 ) {
+    /** The ids of the live (non-deleted) Private Channels (CORD-03), lowercase hex. */
+    val privateChannelIds: Set<HexKey> by lazy { channels.filterValues { it.definition.private }.keys.mapTo(HashSet()) { it.lowercase() } }
+
     /** The aggregate active-set of live public links: every honored registry's link signers (CORD-05 §5). */
     val liveInviteLinks: Set<HexKey> by lazy { inviteRegistries.values.flatMapTo(HashSet()) { it } }
 
