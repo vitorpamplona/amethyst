@@ -127,7 +127,7 @@ fun ActiveSubscriptionsScreen(
     nav: INav,
     viewModel: ActiveSubscriptionsViewModel = viewModel(),
 ) {
-    LaunchedEffect(Unit) { viewModel.startPolling() }
+    LaunchedEffect(Unit) { viewModel.startPolling(accountViewModel.account.client) }
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(

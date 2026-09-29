@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -73,7 +71,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -119,6 +116,8 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_scan_connect
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_status_no_relays
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_turn_on
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -142,7 +141,8 @@ fun Nip46SignerScreen(
     val account = accountViewModel.account
     val signer = account.nip46Signer
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
     val clipboard = LocalClipboard.current
     val copiedStr = stringRes(Res.string.nip46_signer_copied)
     val regeneratedStr = stringRes(Res.string.nip46_signer_regenerated)
@@ -175,7 +175,7 @@ fun Nip46SignerScreen(
     fun onConnect(uri: String) {
         scope.launch {
             val result = signer.connectViaNostrConnect(uri.trim())
-            Toast.makeText(context, describe(context, result), Toast.LENGTH_LONG).show()
+            longNotice.show(describe(result))
             refreshKey++
         }
     }
@@ -231,7 +231,7 @@ fun Nip46SignerScreen(
                         uri = uri,
                         onCopy = {
                             scope.launch { clipboard.setText(uri) }
-                            Toast.makeText(context, copiedStr, Toast.LENGTH_SHORT).show()
+                            shortNotice.show(copiedStr)
                         },
                         onRegenerate = { confirmRotate = true },
                     )
@@ -273,7 +273,7 @@ fun Nip46SignerScreen(
             onConfirm = {
                 confirmRotate = false
                 signer.rotateAddress()
-                Toast.makeText(context, regeneratedStr, Toast.LENGTH_SHORT).show()
+                shortNotice.show(regeneratedStr)
             },
             onDismiss = { confirmRotate = false },
         )
@@ -625,10 +625,7 @@ private fun ReadOnlyNotice() {
     }
 }
 
-private suspend fun describe(
-    context: Context,
-    result: Nip46SignerState.ConnectResult,
-): String =
+private suspend fun describe(result: Nip46SignerState.ConnectResult): String =
     when (result) {
         is Nip46SignerState.ConnectResult.Connected ->
             result.name?.let { loadStringRes(Res.string.nip46_signer_connected_named, it) }
