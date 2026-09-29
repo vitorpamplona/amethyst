@@ -1,0 +1,319 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinnedMessage
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.concord_pinned_budget
+import com.vitorpamplona.amethyst.commons.resources.concord_pinned_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_pinned_open_hint
+import com.vitorpamplona.amethyst.commons.resources.concord_pinned_title
+import com.vitorpamplona.amethyst.commons.resources.concord_pinned_unavailable
+import com.vitorpamplona.amethyst.commons.resources.message_edited
+import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
+import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
+import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
+
+/**
+ * [channelId]'s verified pins (CORD-04 §7), re-read whenever the Control Plane seats a new Pin List
+ * head, the fold changes, or a delete / Edit lands in the cache (a held delete hides its entry at
+ * once; a held newer Edit marks it edited). Null until the community has folded the channel.
+ */
+@Composable
+fun rememberConcordChannelPins(
+    communityId: String,
+    channelId: String,
+    accountViewModel: AccountViewModel,
+): State<ConcordChannelPins?> {
+    val account = accountViewModel.account
+    return produceState<ConcordChannelPins?>(null, account, communityId, channelId) {
+        val session = account.concordSessions.sessionFor(communityId) ?: return@produceState
+        val evidence =
+            account.cache.live.newEventBundles.filter { notes ->
+                notes.any { it.event is DeletionRequestEvent || it.event is ConcordChatEditEvent }
+            }
+        merge(session.pinHeads.map { }, session.state.map { }, evidence.map { }).collect {
+            value = withContext(Dispatchers.Default) { account.concord.concordChannelPins(communityId, channelId) }
+        }
+    }
+}
+
+/**
+ * The deletion omission and the Edit refresh a PIN_MESSAGES holder owes keyless readers (§7), run
+ * the way the spec asks: after a short random wait, re-read, and publish only if still owed — so
+ * simultaneous curators collapse to one publisher and a burst of edits costs one write. One attempt
+ * per distinct debt, so a failure never spins.
+ */
+@Composable
+fun ConcordPinDuties(
+    communityId: String,
+    channelId: String,
+    pins: ConcordChannelPins?,
+    accountViewModel: AccountViewModel,
+) {
+    val debt =
+        remember(pins) {
+            pins
+                ?.takeIf { it.owesRepublish }
+                ?.let { p -> (p.killed.map { "d" + it.rumorId } + p.pins.mapNotNull { it.newerEdit?.let { e -> "e" + e.rumorId } }).sorted().joinToString("|") }
+        } ?: return
+    val attempted = remember(communityId, channelId) { HashSet<String>() }
+    LaunchedEffect(communityId, channelId, debt) {
+        if (debt in attempted || !accountViewModel.account.concord.canPinConcord(communityId)) return@LaunchedEffect
+        delay(ConcordPinning.dutyDelayMs())
+        attempted.add(debt)
+        accountViewModel.launchSigner { accountViewModel.account.concord.settleConcordPins(communityId, channelId) }
+    }
+}
+
+/** The channel header's pinned-messages entry point: a pin with a count badge. Hidden when there is nothing to show. */
+@Composable
+fun ConcordPinnedButton(
+    pins: ConcordChannelPins?,
+    onClick: () -> Unit,
+) {
+    if (pins == null || (pins.count == 0 && !pins.sealedUnavailable)) return
+    IconButton(onClick = onClick) {
+        BadgedBox(
+            badge = {
+                if (pins.count > 0) Badge { Text(pins.count.toString()) }
+            },
+        ) {
+            Icon(symbol = MaterialSymbols.PushPin, contentDescription = stringRes(Res.string.relay_group_pinned_content_description))
+        }
+    }
+}
+
+/**
+ * The pinned-messages sheet: each verified pin with its author, time and words (marked edited when
+ * revised), an "unavailable" notice when the list is sealed under a key this account never held,
+ * a jump to the message when it resolves locally, and Unpin for those who may write pins.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConcordPinnedMessagesSheet(
+    communityId: String,
+    channelId: String,
+    pins: ConcordChannelPins,
+    accountViewModel: AccountViewModel,
+    onJumpToMessage: (HexKey) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val canPin = remember(pins) { accountViewModel.account.concord.canPinConcord(communityId) }
+    val session = remember(communityId) { accountViewModel.account.concordSessions.sessionFor(communityId) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            Text(
+                text = stringRes(Res.string.concord_pinned_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            if (canPin && !pins.sealedUnavailable) {
+                // Bytes, not the count, are the real ceiling for a sealed list (§7 Limits): surface both.
+                val bytes =
+                    remember(pins) {
+                        pins.head
+                            ?.content
+                            ?.encodeToByteArray()
+                            ?.size ?: 0
+                    }
+                Text(
+                    text = stringRes(Res.string.concord_pinned_budget, pins.count, ConcordPins.MAX_ENTRIES, bytes * 100 / ConcordPins.MAX_CONTENT_BYTES),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            if (pins.count > 0) {
+                Text(
+                    text = stringRes(Res.string.concord_pinned_open_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+
+            if (pins.sealedUnavailable) {
+                PinNotice(Res.string.concord_pinned_unavailable, MaterialSymbols.Lock)
+            } else if (pins.count == 0) {
+                PinNotice(Res.string.concord_pinned_empty, MaterialSymbols.PushPin)
+            }
+
+            LazyColumn {
+                items(pins.pins, key = { it.rumorId }) { pinned ->
+                    val jumpable = remember(pinned.rumorId, session) { session?.holdsRumor(pinned.rumorId) == true }
+                    PinnedRow(
+                        pinned = pinned,
+                        accountViewModel = accountViewModel,
+                        onClick =
+                            if (jumpable) {
+                                {
+                                    onJumpToMessage(pinned.rumorId)
+                                    onDismiss()
+                                }
+                            } else {
+                                null
+                            },
+                        onUnpin = if (canPin) ({ accountViewModel.unpinConcordRumor(communityId, channelId, pinned.rumorId) }) else null,
+                    )
+                    HorizontalDivider()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PinNotice(
+    text: StringResource,
+    symbol: MaterialSymbol,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(symbol = symbol, contentDescription = null, tint = MaterialTheme.colorScheme.placeholderText, modifier = Modifier.size(20.dp))
+        Text(text = stringRes(text), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.placeholderText)
+    }
+}
+
+@Composable
+private fun PinnedRow(
+    pinned: ConcordPinnedMessage,
+    accountViewModel: AccountViewModel,
+    onClick: (() -> Unit)?,
+    onUnpin: (() -> Unit)?,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = rememberPinAuthorName(pinned.author, accountViewModel),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(
+                    text = timeAgoNoDot(pinned.pin.createdAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+                if (pinned.edited) {
+                    // §7: a revised message is never shown as if its words were the original, current ones.
+                    Text(
+                        text = stringRes(Res.string.message_edited),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
+            }
+            Text(
+                text = pinned.content,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 6,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (onUnpin != null) {
+            IconButton(onClick = onUnpin) {
+                Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.relay_group_unpin_message), modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+/** [hex]'s best display name, reactively, falling back to a short hex. */
+@Composable
+private fun rememberPinAuthorName(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+): String {
+    val user = remember(hex) { LocalCache.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
+    val info by observeUserInfo(user, accountViewModel)
+    return info?.info?.bestName() ?: remember(user) { user.pubkeyDisplayHex() }
+}

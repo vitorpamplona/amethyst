@@ -56,7 +56,9 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.ConcordRevokeResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -67,9 +69,12 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_unreada
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_confirm
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_privatize_warning
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoke_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_ok
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_privatize_pending
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_privatized
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -77,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -124,6 +130,12 @@ fun ConcordInviteLinksScreen(
     var reloads by remember(communityId) { mutableIntStateOf(0) }
     var confirming by remember { mutableStateOf<ConcordInviteListEntry?>(null) }
     var revoking by remember { mutableStateOf(false) }
+
+    // The folded Control Plane, for the Public/Private mode (CORD-05 §5): revoking the community's
+    // last live link flips it Private, which is a Refounding, so the dialog says so before it happens.
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
+    val communityState by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
     LaunchedEffect(communityId, reloads) {
         state = LinksState.Loading
@@ -185,10 +197,22 @@ fun ConcordInviteLinksScreen(
     }
 
     confirming?.let { link ->
+        val privatizes =
+            remember(link, communityState) {
+                val signer = runCatching { link.signerPubKeyHex() }.getOrNull()
+                signer != null && communityState?.retiringWouldPrivatize(listOf(signer)) == true
+            }
         AlertDialog(
             onDismissRequest = { if (!revoking) confirming = null },
             title = { Text(stringRes(Res.string.concord_invite_revoke_title)) },
-            text = { Text(stringRes(Res.string.concord_invite_revoke_explainer)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringRes(Res.string.concord_invite_revoke_explainer))
+                    if (privatizes) {
+                        Text(stringRes(Res.string.concord_invite_revoke_privatize_warning), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(
                     enabled = !revoking,
@@ -196,10 +220,15 @@ fun ConcordInviteLinksScreen(
                         revoking = true
                         scope.launch {
                             try {
-                                val ok = account.concord.revokeConcordInvite(communityId, link.token)
+                                val result = account.concord.revokeConcordInvite(communityId, link.token)
                                 accountViewModel.toastManager.toast(
                                     Res.string.concord_invite_links_title,
-                                    if (ok) Res.string.concord_invite_revoked_ok else Res.string.concord_invite_revoked_failed,
+                                    when (result) {
+                                        ConcordRevokeResult.FAILED -> Res.string.concord_invite_revoked_failed
+                                        ConcordRevokeResult.REVOKED -> Res.string.concord_invite_revoked_ok
+                                        ConcordRevokeResult.PRIVATIZED -> Res.string.concord_invite_revoked_privatized
+                                        ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING -> Res.string.concord_invite_revoked_privatize_pending
+                                    },
                                 )
                                 // Re-read either way: on success the link is gone from the list, and on
                                 // failure the list is the only thing that can say whether it changed.

@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPendingDirectInvites
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -158,13 +159,18 @@ fun ConcordHomeScreen(
         },
     ) { padding ->
         if (communities.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(
-                    stringRes(Res.string.concord_home_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 32.dp),
-                )
+            // Direct Invites (CORD-05 §6) are how a first community usually arrives, so they show
+            // above the empty state rather than being hidden by it.
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                ConcordPendingDirectInvites(accountViewModel, nav)
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringRes(Res.string.concord_home_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    )
+                }
             }
             return@Scaffold
         }
@@ -187,6 +193,9 @@ fun ConcordHomeScreen(
             }
 
         LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+            // Pending Direct Invites (CORD-05 §6), parked until the user accepts or declines.
+            item(key = "concord-direct-invites") { ConcordPendingDirectInvites(accountViewModel, nav) }
+
             sorted.forEach { entry ->
                 val state =
                     account.concordSessions

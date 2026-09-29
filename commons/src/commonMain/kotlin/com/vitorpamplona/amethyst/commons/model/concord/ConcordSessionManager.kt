@@ -69,6 +69,16 @@ class ConcordSessionManager(
     /** Monotonic counter bumped whenever the joined set or any community's fold changes. */
     val revision: StateFlow<Int> = _revision
 
+    // Declared before `init`: the communities collector may run synchronously on an immediate dispatcher.
+    private val _nextExpiry = MutableStateFlow<Long?>(null)
+
+    /**
+     * The earliest disappearing-message deadline (unix seconds) across every joined community, or
+     * null when nothing expires (CORD-08 §3). The account schedules its [sweepExpired] on this, so
+     * communities without a timer cost nothing.
+     */
+    val nextExpiry: StateFlow<Long?> = _nextExpiry
+
     private val lock = KmpLock()
     private val stateWatchers = HashMap<HexKey, Job>() // communityId -> state collector
 
@@ -97,11 +107,32 @@ class ConcordSessionManager(
                 stateWatchers.remove(id)?.cancel()
                 stateWatchers[id] =
                     scope.launch {
+                        // CORD-08: a rumor with an expiration moves the account-wide sweep deadline.
+                        launch { session.nextExpiry.collect { recomputeNextExpiry() } }
                         session.state.collect { bumpRevision() }
                     }
             }
         }
+        recomputeNextExpiry()
         bumpRevision()
+    }
+
+    private fun recomputeNextExpiry() {
+        _nextExpiry.value = registry.sessions().mapNotNull { it.nextExpiry.value }.minOrNull()
+    }
+
+    /**
+     * Sweeps every session for rumors expired at [now] (CORD-08 §3): drops their wraps from the
+     * session buffers and returns them, per community, for the caller to purge from its store.
+     */
+    fun sweepExpired(now: Long): Map<HexKey, List<ExpiredConcordRumor>> {
+        val out = HashMap<HexKey, List<ExpiredConcordRumor>>()
+        for (session in registry.sessions()) {
+            val expired = session.sweepExpired(now)
+            if (expired.isNotEmpty()) out[session.entry.id] = expired
+        }
+        recomputeNextExpiry()
+        return out
     }
 
     private fun bumpRevision() {

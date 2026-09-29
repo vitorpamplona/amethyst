@@ -21,15 +21,25 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
+import com.vitorpamplona.amethyst.commons.actions.ConcordLocalEdit
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinContext
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinWrite
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
+import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
@@ -43,6 +53,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordListTooLargeExcep
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.concordEpoch
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
@@ -56,6 +67,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -65,6 +77,7 @@ import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -90,8 +103,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
@@ -278,7 +296,8 @@ class AccountConcordActions(
     }
 
     /**
-     * Merges [patch] into the published Invite List and republishes it, returning whether it landed.
+     * Merges [patch] into the published Invite List and republishes it, returning the merged document
+     * when it landed and null when it did not.
      *
      * Read-merge-write, and **aborts rather than overwriting** when the read fails: the list is
      * replaceable, so publishing a patch-only document over an unread list deletes every other
@@ -286,20 +305,62 @@ class AccountConcordActions(
      * rotation. A momentarily unreachable relay or a bunker signer that declines one decrypt is
      * enough to trigger that, which is exactly how the kind-13302 community list was once emptied.
      */
-    private suspend fun publishConcordInviteList(patch: ConcordInviteListDocument): Boolean {
+    private suspend fun publishConcordInviteList(patch: ConcordInviteListDocument): ConcordInviteListDocument? {
         val publishTo = account.outboxRelays.flow.value
-        if (publishTo.isEmpty()) return false
+        if (publishTo.isEmpty()) return null
         val base =
             readConcordInviteList() ?: run {
                 Log.w("Concord") { "Refusing to write the invite list: could not read the current one (would drop other links' signer_sk)" }
-                return false
+                return null
             }
+        val merged = ConcordInviteList.merge(base, patch)
         // publishAndConfirm, never publish: `INostrClient.publish` returns Unit — it queues the event
         // and never reports acceptance — so a `runCatching { publish(); true }` is true whenever
         // local signing worked, and every caller's "did the record land?" gate becomes decorative.
-        return runCatching {
-            account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, ConcordInviteList.merge(base, patch), TimeUtils.now()), publishTo)
-        }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
+        val landed =
+            runCatching {
+                account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
+            }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
+        return if (landed) merged else null
+    }
+
+    /**
+     * Publishes this account's Invite Registry for [entry]'s community (CORD-05 §5, `vsk 8`): "a
+     * Registry edit accompanies every mint and every retire". The list is this account's honored
+     * registry plus the live links its Invite List [list] holds plus [minted], minus [retired] and
+     * minus every tombstoned or expired link ([ConcordInviteRegistry.nextLinks]), so an elapsed link
+     * stops keeping the community Public. Returns whether an edition was published.
+     *
+     * Best-effort, like the reference client's: the registry never gates a link working. It is
+     * skipped when there is no session to chain onto, when this account no longer holds
+     * CREATE_INVITE (every reader would drop the edition), when the `control_root` is not held
+     * (CORD-02 §2), and when the next list equals the one already honored.
+     */
+    private suspend fun publishConcordInviteRegistry(
+        entry: ConcordCommunityListEntry,
+        list: ConcordInviteListDocument?,
+        minted: List<HexKey> = emptyList(),
+        retired: List<HexKey> = emptyList(),
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(entry.id) ?: return false
+        if (!isAuthorizedFor(session, ConcordPermissions.CREATE_INVITE)) return false
+        val cp = controlKeysForWrite(session) ?: return false
+        val me = account.signer.pubKey
+        val state = session.state.value
+        val published = state?.registryOf(me).orEmpty()
+        val next = ConcordInviteRegistry.nextLinks(published, list, entry.id, TimeUtils.now(), minted, retired)
+        val hasHead = state?.inviteRegistries?.containsKey(me.lowercase()) == true
+        if (next == published.sorted() && (hasHead || next.isEmpty())) return false
+        // The writer chains off the same authorized head the fold honors (ConcordModeration.headOf).
+        val wrap =
+            try {
+                ConcordModeration.setInviteRegistry(account.signer, cp, entry.id.hexToByteArray(), next, session.controlEditions(), TimeUtils.now(), owner = entry.owner)
+            } catch (e: Exception) {
+                Log.w("Concord", "invite registry build failed for ${entry.id}", e)
+                return false
+            }
+        publishConcordWrap(entry, wrap)
+        return true
     }
 
     /**
@@ -414,7 +475,8 @@ class AccountConcordActions(
         // was never stored can never be refreshed, so the next Refounding orphans it and everyone
         // holding it is stranded — with nothing to have warned them. Failing the mint is the honest
         // outcome; a stored entry for a link nobody received is harmless by comparison.
-        if (!publishConcordInviteList(
+        val recorded =
+            publishConcordInviteList(
                 ConcordInviteListDocument(
                     entries =
                         listOf(
@@ -428,12 +490,15 @@ class AccountConcordActions(
                         ),
                 ),
             )
-        ) {
+        if (recorded == null) {
             Log.w("Concord") { "Invite not minted for ${entry.id}: its link signer could not be recorded, so the link could never be refreshed" }
             return null
         }
 
         if (publishTo.isNotEmpty()) account.client.publish(minted.bundleEvent, publishTo)
+        // The member-facing shadow of the list we just wrote (CORD-05 §5): the link now makes the
+        // community Public. Best-effort — the link works without it.
+        publishConcordInviteRegistry(entry, recorded, minted = listOf(minted.linkSignerPubKey))
         return minted.url
     }
 
@@ -472,24 +537,29 @@ class AccountConcordActions(
      * leave the link live with its signer gone and no way left to retire it. A failed list write is
      * recoverable — the link is already dead on the wire, and the refresh path re-mints only a
      * coordinate that still resolves Live.
+     *
+     * Every retire also edits this account's Invite Registry (CORD-05 §5). When the link was the
+     * community's last live one, retiring it flips the community Private — "a Refounding (CORD-06)"
+     * (CORD-05 §2) — so this then Refounds with nobody removed, provided this account may (it takes
+     * BAN). The result says which of those happened.
      */
     suspend fun revokeConcordInvite(
         communityId: String,
         token: String,
-    ): Boolean {
-        if (!account.isWriteable()) return false
+    ): ConcordRevokeResult {
+        if (!account.isWriteable()) return ConcordRevokeResult.FAILED
         val entry =
             account.concordChannelList.liveCommunities.value
-                .firstOrNull { it.id == communityId } ?: return false
+                .firstOrNull { it.id == communityId } ?: return ConcordRevokeResult.FAILED
         val link =
             readConcordInviteList()?.entries?.firstOrNull { it.token == token && it.communityId == communityId }
                 ?: run {
                     Log.w("Concord") { "Cannot revoke $token: it is not in this account's invite list, so its link signer is unknown" }
-                    return false
+                    return ConcordRevokeResult.FAILED
                 }
 
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
-        if (relays.isEmpty()) return false
+        if (relays.isEmpty()) return ConcordRevokeResult.FAILED
         // Confirmed, not fire-and-forget. A `publish` that returns Unit would report success for a
         // tombstone no relay stored — and the list write below would then drop this entry on merge,
         // destroying the only `signer_sk` that could ever retire the link while the link stays live.
@@ -497,14 +567,31 @@ class AccountConcordActions(
             runCatching {
                 account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
             }.onFailure { Log.w("Concord", "invite revocation failed for $communityId", it) }.getOrDefault(false)
-        if (!published) return false
+        if (!published) return ConcordRevokeResult.FAILED
 
-        if (!publishConcordInviteList(ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = communityId))))) {
+        val signer = link.signerPubKeyHex().lowercase()
+        // Judged on the fold BEFORE our registry edit lands: afterwards the link is gone from it.
+        val privatizes =
+            account.concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value
+                ?.retiringWouldPrivatize(listOf(signer)) == true
+
+        val recorded = publishConcordInviteList(ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = communityId))))
+        if (recorded == null) {
             // The link is already dead on the wire, so this is bookkeeping we can retry rather than a
             // failed revocation. Reported as success for exactly that reason.
             Log.w("Concord") { "Revoked $token on the wire but could not tombstone it in the invite list; a later revoke will record it" }
         }
-        return true
+        publishConcordInviteRegistry(entry, recorded, retired = listOf(signer))
+
+        if (!privatizes) return ConcordRevokeResult.REVOKED
+        // The last live link is gone: the community is Private now, and whoever already fetched a
+        // link holds the current root. CORD-05 §2/§5: this is a Refounding (CORD-06 §3, "converting a
+        // Public Community to Private"), which re-keys the members and leaves the lurkers behind.
+        Log.i("Concord") { "Retired the last live invite link of $communityId: the community is Private, Refounding" }
+        return if (privatizeConcordCommunity(communityId)) ConcordRevokeResult.PRIVATIZED else ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING
     }
 
     /** Leave a joined Concord community: drop it from the Community List and tombstone it (CORD-02 §8). */
@@ -558,6 +645,38 @@ class AccountConcordActions(
                 InviteBundleStatus.Unreadable -> return ConcordInviteResult.Incompatible
                 InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable
             }
+
+        return joinValidatedConcordInvite(
+            bundle = bundle,
+            servedBy = relays,
+            // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
+            // Refounding that leaves us out of the recipient set is recoverable later. See
+            // recoverStrandedConcordCommunities().
+            inviteRef = ConcordActions.bareInviteRef(url),
+            // Invite attribution (CORD-05 §1): the joiner echoes the link's creator + label in their
+            // Guestbook Join, which is what makes per-link usage counters possible.
+            inviteCreator = bundle.creatorNpub,
+            inviteLabel = bundle.label,
+        )
+    }
+
+    /**
+     * The join half shared by every redeem path (link [joinConcordViaInvite], Direct Invite
+     * [acceptConcordDirectInvite]): [bundle] is already opened, bounded and owner-proof validated,
+     * and not expired. An already-held community only moves forward through a stranded rejoin (a
+     * Refounding left us behind and the user re-accepted); otherwise it refuses a community whose
+     * roster bans us (fails closed on an unreadable Control Plane, fetched over [servedBy] ∪ the
+     * bundle's relays), then stores the secret-bearing entry and announces the Guestbook Join with
+     * [inviteCreator]/[inviteLabel] attribution.
+     */
+    private suspend fun joinValidatedConcordInvite(
+        bundle: CommunityInvite,
+        servedBy: Set<NormalizedRelayUrl>,
+        inviteRef: String?,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+    ): ConcordInviteResult {
+        val relays = servedBy
 
         // Already a member? Just take the user to the community. Re-following and re-announcing a
         // Guestbook JOIN (kind 3306) would spam the community relays with a fresh join every time an
@@ -620,15 +739,14 @@ class AccountConcordActions(
             return ConcordInviteResult.Banned
         }
 
-        // Invite attribution (CORD-05 §1): the joiner echoes the link's creator + label in their
-        // Guestbook Join, which is what makes per-link usage counters possible.
-        val inviteCreator = bundle.creatorNpub?.lowercase()?.takeIf { HEX64.matches(it) }
-        val inviteLabel = bundle.label?.takeIf { inviteCreator != null && it.isNotBlank() }
+        // Invite attribution (CORD-05 §1), echoed in the Guestbook Join; a label only rides with a creator.
+        val creator = inviteCreator?.lowercase()?.takeIf { HEX64.matches(it) }
+        val label = inviteLabel?.takeIf { creator != null && it.isNotBlank() }
 
         if (rejoined != null) {
             if (!adoptedConcordRotations.add("${rejoined.id}:${rejoined.rootEpoch}")) return ConcordInviteResult.Joined(bundle.communityId)
             Log.i("Concord") { "Stranded rejoin by explicit invite: ${rejoined.id} -> epoch ${rejoined.rootEpoch}" }
-            joinConcordCommunity(rejoined, inviteCreator, inviteLabel)
+            joinConcordCommunity(rejoined, creator, label)
             _strandedConcordCommunities.value -= rejoined.id
             return ConcordInviteResult.Joined(bundle.communityId)
         }
@@ -649,14 +767,165 @@ class AccountConcordActions(
                 relays = bundle.relays,
                 name = bundle.name,
                 addedAt = TimeUtils.nowMillis(),
-                // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
-                // Refounding that leaves us out of the recipient set is recoverable later. See
-                // recoverStrandedConcordCommunities().
-                inviteRef = ConcordActions.bareInviteRef(url),
+                // Anchor for stranded recovery (null for a Direct Invite, which has no link).
+                inviteRef = inviteRef,
             )
-        joinConcordCommunity(entry, inviteCreator, inviteLabel)
+        joinConcordCommunity(entry, creator, label)
         return ConcordInviteResult.Joined(bundle.communityId)
     }
+
+    // ---- CORD-05 §6 Direct Invites ---------------------------------------------
+
+    /**
+     * The Direct Invite inbox: wraps from the dedicated sweep ([refreshConcordDirectInvites]) and
+     * from the NIP-17 giftwrap pipeline land here, parked until the user accepts or declines.
+     */
+    val directInviteInbox = ConcordDirectInviteInbox(account.signer)
+
+    /**
+     * The parked Direct Invites a UI should show, newest first: invites for communities we don't
+     * hold, plus catch-ups for ones we do ([ConcordDirectInviteInbox.visible]).
+     */
+    val pendingConcordDirectInvites: StateFlow<List<ConcordDirectInviteView>> =
+        combine(directInviteInbox.pending, account.concordChannelList.liveCommunities) { pending, joined ->
+            ConcordDirectInviteInbox.visible(pending.values, joined)
+        }.stateIn(account.scope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM
+     * inbox relays (kind 10050, plus the NIP-65 read and private/local relays the DM feed already
+     * reads), else the stock Concord set.
+     */
+    private fun concordDirectInviteScanRelays(): Set<NormalizedRelayUrl> =
+        account.dmRelays.flow.value.ifEmpty {
+            ConcordActions.directInviteDeliveryRelays(null)
+        }
+
+    /**
+     * Sweeps our inbox relays for Direct Invite wraps
+     * (`{"kinds":[1059],"#p":[me],"#k":["3313"]}` since the inbox cursor, rewound by NIP-59's backdate
+     * window) and offers each to the inbox. Returns how many new invites were parked. Read-only: it
+     * decrypts, it never joins or contacts a community's relays.
+     */
+    suspend fun refreshConcordDirectInvites(): Int {
+        val relays = concordDirectInviteScanRelays()
+        if (relays.isEmpty()) return 0
+        val before = directInviteInbox.pending.value.keys
+        val filter = ConcordActions.directInvitesFilter(account.signer.pubKey, directInviteInbox.since())
+        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(filter) })
+        wraps.distinctBy { it.id }.forEach { directInviteInbox.offer(it) }
+        return (directInviteInbox.pending.value.keys - before).size
+    }
+
+    /**
+     * The recipient's giftwrap inbox (CORD-05 §6): their kind-10050 DM relays, else NIP-65 read
+     * relays — from the cache when we have their lists, fetched otherwise — else the stock set.
+     */
+    private suspend fun concordDirectInviteDeliveryRelays(recipient: HexKey): Set<NormalizedRelayUrl> {
+        val user = account.cache.getOrCreateUser(recipient)
+        val dmInbox = user.dmInboxRelayList()?.relays().orEmpty()
+        val cached =
+            if (dmInbox.isNotEmpty() || user.authorRelayList() != null) {
+                RecipientRelayFetcher.Lists(dmInbox = dmInbox, keyPackage = emptyList(), nip65 = user.authorRelayList())
+            } else {
+                null
+            }
+        val lists =
+            cached ?: run {
+                val seed = DefaultDmIndexerRelays.RELAYS.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value
+                RecipientRelayFetcher.fetchRelayLists(account.client, recipient, seed)
+            }
+        return ConcordActions.directInviteDeliveryRelays(lists)
+    }
+
+    /**
+     * Hands the keys of [communityId] straight to [recipientPubKey] as a Direct Invite (CORD-05 §6):
+     * the §1 bundle — carrying only the Private Channel keys the recipient's Roles entitle them to —
+     * sealed by our real key inside an ephemeral, `k`-tagged giftwrap, published to the recipient's
+     * inbox relays. It appears in no Registry and never flips the community Public; it cannot be
+     * revoked once it lands. [expiresAtMs] (unix ms) bounds its shelf life.
+     *
+     * No community permission gates it — none could (CORD-05 §6) — but a banned member is refused,
+     * like minting, and so is a banned recipient, whom the join would refuse anyway.
+     */
+    suspend fun sendConcordDirectInvite(
+        communityId: String,
+        recipientPubKey: HexKey,
+        expiresAtMs: Long? = null,
+    ): ConcordDirectInviteSendResult {
+        if (!account.isWriteable()) return ConcordDirectInviteSendResult.NOT_WRITEABLE
+        val recipient = recipientPubKey.lowercase()
+        val entry =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == communityId } ?: return ConcordDirectInviteSendResult.NOT_MEMBER
+        // The fold decides which Private Channel keys the recipient may receive; no fold, no send.
+        val state =
+            account.concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value ?: return ConcordDirectInviteSendResult.ROSTER_NOT_LOADED
+        val invite =
+            when (val draft = ConcordActions.draftDirectInvite(entry, state, account.signer.pubKey, recipient, expiresAtMs)) {
+                is ConcordDirectInviteDraft.Refused -> return draft.reason
+                is ConcordDirectInviteDraft.Ready -> draft.invite
+            }
+        val wrap = ConcordActions.buildDirectInvite(account.signer, recipient, invite)
+        val relays = concordDirectInviteDeliveryRelays(recipient)
+        if (relays.isEmpty()) return ConcordDirectInviteSendResult.NOT_DELIVERED
+        val delivered =
+            runCatching { account.client.publishAndConfirm(wrap, relays) }
+                .onFailure { Log.w("Concord", "direct invite publish failed for $communityId", it) }
+                .getOrDefault(false)
+        return if (delivered) ConcordDirectInviteSendResult.SENT else ConcordDirectInviteSendResult.NOT_DELIVERED
+    }
+
+    /**
+     * Accepts the parked Direct Invite [wrapId] (CORD-05 §6) through the same join path as a link:
+     * refused once `expires_at` has passed, refused when the roster bans us, and — for a community
+     * we already hold — only a catch-up adopting newly granted Private Channel keys on the same base.
+     * The Guestbook Join is attributed to the seal-verified sender. **Only from an explicit user
+     * action**: this is the first moment anything contacts the community's relays.
+     */
+    suspend fun acceptConcordDirectInvite(wrapId: HexKey): ConcordInviteResult {
+        if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
+        val opened = directInviteInbox.get(wrapId) ?: return ConcordInviteResult.InvalidLink
+        val bundle = opened.invite
+        val held =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id.equals(bundle.communityId, ignoreCase = true) }
+        val heldState =
+            held?.let {
+                account.concordSessions
+                    .sessionFor(it.id)
+                    ?.state
+                    ?.value
+            }
+        val result =
+            when (val plan = ConcordDirectInviteInbox.acceptPlan(opened, held, heldState, account.signer.pubKey)) {
+                DirectInviteAcceptPlan.Expired -> ConcordInviteResult.Expired
+                DirectInviteAcceptPlan.Banned -> ConcordInviteResult.Banned
+                // No folded roster yet: whether it bans us is unknown, so the invite waits.
+                DirectInviteAcceptPlan.RosterNotLoaded -> ConcordInviteResult.NotReachable
+                DirectInviteAcceptPlan.NothingNew -> ConcordInviteResult.Joined(bundle.communityId)
+                // Keys only, on the held base: no second Guestbook Join.
+                is DirectInviteAcceptPlan.CatchUp ->
+                    if (persistConcordEntry(plan.entry)) ConcordInviteResult.Joined(bundle.communityId) else ConcordInviteResult.NotReachable
+                DirectInviteAcceptPlan.Join ->
+                    joinValidatedConcordInvite(
+                        bundle = bundle,
+                        servedBy = emptySet(),
+                        inviteRef = null,
+                        // Attributed to the seal-verified sender (Armada), never the bundle's claim.
+                        inviteCreator = opened.sender,
+                        inviteLabel = bundle.label,
+                    )
+            }
+        if (result is ConcordInviteResult.Joined) directInviteInbox.resolve(opened.wrapId)
+        return result
+    }
+
+    /** Declines the parked Direct Invite [wrapId]: its keys are discarded and it never resurfaces. */
+    fun declineConcordDirectInvite(wrapId: HexKey): Boolean = directInviteInbox.decline(wrapId)
 
     /**
      * Post [text] to a Concord channel: derive the channel plane key, build an
@@ -691,19 +960,21 @@ class AccountConcordActions(
                 .toTypedArray()
 
         val parent = replyTo?.event
+        // CORD-08 §2: the community timer as folded right now rides inside the signed rumor.
+        val timer = session.messageExpirationSecs()
         val wrap =
             when {
                 // A minichat reply is a kind-1111 thread comment (carrying encrypted image imetas when
                 // the user attached media); an inline reply is a kind-9 message quoting the parent; a
                 // fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags, timer)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
                 else ->
-                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags, timer)
             }
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
@@ -733,7 +1004,7 @@ class AccountConcordActions(
                 .findEmojiTags(text)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
     }
@@ -767,7 +1038,7 @@ class AccountConcordActions(
                 .findEmojiTags(reaction)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -805,7 +1076,7 @@ class AccountConcordActions(
                 .findEmojiTags(newText)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -853,6 +1124,10 @@ class AccountConcordActions(
             publishConcordWrap(session.entry, wrap)
             sent = true
         }
+        // Self-erasure outranks curation (CORD-04 §7): the delete hides a pinned entry for tracking
+        // members at once, but a future member learns of it only through an omitting edition. The
+        // author knows their own pins, so when they may write pins they publish it immediately.
+        if (sent) omitDeletedConcordPins(channel.channelId.communityId, channelIdHex, mine.mapTo(HashSet()) { it.id })
         return sent
     }
 
@@ -1194,7 +1469,17 @@ class AccountConcordActions(
         return if (canBan) communityId to author else null
     }
 
-    /** Add [member] to the community banlist. */
+    /**
+     * Ban [member] (CORD-04 §5 composition): the Banlist edition first, then — only when the
+     * community is **Private** — the Refounding (CORD-06 §3). A Public ban is the Banlist alone
+     * (CORD-05 §5): anyone holding a live link can fetch a rotated root straight back out of its
+     * bundle, so rotating would cost every member a rekey and sever nobody. The mode is judged with
+     * the target's own links left out, since the ban stops honoring their registry
+     * ([com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState.banRequiresRefounding]).
+     *
+     * Returns whether the ban landed; a Refounding that fails is logged and can be retried with
+     * [refoundConcordCommunity].
+     */
     suspend fun banConcordMember(
         communityId: String,
         member: HexKey,
@@ -1204,6 +1489,13 @@ class AccountConcordActions(
         val cp = controlKeysForAction(session, ConcordPermissions.BAN, member) ?: return false
         val wrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
+        // Judged on the fold that now carries the ban (publishConcordWrap ingests it first).
+        val state = session.state.value
+        if (state != null && state.banRequiresRefounding(listOf(member))) {
+            if (!refoundConcordCommunity(communityId, setOf(member))) {
+                Log.w("Concord") { "Banned $member from the Private community $communityId, but its Refounding did not complete" }
+            }
+        }
         return true
     }
 
@@ -1218,6 +1510,168 @@ class AccountConcordActions(
         val wrap = ConcordModeration.unban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    // ── Concord pins (CORD-04 §7) ─────────────────────────────────────────────
+    // A Channel's Pin List rides the Control Plane as one replace-entire edition (vsk 11) of
+    // self-proving entries. The read side verifies every entry and applies what this client holds
+    // (deletes hide, newer Edits mark "edited"); the write side is ConcordPinning, gated here on
+    // PIN_MESSAGES + the control write key and serialized so two quick writes never drop each other.
+
+    /** Serializes pin writes: each replaces the list entire, so two in flight would lose one. */
+    private val concordPinMutex = Mutex()
+
+    /** Owner, or a PIN_MESSAGES holder per the fold (hasPermission, so a banned holder is not). Silent: UI gating asks this often. */
+    private fun holdsConcordPinBit(session: ConcordCommunitySession): Boolean {
+        val me = account.signer.pubKey
+        if (session.entry.owner.equals(me, ignoreCase = true)) return true
+        return session.state.value
+            ?.authority
+            ?.hasPermission(me, ConcordPermissions.PIN_MESSAGES) == true
+    }
+
+    /** True when this account may write [communityId]'s Pin Lists now: the bit, the control write key, a signer. */
+    fun canPinConcord(communityId: String): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        return account.isWriteable() && holdsConcordPinBit(session) && session.controlPlaneKeys().canWrite
+    }
+
+    /**
+     * [channelIdHex]'s verified pins, read from the current head: sealed lists open with the held
+     * key of their epoch (else [ConcordChannelPins.sealedUnavailable]), an entry its author deleted
+     * is hidden by the delete this account holds for the recomputed rumor id, and an entry behind a
+     * newer held Edit is marked edited. Null until the community has folded the channel.
+     */
+    fun concordChannelPins(
+        communityId: String,
+        channelIdHex: String,
+    ): ConcordChannelPins? {
+        val session = account.concordSessions.sessionFor(communityId) ?: return null
+        return session.readPins(
+            channelIdHex,
+            isKilled = { account.cache.deletionIndex.hasBeenDeleted(it.rumorId, it.author) },
+            newestEdit = { heldConcordEdit(it.rumorId, it.author) },
+        )
+    }
+
+    /** The author's newest Concord Edit this account holds for [rumorId], or null. */
+    private fun heldConcordEdit(
+        rumorId: HexKey,
+        author: HexKey,
+    ): ConcordLocalEdit? {
+        val edit =
+            account.cache
+                .getNoteIfExists(rumorId)
+                ?.latestConcordEdit()
+                ?.event as? ConcordChatEditEvent ?: return null
+        if (edit.pubKey != author) return null
+        return ConcordLocalEdit(edit.id, edit.pubKey, edit.content, edit.orderingMs())
+    }
+
+    /**
+     * For the message action sheet: null when [note] is not a pinnable Concord message or this
+     * account cannot write pins there; else whether it is pinned now.
+     */
+    fun concordPinState(note: Note): Boolean? {
+        val event = note.event ?: return null
+        if (event !is ChatEvent && event !is CommentEvent) return null
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
+        if (!canPinConcord(channel.channelId.communityId)) return null
+        val pins = concordChannelPins(channel.channelId.communityId, channel.channelId.channelId) ?: return null
+        return pins.isPinned(note.idHex)
+    }
+
+    /**
+     * Runs one pin write: re-reads the list inside the lock (the previous write was echoed into the
+     * session, so this chains onto it), resolves the context, and publishes the edition [op] builds.
+     */
+    private suspend fun writeConcordPins(
+        communityId: String,
+        channelIdHex: String,
+        op: suspend (ConcordCommunitySession, ConcordPinContext) -> ConcordPinWrite,
+    ): ConcordPinOutcome =
+        concordPinMutex.withLock {
+            if (!account.isWriteable()) return@withLock ConcordPinOutcome.NOT_WRITEABLE
+            val session = account.concordSessions.sessionFor(communityId) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+            val definition =
+                session.state.value
+                    ?.channels
+                    ?.get(channelIdHex)
+                    ?.definition ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+            val pins = concordChannelPins(communityId, channelIdHex) ?: return@withLock ConcordPinOutcome.NOT_FOLDED
+            val ctx =
+                ConcordPinContext(
+                    actor = account.signer,
+                    controlPlane = session.controlPlaneKeys(),
+                    communityId = communityId.hexToByteArray(),
+                    owner = session.entry.owner,
+                    current = session.controlEditions(),
+                    channelIdHex = channelIdHex,
+                    channelIsPrivate = definition.private,
+                    currentPlane = session.currentChannelPlane(channelIdHex),
+                    pins = pins,
+                    authorized = holdsConcordPinBit(session),
+                )
+            val write = op(session, ctx)
+            write.wrap?.let { publishConcordWrap(session.entry, it) }
+            write.outcome
+        }
+
+    /** Pin Concord message [note] into its channel's Pin List, proving it with its original seal. */
+    suspend fun pinConcordMessage(note: Note): ConcordPinOutcome {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return ConcordPinOutcome.NOT_FOLDED
+        val channelIdHex = channel.channelId.channelId
+        return writeConcordPins(channel.channelId.communityId, channelIdHex) { session, ctx ->
+            val refused = ConcordPinning.refusal(ctx)
+            val source = if (refused == null) session.pinSource(channelIdHex, note.idHex) else null
+            when {
+                refused != null -> ConcordPinWrite(refused)
+                source == null -> ConcordPinWrite(ConcordPinOutcome.MESSAGE_UNAVAILABLE)
+                else -> ConcordPinning.pin(ctx, source, TimeUtils.now())
+            }
+        }
+    }
+
+    /** Unpin Concord message [note]. */
+    suspend fun unpinConcordMessage(note: Note): ConcordPinOutcome {
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return ConcordPinOutcome.NOT_FOLDED
+        return unpinConcordRumor(channel.channelId.communityId, channel.channelId.channelId, note.idHex)
+    }
+
+    /** Unpin the entry whose recomputed rumor id is [rumorId] — works for a pin whose message this account never held. */
+    suspend fun unpinConcordRumor(
+        communityId: String,
+        channelIdHex: String,
+        rumorId: HexKey,
+    ): ConcordPinOutcome = writeConcordPins(communityId, channelIdHex) { _, ctx -> ConcordPinning.unpin(ctx, rumorId, TimeUtils.now()) }
+
+    /** The pinner-style deletion omission: the list without [rumorIds], published now when this account may write pins. */
+    private suspend fun omitDeletedConcordPins(
+        communityId: String,
+        channelIdHex: String,
+        rumorIds: Set<HexKey>,
+    ) {
+        if (!canPinConcord(communityId)) return
+        val pins = concordChannelPins(communityId, channelIdHex) ?: return
+        if (pins.alive.none { it.rumorId in rumorIds } && pins.killed.none { it.rumorId in rumorIds }) return
+        writeConcordPins(communityId, channelIdHex) { _, ctx -> ConcordPinning.omit(ctx, rumorIds, TimeUtils.now()) }
+    }
+
+    /**
+     * Settle what [channelIdHex]'s head owes keyless readers (CORD-04 §7): drop entries their author
+     * erased and attach the newest provable Edit to entries behind one. The caller waits
+     * [ConcordPinning.dutyDelayMs] first; this re-reads the head and publishes only if it is still
+     * owed, so simultaneous curators collapse to one publisher and a burst of edits costs one write.
+     */
+    suspend fun settleConcordPins(
+        communityId: String,
+        channelIdHex: String,
+    ): ConcordPinOutcome {
+        if (!canPinConcord(communityId)) return ConcordPinOutcome.NOT_AUTHORIZED
+        if (concordChannelPins(communityId, channelIdHex)?.owesRepublish != true) return ConcordPinOutcome.NOTHING_TO_DO
+        return writeConcordPins(communityId, channelIdHex) { session, ctx ->
+            ConcordPinning.settle(ctx, { pinned -> pinned.newerEdit?.let { session.pinSource(channelIdHex, it.rumorId) } }, TimeUtils.now())
+        }
     }
 
     // ── Concord refounding / rekey (CORD-06) ──────────────────────────────────
@@ -1241,6 +1695,22 @@ class AccountConcordActions(
         communityId: String,
         removed: Set<HexKey>,
     ): Boolean {
+        if (removed.isEmpty()) return false
+        return refound(communityId, removed)
+    }
+
+    /**
+     * Converts the community to Private (CORD-06 §3): a Refounding with nobody removed, run when its
+     * last live invite link is retired (CORD-05 §2/§5). Every member is re-keyed; whoever only ever
+     * fetched a link — and so holds the current root without being a member — is left behind.
+     * Takes BAN (or ownership), like any Refounding.
+     */
+    suspend fun privatizeConcordCommunity(communityId: String): Boolean = refound(communityId, emptySet())
+
+    private suspend fun refound(
+        communityId: String,
+        removed: Set<HexKey>,
+    ): Boolean {
         if (!account.isWriteable()) return false
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         val state = session.state.value ?: return false
@@ -1258,7 +1728,7 @@ class AccountConcordActions(
         val iCanBan = authority.isOwner(account.signer.pubKey) || authority.hasPermission(account.signer.pubKey, ConcordPermissions.BAN)
         if (!iCanBan) return false
         val removedLower = removed.mapTo(HashSet()) { it.lowercase() }
-        if (removedLower.isEmpty() || removedLower.any { authority.isOwner(it) }) return false
+        if (removedLower.any { authority.isOwner(it) }) return false
         // Removal is the hardest form of a ban, so it takes the same rank rule (CORD-04 §3): an admin
         // cannot Refound a peer admin out of the community any more than they could ban one. The owner
         // short-circuits, as everywhere else, because canActOn starts at hasPermission.
@@ -1288,7 +1758,10 @@ class AccountConcordActions(
         // 1. Ban the removed members on the current Control Plane so the compacted snapshot —
         //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
         //    first, so each subsequent edition chains onto the updated banlist head.
+        //    A target the fold already bans (a ban that is composing its Refounding) needs no second edition.
+        val alreadyBanned = authority.bannedMembers().mapTo(HashSet()) { it.lowercase() }
         for (target in removedLower) {
+            if (target in alreadyBanned) continue
             val banWrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
             publishConcordWrap(session.entry, banWrap)
         }
@@ -1729,6 +2202,45 @@ class AccountConcordActions(
         val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    /**
+     * Set [communityId]'s disappearing-messages timer to [secs] seconds, or turn it off when null or
+     * below 1 (CORD-08 §1): a metadata edition under MANAGE_METADATA, laid over the folded metadata so
+     * nothing else changes. Then, as §4 asks, one kind-1740 timer notice goes into every channel whose
+     * key this account holds (a Private Channel without one simply gets none). Returns false when
+     * nothing was published (not authorized, no Control write key, or the timer is already [secs]).
+     */
+    suspend fun setConcordMessageExpiration(
+        communityId: String,
+        secs: Long?,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_METADATA) ?: return false
+        val timer = secs?.takeIf { it >= 1 }
+        val standing = session.state.value?.metadata ?: MetadataEntity()
+        if (standing.messageExpirationSecs() == timer) return false
+        val wrap = ConcordModeration.setMessageExpiration(account.signer, cp, communityId.hexToByteArray(), standing, timer, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        publishConcordWrap(session.entry, wrap)
+        postConcordTimerNotices(session, timer ?: 0)
+        return true
+    }
+
+    /** One CORD-08 §4 timer notice per channel of [session] this account can write. */
+    private suspend fun postConcordTimerNotices(
+        session: ConcordCommunitySession,
+        timerSecs: Long,
+    ) {
+        val channels =
+            session.state.value
+                ?.channels
+                ?.keys ?: return
+        val now = TimeUtils.now()
+        for (channelIdHex in channels) {
+            val plane = session.currentChannelPlane(channelIdHex) ?: continue
+            publishConcordWrap(session.entry, ConcordActions.buildChannelTimerNotice(account.signer, plane.key, channelIdHex, plane.epoch, timerSecs, now))
+        }
     }
 
     /**

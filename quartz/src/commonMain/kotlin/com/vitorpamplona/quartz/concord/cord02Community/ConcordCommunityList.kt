@@ -704,4 +704,27 @@ object ConcordCommunityList {
             excludedAtEpoch = excludedAtEpoch,
             residue = residue,
         )
+
+    /**
+     * Copy of this entry holding [privateChannels] — e.g. after a Direct Invite catch-up delivered a
+     * Private Channel key (CORD-05 §6). Every other field, the base included, untouched.
+     */
+    fun ConcordCommunityListEntry.withPrivateChannels(privateChannels: List<PrivateChannelKey>) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+            residue = residue,
+        )
 }

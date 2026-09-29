@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.concord.cord03Channels
 
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -84,6 +86,24 @@ object ConcordDisappearing {
         return tags.filterNot { it.isNotEmpty() && it[0] == ExpirationTag.TAG_NAME }.toTypedArray() + ExpirationTag.assemble(expiration)
     }
 
+    /**
+     * The outer tags [rumor]'s kind-1059 wrap must carry (§2): the rumor's own expiration, repeated
+     * with the same value so NIP-40 relays delete the ciphertext, or nothing when the rumor carries
+     * none. Hand it to [com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope.wrap]'s
+     * `outerTags`.
+     */
+    fun wrapTagsFor(rumor: Event): TagArray = expirationOf(rumor)?.let { arrayOf(ExpirationTag.assemble(it)) } ?: emptyArray()
+
+    /** One day, the shortest timer a client should offer (§3: it dwarfs any honest clock skew). */
+    const val MIN_OFFERED_SECS = 86_400L
+
+    /**
+     * The timers a client offers staff, in seconds (`0` = off): off, 1 day, 1 week, 30 days, 90 days
+     * and 1 year — the reference client's presets. Nothing shorter than [MIN_OFFERED_SECS].
+     */
+    val PRESET_SECS: List<Long> =
+        listOf(0L, MIN_OFFERED_SECS, 7 * MIN_OFFERED_SECS, 30 * MIN_OFFERED_SECS, 90 * MIN_OFFERED_SECS, 365 * MIN_OFFERED_SECS)
+
     /** The rumor's own expiration, the only one a reader judges by (§3). */
     fun expirationOf(rumor: Event): Long? = rumor.tags.firstNotNullOfOrNull(ExpirationTag::parse)
 
@@ -111,6 +131,16 @@ object ConcordDisappearing {
                 add(arrayOf(TIMER_TAG, timerSecs.coerceAtLeast(0).toString()))
             },
         )
+
+    /**
+     * True when a reader may display timer notice [rumor] (§4): a well-formed 1740 whose author holds
+     * MANAGE_METADATA in the folded [authority] (the owner always does; a banned member never). Anyone
+     * can spell the tag; only staff are believed about policy, so everything else is dropped.
+     */
+    fun isBelievedNotice(
+        rumor: Event,
+        authority: AuthorityResolver,
+    ): Boolean = noticeTimerSecs(rumor) != null && authority.hasPermission(rumor.pubKey, ConcordPermissions.MANAGE_METADATA)
 
     /**
      * The timer a notice announces, in seconds (`0` = turned off), or null when [rumor] isn't a

@@ -22,6 +22,11 @@ package com.vitorpamplona.amethyst.commons.model.concord
 
 import com.vitorpamplona.amethyst.commons.actions.ChannelPlane
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
+import com.vitorpamplona.amethyst.commons.actions.ConcordLocalEdit
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinSource
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinVerifier
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -29,9 +34,12 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
+import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPinLists
+import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
@@ -40,6 +48,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,6 +62,18 @@ import kotlin.concurrent.Volatile
  * reaction/reply/delete/OTS/zap machinery wires up automatically.
  */
 typealias ConcordRumorSink = (communityId: HexKey, channelIdHex: HexKey, rumor: Event, seenOnRelays: Set<NormalizedRelayUrl>) -> Unit
+
+/**
+ * A disappearing Chat rumor (CORD-08) a session tracks: the [rumorId] carried by wrap [wrapId] on
+ * [channelIdHex], gone at [expiresAt] (unix seconds). Returned by a sweep once expired, so the
+ * store drops both notes.
+ */
+data class ExpiredConcordRumor(
+    val channelIdHex: HexKey,
+    val wrapId: HexKey,
+    val rumorId: HexKey,
+    val expiresAt: Long,
+)
 
 /**
  * The result of feeding one wrap to a session's [ConcordCommunitySession.ingest]. It separates
@@ -250,6 +271,14 @@ class ConcordCommunitySession(
     private val historicalControlWraps = HashMap<HexKey, LinkedHashMap<HexKey, Event>>()
 
     private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>() // channelIdHex -> (wrapId -> wrap)
+
+    // Chat rumor id -> the id of the wrap that carried it, filled as each wrap is emitted. A pin
+    // proves its message with the ORIGINAL kind-20013 seal (CORD-04 §7), which only the wrap holds,
+    // so pinning reopens that wrap rather than re-deriving anything from the stored rumor.
+    private val wrapIdByRumorId = HashMap<HexKey, HexKey>()
+
+    /** Pin-entry verdicts memoized by entry identity (CORD-04 §7 Weight). */
+    private val pinVerifier = ConcordPinVerifier()
     private val guestbookWraps = LinkedHashMap<HexKey, Event>()
     private val baseRekeyWraps = LinkedHashMap<HexKey, Event>()
     private val siblingRekeyWraps = LinkedHashMap<HexKey, Event>()
@@ -271,6 +300,15 @@ class ConcordCommunitySession(
 
     private val _state = MutableStateFlow<ConcordCommunityState?>(null)
     val state: StateFlow<ConcordCommunityState?> = _state
+
+    private val _pinHeads = MutableStateFlow<Map<HexKey, ControlEdition>>(emptyMap())
+
+    /**
+     * The authorized head of each folded Channel's Pin List (CORD-04 §7), by channel id, re-derived
+     * on every control fold. Kept apart from [state] because a pin edition changes no field of the
+     * folded community, so [state] would not re-emit for it.
+     */
+    val pinHeads: StateFlow<Map<HexKey, ControlEdition>> = _pinHeads
 
     private val _members = MutableStateFlow<Set<HexKey>>(emptySet())
 
@@ -660,13 +698,9 @@ class ConcordCommunitySession(
         val newChannels =
             lock.withLock {
                 val wraps = controlWraps.values.toList()
-                val folded =
-                    ConcordCommunityState.fold(
-                        editionsLocked(wraps, controlKeys),
-                        communityIdBytes,
-                        entry.owner,
-                        controlFloorsLocked(),
-                    )
+                val editions = editionsLocked(wraps, controlKeys)
+                val floors = controlFloorsLocked()
+                val folded = ConcordCommunityState.fold(editions, communityIdBytes, entry.owner, floors)
 
                 val prevAddresses = channelKeysByAddress.keys.toHashSet()
                 val next = HashMap<HexKey, ChannelPlane>()
@@ -687,6 +721,7 @@ class ConcordCommunitySession(
                 derivedPrivateKeys = privateKeySet(entry)
 
                 _state.value = folded.withDissolved(dissolved)
+                _pinHeads.value = ConcordPinLists.heads(editions, folded.authority, entry.id, folded.channels.keys, floors)
                 next.filterKeys { it !in prevAddresses }.values.map { it.channelIdHex }
             }
 
@@ -776,7 +811,19 @@ class ConcordCommunitySession(
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         val authors = HashSet<HexKey>()
-        ConcordActions.channelRumors(wraps, key, channelIdHex, epoch).forEach { rumor ->
+        val now = TimeUtils.now()
+        for (wrap in wraps) {
+            val rumor = ConcordActions.openChannelRumorAnyExpiry(wrap, key, channelIdHex, epoch) ?: continue
+            // Pins reopen the carrying wrap to disclose this one message's keys (CORD-04 §7).
+            lock.withLock { wrapIdByRumorId[rumor.id] = wrap.id }
+            // CORD-08 §3: only the rumor's own tag counts. A rumor carrying one is remembered so the
+            // sweep purges it (and its wrap) when it expires; one already expired is refused here —
+            // never handed to the store — and queued for the next sweep so its wrap goes too.
+            val expiresAt = ConcordDisappearing.expirationOf(rumor)
+            if (expiresAt != null) {
+                trackExpiring(wrap.id, channelIdHex, rumor.id, expiresAt)
+                if (expiresAt <= now) continue
+            }
             authors.add(rumor.pubKey.lowercase())
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
@@ -786,6 +833,122 @@ class ConcordCommunitySession(
             _observedAuthors.update { if (it.containsAll(authors)) it else it + authors }
         }
     }
+
+    // ── Disappearing messages (CORD-08) ──────────────────────────────────────
+
+    /** Wrap id -> the expiring rumor it carries, for every rumor with an `expiration` we emitted or refused. */
+    private val expiringByWrapId = HashMap<HexKey, ExpiredConcordRumor>()
+
+    private val _nextExpiry = MutableStateFlow<Long?>(null)
+
+    /**
+     * The earliest `expiration` (unix seconds) among the rumors this session holds, or null when none
+     * expires — what the account's sweep schedules itself on, so a community with no timer costs
+     * nothing. At or before now when an expired rumor was just refused and its wrap awaits the sweep.
+     */
+    val nextExpiry: StateFlow<Long?> = _nextExpiry
+
+    /**
+     * The disappearing-messages timer (seconds) a compliant sender attaches to its next durable Chat
+     * rumor, read from the current fold at send time (CORD-08 §2), or null when off or not folded.
+     */
+    fun messageExpirationSecs(): Long? = _state.value?.metadata?.messageExpirationSecs()
+
+    private fun trackExpiring(
+        wrapId: HexKey,
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+        expiresAt: Long,
+    ) {
+        lock.withLock {
+            expiringByWrapId[wrapId] = ExpiredConcordRumor(channelIdHex, wrapId, rumorId, expiresAt)
+            _nextExpiry.update { if (it == null || expiresAt < it) expiresAt else it }
+        }
+    }
+
+    /**
+     * Forgets every rumor whose `expiration` is at or before [now] (CORD-08 §3): its wrap leaves the
+     * channel buffer, so no re-projection can resurrect it, and it is returned so the caller purges
+     * the rumor's note and the wrap's note from its store. A wrap re-delivered later is refused again
+     * at ingest.
+     */
+    fun sweepExpired(now: Long = TimeUtils.now()): List<ExpiredConcordRumor> =
+        lock.withLock {
+            if (expiringByWrapId.isEmpty()) return@withLock emptyList()
+            val out = ArrayList<ExpiredConcordRumor>()
+            val it = expiringByWrapId.values.iterator()
+            while (it.hasNext()) {
+                val expiring = it.next()
+                if (expiring.expiresAt <= now) {
+                    channelWrapsById[expiring.channelIdHex]?.remove(expiring.wrapId)
+                    wrapIdByRumorId.remove(expiring.rumorId)
+                    out.add(expiring)
+                    it.remove()
+                }
+            }
+            _nextExpiry.value = expiringByWrapId.values.minOfOrNull { it.expiresAt }
+            out
+        }
+
+    /** True while [channelIdHex]'s buffer holds [wrapId] — for tests of the sweep. */
+    internal fun isBuffered(
+        channelIdHex: HexKey,
+        wrapId: HexKey,
+    ): Boolean = lock.withLock { channelWrapsById[channelIdHex]?.containsKey(wrapId) == true }
+
+    // ---- Pins (CORD-04 §7) ------------------------------------------------------------------
+
+    /**
+     * The Channel's conversation key at [epoch] for opening a sealed Pin List, or null when this
+     * account holds no plane of [channelIdHex] bound to that epoch.
+     */
+    fun pinUnsealKey(
+        channelIdHex: HexKey,
+        epoch: Long,
+    ): ByteArray? = channelPlaneFor(channelIdHex, epoch)?.key?.conversationKey
+
+    /**
+     * [channelIdHex]'s Pin List read from its current head: sealed form opened with the held key of
+     * the named epoch, entries verified (memoized), [isKilled] entries hidden, [newestEdit] applied.
+     * Null until the Control Plane has folded, so an unfolded community is never mistaken for one
+     * with no pins.
+     */
+    fun readPins(
+        channelIdHex: HexKey,
+        isKilled: (ConcordPins.VerifiedPin) -> Boolean = { false },
+        newestEdit: (ConcordPins.VerifiedPin) -> ConcordLocalEdit? = { null },
+        now: Long = TimeUtils.now(),
+    ): ConcordChannelPins? {
+        val state = _state.value ?: return null
+        if (channelIdHex !in state.channels) return null
+        // An expired message leaves the pinned list too (CORD-08 §3: never display an expired rumor);
+        // its proof is still valid, but the rumor's own tag says it is gone.
+        val hidden = { pin: ConcordPins.VerifiedPin -> isKilled(pin) || pin.tags.isExpirationBefore(now) }
+        return ConcordPinning.read(_pinHeads.value[channelIdHex], channelIdHex, { pinUnsealKey(channelIdHex, it) }, pinVerifier, hidden, newestEdit)
+    }
+
+    /**
+     * The proof source for pinning [rumorId] of [channelIdHex] (or for attaching an Edit): the wrap
+     * that carried it, reopened on the plane it arrived on so the disclosure derives from the key of
+     * the message's own epoch. Null when this session never held that wrap.
+     */
+    fun pinSource(
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+    ): ConcordPinSource? {
+        val (wrap, plane) =
+            lock.withLock {
+                val wrapId = wrapIdByRumorId[rumorId] ?: return null
+                val wrap = channelWrapsById[channelIdHex]?.get(wrapId) ?: return null
+                val plane = channelKeysByAddress[wrap.pubKey] ?: historicalChannelKeysByAddress[wrap.pubKey] ?: return null
+                wrap to plane
+            }
+        if (plane.channelIdHex != channelIdHex) return null
+        return ConcordPinning.sourceOf(wrap, plane, rumorId)
+    }
+
+    /** True when this session holds the wrap that carried [rumorId] (jump-to-context resolves locally). */
+    fun holdsRumor(rumorId: HexKey): Boolean = lock.withLock { rumorId in wrapIdByRumorId }
 
     companion object {
         private fun privateKeySet(e: ConcordCommunityListEntry) = e.privateChannels.mapTo(HashSet()) { Triple(it.channelId.lowercase(), it.key.lowercase(), it.epoch) }
