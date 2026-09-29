@@ -154,8 +154,8 @@ class SecretTree(
         if (cachedKey != null) {
             // Still mark as consumed for replay detection
             val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
-            require(generation !in senderConsumed) {
-                "Replay detected: generation $generation from sender $leafIndex already consumed"
+            if (generation in senderConsumed) {
+                throw StaleGenerationException(leafIndex, generation, null, "Replay detected: generation $generation from sender $leafIndex already consumed")
             }
             senderConsumed.add(generation)
             return cachedKey
@@ -163,8 +163,13 @@ class SecretTree(
 
         val state = getOrInitSender(leafIndex)
 
-        require(generation >= state.applicationGeneration) {
-            "Generation $generation already consumed (current: ${state.applicationGeneration})"
+        if (generation < state.applicationGeneration) {
+            throw StaleGenerationException(
+                leafIndex,
+                generation,
+                state.applicationGeneration,
+                "Generation $generation already consumed (current: ${state.applicationGeneration})",
+            )
         }
         // DoS guard: a malicious sender can put any uint32 in the
         // PrivateMessage generation field, and without this cap a single
@@ -178,8 +183,8 @@ class SecretTree(
 
         // Replay detection: reject if this (sender, generation) was already used
         val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
-        require(generation !in senderConsumed) {
-            "Replay detected: generation $generation from sender $leafIndex already consumed"
+        if (generation in senderConsumed) {
+            throw StaleGenerationException(leafIndex, generation, null, "Replay detected: generation $generation from sender $leafIndex already consumed")
         }
         senderConsumed.add(generation)
 
@@ -233,8 +238,13 @@ class SecretTree(
         val cachedKey = handshakeSkippedKeys.remove(Pair(leafIndex, generation))
         if (cachedKey != null) {
             val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
-            require(generation !in senderConsumed) {
-                "Replay detected: handshake generation $generation from sender $leafIndex already consumed"
+            if (generation in senderConsumed) {
+                throw StaleGenerationException(
+                    leafIndex,
+                    generation,
+                    null,
+                    "Replay detected: handshake generation $generation from sender $leafIndex already consumed",
+                )
             }
             senderConsumed.add(generation)
             return cachedKey
@@ -242,8 +252,13 @@ class SecretTree(
 
         val state = getOrInitSender(leafIndex)
 
-        require(generation >= state.handshakeGeneration) {
-            "Handshake generation $generation already consumed (current: ${state.handshakeGeneration})"
+        if (generation < state.handshakeGeneration) {
+            throw StaleGenerationException(
+                leafIndex,
+                generation,
+                state.handshakeGeneration,
+                "Handshake generation $generation already consumed (current: ${state.handshakeGeneration})",
+            )
         }
         require(generation - state.handshakeGeneration <= MAX_RATCHET_STEPS_PER_CALL) {
             "Handshake generation jump too large: " +
@@ -252,8 +267,13 @@ class SecretTree(
         }
 
         val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
-        require(generation !in senderConsumed) {
-            "Replay detected: handshake generation $generation from sender $leafIndex already consumed"
+        if (generation in senderConsumed) {
+            throw StaleGenerationException(
+                leafIndex,
+                generation,
+                null,
+                "Replay detected: handshake generation $generation from sender $leafIndex already consumed",
+            )
         }
         senderConsumed.add(generation)
 
@@ -451,3 +471,21 @@ data class KeyNonceGeneration(
         return result
     }
 }
+
+/**
+ * A (sender, generation) this tree has already used: a replay, or two clients
+ * sending from one leaf that each sealed the same generation (a restored
+ * device, or linked devices sharing a leaf).
+ *
+ * Carries the sender so a caller can tell a collision on its own leaf from
+ * another member's without parsing the message. Still an
+ * [IllegalArgumentException] with the same messages as the `require`s it
+ * replaces, so existing catch sites keep working.
+ */
+class StaleGenerationException(
+    val leafIndex: Int,
+    val generation: Int,
+    /** The sender's next expected generation, or null for a replay caught by the consumed set. */
+    val current: Int?,
+    message: String,
+) : IllegalArgumentException(message)
