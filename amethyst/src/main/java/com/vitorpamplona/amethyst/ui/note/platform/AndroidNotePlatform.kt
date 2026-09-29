@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
+import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -206,9 +208,13 @@ object AndroidNotePlatform : NotePlatform {
         pinColor: Color?,
         pinEmoji: String?,
         pinAlpha: Float,
+        modifier: Modifier,
+        zoom: Double?,
     ) = AppLocationPreviewMap(
         latitude = latitude,
         longitude = longitude,
+        modifier = modifier,
+        zoom = zoom ?: DEFAULT_MAP_ZOOM,
         aspectRatio = aspectRatio,
         pinColor = pinColor,
         pinEmoji = pinEmoji,
@@ -595,6 +601,25 @@ object AndroidNotePlatform : NotePlatform {
         config: ZapButtonConfig,
         callbacks: ZapButtonCallbacks,
     ) = AppReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
+
+    @Composable
+    override fun FullscreenVideoView(
+        videoUri: String,
+        mimeType: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        controllerVisible: MutableState<Boolean>,
+        accountViewModel: AccountViewModel,
+    ) = VideoViewInner(
+        videoUri = videoUri,
+        mimeType = mimeType,
+        contentScale = contentScale,
+        borderModifier = modifier,
+        automaticallyStartPlayback = true,
+        controllerVisible = controllerVisible,
+        isFullscreen = true,
+        accountViewModel = accountViewModel,
+    )
 
     @Composable
     override fun EditPostView(

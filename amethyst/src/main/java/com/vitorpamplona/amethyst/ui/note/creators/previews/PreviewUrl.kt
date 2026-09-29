@@ -50,10 +50,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.platform.VideoView
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 
 @Composable
@@ -79,7 +79,6 @@ fun PreviewUrl(
                         myUrlPreview,
                         mimeType = null,
                         roundedCorner = false,
-                        gallery = false,
                         contentScale = ContentScale.FillHeight,
                         accountViewModel = accountViewModel,
                     )
@@ -133,7 +132,6 @@ fun PreviewUrlFillWidth(
                     myUrlPreview,
                     mimeType = null,
                     roundedCorner = false,
-                    gallery = false,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
@@ -233,7 +231,6 @@ private fun MyLoadUrlPreviewDirect(
                         state.previewInfo.url,
                         mimeType = state.previewInfo.mimeType,
                         roundedCorner = false,
-                        gallery = false,
                         contentScale = ContentScale.Crop,
                         accountViewModel = accountViewModel,
                     )
@@ -301,7 +298,6 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                         state.previewInfo.url,
                         mimeType = state.previewInfo.mimeType,
                         roundedCorner = false,
-                        gallery = false,
                         contentScale = ContentScale.FillWidth,
                         accountViewModel = accountViewModel,
                     )

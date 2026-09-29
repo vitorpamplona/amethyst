@@ -38,11 +38,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarP
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.LocalCurrentExternalScope
+import com.vitorpamplona.amethyst.commons.ui.note.platform.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.dal.UrlFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.UrlFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId

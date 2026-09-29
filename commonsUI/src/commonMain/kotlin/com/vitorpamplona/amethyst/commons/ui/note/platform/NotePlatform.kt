@@ -106,6 +106,20 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
+    /**
+     * A video filling a full-screen viewer, playing at once. [controllerVisible] shows and hides
+     * its playback controls, so the viewer can toggle them with its own chrome.
+     */
+    @Composable
+    fun FullscreenVideoView(
+        videoUri: String,
+        mimeType: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        controllerVisible: MutableState<Boolean>,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     /** The link card for [url]: OpenGraph preview, inline media, or a plain link. */
     @Composable
     fun UrlPreview(
@@ -142,6 +156,8 @@ interface NotePlatform {
         pinColor: Color?,
         pinEmoji: String?,
         pinAlpha: Float,
+        modifier: Modifier,
+        zoom: Double?,
     ) {}
 
     /** Resolves [geohashStr] to a place name for [content], showing [onLoading] meanwhile. */

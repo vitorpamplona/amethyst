@@ -108,6 +108,16 @@ fun GifVideoView(
 )
 
 @Composable
+fun FullscreenVideoView(
+    videoUri: String,
+    mimeType: String?,
+    contentScale: ContentScale,
+    controllerVisible: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) = LocalNotePlatform.current.FullscreenVideoView(videoUri, mimeType, contentScale, modifier, controllerVisible, accountViewModel)
+
+@Composable
 fun VideoView(
     videoUri: String,
     mimeType: String?,
@@ -151,6 +161,8 @@ fun LoadUrlPreview(
 fun LocationPreviewMap(
     latitude: Double,
     longitude: Double,
+    modifier: Modifier = Modifier,
+    zoom: Double? = null,
     aspectRatio: Float = 1f,
     pinColor: Color? = null,
     pinEmoji: String? = null,
@@ -162,6 +174,8 @@ fun LocationPreviewMap(
     pinColor = pinColor,
     pinEmoji = pinEmoji,
     pinAlpha = pinAlpha,
+    modifier = modifier,
+    zoom = zoom,
 )
 
 @Composable

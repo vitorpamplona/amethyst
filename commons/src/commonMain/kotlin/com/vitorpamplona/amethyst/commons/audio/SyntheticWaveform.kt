@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback.composable.wavefront
+package com.vitorpamplona.amethyst.commons.audio
 
-import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random

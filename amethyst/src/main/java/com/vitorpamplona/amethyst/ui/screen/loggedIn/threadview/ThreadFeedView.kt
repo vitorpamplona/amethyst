@@ -144,6 +144,18 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMusicTrack
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderVoiceTrack
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBroadcastRelayList
@@ -261,18 +273,6 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
-import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
-import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
-import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -894,7 +894,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is WorkoutRecordEvent) {
                     WorkoutDisplay(baseNote, backgroundColor, canPreview = true, quotesLeft = 3, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is BaseVoiceEvent) {
-                    VoiceHeader(noteEvent, baseNote, accountViewModel, nav)
+                    RenderVoiceTrack(baseNote, accountViewModel, nav)
                 } else if (noteEvent is FileMetadataEvent) {
                     FileMetadataDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {
@@ -906,9 +906,9 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is ContactListEvent) {
                     DisplayContactList(baseNote, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
-                    AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
+                    RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
-                    AudioHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
+                    RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is MusicTrackEvent) {
                     RenderMusicTrack(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is MusicPlaylistEvent) {
