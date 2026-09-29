@@ -63,6 +63,11 @@ class NappletIdentityWatch(
         }
     }
 
+    /** Stops the watch started under [watchId], if any. */
+    fun stop(watchId: String) {
+        jobs.remove(watchId)?.cancel()
+    }
+
     fun stopAll() {
         jobs.snapshot().values.forEach { it.cancel() }
         jobs.clear()

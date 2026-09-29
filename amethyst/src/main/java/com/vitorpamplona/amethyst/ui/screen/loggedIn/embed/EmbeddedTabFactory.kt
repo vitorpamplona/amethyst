@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.napplet.NappletLaunchRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController
@@ -84,6 +85,11 @@ object EmbeddedTabFactory {
         backgroundColor: Int,
     ): EmbeddedNostrAppController {
         params.putInt(NappletHostContract.EXTRA_BG_COLOR, backgroundColor)
+        // The screen mints fresh params on every visit, but a warm tab keeps the session (and token) it was
+        // built with — give the unused fresh token back instead of leaving it registered.
+        if (EmbeddedTabHost.isWarm(nostrAppId(coordinate))) {
+            NappletLaunchRegistry.unregister(params.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN))
+        }
         return EmbeddedTabHost.acquire(nostrAppId(coordinate)) {
             EmbeddedNostrAppController(context.applicationContext, params).also { it.bind() }
         } as EmbeddedNostrAppController

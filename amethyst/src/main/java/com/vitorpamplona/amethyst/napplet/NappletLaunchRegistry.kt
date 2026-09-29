@@ -61,9 +61,10 @@ object NappletLaunchRegistry {
         val accountPubKey: HexKey,
     )
 
-    // Access-ordered + capped so tokens from long-closed napplets can't accumulate without bound. The
-    // active napplet always re-touches its token, so only stale sessions are ever evicted.
-    private const val MAX_SESSIONS = 128
+    // Access-ordered + capped so tokens from long-closed napplets can't accumulate without bound. Closed
+    // surfaces give their tokens back ([unregister]), so the cap is only a backstop for ones that never
+    // could (a crashed process); an idle live surface whose token is evicted anyway is told so and re-mints.
+    private const val MAX_SESSIONS = 512
 
     // LruCache is internally synchronized and access-ordered — the same
     // touch-on-resolve + evict-eldest-beyond-cap semantics the old access-ordered

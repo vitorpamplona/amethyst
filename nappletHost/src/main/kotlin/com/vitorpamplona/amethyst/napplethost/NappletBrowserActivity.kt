@@ -75,8 +75,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.ProxyConfig
-import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -90,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
+import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -98,7 +97,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
 import java.lang.ref.WeakReference
-import java.util.concurrent.Executor
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -311,7 +309,7 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
         shimJs = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        applyWebViewProxy(if (useTor) proxyPort else -1)
+        claimRoute()
 
         bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
         onBackPressedDispatcher.addCallback(this, backCallback)
@@ -336,7 +334,8 @@ class NappletBrowserActivity : ComponentActivity() {
         contentFrame.addView(wv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         if (popup == null) {
             loadingView = buildLoadingView().also { contentFrame.addView(it) }
-            wv.loadUrl(startUrl)
+            // Wait for this page's route (claimed above) to be in effect before the first request leaves.
+            WebViewProxyPolicy.whenApplied { if (webView === wv) wv.loadUrl(startUrl) }
         } else {
             wv.url?.let { if (it.isNotBlank() && it != "about:blank") startUrl = it }
         }
@@ -420,6 +419,7 @@ class NappletBrowserActivity : ComponentActivity() {
         // Messenger is a binder, and it would pin this Activity (and its WebView) in `:napplet` for the
         // life of the process. `unbindService` alone does not release it. See [replyMessenger].
         releaseFromBroker()
+        WebViewProxyPolicy.release(this)
         runCatching { unbindService(brokerConnection) }
         // A picker still up when the browser is torn down would otherwise leave its callback unanswered.
         pendingFileChooser.cancel()
@@ -471,7 +471,12 @@ class NappletBrowserActivity : ComponentActivity() {
         val msg =
             Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply {
                 replyTo = replyMessenger
-                data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, leaseKey) }
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, leaseKey)
+                        // This activity's per-origin tokens die with it (a recreated activity mints its own).
+                        if (originTokens.isNotEmpty()) putStringArray(NappletIpc.KEY_RELEASED_TOKENS, originTokens.values.toTypedArray())
+                    }
             }
         runCatching { broker.send(msg) }
     }
@@ -879,10 +884,11 @@ class NappletBrowserActivity : ComponentActivity() {
         val resolved = OmniboxInput.resolve(text) ?: return
         if (resolved.forceTor && proxyPort > 0 && !useTor) {
             useTor = true
-            applyWebViewProxy(proxyPort)
+            claimRoute()
             updateChromeState { copy(torOn = true) }
         }
-        webView?.loadUrl(resolved.url)
+        // An onion must not leave before the Tor route it just claimed is in place.
+        WebViewProxyPolicy.whenApplied { webView?.loadUrl(resolved.url) }
     }
 
     // ---- bridge: page <-> native (mirror of NappletBrowserService.onBridgeMessage) ----
@@ -995,6 +1001,11 @@ class NappletBrowserActivity : ComponentActivity() {
     private fun onBrokerReply(msg: Message): Boolean {
         val data = msg.data ?: return true
         when (msg.what) {
+            NappletIpc.MSG_TOKEN_UNKNOWN -> {
+                // The broker no longer knows this token (evicted): forget it so the origin re-mints.
+                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+                originTokens.values.removeAll { it == token }
+            }
             NappletIpc.MSG_RESPONSE -> {
                 val brokerId = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
@@ -1320,27 +1331,24 @@ class NappletBrowserActivity : ComponentActivity() {
     // ---- network ----
 
     /**
-     * Routes WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears the override.
-     * Process-global (this `:napplet` process hosts only sandbox WebViews) and best-effort.
+     * Files this page's Tor / open-web choice with the process-wide [WebViewProxyPolicy] (the override is
+     * shared by every WebView in `:napplet`, so no surface sets it directly); [onReady] runs once the shared
+     * route is in effect. An open-web page exempts its own site from other surfaces' Tor route.
      */
-    private fun applyWebViewProxy(port: Int) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
-        val executor = Executor { it.run() }
-        runCatching {
-            if (port > 0) {
-                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
-                ProxyController.getInstance().setProxyOverride(config, executor) {}
-            } else {
-                ProxyController.getInstance().clearProxyOverride(executor) {}
-            }
-        }.onFailure { Log.w(TAG, "Failed to apply WebView proxy override", it) }
+    private fun claimRoute(onReady: () -> Unit = {}) {
+        if (useTor && proxyPort > 0) {
+            WebViewProxyPolicy.claim(this, proxyPort, onReady = onReady)
+        } else {
+            val shown = webView?.url?.takeIf { it.startsWith("http") } ?: startUrl
+            WebViewProxyPolicy.claim(this, NappletProxyClaims.NO_PROXY, WebViewProxyPolicy.directHostsOf(shown), onReady)
+        }
     }
 
     /** Persists the per-host Tor choice in the main process and re-applies it to the live WebView. */
     private fun setNetworkMode(newUseTor: Boolean) {
         useTor = newUseTor
-        applyWebViewProxy(if (useTor) proxyPort else -1)
-        webView?.reload()
+        // Reload only once the new route is in effect, or the reload would go out the old way.
+        claimRoute { webView?.reload() }
         updateChromeState { copy(torOn = useTor) }
         // Key the persisted choice on the host actually displayed (which may differ from startUrl after
         // in-page navigation), so the preference sticks to the right site.
@@ -1627,7 +1635,7 @@ class NappletBrowserActivity : ComponentActivity() {
                                 crashView = null
                                 val wv = buildWebView()
                                 contentFrame.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-                                wv.loadUrl(url)
+                                WebViewProxyPolicy.whenApplied { if (webView === wv) wv.loadUrl(url) }
                             }
                         },
                     )

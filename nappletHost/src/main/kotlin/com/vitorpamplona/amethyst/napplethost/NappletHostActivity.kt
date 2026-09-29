@@ -58,8 +58,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.ProxyConfig
-import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -89,7 +87,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import java.lang.ref.WeakReference
-import java.util.concurrent.Executor
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -303,7 +300,7 @@ class NappletHostActivity : ComponentActivity() {
         // Route the WebView's own (off-origin) traffic through Tor for an nSite, unless this site was
         // opted out to the open web. Set process-wide before any page navigation; the shell + blobs are
         // served from cache via shouldInterceptRequest, so only the site's external requests hit this.
-        if (profile.exposesNetwork) applyWebViewProxy(effectiveProxy)
+        if (profile.exposesNetwork) WebViewProxyPolicy.claim(this, effectiveProxy)
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
             webView,
@@ -368,7 +365,8 @@ class NappletHostActivity : ComponentActivity() {
         contentFrame.addView(webView, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         if (!started) {
             started = true
-            webView.loadUrl(NappletWebContract.SHELL_URL)
+            // Wait for the route claimed above: a Tor nSite's first off-origin request must not leave early.
+            WebViewProxyPolicy.whenApplied { if (!isDestroyed) webView.loadUrl(NappletWebContract.SHELL_URL) }
         }
     }
 
@@ -455,6 +453,7 @@ class NappletHostActivity : ComponentActivity() {
         // Drop the broker's references to our reply Messenger BEFORE unbinding — a retained Messenger is a
         // binder and would pin this Activity (and its WebView) for the life of the `:napplet` process.
         releaseFromBroker()
+        WebViewProxyPolicy.release(this)
         // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()
@@ -567,25 +566,6 @@ class NappletHostActivity : ComponentActivity() {
         WebView.setWebContentsDebuggingEnabled(false)
         webView.webViewClient = NappletWebViewClient()
         webView.webChromeClient = NappletWebChromeClient()
-    }
-
-    /**
-     * Routes this process's WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears any
-     * override so the site loads over the open web. Process-global (this `:napplet` process hosts only
-     * applet/site WebViews) and best-effort: a device whose WebView can't honor a SOCKS proxy falls back
-     * to direct — verified on-device, since SOCKS-over-WebView support varies by WebView version.
-     */
-    private fun applyWebViewProxy(port: Int) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
-        val executor = Executor { it.run() }
-        runCatching {
-            if (port > 0) {
-                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
-                ProxyController.getInstance().setProxyOverride(config, executor) {}
-            } else {
-                ProxyController.getInstance().clearProxyOverride(executor) {}
-            }
-        }.onFailure { Log.w(TAG, "Failed to apply WebView proxy override", it) }
     }
 
     /** Serves only the trusted shell and the manifest's verified blobs; everything else 404s. */

@@ -58,15 +58,13 @@ import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.ProxyConfig
-import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
+import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -74,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
-import java.util.concurrent.Executor
 
 /**
  * Provider for the **embedded** in-app browser. Runs in the keyless `:napplet` process: it hosts the
@@ -187,17 +184,19 @@ class NappletBrowserService : Service() {
     override fun onBind(intent: Intent?): IBinder = incoming.binder
 
     override fun onDestroy() {
+        // Release before unbinding, while the broker can still hear it.
+        tabs.values.forEach {
+            it.fileChooser.cancel()
+            cancelPending(it)
+            releasePage(it, closing = true)
+            WebViewProxyPolicy.release(it)
+            it.webView?.destroy()
+        }
+        tabs.clear()
         if (brokerBound) {
             runCatching { unbindService(brokerConnection) }
             brokerBound = false
         }
-        tabs.values.forEach {
-            it.fileChooser.cancel()
-            cancelPending(it)
-            releasePage(it)
-            it.webView?.destroy()
-        }
-        tabs.clear()
         super.onDestroy()
     }
 
@@ -231,7 +230,13 @@ class NappletBrowserService : Service() {
                 val tab = tabFor(msg) ?: return true
                 val url = normalizeUrl(msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty())
                 // A renderer crash destroyed this tab's WebView; the user's retry builds a fresh one.
-                if (tab.webView == null) rebuildWebView(tab, url) else tab.webView?.loadUrl(url)
+                val wv = tab.webView
+                if (wv == null) {
+                    rebuildWebView(tab, url)
+                } else {
+                    // Right after a Tor toggle the new route may still be applying; don't let this load race it.
+                    WebViewProxyPolicy.whenApplied { if (tab.webView === wv) wv.loadUrl(url) }
+                }
             }
             NappletBrowserContract.MSG_FORWARD -> tabFor(msg)?.webView?.let { if (it.canGoForward()) it.goForward() }
             NappletBrowserContract.MSG_STOP -> tabFor(msg)?.webView?.stopLoading()
@@ -317,11 +322,9 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_SET_TOR -> {
                 val tab = tabFor(msg) ?: return true
                 tab.useTor = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
-                // Reload only after the proxy override actually applies — setProxyOverride is async, so
-                // reloading immediately would re-fetch through the old route. NB: the override is
-                // process-global (Android has no per-WebView proxy), so it affects every tab; we only
-                // reload the one the user toggled.
-                applyWebViewProxy(if (tab.useTor) tab.proxyPort else -1) { tab.webView?.reload() }
+                // Reload only after the route actually applies — the override is async, so reloading
+                // immediately would re-fetch through the old route.
+                claimRoute(tab) { tab.webView?.reload() }
             }
             NappletBrowserContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             NappletBrowserContract.MSG_FILE_CHOOSER_RESULT -> {
@@ -408,7 +411,24 @@ class NappletBrowserService : Service() {
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
         tab.container = container
-        return buildTabWebView(context, tab).also { it.loadUrl(tab.url) }
+        val wv = buildTabWebView(context, tab)
+        claimRoute(tab) { if (tab.webView === wv) wv.loadUrl(tab.url) }
+        return wv
+    }
+
+    /**
+     * Files [tab]'s Tor / open-web choice with the process-wide [WebViewProxyPolicy]; [onReady] runs once the
+     * shared route is in effect. An open-web tab exempts its own site from other tabs' Tor route.
+     */
+    private fun claimRoute(
+        tab: BrowserTab,
+        onReady: () -> Unit = {},
+    ) {
+        if (tab.useTor && tab.proxyPort > 0) {
+            WebViewProxyPolicy.claim(tab, tab.proxyPort, onReady = onReady)
+        } else {
+            WebViewProxyPolicy.claim(tab, NappletProxyClaims.NO_PROXY, WebViewProxyPolicy.directHostsOf(tab.webView?.url ?: tab.url), onReady)
+        }
     }
 
     /** Builds [tab]'s WebView with every client, bridge and script wired, without loading anything. */
@@ -425,7 +445,6 @@ class NappletBrowserService : Service() {
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)
         wv.dropSystemBarInsets()
-        applyWebViewProxy(if (tab.useTor) tab.proxyPort else -1)
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf("*")) { view, message, sourceOrigin, isMainFrame, replyProxy ->
             onBridgeMessage(tab, view, message, sourceOrigin, isMainFrame, replyProxy)
         }
@@ -447,13 +466,14 @@ class NappletBrowserService : Service() {
         val container = tab.container ?: return
         val wv = buildTabWebView(container.context, tab)
         container.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        wv.loadUrl(url)
+        claimRoute(tab) { if (tab.webView === wv) wv.loadUrl(url) }
     }
 
     /** A session closed: drop the tab and destroy its own WebView (never a sibling's). */
     fun onSessionClosed(sessionId: String) {
         val tab = tabs.remove(sessionId) ?: return
-        releasePage(tab)
+        WebViewProxyPolicy.release(tab)
+        releasePage(tab, closing = true)
         tab.bridge.clear()
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
@@ -929,34 +949,6 @@ class NappletBrowserService : Service() {
     }
 
     /**
-     * Routes WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears the override.
-     * [onApplied] runs on the main thread once the override is in effect (the WebKit callback is async,
-     * so callers that reload must wait for it). Process-global (this `:napplet` process hosts only
-     * sandbox WebViews) and best-effort.
-     */
-    private fun applyWebViewProxy(
-        port: Int,
-        onApplied: () -> Unit = {},
-    ) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
-            onApplied()
-            return
-        }
-        val executor = Executor { it.run() }
-        runCatching {
-            if (port > 0) {
-                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
-                ProxyController.getInstance().setProxyOverride(config, executor) { onApplied() }
-            } else {
-                ProxyController.getInstance().clearProxyOverride(executor) { onApplied() }
-            }
-        }.onFailure {
-            Log.w(TAG, "Failed to apply WebView proxy override", it)
-            onApplied()
-        }
-    }
-
-    /**
      * A top-frame NIP-07 call from [sourceOrigin]. The origin is the trusted value the WebView reports
      * (the page can't forge it), so it keys consent; each origin uses its own broker-minted launch token.
      */
@@ -1031,14 +1023,28 @@ class NappletBrowserService : Service() {
      * The page on [tab] is gone (navigated away, renderer died, session closed): drop its requests still
      * waiting for a token or the broker, and have the broker close the live relay / inc subscriptions it
      * opened — otherwise their events would keep streaming into whatever page comes next.
+     *
+     * [closing]: the whole tab is going away, so its per-origin launch tokens are given back too (a closed
+     * tab never re-uses them; a new session mints its own). Otherwise they'd sit in the broker's registry
+     * until evicted, pushing live tabs' tokens out first.
      */
-    private fun releasePage(tab: BrowserTab) {
+    private fun releasePage(
+        tab: BrowserTab,
+        closing: Boolean = false,
+    ) {
         tab.pendingByOrigin.clear()
         // A mint the broker never answered (none is sent while logged out) would otherwise block the
         // origin for the tab's life; the next page asks again.
         tab.mintInFlight.clear()
         pendingBrokerRequests.removeAll { it.what == NappletIpc.MSG_REQUEST && it.replyTo == tab.replyMessenger }
-        val release = Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = tab.replyMessenger }
+        val release =
+            Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply {
+                replyTo = tab.replyMessenger
+                if (closing && tab.originTokens.isNotEmpty()) {
+                    data = Bundle().apply { putStringArray(NappletIpc.KEY_RELEASED_TOKENS, tab.originTokens.values.toTypedArray()) }
+                }
+            }
+        if (closing) tab.originTokens.clear()
         if (brokerMessenger != null) sendToBroker(release)
     }
 
@@ -1139,6 +1145,11 @@ class NappletBrowserService : Service() {
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
                 runCatching { tab.bridge.currentProxy?.postMessage(payload) }
+            }
+            NappletIpc.MSG_TOKEN_UNKNOWN -> {
+                // The broker no longer knows this token (evicted): forget it so the origin re-mints.
+                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+                tab.originTokens.values.removeAll { it == token }
             }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true

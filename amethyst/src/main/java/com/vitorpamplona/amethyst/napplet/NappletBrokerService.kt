@@ -162,6 +162,15 @@ class NappletBrokerService : Service() {
                 incBus.removeAll(it)
                 liveSubscriptions.closeAllFor(it)
             }
+            // Tokens the surface will never use again: drop their sessions and whatever runs under them.
+            // Only the surface that minted a token holds it (tokens are unguessable), so it can only ever
+            // give back its own.
+            msg.data?.getStringArray(NappletIpc.KEY_RELEASED_TOKENS)?.forEach { token ->
+                NappletLaunchRegistry.unregister(token)
+                identityWatch.stop(token)
+                val prefix = "$token\u0000"
+                resourceRequests.keys.filter { it.startsWith(prefix) }.forEach { key -> resourceRequests.remove(key)?.cancel() }
+            }
             // Release its foreground lease too; otherwise a destroyed surface keeps the main process
             // pinned resumed until the lease watchdog expires it.
             msg.data?.getString(NappletIpc.KEY_LAUNCH_TOKEN)?.let { token ->
@@ -369,6 +378,14 @@ class NappletBrokerService : Service() {
         val session = NappletLaunchRegistry.resolve(launchToken)
         if (session == null) {
             reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("Unknown napplet session.")))
+            // Tell the surface its token is gone, so a browser tab re-mints instead of failing every call.
+            if (launchToken != null) {
+                val unknown =
+                    Message.obtain(null, NappletIpc.MSG_TOKEN_UNKNOWN).apply {
+                        this.data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken) }
+                    }
+                runCatching { replyTo.send(unknown) }
+            }
             return true
         }
         val identity = session.identity

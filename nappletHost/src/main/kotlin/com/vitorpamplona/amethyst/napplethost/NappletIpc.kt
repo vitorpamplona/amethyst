@@ -109,8 +109,10 @@ object NappletIpc {
 
     /**
      * Host → broker: this surface is being destroyed — drop every reference the broker holds to its
-     * `replyTo` [android.os.Messenger] (inc-bus topic subscriptions, and its foreground lease when
-     * [KEY_LAUNCH_TOKEN] is supplied).
+     * `replyTo` [android.os.Messenger] (inc-bus topic subscriptions, live relay subscriptions, and its
+     * foreground lease when [KEY_LAUNCH_TOKEN] is supplied). [KEY_RELEASED_TOKENS], when present, lists
+     * launch tokens the surface minted and will never use again (a closed browser tab's per-origin
+     * tokens); the broker unregisters them so dead sessions stop crowding live ones out of the registry.
      *
      * A `Messenger` handed to the broker is a **binder**, so the main process holding it keeps a JNI
      * global reference alive in `:napplet`. Because the sandbox's reply handler is a bound method
@@ -156,6 +158,13 @@ object NappletIpc {
      * [KEY_FAVORITE_LABEL]. The shortcut opens the page full screen in Amethyst's browser. Fire-and-forget.
      */
     const val MSG_ADD_TO_HOME_SCREEN = 19
+
+    /**
+     * Broker → host: a request carried [KEY_LAUNCH_TOKEN] the registry no longer knows (it was evicted, or
+     * released). The request itself was answered with a failure; a browser host drops that token so the
+     * origin's next call mints a fresh one instead of failing forever.
+     */
+    const val MSG_TOKEN_UNKNOWN = 20
 
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
@@ -208,4 +217,7 @@ object NappletIpc {
      * the trusted identity + declared capability set the launch was registered with.
      */
     const val KEY_LAUNCH_TOKEN = "launchToken"
+
+    /** Launch tokens a [MSG_RELEASE_CLIENT] gives back (a string array). */
+    const val KEY_RELEASED_TOKENS = "releasedTokens"
 }

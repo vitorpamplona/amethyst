@@ -56,8 +56,6 @@ import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.ProxyConfig
-import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -73,7 +71,6 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
-import java.util.concurrent.Executor
 
 /**
  * Provider for an **embedded** nsite/napplet tab — the in-app-tab counterpart of [NappletHostActivity].
@@ -171,16 +168,19 @@ class NappletHostService : Service() {
     override fun onBind(intent: Intent?): IBinder = incoming.binder
 
     override fun onDestroy() {
-        if (brokerBound) {
-            runCatching { unbindService(brokerConnection) }
-            brokerBound = false
-        }
+        // Release before unbinding, while the broker can still hear it.
         tabs.values.forEach {
+            WebViewProxyPolicy.release(it)
+            releaseFromBroker(it)
             it.fileChooser.cancel()
             it.contentServer?.close()
             it.webView?.destroy()
         }
         tabs.clear()
+        if (brokerBound) {
+            runCatching { unbindService(brokerConnection) }
+            brokerBound = false
+        }
         super.onDestroy()
     }
 
@@ -388,13 +388,18 @@ class NappletHostService : Service() {
         // Theme the pre-load background so the shell/app loading shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)
         wv.dropSystemBarInsets()
-        if (tab.profile.exposesNetwork) applyWebViewProxy(effectiveProxy)
         WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf(NappletWebContract.ORIGIN), ::onShellMessage)
         wv.setFindListener { active, total, _ -> pushFindResult(tab, active, total) }
         if (tab.textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) BrowserWebTools.setTextZoom(wv, tab.textZoom)
         tab.webView = wv
         if (tab.paused) wv.onPause()
-        wv.loadUrl(NappletWebContract.SHELL_URL)
+        if (tab.profile.exposesNetwork) {
+            // The site's own off-origin traffic follows the process-wide route; load once it's in place so
+            // a Tor nSite's first request can't leave over the open web.
+            WebViewProxyPolicy.claim(tab, effectiveProxy) { if (tab.webView === wv) wv.loadUrl(NappletWebContract.SHELL_URL) }
+        } else {
+            wv.loadUrl(NappletWebContract.SHELL_URL)
+        }
         return wv
     }
 
@@ -402,6 +407,8 @@ class NappletHostService : Service() {
     fun onSessionClosed(sessionId: String) {
         val tab = tabs.remove(sessionId) ?: return
         tab.bridgeReplyProxy = null
+        WebViewProxyPolicy.release(tab)
+        releaseFromBroker(tab)
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
         tab.contentServer?.close()
@@ -530,19 +537,6 @@ class NappletHostService : Service() {
             }
         if (runCatching { client.send(msg) }.isFailure) tab.fileChooser.cancel()
         return true
-    }
-
-    private fun applyWebViewProxy(port: Int) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
-        val executor = Executor { it.run() }
-        runCatching {
-            if (port > 0) {
-                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
-                ProxyController.getInstance().setProxyOverride(config, executor) {}
-            } else {
-                ProxyController.getInstance().clearProxyOverride(executor) {}
-            }
-        }.onFailure { Log.w(TAG, "Failed to apply WebView proxy override", it) }
     }
 
     /** Serves only the trusted shell and the manifest's verified blobs; external links go to the system. */
@@ -736,6 +730,18 @@ class NappletHostService : Service() {
                     }
             }
         if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
+    }
+
+    /**
+     * [tab] is gone: have the broker close the live relay / inc subscriptions it opened and drop its reply
+     * Messenger (a binder the main process would otherwise hold, keeping the tab alive). The launch token is
+     * NOT given back: the main-process controller re-creates sessions with the same token, and gives it
+     * back itself when it is torn down.
+     */
+    private fun releaseFromBroker(tab: NappletTab) {
+        pendingBrokerRequests.removeAll { it.replyTo == tab.replyMessenger }
+        if (brokerMessenger == null) return
+        sendToBroker(Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = tab.replyMessenger })
     }
 
     private fun sendToBroker(msg: Message) {

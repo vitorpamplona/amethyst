@@ -43,6 +43,7 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.napplet.NappletLaunchRegistry
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
@@ -185,6 +186,9 @@ class EmbeddedNostrAppController(
             runCatching { appContext.unbindService(connection) }
             bound = false
         }
+        // This controller's launch token dies with it (every session it re-creates reuses the token, so it
+        // can't be given back any earlier). Left registered, dead tokens crowd live ones out of the registry.
+        NappletLaunchRegistry.unregister(params.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN))
         // Drop refs so an evicted controller doesn't pin the surface view or the remote messenger.
         serviceMessenger = null
         sandboxedSdkView?.setEventListener(null)
