@@ -59,7 +59,7 @@ Ranked security > interop > feature inside each group.
 
 | # | Spec | Finding | Status |
 |---|---|---|---|
-| I1 | 02 §8 | Community List on retired 13302, hex, no fragments, no tombstones | in progress (this branch) |
+| I1 | 02 §8 | Community List on retired 13302, hex, no fragments, no tombstones | **fixed** — fragmented kind 33302 (`ConcordListFragments`/`ConcordListFragmentSet`), unpadded base64url, seed/current rules, tombstone on leave, byte-identical to Armada's `listFrag.ts` (golden tests), 13302 read as a rescue source and migrated on the next write |
 | I2 | 02 §6 | Metadata/Channel edits rebuilt from scratch, wiping `custom`, `message_expiration` (CORD-08), `av_brokers` | **fixed** — `ConcordJson.encodePreserving` lays every edit over the authorized head; metadata/channel forms start from the folded entity |
 | I3 | 03 §2 | Per-channel `voice` flag still modeled and rendered (every Channel is callable since `23dcea5`) | **fixed** — field removed (rides through as an unknown key), Mic icon and blank-preview special case removed |
 | I4 | 04 §1/§5 | `vac` never written or verified — Armada drops every non-owner edition we author | **fixed** — `ConcordModeration` stamps every non-owner edition with `AuthorityCitations.forActor` (own grant coordinate, folded head version + hash); every fold gate (roles, grants, banlist, metadata, channels, unmodeled kinds, floors/compaction) requires it per Armada `citationSatisfied` |
