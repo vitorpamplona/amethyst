@@ -129,7 +129,7 @@ class LiveActivitiesChatMessageEvent(
 
     override fun markedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
 
-    override fun unmarkedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
+    override fun unmarkedReplyTos() = super.unmarkedReplyTos().minus(activityHex() ?: "")
 
     override fun exposeInDraft() =
         tagArray<LiveActivitiesChatMessageEvent> {

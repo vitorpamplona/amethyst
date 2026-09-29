@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyAuthorTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyEventTag
@@ -46,6 +49,22 @@ fun <T : BaseVoiceEvent> TagArrayBuilder<T>.audioIMeta(audioUrls: List<AudioMeta
     audioUrls.forEach { audioIMeta(it) }
     return this
 }
+
+// NIP-22 root scope (uppercase E / K / P): NIP-A0 says a voice reply MUST follow NIP-22.
+fun TagArrayBuilder<VoiceReplyEvent>.rootEvent(
+    eventId: String,
+    relayHint: NormalizedRelayUrl?,
+    pubkey: String?,
+) = addUnique(RootEventTag.assemble(eventId, relayHint, pubkey))
+
+fun TagArrayBuilder<VoiceReplyEvent>.rootKind(kind: String) = addUnique(RootKindTag.assemble(kind))
+
+fun TagArrayBuilder<VoiceReplyEvent>.rootKind(kind: Int) = addUnique(RootKindTag.assemble(kind))
+
+fun TagArrayBuilder<VoiceReplyEvent>.rootAuthor(
+    pubKey: HexKey,
+    relay: NormalizedRelayUrl?,
+) = addUnique(RootAuthorTag.assemble(pubKey, relay))
 
 fun TagArrayBuilder<VoiceReplyEvent>.replyEvent(
     eventId: String,

@@ -18,29 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
+package com.vitorpamplona.quartz.experimental.forks
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 
 /**
- * Podcasting-2.0 edit-history pointer: `["edit", "<original-event-id>"]`. References
- * the event id of the original publication when an addressable episode/trailer is
- * updated, so clients can reconstruct edit history.
+ * The address an `a` tag marked `fork` points at: `["a", <address>, <relay>, "fork"]`, the
+ * version a note, a NIP text or a wiki article (NIP-54 "Forks") was forked from — of any kind.
+ * Only the marked tag counts: an event also carries unmarked `a` tags (a community, a mention),
+ * and those are not its origin.
  */
-class EditTag {
-    companion object {
-        const val TAG_NAME = "edit"
-
-        fun parse(tag: Array<String>): HexKey? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64 && Hex.isHex(tag[1])) { return null }
-            return tag[1]
-        }
-
-        fun assemble(originalEventId: HexKey) = arrayOf(TAG_NAME, originalEventId)
-    }
+fun parseForkedAddress(tag: Array<String>): Address? {
+    if (tag.size < 4 || tag[0] != "a") return null
+    if (tag[3] != MarkedETag.MARKER.FORK.code) return null
+    return Address.parse(tag[1])
 }

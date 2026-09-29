@@ -69,6 +69,7 @@ data class AddressMemberTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
+            ensure(AddressSerializer.parse(tag[1]) != null) { return null }
 
             return AddressMemberTag(tag[1], MemberTagFields.relayHint(tag), MemberTagFields.score(tag))
         }
@@ -77,6 +78,7 @@ data class AddressMemberTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
+            ensure(AddressSerializer.parse(tag[1]) != null) { return null }
             return tag[1]
         }
 

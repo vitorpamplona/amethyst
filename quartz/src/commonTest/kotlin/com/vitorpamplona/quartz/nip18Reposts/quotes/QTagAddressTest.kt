@@ -18,29 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
+package com.vitorpamplona.quartz.nip18Reposts.quotes
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.ensure
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
-/**
- * Podcasting-2.0 edit-history pointer: `["edit", "<original-event-id>"]`. References
- * the event id of the original publication when an addressable episode/trailer is
- * updated, so clients can reconstruct edit history.
- */
-class EditTag {
-    companion object {
-        const val TAG_NAME = "edit"
+class QTagAddressTest {
+    private val address = "30023:460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c:my-article"
 
-        fun parse(tag: Array<String>): HexKey? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64 && Hex.isHex(tag[1])) { return null }
-            return tag[1]
-        }
+    @Test
+    fun anAddressQuoteParsesAsAnAddress() {
+        assertEquals(address, QTag.parseAddressId(arrayOf("q", address)))
+        assertEquals(address, QTag.parseAddressAsHint(arrayOf("q", address, "wss://relay.example.com"))?.addressId)
+    }
 
-        fun assemble(originalEventId: HexKey) = arrayOf(TAG_NAME, originalEventId)
+    @Test
+    fun anEventQuoteIsNotAnAddress() {
+        assertNull(QTag.parseAddressId(arrayOf("q", "a".repeat(64))))
     }
 }

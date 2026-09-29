@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -66,7 +65,7 @@ class ForkTag(
             ensure(
                 Address.Companion.isOfKind(
                     tag[1],
-                    CommunityDefinitionEvent.Companion.KIND_STR,
+                    NipTextEvent.KIND_STR,
                 ),
             ) { return null }
 
@@ -81,7 +80,7 @@ class ForkTag(
             ensure(
                 Address.Companion.isOfKind(
                     tag[1],
-                    CommunityDefinitionEvent.Companion.KIND_STR,
+                    NipTextEvent.KIND_STR,
                 ),
             ) { return null }
             return Address.Companion.parse(tag[1])?.toValue()

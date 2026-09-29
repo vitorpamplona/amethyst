@@ -18,29 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
+package com.vitorpamplona.quartz.nip58Badges
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-/**
- * Podcasting-2.0 edit-history pointer: `["edit", "<original-event-id>"]`. References
- * the event id of the original publication when an addressable episode/trailer is
- * updated, so clients can reconstruct edit history.
- */
-class EditTag {
-    companion object {
-        const val TAG_NAME = "edit"
-
-        fun parse(tag: Array<String>): HexKey? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64 && Hex.isHex(tag[1])) { return null }
-            return tag[1]
-        }
-
-        fun assemble(originalEventId: HexKey) = arrayOf(TAG_NAME, originalEventId)
+class ProfileBadgeDefinitionsTest {
+    @Test
+    fun badgeSetPointersAreNotBadgeDefinitions() {
+        val pk = "1".repeat(64)
+        val definition = "30009:$pk:early-adopter"
+        val profile =
+            ProfileBadgesEvent(
+                "0".repeat(64),
+                pk,
+                1,
+                arrayOf(arrayOf("d", "profile_badges"), arrayOf("a", definition), arrayOf("e", "e".repeat(64)), arrayOf("a", "30008:$pk:favorites")),
+                "",
+                "0".repeat(128),
+            )
+        assertEquals(listOf(definition), profile.badgeAwardDefinitions().map { it.toValue() })
     }
 }

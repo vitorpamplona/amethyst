@@ -128,8 +128,8 @@ class InteractiveStoryReadingStateEvent(
             status(status)
 
             root.event.title()?.let { storyTitle(it) }
-            root.event.summary()?.let { storyImage(it) }
-            root.event.image()?.let { storySummary(it) }
+            root.event.summary()?.let { storySummary(it) }
+            root.event.image()?.let { storyImage(it) }
 
             initializer()
         }

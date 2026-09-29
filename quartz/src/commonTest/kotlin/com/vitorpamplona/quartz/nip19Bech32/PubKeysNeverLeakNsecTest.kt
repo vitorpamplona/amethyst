@@ -18,29 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
+package com.vitorpamplona.quartz.nip19Bech32
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-/**
- * Podcasting-2.0 edit-history pointer: `["edit", "<original-event-id>"]`. References
- * the event id of the original publication when an addressable episode/trailer is
- * updated, so clients can reconstruct edit history.
- */
-class EditTag {
-    companion object {
-        const val TAG_NAME = "edit"
+class PubKeysNeverLeakNsecTest {
+    private val secret = "7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a"
+    private val npubKey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
 
-        fun parse(tag: Array<String>): HexKey? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64 && Hex.isHex(tag[1])) { return null }
-            return tag[1]
-        }
-
-        fun assemble(originalEventId: HexKey) = arrayOf(TAG_NAME, originalEventId)
+    @Test
+    fun aPastedNsecIsNotALinkedPubkey() {
+        val nsec = secret.hexToByteArray().toNsec()
+        val npub = npubKey.hexToByteArray().toNpub()
+        val cited = Nip19Parser.parseAll("leaked nostr:$nsec and hi nostr:$npub")
+        assertEquals(listOf(npubKey), cited.pubKeys())
     }
 }

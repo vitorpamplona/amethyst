@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -48,7 +49,8 @@ object ConsentTag {
         ensure(tag.has(2)) { return null }
         ensure(tag[0] == TAG_NAME) { return null }
         ensure(tag[1].isNotEmpty()) { return null }
-        ensure(tag[2].isNotEmpty()) { return null }
+        // The actor is a pubkey.
+        ensure(tag[2].length == 64 && Hex.isHex(tag[2])) { return null }
         return Consent(tag[1], tag[2])
     }
 

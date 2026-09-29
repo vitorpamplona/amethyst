@@ -47,7 +47,20 @@ class ChannelHideMessageEvent(
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
 
-    fun eventsToHide() = tags.taggedEventIds()
+    /**
+     * NIP-28 names the channel only through a MARKED root (Quartz writes one; the spec's own 43
+     * has none): the unmarked-root fallback of [BasePublicChatEvent] would read the first hidden
+     * message as the channel.
+     */
+    override fun channel() = markedRoot()
+
+    override fun channelId() = channel()?.eventId
+
+    /** The hidden messages: every `e` except the channel it is posted in. */
+    fun eventsToHide(): List<HexKey> {
+        val channel = channelId()
+        return tags.taggedEventIds().filter { it != channel }
+    }
 
     companion object {
         const val KIND = 43

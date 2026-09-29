@@ -24,6 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyAuthorTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyEventTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyKindTag
@@ -55,6 +58,12 @@ class VoiceReplyEvent(
 
     fun replyingTo(): HexKey? = tags.lastNotNullOfOrNull(ReplyEventTag::parseKey)
 
+    /** The thread's root scope (NIP-22 `E`): the voice message the conversation started from. */
+    fun rootEventId(): HexKey? = tags.firstNotNullOfOrNull(RootEventTag::parseKey)
+
+    /** The root scope's author (NIP-22 `P`). */
+    fun rootAuthorKey(): HexKey? = tags.firstNotNullOfOrNull(RootAuthorTag::parseKey)
+
     companion object {
         const val KIND = 1244
 
@@ -73,6 +82,23 @@ class VoiceReplyEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VoiceReplyEvent>.() -> Unit = {},
         ) = build(voiceMessage, KIND, createdAt) {
+            // NIP-A0: a voice reply MUST follow NIP-22, so it names the thread's root scope
+            // (E / K / P) as well as its parent. Replying to a reply inherits that reply's root;
+            // replying to the voice message itself makes it the root.
+            val parent = replyingTo.event
+            val inherited =
+                if (parent is VoiceReplyEvent) {
+                    parent.tags.filter { RootEventTag.match(it) || RootKindTag.match(it) || RootAuthorTag.match(it) }
+                } else {
+                    emptyList()
+                }
+            if (inherited.any { RootEventTag.match(it) }) {
+                inherited.forEach { addUnique(it) }
+            } else {
+                rootEvent(parent.id, replyingTo.relay, parent.pubKey)
+                rootKind(parent.kind)
+                rootAuthor(parent.pubKey, replyingTo.authorHomeRelay)
+            }
             replyEvent(replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey)
             replyKind(replyingTo.event.kind)
             replyAuthor(replyingTo.event.pubKey, replyingTo.authorHomeRelay)
