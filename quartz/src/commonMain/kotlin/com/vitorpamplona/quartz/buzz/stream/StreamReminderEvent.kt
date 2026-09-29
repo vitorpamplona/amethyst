@@ -21,18 +21,18 @@
 package com.vitorpamplona.quartz.buzz.stream
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.buzzChannels
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -61,8 +61,8 @@ class StreamReminderEvent(
 
     override fun links(): List<Link<*>> =
         links {
-            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
-            userTags(Relation.RECIPIENT, tags)
+            buzzChannels(tags)
+            each(tags, PTag::parse) { user(Relation.RECIPIENT, it, PTag.TAG_NAME) }
             event(Relation.REMINDED, targetMessage(), ETag.TAG_NAME)
         }
 

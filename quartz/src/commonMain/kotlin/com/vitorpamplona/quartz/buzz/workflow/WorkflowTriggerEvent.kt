@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.workflow
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -52,12 +53,15 @@ class WorkflowTriggerEvent(
     fun workflowId() = tags.workflowDTag()
 
     /**
-     * The `d` on this REGULAR kind names the workflow to run, not this event: it is the
-     * 30620 definition's `d`, under this author, since only the workflow's owner may trigger it.
+     * The [WorkflowDefEvent] this trigger runs. The `d` on this REGULAR kind names the workflow,
+     * not this event: it is the definition's `d`, under this author, since only the workflow's
+     * owner may trigger it.
      */
+    fun workflowAddress(): Address? = workflowId()?.let { Address(WorkflowDefEvent.KIND, pubKey, it) }
+
     override fun links(): List<Link<*>> =
         links {
-            address(Relation.TRIGGERED, workflowId()?.let { "${WorkflowDefEvent.KIND}:$pubKey:$it" }, DTag.TAG_NAME)
+            address(Relation.TRIGGERED, workflowAddress(), DTag.TAG_NAME)
         }
 
     companion object {

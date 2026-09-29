@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.buzz.iaIdentityArchival
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
-import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.tags.AuthTag
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.verifiedOwner
@@ -33,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ModerationProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
@@ -72,7 +72,7 @@ class UnarchiveRequestEvent(
     /** The `auth` owner is linked only when its attestation verifies for this event's author. */
     override fun links(): List<Link<*>> =
         links {
-            user(Relation.UNARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
+            user(Relation.UNARCHIVED, target(), PTag.TAG_NAME, ModerationProps(reason()))
             verifiedOwner(auth(), pubKey)
         }
 

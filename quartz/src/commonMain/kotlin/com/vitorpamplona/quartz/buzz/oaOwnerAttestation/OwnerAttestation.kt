@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
+import com.vitorpamplona.quartz.nip01Core.links.props.OwnerProps
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
@@ -81,6 +82,9 @@ data class OwnerAttestation(
 
     /** Builds the NIP-OA `auth` tag for this attestation. */
     fun toTag(): Array<String> = AuthTag.assemble(this)
+
+    /** The props of the `OWNER` link an attestation states: its [conditions], when it has any (empty means unconditional). */
+    fun ownerProps() = OwnerProps(conditions.ifEmpty { null })
 
     companion object {
         const val COMMITMENT_PREFIX = "nostr:agent-auth:"

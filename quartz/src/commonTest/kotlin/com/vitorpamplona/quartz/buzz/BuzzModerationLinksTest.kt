@@ -38,6 +38,11 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.ActorProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ModerationProps
+import com.vitorpamplona.quartz.nip01Core.links.props.OwnerProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ResolutionProps
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -70,8 +75,8 @@ class BuzzModerationLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.ARCHIVED, LinkTarget.User(p1), "p", mapOf("reason" to "rotated")),
-                Link(Relation.ACTOR, LinkTarget.User(p2), "consent", mapOf("path" to "owner")),
+                Link(Relation.ARCHIVED, LinkTarget.User(p1), "p", ModerationProps(reason = "rotated")),
+                Link(Relation.ACTOR, LinkTarget.User(p2), "consent", ActorProps("owner")),
                 Link(Relation.REQUEST, LinkTarget.Event(e1), "e"),
                 Link(Relation.REPLACED_BY, LinkTarget.User(p3), "replaced-by"),
             ),
@@ -93,7 +98,7 @@ class BuzzModerationLinksTest {
         assertEquals(
             listOf(
                 Link(Relation.UNARCHIVED, LinkTarget.User(p1), "p"),
-                Link(Relation.ACTOR, LinkTarget.User(p1), "consent", mapOf("path" to "self")),
+                Link(Relation.ACTOR, LinkTarget.User(p1), "consent", ActorProps("self")),
                 Link(Relation.REQUEST, LinkTarget.Event(e1), "e"),
             ),
             event.links(),
@@ -116,7 +121,7 @@ class BuzzModerationLinksTest {
             listOf(
                 Link(Relation.ARCHIVED, LinkTarget.User(p1), "p"),
                 Link(Relation.REPLACED_BY, LinkTarget.User(p2), "replaced-by"),
-                Link(Relation.OWNER, LinkTarget.User(owner.pubKey.toHexKey()), "auth", mapOf("conditions" to "kind=9035")),
+                Link(Relation.OWNER, LinkTarget.User(owner.pubKey.toHexKey()), "auth", OwnerProps("kind=9035")),
             ),
             ArchiveRequestEvent(id, author, 0, tags, "", sig).links(),
         )
@@ -146,7 +151,7 @@ class BuzzModerationLinksTest {
             )
         assertEquals(
             listOf(
-                Link(Relation.UNARCHIVED, LinkTarget.User(p1), "p", mapOf("reason" to "mistake")),
+                Link(Relation.UNARCHIVED, LinkTarget.User(p1), "p", ModerationProps(reason = "mistake")),
                 Link(Relation.OWNER, LinkTarget.User(owner.pubKey.toHexKey()), "auth"),
             ),
             event.links(),
@@ -176,7 +181,7 @@ class BuzzModerationLinksTest {
     @Test
     fun relayAdminCommands() {
         assertEquals(
-            listOf(Link(Relation.ADDED_USER, LinkTarget.User(p1), "p", mapOf("role" to "admin"))),
+            listOf(Link(Relation.ADDED_USER, LinkTarget.User(p1), "p", RoleProps(listOf("admin")))),
             RelayAdminAddMemberEvent(id, author, 0, arrayOf(arrayOf("p", p1), arrayOf("role", "admin")), "", sig).links(),
         )
         assertEquals(
@@ -188,7 +193,7 @@ class BuzzModerationLinksTest {
             RelayAdminRemoveMemberEvent(id, author, 0, arrayOf(arrayOf("p", p1)), "", sig).links(),
         )
         assertEquals(
-            listOf(Link(Relation.ROLE_CHANGED, LinkTarget.User(p1), "p", mapOf("role" to "member"))),
+            listOf(Link(Relation.ROLE_CHANGED, LinkTarget.User(p1), "p", RoleProps(listOf("member")))),
             RelayAdminChangeRoleEvent(id, author, 0, arrayOf(arrayOf("p", p1), arrayOf("role", "member")), "", sig).links(),
         )
     }
@@ -196,7 +201,7 @@ class BuzzModerationLinksTest {
     @Test
     fun moderationCommands() {
         assertEquals(
-            listOf(Link(Relation.BANNED, LinkTarget.User(p1), "p", mapOf("expiration" to 1700000000L, "reason" to "spam"))),
+            listOf(Link(Relation.BANNED, LinkTarget.User(p1), "p", ModerationProps(reason = "spam", expiration = 1700000000L))),
             ModerationBanEvent(
                 id,
                 author,
@@ -211,7 +216,7 @@ class BuzzModerationLinksTest {
             ModerationBanEvent(id, author, 0, arrayOf(arrayOf("p", p1)), "", sig).links(),
         )
         assertEquals(
-            listOf(Link(Relation.TIMED_OUT, LinkTarget.User(p1), "p", mapOf("expiration" to 1700000000L))),
+            listOf(Link(Relation.TIMED_OUT, LinkTarget.User(p1), "p", ModerationProps(expiration = 1700000000L))),
             ModerationTimeoutEvent(id, author, 0, arrayOf(arrayOf("p", p1), arrayOf("expiration", "1700000000")), "", sig).links(),
         )
         assertEquals(
@@ -232,7 +237,7 @@ class BuzzModerationLinksTest {
                 sig,
             )
         assertEquals(
-            listOf(Link(Relation.RESOLVED, LinkTarget.Event(e1), "report", mapOf("status" to "resolved", "action" to "ban"))),
+            listOf(Link(Relation.RESOLVED, LinkTarget.Event(e1), "report", ResolutionProps(status = "resolved", action = "ban"))),
             event.links(),
         )
     }

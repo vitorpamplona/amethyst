@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.buzz.moderation
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
-import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.moderation.tags.ActionTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.ReportTag
 import com.vitorpamplona.quartz.buzz.moderation.tags.StatusTag
@@ -33,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ResolutionProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -70,7 +70,7 @@ class ModerationResolveReportEvent(
     /** The report rides in Buzz's own `report` tag, not an `e`. */
     override fun links(): List<Link<*>> =
         links {
-            event(Relation.RESOLVED, report(), ReportTag.TAG_NAME, linkProps("status" to status(), "action" to action(), "reason" to reason()))
+            event(Relation.RESOLVED, report(), ReportTag.TAG_NAME, ResolutionProps(status(), action(), reason()))
         }
 
     companion object {

@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.props.VoteProps
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
@@ -203,7 +204,7 @@ class BuzzLinksTest {
             ForumCommentEvent(id, author, 0, arrayOf(arrayOf("h", channel), arrayOf("e", e1, "", "reply"), arrayOf("p", p1)), "+1", sig).links(),
         )
         assertEquals(
-            listOf(group, Link(Relation.VOTED, LinkTarget.Event(e1), "e", mapOf("direction" to "-"))),
+            listOf(group, Link(Relation.VOTED, LinkTarget.Event(e1), "e", VoteProps("-"))),
             ForumVoteEvent(id, author, 0, arrayOf(arrayOf("h", channel), arrayOf("e", e1)), "-", sig).links(),
         )
         assertEquals(

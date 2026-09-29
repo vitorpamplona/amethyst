@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.buzz.relayAdmin
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.relayAdmin.tags.RoleTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -30,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -60,7 +60,7 @@ class RelayAdminAddMemberEvent(
 
     override fun links(): List<Link<*>> =
         links {
-            user(Relation.ADDED_USER, target(), PTag.TAG_NAME, linkProps("role" to role()))
+            user(Relation.ADDED_USER, target(), PTag.TAG_NAME, RoleProps(listOfNotNull(role())))
         }
 
     companion object {

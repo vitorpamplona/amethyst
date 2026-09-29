@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.forum
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.buzzChannels
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -28,11 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -73,8 +73,8 @@ class ForumPostEvent(
 
     override fun links(): List<Link<*>> =
         links {
-            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
-            userTags(Relation.MENTION, tags)
+            buzzChannels(tags)
+            each(tags, PTag::parse) { user(Relation.MENTION, it, PTag.TAG_NAME) }
             contentMentions(content)
         }
 

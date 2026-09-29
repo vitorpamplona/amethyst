@@ -21,17 +21,15 @@
 package com.vitorpamplona.quartz.buzz.workflow
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.buzzChannels
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
-import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -77,7 +75,7 @@ class WorkflowDefEvent(
 
     override fun links(): List<Link<*>> =
         links {
-            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+            buzzChannels(tags)
         }
 
     companion object {

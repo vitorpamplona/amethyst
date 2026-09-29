@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.buzz.iaIdentityArchival
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ConsentTag
 import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReasonTag
-import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -31,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.props.ModerationProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -73,8 +73,8 @@ class UnarchivedIdentityEvent(
 
     override fun links(): List<Link<*>> =
         links {
-            user(Relation.UNARCHIVED, target(), PTag.TAG_NAME, linkProps("reason" to reason()))
-            consent()?.let { user(Relation.ACTOR, it.actorPubKey, ConsentTag.TAG_NAME, mapOf("path" to it.path)) }
+            user(Relation.UNARCHIVED, target(), PTag.TAG_NAME, ModerationProps(reason()))
+            consent()?.let { user(Relation.ACTOR, it, ConsentTag.TAG_NAME, it.actorProps()) }
             event(Relation.REQUEST, requestId(), ETag.TAG_NAME)
         }
 

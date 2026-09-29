@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.buzz.oaOwnerAttestation
 
-import com.vitorpamplona.quartz.buzz.linkProps
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.tags.AuthTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
@@ -37,5 +36,5 @@ fun LinkBuilder.verifiedOwner(
     agentPubKey: HexKey,
 ) {
     if (attestation == null || !attestation.verify(agentPubKey)) return
-    user(Relation.OWNER, attestation.ownerPubKey, AuthTag.TAG_NAME, linkProps("conditions" to attestation.conditions.ifEmpty { null }))
+    user(Relation.OWNER, attestation.ownerPubKey, AuthTag.TAG_NAME, attestation.ownerProps())
 }

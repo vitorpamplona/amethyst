@@ -55,6 +55,8 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.props.AuditProps
+import com.vitorpamplona.quartz.nip01Core.links.props.FrameProps
+import com.vitorpamplona.quartz.nip01Core.links.props.StatusProps
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -85,12 +87,12 @@ class BuzzAgentLinksTest {
             JobAcceptedEvent(id, author, 0, arrayOf(arrayOf("e", e1), h, arrayOf("p", p2)), "", sig).links(),
         )
         assertEquals(
-            listOf(Link(Relation.REQUEST, LinkTarget.Event(e1), "e", mapOf("status" to "running")), group),
+            listOf(Link(Relation.REQUEST, LinkTarget.Event(e1), "e", StatusProps("running")), group),
             JobProgressEvent(id, author, 0, arrayOf(arrayOf("e", e1), h, arrayOf("status", "running")), "50%", sig).links(),
         )
         assertEquals(
             listOf(
-                Link(Relation.REQUEST, LinkTarget.Event(e1), "e", mapOf("status" to "success")),
+                Link(Relation.REQUEST, LinkTarget.Event(e1), "e", StatusProps("success")),
                 group,
                 Link(Relation.REQUEST_AUTHOR, LinkTarget.User(p2), "p"),
             ),
@@ -188,7 +190,7 @@ class BuzzAgentLinksTest {
             ),
             AgentTurnMetricEvent(id, author, 0, arrayOf(arrayOf("p", p1), arrayOf("agent", author)), "ciphertext", sig).links(),
         )
-        val frame = mapOf("frame" to "control")
+        val frame = FrameProps("control")
         assertEquals(
             listOf(
                 Link(Relation.RECIPIENT, LinkTarget.User(p2), "p", frame),

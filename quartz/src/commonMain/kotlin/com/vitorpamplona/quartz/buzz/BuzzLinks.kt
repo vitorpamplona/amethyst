@@ -20,17 +20,19 @@
  */
 package com.vitorpamplona.quartz.buzz
 
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.props.NoProps
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+
 /**
- * A link's props from the values an event actually carries: a null value is left out, and an
- * event that carries none of them gets no props at all.
+ * The channels a Buzz event's `h` tags ([GroupIdTag]) name, as [Relation.GROUP] (or [relation]).
+ * Buzz scopes nearly every kind to a channel this way, and a channel id is a NIP-29 group id, so
+ * the target is the same `h` value node the NIP-29 kinds link to.
  */
-internal fun linkProps(vararg entries: Pair<String, Any?>): Map<String, Any>? {
-    var props: LinkedHashMap<String, Any>? = null
-    for ((key, value) in entries) {
-        if (value != null) {
-            val map = props ?: LinkedHashMap<String, Any>(entries.size).also { props = it }
-            map[key] = value
-        }
-    }
-    return props
-}
+fun LinkBuilder.buzzChannels(
+    tags: TagArray,
+    relation: Relation<NoProps> = Relation.GROUP,
+) = each(tags, GroupIdTag::parse) { tag(relation, GroupIdTag.TAG_NAME, it) }

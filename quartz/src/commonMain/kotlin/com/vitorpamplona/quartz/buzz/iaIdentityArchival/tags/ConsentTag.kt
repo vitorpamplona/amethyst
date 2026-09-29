@@ -24,6 +24,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.links.props.ActorProps
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -64,4 +67,12 @@ object ConsentTag {
 data class Consent(
     val path: String,
     val actorPubKey: HexKey,
-)
+) : PubKeyReferenceTag {
+    override val pubKey: HexKey get() = actorPubKey
+
+    // The tag carries no relay slot.
+    override val relayHint: NormalizedRelayUrl? get() = null
+
+    /** The props of the `ACTOR` link to [actorPubKey]: which consent [path] authorized the mutation. */
+    fun actorProps() = ActorProps(path)
+}

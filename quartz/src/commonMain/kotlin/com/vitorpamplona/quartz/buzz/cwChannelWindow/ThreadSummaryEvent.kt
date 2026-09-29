@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.cwChannelWindow
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.buzzChannels
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -28,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -78,7 +78,7 @@ class ThreadSummaryEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            valueTags(Relation.GROUP, tags, GroupIdTag.TAG_NAME)
+            buzzChannels(tags)
             event(Relation.ABOUT, rootEventTag(), ETag.TAG_NAME)
         }
 
