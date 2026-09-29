@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip87Ecash
 
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -42,5 +44,12 @@ class MintEventsAreAddressableTest {
             assertIs<AddressableEvent>(event)
             assertEquals("${event.kind}:$pk:mint-id", event.addressTag())
         }
+    }
+
+    @Test
+    fun deletingARecommendationNamesItsAddressOnce() {
+        val rec = MintRecommendationEvent("0".repeat(64), pk, 1, tags, "", "0".repeat(128))
+        val deletion = NostrSignerSync().sign(DeletionRequestEvent.build(listOf(rec)))
+        assertEquals(listOf("38000:$pk:mint-id"), deletion.tags.filter { it[0] == "a" }.map { it[1] })
     }
 }

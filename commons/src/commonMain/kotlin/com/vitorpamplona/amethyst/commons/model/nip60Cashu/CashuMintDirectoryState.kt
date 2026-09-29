@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip60Cashu
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryQueryState
@@ -201,13 +202,17 @@ class CashuMintDirectoryState(
 
     private fun backfillFromCacheAsync() {
         scope.launch(Dispatchers.Default) {
-            cache.notes.forEach { _, note ->
+            // NIP-87 kinds are addressable: the current version lives in `addressables` (its
+            // per-id note is weakly held and pruned once superseded). Both maps are keyed by id.
+            val visit = { note: Note ->
                 when (val e = note.event) {
                     is CashuMintEvent -> announcements[e.id] = e
                     is MintRecommendationEvent -> if (e.isCashuRecommendation()) recommendations[e.id] = e
                     else -> Unit
                 }
             }
+            cache.notes.forEach { _, note -> visit(note) }
+            cache.addressables.forEach { _, note -> visit(note) }
             rebuildEntries()
         }
     }

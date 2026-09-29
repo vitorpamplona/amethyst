@@ -18,29 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags
+package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.RequestTag
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
-/**
- * Podcasting-2.0 edit-history pointer: `["edit", "<original-event-id>"]`. References
- * the event id of the original publication when an addressable episode/trailer is
- * updated, so clients can reconstruct edit history.
- */
-class EditTag {
-    companion object {
-        const val TAG_NAME = "edit"
+class AddressIsOfKindBoundsTest {
+    @Test
+    fun aValueThatIsOnlyTheKindIsNotOfThatKind() {
+        assertFalse(Address.isOfKind("31872", "31872"))
+        assertFalse(AddressSerializer.isOfKind("31872", "31872"))
+        assertFalse(Address.isOfKind("318720:x:y", "31872"))
+        assertTrue(Address.isOfKind("31872:x:y", "31872"))
+    }
 
-        fun parse(tag: Array<String>): HexKey? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isValid()) { return null }
-            return tag[1]
-        }
-
-        fun assemble(originalEventId: HexKey) = arrayOf(TAG_NAME, originalEventId)
+    @Test
+    fun aHostileRequestTagIsRejectedNotThrown() {
+        assertNull(RequestTag.parse(arrayOf("request", "31872")))
+        assertFalse(RequestTag.isTagged(arrayOf("request", "31872")))
     }
 }

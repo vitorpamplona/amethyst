@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyAuthorTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyEventTag
@@ -64,6 +66,29 @@ class VoiceReplyEvent(
     /** The root scope's author (NIP-22 `P`). */
     fun rootAuthorKey(): HexKey? = tags.firstNotNullOfOrNull(RootAuthorTag::parseKey)
 
+    /**
+     * The root-scope tags a reply to this event inherits, or null when this event names no root.
+     *
+     * A NIP-22 reply carries them verbatim: `E`, `A` or `I` (a thread may be rooted at an
+     * address or an external id, not only at an event) plus `K` and `P`. A reply published
+     * before voice replies followed NIP-22 has only the lowercase parent tags; when that parent
+     * is a voice message (`k` 1222) the parent IS the root, so its `e` / `p` are rewritten as
+     * `E` / `P` (identical layouts). An older reply to a reply has lost its root: null.
+     */
+    fun rootScopeTags(): List<Array<String>>? {
+        val scope = tags.filter { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) || RootKindTag.match(it) || RootAuthorTag.match(it) }
+        if (scope.any { RootEventTag.match(it) || RootAddressTag.match(it) || RootIdentifierTag.match(it) }) return scope
+
+        if (tags.none { ReplyKindTag.match(it) && it[1] == VoiceEvent.KIND.toString() }) return null
+        val parentTag = tags.lastOrNull { ReplyEventTag.parseKey(it) != null } ?: return null
+        val authorTag = tags.lastOrNull { ReplyAuthorTag.parseKey(it) != null }
+        return listOfNotNull(
+            parentTag.copyOf().also { it[0] = RootEventTag.TAG_NAME },
+            RootKindTag.assemble(VoiceEvent.KIND),
+            authorTag?.copyOf()?.also { it[0] = RootAuthorTag.TAG_NAME },
+        )
+    }
+
     companion object {
         const val KIND = 1244
 
@@ -82,17 +107,11 @@ class VoiceReplyEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VoiceReplyEvent>.() -> Unit = {},
         ) = build(voiceMessage, KIND, createdAt) {
-            // NIP-A0: a voice reply MUST follow NIP-22, so it names the thread's root scope
-            // (E / K / P) as well as its parent. Replying to a reply inherits that reply's root;
-            // replying to the voice message itself makes it the root.
+            // NIP-A0: a voice reply MUST follow NIP-22, so it names the thread's root scope as
+            // well as its parent. Replying to the voice message itself makes it the root.
             val parent = replyingTo.event
-            val inherited =
-                if (parent is VoiceReplyEvent) {
-                    parent.tags.filter { RootEventTag.match(it) || RootKindTag.match(it) || RootAuthorTag.match(it) }
-                } else {
-                    emptyList()
-                }
-            if (inherited.any { RootEventTag.match(it) }) {
+            val inherited = if (parent is VoiceReplyEvent) parent.rootScopeTags() else null
+            if (inherited != null) {
                 inherited.forEach { addUnique(it) }
             } else {
                 rootEvent(parent.id, replyingTo.relay, parent.pubKey)

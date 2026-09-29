@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class VoiceReplyRootScopeTest {
     private val audio = AudioMeta("https://blossom.example/a.m4a", "audio/mp4", "f".repeat(64), 3, listOf(0.1f))
@@ -42,5 +43,45 @@ class VoiceReplyRootScopeTest {
         val nested = signer.sign(VoiceReplyEvent.build(audio, EventHintBundle<BaseVoiceEvent>(reply)))
         assertEquals(voice.id, nested.rootEventId())
         assertEquals(reply.id, nested.replyingTo())
+    }
+
+    @Test
+    fun aReplyToAnAddressRootedReplyKeepsTheAddressRoot() {
+        val article = "30023:${"2".repeat(64)}:post"
+        val parent =
+            VoiceReplyEvent(
+                "8".repeat(64),
+                "3".repeat(64),
+                1,
+                arrayOf(arrayOf("A", article), arrayOf("K", "30023"), arrayOf("P", "2".repeat(64)), arrayOf("e", "7".repeat(64)), arrayOf("k", "1111")),
+                "",
+                "0".repeat(128),
+            )
+        val reply = NostrSignerSync().sign(VoiceReplyEvent.build(audio, EventHintBundle<BaseVoiceEvent>(parent)))
+        assertEquals(listOf(article), reply.tags.filter { it[0] == "A" }.map { it[1] })
+        assertEquals(listOf("30023"), reply.tags.filter { it[0] == "K" }.map { it[1] })
+        assertTrue(reply.tags.none { it[0] == "E" })
+        assertEquals(parent.id, reply.replyingTo())
+    }
+
+    @Test
+    fun aReplyToALegacyReplyFindsTheVoiceMessageRoot() {
+        // Published before voice replies wrote NIP-22 root tags: only the lowercase parent.
+        val voiceId = "9".repeat(64)
+        val voiceAuthor = "1".repeat(64)
+        val legacy =
+            VoiceReplyEvent(
+                "8".repeat(64),
+                "3".repeat(64),
+                1,
+                arrayOf(arrayOf("e", voiceId, "", voiceAuthor), arrayOf("k", "1222"), arrayOf("p", voiceAuthor)),
+                "",
+                "0".repeat(128),
+            )
+        val reply = NostrSignerSync().sign(VoiceReplyEvent.build(audio, EventHintBundle<BaseVoiceEvent>(legacy)))
+        assertEquals(voiceId, reply.rootEventId())
+        assertEquals(voiceAuthor, reply.rootAuthorKey())
+        assertEquals(listOf("1222"), reply.tags.filter { it[0] == "K" }.map { it[1] })
+        assertEquals(legacy.id, reply.replyingTo())
     }
 }

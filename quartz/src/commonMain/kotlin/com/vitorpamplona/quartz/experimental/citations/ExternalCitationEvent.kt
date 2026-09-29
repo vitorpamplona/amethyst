@@ -25,10 +25,10 @@ import com.vitorpamplona.quartz.experimental.citations.tags.CitationTags
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** A citation of something on the web (kind 31): a URL, optionally timestamped. */
@@ -51,7 +51,7 @@ class ExternalCitationEvent(
     fun url() = value(CitationTags.URL) ?: value("url")
 
     /** The id of a NIP-03 kind-1040 timestamp attesting when the page was seen. */
-    fun openTimestamp() = value(CitationTags.OPEN_TIMESTAMP)?.takeIf { it.length == 64 && Hex.isHex(it) }
+    fun openTimestamp() = value(CitationTags.OPEN_TIMESTAMP)?.takeIf { it.isValid() }
 
     override fun displayTitle(): String? = title() ?: url()
 

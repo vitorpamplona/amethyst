@@ -46,4 +46,20 @@ class ReadingStateBuildTest {
         assertEquals("the summary", state.summary())
         assertEquals("https://img.example/cover.png", state.image())
     }
+
+    @Test
+    fun aStateWrittenWithoutItsRootTagFallsBackToItsDTagAndHealsOnUpdate() {
+        val pk = "1".repeat(64)
+        val story = "30296:$pk:story"
+        val scene = "30297:$pk:scene-2"
+        // What the old builder published: the root's lowercase `a` was replaced by the scene's.
+        val old =
+            InteractiveStoryReadingStateEvent("0".repeat(64), pk, 1, arrayOf(arrayOf("d", story), arrayOf("a", scene), arrayOf("status", "reading")), "", "0".repeat(128))
+        assertEquals(story, old.root()?.toTag())
+
+        val next = InteractiveStorySceneEvent("3".repeat(64), pk, 2, arrayOf(arrayOf("d", "scene-3")), "", "0".repeat(128))
+        val updated = NostrSignerSync().sign(InteractiveStoryReadingStateEvent.update(old, EventHintBundle(next)))
+        assertEquals(listOf(story), updated.tags.filter { it[0] == "A" }.map { it[1] })
+        assertEquals(next.address().toValue(), updated.currentScene()?.toValue())
+    }
 }

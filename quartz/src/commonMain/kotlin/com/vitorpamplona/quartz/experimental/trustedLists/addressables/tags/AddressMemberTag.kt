@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.decentralizedLists.CoordinateShape
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.MemberTagFields
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -58,7 +59,11 @@ data class AddressMemberTag(
     companion object {
         const val TAG_NAME = "a"
 
-        fun isTag(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        // A member is a `kind:pubkey:d` coordinate. CoordinateShape checks that without allocating
+        // (a 30394 can list thousands of members) and, unlike AddressSerializer.parse, neither
+        // decodes an naddr (whose raw bech32 would then be used as the member key) nor logs a
+        // warning per rejected value.
+        fun isTag(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && CoordinateShape.matches(tag[1])
 
         fun isTagged(
             tag: Tag,
@@ -68,8 +73,7 @@ data class AddressMemberTag(
         fun parse(tag: Tag): AddressMemberTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            ensure(AddressSerializer.parse(tag[1]) != null) { return null }
+            ensure(CoordinateShape.matches(tag[1])) { return null }
 
             return AddressMemberTag(tag[1], MemberTagFields.relayHint(tag), MemberTagFields.score(tag))
         }
@@ -77,24 +81,21 @@ data class AddressMemberTag(
         fun parseAddressId(tag: Tag): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            ensure(AddressSerializer.parse(tag[1]) != null) { return null }
+            ensure(CoordinateShape.matches(tag[1])) { return null }
             return tag[1]
         }
 
         fun parseAddress(tag: Tag): Address? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(CoordinateShape.matches(tag[1])) { return null }
             return AddressSerializer.parse(tag[1])
         }
 
         fun parseAsHint(tag: Tag): AddressHint? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            // only index a value that is actually a coordinate, as ATag does
-            ensure(tag[1].contains(':')) { return null }
+            ensure(CoordinateShape.matches(tag[1])) { return null }
 
             val hint = MemberTagFields.relayHint(tag)
 

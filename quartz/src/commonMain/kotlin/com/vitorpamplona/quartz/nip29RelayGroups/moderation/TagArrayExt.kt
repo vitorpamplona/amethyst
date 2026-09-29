@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
@@ -35,7 +36,6 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
-import com.vitorpamplona.quartz.utils.Hex
 
 fun TagArray.groupId() = firstTagValue(GroupIdTag.TAG_NAME)
 
@@ -57,7 +57,7 @@ fun TagArray.childGroupIds(): List<String> = mapNotNull(ChildTag::parse)
 
 fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
 
-fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it }.filter { it.length == 64 && Hex.isHex(it) }
+fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it.takeIf { value -> value.isValid() } }
 
 /** The ordered pin list: `e` (event id) and `a` (address) references, interleaved as sent. */
 fun TagArray.groupPins(): List<GroupPin> = mapNotNull(GroupPin::parse)
