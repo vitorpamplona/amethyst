@@ -226,21 +226,26 @@ object ConcordActions {
         icon: ImagePointer? = null,
     ): NewConcordCommunity = ConcordCommunityFactory.create(ownerSigner, name, createdAt, description, relays, icon)
 
-    /** Opens the control-plane [wraps] into their [ControlEdition]s (drops any that don't open/parse). */
+    /**
+     * Opens the control-plane [wraps] into their [ControlEdition]s, dropping any that don't open or
+     * parse — including an edition under an encrypted seal, which the Control Plane never carries
+     * (CORD-02 §5: its seals MUST be plaintext kind 20014).
+     */
     fun controlEditions(
         wraps: List<Event>,
         controlPlane: ControlPlaneKeys,
     ): List<ControlEdition> =
         wraps.mapNotNull { wrap ->
-            ConcordStreamEnvelope.openOrNull(wrap, controlPlane)?.let { ControlEdition.fromRumor(it.rumor) }
+            ConcordStreamEnvelope.openOrNull(wrap, controlPlane)?.let { ControlEdition.fromOpened(it) }
         }
 
     /** Opens the control-plane [wraps] and folds them into the live community state. */
     fun foldCommunity(
         wraps: List<Event>,
         controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
         ownerPubKey: HexKey,
-    ): ConcordCommunityState = ConcordCommunityState.fold(controlEditions(wraps, controlPlane), ownerPubKey)
+    ): ConcordCommunityState = ConcordCommunityState.fold(controlEditions(wraps, controlPlane), communityId, ownerPubKey)
 
     // ---- channel chat ---------------------------------------------------------
 

@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -151,6 +152,8 @@ class AccountConcordActions(
         icon: ImagePointer? = null,
     ): String? {
         if (!account.isWriteable()) return null
+        // CORD-02 §6 caps: every reader drops metadata past them, so never mint a genesis they'd refuse.
+        if (!ConcordLimits.nameFits(name) || !ConcordLimits.descriptionFits(description)) return null
         val relayUrls =
             relays.ifEmpty {
                 account.outboxRelays.flow.value
@@ -546,7 +549,7 @@ class AccountConcordActions(
         ) { event, _ -> planeWraps.add(event) }
         val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
         if (joinEditions.isEmpty()) return ConcordInviteResult.NotReachable
-        if (AuthorityResolver.resolve(joinEditions, bundle.owner).isBanned(account.signer.pubKey)) {
+        if (AuthorityResolver.resolve(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner).isBanned(account.signer.pubKey)) {
             return ConcordInviteResult.Banned
         }
 
@@ -897,7 +900,12 @@ class AccountConcordActions(
         return true
     }
 
-    /** The default community Admin role: position 1, holding every management + moderation permission. */
+    /**
+     * The default community Admin role: position 1, holding every currently-defined permission —
+     * the reference client's `ADMIN_ALL` bit for bit, so an Admin minted here can pin, read the
+     * audit log and mention everyone exactly like one minted there. There is no all-powerful bit
+     * (CORD-04 §3): a permission added later is not inherited.
+     */
     private fun concordAdminRole() =
         RoleEntity(
             name = CONCORD_ADMIN_ROLE,
@@ -912,6 +920,9 @@ class AccountConcordActions(
                         ConcordPermissions.BAN,
                         ConcordPermissions.MANAGE_MESSAGES,
                         ConcordPermissions.CREATE_INVITE,
+                        ConcordPermissions.VIEW_AUDIT_LOG,
+                        ConcordPermissions.MENTION_EVERYONE,
+                        ConcordPermissions.PIN_MESSAGES,
                     ).toWire(),
         )
 
@@ -958,7 +969,7 @@ class AccountConcordActions(
         val roleIdHex =
             existing?.key ?: run {
                 val roleId = RandomInstance.bytes(32)
-                val roleWrap = ConcordModeration.defineRole(account.signer, cp, roleId, concordAdminRole(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+                val roleWrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleId, concordAdminRole(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
                 publishConcordWrap(session.entry, roleWrap)
                 roleId.toHexKey()
             }
@@ -1444,6 +1455,8 @@ class AccountConcordActions(
         // all — is carried forward instead of reset (CORD-02 §6 round-trip).
         val standing = session.state.value?.metadata ?: MetadataEntity()
         val metadata = standing.copy(name = name, icon = icon, banner = banner, description = description, relays = relays)
+        // CORD-02 §6 caps are fold gates too: an edition past them would be dropped by every reader.
+        if (!ConcordLimits.metadataFits(metadata)) return false
         val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -1478,7 +1491,7 @@ class AccountConcordActions(
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_CHANNELS) ?: return false
         val channelId = RandomInstance.bytes(32)
         val channel = ChannelEntity(name = name.trim())
-        val wrap = ConcordModeration.defineChannel(account.signer, cp, channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.defineChannel(account.signer, cp, communityId.hexToByteArray(), channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -1501,7 +1514,7 @@ class AccountConcordActions(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = (standing ?: ChannelEntity()).copy(name = name.trim())
-        val wrap = ConcordModeration.defineChannel(account.signer, cp, channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.defineChannel(account.signer, cp, communityId.hexToByteArray(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -1523,7 +1536,7 @@ class AccountConcordActions(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = (standing ?: ChannelEntity()).copy(name = name.trim(), deleted = true)
-        val wrap = ConcordModeration.defineChannel(account.signer, cp, channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.defineChannel(account.signer, cp, communityId.hexToByteArray(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }

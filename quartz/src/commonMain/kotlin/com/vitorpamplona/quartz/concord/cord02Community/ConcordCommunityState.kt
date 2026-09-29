@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.asFloor
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /** A channel id paired with its current folded definition. */
 data class ConcordChannel(
@@ -64,6 +65,12 @@ data class ConcordCommunityState(
     fun withDissolved(dissolved: Boolean): ConcordCommunityState = if (dissolved == this.dissolved) this else copy(dissolved = dissolved)
 
     companion object {
+        /** The Pin List sub-kind (CORD-04 §7), carried but not modeled here. */
+        private const val VSK_PINS = "11"
+
+        /** The Community Signals sub-kind (CORD-04 §8, upstream PR #17), carried but not modeled here. */
+        private const val VSK_SIGNALS = "12"
+
         /**
          * The permission bit an edition of each entity kind must be authored under.
          * `null` means owner-only (no bit grants it). Mirrors the per-kind gating
@@ -80,9 +87,38 @@ data class ConcordCommunityState(
             }
 
         /**
+         * Whether a reader honors [edition] as its entity's head: well-formed at its coordinate,
+         * authored by the owner or a holder of the kind's bit, citing the Grant it acts under.
+         *
+         * A sub-kind we do not model is still gated — a floor or a compaction must only remember
+         * editions some reader honors: a Pin List by `PIN_MESSAGES` (CORD-04 §7), a Signal by
+         * `MANAGE_CHANNELS` (the one gate Armada implements, `pause`), and anything newer by any
+         * staff bit, the set whose actions are Control editions at all (CORD-04 §3).
+         */
+        private fun honors(
+            authority: AuthorityResolver,
+            edition: ControlEdition,
+        ): Boolean {
+            val kind = edition.entityKind ?: return honorsUnmodeled(authority, edition)
+            return authority.admits(edition, requiredPermission(kind))
+        }
+
+        private fun honorsUnmodeled(
+            authority: AuthorityResolver,
+            edition: ControlEdition,
+        ): Boolean =
+            when (edition.vsk) {
+                VSK_PINS -> authority.admits(edition, ConcordPermissions.PIN_MESSAGES)
+                VSK_SIGNALS -> authority.admits(edition, ConcordPermissions.MANAGE_CHANNELS)
+                else -> authority.isOwner(edition.author) || (authority.isStaff(edition.author) && authority.citationSatisfied(edition))
+            }
+
+        /**
          * The authority-gated structural head of **every** control entity, keyed by
          * [ControlEdition.entityIdHex] — the source of the anti-rollback [EntityFloor]s a
-         * client carries across a CORD-06 Refounding.
+         * client carries across a CORD-06 Refounding, and the set of heads a Refounding's
+         * compaction re-wraps (sub-kinds we do not model included, so another client's Pins
+         * or Signals survive our Refounding).
          *
          * It is deliberately gated the same way [fold] gates each entity kind (and, for
          * [ControlEntityKind.DISSOLVED], owner-only): an *ungated* head map would let any
@@ -92,6 +128,7 @@ data class ConcordCommunityState(
          */
         fun authorizedHeads(
             editions: Collection<ControlEdition>,
+            communityId: ByteArray,
             ownerPubKey: String,
             floors: Map<String, EntityFloor> = emptyMap(),
         ): Map<String, EntityFloor> {
@@ -102,15 +139,14 @@ data class ConcordCommunityState(
             // mentioned correctly keeps chain-walk semantics.
             val snapshot = editions.mapTo(HashSet(editions.size)) { it.rumorId }
             val pool = EditionFold.admissible(editions, floors, snapshot = snapshot)
-            val authority = AuthorityResolver.resolve(pool, ownerPubKey)
+            val authority = AuthorityResolver.resolve(pool, communityId, ownerPubKey)
             val out = HashMap<String, EntityFloor>(floors)
-            for ((kind, list) in pool.groupBy { it.entityKind }) {
-                val bit = requiredPermission(kind)
+            for ((_, list) in pool.groupBy { it.entityKind }) {
                 // Gate the CANDIDATES, don't pre-filter the chain: a rejected edition mid-chain must
                 // stay inert instead of orphaning the authorized editions above it (EditionFold.candidates).
                 val heads =
-                    EditionFold.foldGated(list, floors, snapshot = snapshot) {
-                        authority.isOwner(it.author) || (bit != null && authority.hasPermission(it.author, bit))
+                    EditionFold.foldGated(list, floors, snapshot = snapshot, rank = authority::tieBreakRank) {
+                        honors(authority, it)
                     }
                 for ((entity, head) in heads) {
                     // Monotonic: a floor only ever rises. Folding epoch by epoch, an entity the
@@ -122,8 +158,14 @@ data class ConcordCommunityState(
             return out
         }
 
+        /**
+         * Folds one epoch's Control Plane [editions] of the community [communityId] (which pins
+         * every derived entity coordinate, CORD-04 §1) owned by [ownerPubKey] into its current
+         * state, honoring the anti-rollback [floors] carried from earlier epochs.
+         */
         fun fold(
             editions: Collection<ControlEdition>,
+            communityId: ByteArray,
             ownerPubKey: String,
             floors: Map<String, EntityFloor> = emptyMap(),
         ): ConcordCommunityState {
@@ -142,7 +184,7 @@ data class ConcordCommunityState(
             // Resolve authority from the FULL edition set (not the structural heads): the resolver
             // folds each role/grant chain through authorized editions only, so a rogue higher-version
             // edition can't supersede a legit one before authority is even judged.
-            val authority = AuthorityResolver.resolve(editions, ownerPubKey)
+            val authority = AuthorityResolver.resolve(editions, communityId, ownerPubKey)
 
             // CORD-04 §1: "an edition whose signer isn't authorized is dropped." Authority is
             // owner-rooted (the AuthorityResolver resolves it from the owner outward via the grant
@@ -154,20 +196,23 @@ data class ConcordCommunityState(
             // remaining editions version-descending), never as a pre-filter on the chain: dropping a
             // rejected edition out of the middle of a chain permanently orphans every honest edition
             // above it, freezing the entity. See EditionFold.candidates.
+            //
+            // Every gate also demands the edition sit at its derived coordinate and cite the Grant
+            // its author acts under (CORD-04 §5, `vac`) — AuthorityResolver.admits — and an
+            // equal-version tie goes to the higher-ranked author before the rumor id (§1).
             fun foldGatedBy(
                 kind: ControlEntityKind,
                 bit: Int,
             ): Map<String, ControlEdition> =
-                EditionFold.foldGated(editions.filter { it.entityKind == kind }, floors, snapshot = snapshot) {
-                    authority.isOwner(it.author) || authority.hasPermission(it.author, bit)
+                EditionFold.foldGated(editions.filter { it.entityKind == kind }, floors, snapshot = snapshot, rank = authority::tieBreakRank) {
+                    authority.admits(it, bit)
                 }
 
-            // Metadata is one entity (== community id), gated by MANAGE_METADATA. Take the
-            // highest-version gated head (guarding against strays).
+            // Metadata is ONE entity, at the community_id itself (CORD-04 §1): an edition at any
+            // other coordinate is not this community's metadata however high its version, so it can
+            // neither shadow the chain nor bypass it (S8). Name and description caps are fold gates.
             val metadata =
-                foldGatedBy(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA)
-                    .values
-                    .maxByOrNull { it.version }
+                foldGatedBy(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA)[communityId.toHexKey()]
                     ?.let { ConcordJson.decodeOrNull<MetadataEntity>(it.content) }
 
             // Channels are gated by MANAGE_CHANNELS, per channel entity, dropping the tombstoned ones.

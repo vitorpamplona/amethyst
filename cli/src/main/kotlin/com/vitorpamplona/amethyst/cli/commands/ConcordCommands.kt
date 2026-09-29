@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFrag
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
@@ -135,6 +136,9 @@ object ConcordCommands {
         val relaysAlias = args.flag("relays")
         val relayArg = parseRelays(args.flag("relay") ?: relaysAlias)
         args.rejectUnknown()
+        // CORD-02 §6 caps, which every reader also enforces at fold.
+        if (!ConcordLimits.nameFits(name)) return Output.error("bad_args", "community name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes").let { 2 }
+        if (!ConcordLimits.descriptionFits(about)) return Output.error("bad_args", "description exceeds ${ConcordLimits.DESCRIPTION_MAX_BYTES} bytes").let { 2 }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -458,7 +462,7 @@ object ConcordCommands {
             if (joinEditions.isEmpty()) {
                 return Output.error("control_plane_unreadable", "could not fold this community's Control Plane, so whether it has banned you is unknown — refusing to join")
             }
-            if (AuthorityResolver.resolve(joinEditions, bundle.owner).isBanned(ctx.signer.pubKey)) {
+            if (AuthorityResolver.resolve(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner).isBanned(ctx.signer.pubKey)) {
                 return Output.error("banned", "this community has banned this account; the link works but the roster does not admit you (CORD-04)")
             }
 
@@ -528,7 +532,7 @@ object ConcordCommands {
         editions: List<ControlEdition>,
     ): Pair<StoredCommunity, ControlPlaneKeys>? {
         val entry = entryFor(sc)
-        val authority = AuthorityResolver.resolve(editions, sc.owner)
+        val authority = AuthorityResolver.resolve(editions, sc.communityId.hexToByteArray(), sc.owner)
         val delivered = ConcordReceive.deliveredControlRoot(entry, editions, authority, ctx.signer) ?: return null
         val updated = sc.copy(controlRoot = delivered)
         ConcordStore(dataDir.concordFile).upsert(updated)
@@ -633,7 +637,7 @@ object ConcordCommands {
                     results += mapOf("community_id" to sc.communityId, "name" to sc.name, "recovered" to false, "reason" to "control_plane_not_folded")
                     continue
                 }
-                val bannedHere = AuthorityResolver.resolve(editions, sc.owner).isBanned(ctx.signer.pubKey)
+                val bannedHere = AuthorityResolver.resolve(editions, sc.communityId.hexToByteArray(), sc.owner).isBanned(ctx.signer.pubKey)
 
                 val merged = ConcordActions.recoverStranded(entryFor(sc), bundle, bannedHere)
                 if (merged == null) {
@@ -711,7 +715,7 @@ object ConcordCommands {
                     results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to false, "reason" to "control_plane_not_folded")
                     continue
                 }
-                if (!ConcordReceive.isAuthorizedRotator(AuthorityResolver.resolve(editions, sc.owner), received.rotator)) {
+                if (!ConcordReceive.isAuthorizedRotator(AuthorityResolver.resolve(editions, sc.communityId.hexToByteArray(), sc.owner), received.rotator)) {
                     results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to false, "reason" to "unauthorized_rotator", "rotator" to received.rotator)
                     continue
                 }

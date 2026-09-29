@@ -167,7 +167,7 @@ class ControlRootRotationTest {
                 build.controlWraps.mapNotNull { wrap ->
                     ConcordStreamEnvelope.openOrNull(wrap, memberView)?.let { ControlEdition.fromRumor(it.rumor) }
                 }
-            val folded = ConcordCommunityState.fold(editions, owner.pubKey)
+            val folded = ConcordCommunityState.fold(editions, community.communityId, owner.pubKey)
             assertEquals("Test", folded.metadata?.name)
             assertTrue(folded.channels.isNotEmpty())
         }

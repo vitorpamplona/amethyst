@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -56,7 +57,7 @@ object ConcordModCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val (_, editions) = load(ctx, sc, dataDir)
-            val state = ConcordCommunityState.fold(editions, sc.owner)
+            val state = ConcordCommunityState.fold(editions, sc.communityId.hexToByteArray(), sc.owner)
             Output.emit(
                 mapOf(
                     "roles" to
@@ -92,6 +93,9 @@ object ConcordModCommands {
         val position = args.positional(2, "position").toLongOrNull() ?: return Output.error("bad_args", "position must be an integer").let { 2 }
         val permBits = args.positional.drop(3).mapNotNull { permByName(it) }
         args.rejectUnknown()
+        // The CORD-04 §2/§3 rules every reader enforces at fold, refused here as bad input.
+        if (!ConcordLimits.nameFits(name)) return Output.error("bad_args", "role name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes").let { 2 }
+        if (position < 1) return Output.error("bad_args", "position must be 1 or greater (position 0 is the owner's)").let { 2 }
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
         Context.open(dataDir).use { ctx ->
@@ -100,7 +104,7 @@ object ConcordModCommands {
             writeGuard(cp)?.let { return it }
             val roleId = RandomInstance.bytes(32)
             val role = RoleEntity(name = name, position = position, permissions = ConcordPermissions.of(*permBits.toIntArray()).toWire())
-            val wrap = ConcordModeration.defineRole(ctx.signer, cp, roleId, role, editions, TimeUtils.now(), owner = sc.owner)
+            val wrap = ConcordModeration.defineRole(ctx.signer, cp, sc.communityId.hexToByteArray(), roleId, role, editions, TimeUtils.now(), owner = sc.owner)
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(mapOf("role_id" to roleId.toHexKey(), "name" to name, "position" to position) + RawEventSupport.ackFields(ack))
@@ -281,7 +285,7 @@ object ConcordModCommands {
 
             val loaded = load(ctx, sc, dataDir)
             val (cp, editions) = loaded
-            val state = ConcordCommunityState.fold(editions, sc.owner)
+            val state = ConcordCommunityState.fold(editions, sc.communityId.hexToByteArray(), sc.owner)
             val authority = state.authority
             val me = ctx.signer.pubKey
 
@@ -543,6 +547,9 @@ object ConcordModCommands {
             "BAN" -> ConcordPermissions.BAN
             "MANAGE_MESSAGES" -> ConcordPermissions.MANAGE_MESSAGES
             "CREATE_INVITE" -> ConcordPermissions.CREATE_INVITE
+            "VIEW_AUDIT_LOG" -> ConcordPermissions.VIEW_AUDIT_LOG
+            "MENTION_EVERYONE" -> ConcordPermissions.MENTION_EVERYONE
+            "PIN_MESSAGES" -> ConcordPermissions.PIN_MESSAGES
             else -> null
         }
 }

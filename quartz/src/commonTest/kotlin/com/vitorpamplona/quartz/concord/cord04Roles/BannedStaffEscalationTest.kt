@@ -46,8 +46,8 @@ import kotlin.test.assertTrue
  * [AuthorityResolver.resolve]. Note that a chain-local rule ("the author must not be banned by the
  * state their edition chains from") would NOT have been enough:
  * [aBannedAdminForksTheBanlistAtGenesisRatherThanChainingOntoTheirOwnBan] forks at genesis so no
- * parent ever mentions the ban, and CORD-04 §4's re-heal union would carry it in anyway. The rule
- * had to bind the union too, which is why it is expressed as a whole-pass mask.
+ * parent ever mentions the ban. The rule had to bind every fork too, which is why it is expressed as
+ * a whole-pass mask.
  *
  * Three tests pin behaviour the fix had to *preserve* rather than change:
  * [selfUnbanIsStillRefused], [aJuniorPuppetCannotLiftASeniorsBan], and
@@ -65,11 +65,11 @@ class BannedStaffEscalationTest {
     private val modRole = "22".repeat(32)
     private val puppetRole = "33".repeat(32)
 
-    private val banlistEntity = "44".repeat(32)
+    private val banlistEntity = ControlFixtures.banlistEid()
     private val channelEntity = "55".repeat(32)
-    private val metadataEntity = "66".repeat(32)
-    private val bobGrantEntity = "32".repeat(32)
-    private val puppetGrantEntity = "35".repeat(32)
+    private val metadataEntity = ControlFixtures.COMMUNITY_ID_HEX
+    private val bobGrantEntity = ControlFixtures.grantEid(bob)
+    private val puppetGrantEntity = ControlFixtures.grantEid(puppet)
 
     // MANAGE_ROLES|MANAGE_CHANNELS|MANAGE_METADATA|KICK|BAN|CREATE_INVITE = 1+2+4+8+16+64
     private val adminJson = """{"name":"Admin","position":1,"permissions":"95"}"""
@@ -102,7 +102,8 @@ class BannedStaffEscalationTest {
         prev: ByteArray? = null,
     ) = edition(
         ControlEntityKind.GRANT,
-        coordinate,
+        // A Grant lives at its member's own coordinate (CORD-04 §1); [coordinate] only names the rumor.
+        ControlFixtures.grantEid(member),
         version,
         prev,
         """{"member":"$member","role_ids":[${roleIds.joinToString(",") { "\"$it\"" }}]}""",
@@ -167,7 +168,7 @@ class BannedStaffEscalationTest {
 
     @Test
     fun aBanStripsTheAuthorityCheckedByFoldButNotTheOneCheckedByTheResolver() {
-        val r = AuthorityResolver.resolve(community() + ownerBansAlice, owner)
+        val r = ControlFixtures.resolve(community() + ownerBansAlice, owner)
 
         assertTrue(r.isBanned(alice), "the owner's ban lands")
         assertFalse(r.hasPermission(alice, ConcordPermissions.MANAGE_ROLES), "the ban-aware check refuses her")
@@ -182,7 +183,7 @@ class BannedStaffEscalationTest {
 
     @Test
     fun aBannedAdminPromotesAFreshSockpuppetToAdmin() {
-        val r = AuthorityResolver.resolve(community() + ownerBansAlice + aliceMintsAPuppet(), owner)
+        val r = ControlFixtures.resolve(community() + ownerBansAlice + aliceMintsAPuppet(), owner)
 
         assertEquals(null, r.rank(puppet), "the banned admin's role and grant editions are both dropped")
         assertFalse(r.isBanned(puppet), "the puppet itself is a clean npub — it is never banned, just powerless")
@@ -200,7 +201,7 @@ class BannedStaffEscalationTest {
                 channel("""{"name":"general","deleted":true}""", puppet, 1, channelV0.hash) +
                 metadata("""{"name":"Owned by the guy you banned"}""", puppet, 1, metadataV0.hash)
 
-        val state = ConcordCommunityState.fold(editions, owner)
+        val state = ControlFixtures.fold(editions, owner)
 
         assertEquals(1, state.channels.size, "the puppet holds nothing, so its tombstone is inert")
         assertEquals("My Community", state.metadata?.name, "and the community keeps its identity")
@@ -210,7 +211,7 @@ class BannedStaffEscalationTest {
     fun theSockpuppetBansEveryMemberBeneathIt() {
         val editions = community() + ownerBansAlice + aliceMintsAPuppet() + banlist(puppet, 1, ownerBansAlice.hash, alice, bob, carol)
 
-        val r = AuthorityResolver.resolve(editions, owner)
+        val r = ControlFixtures.resolve(editions, owner)
 
         assertFalse(r.isBanned(bob), "the puppet's banlist edition is unauthorized, so the moderator stands")
         assertFalse(r.isBanned(carol), "and so do the plain members")
@@ -220,7 +221,7 @@ class BannedStaffEscalationTest {
     fun aBannedAdminBansEveryoneBeneathThemWithoutNeedingAPuppetAtAll() {
         val editions = community() + ownerBansAlice + banlist(alice, 1, ownerBansAlice.hash, alice, bob, carol)
 
-        val r = AuthorityResolver.resolve(editions, owner)
+        val r = ControlFixtures.resolve(editions, owner)
 
         assertTrue(r.isBanned(alice), "her own ban stands — it was the owner's")
         assertFalse(r.isBanned(bob), "banGate now drops a banned author's edition outright")
@@ -231,14 +232,14 @@ class BannedStaffEscalationTest {
     fun aBannedAdminForksTheBanlistAtGenesisRatherThanChainingOntoTheirOwnBan() {
         // The same attack as above, except her edition does NOT chain onto the edition that banned
         // her — it forks at genesis. So a rule that only asks "was the author banned by this
-        // edition's parent?" never sees her ban, and CORD-04 §4's re-heal union carries her bans in
-        // regardless. Any fix has to bind the union, not just the chain.
+        // edition's parent?" never sees her ban. The equal-version fork now resolves authority
+        // first (CORD-04 §1): the owner's edition takes it whatever the rumor ids say.
         val editions = community() + ownerBansAlice + banlist(alice, 0, null, bob, carol)
 
-        val r = AuthorityResolver.resolve(editions, owner)
+        val r = ControlFixtures.resolve(editions, owner)
 
-        assertTrue(r.isBanned(alice), "the owner's ban survives the fork — the union is down-only")
-        assertFalse(r.isBanned(bob), "the fix binds the UNION too: her fork is dropped before it can be healed in")
+        assertTrue(r.isBanned(alice), "the owner's ban wins the fork")
+        assertFalse(r.isBanned(bob), "her fork loses, and her authorship is masked besides")
         assertFalse(r.isBanned(carol), "same")
     }
 
@@ -246,7 +247,7 @@ class BannedStaffEscalationTest {
     fun aBannedAdminRevokesTheSurvivingModerators() {
         val editions = community() + ownerBansAlice + grant(bobGrantEntity, bob, emptyList(), author = alice, version = 1, prev = bobGrantV0.hash)
 
-        val r = AuthorityResolver.resolve(editions, owner)
+        val r = ControlFixtures.resolve(editions, owner)
 
         assertEquals(5, r.rank(bob), "a banned admin's revoke is dropped, so the moderator keeps their role")
         assertTrue(r.hasPermission(bob, ConcordPermissions.BAN), "and keeps the authority that comes with it")
@@ -256,7 +257,7 @@ class BannedStaffEscalationTest {
     fun aBannedAdminDeletesEveryRoleBeneathThem() {
         val tombstone = role(modRole, """{"name":"Mod","position":5,"permissions":"24","deleted":true}""", author = alice, version = 1, prev = modRoleV0.hash)
 
-        val r = AuthorityResolver.resolve(community() + ownerBansAlice + tombstone, owner)
+        val r = ControlFixtures.resolve(community() + ownerBansAlice + tombstone, owner)
 
         assertEquals(5, r.roles()[modRole]?.position, "a banned admin's tombstone is dropped, so the role survives")
         assertEquals(5, r.rank(bob), "and its holders keep their standing")
@@ -268,7 +269,7 @@ class BannedStaffEscalationTest {
         // gates removals too, and strict outranking means nobody outranks themselves.
         val editions = community() + ownerBansAlice + banlist(alice, 1, ownerBansAlice.hash)
 
-        assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "a banned member may not lift their own ban")
+        assertTrue(ControlFixtures.resolve(editions, owner).isBanned(alice), "a banned member may not lift their own ban")
     }
 
     @Test
@@ -278,7 +279,7 @@ class BannedStaffEscalationTest {
         // can outrank her, and so nothing she mints can unban her.
         val editions = community() + ownerBansAlice + aliceMintsAPuppet() + banlist(puppet, 1, ownerBansAlice.hash)
 
-        assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "the puppet does not outrank its creator")
+        assertTrue(ControlFixtures.resolve(editions, owner).isBanned(alice), "the puppet does not outrank its creator")
     }
 
     @Test
@@ -289,22 +290,21 @@ class BannedStaffEscalationTest {
         // to win the head fold. The head's own effective list then never carried his ban, so there is
         // nothing to remove and the rank rule never fires.
         //
-        // §4's re-heal is what closes it: the owner's edition is authorized and is NOT on the forked
-        // head's back-chain, so it is unioned back in as a concurrent ban.
+        // A dangling high version never wins the fold: the chain anchors at the genesis (the lowest
+        // version without a `prev`), and the chain-verified head outranks every edition off it.
         val editions = community() + ownerBansAlice + banlist(alice, 99, null, carol)
 
-        assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "the re-heal union must put the owner's ban back")
+        assertTrue(ControlFixtures.resolve(editions, owner).isBanned(alice), "the owner's chain keeps the head")
     }
 
     @Test
     fun aPrivateBanlistChainOfHisOwnCannotLaunderTheBanAway() {
         // The same idea two editions deep, so the winning head has a clean ancestry entirely of his
-        // own making. Ancestry is walked over the full pool, so the owner's ban is still recognised
-        // as a concurrent fork rather than a superseded ancestor.
+        // own making. It is still a chain off the side of the genesis the owner's edition anchors.
         val mine = banlist(alice, 50, null)
         val editions = community() + ownerBansAlice + mine + banlist(alice, 51, mine.hash)
 
-        assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "a self-authored chain must not launder the ban away")
+        assertTrue(ControlFixtures.resolve(editions, owner).isBanned(alice), "a self-authored chain must not launder the ban away")
     }
 
     @Test
@@ -318,15 +318,15 @@ class BannedStaffEscalationTest {
         // whole defense, so this splits the community in two: clients that already folded the ban
         // refuse the rollback, while fresh joiners have no floor to refuse with and see no ban at all.
         val editions = community() + ownerBansAlice
-        val floors = ConcordCommunityState.authorizedHeads(editions, owner)
+        val floors = ControlFixtures.authorizedHeads(editions, owner)
         val compacted = editions.filter { it.entityKind != ControlEntityKind.BANLIST }
 
         assertFalse(
-            ConcordCommunityState.fold(compacted, owner).authority.isBanned(alice),
+            ControlFixtures.fold(compacted, owner).authority.isBanned(alice),
             "ESCALATION: a fresh joiner holds no floor, so the omitted ban simply never existed",
         )
         assertTrue(
-            ConcordCommunityState.fold(compacted, owner, floors).authority.isBanned(alice),
+            ControlFixtures.fold(compacted, owner, floors).authority.isBanned(alice),
             "a client that already folded the ban must refuse the rollback",
         )
     }
@@ -340,10 +340,10 @@ class BannedStaffEscalationTest {
         // to re-issue. See B2 in docs/concord-soft-ban-audit.md.
         val promoted = grant("36".repeat(32), carol, listOf(modRole), author = alice)
 
-        val before = AuthorityResolver.resolve(community() + promoted, owner)
+        val before = ControlFixtures.resolve(community() + promoted, owner)
         assertEquals(5, before.rank(carol), "while alice is in good standing, her grant stands")
 
-        val after = AuthorityResolver.resolve(community() + promoted + ownerBansAlice, owner)
+        val after = ControlFixtures.resolve(community() + promoted + ownerBansAlice, owner)
         assertEquals(null, after.rank(carol), "banning alice retroactively drops the grant she authored")
     }
 
@@ -356,7 +356,7 @@ class BannedStaffEscalationTest {
         // only honored when authored by someone who outranks it — the owner does, bob does not.
         val carolByOwner = grant("38".repeat(32), carol, listOf(modRole), author = owner)
 
-        val r = AuthorityResolver.resolve(community() + ownerBansAlice + carolByBob + carolByOwner, owner)
+        val r = ControlFixtures.resolve(community() + ownerBansAlice + carolByBob + carolByOwner, owner)
 
         assertTrue(r.isBanned(alice), "alice is the only one banned")
         assertEquals(5, r.rank(bob), "bob is untouched")
@@ -387,7 +387,7 @@ class BannedStaffEscalationTest {
                 // ...while the owner concurrently bans the rogue, never naming bob
                 ownerBansAlice
 
-        val r = AuthorityResolver.resolve(editions, owner)
+        val r = ControlFixtures.resolve(editions, owner)
 
         assertTrue(r.isBanned(alice), "the owner's ban of the rogue stands")
         assertFalse(r.isBanned(bob), "and the rogue's ban of the moderator falls with them")

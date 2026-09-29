@@ -58,7 +58,7 @@ class ConcordSubscriptionPlannerTest {
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
             val subs = ConcordSubscriptionPlanner.channelPlaneSubs(entry, state)
 
             // Both the current-epoch and the prior-epoch #general planes are subscribed.
@@ -93,7 +93,7 @@ class ConcordSubscriptionPlannerTest {
             assertTrue(controlSubs[0].channelId == null)
 
             // Channel-plane subs cover the folded #general channel.
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
             val channelSubs = ConcordSubscriptionPlanner.channelPlaneSubs(entry, state)
             val general = channelSubs.firstOrNull { it.channelId?.channelId == community.generalChannelIdHex }
             assertTrue(general != null)
@@ -127,7 +127,7 @@ class ConcordSubscriptionPlannerTest {
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
 
             // Never read (lastRead == 0) ⇒ the newest few wraps (previewLimit), no `since`.
             val previews = ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { 0L }, previewLimit = 10)
@@ -158,7 +158,7 @@ class ConcordSubscriptionPlannerTest {
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
 
             // Read before (lastRead > 0) ⇒ everything since, capped, so the unread badge is accurate.
             val lastRead = 1_700_000_000L
@@ -225,7 +225,7 @@ class ConcordSubscriptionPlannerTest {
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
 
             val controlPk = community.controlPlane.address
             val guestbookPk = ConcordActions.guestbookPlane(community.communityRoot, community.communityId, community.rootEpoch).publicKeyHex
