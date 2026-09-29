@@ -97,7 +97,8 @@ object ConcordChannelCommands {
                 ConcordActions.currentChannelPlane(ConcordCommands.entryFor(sc), state, channelId)
                     ?: return Output.error("no_channel_key", "channel '$channelRef' is not folded, or is private and this account holds no key for it (CORD-03 §1)")
             val channel = plane.key
-            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, text, TimeUtils.now())
+            // CORD-08 §2: the folded timer rides inside the signed rumor, and on the wrap for relays.
+            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, text, TimeUtils.now(), timerSecs = state.metadata?.messageExpirationSecs())
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // A relay that gates writes behind NIP-42 wants the wrap's author (the stream key) authenticated.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
@@ -157,13 +158,17 @@ object ConcordChannelCommands {
             // The channel plane is NIP-42-gated to its own derived stream key; register it so the drain authenticates.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
             val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(channel.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
-            val msgs = ConcordActions.channelMessages(wraps, channel, channelId, epoch).takeLast(limit)
+            // A banned member's messages are hidden, as every client shows the channel (CORD-04 §4);
+            // the count of what was hidden stays in the output so interop checks can see it arrived.
+            val (banned, visible) = ConcordActions.channelMessages(wraps, channel, channelId, epoch).partition { state.authority.isBanned(it.author) }
+            val msgs = visible.takeLast(limit)
             Output.emit(
                 mapOf(
                     "channel" to channelId,
                     "epoch" to epoch,
                     "plane" to channel.publicKeyHex,
                     "count" to msgs.size,
+                    "hidden_banned" to banned.size,
                     "messages" to msgs.map { mapOf("event_id" to it.id, "author" to it.author, "content" to it.content, "created_at" to it.createdAt) },
                 ),
             )
@@ -172,7 +177,7 @@ object ConcordChannelCommands {
     }
 
     /** Drain the control plane and fold it into the current community state. */
-    private suspend fun foldState(
+    suspend fun foldState(
         ctx: Context,
         sc: StoredCommunity,
     ): ConcordCommunityState {
@@ -198,7 +203,7 @@ object ConcordChannelCommands {
     }
 
     /** Resolve a channel handle: the `general` shortcut, a full hex id, or a folded name/id-prefix match. */
-    private suspend fun resolve(
+    internal suspend fun resolve(
         ctx: Context,
         sc: StoredCommunity,
         ref: String,

@@ -54,7 +54,10 @@ import com.vitorpamplona.amethyst.commons.resources.concord_create_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_relays_desc
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_save
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
+import com.vitorpamplona.amethyst.commons.resources.concord_timer_desc
+import com.vitorpamplona.amethyst.commons.resources.concord_timer_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordTimerPicker
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -93,6 +96,9 @@ fun ConcordEditScreen(
     val icon = remember { mutableStateOf<ImagePointer?>(null) }
     val banner = remember { mutableStateOf<ImagePointer?>(null) }
     val relays = remember { mutableStateListOf<NormalizedRelayUrl>() }
+    // CORD-08 timer, seconds (0 = off): the folded value, and the one picked here.
+    var foldedTimer by remember { mutableStateOf(0L) }
+    var timer by remember { mutableStateOf(0L) }
     var prefilled by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -109,6 +115,8 @@ fun ConcordEditScreen(
             val seededRelays = (md.relays.takeIf { it.isNotEmpty() } ?: session?.entry?.relays.orEmpty())
             relays.clear()
             relays.addAll(seededRelays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
+            foldedTimer = md.messageExpirationSecs() ?: 0L
+            timer = foldedTimer
             prefilled = true
         }
     }
@@ -161,6 +169,14 @@ fun ConcordEditScreen(
                 nav = nav,
             )
 
+            // CORD-08: this screen is only reachable with MANAGE_METADATA and the Control write key,
+            // the same predicate as every other field here.
+            ConcordSectionHeader(
+                title = stringRes(Res.string.concord_timer_title),
+                description = stringRes(Res.string.concord_timer_desc),
+            )
+            ConcordTimerPicker(selected = timer, onSelect = { timer = it }, enabled = !working)
+
             Button(
                 onClick = {
                     if (name.value.isBlank() || working) return@Button
@@ -175,7 +191,10 @@ fun ConcordEditScreen(
                                     icon = icon.value,
                                     banner = banner.value,
                                     relays = relays.map { it.url },
-                                )
+                                ) &&
+                                    // A timer change is its own edition, chained on the one above, and
+                                    // posts the CORD-08 §4 notice into each channel.
+                                    (timer == foldedTimer || account.concord.setConcordMessageExpiration(communityId, timer.takeIf { it > 0 }))
                             } finally {
                                 // Always re-enable — a thrown save would otherwise strand the button.
                                 working = false

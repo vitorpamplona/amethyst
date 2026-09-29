@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.concord.cord05Invites
 
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.LenientImagePointerSerializer
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -50,14 +52,21 @@ class InviteChannel(
  * Field names are pinned to the Concord v2 reference client (snake_case on the
  * wire) so bundles interoperate. This object is JSON-serialized and encrypted —
  * into a kind-33301 bundle (link invites) or a NIP-59 giftwrap (direct invites).
+ *
+ * [rootEpoch], [channels], [relays] and [name] are always written, even at their defaults:
+ * Armada rejects join material whose `root_epoch` is not a number or whose `name` is not a
+ * string, and Accordion rejects a bundle missing `root_epoch`, `channels` or `relays`. A
+ * fresh public community (epoch 0, no private channel grants) was unjoinable from both while
+ * the encoder dropped them.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class CommunityInvite(
     @SerialName("community_id") val communityId: String,
     val owner: String,
     @SerialName("owner_salt") val ownerSalt: String,
     @SerialName("community_root") val communityRoot: String,
-    @SerialName("root_epoch") val rootEpoch: Long = 0,
+    @EncodeDefault @SerialName("root_epoch") val rootEpoch: Long = 0,
     /**
      * The Control Plane's signer pubkey at [rootEpoch] (CORD-02 §5): subscribe,
      * verify, read — never write. Absent = a legacy, pre-split Community; the
@@ -71,9 +80,9 @@ data class CommunityInvite(
      * Roster, and a later base rotation re-delivers the true key.
      */
     @SerialName("control_pk") val controlPk: String? = null,
-    val channels: List<InviteChannel> = emptyList(),
-    val relays: List<String> = emptyList(),
-    val name: String = "",
+    @EncodeDefault val channels: List<InviteChannel> = emptyList(),
+    @EncodeDefault val relays: List<String> = emptyList(),
+    @EncodeDefault val name: String = "",
     @Serializable(with = LenientImagePointerSerializer::class) val icon: ImagePointer? = null,
     @SerialName("expires_at") val expiresAt: Long? = null,
     @SerialName("creator_npub") val creatorNpub: String? = null,

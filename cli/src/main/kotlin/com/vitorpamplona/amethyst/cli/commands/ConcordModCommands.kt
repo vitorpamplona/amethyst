@@ -32,10 +32,14 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.cord06Rekey.IncompleteControlPlaneException
@@ -80,10 +84,55 @@ object ConcordModCommands {
                             )
                         },
                     "banned" to ConcordModeration.currentBanned(editions, sc.communityId.hexToByteArray(), sc.owner).toList(),
+                    // CORD-05 §5: the folded Invite Registries are the Public/Private source of truth.
+                    "public" to state.isPublic,
+                    "live_invite_links" to state.liveInviteLinks.size,
+                    "invite_registries" to state.inviteRegistries.mapValues { it.value.size },
                 ),
             )
             return 0
         }
+    }
+
+    /**
+     * Publishes this account's Invite Registry (CORD-05 §5, `vsk 8`) after a mint or a retire of
+     * [sc]'s links, and reports the Public/Private mode around it. Best-effort, like Amethyst's: a
+     * link works without its registry, so a missing permission or `control_root` only skips the edit.
+     *
+     * [list] is the Invite List as just written (null when unreadable); the next registry is
+     * [ConcordInviteRegistry.nextLinks] over this account's honored head, so expired and tombstoned
+     * links drop out and links minted before any registry existed are re-listed.
+     */
+    internal suspend fun publishInviteRegistry(
+        ctx: Context,
+        sc: StoredCommunity,
+        dataDir: DataDir,
+        list: ConcordInviteListDocument?,
+        minted: List<String> = emptyList(),
+        retired: List<String> = emptyList(),
+    ): Map<String, Any?> {
+        val (cp, editions) = load(ctx, sc, dataDir)
+        val cid = sc.communityId.hexToByteArray()
+        val before = ConcordCommunityState.fold(editions, cid, sc.owner)
+        val me = ctx.signer.pubKey
+        val privatizes = before.retiringWouldPrivatize(retired)
+        val authorized = before.authority.isOwner(me) || before.authority.hasPermission(me, ConcordPermissions.CREATE_INVITE)
+        val next = ConcordInviteRegistry.nextLinks(before.registryOf(me), list, sc.communityId, TimeUtils.now(), minted, retired)
+        val wrap =
+            if (authorized && cp.canWrite) {
+                ConcordModeration.setInviteRegistry(ctx.signer, cp, cid, next, editions, TimeUtils.now(), owner = sc.owner)
+            } else {
+                System.err.println("[concord] invite registry not published: this account ${if (!authorized) "does not hold CREATE_INVITE" else "holds no control_root"} (CORD-05 §5)")
+                null
+            }
+        val published = wrap != null && ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc)).values.any { it.accepted }
+        // The mode as it reads once the edition lands: the same fold, with it.
+        val after = if (published && wrap != null) ConcordCommunityState.fold(editions + ConcordActions.controlEditions(listOf(wrap), cp), cid, sc.owner) else before
+        return mapOf(
+            "registry_published" to published,
+            "public" to after.isPublic,
+            "live_invite_links" to after.liveInviteLinks.size,
+        ) + (if (privatizes) mapOf("privatized" to true, "refound_required" to true) else emptyMap())
     }
 
     /** Defines a new role: `role <community> <name> <position> PERM...` (perms by name, e.g. BAN KICK). */
@@ -198,6 +247,77 @@ object ConcordModCommands {
         }
     }
 
+    /**
+     * `timer COMMUNITY [off|SECONDS|1d|1w|30d|90d|1y]` — CORD-08 disappearing messages. Without a
+     * value, prints the folded timer (seconds, `0` = off). With one, publishes the metadata edition
+     * (MANAGE_METADATA, laid over the folded metadata) and then one kind-1740 timer notice into every
+     * channel this account holds a key for (§4).
+     */
+    suspend fun timer(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        val raw = args.positionalOrNull(1)
+        args.rejectUnknown()
+        val secs =
+            raw?.let {
+                parseTimer(it) ?: return Output.error("bad_args", "timer must be off, a number of seconds, or Nd/Nw/Ny (e.g. 1d, 1w, 30d, 90d, 1y)").let { 2 }
+            }
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val loaded = load(ctx, sc, dataDir)
+            val cid = sc.communityId.hexToByteArray()
+            val state = ConcordCommunityState.fold(loaded.editions, cid, sc.owner)
+            val current = state.metadata?.messageExpirationSecs() ?: 0L
+            if (secs == null) {
+                Output.emit(mapOf("community" to sc.communityId, "message_expiration" to current, "enabled" to (current > 0)))
+                return 0
+            }
+            writeGuard(loaded.keys)?.let { return it }
+            if (!state.authority.hasPermission(ctx.signer.pubKey, ConcordPermissions.MANAGE_METADATA)) {
+                return Output.error("forbidden", "setting the timer takes MANAGE_METADATA in '$handle' (CORD-08 §1)")
+            }
+            val timer = secs.takeIf { it >= 1 }
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+            val wrap = ConcordModeration.setMessageExpiration(ctx.signer, loaded.keys, cid, state.metadata ?: MetadataEntity(), timer, loaded.editions, TimeUtils.now(), owner = sc.owner)
+            val ack = ctx.publish(wrap, relays)
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+
+            // CORD-08 §4: one notice per channel whose key we hold; the fold stays the authority.
+            val entry = ConcordCommands.entryFor(loaded.community)
+            val now = TimeUtils.now()
+            var notices = 0
+            for (channelIdHex in state.channels.keys) {
+                val plane = ConcordActions.currentChannelPlane(entry, state, channelIdHex) ?: continue
+                ctx.registerConcordStreamKeys(relays, listOf(plane.key.secretKey))
+                val notice = ConcordActions.buildChannelTimerNotice(ctx.signer, plane.key, channelIdHex, plane.epoch, timer ?: 0L, now)
+                // Best effort, like the reference client: a notice that no relay took is only counted out.
+                if (ctx.publish(notice, relays).values.any { it.accepted }) notices++
+            }
+            Output.emit(mapOf("community" to sc.communityId, "message_expiration" to (timer ?: 0L), "previous" to current, "notices" to notices) + RawEventSupport.ackFields(ack))
+            return 0
+        }
+    }
+
+    /** `off`/`0`, plain seconds, or a count of days/weeks/years (`1d`, `1w`, `30d`, `1y`); null if unparseable. */
+    private fun parseTimer(raw: String): Long? {
+        val v = raw.trim().lowercase()
+        if (v == "off") return 0L
+        v.toLongOrNull()?.let { return it.takeIf { it >= 0 } }
+        val n = v.dropLast(1).toLongOrNull()?.takeIf { it >= 1 } ?: return null
+        val day = ConcordDisappearing.MIN_OFFERED_SECS
+        return when (v.last()) {
+            'd' -> n * day
+            'w' -> n * 7 * day
+            'y' -> n * 365 * day
+            else -> null
+        }
+    }
+
     /** Unbans a member: `unban <community> <user>`. */
     suspend fun unban(
         dataDir: DataDir,
@@ -229,7 +349,19 @@ object ConcordModCommands {
                 }
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            Output.emit(mapOf("member" to member, "banned" to ban) + RawEventSupport.ackFields(ack))
+            // CORD-06 §3 / CORD-05 §5: a Public ban is the Banlist alone; a ban from a Private
+            // community owes a Refounding (`concord refound COMMUNITY --remove USER`). Judged with
+            // the target's own invite registry left out, since the ban stops honoring it.
+            val mode =
+                if (ban) {
+                    val state = ConcordCommunityState.fold(editions, cid, sc.owner)
+                    val refound = state.banRequiresRefounding(listOf(member))
+                    if (refound) System.err.println("[concord] the community is Private: run `amy concord refound ${sc.communityId} --remove $member` to sever the banned member's keys (CORD-06 §3)")
+                    mapOf("public" to !refound, "refound_required" to refound)
+                } else {
+                    emptyMap()
+                }
+            Output.emit(mapOf("member" to member, "banned" to ban) + mode + RawEventSupport.ackFields(ack))
             return 0
         }
     }
@@ -240,7 +372,7 @@ object ConcordModCommands {
      * rewrites the stored record — a caller that kept the pre-load copy would then fail to pass the
      * secret on in its own Grant (CORD-04 §3).
      */
-    private class LoadedControl(
+    internal class LoadedControl(
         val community: StoredCommunity,
         val keys: ControlPlaneKeys,
         val editions: List<ControlEdition>,
@@ -275,7 +407,11 @@ object ConcordModCommands {
     ): Int {
         val args = Args(rest)
         val handle = args.positional(0, "community")
-        val removeArg = args.flag("remove") ?: return Output.error("bad_args", "refound <community> --remove USER[,USER…]").let { 2 }
+        val removeArg = args.flag("remove")
+        // CORD-06 §3 "converting a Public Community to Private": a Refounding that removes nobody,
+        // owed when the last live invite link is retired (CORD-05 §2/§5).
+        val privatize = args.bool("privatize")
+        if (removeArg == null && !privatize) return Output.error("bad_args", "refound <community> --remove USER[,USER…] | --privatize").let { 2 }
         args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
@@ -283,12 +419,13 @@ object ConcordModCommands {
             ctx.prepare()
             val removed =
                 removeArg
-                    .split(',')
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .map { ctx.requireUserHex(it).lowercase() }
-                    .toSet()
-            if (removed.isEmpty()) return Output.error("bad_args", "--remove needs at least one user")
+                    ?.split(',')
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotEmpty() }
+                    ?.map { ctx.requireUserHex(it).lowercase() }
+                    ?.toSet()
+                    .orEmpty()
+            if (removed.isEmpty() && !privatize) return Output.error("bad_args", "--remove needs at least one user")
 
             // Death wins every race (CORD-02 §9): no epoch advance past a tombstone is honored.
             if (ConcordCommands.isDissolved(ctx, sc)) {
@@ -551,7 +688,7 @@ object ConcordModCommands {
     }
 
     /** Drain the control plane and return its keys + current editions to chain onto. */
-    private suspend fun load(
+    internal suspend fun load(
         ctx: Context,
         sc: StoredCommunity,
         dataDir: DataDir? = null,
@@ -584,7 +721,7 @@ object ConcordModCommands {
      * a spam gate, never authority — holding the key still does not make the action
      * honored, which the Roster decides at fold (CORD-04 §5).
      */
-    private fun writeGuard(cp: ControlPlaneKeys): Int? {
+    internal fun writeGuard(cp: ControlPlaneKeys): Int? {
         if (cp.canWrite) return null
         Output.error("forbidden", "this account holds no control_root for the community, so it cannot publish Control Plane editions (CORD-02 §2) — ask a staff member to grant you a Control-writing role")
         return 1

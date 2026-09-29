@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.concord.cord02Community
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -309,6 +310,8 @@ object ConcordCommunityList {
         @SerialName(EXTRAS) val extras: JsonObject = NoExtras,
     )
 
+    // `name` is always written: Armada refuses to serialize a list entry whose name is not a string.
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     private class JoinMaterialWire(
         @SerialName("community_id") val communityId: String,
@@ -323,7 +326,7 @@ object ConcordCommunityList {
             WireChannel,
         > = emptyList(),
         val relays: List<String> = emptyList(),
-        val name: String = "",
+        @EncodeDefault val name: String = "",
         @SerialName("held_roots") val heldRoots: List<
             @Serializable(WireHeldRootSerializer::class)
             WireHeldRoot,
@@ -687,6 +690,29 @@ object ConcordCommunityList {
      * Every other field untouched.
      */
     fun ConcordCommunityListEntry.withControlRoot(controlRoot: String?) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+            residue = residue,
+        )
+
+    /**
+     * Copy of this entry holding [privateChannels] — e.g. after a Direct Invite catch-up delivered a
+     * Private Channel key (CORD-05 §6). Every other field, the base included, untouched.
+     */
+    fun ConcordCommunityListEntry.withPrivateChannels(privateChannels: List<PrivateChannelKey>) =
         ConcordCommunityListEntry(
             id = id,
             owner = owner,

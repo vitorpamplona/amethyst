@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
@@ -535,6 +536,17 @@ class SealEventHandler(
         publicNote: Note,
     ) {
         val innerRumor = event.unsealOrNull(account.signer) ?: return
+
+        // A Concord Direct Invite (CORD-05 §6) is a standard NIP-59 giftwrap, so the DM inbox sees
+        // it too — tagged `k=3313` or not. It is not a DM: its rumor carries a community's keys. Hand
+        // the seal to the Concord invite inbox, which re-opens it with the NIP-59 anti-spoofing check
+        // the generic unseal skips and parks it for the user, and keep the rumor out of the cache and
+        // every chat feed. Must run before the seal's content is stripped below.
+        if (innerRumor.kind == ConcordDirectInvite.KIND) {
+            account.concord.directInviteInbox.offerSeal(publicNote.event ?: event, event)
+            eventNote.event = event.copyNoContent()
+            return
+        }
 
         eventNote.event = event.copyNoContent()
 

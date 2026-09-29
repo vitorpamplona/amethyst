@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteRegistry
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -302,6 +304,34 @@ object ConcordModeration {
     }
 
     /**
+     * Writes [content] — an already-serialized Pin List ([ConcordPins.serializePublic] /
+     * [ConcordPins.serializeSealed]) — as the next edition of [channelId]'s Pin List (CORD-04 §7,
+     * vsk 11, at `pins_locator(community_id, channel_id)`), chained onto [head].
+     *
+     * Unlike the other editors this takes the head explicitly rather than re-folding [current]: a
+     * Pin List is replaced entire, so the edition MUST chain onto exactly the list the caller read
+     * its entries from (§7 — never build from a list you could not read). [ConcordPinning] is the
+     * caller that enforces that, the PIN_MESSAGES gate and the caps; this only mints the wrap.
+     */
+    suspend fun setPinList(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        channelId: ByteArray,
+        head: ControlEdition?,
+        content: String,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event {
+        require(content.encodeToByteArray().size <= ConcordPins.MAX_CONTENT_BYTES) { "pin list exceeds ${ConcordPins.MAX_CONTENT_BYTES} bytes" }
+        val entityId = ConcordKeyDerivation.pinsCoordinate(communityId, channelId)
+        require(head == null || head.entityIdHex == entityId.toHexKey()) { "head is not this channel's Pin List" }
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.PIN_LIST, entityId, head, content, current, createdAt, citation, owner)
+    }
+
+    /**
      * Adds [member] to the banlist, written over the current folded head. Another admin's
      * concurrent edition at the same version may win the fold (CORD-04 §4); calling this again
      * after the refold re-applies the ban atop the winner — the spec's re-heal.
@@ -343,6 +373,28 @@ object ConcordModeration {
         communityId: ByteArray,
         owner: HexKey,
     ): Set<HexKey> = AuthorityResolver.resolve(current, communityId, owner).bannedMembers()
+
+    /**
+     * Publishes [actor]'s Invite Registry (CORD-05 §5, `vsk 8`) listing [linkSigners] — the
+     * link-signer pubkeys of their live public links, locators only. The entity sits at
+     * `invite_links_locator(community_id, actor)`, so it chains onto [actor]'s own registry head and
+     * can never touch another creator's; it is honored at fold only while [actor] holds
+     * CREATE_INVITE (or is the owner). Compute [linkSigners] with [ConcordInviteRegistry.nextLinks].
+     */
+    suspend fun setInviteRegistry(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        linkSigners: Collection<HexKey>,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+    ): Event {
+        val entityId = ConcordInviteRegistry.coordinate(communityId, actor.pubKey)
+        val head = headOf(current, communityId, entityId, owner)
+        return wrap(actor, controlPlane, communityId, ControlEntityKind.INVITE_REGISTRY, entityId, head, ConcordInviteRegistry.encode(linkSigners), current, createdAt, citation, owner)
+    }
 
     private suspend fun setBanlist(
         actor: NostrSigner,

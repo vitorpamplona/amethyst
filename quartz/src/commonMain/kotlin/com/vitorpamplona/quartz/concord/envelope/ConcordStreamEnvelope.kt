@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -78,11 +79,14 @@ object ConcordStreamEnvelope {
         authorSigner: NostrSigner,
         encrypted: Boolean,
     ): Event {
+        // A rumor is unsigned (NIP-59): serialize it without `sig`. applesauce clients read
+        // `"sig": ""` as a signed event with a bad signature and drop it.
+        val rumorJson = Rumor.toJson(Rumor.create(rumor))
         val content =
             if (encrypted) {
-                encryptChecked(rumor.toJson(), stream.conversationKey)
+                encryptChecked(rumorJson, stream.conversationKey)
             } else {
-                rumor.toJson()
+                rumorJson
             }
         val kind = if (encrypted) KIND_SEAL_ENCRYPTED else KIND_SEAL_PLAINTEXT
         return authorSigner.sign(rumor.createdAt, kind, EMPTY_TAGS, content)
@@ -93,13 +97,18 @@ object ConcordStreamEnvelope {
      * address, signed by the stream key and encrypted under its conversation key.
      * Adds a fresh ephemeral `["p", …]` tag. Use [KIND_WRAP_EPHEMERAL] via
      * [ephemeral] for transient traffic (typing, voice presence).
+     *
+     * [outerTags] are appended after the `p` tag. The only sanctioned one is the CORD-08 §2
+     * `["expiration", …]` that a disappearing Chat rumor's wrap repeats for NIP-40 relays
+     * ([com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing.wrapTagsFor]).
      */
     fun wrapSeal(
         seal: Event,
         stream: GroupKey,
         ephemeral: Boolean = false,
         createdAt: Long = TimeUtils.now(),
-    ): Event = wrapSeal(seal, stream, stream.conversationKey, ephemeral, createdAt)
+        outerTags: Array<Array<String>> = EMPTY_TAGS,
+    ): Event = wrapSeal(seal, stream, stream.conversationKey, ephemeral, createdAt, outerTags)
 
     /**
      * Write-restricted variant (CORD-01, Write-Restricted Streams): the wrap is
@@ -114,12 +123,13 @@ object ConcordStreamEnvelope {
         readConversationKey: ByteArray,
         ephemeral: Boolean = false,
         createdAt: Long = TimeUtils.now(),
+        outerTags: Array<Array<String>> = EMPTY_TAGS,
     ): Event {
         val streamSigner = NostrSignerSync(KeyPair(privKey = signerKey.secretKey))
         val content = encryptChecked(seal.toJson(), readConversationKey)
         val ephemeralP = KeyPair().pubKey.toHexKey()
         val kind = if (ephemeral) KIND_WRAP_EPHEMERAL else KIND_WRAP
-        return streamSigner.signNormal(createdAt, kind, arrayOf(arrayOf("p", ephemeralP)), content)
+        return streamSigner.signNormal(createdAt, kind, arrayOf(arrayOf("p", ephemeralP)) + outerTags, content)
     }
 
     /**
@@ -138,7 +148,7 @@ object ConcordStreamEnvelope {
         return wrapSeal(seal, signer, keys.readKey.conversationKey, ephemeral, createdAt)
     }
 
-    /** Convenience: [seal] then [wrapSeal] in one call. */
+    /** Convenience: [seal] then [wrapSeal] in one call. [outerTags] ride the wrap after its `p` tag. */
     suspend fun wrap(
         rumor: Event,
         stream: GroupKey,
@@ -146,7 +156,8 @@ object ConcordStreamEnvelope {
         encrypted: Boolean,
         ephemeral: Boolean = false,
         createdAt: Long = TimeUtils.now(),
-    ): Event = wrapSeal(seal(rumor, stream, authorSigner, encrypted), stream, ephemeral, createdAt)
+        outerTags: Array<Array<String>> = EMPTY_TAGS,
+    ): Event = wrapSeal(seal(rumor, stream, authorSigner, encrypted), stream, ephemeral, createdAt, outerTags)
 
     /**
      * Convenience for the Control Plane: seals under [keys]' read key (an encrypted

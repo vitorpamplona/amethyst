@@ -224,6 +224,7 @@ class DataDir(
     val aliasesFile = File(root, "aliases.json")
     val cashuFile = File(root, "cashu.json")
     val concordFile = File(root, "concord.json")
+    val concordInvitesFile = File(root, "concord-invites.json")
     val marmotDir = File(root, "marmot")
     val groupsDir = File(marmotDir, "groups")
     val keyPackageBundleFile = File(marmotDir, "keypackages.bundle")

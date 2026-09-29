@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_banned
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_expired
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_incompatible
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_invalid
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_revoked
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_explainer
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_relays
@@ -144,6 +145,8 @@ fun ConcordInviteScreen(
                         RedeemState.Failed(Res.string.concord_invite_failed_expired, canRetry = false)
                     is ConcordInviteResult.NotReachable ->
                         RedeemState.Failed(Res.string.concord_invite_failed, canRetry = true)
+                    is ConcordInviteResult.NotSaved ->
+                        RedeemState.Failed(Res.string.concord_invite_failed_not_saved, canRetry = true)
                 }
         }
     }

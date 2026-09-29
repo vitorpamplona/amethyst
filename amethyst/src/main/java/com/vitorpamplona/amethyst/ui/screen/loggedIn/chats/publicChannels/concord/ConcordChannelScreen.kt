@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_no_key
 import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
+import com.vitorpamplona.amethyst.commons.resources.concord_timer_active
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
@@ -83,7 +85,12 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.concordTimerText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinDuties
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedMessagesSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordChannelPins
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -179,9 +186,29 @@ fun ConcordChannelScreen(
     newMessageModel.init(accountViewModel)
     newMessageModel.load(communityId, channelId)
 
+    // CORD-04 §7 Pins: the header's entry point, the sheet it opens, the jump it requests, and the
+    // delayed duty writes (deletion omission / Edit refresh) a PIN_MESSAGES holder owes.
+    val pins by rememberConcordChannelPins(communityId, channelId, accountViewModel)
+    ConcordPinDuties(communityId, channelId, pins, accountViewModel)
+    var showPins by remember { mutableStateOf(false) }
+    val jumpToNoteId = remember { mutableStateOf<String?>(null) }
+    pins?.let { current ->
+        if (showPins) {
+            ConcordPinnedMessagesSheet(
+                communityId = communityId,
+                channelId = channelId,
+                pins = current,
+                accountViewModel = accountViewModel,
+                onJumpToMessage = { jumpToNoteId.value = it },
+                onDismiss = { showPins = false },
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                actions = { ConcordPinnedButton(pins) { showPins = true } },
                 title = {
                     Column {
                         Text(channel.toBestDisplayName(), maxLines = 1)
@@ -218,6 +245,8 @@ fun ConcordChannelScreen(
                     onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
                     onWantsToEditChatMessage = { newMessageModel.editConcordMessage(it) },
+                    jumpToNoteId = jumpToNoteId,
+                    onJumpHandled = { jumpToNoteId.value = null },
                     // A status card at the oldest end: shows what it's reaching for while it pages and
                     // crossfades to "All caught up" when every relay runs dry.
                     olderBoundary = {
@@ -255,6 +284,7 @@ fun ConcordChannelScreen(
             ConcordTypingIndicator(communityId, channelId, accountViewModel)
 
             if (channel.canPost()) {
+                ConcordTimerIndicator(communityId, accountViewModel)
                 Spacer(modifier = DoubleVertSpacer)
                 ConcordMessageComposer(
                     newMessageModel = newMessageModel,
@@ -290,6 +320,27 @@ private fun ConcordReadOnlyNotice(message: StringResource) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.placeholderText,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+    )
+}
+
+/**
+ * CORD-08: a slim "Messages disappear after 30 days" line above the composer while the community's
+ * timer is on, so a member knows before sending that the message will not last.
+ */
+@Composable
+private fun ConcordTimerIndicator(
+    communityId: String,
+    accountViewModel: AccountViewModel,
+) {
+    val session = remember(communityId) { accountViewModel.account.concordSessions.sessionFor(communityId) } ?: return
+    val state by session.state.collectAsStateWithLifecycle()
+    val secs = state?.metadata?.messageExpirationSecs() ?: return
+    Text(
+        text = stringRes(Res.string.concord_timer_active, concordTimerText(secs)),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
     )
 }
 
