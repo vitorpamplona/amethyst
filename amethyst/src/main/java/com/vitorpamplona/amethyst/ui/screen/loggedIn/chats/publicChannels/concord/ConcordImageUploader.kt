@@ -54,10 +54,8 @@ class ConcordImageUploader(
     /**
      * Compresses, strips, AES-256-GCM-encrypts and uploads the picked [uri], returning its pointer.
      *
-     * Runs on [Dispatchers.IO]: the compression/upload pipeline asserts it is off the main thread
-     * ([MediaCompressor] calls `checkNotInMainThread`), and callers launch this from a Compose
-     * `rememberCoroutineScope()`, which is Main-dispatched — so without this switch the first step
-     * throws before any bytes leave the device.
+     * Runs on [Dispatchers.IO]: compression, encryption and the upload all block, and callers launch
+     * this from a Compose `rememberCoroutineScope()`, which is Main-dispatched.
      */
     suspend fun uploadEncrypted(
         uri: Uri,

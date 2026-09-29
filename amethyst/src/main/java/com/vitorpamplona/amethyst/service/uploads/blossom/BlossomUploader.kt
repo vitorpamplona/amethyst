@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_w
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.extensionFromMimeType
@@ -86,8 +85,6 @@ class BlossomUploader {
         useMediaEndpoint: Boolean = false,
         onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
-        checkNotInMainThread()
-
         val contentResolver = context.contentResolver
         val myContentType = contentType ?: contentResolver.getType(uri)
         val fileName = context.getFileName(uri)
@@ -141,8 +138,6 @@ class BlossomUploader {
         useMediaEndpoint: Boolean = false,
         onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
-        checkNotInMainThread()
-
         val fileName = baseFileName ?: RandomInstance.randomChars(16)
         val extension =
             contentType?.let {

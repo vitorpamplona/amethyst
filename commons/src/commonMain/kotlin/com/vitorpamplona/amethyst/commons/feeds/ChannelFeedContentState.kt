@@ -25,7 +25,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
@@ -73,8 +72,6 @@ class ChannelFeedContentState(
     }
 
     fun refreshSuspended() {
-        LocalCache.appHost.assertNotMainThread()
-
         isRefreshing.value = true
         try {
             lastFeedKey = localFilter.feedKey()

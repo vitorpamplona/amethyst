@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.feeds.StringFeedState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -55,8 +54,6 @@ open class StringFeedViewModel(
     }
 
     private fun refreshSuspended() {
-        checkNotInMainThread()
-
         try {
             isRefreshing.value = true
 

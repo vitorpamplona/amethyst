@@ -1039,13 +1039,10 @@ private suspend fun sendAttachment(
     try {
         // The media-quality slider.
         //
-        // Off the main thread, like the strip and the read below it.
+        // Off the main thread, like the strip and the read below it:
         // `sendAttachment` is called from the composition's scope, so it
-        // inherits Main, and `MediaCompressor.compress` opens with
-        // `checkNotInMainThread()` — so every image attachment threw
-        // `OnMainThreadException` before it ever reached the uploader. The
-        // voice path never hit it because it posts its recording already
-        // encoded and skips compression entirely.
+        // inherits Main, and compression blocks. The voice path posts its
+        // recording already encoded and skips compression entirely.
         val compressed =
             withContext(Dispatchers.IO) {
                 item.orchestrator.compressIfNeeded(

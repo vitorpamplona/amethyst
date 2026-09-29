@@ -26,7 +26,6 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
@@ -50,8 +49,6 @@ class MediaCompressor {
         useH265: Boolean = false,
         convertGifToMp4: Boolean = false,
     ): MediaCompressorResult {
-        checkNotInMainThread()
-
         // Convert GIF to MP4 if requested. The GIF converter already produces a well-compressed
         // H.264 MP4 so no additional video compression step is needed.
         if (convertGifToMp4 && contentType?.contains("gif", ignoreCase = true) == true) {

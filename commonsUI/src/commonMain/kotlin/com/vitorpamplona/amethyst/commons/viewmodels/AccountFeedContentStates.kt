@@ -373,8 +373,6 @@ class AccountFeedContentStates(
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
-        LocalCache.appHost.assertNotMainThread()
-
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
@@ -447,8 +445,6 @@ class AccountFeedContentStates(
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
-        LocalCache.appHost.assertNotMainThread()
-
         homeLive.deleteFromFeed(newNotes)
         homeNewThreads.deleteFromFeed(newNotes)
         homeReplies.deleteFromFeed(newNotes)

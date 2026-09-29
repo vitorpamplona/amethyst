@@ -123,8 +123,6 @@ class CardFeedContentState(
     private fun refreshSuspended() = refreshLock.withLock { refreshLocked() }
 
     private fun refreshLocked() {
-        LocalCache.appHost.assertNotMainThread()
-
         try {
             isRefreshing.value = true
 
@@ -170,8 +168,6 @@ class CardFeedContentState(
     }
 
     private fun convertToCard(notes: Collection<Note>): List<Card> {
-        LocalCache.appHost.assertNotMainThread()
-
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is ReactionEvent }
@@ -544,8 +540,6 @@ class CardFeedContentState(
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
-        LocalCache.appHost.assertNotMainThread()
-
         if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
             invalidateInsertData(newNotes)
         } else {

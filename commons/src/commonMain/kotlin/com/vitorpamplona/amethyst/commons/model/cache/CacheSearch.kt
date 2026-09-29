@@ -69,8 +69,6 @@ class CacheSearch(
     ): List<User> {
         if (username.isBlank()) return emptyList()
 
-        cache.appHost.assertNotMainThread()
-
         val key = decodePublicKeyAsHexOrNull(username)
 
         if (key != null) {
@@ -164,8 +162,6 @@ class CacheSearch(
         filters: List<Filter>,
         hidden: LiveHiddenUsers,
     ): List<Note> {
-        cache.appHost.assertNotMainThread()
-
         if (filters.isEmpty()) return emptyList()
 
         // Distinct across filters: a union of arms (a hashtag asks #t, #l and the comment tags)
@@ -201,8 +197,6 @@ class CacheSearch(
         text: String,
         hidden: LiveHiddenUsers,
     ): List<Note> {
-        cache.appHost.assertNotMainThread()
-
         if (text.isBlank()) return emptyList()
 
         val key = decodeEventIdAsHexOrNull(text)

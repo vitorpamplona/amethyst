@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.FileSystemNip95BlobStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCacheHost
 import com.vitorpamplona.amethyst.commons.model.cache.Nip95BlobStore
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -63,6 +62,4 @@ class AmethystLocalCacheHost(
 
     // The zap path's LNURL cache is a quartz-side singleton the outbound-zap resolver fills.
     override fun lnurlEndpoint(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.get(lnurlpUrl)
-
-    override fun assertNotMainThread() = checkNotInMainThread()
 }

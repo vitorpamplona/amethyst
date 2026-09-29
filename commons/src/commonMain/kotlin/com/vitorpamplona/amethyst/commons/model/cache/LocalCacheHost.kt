@@ -98,12 +98,6 @@ interface LocalCacheHost {
      */
     fun lnurlEndpoint(lnurlpUrl: String): LnurlEndpointInfo? = null
 
-    /**
-     * Throws if called on the platform's main thread. Signature verification and the cache
-     * sweeps are far too slow to run there. A no-op by default and on release builds.
-     */
-    fun assertNotMainThread() {}
-
     /** The neutral host: an own IO scope and nothing else. */
     companion object Default : LocalCacheHost {
         override val scope: CoroutineScope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }

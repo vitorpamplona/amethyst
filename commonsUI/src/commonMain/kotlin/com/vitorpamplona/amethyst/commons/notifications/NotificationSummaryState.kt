@@ -89,8 +89,6 @@ class NotificationSummaryState(
     fun today(): String = LocalClock.today().ymd()
 
     suspend fun initializeSuspend() {
-        LocalCache.appHost.assertNotMainThread()
-
         val days = LocalClock.epochDayCounter()
 
         val currentUser = user.pubkeyHex
@@ -182,8 +180,6 @@ class NotificationSummaryState(
     }
 
     suspend fun addToStatsSuspend(newBlockNotes: Set<Set<Note>>) {
-        LocalCache.appHost.assertNotMainThread()
-
         val days = LocalClock.epochDayCounter()
 
         val currentUser = user.pubkeyHex
@@ -286,8 +282,6 @@ class NotificationSummaryState(
     }
 
     private suspend fun refreshChartModel() {
-        LocalCache.appHost.assertNotMainThread()
-
         val today = LocalClock.today()
 
         val dataAxisLabelIndexes = listOf(-6, -5, -4, -3, -2, -1, 0)
