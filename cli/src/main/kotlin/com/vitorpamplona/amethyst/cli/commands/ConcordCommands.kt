@@ -24,12 +24,18 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.cli.stores.ConcordInviteInboxStore
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
 import com.vitorpamplona.amethyst.cli.stores.StoredPrivateChannel
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
+import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
+import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
@@ -41,6 +47,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
@@ -49,6 +56,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -75,6 +83,14 @@ object ConcordCommands {
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages (default 50);
         |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
         |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
+        |  concord invite COMMUNITY --to USER          send a Direct Invite (CORD-05 §6): the bundle
+        |          [--expires-in SECS]                  giftwrapped to USER (npub|hex|nprofile|nip05),
+        |                                               to their 10050 / NIP-65 read / stock relays,
+        |                                               with only the private channels their roles grant
+        |  concord invites                             list Direct Invites waiting for you (never joins)
+        |  concord accept WRAP-ID                      accept a Direct Invite: join (or, for a community
+        |                                               you hold, adopt newly granted channel keys)
+        |  concord decline WRAP-ID                     discard a Direct Invite; it never resurfaces
         |  concord revoke COMMUNITY TOKEN|URL          retire a link you minted: publishes a vsk=9
         |                                               tombstone at its coordinate, then tombstones
         |                                               it in your invite list so it stays retired
@@ -117,7 +133,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|pins|pin|unpin|refound|dissolve|timer>",
+            "concord <create|list|import|channels|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
@@ -128,6 +144,9 @@ object ConcordCommands {
                     "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
                     "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
                     "invite" to { rest -> invite(dataDir, rest) },
+                    "invites" to { rest -> invites(dataDir, rest) },
+                    "accept" to { rest -> accept(dataDir, rest) },
+                    "decline" to { rest -> decline(dataDir, rest) },
                     "revoke" to { rest -> revoke(dataDir, rest) },
                     "join" to { rest -> join(dataDir, rest) },
                     "recover" to { rest -> recover(dataDir, rest) },
@@ -298,9 +317,13 @@ object ConcordCommands {
         val args = Args(rest)
         val handle = args.positional(0, "community")
         val base = args.flag("base", "https://vector.chat")!!
+        val to = args.flag("to")
+        val expiresInSecs = args.flag("expires-in")?.let { it.toLongOrNull()?.takeIf { secs -> secs > 0 } ?: throw IllegalArgumentException("--expires-in expects a positive number of seconds, got '$it'") }
         args.rejectUnknown()
 
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
+        if (to != null) return directInvite(dataDir, sc, to, expiresInSecs)
+        if (expiresInSecs != null) return Output.error("bad_args", "--expires-in applies to a Direct Invite (--to)").let { 2 }
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             // The joiner cannot derive the Control Plane address, so the invite carries it
@@ -474,60 +497,262 @@ object ConcordCommands {
                     InviteBundleStatus.Absent -> return Output.error("not_found", "no bundle for this link on any of its relays")
                 }
 
-            // Refuse a link that readmits us after we were removed. A Refounding re-mints every
-            // outstanding link onto the new root (CORD-05), and an ex-member keeps the URL and its
-            // unlock token forever — so without this check the rotation that was supposed to expel
-            // them hands them the new keys instead. `recover` has always been ban-gated; `join` is
-            // the other door into the same room.
-            //
-            // Fails CLOSED on an unreadable plane: no verdict, no join. The banlist is only knowable
-            // after the bundle yields the root, which is why the check lives here rather than before.
-            val joinKeys =
-                ConcordActions.controlPlaneKeys(
-                    communityRoot = bundle.communityRoot.hexToByteArray(),
-                    communityId = bundle.communityId.hexToByteArray(),
-                    rootEpoch = bundle.rootEpoch,
-                    controlPk = bundle.controlPk,
-                )
-            val joinRelays = normalize(bundle.relays).ifEmpty { relays }
-            val joinEditions =
-                ConcordActions.controlEditions(
-                    ctx.drain(joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) }, pendingOnAuthRequired = true).map { it.second },
-                    joinKeys,
-                )
-            if (joinEditions.isEmpty()) {
-                return Output.error("control_plane_unreadable", "could not fold this community's Control Plane, so whether it has banned you is unknown — refusing to join")
-            }
-            if (AuthorityResolver.resolve(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner).isBanned(ctx.signer.pubKey)) {
-                return Output.error("banned", "this community has banned this account; the link works but the roster does not admit you (CORD-04)")
-            }
+            return joinBundle(
+                ctx = ctx,
+                dataDir = dataDir,
+                bundle = bundle,
+                fallbackRelays = relays,
+                // The stranded-recovery anchor: if a later Refounding leaves us out, re-resolving
+                // this link is the only way back (CORD-05/06). Stored bare, domain-agnostic.
+                inviteRef = ConcordActions.bareInviteRef(url) ?: "",
+                inviteCreator = bundle.creatorNpub,
+                inviteLabel = bundle.label,
+            )
+        }
+    }
 
-            val stored =
-                StoredCommunity(
-                    name = bundle.name,
-                    communityId = bundle.communityId,
-                    owner = bundle.owner,
-                    ownerSalt = bundle.ownerSalt,
-                    root = bundle.communityRoot,
-                    rootEpoch = bundle.rootEpoch,
-                    // Read access to the Control Plane, never write (CORD-05 §1). Absent = the
-                    // community is still pre-split and folds at the legacy address.
-                    controlPk = bundle.controlPk ?: "",
-                    relays = bundle.relays,
-                    // The stranded-recovery anchor: if a later Refounding leaves us out, re-resolving
-                    // this link is the only way back (CORD-05/06). Stored bare, domain-agnostic.
-                    inviteRef = ConcordActions.bareInviteRef(url) ?: "",
-                    privateChannels = ConcordActions.privateChannelKeysOf(bundle).map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
-                )
-            ConcordStore(dataDir.concordFile).upsert(stored)
+    /**
+     * The join half shared by `join` (a link) and `accept` (a Direct Invite): [bundle] is already
+     * opened, bounded, owner-proof validated and not expired. Ban-gates against the community's own
+     * Control Plane (read over the bundle's relays, else [fallbackRelays]), stores the membership and
+     * announces the Guestbook Join with [inviteCreator]/[inviteLabel] attribution.
+     */
+    private suspend fun joinBundle(
+        ctx: Context,
+        dataDir: DataDir,
+        bundle: CommunityInvite,
+        fallbackRelays: Set<NormalizedRelayUrl>,
+        inviteRef: String,
+        inviteCreator: String?,
+        inviteLabel: String?,
+    ): Int {
+        // Refuse a link that readmits us after we were removed. A Refounding re-mints every
+        // outstanding link onto the new root (CORD-05), and an ex-member keeps the URL and its
+        // unlock token forever — so without this check the rotation that was supposed to expel
+        // them hands them the new keys instead. `recover` has always been ban-gated; `join` is
+        // the other door into the same room.
+        //
+        // Fails CLOSED on an unreadable plane: no verdict, no join. The banlist is only knowable
+        // after the bundle yields the root, which is why the check lives here rather than before.
+        val joinKeys =
+            ConcordActions.controlPlaneKeys(
+                communityRoot = bundle.communityRoot.hexToByteArray(),
+                communityId = bundle.communityId.hexToByteArray(),
+                rootEpoch = bundle.rootEpoch,
+                controlPk = bundle.controlPk,
+            )
+        val joinRelays = normalize(bundle.relays).ifEmpty { fallbackRelays }
+        val joinEditions =
+            ConcordActions.controlEditions(
+                ctx.drain(joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) }, pendingOnAuthRequired = true).map { it.second },
+                joinKeys,
+            )
+        if (joinEditions.isEmpty()) {
+            return Output.error("control_plane_unreadable", "could not fold this community's Control Plane, so whether it has banned you is unknown — refusing to join")
+        }
+        if (AuthorityResolver.resolve(joinEditions, bundle.communityId.hexToByteArray(), bundle.owner).isBanned(ctx.signer.pubKey)) {
+            return Output.error("banned", "this community has banned this account; the invite opens but the roster does not admit you (CORD-04)")
+        }
 
-            // Announce the membership (CORD-05 §6 / CORD-02 §5): a Guestbook Join is how a later
-            // Refounding finds this member to re-key, and it echoes the link's attribution so link
-            // holders can count per-link joins. Best-effort, like every Guestbook motion.
-            val announced = announceGuestbookJoin(ctx, stored, bundle.creatorNpub, bundle.label)
-            Output.emit(mapOf("community_id" to bundle.communityId, "name" to bundle.name, "relays" to bundle.relays, "guestbook_join" to announced))
+        val stored =
+            StoredCommunity(
+                name = bundle.name,
+                communityId = bundle.communityId,
+                owner = bundle.owner,
+                ownerSalt = bundle.ownerSalt,
+                root = bundle.communityRoot,
+                rootEpoch = bundle.rootEpoch,
+                // Read access to the Control Plane, never write (CORD-05 §1). Absent = the
+                // community is still pre-split and folds at the legacy address.
+                controlPk = bundle.controlPk ?: "",
+                relays = bundle.relays,
+                // The stranded-recovery anchor; blank for a Direct Invite, which has no link.
+                inviteRef = inviteRef,
+                privateChannels = ConcordActions.privateChannelKeysOf(bundle).map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
+            )
+        ConcordStore(dataDir.concordFile).upsert(stored)
+
+        // Announce the membership (CORD-05 §6 / CORD-02 §5): a Guestbook Join is how a later
+        // Refounding finds this member to re-key, and it echoes the link's attribution so link
+        // holders can count per-link joins. Best-effort, like every Guestbook motion.
+        val announced = announceGuestbookJoin(ctx, stored, inviteCreator, inviteLabel)
+        Output.emit(mapOf("community_id" to bundle.communityId, "name" to bundle.name, "relays" to bundle.relays, "guestbook_join" to announced))
+        return 0
+    }
+
+    // ---- Direct Invites (CORD-05 §6) -------------------------------------------
+
+    /**
+     * `concord invite COMMUNITY --to USER` — hands the community's keys straight to USER as a
+     * Direct Invite: the §1 bundle giftwrapped (standard NIP-59, `k=3313`) to their inbox relays.
+     * Which Private Channel keys ride along, and who is refused, is [ConcordActions.draftDirectInvite].
+     */
+    private suspend fun directInvite(
+        dataDir: DataDir,
+        sc: StoredCommunity,
+        to: String,
+        expiresInSecs: Long?,
+    ): Int {
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val recipient = ctx.requireUserHex(to)
+            // The fold decides which Private Channel keys the recipient's Roles entitle them to and
+            // whether either side is banned; no fold, no verdict, no send.
+            val state = ConcordChannelCommands.foldState(ctx, sc)
+            if (state.metadata == null) {
+                return Output.error("control_plane_unreadable", "could not fold this community's Control Plane, so which keys the recipient may receive is unknown — not sending")
+            }
+            val expiresAtMs = expiresInSecs?.let { TimeUtils.nowMillis() + it * 1000 }
+            val invite =
+                when (val draft = ConcordActions.draftDirectInvite(entryFor(sc), state, ctx.signer.pubKey, recipient, expiresAtMs)) {
+                    is ConcordDirectInviteDraft.Ready -> draft.invite
+                    is ConcordDirectInviteDraft.Refused ->
+                        return when (draft.reason) {
+                            ConcordDirectInviteSendResult.RECIPIENT_BANNED -> Output.error("recipient_banned", "this community has banned $recipient; their join would be refused")
+                            ConcordDirectInviteSendResult.INVALID_RECIPIENT -> Output.error("bad_args", "'$to' is not a 32-byte pubkey").let { 2 }
+                            else -> Output.error("not_member", "this account is banned from, or no longer holds, this community")
+                        }
+                }
+            val wrap = ConcordActions.buildDirectInvite(ctx.signer, recipient, invite)
+            // Their kind-10050 DM relays, else NIP-65 read relays, else the stock set (CORD-05 §6).
+            val lists = ctx.cachedRelayListsOf(recipient) ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, recipient, ctx.bootstrapRelays())
+            val relays = ConcordActions.directInviteDeliveryRelays(lists)
+            val ack = ctx.publish(wrap, relays)
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            Output.emit(
+                mapOf(
+                    "sent" to true,
+                    "wrap_id" to wrap.id,
+                    "recipient" to recipient,
+                    "community_id" to sc.communityId,
+                    "channels" to invite.channels.map { mapOf("id" to it.id, "name" to it.name, "epoch" to it.epoch) },
+                    "expires_at" to invite.expiresAt,
+                ) + RawEventSupport.ackFields(ack),
+            )
             return 0
         }
+    }
+
+    /**
+     * Collects this account's Direct Invite wraps (`{"kinds":[1059],"#p":[me],"#k":["3313"]}`) from
+     * where senders deliver them — our 10050 / NIP-65 read / stock relays, plus the DM inbox — into
+     * the shared headless inbox, with the declines this account already made restored.
+     */
+    private suspend fun sweepDirectInvites(
+        ctx: Context,
+        dataDir: DataDir,
+    ): ConcordDirectInviteInbox {
+        val inbox = ConcordDirectInviteInbox(ctx.signer)
+        inbox.restoreDeclined(ConcordInviteInboxStore(dataDir.concordInvitesFile).declined())
+        val me = ctx.signer.pubKey
+        val relays = ConcordActions.directInviteDeliveryRelays(ctx.cachedRelayListsOf(me)) + ctx.inboxRelays()
+        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.directInvitesFilter(me)) }).map { it.second }
+        wraps.distinctBy { it.id }.forEach { inbox.offer(it) }
+        return inbox
+    }
+
+    private fun directInviteJson(view: ConcordDirectInviteView): Map<String, Any?> =
+        mapOf(
+            "wrap_id" to view.wrapId,
+            "sender" to view.sender,
+            "community_id" to view.communityId,
+            "name" to view.name,
+            "icon" to view.icon?.url,
+            "relays" to view.invite.relays,
+            "channels" to
+                view.invite.channels
+                    .filter { it.key.isNotBlank() }
+                    .map { mapOf("id" to it.id, "name" to it.name, "epoch" to it.epoch) },
+            "sent_at" to view.opened.sentAt,
+            "expires_at" to view.invite.expiresAt,
+            "expired" to view.expired,
+            "catch_up" to view.catchUp,
+        )
+
+    /** `concord invites` — the Direct Invites waiting for this account. Read-only: nothing joins. */
+    private suspend fun invites(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        Args(rest).rejectUnknown()
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val inbox = sweepDirectInvites(ctx, dataDir)
+            val joined = ConcordStore(dataDir.concordFile).load().map { entryFor(it) }
+            val views = ConcordDirectInviteInbox.visible(inbox.pending.value.values, joined)
+            Output.emit(mapOf("invites" to views.map { directInviteJson(it) })) {
+                if (views.isEmpty()) {
+                    "no pending direct invites"
+                } else {
+                    views.joinToString(System.lineSeparator()) { v ->
+                        val flags = listOfNotNull("expired".takeIf { v.expired }, "catch-up".takeIf { v.catchUp }).joinToString(" ") { "[$it]" }
+                        "${v.wrapId}  ${v.name.ifBlank { v.communityId.take(12) }}  from ${v.sender}" + if (flags.isNotEmpty()) "  $flags" else ""
+                    }
+                }
+            }
+            return 0
+        }
+    }
+
+    /**
+     * `concord accept WRAP-ID` — accepts a Direct Invite through the same join path as a link:
+     * refused past `expires_at` or when the roster bans us; for a community already held, only a
+     * catch-up adopting newly granted Private Channel keys on the same base (never a base move).
+     */
+    private suspend fun accept(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val ref = args.positional(0, "wrap-id").lowercase()
+        args.rejectUnknown()
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val pending = sweepDirectInvites(ctx, dataDir).pending.value.values
+            val opened =
+                pending.firstOrNull { it.wrapId == ref }
+                    ?: pending.singleOrNull { it.wrapId.startsWith(ref) }
+                    ?: return Output.error("not_found", "no pending direct invite with wrap id '$ref' (see `amy concord invites`)")
+
+            val store = ConcordStore(dataDir.concordFile)
+            val heldSc = store.load().firstOrNull { it.communityId.equals(opened.invite.communityId, ignoreCase = true) }
+            // An unreadable held plane is no verdict (metadata is written at genesis), so it waits.
+            val heldState = heldSc?.let { ConcordChannelCommands.foldState(ctx, it) }?.takeIf { it.metadata != null }
+
+            fun done(extra: Map<String, Any?>) = mapOf("wrap_id" to opened.wrapId, "community_id" to opened.invite.communityId, "name" to opened.invite.name) + extra
+            return when (val plan = ConcordDirectInviteInbox.acceptPlan(opened, heldSc?.let { entryFor(it) }, heldState, ctx.signer.pubKey)) {
+                DirectInviteAcceptPlan.Expired -> Output.error("expired", "this direct invite has expired and can no longer be joined")
+                DirectInviteAcceptPlan.Banned -> Output.error("banned", "this community has banned this account (CORD-04)")
+                DirectInviteAcceptPlan.RosterNotLoaded -> Output.error("control_plane_unreadable", "could not fold this community's Control Plane, so whether it has banned you is unknown — refusing to adopt")
+                DirectInviteAcceptPlan.NothingNew -> {
+                    Output.emit(done(mapOf("joined" to true, "already_member" to true, "catch_up" to false)))
+                    0
+                }
+                is DirectInviteAcceptPlan.CatchUp -> {
+                    val held = heldSc!!
+                    store.upsert(storedFrom(held, plan.entry))
+                    val added = plan.entry.privateChannels.filter { pc -> held.privateChannels.none { it.channelId.equals(pc.channelId, ignoreCase = true) && it.epoch == pc.epoch } }
+                    Output.emit(done(mapOf("joined" to true, "catch_up" to true, "channels" to added.map { mapOf("id" to it.channelId, "name" to it.name, "epoch" to it.epoch) })))
+                    0
+                }
+                // The Join is attributed to the seal-verified sender, never the bundle's claim.
+                DirectInviteAcceptPlan.Join -> joinBundle(ctx, dataDir, opened.invite, emptySet(), inviteRef = "", inviteCreator = opened.sender, inviteLabel = opened.invite.label)
+            }
+        }
+    }
+
+    /** `concord decline WRAP-ID` — discards a Direct Invite locally; it is never listed again. */
+    private fun decline(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val wrapId = args.positional(0, "wrap-id").lowercase()
+        args.rejectUnknown()
+        if (!HEX64.matches(wrapId)) return Output.error("bad_args", "expected the invite's full 64-hex wrap id, got '$wrapId'").let { 2 }
+        ConcordInviteInboxStore(dataDir.concordInvitesFile).decline(wrapId)
+        Output.emit(mapOf("declined" to wrapId))
+        return 0
     }
 
     // ---- shared helpers (used by ConcordChannelCommands too) ------------------

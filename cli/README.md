@@ -680,6 +680,10 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). A private channel posts on its own key's plane; without a held key it fails with `no_channel_key` instead of falling back to the community-wide plane. |
 | `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane (public channels; a private channel reads its held key's plane). |
 | `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link (at most 3 bootstrap relays ride in the fragment, CORD-05 §3; the bundle names this account as creator), then publish this account's Invite Registry (`vsk 8`, CORD-05 §5) listing its live link signers — expired links pruned. Output adds `registry_published`, `public` and `live_invite_links`. |
+| `amy concord invite COMMUNITY --to USER [--expires-in SECS]` | Send a Direct Invite (CORD-05 §6): the bundle giftwrapped as standard NIP-59 (kind-3313 rumor, `k=3313` wrap tag, NIP-40 expiration when `--expires-in` is set) to USER (npub, hex, nprofile or NIP-05) on their kind-10050 relays, else NIP-65 read relays, else the stock set. Carries only the private-channel keys USER's roles grant; refused for a banned recipient. No registry entry, never flips the community Public, cannot be revoked. |
+| `amy concord invites` | List Direct Invites waiting for this account (sender, community name/icon, expired, catch-up). Read-only: nothing joins or contacts the community's relays. Communities you already hold are hidden unless the invite carries new channel keys on the same base (a catch-up). |
+| `amy concord accept WRAP-ID` | Accept a Direct Invite (full wrap id or a unique prefix): the same join path as a link (ban-gated, Guestbook Join attributed to the seal-verified sender); refused past `expires_at`. For a community you hold, only adopts newly granted private-channel keys on the same root/epoch/control_pk, never moving the base. |
+| `amy concord decline WRAP-ID` | Discard a Direct Invite; its wrap id is remembered in `concord-invites.json` so it never resurfaces. |
 | `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, records it in your Invite List, then republishes your Invite Registry without it. When it was the community's last live link the output carries `privatized: true` / `refound_required: true`: the community is Private now, and `concord refound COMMUNITY --privatize` rotates its keys (CORD-05 §2). |
 | `amy concord join URL` | Redeem an invite link, save the community, and publish a Guestbook Join echoing the link's attribution (CORD-05 §1/§6). |
 | `amy concord rekey [COMMUNITY]` | Follow a Refounding we were re-keyed for. Honors only a BAN-holding rotator whose `vac` cites a Grant our fold has synced (the owner cites none); racing rotations converge on the lowest root (CORD-06 §3). |
@@ -990,6 +994,7 @@ matches that:
 │   ├── aliases.json           # local name → npub map
 │   ├── cashu.json             # NIP-60 NUT-13 counters
 │   ├── concord.json           # Concord community secrets
+│   ├── concord-invites.json   # declined Concord Direct Invite wrap ids
 │   └── marmot/                # MLS state per group
 └── bob/
     └── …
