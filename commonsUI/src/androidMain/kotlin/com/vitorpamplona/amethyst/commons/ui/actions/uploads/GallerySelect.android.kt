@@ -67,7 +67,10 @@ actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {
 }
 
 @Composable
-actual fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit) {
+actual fun GallerySelectSingle(
+    imagesOnly: Boolean,
+    onImageUri: (SelectedMedia?) -> Unit,
+) {
     val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
     val resolver = LocalContext.current.contentResolver
 
@@ -89,7 +92,7 @@ actual fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit) {
     fun LaunchGallery() {
         SideEffect {
             if (!hasLaunched.getAndSet(true)) {
-                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                launcher.launch(PickVisualMediaRequest(if (imagesOnly) ActivityResultContracts.PickVisualMedia.ImageOnly else ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
         }
     }

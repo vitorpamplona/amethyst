@@ -21,6 +21,17 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.window.DialogProperties
 
 @Composable
 actual fun SetDialogToEdgeToEdge() {}
+
+actual fun edgeToEdgeDialogProperties(
+    dismissOnBackPress: Boolean,
+    dismissOnClickOutside: Boolean,
+): DialogProperties =
+    DialogProperties(
+        usePlatformDefaultWidth = false,
+        dismissOnBackPress = dismissOnBackPress,
+        dismissOnClickOutside = dismissOnClickOutside,
+    )

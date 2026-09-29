@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.uploading_state_server_proce
 import com.vitorpamplona.amethyst.commons.resources.uploading_state_uploading
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource

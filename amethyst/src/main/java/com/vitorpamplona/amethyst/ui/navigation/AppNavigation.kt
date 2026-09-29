@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCo
 import com.vitorpamplona.amethyst.commons.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.BackupConflictReviewScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.award.AwardBadgeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.profile.ProfileBadgesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.bookmarkgroups.default.BookmarkListScreen
@@ -91,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.Co
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnInvitationsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.GeohashTeleportScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelListScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordEditScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordHomeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteLinksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
@@ -100,6 +103,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.CommunityScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.contactList.ContactListUsersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
@@ -124,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list.ListOfPe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicTracksScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
@@ -179,6 +185,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletDetail
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletTransactionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -212,7 +219,6 @@ import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsQrScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display.BookmarkGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadata.BookmarkGroupMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
@@ -240,8 +246,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
@@ -256,8 +260,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.CommunitiesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -293,7 +295,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleL
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
@@ -337,7 +338,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen

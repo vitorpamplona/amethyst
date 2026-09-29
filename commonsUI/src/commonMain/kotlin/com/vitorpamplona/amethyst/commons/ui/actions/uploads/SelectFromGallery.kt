@@ -114,6 +114,9 @@ private fun GallerySelectButton(
 @Composable
 expect fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit = {})
 
-/** Opens the platform's photo/video picker for one item; reports null on cancel. */
+/** Opens the platform's photo/video picker for one item ([imagesOnly]: photos only); reports null on cancel. */
 @Composable
-expect fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit = {})
+expect fun GallerySelectSingle(
+    imagesOnly: Boolean = false,
+    onImageUri: (SelectedMedia?) -> Unit = {},
+)

@@ -34,6 +34,9 @@ actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {
 }
 
 @Composable
-actual fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit) {
+actual fun GallerySelectSingle(
+    imagesOnly: Boolean,
+    onImageUri: (SelectedMedia?) -> Unit,
+) {
     LaunchedEffect(Unit) { onImageUri(null) }
 }

@@ -204,7 +204,7 @@ class EditPodcastShowViewModel : ViewModel() {
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
                     "Failed to save podcast",
-                    t.message ?: t.javaClass.simpleName,
+                    t.message ?: t::class.simpleName ?: "",
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

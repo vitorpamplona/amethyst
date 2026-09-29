@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
@@ -57,3 +58,14 @@ actual fun SetDialogToEdgeToEdge() {
         }
     }
 }
+
+actual fun edgeToEdgeDialogProperties(
+    dismissOnBackPress: Boolean,
+    dismissOnClickOutside: Boolean,
+): DialogProperties =
+    DialogProperties(
+        usePlatformDefaultWidth = false,
+        dismissOnBackPress = dismissOnBackPress,
+        dismissOnClickOutside = dismissOnClickOutside,
+        decorFitsSystemWindows = false,
+    )

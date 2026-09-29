@@ -75,10 +75,10 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadInProgressBanner
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadPlaceholder
 
 /** Composer for a Podcasting-2.0 trailer (`kind:30055`): title, a short audio/video clip, and season. */
 @OptIn(ExperimentalMaterial3Api::class)

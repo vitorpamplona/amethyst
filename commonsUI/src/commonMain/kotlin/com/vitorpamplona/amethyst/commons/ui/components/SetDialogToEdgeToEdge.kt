@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.window.DialogProperties
 
 /**
  * Stretches the enclosing dialog's window over the whole activity and matches its system-bar
@@ -28,3 +29,12 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun SetDialogToEdgeToEdge()
+
+/**
+ * Properties for a full-window dialog drawn edge to edge (pair with [SetDialogToEdgeToEdge]). On
+ * Android the dialog window also stops fitting the system bars.
+ */
+expect fun edgeToEdgeDialogProperties(
+    dismissOnBackPress: Boolean = true,
+    dismissOnClickOutside: Boolean = true,
+): DialogProperties
