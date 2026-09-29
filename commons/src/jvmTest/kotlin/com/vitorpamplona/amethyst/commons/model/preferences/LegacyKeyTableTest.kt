@@ -209,7 +209,7 @@ class LegacyKeyTableTest {
         )
 
         assertEquals(FollowListSlot.entries.size, TopNavFollowListStore.legacyTable.keys.size)
-        assertEquals(LatestEventSlot.entries.size, LatestEventCacheStore.legacyTable.keys.size)
+        assertEquals(LatestEventSlot.entries.count { it.existedInLegacyPrefs }, LatestEventCacheStore.legacyTable.keys.size)
     }
 
     /** Several tables share one store, so their markers must not collide. */
