@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
@@ -53,6 +54,18 @@ import kotlin.concurrent.Volatile
  * reaction/reply/delete/OTS/zap machinery wires up automatically.
  */
 typealias ConcordRumorSink = (communityId: HexKey, channelIdHex: HexKey, rumor: Event, seenOnRelays: Set<NormalizedRelayUrl>) -> Unit
+
+/**
+ * A disappearing Chat rumor (CORD-08) a session tracks: the [rumorId] carried by wrap [wrapId] on
+ * [channelIdHex], gone at [expiresAt] (unix seconds). Returned by a sweep once expired, so the
+ * store drops both notes.
+ */
+data class ExpiredConcordRumor(
+    val channelIdHex: HexKey,
+    val wrapId: HexKey,
+    val rumorId: HexKey,
+    val expiresAt: Long,
+)
 
 /**
  * The result of feeding one wrap to a session's [ConcordCommunitySession.ingest]. It separates
@@ -776,7 +789,17 @@ class ConcordCommunitySession(
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         val authors = HashSet<HexKey>()
-        ConcordActions.channelRumors(wraps, key, channelIdHex, epoch).forEach { rumor ->
+        val now = TimeUtils.now()
+        for (wrap in wraps) {
+            val rumor = ConcordActions.openChannelRumorAnyExpiry(wrap, key, channelIdHex, epoch) ?: continue
+            // CORD-08 §3: only the rumor's own tag counts. A rumor carrying one is remembered so the
+            // sweep purges it (and its wrap) when it expires; one already expired is refused here —
+            // never handed to the store — and queued for the next sweep so its wrap goes too.
+            val expiresAt = ConcordDisappearing.expirationOf(rumor)
+            if (expiresAt != null) {
+                trackExpiring(wrap.id, channelIdHex, rumor.id, expiresAt)
+                if (expiresAt <= now) continue
+            }
             authors.add(rumor.pubKey.lowercase())
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
@@ -786,6 +809,67 @@ class ConcordCommunitySession(
             _observedAuthors.update { if (it.containsAll(authors)) it else it + authors }
         }
     }
+
+    // ── Disappearing messages (CORD-08) ──────────────────────────────────────
+
+    /** Wrap id -> the expiring rumor it carries, for every rumor with an `expiration` we emitted or refused. */
+    private val expiringByWrapId = HashMap<HexKey, ExpiredConcordRumor>()
+
+    private val _nextExpiry = MutableStateFlow<Long?>(null)
+
+    /**
+     * The earliest `expiration` (unix seconds) among the rumors this session holds, or null when none
+     * expires — what the account's sweep schedules itself on, so a community with no timer costs
+     * nothing. At or before now when an expired rumor was just refused and its wrap awaits the sweep.
+     */
+    val nextExpiry: StateFlow<Long?> = _nextExpiry
+
+    /**
+     * The disappearing-messages timer (seconds) a compliant sender attaches to its next durable Chat
+     * rumor, read from the current fold at send time (CORD-08 §2), or null when off or not folded.
+     */
+    fun messageExpirationSecs(): Long? = _state.value?.metadata?.messageExpirationSecs()
+
+    private fun trackExpiring(
+        wrapId: HexKey,
+        channelIdHex: HexKey,
+        rumorId: HexKey,
+        expiresAt: Long,
+    ) {
+        lock.withLock {
+            expiringByWrapId[wrapId] = ExpiredConcordRumor(channelIdHex, wrapId, rumorId, expiresAt)
+            _nextExpiry.update { if (it == null || expiresAt < it) expiresAt else it }
+        }
+    }
+
+    /**
+     * Forgets every rumor whose `expiration` is at or before [now] (CORD-08 §3): its wrap leaves the
+     * channel buffer, so no re-projection can resurrect it, and it is returned so the caller purges
+     * the rumor's note and the wrap's note from its store. A wrap re-delivered later is refused again
+     * at ingest.
+     */
+    fun sweepExpired(now: Long = TimeUtils.now()): List<ExpiredConcordRumor> =
+        lock.withLock {
+            if (expiringByWrapId.isEmpty()) return@withLock emptyList()
+            val out = ArrayList<ExpiredConcordRumor>()
+            val it = expiringByWrapId.values.iterator()
+            while (it.hasNext()) {
+                val expiring = it.next()
+                if (expiring.expiresAt <= now) {
+                    channelWrapsById[expiring.channelIdHex]?.remove(expiring.wrapId)
+                    out.add(expiring)
+                    it.remove()
+                }
+            }
+            _nextExpiry.value = expiringByWrapId.values.minOfOrNull { it.expiresAt }
+            out
+        }
+
+    /** True while [channelIdHex]'s buffer holds [wrapId] — for tests of the sweep. */
+    internal fun isBuffered(
+        channelIdHex: HexKey,
+        wrapId: HexKey,
+    ): Boolean = lock.withLock { channelWrapsById[channelIdHex]?.containsKey(wrapId) == true }
 
     companion object {
         private fun privateKeySet(e: ConcordCommunityListEntry) = e.privateChannels.mapTo(HashSet()) { Triple(it.channelId.lowercase(), it.key.lowercase(), it.epoch) }

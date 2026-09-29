@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
@@ -55,6 +57,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -354,6 +358,41 @@ object ConcordActions {
 
     // ---- channel chat ---------------------------------------------------------
 
+    /**
+     * [extraTags] plus the CORD-08 §2 `expiration` a rumor of [kind] created at [createdAt] must carry
+     * while the community's timer is [timerSecs] — none when the timer is off or the kind is exempt
+     * (deletes, timer notices, ephemeral kinds). Inside the signed rumor, so it is authoritative.
+     */
+    private fun withTimer(
+        extraTags: Array<Array<String>>,
+        kind: Int,
+        createdAt: Long,
+        timerSecs: Long?,
+    ): Array<Array<String>> = ConcordDisappearing.withExpiration(extraTags, ConcordDisappearing.expirationFor(kind, createdAt, timerSecs))
+
+    /**
+     * Seals [rumor] (encrypted 20013) and wraps it on the [channel] plane. The wrap repeats the
+     * rumor's own `expiration`, if any, so NIP-40 relays delete the ciphertext (CORD-08 §2).
+     */
+    private suspend fun wrapChat(
+        rumor: Event,
+        channel: GroupKey,
+        authorSigner: NostrSigner,
+    ): Event = ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true, outerTags = ConcordDisappearing.wrapTagsFor(rumor))
+
+    /**
+     * Builds a CORD-08 §4 timer-notice wrap (kind 1740) announcing [timerSecs] (`0` = off) on the
+     * [channel] plane. A notice never expires, whatever the timer.
+     */
+    suspend fun buildChannelTimerNotice(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        timerSecs: Long,
+        createdAt: Long,
+    ): Event = wrapChat(ConcordDisappearing.timerNotice(authorSigner.pubKey, channelId, epoch, timerSecs, createdAt), channel, authorSigner)
+
     /** Builds an encrypted-seal channel message wrap to publish on the [channel] plane. */
     suspend fun buildChannelMessage(
         authorSigner: NostrSigner,
@@ -363,9 +402,10 @@ object ConcordActions {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt, withTimer(extraTags, ChatEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -381,9 +421,10 @@ object ConcordActions {
         imetas: List<IMetaTag>,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt, withTimer(extraTags, ChatEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /** Builds an encrypted-seal inline quote-reply wrap (kind-9 message quoting [parent] via `q`) on the [channel] plane. */
@@ -396,9 +437,10 @@ object ConcordActions {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt, withTimer(extraTags, ChatEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /** Builds an encrypted-seal thread-reply wrap (kind-1111 NIP-22 comment on [parent]) on the [channel] plane. */
@@ -411,9 +453,10 @@ object ConcordActions {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt, withTimer(extraTags, CommentEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -430,9 +473,10 @@ object ConcordActions {
         imetas: List<IMetaTag>,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.imageReply(authorSigner.pubKey, channelId, epoch, text, imetas, parent, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.imageReply(authorSigner.pubKey, channelId, epoch, text, imetas, parent, createdAt, withTimer(extraTags, CommentEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -449,9 +493,10 @@ object ConcordActions {
         newText: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, withTimer(extraTags, ConcordChatEditEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -469,7 +514,7 @@ object ConcordActions {
         createdAt: Long,
     ): Event {
         val rumor = ChannelChat.delete(authorSigner.pubKey, channelId, epoch, targets, createdAt)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
@@ -482,9 +527,10 @@ object ConcordActions {
         reaction: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        timerSecs: Long? = null,
     ): Event {
-        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt, extraTags)
-        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt, withTimer(extraTags, ReactionEvent.KIND, createdAt, timerSecs))
+        return wrapChat(rumor, channel, authorSigner)
     }
 
     /**
@@ -538,10 +584,24 @@ object ConcordActions {
     /**
      * Opens one channel [wrap] and returns its rumor only when it passes the Chat ingest gate
      * ([ChannelChat.acceptOpened]): an encrypted 20013 seal, a Chat kind (never another plane's
-     * kind), a strict `channel`/`epoch` binding, and a well-formed `ms`. Anything else is dropped
-     * here, before it can reach the store.
+     * kind), a strict `channel`/`epoch` binding, and a well-formed `ms`. A rumor whose own
+     * `expiration` is at or before [now] is refused too (CORD-08 §3: never stored). Anything else is
+     * dropped here, before it can reach the store.
      */
     fun openChannelRumor(
+        wrap: Event,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        now: Long = TimeUtils.now(),
+    ): Event? = openChannelRumorAnyExpiry(wrap, channel, channelId, epoch)?.takeUnless { ConcordDisappearing.isExpired(it, now) }
+
+    /**
+     * [openChannelRumor] without the CORD-08 expiry refusal, for a caller that must tell an expired
+     * rumor apart from garbage — the session, which purges an expired rumor's wrap instead of merely
+     * skipping it. Such a caller owns the refusal.
+     */
+    fun openChannelRumorAnyExpiry(
         wrap: Event,
         channel: GroupKey,
         channelId: HexKey,

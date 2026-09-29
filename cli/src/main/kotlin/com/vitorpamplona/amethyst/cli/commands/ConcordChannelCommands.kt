@@ -97,7 +97,8 @@ object ConcordChannelCommands {
                 ConcordActions.currentChannelPlane(ConcordCommands.entryFor(sc), state, channelId)
                     ?: return Output.error("no_channel_key", "channel '$channelRef' is not folded, or is private and this account holds no key for it (CORD-03 §1)")
             val channel = plane.key
-            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, text, TimeUtils.now())
+            // CORD-08 §2: the folded timer rides inside the signed rumor, and on the wrap for relays.
+            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, text, TimeUtils.now(), timerSecs = state.metadata?.messageExpirationSecs())
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // A relay that gates writes behind NIP-42 wants the wrap's author (the stream key) authenticated.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))

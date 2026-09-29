@@ -691,19 +691,21 @@ class AccountConcordActions(
                 .toTypedArray()
 
         val parent = replyTo?.event
+        // CORD-08 §2: the community timer as folded right now rides inside the signed rumor.
+        val timer = session.messageExpirationSecs()
         val wrap =
             when {
                 // A minichat reply is a kind-1111 thread comment (carrying encrypted image imetas when
                 // the user attached media); an inline reply is a kind-9 message quoting the parent; a
                 // fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags, timer)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags, timer)
                 else ->
-                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags, timer)
             }
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
@@ -733,7 +735,7 @@ class AccountConcordActions(
                 .findEmojiTags(text)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
     }
@@ -767,7 +769,7 @@ class AccountConcordActions(
                 .findEmojiTags(reaction)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -805,7 +807,7 @@ class AccountConcordActions(
                 .findEmojiTags(newText)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags, session.messageExpirationSecs())
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -1729,6 +1731,45 @@ class AccountConcordActions(
         val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    /**
+     * Set [communityId]'s disappearing-messages timer to [secs] seconds, or turn it off when null or
+     * below 1 (CORD-08 §1): a metadata edition under MANAGE_METADATA, laid over the folded metadata so
+     * nothing else changes. Then, as §4 asks, one kind-1740 timer notice goes into every channel whose
+     * key this account holds (a Private Channel without one simply gets none). Returns false when
+     * nothing was published (not authorized, no Control write key, or the timer is already [secs]).
+     */
+    suspend fun setConcordMessageExpiration(
+        communityId: String,
+        secs: Long?,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_METADATA) ?: return false
+        val timer = secs?.takeIf { it >= 1 }
+        val standing = session.state.value?.metadata ?: MetadataEntity()
+        if (standing.messageExpirationSecs() == timer) return false
+        val wrap = ConcordModeration.setMessageExpiration(account.signer, cp, communityId.hexToByteArray(), standing, timer, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        publishConcordWrap(session.entry, wrap)
+        postConcordTimerNotices(session, timer ?: 0)
+        return true
+    }
+
+    /** One CORD-08 §4 timer notice per channel of [session] this account can write. */
+    private suspend fun postConcordTimerNotices(
+        session: ConcordCommunitySession,
+        timerSecs: Long,
+    ) {
+        val channels =
+            session.state.value
+                ?.channels
+                ?.keys ?: return
+        val now = TimeUtils.now()
+        for (channelIdHex in channels) {
+            val plane = session.currentChannelPlane(channelIdHex) ?: continue
+            publishConcordWrap(session.entry, ConcordActions.buildChannelTimerNotice(account.signer, plane.key, channelIdHex, plane.epoch, timerSecs, now))
+        }
     }
 
     /**

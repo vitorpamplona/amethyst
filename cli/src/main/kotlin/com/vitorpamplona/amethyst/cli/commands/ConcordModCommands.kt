@@ -32,9 +32,11 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
@@ -195,6 +197,77 @@ object ConcordModCommands {
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(mapOf("community" to sc.communityId, "dissolved" to true) + RawEventSupport.ackFields(ack))
             return 0
+        }
+    }
+
+    /**
+     * `timer COMMUNITY [off|SECONDS|1d|1w|30d|90d|1y]` — CORD-08 disappearing messages. Without a
+     * value, prints the folded timer (seconds, `0` = off). With one, publishes the metadata edition
+     * (MANAGE_METADATA, laid over the folded metadata) and then one kind-1740 timer notice into every
+     * channel this account holds a key for (§4).
+     */
+    suspend fun timer(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        val raw = args.positionalOrNull(1)
+        args.rejectUnknown()
+        val secs =
+            raw?.let {
+                parseTimer(it) ?: return Output.error("bad_args", "timer must be off, a number of seconds, or Nd/Nw/Ny (e.g. 1d, 1w, 30d, 90d, 1y)").let { 2 }
+            }
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val loaded = load(ctx, sc, dataDir)
+            val cid = sc.communityId.hexToByteArray()
+            val state = ConcordCommunityState.fold(loaded.editions, cid, sc.owner)
+            val current = state.metadata?.messageExpirationSecs() ?: 0L
+            if (secs == null) {
+                Output.emit(mapOf("community" to sc.communityId, "message_expiration" to current, "enabled" to (current > 0)))
+                return 0
+            }
+            writeGuard(loaded.keys)?.let { return it }
+            if (!state.authority.hasPermission(ctx.signer.pubKey, ConcordPermissions.MANAGE_METADATA)) {
+                return Output.error("forbidden", "setting the timer takes MANAGE_METADATA in '$handle' (CORD-08 §1)")
+            }
+            val timer = secs.takeIf { it >= 1 }
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+            val wrap = ConcordModeration.setMessageExpiration(ctx.signer, loaded.keys, cid, state.metadata ?: MetadataEntity(), timer, loaded.editions, TimeUtils.now(), owner = sc.owner)
+            val ack = ctx.publish(wrap, relays)
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+
+            // CORD-08 §4: one notice per channel whose key we hold; the fold stays the authority.
+            val entry = ConcordCommands.entryFor(loaded.community)
+            val now = TimeUtils.now()
+            var notices = 0
+            for (channelIdHex in state.channels.keys) {
+                val plane = ConcordActions.currentChannelPlane(entry, state, channelIdHex) ?: continue
+                ctx.registerConcordStreamKeys(relays, listOf(plane.key.secretKey))
+                val notice = ConcordActions.buildChannelTimerNotice(ctx.signer, plane.key, channelIdHex, plane.epoch, timer ?: 0L, now)
+                // Best effort, like the reference client: a notice that no relay took is only counted out.
+                if (ctx.publish(notice, relays).values.any { it.accepted }) notices++
+            }
+            Output.emit(mapOf("community" to sc.communityId, "message_expiration" to (timer ?: 0L), "previous" to current, "notices" to notices) + RawEventSupport.ackFields(ack))
+            return 0
+        }
+    }
+
+    /** `off`/`0`, plain seconds, or a count of days/weeks/years (`1d`, `1w`, `30d`, `1y`); null if unparseable. */
+    private fun parseTimer(raw: String): Long? {
+        val v = raw.trim().lowercase()
+        if (v == "off") return 0L
+        v.toLongOrNull()?.let { return it.takeIf { it >= 0 } }
+        val n = v.dropLast(1).toLongOrNull()?.takeIf { it >= 1 } ?: return null
+        val day = ConcordDisappearing.MIN_OFFERED_SECS
+        return when (v.last()) {
+            'd' -> n * day
+            'w' -> n * 7 * day
+            'y' -> n * 365 * day
+            else -> null
         }
     }
 

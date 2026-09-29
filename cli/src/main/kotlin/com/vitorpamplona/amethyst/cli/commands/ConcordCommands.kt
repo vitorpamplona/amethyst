@@ -96,6 +96,9 @@ object ConcordCommands {
         |                                               key — the hard removal a ban cannot give
         |  concord dissolve COMMUNITY --yes            CORD-02 §9: owner-only, IRREVERSIBLE tombstone
         |                                               that seals the community read-only for everyone
+        |  concord timer COMMUNITY [off|SECONDS|1d|1w|30d|90d|1y]
+        |                                               CORD-08 disappearing messages: print the timer,
+        |                                               or set it (MANAGE_METADATA) + post channel notices
         """.trimMargin()
 
     suspend fun dispatch(
@@ -105,7 +108,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|refound|dissolve>",
+            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
@@ -127,6 +130,7 @@ object ConcordCommands {
                     "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
                     "refound" to { rest -> ConcordModCommands.refound(dataDir, rest) },
                     "dissolve" to { rest -> ConcordModCommands.dissolve(dataDir, rest) },
+                    "timer" to { rest -> ConcordModCommands.timer(dataDir, rest) },
                 ),
         )
 

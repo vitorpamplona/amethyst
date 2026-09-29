@@ -141,6 +141,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFrag
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
@@ -981,7 +982,9 @@ open class EventCache :
         // so the note already carries its ConcordChannel gatherer when it flows through
         // the Messages-list incremental filter (which routes rows by that gatherer).
         val messageRow =
-            if (rumor is ChatEvent || rumor is CommentEvent) {
+            // A CORD-08 timer notice is a channel row too: the inline "… set disappearing messages" line
+            // (the feed shows it only when its author holds MANAGE_METADATA, see Account.isAcceptable).
+            if (rumor is ChatEvent || rumor is CommentEvent || rumor is ConcordTimerNoticeEvent) {
                 val ch = getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
                 val note = getOrCreateNote(rumor.id)
                 // Skip attaching a row for a message we already know is deleted (its kind-5 delete
@@ -4029,6 +4032,7 @@ open class EventCache :
                 is WakeUpEvent,
                 is WelcomeEvent,
                 is WorkoutRecordEvent,
+                is ConcordTimerNoticeEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {

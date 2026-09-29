@@ -598,6 +598,12 @@
     <string name="concord_open_channel">Open channel</string>
     <string name="concord_edit_banner_hint">Add a banner</string>
     <string name="concord_edit_relays_desc">Where this community's encrypted planes are published and read.</string>
+    <string name="concord_timer_title">Disappearing messages</string>
+    <string name="concord_timer_desc">New messages in every channel are deleted from members' devices and from relays after this long. Changing it doesn't affect messages already sent. Anyone who can read a message could still copy it.</string>
+    <string name="concord_timer_off">Off</string>
+    <string name="concord_timer_notice_set">%1$s set disappearing messages to %2$s</string>
+    <string name="concord_timer_notice_off">%1$s turned off disappearing messages</string>
+    <string name="concord_timer_active">Messages disappear after %1$s</string>
     <string name="concord_dissolved_read_only">This community has been dissolved and is now read-only. You can still read its history, but no new messages can be posted.</string>
     <string name="concord_private_channel_no_key">This is a private channel and you don't hold its key, so you can't read it or post here.</string>
     <string name="concord_create_name">Name</string>
