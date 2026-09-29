@@ -931,12 +931,14 @@ class AccountConcordActions(
     /**
      * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM
      * inbox relays (kind 10050, plus the NIP-65 read and private/local relays the DM feed already
-     * reads), else the stock Concord set.
+     * reads), plus the stock Concord set.
      */
     private fun concordDirectInviteScanRelays(): Set<NormalizedRelayUrl> =
-        account.dmRelays.flow.value.ifEmpty {
-            ConcordActions.directInviteDeliveryRelays(null)
-        }
+        // Our inbox relays AND the stock set, always: a sender that could not find our relay lists
+        // (none published, or none reachable) delivers to the stock set (CORD-05 §6), and we can't
+        // know which case a sender hit. Sweeping only our DM relays missed every invite from such a
+        // sender; Armada's to an account with no published kind 10050 never arrived.
+        account.dmRelays.flow.value + ConcordActions.directInviteDeliveryRelays(null)
 
     /**
      * Sweeps our inbox relays for Direct Invite wraps
