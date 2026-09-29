@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
@@ -212,24 +213,30 @@ object ConcordActions {
 
     /**
      * The older Chat Planes of a channel this account can still read, beside [currentChannelPlane]:
-     *  - Public: its plane under every held prior root ([historicalChannelPlanes]), plus the
-     *    private-era plane when a channel key is held (a channel that was Private before);
-     *  - Private: none. Only the channel-key planes are its own; the root-derived plane is readable
-     *    by every member, so showing it would present public content as private (Armada
-     *    `channelsView`). With no priors kept per channel key, that leaves nothing.
+     *  - Public: its plane under every held prior root ([historicalChannelPlanes]), plus every
+     *    private-era plane a channel key is held for (a channel that was Private before);
+     *  - Private: the planes of the older channel keys the entry still carries (its `seed` and a
+     *    peer's `priors`, [ConcordChannelKeyring.historicalKeys]) — history across a channel rekey.
+     *    Never the root-derived plane: every member reads that one, so showing it would present
+     *    public content as private (Armada `channelsView`).
      */
     fun historicalChannelPlanes(
         entry: ConcordCommunityListEntry,
         channelIdHex: HexKey,
         isPrivate: Boolean,
     ): List<ChannelPlane> {
-        if (isPrivate) return emptyList()
+        val channelId = channelIdHex.hexToByteArray()
+        val olderKeys =
+            ConcordChannelKeyring.historicalKeys(entry, channelIdHex).map { old ->
+                ChannelPlane(channelIdHex, old.epoch, ConcordChannelKeys.privateChannel(old.key.hexToByteArray(), channelId, old.epoch))
+            }
+        if (isPrivate) return olderKeys
         val rootEras = historicalChannelPlanes(entry.heldRoots, listOf(channelIdHex))
         val privateEra =
             heldPrivateChannelKey(entry, channelIdHex)?.let { held ->
-                ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelIdHex.hexToByteArray(), held.epoch))
+                ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
             }
-        return rootEras + listOfNotNull(privateEra)
+        return rootEras + listOfNotNull(privateEra) + olderKeys
     }
 
     /**
@@ -676,6 +683,7 @@ object ConcordActions {
         expiresAtMs: Long? = null,
         name: String = entry.name,
         icon: ImagePointer? = null,
+        onlyChannelIds: Set<HexKey>? = null,
     ): CommunityInvite =
         CommunityInvite(
             communityId = entry.id,
@@ -684,7 +692,12 @@ object ConcordActions {
             communityRoot = entry.root,
             rootEpoch = entry.rootEpoch,
             controlPk = entry.controlPk,
-            channels = ConcordInviteVend.toInviteChannels(ConcordInviteVend.vendableChannels(entry.privateChannels, authority, recipient)),
+            channels =
+                ConcordInviteVend.toInviteChannels(
+                    ConcordInviteVend
+                        .vendableChannels(entry.privateChannels, authority, recipient)
+                        .filter { onlyChannelIds == null || it.channelId.lowercase() in onlyChannelIds },
+                ),
             relays = entry.relays.take(ConcordInviteBundle.MAX_COMMUNITY_RELAYS),
             name = name.ifBlank { entry.name },
             icon = icon,
@@ -705,6 +718,7 @@ object ConcordActions {
         sender: HexKey,
         recipient: HexKey,
         expiresAtMs: Long? = null,
+        onlyChannelIds: Set<HexKey>? = null,
     ): ConcordDirectInviteDraft {
         val to = recipient.lowercase()
         if (!HEX64.matches(to)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.INVALID_RECIPIENT)
@@ -719,6 +733,7 @@ object ConcordActions {
                 expiresAtMs = expiresAtMs,
                 name = state.metadata?.name ?: entry.name,
                 icon = state.metadata?.icon,
+                onlyChannelIds = onlyChannelIds?.mapTo(HashSet()) { it.lowercase() },
             ),
         )
     }

@@ -244,6 +244,28 @@ class ConcordChannelListState(
         }
 
     /**
+     * Read-modify-write one membership: [transform] receives the entry for [communityId] **as the
+     * List holds it inside the write lock** and returns its replacement, or null to write nothing.
+     * Returns the fragment events to publish (empty when the community isn't held or nothing
+     * changed).
+     *
+     * Use this, never [follow] with a snapshot, for any change that touches one field of a live
+     * entry (a channel key, a cut): the List can move between reading a snapshot and writing it —
+     * a rekey adopted, a new root imported — and following the stale copy would write the old
+     * root back over it.
+     */
+    suspend fun update(
+        communityId: String,
+        transform: (ConcordCommunityListEntry) -> ConcordCommunityListEntry?,
+    ): List<Event> =
+        writeLock.withLock {
+            val (set, doc) = snapshot()
+            val current = doc.entries.firstOrNull { it.id == communityId } ?: return@withLock emptyList()
+            val next = transform(current) ?: return@withLock emptyList()
+            write(set, doc.entries.map { if (it.id == communityId) next else it }, doc.residue)
+        }
+
+    /**
      * Leave [communityId]: drop its membership and tombstone it (CORD-02 §8 — only a tombstone
      * subtracts a membership; a missing entry is just unseen news another fragment may still
      * carry). Returns the fragment events to publish, or empty when we were not a member.

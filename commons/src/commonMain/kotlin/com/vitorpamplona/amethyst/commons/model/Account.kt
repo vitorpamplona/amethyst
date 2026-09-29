@@ -4185,6 +4185,11 @@ class Account(
                 // A promotion to staff delivers the Control Plane write key inside the Grant
                 // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
                 runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
+                // A Private Channel rotation lands on its channel-rekey address (CORD-06 §2): adopt the new
+                // key, or drop the channel when it cut us.
+                runCatching { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
+                // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
+                runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
                 runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
