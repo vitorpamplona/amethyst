@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.commons.ui.actions
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -49,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.twitter_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.username
 import com.vitorpamplona.amethyst.commons.resources.website_url
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
@@ -88,7 +88,7 @@ fun NewUserMetadataScreen(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val postViewModel: NewUserMetadataViewModel = viewModel()
+    val postViewModel: NewUserMetadataViewModel = rememberViewModel { NewUserMetadataViewModel() }
     postViewModel.init(accountViewModel)
 
     val socialExpanded = rememberSaveable { mutableStateOf(false) }

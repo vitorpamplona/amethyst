@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.list.metadata
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,7 +58,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -71,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_cta
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_hint
 import com.vitorpamplona.amethyst.commons.resources.new_emoji_pack
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
@@ -85,7 +85,7 @@ fun EmojiPackMetadataScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: EmojiPackMetadataViewModel = viewModel()
+    val viewModel: EmojiPackMetadataViewModel = rememberViewModel { EmojiPackMetadataViewModel() }
     viewModel.init(accountViewModel)
 
     if (packIdentifier != null) {

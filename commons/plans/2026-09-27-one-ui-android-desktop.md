@@ -413,11 +413,24 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - `MediaMimeTypes` moved to commons.
    - **Wave 6 moved:** the NIP-46 signer screen. The other cuts clear blockers that sit
      behind the upload stack.
-   - **Next:** the post-composer upload stack is now the main blocker, holding about 30
-     screens. `UploadOrchestrator`/`MultiOrchestrator` thread an Android `Context` through
-     compression, metadata stripping, encryption and the NIP-95/NIP-96/Blossom uploaders,
-     and the composer view models call them directly. The video player stack (media3) is
-     next at about 22. Smaller exits remain: the Android-only `AccountViewModel` actions,
+   - **Upload port (2026-09-29):**
+     - The upload model is in `commons.service.uploads`: `UploadOrchestrator`,
+       `MultiOrchestrator`, `UploadingState`, `CompressorQuality`, `MediaCompressorResult`
+       and the `MediaUploader` port.
+     - Errors are an `UploadError` enum. commonsUI maps it to a string (`errorResource`).
+     - The Android pipeline (compression, metadata stripping, encryption, the
+       NIP-95/NIP-96/Blossom uploaders) stays in the app as `AndroidMediaUploader`. It is
+       reached through `AccountViewModelHost.mediaUploader`.
+     - Composer view models take a `MediaUploader` instead of a `Context`.
+     - Five view models had their own copy of strip, compress and upload for a single
+       image. They now call the shared `uploadToDefaultServer`.
+     - Moved: the profile editor, the emoji pack screen and the emoji pack metadata screen
+       (7 files).
+   - **Next:** most composer screens still exit through `ShowImageUploadItem` (the upload
+     preview, which uses Android media APIs to show a thumbnail) and `SelectFromFiles`.
+     After those comes the per-composer state: `ShortNotePostViewModel`, `PreviewState`
+     and the location pickers. The video player stack (media3) holds about 22 screens.
+     Smaller exits remain: the Android-only `AccountViewModel` actions,
      `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`, `UpdateZapAmountDialog`
      (biometrics), the `java.time` pickers and the language list.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.

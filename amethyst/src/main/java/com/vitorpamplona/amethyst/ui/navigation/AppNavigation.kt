@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccoun
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
+import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
@@ -102,7 +103,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.Communi
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.contactList.ContactListUsersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.list.metadata.EmojiPackMetadataScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppsScreen
@@ -184,7 +187,6 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
-import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.bolt12Offers.Bolt12OffersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
@@ -266,8 +268,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.list.metadata.EmojiPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
