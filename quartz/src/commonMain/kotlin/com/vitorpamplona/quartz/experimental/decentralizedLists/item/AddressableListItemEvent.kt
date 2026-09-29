@@ -40,19 +40,28 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.titles
 import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFrom
 import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFromTargets
 import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUnaffiliated
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ElementOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.SubsetOfTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.json
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.tags.PolarityTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritFromTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -80,12 +89,37 @@ class AddressableListItemEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     DecentralizedListItem,
     AddressableDecentralizedListEvent,
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
+    /**
+     * The item tags ([listItemTag]), plus Tapestry's class-thread claims (`b` inherit-from, `n`
+     * element-of, `s` subset-of) and the `q` a curation copy points back to its original with.
+     *
+     * Taggings overload the item slots (a PubKeyTagging's `a` is the tag applied, its `p` the
+     * target) and only deployment-configured `z` namespaces tell them apart, so every item slot
+     * links as ITEM and a tagging's `polarity` rides on them. The `curation-method` is JSON, not
+     * modelled.
+     */
+    override fun links(): List<Link> {
+        val itemProps = tags.fastFirstNotNullOfOrNull(PolarityTag::parseValue)?.let { mapOf("polarity" to it) }
+        return links {
+            tags.fastForEach {
+                if (listItemTag(it, itemProps) || it.size < 2) return@fastForEach
+                when (it[0]) {
+                    InheritFromTag.TAG_NAME -> address(Relation.INHERIT_FROM, InheritFromTag.parse(it)?.target, InheritFromTag.TAG_NAME)
+                    ElementOfTag.TAG_NAME -> address(Relation.ELEMENT_OF, it[1], ElementOfTag.TAG_NAME)
+                    SubsetOfTag.TAG_NAME -> address(Relation.SUBSET_OF, it[1], SubsetOfTag.TAG_NAME)
+                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
+                }
+            }
+        }
+    }
+
     override fun listPointer() = addressTag()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)

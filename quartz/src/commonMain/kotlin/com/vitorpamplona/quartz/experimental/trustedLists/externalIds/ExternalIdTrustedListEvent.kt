@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -49,6 +51,9 @@ class ExternalIdTrustedListEvent(
 ) : TrustedListEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
     PubKeyHintProvider {
+    /** Members are NIP-73 external ids (`i`). */
+    override fun links(): List<Link> = trustedListLinks("i") { value, props -> tag(Relation.MEMBER, "i", value, "i", props) }
+
     override fun members(): List<ExternalIdMemberTag> = tags.members()
 
     override fun isMemberTag(tag: Tag) = ExternalIdMemberTag.isTag(tag)

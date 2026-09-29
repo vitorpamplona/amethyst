@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.control.vsk
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -49,7 +50,8 @@ class ConcordInviteBundleEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     override fun isContentEncoded() = true
 
     /** The versioned sub-kind marker (`vsk`), expected to be [ControlEntityKind.INVITE_LIVE]. */

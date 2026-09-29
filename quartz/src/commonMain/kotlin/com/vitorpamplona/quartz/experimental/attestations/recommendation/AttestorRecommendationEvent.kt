@@ -21,10 +21,16 @@
 package com.vitorpamplona.quartz.experimental.attestations.recommendation
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.tags.KindTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -40,7 +46,19 @@ class AttestorRecommendationEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /**
+     * The recommended attestor is this event's `d` ([build] writes the pubkey there). Like a
+     * NIP-85 assertion's subject, it is the thing the event is about, not the event's own
+     * identity, so it is a link; the validator drops a `d` that is not a pubkey.
+     */
+    override fun links(): List<Link> =
+        links {
+            user(Relation.RECOMMENDED, dTag(), "d")
+            valueTags(Relation.TAG, tags, KindTag.TAG_NAME)
+        }
+
     override fun indexableContent() = listOfNotNull(description()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

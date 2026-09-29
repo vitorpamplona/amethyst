@@ -46,6 +46,9 @@ import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -75,11 +78,15 @@ class ListItemEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     DecentralizedListItem,
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
+    /** The list(s) this item is on and the item itself: see [listItemTag]. */
+    override fun links(): List<Link> = links { tags.fastForEach { listItemTag(it) } }
+
     override fun listPointer() = id
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)

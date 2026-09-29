@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
@@ -54,6 +55,7 @@ class KeyPackageRelayListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree,
     DiffableEvent<RelayListDiff> {
     override fun diffFrom(older: Event): RelayListDiff? {
         if (older !is KeyPackageRelayListEvent || older.pubKey != pubKey) return null

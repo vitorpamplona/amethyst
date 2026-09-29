@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -50,7 +51,8 @@ class ConcordInviteListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     /**
      * Decrypts the whole document with [signer] — entries, tombstones and the document residue — or
      * **null** if it cannot be decrypted or parsed.

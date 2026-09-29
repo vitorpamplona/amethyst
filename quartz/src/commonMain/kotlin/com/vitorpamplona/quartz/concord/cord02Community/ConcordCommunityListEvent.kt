@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -57,6 +58,7 @@ class ConcordCommunityListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree,
     DiffableEvent<ConcordCommunityListDiff> {
     override fun diffFrom(older: Event): ConcordCommunityListDiff? {
         if (older !is ConcordCommunityListEvent || older.pubKey != pubKey) return null

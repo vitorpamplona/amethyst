@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -54,7 +58,11 @@ class ProfileGalleryEntryEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The event the picture was taken from. */
+    override fun links(): List<Link> = links { event(Relation.SOURCE, fromEvent(), "e") }
+
     // Only the optional summary caption is indexed; this event is otherwise a
     // url/hash pointer with no natural-language body (content is empty).
     override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")

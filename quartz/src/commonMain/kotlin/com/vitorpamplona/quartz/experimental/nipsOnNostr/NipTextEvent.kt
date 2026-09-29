@@ -28,10 +28,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -60,12 +66,33 @@ class NipTextEvent(
     content: String,
     sig: HexKey,
 ) : BaseNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     AddressableEvent,
     RootScope,
     EventHintProvider,
     AddressHintProvider,
     IForkableEvent,
     SearchableEvent {
+    /**
+     * The version this text forks (an `a` or `e` marked `fork`), quotes, mentions (unmarked `a`,
+     * `p`, NIP-27 URIs in the text) and the kinds it defines (`k`).
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                val fork = it.size > MarkedETag.ORDER_MARKER && it[MarkedETag.ORDER_MARKER] == MarkedETag.MARKER.FORK.code
+                when (it[0]) {
+                    "a" -> address(if (fork) Relation.FORK else Relation.MENTION, it[1], "a")
+                    "e" -> if (fork) event(Relation.FORK, it[1], "e")
+                    "q" -> eventOrAddress(Relation.QUOTE, it[1], "q")
+                    "p" -> user(Relation.MENTION, it[1], "p")
+                    "k" -> tag(Relation.TAG, "k", it[1])
+                }
+            }
+            contentMentions(citedNIP19())
+        }
+
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

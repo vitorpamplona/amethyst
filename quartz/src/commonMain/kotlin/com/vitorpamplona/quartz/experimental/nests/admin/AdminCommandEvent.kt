@@ -23,6 +23,10 @@ package com.vitorpamplona.quartz.experimental.nests.admin
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -54,7 +58,23 @@ class AdminCommandEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /**
+     * The room (its kind-30312 `a`, which the presence and chat kinds tag as their root) and
+     * the target, whose relation is the verb: a kick or a mute, the two queried apart (rule 4).
+     * A command with an unknown verb names nobody.
+     */
+    override fun links(): List<Link> =
+        links {
+            address(Relation.ROOT, room(), "a")
+            when (action()) {
+                Action.KICK -> user(Relation.KICKED, targetPubkey(), "p")
+                Action.MUTE -> user(Relation.CHANNEL_MUTED, targetPubkey(), "p")
+                null -> Unit
+            }
+        }
+
     /** The room this command applies to, if a single `a`-tag is present. */
     fun room(): String? = tags.firstOrNull { it.firstOrNull() == "a" }?.getOrNull(1)
 

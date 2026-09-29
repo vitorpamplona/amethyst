@@ -18,35 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipACWebRtcCalls.events
+package com.vitorpamplona.quartz.concord
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@Immutable
-abstract class WebRTCEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    kind: Kind,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig),
-    LinkProvider {
-    fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
+class ConcordLinksTest {
+    private val me = "0".repeat(64)
+    private val message = "e1".repeat(32)
 
-    /**
-     * NIP-AC: every signalling kind names its callee(s) in `p` ("one per member" in group
-     * calls), so the whole family links the same way. `call-id` is a session value, not a link.
-     */
-    override fun links(): List<Link> = links { userTags(Relation.RECIPIENT, tags) }
+    @Test
+    fun chatEditLinksTheFirstEditedMessageOnly() {
+        val tags =
+            arrayOf(
+                arrayOf("channel", "concord-channel-id"),
+                arrayOf("e", message),
+                arrayOf("ms", "250"),
+                arrayOf("e", "e2".repeat(32)),
+            )
+        assertEquals(
+            listOf(Link(Relation.EDITED, LinkTarget.Event(message), "e")),
+            ConcordChatEditEvent(me, me, 0, tags, "fixed typo", me).links(),
+        )
+    }
 }

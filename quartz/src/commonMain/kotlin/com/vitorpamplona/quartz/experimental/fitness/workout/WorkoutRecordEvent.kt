@@ -21,11 +21,18 @@
 package com.vitorpamplona.quartz.experimental.fitness.workout
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseSetTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TemplateTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -50,9 +57,26 @@ class WorkoutRecordEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     RootScope,
     SearchableEvent,
     AddressHintProvider {
+    /**
+     * POWR / NIP-101e exercise and workout templates, by coordinate. A RUNSTR `exercise` is a
+     * plain verb, not a coordinate, and the parser skips it.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    ExerciseSetTag.TAG_NAME -> address(Relation.EXERCISE, ExerciseSetTag.parseAddressId(it), ExerciseSetTag.TAG_NAME)
+                    TemplateTag.TAG_NAME -> address(Relation.TEMPLATE, TemplateTag.parseAddressId(it), TemplateTag.TAG_NAME)
+                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
+                }
+            }
+        }
+
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

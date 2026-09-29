@@ -28,6 +28,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.addressTags
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -60,8 +66,23 @@ class VideoCollaborationEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     AddressHintProvider,
     PubKeyHintProvider {
+    /**
+     * The video credited and its author, with the answer: `status` (absent means accepted, see
+     * [isAccepted]) and the credited `role`. The divine-mobile `d` repeats the video's coordinate,
+     * but no link comes from an event's own `d`.
+     */
+    override fun links(): List<Link> =
+        links {
+            val props = HashMap<String, Any>(2)
+            props["status"] = status() ?: StatusTag.ACCEPTED
+            role()?.let { props["role"] = it }
+            addressTags(Relation.COLLABORATED, tags, props = props)
+            userTags(Relation.COLLABORATED_AUTHOR, tags, props = props)
+        }
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)

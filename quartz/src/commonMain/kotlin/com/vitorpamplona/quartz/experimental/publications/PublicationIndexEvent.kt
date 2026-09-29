@@ -28,10 +28,15 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -69,9 +74,39 @@ class PublicationIndexEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
+    /**
+     * The table of contents ([sections]: `a` and `e` entries in display order) as members, each
+     * with its `order` (from 0), `level` and inline `title`; the `p` tags (NKBIP-01 does not say
+     * whose), the topics, and the original a derivative work names in uppercase `A` / `E`.
+     */
+    override fun links(): List<Link> =
+        links {
+            sections().forEachIndexed { order, section ->
+                val props = HashMap<String, Any>(3)
+                props["order"] = order
+                props["level"] = section.level
+                section.title?.let { props["title"] = it }
+                if (section.address != null) {
+                    address(Relation.MEMBER, section.address, "a", props)
+                } else {
+                    event(Relation.MEMBER, section.eventId, "e", props)
+                }
+            }
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "p" -> user(Relation.MENTION, it[1], "p")
+                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
+                    "A" -> address(Relation.SOURCE, it[1], "A")
+                    "E" -> event(Relation.SOURCE, it[1], "E")
+                }
+            }
+        }
+
     override fun indexableContent() = listOfNotNull(title(), author(), summary()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

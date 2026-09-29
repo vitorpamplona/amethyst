@@ -29,6 +29,11 @@ import com.vitorpamplona.quartz.experimental.audio.track.tags.TypeTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
@@ -47,7 +52,19 @@ class AudioTrackEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** Zapstr writes each participant's role (Host, Artist…) in the 4th slot of its `p`. */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size > 1 && it[0] == ParticipantTag.TAG_NAME) {
+                    val role = it.getOrNull(3)?.ifBlank { null }
+                    user(Relation.PARTICIPANT, it[1], ParticipantTag.TAG_NAME, role?.let { r -> mapOf("role" to r) })
+                }
+            }
+        }
+
     // content is empty for audio tracks; the only free-text is the subject tag.
     override fun indexableContent() = listOfNotNull(subject()).joinToString("\n")
 

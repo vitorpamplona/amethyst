@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.experimental.nns.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -38,7 +39,8 @@ class NNSEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     fun ip4() = tags.firstNotNullOfOrNull(IPv4Tag::parse)
 
     fun ip6() = tags.firstNotNullOfOrNull(IPv6Tag::parse)

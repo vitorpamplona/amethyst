@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceCoordinate
 import com.vitorpamplona.quartz.cyberspace.CyberspacePlane
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 
 /**
  * DECK-0003 §3.2 — an object hidden at a place: a `kind 3330` bag item, whose
@@ -71,7 +72,9 @@ class SnoShardEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    // The palette reference lives in the SNO JSON content, which links() does not parse.
+    LinkFree {
     /**
      * True when this shard carries no payload of its own.
      *

@@ -23,7 +23,12 @@ package com.vitorpamplona.quartz.experimental.birdstar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -55,7 +60,16 @@ class BirdDetectionEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The species (`i`, a Wikidata URL) and where it was seen (`g`). */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size > 1 && (it[0] == "i" || it[0] == "g")) tag(Relation.TAG, it[0], it[1])
+            }
+        }
+
     override fun indexableContent() = listOfNotNull(summary(), speciesName()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

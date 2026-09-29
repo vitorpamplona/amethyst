@@ -34,6 +34,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.contentMentions
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -59,10 +64,67 @@ class ZapPollEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
+    /**
+     * Kind 1's reading (NIP-10): a zap poll is a threaded note plus `poll_option` tags. Marked
+     * `e` tags name the root and the parent (a lone `root` is also the parent); without markers
+     * the deprecated positional scheme applies (first `e` the root, last the parent, the ones
+     * between mentions). A `p` is the parent's author when it matches the author slot of the
+     * parent's `e`, else a mention. Votes are zaps, not links of the poll.
+     */
+    override fun links(): List<Link> {
+        val thread = arrayOfNulls<MarkedETag>(tags.size)
+        var markedRoot = -1
+        var markedReply = -1
+        var firstUnmarked = -1
+        var lastUnmarked = -1
+        tags.forEachIndexed { i, tag ->
+            val e = MarkedETag.parseAllThreadTags(tag) ?: return@forEachIndexed
+            thread[i] = e
+            when (e.marker) {
+                MarkedETag.MARKER.ROOT -> if (markedRoot < 0) markedRoot = i
+                MarkedETag.MARKER.REPLY -> markedReply = i
+                null -> {
+                    if (firstUnmarked < 0) firstUnmarked = i
+                    lastUnmarked = i
+                }
+                else -> Unit
+            }
+        }
+        val marked = markedRoot >= 0 || markedReply >= 0
+        val root = if (marked) markedRoot else firstUnmarked
+        val parent =
+            when {
+                !marked -> lastUnmarked
+                markedReply >= 0 -> markedReply
+                else -> markedRoot
+            }
+        val parentAuthor = if (parent >= 0) thread[parent]?.author else null
+
+        return links {
+            tags.forEachIndexed { i, tag ->
+                if (tag.size < 2) return@forEachIndexed
+                when (tag[0]) {
+                    "e" -> {
+                        if (i == root) event(Relation.ROOT, tag[1], "e")
+                        if (i == parent) event(Relation.PARENT, tag[1], "e")
+                        if (i != root && i != parent) {
+                            event(if (thread[i]?.marker == MarkedETag.MARKER.FORK) Relation.FORK else Relation.MENTION, tag[1], "e")
+                        }
+                    }
+                    "a" -> address(Relation.MENTION, tag[1], "a")
+                    "q" -> eventOrAddress(Relation.QUOTE, tag[1], "q")
+                    "p" -> user(if (tag[1] == parentAuthor) Relation.PARENT_AUTHOR else Relation.MENTION, tag[1], "p")
+                }
+            }
+            contentMentions(citedNIP19())
+        }
+    }
+
     override fun indexableContent() =
         buildString {
             append(content)

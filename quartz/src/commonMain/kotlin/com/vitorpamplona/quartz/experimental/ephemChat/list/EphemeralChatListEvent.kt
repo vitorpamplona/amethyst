@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -47,6 +48,7 @@ class EphemeralChatListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree,
     DiffableEvent<EphemeralChatListDiff> {
     override fun diffFrom(older: Event): EphemeralChatListDiff? {
         if (older !is EphemeralChatListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null

@@ -22,8 +22,15 @@ package com.vitorpamplona.quartz.contextvm.cep06Announcements
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
+import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 
 /**
  * A server's CEP-6 announcement of itself: kind [CvmKinds.SERVER_ANNOUNCEMENT].
@@ -48,7 +55,8 @@ class CvmServerAnnouncementEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     /**
      * What the server says about itself, parsed from the tags.
      *
@@ -81,7 +89,19 @@ class CvmToolsListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /**
+     * CEP-15 common tool schemas, written NIP-73 style: `["i", <schema-hash>, <tool>]` and
+     * `["k", "io.contextvm/common-schema"]`. The tool list itself is JSON content.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size > 1 && (it[0] == CvmTags.EXTERNAL_ID || it[0] == CvmTags.EXTERNAL_KIND)) tag(Relation.TAG, it[0], it[1])
+            }
+        }
+
     /** The advertised tools, or null when the content does not parse as a list. */
     fun tools(): AnnouncedTools? = AnnouncedTools.parseOrNull(content)
 

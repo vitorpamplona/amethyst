@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.MsTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -49,7 +53,11 @@ class ConcordChatEditEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The edited message. The channel/epoch binding tags carry Concord ids, not Nostr references. */
+    override fun links(): List<Link> = links { event(Relation.EDITED, editedMessageId(), "e") }
+
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without

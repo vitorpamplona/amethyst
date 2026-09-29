@@ -28,6 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -59,8 +63,17 @@ class BookshelfDirectoryEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     AddressHintProvider,
     SearchableEvent {
+    /** What is on the shelf, `a` and `e` entries alike ([items]). */
+    override fun links(): List<Link> =
+        links {
+            items().forEach { item ->
+                if (item.address != null) address(Relation.MEMBER, item.address, "a") else event(Relation.MEMBER, item.eventId, "e")
+            }
+        }
+
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

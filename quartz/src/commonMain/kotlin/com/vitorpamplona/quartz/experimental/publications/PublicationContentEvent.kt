@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -60,7 +64,26 @@ class PublicationContentEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /**
+     * The index this section belongs to, rebuilt from its bare identifier (`T`, else `c`) and this
+     * event's own author ([publicationAddress]), so an inference; and each `wikilink`: its event
+     * when the tag names one, else its target slug as written, plus the linked event's author.
+     */
+    override fun links(): List<Link> =
+        links {
+            address(Relation.PUBLICATION, publicationAddress(), if (firstValue(PUBLICATION_TAG) != null) PUBLICATION_TAG else PUBLICATION_TAG_ALT)
+            wikilinks().forEach { link ->
+                if (link.eventId != null) {
+                    event(Relation.WIKILINK, link.eventId, WIKILINK_TAG)
+                } else {
+                    tag(Relation.WIKILINK, WIKILINK_TAG, link.target)
+                }
+                user(Relation.WIKILINK_AUTHOR, link.pubKey, WIKILINK_TAG)
+            }
+        }
+
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

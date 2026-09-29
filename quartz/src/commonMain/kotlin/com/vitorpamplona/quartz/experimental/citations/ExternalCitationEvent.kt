@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -41,6 +44,13 @@ class ExternalCitationEvent(
     content: String,
     sig: HexKey,
 ) : CitationEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /** The NIP-03 timestamp attesting when the page was seen, then the base's `g`. */
+    override fun links(): List<Link> =
+        links {
+            event(Relation.OPEN_TIMESTAMP, openTimestamp(), CitationTags.OPEN_TIMESTAMP)
+            tag(Relation.TAG, CitationTags.GEOHASH, geohash())
+        }
+
     /**
      * The cited URL.
      *

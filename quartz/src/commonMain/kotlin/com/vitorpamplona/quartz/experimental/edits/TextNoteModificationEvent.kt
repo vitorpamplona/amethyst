@@ -23,6 +23,11 @@ package com.vitorpamplona.quartz.experimental.edits
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -38,7 +43,15 @@ class TextNoteModificationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The edited note (the first `e`, as [editedNote] reads it) and its author, whom the `p` notifies. */
+    override fun links(): List<Link> =
+        links {
+            event(Relation.EDITED, editedNote()?.eventId, "e")
+            userTags(Relation.EDITED_AUTHOR, tags)
+        }
+
     fun editedNote() = firstTaggedEvent()
 
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)

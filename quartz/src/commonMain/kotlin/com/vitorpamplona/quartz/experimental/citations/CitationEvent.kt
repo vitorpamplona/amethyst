@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.experimental.citations.tags.CitationTags
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -59,7 +63,11 @@ abstract class CitationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The location the source was consulted from (`g`). The cited source itself is a value (a title, a DOI, a url). */
+    override fun links(): List<Link> = links { tag(Relation.TAG, CitationTags.GEOHASH, geohash()) }
+
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

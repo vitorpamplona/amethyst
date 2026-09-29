@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.cyberspace.deck0003Sno
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip13Pow.hasPoWTag
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
@@ -54,7 +55,9 @@ class SnoAvatarEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    // The palette reference lives in the SNO JSON content, which links() does not parse.
+    LinkFree {
     /** True when this identity asked for the default avatar, which owes no work. */
     fun isDefaultAvatar(): Boolean = content.isBlank()
 

@@ -31,8 +31,13 @@ import com.vitorpamplona.quartz.experimental.roadstr.tags.roadGeohashes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -62,7 +67,21 @@ class RoadEventConfirmationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     EventHintProvider {
+    /** The confirmed (or denied) report, with the answer as `status`, and the location cells. */
+    override fun links(): List<Link> =
+        links {
+            val status = status()?.let { mapOf("status" to it.code) }
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    RoadReportTag.TAG_NAME -> event(Relation.CONFIRMED, it[1], RoadReportTag.TAG_NAME, status)
+                    "g" -> tag(Relation.TAG, "g", it[1])
+                }
+            }
+        }
+
     override fun eventHints() = tags.mapNotNull(RoadReportTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(RoadReportTag::parseId)

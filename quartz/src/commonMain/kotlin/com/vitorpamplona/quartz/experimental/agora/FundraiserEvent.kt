@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -61,8 +65,11 @@ class FundraiserEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     PublishedAtProvider,
     SearchableEvent {
+    override fun links(): List<Link> = links { hashtags(tags) }
+
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.FormatUnitsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.TitleTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -48,6 +49,7 @@ class ExerciseTemplateEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 

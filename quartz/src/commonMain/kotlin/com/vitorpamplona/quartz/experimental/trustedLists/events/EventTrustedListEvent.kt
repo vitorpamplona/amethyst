@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -56,6 +58,9 @@ class EventTrustedListEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
+    /** Members are event ids (`e`). */
+    override fun links(): List<Link> = trustedListLinks("e") { value, props -> event(Relation.MEMBER, value, "e", props) }
+
     override fun members(): List<EventMemberTag> = tags.members()
 
     override fun isMemberTag(tag: Tag) = EventMemberTag.isTag(tag)

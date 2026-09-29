@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -51,6 +53,9 @@ class UserTrustedListEvent(
 ) : TrustedListEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     AddressHintProvider {
+    /** Members are pubkeys (`p`). */
+    override fun links(): List<Link> = trustedListLinks("p") { value, props -> user(Relation.MEMBER, value, "p", props) }
+
     override fun members(): List<PubKeyMemberTag> = tags.members()
 
     override fun isMemberTag(tag: Tag) = PubKeyMemberTag.isTag(tag)

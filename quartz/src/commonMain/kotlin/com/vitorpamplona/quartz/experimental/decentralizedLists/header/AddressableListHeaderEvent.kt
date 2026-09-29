@@ -33,11 +33,17 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFromTarge
 import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUnaffiliated
 import com.vitorpamplona.quartz.experimental.decentralizedLists.json
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritFromTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -62,8 +68,24 @@ class AddressableListHeaderEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     AddressableDecentralizedListEvent,
     SearchableEvent {
+    /**
+     * The `b` inherit-from targets and the Concept Graph node, only when the `concept-graph` tag
+     * is written: [conceptGraph]'s computed fallback is derived from this header's own address.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    InheritFromTag.TAG_NAME -> address(Relation.INHERIT_FROM, InheritFromTag.parse(it)?.target, InheritFromTag.TAG_NAME)
+                    ConceptGraphTag.TAG_NAME -> address(Relation.CONCEPT_GRAPH, it[1], ConceptGraphTag.TAG_NAME)
+                }
+            }
+        }
+
     override fun listPointer() = addressTag()
 
     override fun indexableContent() = tags.searchableListContent()

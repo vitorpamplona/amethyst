@@ -29,6 +29,11 @@ import com.vitorpamplona.quartz.experimental.roadstr.tags.roadGeohashes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -63,7 +68,20 @@ class RoadEventReportEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The road-event type code (`t`: police, accident…) and the location cells (`g`, at several precisions). */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
+                    "g" -> tag(Relation.TAG, "g", it[1])
+                }
+            }
+        }
+
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without

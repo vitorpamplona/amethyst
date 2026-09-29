@@ -18,35 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipACWebRtcCalls.events
+package com.vitorpamplona.quartz.contextvm
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.nip01Core.links.Link
-import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
-import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
-import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@Immutable
-abstract class WebRTCEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    kind: Kind,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig),
-    LinkProvider {
-    fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
+class ContextvmLinksTest {
+    private val me = "0".repeat(64)
 
-    /**
-     * NIP-AC: every signalling kind names its callee(s) in `p` ("one per member" in group
-     * calls), so the whole family links the same way. `call-id` is a session value, not a link.
-     */
-    override fun links(): List<Link> = links { userTags(Relation.RECIPIENT, tags) }
+    @Test
+    fun toolsListLinksItsCommonSchemaIds() {
+        val tags =
+            arrayOf(
+                arrayOf("i", "schemahash1", "create_group"),
+                arrayOf("k", "io.contextvm/common-schema"),
+                arrayOf("p", "1".repeat(64)),
+            )
+        assertEquals(
+            listOf(
+                Link(Relation.TAG, LinkTarget.Tag("i", "schemahash1"), "i"),
+                Link(Relation.TAG, LinkTarget.Tag("k", "io.contextvm/common-schema"), "k"),
+            ),
+            CvmToolsListEvent(me, me, 0, tags, "{\"tools\":[]}", me).links(),
+        )
+    }
 }

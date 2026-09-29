@@ -27,6 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.eventTags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
@@ -57,7 +62,11 @@ class FileStorageHeaderEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The kind-1064 events holding the bytes. The `e` tag's author slot is a hint, not a statement. */
+    override fun links(): List<Link> = links { eventTags(Relation.FILE_DATA, tags) }
+
     // Only the summary tag is indexed; the file payload is base64 binary stored
     // in a separate FileStorageEvent and is intentionally never indexed.
     override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")

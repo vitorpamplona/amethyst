@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
+import com.vitorpamplona.quartz.nip01Core.links.LinkFree
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.serialization.json.JsonArray
 import kotlin.io.encoding.Base64
@@ -110,7 +111,8 @@ class CyberspaceBagEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkFree {
     /** The `d` tag: this region's `lookup_id` (§7.2), and the address a sweep asks for. */
     fun lookupId(): HexKey? = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1)
 

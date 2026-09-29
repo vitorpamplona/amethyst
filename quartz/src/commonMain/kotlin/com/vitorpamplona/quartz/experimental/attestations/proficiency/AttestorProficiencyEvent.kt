@@ -21,10 +21,16 @@
 package com.vitorpamplona.quartz.experimental.attestations.proficiency
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.tags.KindTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -39,7 +45,11 @@ class AttestorProficiencyEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    /** The kinds this attestor declares it can attest. */
+    override fun links(): List<Link> = links { valueTags(Relation.TAG, tags, KindTag.TAG_NAME) }
+
     override fun indexableContent() = listOfNotNull(description()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

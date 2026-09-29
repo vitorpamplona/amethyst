@@ -28,8 +28,13 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -48,7 +53,23 @@ class InteractiveStoryReadingStateEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider {
+    /**
+     * The story (`A`, its root) and the scene the reader is on (`a`). [root]'s fallback to the
+     * `d` tag (which holds the root's address) is not a link: no link comes from an event's own `d`.
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    RootSceneTag.TAG_NAME -> address(Relation.ROOT, it[1], RootSceneTag.TAG_NAME)
+                    "a" -> address(Relation.CURRENT_SCENE, it[1], "a")
+                }
+            }
+        }
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)

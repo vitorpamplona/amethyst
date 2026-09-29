@@ -29,6 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -59,7 +63,10 @@ class LearningResourceEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     SearchableEvent {
+    override fun links(): List<Link> = links { hashtags(tags) }
+
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

@@ -24,6 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
+import com.vitorpamplona.quartz.nip01Core.links.valueTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -62,7 +67,15 @@ class GroupEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    HasInnerEvent {
+    HasInnerEvent,
+    LinkProvider {
+    /**
+     * The group, by its `h` (the nostr_group_id, a random global id). The signer is a fresh
+     * ephemeral key per event, so the `AUTHOR` link every event states is a throwaway here; the
+     * inner rumors carry their own links once decrypted.
+     */
+    override fun links(): List<Link> = links { valueTags(Relation.GROUP, tags, "h") }
+
     // Set when the app layer learns the envelope ↔ inner mapping: on decrypt
     // for inbound events, at build time for outbound ones. Lets relay
     // attribution (OK acceptances, duplicate deliveries) drill from the

@@ -30,11 +30,17 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -78,10 +84,51 @@ class EntityRatingEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
+    /**
+     * The rated entity and its author, each carrying the rating's `mark` and `stars` (0..5, see
+     * [stars]).
+     *
+     * The spec's own slot for the entity is `d`: like a NIP-85 assertion's subject it names what
+     * the event is about, not the event itself, so it is a link, typed by the mark (a profile is
+     * a user, a relay is not modelled, an id an event, a coordinate an address, and anything else,
+     * a hashtag or a book, the `d` value as written, mark prefix included, which is what keeps it
+     * unique). The clients' extension tags (`a`/`A`, `e`, `p`, `k`) repeat the target; one link
+     * is emitted per distinct target.
+     */
+    override fun links(): List<Link> {
+        val mark = mark()
+        val props = HashMap<String, Any>(2)
+        props["mark"] = mark
+        stars()?.let { props["stars"] = it }
+        val rated = HashSet<String>()
+        return links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "a", RootAddressTag.TAG_NAME -> if (rated.add(it[1])) address(Relation.RATED, it[1], it[0], props)
+                    "e" -> if (rated.add(it[1])) event(Relation.RATED, it[1], "e", props)
+                    "p" -> user(Relation.RATED_AUTHOR, it[1], "p", props)
+                    ReplyKindTag.TAG_NAME -> tag(Relation.TAG, ReplyKindTag.TAG_NAME, it[1])
+                }
+            }
+            val target = targetIdentifier()
+            if (target.isNotEmpty() && target !in rated) {
+                when {
+                    mark == RatingMark.PROFILE -> user(Relation.RATED, target, "d", props)
+                    mark == RatingMark.RELAY -> Unit
+                    target.length == 64 -> event(Relation.RATED, target, "d", props)
+                    LinkBuilder.normalizedAddress(target) != null -> address(Relation.RATED, target, "d", props)
+                    else -> tag(Relation.RATED, "d", dTag(), "d", props)
+                }
+            }
+        }
+    }
+
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without

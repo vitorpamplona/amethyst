@@ -25,9 +25,14 @@ import com.vitorpamplona.quartz.experimental.attestations.proficiency.kinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.links.Link
+import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
+import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
@@ -45,7 +50,24 @@ class WakeUpEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LinkProvider,
     EventHintProvider {
+    /**
+     * The events this wake-up is about and their authors: the `p` tags name the AUTHORS of the
+     * subject events, not a recipient (see [notifies]).
+     */
+    override fun links(): List<Link> =
+        links {
+            tags.fastForEach {
+                if (it.size < 2) return@fastForEach
+                when (it[0]) {
+                    "e" -> event(Relation.ABOUT, it[1], "e")
+                    "p" -> user(Relation.ABOUT_AUTHOR, it[1], "p")
+                    "k" -> tag(Relation.TAG, "k", it[1])
+                }
+            }
+        }
+
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
