@@ -63,6 +63,8 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_members_ban
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_message
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_members_make_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove
@@ -92,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -289,9 +292,28 @@ private fun ConcordMemberRow(
         )
     }
 
+    // A ban is reversible here, but not for the banned member: clients such as Armada drop the
+    // community from a banned member's list on sight, so a mis-tap still costs them the community.
+    var confirmBan by remember { mutableStateOf(false) }
+    if (confirmBan) {
+        ConcordConfirmMemberActionDialog(
+            title = Res.string.concord_members_ban_title,
+            message = Res.string.concord_members_ban_message,
+            confirm = Res.string.concord_members_ban,
+            onConfirm = {
+                accountViewModel.setConcordBan(communityId, entry.pubkey, ban = true)
+                confirmBan = false
+            },
+            onDismiss = { confirmBan = false },
+        )
+    }
+
     var confirmRemove by remember { mutableStateOf(false) }
     if (confirmRemove) {
-        ConcordRemoveMemberDialog(
+        ConcordConfirmMemberActionDialog(
+            title = Res.string.concord_members_remove_title,
+            message = Res.string.concord_members_remove_message,
+            confirm = Res.string.concord_members_remove_confirm,
             onConfirm = {
                 accountViewModel.removeConcordMember(communityId, entry.pubkey)
                 confirmRemove = false
@@ -357,7 +379,8 @@ private fun ConcordMemberRow(
                         DropdownMenuItem(
                             text = { Text(stringRes(if (isBanned) Res.string.concord_members_unban else Res.string.concord_members_ban)) },
                             onClick = {
-                                accountViewModel.setConcordBan(communityId, entry.pubkey, ban = !isBanned)
+                                // Unbanning restores access, so only a ban asks first.
+                                if (isBanned) accountViewModel.setConcordBan(communityId, entry.pubkey, ban = false) else confirmBan = true
                                 expanded = false
                             },
                         )
@@ -471,17 +494,20 @@ private fun ConcordRolesDialog(
 
 /** Confirms a hard removal — spells out that it rotates the community key (CORD-06). */
 @Composable
-private fun ConcordRemoveMemberDialog(
+private fun ConcordConfirmMemberActionDialog(
+    title: StringResource,
+    message: StringResource,
+    confirm: StringResource,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(Res.string.concord_members_remove_title)) },
-        text = { Text(stringRes(Res.string.concord_members_remove_message)) },
+        title = { Text(stringRes(title)) },
+        text = { Text(stringRes(message)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(Res.string.concord_members_remove_confirm), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(confirm), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
