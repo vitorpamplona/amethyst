@@ -26,8 +26,11 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragments
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -130,5 +133,30 @@ class ConcordListLateArrivalTest {
 
             assertEquals(1, state.liveCommunities.value.size)
             assertEquals(alpha, state.liveCommunities.value[0].id)
+        }
+
+    @Test
+    fun lateArrivingFragmentDecryptsAndSurfaces() =
+        runTest {
+            val cache = StubCache()
+            val state =
+                ConcordChannelListState(
+                    signer = signer,
+                    cache = cache,
+                    scope = CoroutineScope(Dispatchers.Unconfined),
+                    settings = NoBackupRepository(),
+                )
+            assertEquals(emptyList(), state.liveCommunities.value)
+
+            // A relay delivers fragment 0 of the kind-33302 List into the note the state watches.
+            val internal = ConcordCommunityList.encodeInternal(listOf(entry(alpha, "Alpha")))
+            val fragment = ConcordCommunityListFragmentEvent.create(signer, 0, ConcordListFragments.pack(internal).single())
+            val author = User(signer.pubKey) { addr -> Note(addr.toValue()) }
+            cache.getOrCreateAddressableNote(fragment.address()).loadEvent(fragment, author, emptyList())
+
+            withTimeout(5000) {
+                while (state.liveCommunities.value.isEmpty()) yield()
+            }
+            assertEquals(listOf(alpha), state.liveCommunities.value.map { it.id })
         }
 }

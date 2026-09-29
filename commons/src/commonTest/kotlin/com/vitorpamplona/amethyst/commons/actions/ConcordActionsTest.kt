@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -38,7 +39,7 @@ class ConcordActionsTest {
             val community = ConcordActions.createCommunity(owner, "Test Server", createdAt = 1L, relays = listOf("wss://r.example"))
 
             // Fold genesis -> live state
-            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.communityId, community.ownerPubKey)
             assertEquals("Test Server", state.metadata?.name)
             assertTrue(state.channels.containsKey(community.generalChannelIdHex))
 
@@ -78,7 +79,7 @@ class ConcordActionsTest {
 
             // The joiner can derive the control plane and read the genesis.
             val controlPlane = ConcordActions.controlPlaneFor(opened)
-            val state = ConcordActions.foldCommunity(community.genesisWraps, controlPlane, opened.owner)
+            val state = ConcordActions.foldCommunity(community.genesisWraps, controlPlane, opened.communityId.hexToByteArray(), opened.owner)
             assertEquals("Nostrichs", state.metadata?.name)
         }
 
@@ -149,7 +150,7 @@ class ConcordActionsTest {
                     rootEpoch = aliceGot.newEpoch,
                     controlPk = deliveredControlPk.toHexKey(),
                 )
-            val state = ConcordActions.foldCommunity(build.controlWraps, newControl, community.ownerPubKey)
+            val state = ConcordActions.foldCommunity(build.controlWraps, newControl, community.communityId, community.ownerPubKey)
             assertEquals("Test", state.metadata?.name)
             assertTrue(state.channels.isNotEmpty())
         }

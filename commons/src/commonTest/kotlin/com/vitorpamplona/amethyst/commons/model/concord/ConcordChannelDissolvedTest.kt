@@ -46,14 +46,11 @@ class ConcordChannelDissolvedTest {
         author: String = owner,
     ) = ControlEdition(kind, eid.hexToByteArray(), 0, null, null, content, author, "r-$eid", 0)
 
-    private fun state(dissolved: Boolean): ConcordCommunityState {
-        val editions =
-            buildList {
-                add(ed(ControlEntityKind.CHANNEL, channelId, """{"name":"general"}"""))
-                if (dissolved) add(ed(ControlEntityKind.DISSOLVED, "dd".repeat(32), """{}"""))
-            }
-        return ConcordCommunityState.fold(editions, owner)
-    }
+    // The tombstone lives on its own plane (CORD-02 §9); the session sets the flag from there.
+    private fun state(dissolved: Boolean): ConcordCommunityState =
+        ConcordCommunityState
+            .fold(listOf(ed(ControlEntityKind.CHANNEL, channelId, """{"name":"general"}""")), "cc".repeat(32).hexToByteArray(), owner)
+            .withDissolved(dissolved)
 
     @Test
     fun liveCommunityLetsTheOwnerPost() {

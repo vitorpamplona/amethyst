@@ -83,6 +83,7 @@ object ConcordDirectInvite {
         if (seal !is SealEvent) return null
         val rumor = seal.unsealOrNull(recipientSigner) ?: return null
         if (rumor.kind != KIND) return null
-        return ConcordJson.decodeOrNull<CommunityInvite>(rumor.content)
+        // Bounded like a fetched bundle (CORD-05 §6: "the §1 bounds apply").
+        return ConcordJson.decodeOrNull<CommunityInvite>(rumor.content)?.let { ConcordInviteBundle.bound(it) }
     }
 }

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -56,7 +57,13 @@ object ConcordChannelCommands {
                     "banner" to state.metadata?.banner?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
                     "channels" to
                         state.channels.values.map {
-                            mapOf("id" to it.channelIdHex, "name" to it.definition.name, "voice" to it.definition.voice, "private" to it.definition.private)
+                            mapOf(
+                                "id" to it.channelIdHex,
+                                "name" to it.definition.name,
+                                "private" to it.definition.private,
+                                // False for a Private Channel whose key this account does not hold (CORD-03 §1).
+                                "readable" to ConcordActions.canAccessChannel(ConcordCommands.entryFor(sc), state, it.channelIdHex),
+                            )
                         },
                 ),
             )
@@ -79,12 +86,18 @@ object ConcordChannelCommands {
             ctx.prepare()
             // CORD-02 §9: a dissolved community is sealed read-only — held keys still open history, but
             // nothing new is honored, so refuse to post before we ever build/publish a wrap.
-            if (foldState(ctx, sc).dissolved) {
+            val state = foldState(ctx, sc)
+            if (state.dissolved) {
                 return Output.error("dissolved", "community '$handle' has been dissolved and is read-only (CORD-02 §9)")
             }
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
-            val channel = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelId.hexToByteArray(), sc.rootEpoch)
-            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, sc.rootEpoch, text, TimeUtils.now())
+            // The channel's own plane (CORD-03 §1): root-derived when Public, its held key when
+            // Private — and a refusal, never the root plane, for a Private Channel we hold no key for.
+            val plane =
+                ConcordActions.currentChannelPlane(ConcordCommands.entryFor(sc), state, channelId)
+                    ?: return Output.error("no_channel_key", "channel '$channelRef' is not folded, or is private and this account holds no key for it (CORD-03 §1)")
+            val channel = plane.key
+            val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, plane.epoch, text, TimeUtils.now())
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // A relay that gates writes behind NIP-42 wants the wrap's author (the stream key) authenticated.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
@@ -126,7 +139,20 @@ object ConcordChannelCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
-            val channel = ConcordActions.publicChannel(rootHex.hexToByteArray(), channelId.hexToByteArray(), epoch)
+            val state = foldState(ctx, sc)
+            // A Private Channel is read only on its own key's plane (CORD-03 §1); --root/--epoch pick a
+            // root-derived plane and so apply to Public Channels only.
+            val privatePlane =
+                if (state.channels[channelId]?.definition?.private == true) {
+                    ConcordActions.currentChannelPlane(ConcordCommands.entryFor(sc), state, channelId)
+                        ?: return Output.error("no_channel_key", "channel '$channelRef' is private and this account holds no key for it (CORD-03 §1)")
+                } else {
+                    null
+                }
+            val channel = privatePlane?.key ?: ConcordActions.publicChannel(rootHex.hexToByteArray(), channelId.hexToByteArray(), epoch)
+
+            @Suppress("NAME_SHADOWING")
+            val epoch = privatePlane?.epoch ?: epoch
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // The channel plane is NIP-42-gated to its own derived stream key; register it so the drain authenticates.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
@@ -152,13 +178,23 @@ object ConcordChannelCommands {
     ): ConcordCommunityState {
         val controlPlane = ConcordCommands.controlPlaneKeysFor(sc)
         val relays = ConcordCommands.relaysFor(ctx, sc)
-        // The relays gate the plane's kind-1059 behind NIP-42 as the stream key — register it so
-        // the drain's AUTH challenge is answered as the control plane, not the account. On a split
-        // epoch only staff hold that secret (CORD-02 §2); a plain member registers nothing and
-        // relies on the relay serving the plane unauthenticated.
-        ctx.registerConcordStreamKeys(relays, listOfNotNull(controlPlane.signer?.secretKey))
-        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(controlPlane.address)) }, pendingOnAuthRequired = true).map { it.second }
-        return ConcordActions.foldCommunity(wraps, controlPlane, sc.owner)
+        // The dissolution tombstone lives at its own id-derived address (CORD-02 §9), drained alongside.
+        val dissolved = ConcordDissolution.planeKey(sc.communityId)
+        val dissolvedAddress = dissolved.publicKeyHex
+        // The relays gate each plane's kind-1059 behind NIP-42 as the stream key — register them so
+        // the drain's AUTH challenge is answered as the plane, not the account. On a split epoch
+        // only staff hold the control secret (CORD-02 §2); a plain member relies on the relay
+        // serving that plane unauthenticated. The dissolved plane's key derives from the public
+        // community id, so every member can always answer for it.
+        ctx.registerConcordStreamKeys(relays, listOfNotNull(controlPlane.signer?.secretKey, dissolved.secretKey))
+        val wraps =
+            ctx
+                .drain(relays.associateWith { listOf(ConcordActions.planeFilterFor(listOf(controlPlane.address, dissolvedAddress))) }, pendingOnAuthRequired = true)
+                .map { it.second }
+        val (graveWraps, controlWraps) = wraps.partition { it.pubKey == dissolvedAddress }
+        return ConcordActions
+            .foldCommunity(controlWraps, controlPlane, sc.communityId.hexToByteArray(), sc.owner)
+            .withDissolved(ConcordDissolution.isDissolved(graveWraps, sc.communityId, sc.owner))
     }
 
     /** Resolve a channel handle: the `general` shortcut, a full hex id, or a folded name/id-prefix match. */

@@ -30,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -87,7 +88,13 @@ class ConcordCommunityFactoryTest {
             val community =
                 ConcordCommunityFactory.create(owner, name = "Gamers", createdAt = 1L, relays = listOf("wss://r.example"))
 
-            val state = ConcordCommunityState.fold(community.genesisEditions, community.ownerPubKey)
+            val state = ConcordCommunityState.fold(community.genesisEditions, community.communityId, community.ownerPubKey)
+
+            // CORD-04 §1: versions start at 1.
+            community.genesisEditions.forEach {
+                assertEquals(1L, it.version)
+                assertEquals(null, it.prevHash)
+            }
 
             assertEquals("Gamers", state.metadata?.name)
             assertEquals(listOf("wss://r.example"), state.metadata?.relays)
@@ -101,6 +108,16 @@ class ConcordCommunityFactoryTest {
             assertTrue(state.authority.isOwner(owner.pubKey))
             assertEquals(0L, state.authority.rank(owner.pubKey))
             assertFalse(state.dissolved)
+        }
+
+    @Test
+    fun refusesAGenesisPastTheMetadataCaps() =
+        runTest {
+            // CORD-02 §6: every reader drops metadata past 64 bytes of name / 10,000 of description,
+            // so a genesis past them would found a community with no metadata at all.
+            assertFailsWith<IllegalArgumentException> { ConcordCommunityFactory.create(owner, "n".repeat(65), 1L) }
+            assertFailsWith<IllegalArgumentException> { ConcordCommunityFactory.create(owner, "ok", 1L, description = "d".repeat(10_001)) }
+            assertEquals("n".repeat(64), ConcordCommunityFactory.create(owner, "n".repeat(64), 1L).let { ConcordCommunityState.fold(it.genesisEditions, it.communityId, it.ownerPubKey).metadata?.name })
         }
 
     @Test

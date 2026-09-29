@@ -99,6 +99,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
@@ -873,6 +874,7 @@ class EventFactory {
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordCommunityListEvent.KIND -> ConcordCommunityListEvent(id, pubKey, createdAt, tags, content, sig)
+                ConcordCommunityListFragmentEvent.KIND -> ConcordCommunityListFragmentEvent(id, pubKey, createdAt, tags, content, sig)
                 ControlEditionEvent.KIND -> ControlEditionEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordInviteListEvent.KIND -> ConcordInviteListEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordInviteBundleEvent.KIND -> ConcordInviteBundleEvent(id, pubKey, createdAt, tags, content, sig)

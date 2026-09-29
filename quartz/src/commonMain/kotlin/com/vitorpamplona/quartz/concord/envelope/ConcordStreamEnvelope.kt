@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
+import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -79,7 +80,7 @@ object ConcordStreamEnvelope {
     ): Event {
         val content =
             if (encrypted) {
-                Nip44.v2.encrypt(rumor.toJson(), stream.conversationKey).encodePayload()
+                encryptChecked(rumor.toJson(), stream.conversationKey)
             } else {
                 rumor.toJson()
             }
@@ -115,7 +116,7 @@ object ConcordStreamEnvelope {
         createdAt: Long = TimeUtils.now(),
     ): Event {
         val streamSigner = NostrSignerSync(KeyPair(privKey = signerKey.secretKey))
-        val content = Nip44.v2.encrypt(seal.toJson(), readConversationKey).encodePayload()
+        val content = encryptChecked(seal.toJson(), readConversationKey)
         val ephemeralP = KeyPair().pubKey.toHexKey()
         val kind = if (ephemeral) KIND_WRAP_EPHEMERAL else KIND_WRAP
         return streamSigner.signNormal(createdAt, kind, arrayOf(arrayOf("p", ephemeralP)), content)
@@ -200,7 +201,7 @@ object ConcordStreamEnvelope {
         }
         require(wrap.verify()) { "Wrap signature/id is invalid" }
 
-        val seal = Event.fromJson(Nip44.v2.decrypt(wrap.content, readConversationKey))
+        val seal = Event.fromJson(decryptChecked(wrap.content, readConversationKey))
         require(seal.kind == KIND_SEAL_ENCRYPTED || seal.kind == KIND_SEAL_PLAINTEXT) {
             "Not a Concord seal: kind ${seal.kind}"
         }
@@ -208,7 +209,7 @@ object ConcordStreamEnvelope {
 
         val rumorJson =
             if (seal.kind == KIND_SEAL_ENCRYPTED) {
-                Nip44.v2.decrypt(seal.content, readConversationKey)
+                decryptChecked(seal.content, readConversationKey)
             } else {
                 seal.content
             }
@@ -257,6 +258,47 @@ object ConcordStreamEnvelope {
     ): OpenedStreamEvent? = openOrNull(wrap, keys.address, keys.readKey.conversationKey)
 
     private val EMPTY_TAGS = emptyArray<Array<String>>()
+
+    /**
+     * NIP-44's hard plaintext cap (CORD-02 Appendix B). Every layer of a Concord event is a NIP-44
+     * plaintext, and the spec makes enforcing the cap each implementation's job: quartz's NIP-44
+     * silently switches to its extended (u32-prefixed) format past it, which strict readers —
+     * the reference client among them — cannot decrypt.
+     */
+    const val NIP44_MAX_PLAINTEXT = 65_535
+
+    /** The largest standard-format NIP-44 v2 ciphertext: the u16 prefix plus the 64 KiB pad bucket. */
+    private const val MAX_STANDARD_CIPHERTEXT = 2 + 65_536
+
+    /** base64 of version (1) + nonce (32) + [MAX_STANDARD_CIPHERTEXT] + mac (32): anything longer is not standard NIP-44. */
+    private const val MAX_STANDARD_PAYLOAD = 87_472
+
+    /**
+     * NIP-44 v2 encrypt that refuses a plaintext over [NIP44_MAX_PLAINTEXT] UTF-8 bytes instead of
+     * minting an extended-format payload (the reference client's `encryptChecked`).
+     */
+    private fun encryptChecked(
+        plaintext: String,
+        conversationKey: ByteArray,
+    ): String {
+        val size = plaintext.encodeToByteArray().size
+        require(size <= NIP44_MAX_PLAINTEXT) { "Concord plaintext is $size bytes, over the NIP-44 cap of $NIP44_MAX_PLAINTEXT (CORD-02 Appendix B)" }
+        return Nip44.v2.encrypt(plaintext, conversationKey).encodePayload()
+    }
+
+    /**
+     * NIP-44 v2 decrypt that only accepts the standard format: a payload or ciphertext too large
+     * for the u16 length prefix is the extended format, which no strict Concord client can read
+     * and none of ours ever writes, so it is refused before any decryption work.
+     */
+    private fun decryptChecked(
+        payload: String,
+        conversationKey: ByteArray,
+    ): String {
+        val info = Nip44v2.EncryptedInfo.decodePayload(payload, MAX_STANDARD_PAYLOAD)
+        require(info.ciphertext.size <= MAX_STANDARD_CIPHERTEXT) { "Extended-format NIP-44 payload refused (CORD-02 Appendix B)" }
+        return Nip44.v2.decrypt(info, conversationKey)
+    }
 }
 
 /**

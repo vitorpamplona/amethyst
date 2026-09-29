@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterUserAsser
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -98,6 +99,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         // Armada reference client, sharing this key) surface in the Concord hub at login,
         // instead of only appearing after creating/redeeming an invite in Amethyst itself.
         ConcordCommunityListEvent.KIND,
+        ConcordCommunityListFragmentEvent.KIND,
         // NIP-60 Cashu wallet + NIP-61 nutzap info. Replaceables, always
         // useful to have available — wallet event holds the user's P2PK key
         // + mint list, nutzap info tells other clients which mints to lock
