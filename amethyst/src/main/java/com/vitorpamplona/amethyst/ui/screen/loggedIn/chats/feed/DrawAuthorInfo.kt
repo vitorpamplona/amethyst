@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzAgentLabel
 import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -114,13 +118,21 @@ private fun WatchAndDisplayUser(
             ObserveAndRenderUserCards(author, Size20dp, Modifier.align(Alignment.BottomCenter), accountViewModel)
         },
         name = {
-            CreateTextWithEmoji(
-                text = displayName ?: author.pubkeyDisplayHex(),
-                tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
-                color = nameColor,
-                maxLines = 1,
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                CreateTextWithEmoji(
+                    text = displayName ?: author.pubkeyDisplayHex(),
+                    tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
+                    color = nameColor,
+                    maxLines = 1,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                // An agent says so, and whose it is (its owner comes from the NIP-OA tag on its kind 0).
+                BuzzAgentLabel(author, userState?.nipOaOwner, accountViewModel)
+            }
         },
     )
 }

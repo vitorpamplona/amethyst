@@ -3143,6 +3143,9 @@
     <string name="buzz_attest_holding">Holding an attestation for this account. It is attached automatically when you authenticate to a Buzz relay.</string>
     <string name="buzz_attest_grants_prefix">Grants: %1$s</string>
     <string name="buzz_huddle_live">Huddle live</string>
+    <string name="buzz_agent_label">Agent</string>
+    <string name="buzz_agent_managed_by">managed by %1$s</string>
+    <string name="buzz_agent_managed_by_you">managed by you</string>
     <string name="buzz_attest_expired">This attestation has expired. Buzz relays no longer accept it; ask the owner for a new one.</string>
     <string name="buzz_attest_not_yet_valid">This attestation is not valid yet. Buzz relays will accept it once its start time passes.</string>
     <string name="buzz_attest_grants_unrestricted">any kind, any time (unrestricted)</string>
