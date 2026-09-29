@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.zappolls
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
@@ -89,7 +88,7 @@ fun ZapPollOption(
     }
 }
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun ZapPollOptionPreview() {

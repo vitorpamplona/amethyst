@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.resourceusage
 
 import android.os.SystemClock
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow

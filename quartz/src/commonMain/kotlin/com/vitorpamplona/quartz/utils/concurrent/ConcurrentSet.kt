@@ -38,6 +38,8 @@ expect class ConcurrentSet<E : Any>() {
 
     fun size(): Int
 
+    fun clear()
+
     /** A point-in-time copy — safe to iterate or diff against without a lock. */
     fun snapshot(): Set<E>
 }

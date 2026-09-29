@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.resourceusage
 
 import android.os.SystemClock
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request

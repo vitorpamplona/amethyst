@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.zappolls
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -104,7 +103,7 @@ fun ZapPollConsensusThreshold(pollViewModel: ShortNotePostViewModel) {
     }
 }
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun ZapPollConsensusThresholdPreview() {

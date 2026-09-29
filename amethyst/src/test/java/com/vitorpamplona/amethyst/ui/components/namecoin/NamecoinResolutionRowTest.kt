@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.components.namecoin
 
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.ui.components.namecoin.looksLikeNamecoinIdentifier
+import com.vitorpamplona.amethyst.commons.ui.components.namecoin.mapOutcomeToResolveState
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import org.junit.Assert.assertEquals

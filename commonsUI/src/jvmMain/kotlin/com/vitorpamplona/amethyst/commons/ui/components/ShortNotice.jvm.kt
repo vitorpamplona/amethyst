@@ -27,3 +27,6 @@ private val loggedNotice = ShortNotice { message -> Log.d("ShortNotice") { messa
 
 @Composable
 actual fun rememberShortNotice(): ShortNotice = loggedNotice
+
+@Composable
+actual fun rememberLongNotice(): ShortNotice = loggedNotice

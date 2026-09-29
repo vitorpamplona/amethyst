@@ -31,5 +31,7 @@ actual class ConcurrentSet<E : Any> {
 
     actual fun size(): Int = set.size
 
+    actual fun clear() = set.clear()
+
     actual fun snapshot(): Set<E> = HashSet(set)
 }

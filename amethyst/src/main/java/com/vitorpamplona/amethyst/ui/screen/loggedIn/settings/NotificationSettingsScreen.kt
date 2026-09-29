@@ -89,6 +89,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn

@@ -33,3 +33,7 @@ fun interface ShortNotice {
  */
 @Composable
 expect fun rememberShortNotice(): ShortNotice
+
+/** Like [rememberShortNotice], shown longer: for errors the reader needs time to take in. */
+@Composable
+expect fun rememberLongNotice(): ShortNotice

@@ -3069,4 +3069,6 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Lightning-сервіс отримувача за адресою %1$s недоступний. Він був розрахований із lightning-адреси "%2$s". Помилка: %3$s. Перевірте, чи працює сервер і чи правильна lightning-адреса</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Неможливо створити lightning-рахунок від %1$s: Елемент pr не знайдено у відповідному JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Неможливо створити lightning-рахунок. Повідомлення від %1$s: %2$s</string>
+    <string name="browser_address_hint">Пошук або введіть адресу</string>
+    <string name="napplet_untitled">NApplet без назви</string>
 </resources>

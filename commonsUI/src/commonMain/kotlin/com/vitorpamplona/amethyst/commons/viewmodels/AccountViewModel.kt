@@ -729,8 +729,6 @@ class AccountViewModel(
         accountChoices: LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
-        LocalCache.appHost.assertNotMainThread()
-
         val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
         val isFromLoggedInFollow = note.author?.let { followUsers.contains(it.pubkeyHex) } ?: true
         val isPostHidden = note.isHiddenFor(accountChoices)

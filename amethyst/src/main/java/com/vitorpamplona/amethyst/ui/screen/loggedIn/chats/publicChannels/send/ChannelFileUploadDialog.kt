@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,7 +58,6 @@ fun ChannelFileUploadDialog(
     nav: INav,
 ) {
     val channel = channelScreenModel.channel ?: return
-    val context = LocalContext.current
 
     ChatFileUploadDialog(
         state,
@@ -133,7 +131,7 @@ fun ChannelFileUploadDialog(
         upload = {
             channelScreenModel.upload(
                 onError = accountViewModel.toastManager::toast,
-                context = context,
+                uploader = accountViewModel.host.mediaUploader,
                 onceUploaded = onUpload,
             )
 

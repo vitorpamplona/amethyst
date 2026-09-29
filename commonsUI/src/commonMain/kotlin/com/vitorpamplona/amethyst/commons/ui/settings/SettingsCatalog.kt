@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.settings
 
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 
 /** Leading-icon representation mirroring the two [SettingsItem] overloads. */
@@ -30,7 +31,7 @@ sealed interface SettingsIcon {
     ) : SettingsIcon
 
     data class Painter(
-        val iconPainter: Int,
+        val iconPainter: DrawableResource,
         val iconPainterRef: Int,
     ) : SettingsIcon
 }

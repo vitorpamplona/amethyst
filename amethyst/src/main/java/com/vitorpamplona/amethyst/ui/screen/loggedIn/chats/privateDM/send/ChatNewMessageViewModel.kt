@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -48,6 +47,8 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.IZapField
@@ -57,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
@@ -473,7 +473,7 @@ class ChatNewMessageViewModel :
 
     fun uploadAndHold(
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onceUploaded: () -> Unit,
     ) {
         val uploadState = uploadState ?: return
@@ -486,8 +486,11 @@ class ChatNewMessageViewModel :
                     encryptedUploadErrorTitle = title
                     encryptedUploadErrorMessage = message
                     pendingRetryMode = RetryMode.HOLD
+                    pendingRetryOnError = onError
+                    pendingRetryUploader = uploader
+                    pendingRetryOnceUploaded = onceUploaded
                 },
-                context,
+                uploader,
                 onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
             ) {
                 uploadsWaitingToBeSent += it
@@ -499,7 +502,7 @@ class ChatNewMessageViewModel :
 
     fun uploadAndSend(
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         onceUploaded: () -> Unit,
     ) {
         val room = room.value ?: return
@@ -514,10 +517,10 @@ class ChatNewMessageViewModel :
                     encryptedUploadErrorMessage = message
                     pendingRetryMode = RetryMode.SEND
                     pendingRetryOnError = onError
-                    pendingRetryContext = context
+                    pendingRetryUploader = uploader
                     pendingRetryOnceUploaded = onceUploaded
                 },
-                context,
+                uploader,
                 onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
             ) {
                 ChatFileSender(room, account).sendNIP17(it)
@@ -532,7 +535,7 @@ class ChatNewMessageViewModel :
     var encryptedUploadErrorMessage by mutableStateOf<String?>(null)
     var pendingRetryMode by mutableStateOf<RetryMode?>(null)
     var pendingRetryOnError by mutableStateOf<((String, String) -> Unit)?>(null)
-    var pendingRetryContext by mutableStateOf<Context?>(null)
+    var pendingRetryUploader by mutableStateOf<MediaUploader?>(null)
     var pendingRetryOnceUploaded by mutableStateOf<(() -> Unit)?>(null)
 
     enum class RetryMode { HOLD, SEND }
@@ -542,21 +545,23 @@ class ChatNewMessageViewModel :
         encryptedUploadErrorMessage = null
         pendingRetryMode = null
         pendingRetryOnError = null
-        pendingRetryContext = null
+        pendingRetryUploader = null
         pendingRetryOnceUploaded = null
     }
 
     fun retryWithoutEncryption() {
         val mode = pendingRetryMode ?: return
         val onError = pendingRetryOnError
-        val context = pendingRetryContext
+        val uploader = pendingRetryUploader
         val onceUploaded = pendingRetryOnceUploaded
         val room = room.value
         val uploadState = uploadState
 
         dismissEncryptedUploadError()
 
-        if (room == null || uploadState == null || context == null) return
+        // HOLD only uploads; SEND also needs the room to send into.
+        if (uploadState == null || uploader == null) return
+        if (mode == RetryMode.SEND && room == null) return
 
         uploadState.encryptFiles = false
 
@@ -566,7 +571,7 @@ class ChatNewMessageViewModel :
                     ChatFileUploader(account).justUploadNIP17Unencrypted(
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
-                        context,
+                        uploader,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     ) {
                         uploadsWaitingToBeSent += it
@@ -576,13 +581,14 @@ class ChatNewMessageViewModel :
                 }
 
                 RetryMode.SEND -> {
+                    val sendRoom = room ?: return@launchSigner
                     ChatFileUploader(account).justUploadNIP17Unencrypted(
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
-                        context,
+                        uploader,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     ) {
-                        ChatFileSender(room, account).sendNIP17(it)
+                        ChatFileSender(sendRoom, account).sendNIP17(it)
                         draftTag.newVersion()
                         onceUploaded?.invoke()
                     }

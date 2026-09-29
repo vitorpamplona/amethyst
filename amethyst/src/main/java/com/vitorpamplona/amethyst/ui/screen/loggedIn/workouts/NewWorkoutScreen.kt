@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.workout_minutes
 import com.vitorpamplona.amethyst.commons.resources.workout_notes
 import com.vitorpamplona.amethyst.commons.resources.workout_seconds
 import com.vitorpamplona.amethyst.commons.resources.workout_title
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
@@ -91,7 +91,7 @@ fun NewWorkoutScreen(
     postViewModel.init(accountViewModel)
     postViewModel.prefill(prefill)
 
-    BackHandler {
+    PlatformBackHandler {
         postViewModel.cancel()
         nav.popBack()
     }

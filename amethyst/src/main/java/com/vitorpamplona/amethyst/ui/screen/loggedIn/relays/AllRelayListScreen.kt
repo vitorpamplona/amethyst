@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
@@ -104,7 +105,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.renderBroa
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel

@@ -127,6 +127,11 @@ import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSection
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSectionVisibility
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
@@ -157,8 +162,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

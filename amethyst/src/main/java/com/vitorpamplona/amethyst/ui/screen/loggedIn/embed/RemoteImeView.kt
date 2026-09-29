@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock
 import android.text.Editable
@@ -52,7 +51,7 @@ import kotlinx.serialization.json.put
  * It covers the soft keyboard, hardware keyboards, autofill, paste, and context-menu edits uniformly,
  * because every one of them mutates the same [Editable] and we flush the resulting state.
  */
-@SuppressLint("ViewConstructor", "AppCompatCustomView")
+@Suppress("ViewConstructor", "AppCompatCustomView")
 class RemoteImeView(
     context: Context,
 ) : EditText(context) {

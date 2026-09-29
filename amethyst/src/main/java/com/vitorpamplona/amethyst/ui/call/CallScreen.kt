@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.call
 
 import android.app.Activity
 import android.media.projection.MediaProjectionManager
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -71,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.call_incoming
 import com.vitorpamplona.amethyst.commons.resources.call_incoming_video
 import com.vitorpamplona.amethyst.commons.resources.call_incoming_voice
 import com.vitorpamplona.amethyst.commons.resources.call_reject
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.call.session.CallSession
@@ -98,7 +98,7 @@ fun CallScreen(
     val emptyStringFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }
     val errorMessage by (callSession?.errorMessage ?: emptyStringFlow).collectAsState()
 
-    BackHandler(enabled = callState !is CallState.Idle && callState !is CallState.Ended) {
+    PlatformBackHandler(enabled = callState !is CallState.Idle && callState !is CallState.Ended) {
         scope.launch { callManager.hangup() }
     }
 

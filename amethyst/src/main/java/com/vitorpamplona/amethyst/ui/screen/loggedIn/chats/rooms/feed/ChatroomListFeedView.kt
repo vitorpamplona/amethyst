@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.commons.util.JavaSerializable
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -81,7 +82,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import java.io.Serializable
 
 @Composable
 fun ChatroomListFeedView(
@@ -302,7 +302,7 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
 // stores LazyColumn item keys in a SaveableStateHolder, which on Android
 // requires Bundle-storable types, so each variant is Serializable and only
 // holds primitives.
-private sealed interface ChatroomLazyKey : Serializable
+private sealed interface ChatroomLazyKey : JavaSerializable
 
 private data class MarmotChatroomLazyKey(
     val groupId: HexKey,

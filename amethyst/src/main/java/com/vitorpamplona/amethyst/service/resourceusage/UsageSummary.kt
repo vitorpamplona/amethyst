@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
-import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys.sumMatching
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys.sumMatching
 
 /**
  * Headline metrics derived from one or more daily counter buckets. Shared by

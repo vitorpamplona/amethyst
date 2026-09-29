@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -52,6 +51,12 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -60,13 +65,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
@@ -400,7 +401,7 @@ open class NewProductViewModel :
         mediaQuality: Int,
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -413,40 +414,41 @@ open class NewProductViewModel :
                 myMultiOrchestrator.upload(
                     alt,
                     contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    CompressorQuality.fromSlider(mediaQuality),
                     server,
                     myAccount,
-                    context,
+                    uploader,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {
                 val urls =
-                    results.successful.mapNotNull {
-                        if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            if (it.result.fileHeader.mimeType
+                    results.successful.mapNotNull { finished ->
+                        val uploaded = finished.result
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            if (uploaded.fileHeader.mimeType
                                     ?.startsWith("image") == true
                             ) {
                                 productImages = productImages +
                                     ProductImageMeta(
-                                        url = it.result.url,
-                                        mimeType = it.result.fileHeader.mimeType,
+                                        url = uploaded.url,
+                                        mimeType = uploaded.fileHeader.mimeType,
                                         blurhash =
-                                            it.result.fileHeader.blurHash
+                                            uploaded.fileHeader.blurHash
                                                 ?.blurhash,
-                                        dimension = it.result.fileHeader.dim,
+                                        dimension = uploaded.fileHeader.dim,
                                         alt = alt,
-                                        hash = it.result.fileHeader.hash,
-                                        size = it.result.fileHeader.size,
+                                        hash = uploaded.fileHeader.hash,
+                                        size = uploaded.fileHeader.size,
                                         thumbhash =
-                                            it.result.fileHeader.thumbHash
+                                            uploaded.fileHeader.thumbHash
                                                 ?.thumbhash,
                                     )
                             } else {
-                                iMetaDescription.add(it.result, alt, contentWarningReason)
+                                iMetaDescription.add(uploaded, alt, contentWarningReason)
 
-                                it.result.url
+                                uploaded.url
                             }
                         } else {
                             null

@@ -22,7 +22,6 @@
 
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -144,6 +143,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBroadcastRelayList
@@ -262,7 +262,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -1286,7 +1285,7 @@ private fun RenderApprovalIfNeeded(
     }
 }
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 private fun RenderClassifiedsReaderForThread(
     noteEvent: ClassifiedsEvent,

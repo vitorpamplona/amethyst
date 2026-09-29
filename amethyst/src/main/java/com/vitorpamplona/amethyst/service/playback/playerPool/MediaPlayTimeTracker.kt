@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import android.os.SystemClock
 import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 
 /**
  * Accounts actual media playback time into the resource-usage ledger.

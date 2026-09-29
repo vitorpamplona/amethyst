@@ -76,6 +76,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
@@ -101,8 +103,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightCh
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
@@ -639,7 +639,7 @@ private fun ConcordFileUploadDialog(
                     onEncryptedUploadError = { title, message ->
                         scope.launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
                     },
-                    context = context,
+                    uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->
                         val imetas = uploads.mapNotNull { it.toConcordImeta() }
                         if (imetas.isNotEmpty()) {

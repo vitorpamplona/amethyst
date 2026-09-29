@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 
 import android.text.format.DateUtils
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_code_loading
 import com.vitorpamplona.amethyst.commons.resources.git_repo_commits
 import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_no_commits
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -103,7 +103,7 @@ fun GitCommitLog(
 
     if (openCommit != null) {
         val commit = remember(openCommit, commits) { commits?.firstOrNull { it.oid == openCommit } }
-        BackHandler { openCommit = null }
+        PlatformBackHandler { openCommit = null }
         Column(Modifier.fillMaxSize()) {
             LogHeader(title = commit?.shortOid ?: "", onBack = { openCommit = null })
             HorizontalDivider(thickness = 0.5.dp)
@@ -116,7 +116,7 @@ fun GitCommitLog(
         return
     }
 
-    BackHandler { onBack() }
+    PlatformBackHandler { onBack() }
     Column(Modifier.fillMaxSize()) {
         LogHeader(title = stringRes(Res.string.git_repo_commits), onBack = onBack)
         HorizontalDivider(thickness = 0.5.dp)

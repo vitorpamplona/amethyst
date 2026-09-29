@@ -20,11 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.annotation.SuppressLint
 import android.content.Context
 
 object PackageUtils {
-    @SuppressLint("QueryPermissionsNeeded")
+    @Suppress("QueryPermissionsNeeded")
     private fun isPackageInstalled(
         context: Context,
         target: String,
