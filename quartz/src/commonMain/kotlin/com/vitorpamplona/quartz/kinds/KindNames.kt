@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeade
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
+import com.vitorpamplona.quartz.experimental.divine.DivineKinds
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -74,6 +75,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.addressables.Addressab
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
+import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -243,6 +245,7 @@ import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -506,6 +509,12 @@ object KindNames {
             AddressableShortVideoEvent.KIND to KindName("Shorts (Repl)", "71"),
             VideoNormalEvent.KIND to KindName("Video", "71"),
             VideoShortEvent.KIND to KindName("Shorts", "71"),
+            VideoCollaborationEvent.KIND to KindName("Video Collaboration", null),
+            TextTrackEvent.KIND to KindName("Video Subtitles", null),
+            DivineKinds.VIDEO_VIEW to KindName("Video Views", null),
+            DivineKinds.PUSH_REGISTRATION to KindName("Push Registration", null),
+            DivineKinds.PUSH_DEREGISTRATION to KindName("Push Deregistration", null),
+            DivineKinds.PUSH_PREFERENCES to KindName("Push Preferences", null),
             VoiceEvent.KIND to KindName("Voice Msg", "A0"),
             VoiceReplyEvent.KIND to KindName("Voice Reply", "A0"),
             WakeUpEvent.KIND to KindName("WakeUp", null),

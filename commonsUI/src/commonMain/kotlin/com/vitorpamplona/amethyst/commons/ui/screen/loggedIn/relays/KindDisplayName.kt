@@ -140,6 +140,9 @@ import com.vitorpamplona.amethyst.commons.resources.kind_profile_badges
 import com.vitorpamplona.amethyst.commons.resources.kind_profile_gallery
 import com.vitorpamplona.amethyst.commons.resources.kind_proxy_relays
 import com.vitorpamplona.amethyst.commons.resources.kind_public_message
+import com.vitorpamplona.amethyst.commons.resources.kind_push_deregistration
+import com.vitorpamplona.amethyst.commons.resources.kind_push_preferences
+import com.vitorpamplona.amethyst.commons.resources.kind_push_registration
 import com.vitorpamplona.amethyst.commons.resources.kind_reactions
 import com.vitorpamplona.amethyst.commons.resources.kind_relay_auth
 import com.vitorpamplona.amethyst.commons.resources.kind_relay_discovery
@@ -165,6 +168,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_video_collaboration
 import com.vitorpamplona.amethyst.commons.resources.kind_video_list
 import com.vitorpamplona.amethyst.commons.resources.kind_video_repl
 import com.vitorpamplona.amethyst.commons.resources.kind_video_subtitles
+import com.vitorpamplona.amethyst.commons.resources.kind_video_views
 import com.vitorpamplona.amethyst.commons.resources.kind_voice_msg
 import com.vitorpamplona.amethyst.commons.resources.kind_voice_reply
 import com.vitorpamplona.amethyst.commons.resources.kind_wake
@@ -183,6 +187,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.divine.DivineKinds
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -485,6 +490,10 @@ fun kindDisplayName(kind: Int): StringResource? =
         VideoCurationSetEvent.KIND -> Res.string.kind_video_list
         VideoCollaborationEvent.KIND -> Res.string.kind_video_collaboration
         TextTrackEvent.KIND -> Res.string.kind_video_subtitles
+        DivineKinds.VIDEO_VIEW -> Res.string.kind_video_views
+        DivineKinds.PUSH_REGISTRATION -> Res.string.kind_push_registration
+        DivineKinds.PUSH_DEREGISTRATION -> Res.string.kind_push_deregistration
+        DivineKinds.PUSH_PREFERENCES -> Res.string.kind_push_preferences
         AddressableNormalVideoEvent.KIND -> Res.string.kind_video_repl
         AddressableShortVideoEvent.KIND -> Res.string.kind_shorts_repl
         VideoNormalEvent.KIND -> Res.string.kind_video
