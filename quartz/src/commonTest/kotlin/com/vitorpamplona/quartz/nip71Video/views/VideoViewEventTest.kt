@@ -99,14 +99,14 @@ class VideoViewEventTest {
 
         assertEquals(VideoViewEvent.KIND, template.kind)
         assertEquals("", template.content)
-        assertContentEquals(
-            arrayOf(
-                arrayOf("a", "34236:$videoAuthor:$videoD", "wss://relay.divine.video/"),
-                arrayOf("e", videoId, "wss://relay.divine.video/", videoAuthor),
-                arrayOf("phase", "start"),
-                arrayOf("source", "home"),
+        assertEquals(
+            listOf(
+                listOf("a", "34236:$videoAuthor:$videoD", "wss://relay.divine.video/"),
+                listOf("e", videoId, "wss://relay.divine.video/", videoAuthor),
+                listOf("phase", "start"),
+                listOf("source", "home"),
             ),
-            template.tags,
+            template.tags.map { it.toList() },
         )
     }
 
