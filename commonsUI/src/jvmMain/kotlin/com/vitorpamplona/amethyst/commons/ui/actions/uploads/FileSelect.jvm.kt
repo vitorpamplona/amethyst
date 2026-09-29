@@ -31,3 +31,12 @@ import kotlinx.collections.immutable.persistentListOf
 actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
     LaunchedEffect(Unit) { onFilesSelected(persistentListOf()) }
 }
+
+/** No document picker wired yet: reports a cancel. */
+@Composable
+actual fun DocumentSelectSingle(
+    mimeTypes: List<String>,
+    onPicked: (SelectedMedia?) -> Unit,
+) {
+    LaunchedEffect(Unit) { onPicked(null) }
+}

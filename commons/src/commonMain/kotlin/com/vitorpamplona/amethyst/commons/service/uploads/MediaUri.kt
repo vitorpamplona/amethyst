@@ -29,3 +29,6 @@ expect abstract class MediaUri {
     /** The address as a string (`content://…` on Android). */
     abstract override fun toString(): String
 }
+
+/** The last path segment of this address, if it has one (on Android, `Uri.lastPathSegment`). */
+expect fun MediaUri.lastPathSegmentOrNull(): String?

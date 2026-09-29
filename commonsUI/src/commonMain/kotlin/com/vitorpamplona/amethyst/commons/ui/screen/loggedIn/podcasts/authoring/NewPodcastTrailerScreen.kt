@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,12 +47,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -72,6 +67,8 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_url_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.DocumentSelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
@@ -87,7 +84,7 @@ fun NewPodcastTrailerScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val vm: NewPodcastTrailerViewModel = viewModel()
+    val vm: NewPodcastTrailerViewModel = rememberViewModel { NewPodcastTrailerViewModel() }
 
     LaunchedEffect(accountViewModel) { vm.init(accountViewModel) }
     StrippingFailureDialog(vm.strippingFailureConfirmation)
@@ -201,14 +198,6 @@ fun NewPodcastTrailerScreen(
     }
 }
 
-// Audio or video file via OpenDocument.
+// Audio or video file via the document picker.
 @Composable
-private fun MediaFileSelect(onPicked: (SelectedMedia?) -> Unit) {
-    val resolver = LocalContext.current.contentResolver
-    val launcher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.OpenDocument(),
-            onResult = { uri: Uri? -> onPicked(uri?.let { SelectedMedia(it, resolver.getType(it)) }) },
-        )
-    LaunchedEffect(Unit) { launcher.launch(arrayOf("audio/*", "video/*")) }
-}
+private fun MediaFileSelect(onPicked: (SelectedMedia?) -> Unit) = DocumentSelectSingle(listOf("audio/*", "video/*"), onPicked)

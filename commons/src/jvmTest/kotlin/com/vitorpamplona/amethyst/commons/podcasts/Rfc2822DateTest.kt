@@ -18,25 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.podcasts
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-/** No document picker wired yet: reports a cancel. */
-@Composable
-actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
-    LaunchedEffect(Unit) { onFilesSelected(persistentListOf()) }
-}
+class Rfc2822DateTest {
+    private fun javaTime(epochSeconds: Long) = DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.of("GMT")))
 
-/** No document picker wired yet: reports a cancel. */
-@Composable
-actual fun DocumentSelectSingle(
-    mimeTypes: List<String>,
-    onPicked: (SelectedMedia?) -> Unit,
-) {
-    LaunchedEffect(Unit) { onPicked(null) }
+    @Test
+    fun knownDate() {
+        assertEquals("Tue, 24 Jun 2025 12:00:00 GMT", rfc2822Date(1_750_766_400L))
+    }
+
+    @Test
+    fun matchesJavaTimeAcrossDates() {
+        val samples =
+            listOf(0L, 59L, 86_399L, 86_400L, 951_782_400L, 951_868_799L, 1_709_164_800L, 4_107_542_399L, 1_750_766_400L) +
+                (0 until 2_000).map { it * 2_629_743L + it * 7_919L }
+        samples.forEach { assertEquals(javaTime(it), rfc2822Date(it), "epoch $it") }
+    }
 }

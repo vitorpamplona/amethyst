@@ -24,6 +24,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,4 +69,18 @@ actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
     }
 
     LaunchFilePicker()
+}
+
+@Composable
+actual fun DocumentSelectSingle(
+    mimeTypes: List<String>,
+    onPicked: (SelectedMedia?) -> Unit,
+) {
+    val resolver = LocalContext.current.contentResolver
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+            onResult = { uri: Uri? -> onPicked(uri?.let { SelectedMedia(it, resolver.getType(it)) }) },
+        )
+    LaunchedEffect(Unit) { launcher.launch(mimeTypes.toTypedArray()) }
 }

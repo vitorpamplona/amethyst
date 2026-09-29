@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -64,11 +64,11 @@ import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_settings
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_settings_description
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_static
 import com.vitorpamplona.amethyst.commons.resources.audio_visualizer_waves
+import com.vitorpamplona.amethyst.commons.ui.components.wavefront.FakeWaveformAnimation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.wavefront.FakeWaveformAnimation
 import kotlinx.coroutines.flow.Flow
 
 @Composable

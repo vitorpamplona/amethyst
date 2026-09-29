@@ -18,13 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring
 
-import android.content.Context
-import android.media.MediaMetadataRetriever
-import android.net.Uri
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.podcasts.rfc2822Date
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
@@ -32,10 +30,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Shared upload + media-probe mechanics for the Podcasting-2.0 composers (episode, show, trailer).
@@ -97,34 +94,12 @@ object PodcastComposerMedia {
         val title: String?,
     )
 
-    /**
-     * Reads duration + title from a picked audio file via [MediaMetadataRetriever] (heavy — call off
-     * the main thread). Returns null if the provider rejects it or the file isn't a real container.
-     */
-    fun probeAudio(
-        context: Context,
-        uri: Uri,
-    ): ProbedAudio? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(context, uri)
-            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-            ProbedAudio(
-                durationSeconds = durationMs?.let { (it / 1000).toInt().takeIf { secs -> secs > 0 } },
-                title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.trim()?.ifBlank { null },
-            )
-        } catch (_: Exception) {
-            null
-        } finally {
-            retriever.release()
-        }
-    }
-
     /** Current time as an RFC2822 date string (`Tue, 24 Jun 2025 12:00:00 GMT`) — the spec's `pubdate`. */
-    fun rfc2822Now(): String = DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(ZoneId.of("GMT")))
+    fun rfc2822Now(): String = rfc2822Date(TimeUtils.now())
 
     /** A fresh, stable `d` tag for a new addressable episode/trailer. */
-    fun generateDTag(prefix: String): String = "$prefix-${System.currentTimeMillis() / 1000}-${UUID.randomUUID().toString().take(8)}"
+    @OptIn(ExperimentalUuidApi::class)
+    fun generateDTag(prefix: String): String = "$prefix-${TimeUtils.now()}-${Uuid.random().toString().take(8)}"
 
     /** Splits a comma-separated text field into a clean list (trimmed, no blanks). */
     fun parseCsv(text: String): List<String> = text.split(',').map { it.trim() }.filter { it.isNotEmpty() }

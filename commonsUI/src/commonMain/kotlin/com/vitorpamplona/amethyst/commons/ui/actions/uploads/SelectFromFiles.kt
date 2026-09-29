@@ -91,3 +91,10 @@ private fun FileSelectButton(
 /** Opens the platform's document picker for audio and PDF files; reports an empty list on cancel. */
 @Composable
 expect fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit = {})
+
+/** Opens the platform's document picker for one file of [mimeTypes]; reports null on cancel. */
+@Composable
+expect fun DocumentSelectSingle(
+    mimeTypes: List<String>,
+    onPicked: (SelectedMedia?) -> Unit,
+)

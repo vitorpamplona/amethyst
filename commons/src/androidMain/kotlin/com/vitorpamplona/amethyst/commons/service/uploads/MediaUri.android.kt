@@ -23,3 +23,5 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 import android.net.Uri
 
 actual typealias MediaUri = Uri
+
+actual fun MediaUri.lastPathSegmentOrNull(): String? = lastPathSegment

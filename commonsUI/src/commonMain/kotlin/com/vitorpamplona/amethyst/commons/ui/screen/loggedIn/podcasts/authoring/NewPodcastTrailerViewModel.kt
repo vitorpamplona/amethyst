@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import kotlinx.collections.immutable.persistentListOf
@@ -78,7 +79,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
             return
         }
         media.value = MultiOrchestrator(persistentListOf(uri))
-        pickedName.value = uri.uri.lastPathSegment?.substringAfterLast('/')
+        pickedName.value = uri.uri.lastPathSegmentOrNull()?.substringAfterLast('/')
         pickedMimeType.value = uri.mimeType
     }
 
@@ -149,7 +150,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
 
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
-                accountViewModel.toastManager.toast("Failed to publish trailer", t.message ?: t.javaClass.simpleName)
+                accountViewModel.toastManager.toast("Failed to publish trailer", t.message ?: t::class.simpleName ?: "")
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }
             }

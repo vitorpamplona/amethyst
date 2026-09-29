@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadPlaceholder
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.V4VSplitEditor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.persistentListOf

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_edit_show
 import com.vitorpamplona.amethyst.commons.resources.podcast_publishing_banner
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_show_type_serial
 import com.vitorpamplona.amethyst.commons.resources.podcast_show_website_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
@@ -95,7 +95,7 @@ fun EditPodcastShowScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val vm: EditPodcastShowViewModel = viewModel()
+    val vm: EditPodcastShowViewModel = rememberViewModel { EditPodcastShowViewModel() }
 
     LaunchedEffect(accountViewModel) { vm.init(accountViewModel) }
 

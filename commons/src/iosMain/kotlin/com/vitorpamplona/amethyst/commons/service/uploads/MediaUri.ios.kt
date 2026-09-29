@@ -30,3 +30,11 @@ class StringMediaUri(
 ) : MediaUri() {
     override fun toString(): String = value
 }
+
+actual fun MediaUri.lastPathSegmentOrNull(): String? =
+    toString()
+        .substringBefore('?')
+        .substringBefore('#')
+        .trimEnd('/')
+        .substringAfterLast('/')
+        .ifBlank { null }

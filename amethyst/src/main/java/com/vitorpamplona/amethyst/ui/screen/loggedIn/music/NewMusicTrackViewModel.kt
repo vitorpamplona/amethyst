@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -176,7 +177,7 @@ class NewMusicTrackViewModel : ViewModel() {
         audioMedia.value = MultiOrchestrator(persistentListOf(uri))
         // Fall back to the last path segment of the content:// URI — Android picker URIs
         // rarely expose a clean filename, but the segment is at least stable across recomposes.
-        pickedAudioName.value = uri.uri.lastPathSegment?.substringAfterLast('/')
+        pickedAudioName.value = uri.uri.lastPathSegmentOrNull()?.substringAfterLast('/')
 
         // Auto-fill title/artist/album/duration from the picked file's embedded metadata so
         // the user doesn't have to retype what's already in the ID3 / mp4 / FLAC tags.

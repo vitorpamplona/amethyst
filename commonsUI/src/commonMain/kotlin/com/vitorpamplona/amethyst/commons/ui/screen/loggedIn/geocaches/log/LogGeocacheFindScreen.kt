@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.log
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.log
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -65,7 +62,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -87,6 +83,8 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_scan_code
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_your_log
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_log_geocache_find
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
@@ -121,7 +119,7 @@ fun LogGeocacheFindScreen(
     GeocachesFilterAssemblerSubscription(accountViewModel)
 
     val address = remember(kind, pubKeyHex, dTag) { Address(kind, pubKeyHex, dTag) }
-    val model: LogGeocacheFindViewModel = viewModel(key = "LogGeocacheFind-${address.toValue()}")
+    val model: LogGeocacheFindViewModel = rememberViewModel(key = "LogGeocacheFind-${address.toValue()}") { LogGeocacheFindViewModel() }
     val scope = rememberCoroutineScope()
 
     remember(address) {
@@ -132,12 +130,15 @@ fun LogGeocacheFindScreen(
     val listing = model.listing()
     var scanning by remember { mutableStateOf(false) }
 
-    val photoPicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) {
-                scope.launch { model.uploadImage(uri, null, accountViewModel.host.mediaUploader) }
+    var pickingPhoto by remember { mutableStateOf(false) }
+    if (pickingPhoto) {
+        GallerySelectSingle(imagesOnly = true) { media ->
+            pickingPhoto = false
+            if (media != null) {
+                scope.launch { model.uploadImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader) }
             }
         }
+    }
 
     Scaffold(
         topBar = {
@@ -219,7 +220,7 @@ fun LogGeocacheFindScreen(
                 OutlinedButton(
                     enabled = !model.isUploading.value,
                     onClick = {
-                        photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        pickingPhoto = true
                     },
                 ) {
                     if (model.isUploading.value) {
