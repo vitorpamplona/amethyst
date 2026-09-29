@@ -4159,6 +4159,9 @@
     <string name="kind_profile_gallery">Profile Gallery</string>
     <string name="kind_proxy_relays">Proxy Relays</string>
     <string name="kind_public_message">Public Message</string>
+    <string name="kind_push_registration">Push Registration</string>
+    <string name="kind_push_deregistration">Push Deregistration</string>
+    <string name="kind_push_preferences">Push Preferences</string>
     <string name="kind_reactions">Reactions</string>
     <string name="kind_relay_auth">Relay Auth</string>
     <string name="kind_relay_discovery">Relay Discovery</string>
@@ -4183,6 +4186,7 @@
     <string name="kind_video">Video</string>
     <string name="kind_video_collaboration">Video Collaboration</string>
     <string name="kind_video_list">Video List</string>
+    <string name="kind_video_views">Video Views</string>
     <string name="kind_video_repl">Video (Repl)</string>
     <string name="kind_video_subtitles">Video Subtitles</string>
     <string name="kind_voice_msg">Voice Msg</string>

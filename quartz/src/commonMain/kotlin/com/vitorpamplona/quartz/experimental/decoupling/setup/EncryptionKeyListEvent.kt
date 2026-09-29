@@ -40,6 +40,10 @@ class EncryptionKeyListEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun keys() = tags.mapNotNull(KeyTag::parse)
 
+    // Kind 10044 is replaceable: NIP-01 fixes its address to `kind:pubkey:`, so a stray `d`
+    // tag must not split one user's key list into several addresses.
+    override fun dTag(): String = ""
+
     companion object {
         const val KIND = 10044
 

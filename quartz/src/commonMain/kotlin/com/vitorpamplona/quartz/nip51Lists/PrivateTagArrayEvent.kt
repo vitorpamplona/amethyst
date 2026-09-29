@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.diff.ContentChange
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -41,6 +42,13 @@ abstract class PrivateTagArrayEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     override fun isContentEncoded() = true
+
+    /**
+     * A NIP-51 LIST (10000–19999) is replaceable: NIP-01 fixes its address to `kind:pubkey:`
+     * whatever tags it carries. Read from the tags, a stray `d` would split one user's list
+     * into several addresses. SETS (30000–39999) are addressed by their `d`.
+     */
+    override fun dTag(): String = if (kind.isReplaceable()) "" else super.dTag()
 
     /**
      * How the NIP-44 encrypted private items changed since [older]. They can't be compared

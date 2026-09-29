@@ -602,6 +602,7 @@
     <string name="concord_edit_banner_hint">Dodaj baner</string>
     <string name="concord_edit_relays_desc">Miejsce, w którym publikowane i czytane są zaszyfrowane plany tej społeczności.</string>
     <string name="concord_dissolved_read_only">Ta społeczność została rozwiązana i jest tylko do odczytu. Nadal możesz przeczytać jej historię, ale nie można opublikować żadnych nowych wiadomości.</string>
+    <string name="concord_private_channel_no_key">To jest kanał prywatny, a ty nie posiadasz klucza dostępu do niego, więc nie możesz czytać ani publikować w nim postów.</string>
     <string name="concord_create_name">Nazwa</string>
     <string name="concord_create_about">Informacje (opcjonalne)</string>
     <string name="concord_ban_user">Banuj</string>
@@ -6384,6 +6385,12 @@
     <string name="cordn_info_add_member_note">Można ich dodać tylko wtedy, gdy opublikowali pakiet kluczy dla tego koordynatora.</string>
     <string name="cordn_info_add_member_placeholder">Nazwa, npub lub nazwa@domena</string>
     <string name="cordn_info_admin_badge">Administrator</string>
+    <plurals name="cordn_info_admins_kept">
+        <item quantity="one">Administrator grupy %1$d pozostaje bez zmian.</item>
+        <item quantity="few">Administratorów grupy %1$d pozostaje bez zmian.</item>
+        <item quantity="many">Administratorów grupy %1$d pozostaje bez zmian.</item>
+        <item quantity="other">Administratorzy grupy %1$d pozostają bez zmian.</item>
+    </plurals>
     <string name="cordn_info_coordinator">Koordynator</string>
     <string name="cordn_info_coordinator_key">Klucz koordynatora</string>
     <string name="cordn_info_coordinator_nprofile">Link koordynatora</string>
@@ -6475,4 +6482,20 @@
     <string name="cordn_pinned_title">Przypięte wiadomości</string>
     <string name="cordn_reactions_title">Reakcje</string>
     <string name="cordn_requests_accept">Dodaj</string>
+    <string name="cordn_requests_admin_only">Tylko administrator może wyrazić zgodę. W grupie, w której nie ma administratorów, są to wszyscy członkowie.</string>
+    <string name="cordn_requests_check">Sprawdzanie żądań</string>
+    <string name="cordn_requests_decline">Zignoruj</string>
+    <string name="cordn_requests_failed">Nie można odczytać żądań.</string>
+    <string name="cordn_requests_none">Nikt nie czeka na dołączenie.</string>
+    <string name="cordn_requests_title">Prośby o dołączenie</string>
+    <string name="cordn_send">Wyślij</string>
+    <string name="cordn_send_failed">Nie udało się wysłać.</string>
+    <string name="cordn_send_no_session">Koordynator tej grupy nie jest dostępny, więc na razie nie można niczego wysłać.</string>
+    <string name="cordn_share_copied">Skopiowano</string>
+    <string name="cordn_share_copy">Kopiuj link</string>
+    <string name="cordn_share_explainer">Każdy, kto posiada ten link, może poprosić o dołączenie do grupy. Administrator musi jednak zatwierdzić tę prośbę.</string>
+    <string name="cordn_share_title">Udostępnij tę grupę</string>
+    <string name="cordn_voice_play">Odtwórz wiadomość głosową</string>
+    <string name="cordn_voice_record">Nagraj wiadomość głosową</string>
+    <string name="cordn_voice_stop">Zatrzymaj i wyślij</string>
 </resources>

@@ -86,8 +86,13 @@ class AttestationRequestEvent(
 
     fun assertionETag() = tags.firstNotNullOfOrNull(ETag::parse)
 
+    /** The attestors this request asks (its `p` tags, written by [buildEvent]'s `attestorPubKeys`). */
+    fun attestorPubKeys() = tags.mapNotNull(PTag::parseKey)
+
+    @Deprecated("Returns the first ATTESTOR, not the assertion's author", ReplaceWith("attestorPubKeys().firstOrNull()"))
     fun assertionPubkey() = tags.firstNotNullOfOrNull(PTag::parseKey)
 
+    @Deprecated("Returns the first ATTESTOR's tag, not the assertion's author")
     fun assertionPTag() = tags.firstNotNullOfOrNull(PTag::parse)
 
     companion object {

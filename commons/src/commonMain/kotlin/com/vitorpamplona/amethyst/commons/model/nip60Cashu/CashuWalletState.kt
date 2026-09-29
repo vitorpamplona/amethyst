@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -906,12 +907,17 @@ class CashuWalletState(
     }
 
     private fun scanCacheForOwnEvents(): List<Event> {
-        val collected = mutableListOf<Event>()
-        cache.notes.forEach { _, note ->
-            val e = note.event ?: return@forEach
-            if (isRelevantEvent(e)) collected += e
+        // Replaceable and addressable kinds (the wallet, NIP-87 recommendations) live in
+        // `addressables`: their per-id note is only weakly held and pruned once superseded.
+        // The current version can sit in both maps, so collect by id.
+        val collected = LinkedHashMap<HexKey, Event>()
+        val visit = { note: Note ->
+            val e = note.event
+            if (e != null && isRelevantEvent(e)) collected[e.id] = e
         }
-        return collected
+        cache.notes.forEach { _, note -> visit(note) }
+        cache.addressables.forEach { _, note -> visit(note) }
+        return collected.values.toList()
     }
 
     // ============================================================

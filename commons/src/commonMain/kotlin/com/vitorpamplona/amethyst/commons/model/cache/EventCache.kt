@@ -3933,6 +3933,10 @@ open class EventCache :
                 is PublicationContentEvent,
                 is RelayReviewEvent,
                 is EntityRatingEvent,
+                // NIP-87 mint announcements and recommendations (kind 38172 / 38173 / 38000).
+                is CashuMintEvent,
+                is FedimintEvent,
+                is MintRecommendationEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 // ============================================================
@@ -3949,16 +3953,6 @@ open class EventCache :
                 is CashuTokenEvent,
                 is CashuSpendingHistoryEvent,
                 is CashuMintQuoteEvent,
-                // NIP-87 Cashu mint discovery + recommendations: all three are kind 3xxxx
-                // (parameterized-replaceable per the spec) but neither CashuMintEvent /
-                // FedimintEvent / MintRecommendationEvent extends AddressableEvent in Quartz
-                // today, so consumeBaseReplaceable's `check(event is AddressableEvent)` would
-                // crash. Route them as regular events — downstream consumers
-                // (CashuMintDirectoryState, CashuWalletState) already dedupe by (pubKey, dTag)
-                // and keep the newest.
-                is CashuMintEvent,
-                is FedimintEvent,
-                is MintRecommendationEvent,
                 is ChatMessageEncryptedFileHeaderEvent,
                 is ChatMessageEvent,
                 is BirdDetectionEvent,

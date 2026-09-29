@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -56,7 +57,14 @@ class InteractiveStoryReadingStateEvent(
 
     fun status() = tags.firstNotNullOfOrNull(StatusTag::parse)
 
-    fun root() = tags.firstNotNullOfOrNull(RootSceneTag::parse)
+    /**
+     * The story this state tracks. Reading states written before `rootScene` emitted the `A`
+     * tag carry no root tag at all (the lowercase `a` it wrote was replaced by the current
+     * scene's), but `build` always set the d-tag to the root's address, so that is the fallback.
+     */
+    fun root() =
+        tags.firstNotNullOfOrNull(RootSceneTag::parse)
+            ?: Address.parse(dTag())?.let { RootSceneTag(it.kind, it.pubKeyHex, it.dTag, null) }
 
     fun currentScene() = tags.firstNotNullOfOrNull(ATag::parseAddress)
 
@@ -97,6 +105,10 @@ class InteractiveStoryReadingStateEvent(
 
             val updatedTags =
                 base.tags.builder {
+                    // Heal a state written without its root tag (see [root]).
+                    if (base.tags.none { it.has(1) && it[0] == RootSceneTag.TAG_NAME } && Address.parse(rootTag) != null) {
+                        add(RootSceneTag.assemble(rootTag, null))
+                    }
                     currentScene(sceneTag)
                     status(status)
                 }
@@ -128,8 +140,8 @@ class InteractiveStoryReadingStateEvent(
             status(status)
 
             root.event.title()?.let { storyTitle(it) }
-            root.event.summary()?.let { storyImage(it) }
-            root.event.image()?.let { storySummary(it) }
+            root.event.summary()?.let { storySummary(it) }
+            root.event.image()?.let { storyImage(it) }
 
             initializer()
         }

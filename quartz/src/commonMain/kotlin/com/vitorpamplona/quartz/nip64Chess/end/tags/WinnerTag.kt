@@ -22,17 +22,19 @@ package com.vitorpamplona.quartz.nip64Chess.end.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.utils.ensure
 
 class WinnerTag {
     companion object {
         const val TAG_NAME = "winner"
 
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isValid()
 
         fun parse(tag: Array<String>): HexKey? {
             ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            // The winner is a pubkey.
+            ensure(tag[1].isValid()) { return null }
             return tag[1]
         }
 
