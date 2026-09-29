@@ -103,6 +103,9 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_voice_record
 import com.vitorpamplona.amethyst.commons.resources.cordn_voice_stop
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -116,10 +119,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
@@ -141,6 +142,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * One cordn room.
@@ -518,7 +520,7 @@ private fun CordnGroupChat(
                             attaching = true
                             attachError = null
                             try {
-                                sendAttachment(context, accountViewModel, room, uploadState)
+                                sendAttachment(context, accountViewModel.host.mediaUploader, accountViewModel, room, uploadState)
                                 // Only on success: a failed upload leaves the dialog up
                                 // with what you picked still in it, so retrying is one
                                 // tap rather than the picker again.
@@ -1006,6 +1008,7 @@ private class CordnAttachmentException(
  */
 private suspend fun sendAttachment(
     context: Context,
+    uploader: MediaUploader,
     accountViewModel: AccountViewModel,
     room: CordnGroupChatroom,
     state: ChatFileUploadState,
@@ -1039,20 +1042,17 @@ private suspend fun sendAttachment(
     try {
         // The media-quality slider.
         //
-        // Off the main thread, like the strip and the read below it.
+        // Off the main thread, like the strip and the read below it:
         // `sendAttachment` is called from the composition's scope, so it
-        // inherits Main, and `MediaCompressor.compress` opens with
-        // `checkNotInMainThread()` — so every image attachment threw
-        // `OnMainThreadException` before it ever reached the uploader. The
-        // voice path never hit it because it posts its recording already
-        // encoded and skips compression entirely.
+        // inherits Main, and compression blocks. The voice path posts its
+        // recording already encoded and skips compression entirely.
         val compressed =
             withContext(Dispatchers.IO) {
                 item.orchestrator.compressIfNeeded(
                     uri = uri,
                     mimeType = declaredMime,
-                    compressionQuality = MediaCompressor.intToCompressorQuality(state.mediaQualitySlider),
-                    context = context,
+                    compressionQuality = CompressorQuality.fromSlider(state.mediaQualitySlider),
+                    uploader = uploader,
                 )
             }
         val mime = compressed.contentType ?: declaredMime
@@ -1095,8 +1095,8 @@ private suspend fun sendAttachment(
             // copies of a message that is end-to-end encrypted everywhere else — the
             // same reason the voice path deletes its recording. Both calls no-op on the
             // user's own file.
-            item.orchestrator.deleteTempUri(finalUri, uri)
-            item.orchestrator.deleteTempUri(compressed.uri, uri)
+            deleteTempFile(finalUri, uri)
+            if (compressed.uri != finalUri) deleteTempFile(compressed.uri, uri)
         }
     } finally {
         // Always, not just on success: a failure leaves the dialog up to retry from,
@@ -1332,5 +1332,20 @@ private suspend fun sendVoiceNote(
         room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
     } finally {
         withContext(Dispatchers.IO) { recording.file.delete() }
+    }
+}
+
+/** Deletes a pipeline temp file; a no-op on the user's own file, which is [originalUri]. */
+private fun deleteTempFile(
+    tempUri: Uri,
+    originalUri: Uri,
+) {
+    if (tempUri == originalUri) return
+    val path = tempUri.path ?: return
+    try {
+        val file = File(path)
+        if (file.exists() && !file.delete()) Log.w("CordnGroupChat") { "Could not delete temp file $path" }
+    } catch (e: Exception) {
+        Log.w("CordnGroupChat", "Failed to delete temp file $path", e)
     }
 }

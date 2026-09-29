@@ -42,5 +42,7 @@ actual class ConcurrentSet<E : Any> {
 
     actual fun size(): Int = ref.load().size
 
+    actual fun clear() = ref.store(HashSet())
+
     actual fun snapshot(): Set<E> = HashSet(ref.load())
 }

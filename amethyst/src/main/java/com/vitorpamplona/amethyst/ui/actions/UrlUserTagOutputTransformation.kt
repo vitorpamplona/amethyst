@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.text.MENTION_REGEX
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 import kotlin.coroutines.cancellation.CancellationException
 
 class UrlUserTagOutputTransformation(
@@ -76,16 +77,17 @@ class UrlUserTagOutputTransformation(
     }
 }
 
+// The same detector the note renderer links with, so the editor highlights what the posted
+// note will make clickable.
 private fun TextFieldBuffer.highlightUrls(color: Color) {
     val text = asCharSequence().toString()
-    val urlPattern = android.util.Patterns.WEB_URL
-
-    val matcher = urlPattern.matcher(text)
-    while (matcher.find()) {
-        addStyle(
-            SpanStyle(color = color, textDecoration = TextDecoration.None),
-            matcher.start(),
-            matcher.end(),
-        )
+    var searchFrom = 0
+    UrlDetector(text).detect().forEach { url ->
+        val start = text.indexOf(url.originalUrl, searchFrom)
+        if (start >= 0) {
+            val end = start + url.originalUrl.length
+            addStyle(SpanStyle(color = color, textDecoration = TextDecoration.None), start, end)
+            searchFrom = end
+        }
     }
 }

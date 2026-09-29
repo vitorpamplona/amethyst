@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_section
 import com.vitorpamplona.amethyst.commons.resources.search_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.trusted_section
 import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import org.jetbrains.compose.resources.StringResource
 
 data class RelayListCollection(

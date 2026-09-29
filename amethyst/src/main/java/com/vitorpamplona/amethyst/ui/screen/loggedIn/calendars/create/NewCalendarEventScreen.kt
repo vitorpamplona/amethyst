@@ -275,7 +275,7 @@ private fun ImageRow(
             if (uri == null) return@rememberLauncherForActivityResult
             val mime = context.contentResolver.getType(uri)
             scope.launch {
-                val ok = vm.uploadAndSetImage(uri, mime, context)
+                val ok = vm.uploadAndSetImage(uri, mime, accountViewModel.host.mediaUploader)
                 if (!ok) {
                     accountViewModel.toastManager.toast(
                         Res.string.calendar_event_image_upload_failed,

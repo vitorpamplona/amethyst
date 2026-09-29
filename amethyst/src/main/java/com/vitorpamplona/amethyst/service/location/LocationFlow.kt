@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.location
 
-import android.annotation.SuppressLint
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -67,7 +66,7 @@ class LocationFlow(
     private val locationManager: LocationManager,
     private val sdkInt: Int = Build.VERSION.SDK_INT,
 ) {
-    @SuppressLint("MissingPermission")
+    @Suppress("MissingPermission")
     fun get(
         minTimeMs: Long,
         minDistanceM: Float,
@@ -114,7 +113,7 @@ class LocationFlow(
         }
 
     /** True when the registration was accepted; false when the provider refused it. */
-    @SuppressLint("MissingPermission")
+    @Suppress("MissingPermission")
     private fun requestUpdates(
         provider: String,
         minTimeMs: Long,
@@ -143,7 +142,7 @@ class LocationFlow(
      * the update request is — on a device where one refuses us, the others
      * should still seed.
      */
-    @SuppressLint("MissingPermission")
+    @Suppress("MissingPermission")
     private fun freshestLastKnownLocation(providers: List<String>): Location? =
         providers
             .mapNotNull { provider ->

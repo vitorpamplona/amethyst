@@ -487,7 +487,7 @@ class NappletBrokerService : Service() {
 
     /**
      * Brings the main activity (a `singleInstance`) forward at the Connected Apps detail for [coordinate],
-     * via the in-process `connectedapp?coordinate=` deep link that [com.vitorpamplona.amethyst.ui.uriToRoute]
+     * via the in-process `connectedapp?coordinate=` deep link that [com.vitorpamplona.amethyst.commons.ui.uriToRoute]
      * resolves. Used when a full-screen sandbox surface taps "Manage permissions".
      */
     private fun openConnectedAppDetail(coordinate: String) {

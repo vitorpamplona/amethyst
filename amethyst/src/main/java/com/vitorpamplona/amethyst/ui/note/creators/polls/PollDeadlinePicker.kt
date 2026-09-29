@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.polls
 
-import android.annotation.SuppressLint
 import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -164,7 +163,7 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
     }
 }
 
-@SuppressLint("ViewModelConstructorInComposable")
+@Suppress("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun PollDeadlinePickerPreview() {

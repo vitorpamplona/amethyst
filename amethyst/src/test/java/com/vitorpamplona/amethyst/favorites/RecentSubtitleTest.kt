@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.favorites
 
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.recentSubtitle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.browser.recentSubtitle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test

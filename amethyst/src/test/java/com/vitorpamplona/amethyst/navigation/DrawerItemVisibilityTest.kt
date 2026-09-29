@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.navigation
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerItemVisibility
 import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionVisibility
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.DrawerSettingsState
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSectionVisibility
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSections
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.DrawerSettingsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

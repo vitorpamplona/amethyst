@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,6 +52,10 @@ import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.new_product
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
@@ -75,9 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -148,7 +148,7 @@ fun NewProductScreen(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    BackHandler {
+    PlatformBackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             onUiThread { postViewModel.cancel() }
@@ -292,7 +292,7 @@ private fun NewProductBody(
                         defaultServer = accountViewModel.account.settings.defaultFileServer,
                         isUploading = postViewModel.mediaUploadTracker.isUploading,
                         onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, stripMetadata)
+                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
                             accountViewModel.account.settings.changeDefaultFileServer(server)
                         },
                         onDelete = postViewModel::deleteMediaToUpload,

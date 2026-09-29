@@ -59,7 +59,7 @@ class SettingsCatalogFilterTest {
         isDanger: Boolean = false,
     ) = SettingsEntry(
         titleRes = titleRes,
-        icon = SettingsIcon.Painter(0, 0),
+        icon = SettingsIcon.Painter(Res.drawable.relays, 0),
         keywordsRes = keywordsRes,
         isDanger = isDanger,
         onClick = {},

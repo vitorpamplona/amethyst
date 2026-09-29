@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
-import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -53,13 +53,13 @@ class MarmotGroupIconUploader(
         uri: Uri,
         mimeType: String?,
         server: ServerName,
-        context: Context,
+        uploader: MediaUploader,
     ): MarmotGroupIconUpload {
         // Compress/downscale up front — avatars don't need full resolution, and a smaller
         // blob is cheaper for every member to fetch. The MIP-01 crypto uses no AAD and does
         // not bind the MIME type, so the (possibly transcoded) output type is irrelevant to
         // decryption; we just hand the compressed bytes to the encrypting uploader.
-        val compressed = MediaCompressor().compress(uri, mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+        val compressed = UploadOrchestrator().compressIfNeeded(uri, mimeType, CompressorQuality.MEDIUM, uploader)
         val uploadMime = compressed.contentType ?: mimeType ?: DEFAULT_MIME
         val cipher = MarmotGroupImageCipher.forNewImage()
         val uploadKeySeed = MarmotGroupImageEncryption.generateUploadKey()
@@ -76,13 +76,13 @@ class MarmotGroupIconUploader(
                     encrypt = cipher,
                     server = server,
                     account = account,
-                    context = context,
+                    uploader = uploader,
                     stripMetadata = true,
                     forcedSigner = uploadSigner,
                 )
 
-            if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                val serverResult = state.result
+            val serverResult = (state as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult
+            if (serverResult != null) {
                 val hash =
                     serverResult.uploadedHash
                         ?: throw IllegalStateException("Blossom server did not return a content hash for the group icon")

@@ -24,7 +24,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -299,9 +299,9 @@ private fun EmbeddedWebAppTab(
     }
 
     val isFullscreen by controller.isFullscreen
-    BackHandler(enabled = canGoBack && !isFullscreen) { controller.back() }
+    PlatformBackHandler(enabled = canGoBack && !isFullscreen) { controller.back() }
     // A fullscreen video inside the tab: back leaves fullscreen first, as in Chrome.
-    BackHandler(enabled = isFullscreen) { controller.exitFullscreen() }
+    PlatformBackHandler(enabled = isFullscreen) { controller.exitFullscreen() }
 
     EmbeddedPageUi(controller, chrome.ui, showPageInfo, onPageInfoDismiss = { showPageInfo = false })
 

@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.commons.model.navigation.drawerSectionIdsFromNames
 import com.vitorpamplona.amethyst.commons.model.navigation.toNames
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
-import com.vitorpamplona.amethyst.ui.navigation.drawer.SdkGatedDrawerItems
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSections
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.SdkGatedDrawerItems
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

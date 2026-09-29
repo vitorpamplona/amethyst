@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.rememberBottomBarSlot
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.LoggedInUserPictureDrawer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav

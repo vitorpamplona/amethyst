@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,7 +48,6 @@ fun RoomChatFileUploadDialog(
 ) {
     val roomState = channelScreenModel.room.collectAsStateWithLifecycle()
     val room = roomState.value ?: return
-    val context = LocalContext.current
 
     ChatFileUploadDialog(
         state,
@@ -67,7 +65,7 @@ fun RoomChatFileUploadDialog(
         upload = {
             channelScreenModel.uploadAndSend(
                 onError = accountViewModel.toastManager::toast,
-                context = context,
+                uploader = accountViewModel.host.mediaUploader,
                 onceUploaded = onUpload,
             )
 

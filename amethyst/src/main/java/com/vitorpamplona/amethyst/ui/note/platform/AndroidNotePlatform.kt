@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
+import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
@@ -50,6 +52,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVi
 import com.vitorpamplona.amethyst.ui.actions.EditPostView as AppEditPostView
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview as AppLoadUrlPreview
+import com.vitorpamplona.amethyst.ui.components.ReusableZapButton as AppReusableZapButton
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
@@ -583,6 +586,15 @@ object AndroidNotePlatform : NotePlatform {
         showCounter = showCounter,
         nav = nav,
     )
+
+    @Composable
+    override fun ReusableZapButton(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+        config: ZapButtonConfig,
+        callbacks: ZapButtonCallbacks,
+    ) = AppReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
 
     @Composable
     override fun EditPostView(

@@ -2958,4 +2958,6 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">บริการ Lightning ของ %1$s แลจะไม่พร้อมใช้งานจาก "%2$s". Error: %3$s. โปรดตรวจสอบผู้ให้บริการ หรือที่อยู่ Lightning ให้ถูกตต้อง</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">ไม่สามารถสร้างบิลชำระในการส่ง zap จาก %1$s เนื่องจากไม่พบ PR บน JSON</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">ไม่สามารถสร้าง lightning invoice ข้อความจาก %1$s: %2$s</string>
+    <string name="browser_address_hint">ค้นหาหรือป้อนที่อยู่</string>
+    <string name="napplet_untitled">nApplet ไม่มีชื่อ</string>
 </resources>

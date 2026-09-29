@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.resourceusage
 
 import android.os.SystemClock
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposeOrNull
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage

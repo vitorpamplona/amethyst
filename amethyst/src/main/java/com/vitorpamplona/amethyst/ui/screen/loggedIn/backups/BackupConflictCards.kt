@@ -96,6 +96,15 @@ import com.vitorpamplona.amethyst.commons.resources.backup_conflict_title
 import com.vitorpamplona.amethyst.commons.resources.backup_review_changed_by_other_app
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.BackupConflictReviewScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.BarSegment
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.ConflictCounts
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.SplitBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.StatusTag
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.clip
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.conflictTones
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.countsOf
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.eventTypeName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDiff

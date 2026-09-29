@@ -162,8 +162,6 @@ class CachePruner(
     }
 
     fun pruneOldMessages() {
-        cache.appHost.assertNotMainThread()
-
         cache.ephemeralChannels.forEach { _, channel ->
             pruneOldMessagesChannel(channel)
         }
@@ -310,8 +308,6 @@ class CachePruner(
     }
 
     fun pruneRepliesAndReactions(accounts: Set<HexKey>) {
-        cache.appHost.assertNotMainThread()
-
         val toBeRemoved =
             cache.notes.filter { _, note ->
                 (
@@ -448,8 +444,6 @@ class CachePruner(
     }
 
     fun pruneExpiredEvents() {
-        cache.appHost.assertNotMainThread()
-
         val now = TimeUtils.now()
         val versionsToBeRemoved = cache.notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
         val addressesToBeRemoved = cache.addressables.filter { _, it -> it.event?.isExpirationBefore(now) == true }
@@ -481,8 +475,6 @@ class CachePruner(
      * authors the reader never muted.
      */
     fun pruneHiddenEvents(hidden: LiveHiddenUsers) {
-        cache.appHost.assertNotMainThread()
-
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =

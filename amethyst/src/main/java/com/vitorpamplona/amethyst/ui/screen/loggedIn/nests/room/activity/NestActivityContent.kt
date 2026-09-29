@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity
 
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_loading_room
 import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_back
 import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_body
 import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_title
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -362,7 +362,7 @@ private fun NestActivityBody(
     // Failed) or PIP isn't supported, we let back fall through to the
     // default Activity.finish() so the user can cancel out cleanly.
     val canMinimize = isPipSupported && !isInPipMode && ui.connection is ConnectionUiState.Connected
-    BackHandler(enabled = canMinimize) { onMinimize() }
+    PlatformBackHandler(enabled = canMinimize) { onMinimize() }
 
     if (isInPipMode) {
         NestPipScreen(

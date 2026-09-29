@@ -83,6 +83,29 @@ data class MlsGroupState(
      * the proposal that would evict them.
      */
     val pendingProposals: List<PendingProposal> = emptyList(),
+    /**
+     * Secrets of skipped APPLICATION generations, (leafIndex, generation) ->
+     * secret (STATE_VERSION 5+).
+     *
+     * A message that arrives after a later one from the same sender needs
+     * its generation's secret, and the ratchet has already moved past it.
+     * Without these a restart between the two loses that message for good.
+     */
+    val skippedApplicationSecrets: Map<Pair<Int, Int>, ByteArray> = emptyMap(),
+    /** Same for the HANDSHAKE ratchet (STATE_VERSION 5+). */
+    val skippedHandshakeSecrets: Map<Pair<Int, Int>, ByteArray> = emptyMap(),
+    /**
+     * Receiver data of the last [MlsGroup.RETAIN_EPOCHS] epochs, oldest first
+     * (STATE_VERSION 6+), so a late message from a former epoch still opens
+     * after a restart. See [MlsGroup.decryptFormerEpoch].
+     */
+    val retainedEpochs: List<RetainedEpochReceiverData> = emptyList(),
+    /**
+     * The secret tree's unexpanded node secrets (STATE_VERSION 7+). Empty
+     * means "derive from [encryptionSecret]", which is what every older blob
+     * does. A state imported from ts-mls has these instead of a root.
+     */
+    val nodeSecrets: Map<Int, ByteArray> = emptyMap(),
 ) {
     fun encodeTls(): ByteArray {
         val writer = TlsWriter()
@@ -156,6 +179,19 @@ data class MlsGroupState(
             writer.putOpaqueVarInt(pending.authenticatedContentBytes ?: ByteArray(0))
         }
 
+        // Skipped-generation secrets (STATE_VERSION 5+).
+        writeSkippedSecrets(writer, skippedApplicationSecrets)
+        writeSkippedSecrets(writer, skippedHandshakeSecrets)
+
+        // Retained former epochs (STATE_VERSION 6+).
+        writer.putUint32(retainedEpochs.size.toLong())
+        for (retained in retainedEpochs) retained.encodeTls(writer)
+
+        // Secret-tree node secrets (STATE_VERSION 7+), the current epoch's,
+        // then each retained epoch's in the same order as above.
+        writeNodeSecrets(writer, nodeSecrets)
+        for (retained in retainedEpochs) writeNodeSecrets(writer, retained.nodeSecrets)
+
         return writer.toByteArray()
     }
 
@@ -182,8 +218,16 @@ data class MlsGroupState(
          * v4: appends [pendingProposals] so a departing member's staged
          *     `SelfRemove` survives a restart instead of leaving them in the
          *     tree. Older blobs decode with an empty pool.
+         * v5: appends [skippedApplicationSecrets] and [skippedHandshakeSecrets]
+         *     so an out-of-order message survives a restart. Older blobs
+         *     decode with none, as before.
+         * v6: appends [retainedEpochs]. Older blobs decode with none, so the
+         *     first commit after the upgrade starts the window.
+         * v7: appends the secret tree's [nodeSecrets], current and retained
+         *     epochs, so a state whose root secret is gone (imported from
+         *     ts-mls) restores. Older blobs derive from the root, as before.
          */
-        private const val STATE_VERSION = 4
+        private const val STATE_VERSION = 7
 
         fun decodeTls(data: ByteArray): MlsGroupState {
             val reader = TlsReader(data)
@@ -284,6 +328,27 @@ data class MlsGroupState(
                     emptyList()
                 }
 
+            // v5+: skipped-generation secrets. Absent for older blobs.
+            val skippedApplicationSecrets = if (version >= 5 && reader.hasRemaining) readSkippedSecrets(reader) else emptyMap()
+            val skippedHandshakeSecrets = if (version >= 5 && reader.hasRemaining) readSkippedSecrets(reader) else emptyMap()
+
+            // v6+: retained former epochs. Absent for older blobs.
+            val retainedEpochs =
+                if (version >= 6 && reader.hasRemaining) {
+                    val count = reader.readUint32().toInt()
+                    List(count) { RetainedEpochReceiverData.decodeTls(reader) }
+                } else {
+                    emptyList()
+                }
+
+            // v7+: secret-tree node secrets. Absent for older blobs.
+            var nodeSecrets = emptyMap<Int, ByteArray>()
+            var retainedWithNodes = retainedEpochs
+            if (version >= 7 && reader.hasRemaining) {
+                nodeSecrets = readNodeSecrets(reader)
+                retainedWithNodes = retainedEpochs.map { it.copy(nodeSecrets = readNodeSecrets(reader)) }
+            }
+
             return MlsGroupState(
                 groupContext = groupContext,
                 treeBytes = treeBytes,
@@ -297,6 +362,140 @@ data class MlsGroupState(
                 senderRatchetStates = senderRatchetStates,
                 pathPrivateKeys = pathPrivateKeys,
                 pendingProposals = pendingProposals,
+                skippedApplicationSecrets = skippedApplicationSecrets,
+                skippedHandshakeSecrets = skippedHandshakeSecrets,
+                retainedEpochs = retainedWithNodes,
+                nodeSecrets = nodeSecrets,
+            )
+        }
+
+        internal fun writeSkippedSecrets(
+            writer: TlsWriter,
+            secrets: Map<Pair<Int, Int>, ByteArray>,
+        ) {
+            writer.putUint32(secrets.size.toLong())
+            for ((key, secret) in secrets) {
+                writer.putUint32(key.first.toLong())
+                writer.putUint32(key.second.toLong())
+                writer.putOpaqueVarInt(secret)
+            }
+        }
+
+        private fun writeNodeSecrets(
+            writer: TlsWriter,
+            secrets: Map<Int, ByteArray>,
+        ) {
+            writer.putUint32(secrets.size.toLong())
+            for ((nodeIndex, secret) in secrets) {
+                writer.putUint32(nodeIndex.toLong())
+                writer.putOpaqueVarInt(secret)
+            }
+        }
+
+        private fun readNodeSecrets(reader: TlsReader): Map<Int, ByteArray> {
+            val count = reader.readUint32().toInt()
+            return buildMap {
+                repeat(count) {
+                    val nodeIndex = reader.readUint32().toInt()
+                    put(nodeIndex, reader.readOpaqueVarInt())
+                }
+            }
+        }
+
+        internal fun readSkippedSecrets(reader: TlsReader): Map<Pair<Int, Int>, ByteArray> {
+            val count = reader.readUint32().toInt()
+            return buildMap {
+                repeat(count) {
+                    val leafIndex = reader.readUint32().toInt()
+                    val generation = reader.readUint32().toInt()
+                    put(Pair(leafIndex, generation), reader.readOpaqueVarInt())
+                }
+            }
+        }
+    }
+}
+
+/**
+ * What [MlsGroup.decryptFormerEpoch] needs to open a late APPLICATION message
+ * from one former epoch: its sender-data and encryption secrets, the sender
+ * ratchets and skipped generations as the epoch left them, and the tree and
+ * GroupContext the sender's signature is checked against.
+ *
+ * The exporter secret and resumption PSK ride along so keys an application
+ * derived in that epoch, and a resumption PSK for it (RFC 9420 §8.6), stay
+ * available for as long as the epoch is retained.
+ */
+data class RetainedEpochReceiverData(
+    val epoch: Long,
+    val senderDataSecret: ByteArray,
+    val encryptionSecret: ByteArray,
+    val exporterSecret: ByteArray,
+    val resumptionPsk: ByteArray,
+    val groupContext: GroupContext,
+    val treeBytes: ByteArray,
+    val senderRatchetStates: Map<Int, SenderRatchetState>,
+    val skippedApplicationSecrets: Map<Pair<Int, Int>, ByteArray>,
+    /** The epoch's unexpanded secret-tree node secrets; empty means derive from [encryptionSecret]. */
+    val nodeSecrets: Map<Int, ByteArray> = emptyMap(),
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RetainedEpochReceiverData) return false
+        return epoch == other.epoch
+    }
+
+    override fun hashCode(): Int = epoch.hashCode()
+
+    fun encodeTls(writer: TlsWriter) {
+        writer.putUint64(epoch)
+        writer.putOpaqueVarInt(senderDataSecret)
+        writer.putOpaqueVarInt(encryptionSecret)
+        writer.putOpaqueVarInt(exporterSecret)
+        writer.putOpaqueVarInt(resumptionPsk)
+        writer.putOpaqueVarInt(groupContext.toTlsBytes())
+        writer.putOpaqueVarInt(treeBytes)
+        writer.putUint32(senderRatchetStates.size.toLong())
+        for ((leafIndex, ratchet) in senderRatchetStates) {
+            writer.putUint32(leafIndex.toLong())
+            writer.putOpaqueVarInt(ratchet.handshakeSecret)
+            writer.putUint32(ratchet.handshakeGeneration.toLong())
+            writer.putOpaqueVarInt(ratchet.applicationSecret)
+            writer.putUint32(ratchet.applicationGeneration.toLong())
+        }
+        MlsGroupState.writeSkippedSecrets(writer, skippedApplicationSecrets)
+    }
+
+    companion object {
+        fun decodeTls(reader: TlsReader): RetainedEpochReceiverData {
+            val epoch = reader.readUint64()
+            val senderDataSecret = reader.readOpaqueVarInt()
+            val encryptionSecret = reader.readOpaqueVarInt()
+            val exporterSecret = reader.readOpaqueVarInt()
+            val resumptionPsk = reader.readOpaqueVarInt()
+            val groupContext = GroupContext.decodeTls(TlsReader(reader.readOpaqueVarInt()))
+            val treeBytes = reader.readOpaqueVarInt()
+            val count = reader.readUint32().toInt()
+            val senderRatchetStates =
+                buildMap {
+                    repeat(count) {
+                        val leafIndex = reader.readUint32().toInt()
+                        val handshakeSecret = reader.readOpaqueVarInt()
+                        val handshakeGeneration = reader.readUint32().toInt()
+                        val applicationSecret = reader.readOpaqueVarInt()
+                        val applicationGeneration = reader.readUint32().toInt()
+                        put(leafIndex, SenderRatchetState(handshakeSecret, handshakeGeneration, applicationSecret, applicationGeneration))
+                    }
+                }
+            return RetainedEpochReceiverData(
+                epoch = epoch,
+                senderDataSecret = senderDataSecret,
+                encryptionSecret = encryptionSecret,
+                exporterSecret = exporterSecret,
+                resumptionPsk = resumptionPsk,
+                groupContext = groupContext,
+                treeBytes = treeBytes,
+                senderRatchetStates = senderRatchetStates,
+                skippedApplicationSecrets = MlsGroupState.readSkippedSecrets(reader),
             )
         }
     }

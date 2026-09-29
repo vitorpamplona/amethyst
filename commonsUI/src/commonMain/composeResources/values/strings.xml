@@ -6308,4 +6308,13 @@
     <string name="cordn_voice_play">Play voice note</string>
     <string name="cordn_voice_record">Record a voice note</string>
     <string name="cordn_voice_stop">Stop and send</string>
+    <string name="browser_address_hint">Search or enter address</string>
+    <string name="napplet_untitled">Untitled nApplet</string>
+    <string name="browser_permission_section">Site permissions</string>
+    <string name="browser_permission_camera">Use your camera</string>
+    <string name="browser_permission_microphone">Use your microphone</string>
+    <string name="browser_permission_location">Know your approximate location</string>
+    <string name="browser_permission_ask">Ask</string>
+    <string name="browser_permission_allowed">Allowed</string>
+    <string name="browser_permission_blocked">Blocked</string>
 </resources>

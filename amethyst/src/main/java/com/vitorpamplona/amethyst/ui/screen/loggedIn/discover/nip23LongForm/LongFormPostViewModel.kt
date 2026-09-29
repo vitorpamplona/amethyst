@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -46,17 +45,21 @@ import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
-import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -66,16 +69,10 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
@@ -122,7 +119,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 
 @Stable
@@ -467,7 +463,7 @@ class LongFormPostViewModel :
 
     fun uploadCoverImage(
         uri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ) {
         accountViewModel.launchSigner {
@@ -475,7 +471,7 @@ class LongFormPostViewModel :
             try {
                 directUpload(
                     galleryUri = uri,
-                    context = context,
+                    uploader = uploader,
                     onError = onError,
                 )?.let {
                     coverImageUrl = it
@@ -488,51 +484,11 @@ class LongFormPostViewModel :
 
     private suspend fun directUpload(
         galleryUri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
-    ): String? {
-        val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
-
-        return try {
-            val result =
-                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
-                        onProgress = {},
-                        httpAuth = account::createHTTPAuthorization,
-                        context = context,
-                    )
-                } else {
-                    BlossomUploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForUploads,
-                        httpAuth = account::createBlossomUploadAuth,
-                        context = context,
-                    )
-                }
-
-            if (result.url == null) {
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading))
-            }
-
-            result.url
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
-            null
-        }
-    }
+    ): String? =
+        // Cover images were never stripped: keep them as picked, only compressed.
+        uploadToDefaultServer(galleryUri, account, uploader, onError, stripMetadata = false)
 
     fun upload(
         alt: String?,
@@ -540,13 +496,13 @@ class LongFormPostViewModel :
         mediaQuality: Int,
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         useH265: Boolean,
         stripMetadata: Boolean = true,
         convertGifToMp4: Boolean = false,
     ) {
         try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata, convertGifToMp4)
+            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
         } catch (_: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -563,7 +519,7 @@ class LongFormPostViewModel :
         mediaQuality: Int,
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
+        uploader: MediaUploader,
         useH265: Boolean,
         stripMetadata: Boolean = true,
         convertGifToMp4: Boolean = false,
@@ -577,10 +533,10 @@ class LongFormPostViewModel :
                 myMultiOrchestrator.upload(
                     alt,
                     contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    CompressorQuality.fromSlider(mediaQuality),
                     server,
                     account,
-                    context,
+                    uploader,
                     useH265,
                     stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
@@ -590,29 +546,30 @@ class LongFormPostViewModel :
             if (results.allGood) {
                 val urls =
                     results.successful.mapNotNull { state ->
-                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        val uploaded = state.result
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
-                                IMetaTagBuilder(state.result.url)
+                                IMetaTagBuilder(uploaded.url)
                                     .apply {
-                                        hash(state.result.fileHeader.hash)
-                                        size(state.result.fileHeader.size)
-                                        state.result.fileHeader.mimeType
+                                        hash(uploaded.fileHeader.hash)
+                                        size(uploaded.fileHeader.size)
+                                        uploaded.fileHeader.mimeType
                                             ?.let { mimeType(it) }
-                                        state.result.fileHeader.dim
+                                        uploaded.fileHeader.dim
                                             ?.let { dims(it) }
-                                        state.result.fileHeader.blurHash
+                                        uploaded.fileHeader.blurHash
                                             ?.let { blurhash(it.blurhash) }
-                                        state.result.fileHeader.thumbHash
+                                        uploaded.fileHeader.thumbHash
                                             ?.let { thumbhash(it.thumbhash) }
-                                        state.result.magnet?.let { magnet(it) }
-                                        state.result.uploadedHash?.let { originalHash(it) }
+                                        uploaded.magnet?.let { magnet(it) }
+                                        uploaded.uploadedHash?.let { originalHash(it) }
                                         alt?.let { alt(it) }
                                         contentWarningReason?.let { sensitiveContent(contentWarningReason) }
                                     }.build()
 
                             iMetaAttachments.replace(iMeta.url, iMeta)
 
-                            val markdownImage = "![${alt ?: ""}](${state.result.url})"
+                            val markdownImage = "![${alt ?: ""}](${uploaded.url})"
                             markdownImage
                         } else {
                             null

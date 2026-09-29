@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.blossom
 
-import com.vitorpamplona.amethyst.service.uploads.extensionFromMimeType
+import com.vitorpamplona.amethyst.commons.service.uploads.extensionFromMimeType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

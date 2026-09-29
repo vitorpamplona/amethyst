@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.stableKey
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarEditing
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BottomBarEditing
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BottomBarSettingsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

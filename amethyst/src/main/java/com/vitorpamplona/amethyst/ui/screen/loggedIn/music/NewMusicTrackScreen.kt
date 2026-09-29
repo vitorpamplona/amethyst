@@ -84,16 +84,19 @@ import com.vitorpamplona.amethyst.commons.resources.music_track_title_placeholde
 import com.vitorpamplona.amethyst.commons.resources.music_track_uploading_banner
 import com.vitorpamplona.amethyst.commons.resources.new_music_track
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SendingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.CoverImagePicker
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadInProgressBanner
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.UploadPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import kotlinx.collections.immutable.persistentListOf
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -154,7 +157,6 @@ fun NewMusicTrackScreen(
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
                     vm.saveAndPublish(
-                        context = context,
                         accountViewModel = accountViewModel,
                     )
                 },

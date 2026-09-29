@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites
 
 import android.os.Build
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_apps
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -262,7 +262,7 @@ private fun EmbeddedNostrAppTab(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    BackHandler(enabled = canGoBack) { controller.back() }
+    PlatformBackHandler(enabled = canGoBack) { controller.back() }
 
     if (showAccess) {
         Dialog(onDismissRequest = { showAccess = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {

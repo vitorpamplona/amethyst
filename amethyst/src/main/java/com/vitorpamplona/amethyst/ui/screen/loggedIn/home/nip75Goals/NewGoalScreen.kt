@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.nip75Goals
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.goal_summary_placeholder
 import com.vitorpamplona.amethyst.commons.resources.goal_website_label
 import com.vitorpamplona.amethyst.commons.resources.goal_website_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_goal
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
@@ -93,7 +93,7 @@ fun NewGoalScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    BackHandler {
+    PlatformBackHandler {
         goalViewModel.cancel()
         nav.popBack()
     }

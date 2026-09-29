@@ -3374,8 +3374,6 @@ open class EventCache :
     var verifyMeter: ((elapsedNanos: Long, valid: Boolean) -> Unit)? = null
 
     fun justVerify(event: Event): Boolean {
-        appHost.assertNotMainThread()
-
         val meter = verifyMeter
         if (meter == null) return justVerifyInner(event)
 

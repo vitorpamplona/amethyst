@@ -31,10 +31,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_EXTENSION
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.uploads.AVIF_EXTENSION
-import com.vitorpamplona.amethyst.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -105,8 +104,6 @@ class Nip96Uploader {
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
-        checkNotInMainThread()
-
         val contentResolver = context.contentResolver
         val myContentType = contentType ?: contentResolver.getType(uri)
         val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
@@ -145,8 +142,6 @@ class Nip96Uploader {
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
-        checkNotInMainThread()
-
         val fileName = RandomInstance.randomChars(16)
         val extension =
             contentType?.let {

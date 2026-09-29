@@ -21,8 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import kotlin.reflect.KClass
 
 /**
@@ -56,3 +60,22 @@ inline fun <reified VM : ViewModel> rememberViewModel(
     key: String? = null,
     noinline factory: () -> VM,
 ): VM = rememberViewModel(VM::class, key, factory)
+
+/**
+ * One [ViewModelProvider.Factory] per call site for the lambda overloads of [rememberViewModel],
+ * instead of a new object on every recomposition. It calls the latest [factory], which only runs
+ * when the store has no view model yet.
+ */
+@Composable
+internal fun <VM : ViewModel> rememberLambdaFactory(factory: () -> VM): ViewModelProvider.Factory {
+    val currentFactory by rememberUpdatedState(factory)
+    return remember {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(
+                modelClass: KClass<T>,
+                extras: CreationExtras,
+            ): T = currentFactory() as T
+        }
+    }
+}
