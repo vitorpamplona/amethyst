@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_accept
@@ -90,9 +91,11 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_invali
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
 import com.vitorpamplona.amethyst.commons.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
@@ -232,15 +235,9 @@ private fun sendFailureMessage(result: ConcordDirectInviteSendResult) =
 @Composable
 fun RefreshConcordDirectInvites(accountViewModel: AccountViewModel) {
     val concord = accountViewModel.account.concord
-    LaunchedEffect(concord) {
-        try {
-            concord.refreshConcordDirectInvites()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("ConcordDirectInvites", "Direct Invite sweep failed", e)
-        }
-    }
+    // Sweeps in the account's scope: the hub leaves composition whenever it swaps layouts, which
+    // cancelled a sweep launched here before any relay answered.
+    LaunchedEffect(concord) { concord.requestConcordDirectInviteSweep() }
 }
 
 /**
@@ -281,7 +278,11 @@ private fun ConcordDirectInviteCard(
     val scope = rememberCoroutineScope()
     var working by remember(invite.wrapId) { mutableStateOf(false) }
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
-    val senderName = remember(invite.sender) { LocalCache.checkGetOrCreateUser(invite.sender)?.toBestDisplayName() ?: invite.sender.take(12) }
+    // The sender's own profile (kind 0), loaded like any author's: the card used to show only a cached
+    // name, so an inviter the app had never seen read as a bare npub. Loading a public profile
+    // connects to none of the community's relays, which is what stays gated until Accept.
+    val sender = remember(invite.sender) { LocalCache.checkGetOrCreateUser(invite.sender) }
+    val senderName = sender?.let { observeUserName(it).value } ?: invite.sender.take(12)
 
     val subtitle =
         when {
@@ -310,6 +311,9 @@ private fun ConcordDirectInviteCard(
             subtitle = subtitle,
             accountViewModel = accountViewModel,
             autoPlayGif = autoPlayGif,
+            trailing = {
+                if (!invite.catchUp) UserPicture(invite.sender, Size35dp, accountViewModel = accountViewModel, nav = nav)
+            },
         )
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 12.dp),

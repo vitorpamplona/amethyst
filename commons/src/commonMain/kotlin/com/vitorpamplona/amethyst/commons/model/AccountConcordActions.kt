@@ -940,6 +940,29 @@ class AccountConcordActions(
         // sender; Armada's to an account with no published kind 10050 never arrived.
         account.dmRelays.flow.value + ConcordActions.directInviteDeliveryRelays(null)
 
+    private val directInviteSweep = Mutex()
+
+    /**
+     * Runs a Direct Invite sweep ([refreshConcordDirectInvites]) in the account's scope, unless one
+     * is already running. It used to run in the invite list's composition, which the hub replaces
+     * the moment its communities load, so every sweep was cancelled before a relay answered and no
+     * invite delivered to the stock set ever arrived.
+     */
+    fun requestConcordDirectInviteSweep() {
+        account.scope.launch {
+            if (!directInviteSweep.tryLock()) return@launch
+            try {
+                refreshConcordDirectInvites()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("Concord", "Direct Invite sweep failed", e)
+            } finally {
+                directInviteSweep.unlock()
+            }
+        }
+    }
+
     /**
      * Sweeps our inbox relays for Direct Invite wraps
      * (`{"kinds":[1059],"#p":[me],"#k":["3313"]}` since the inbox cursor, rewound by NIP-59's backdate
