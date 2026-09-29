@@ -32,6 +32,9 @@ class ParamTag(
     companion object {
         const val TAG_NAME = "param"
 
+        /** The discovery kinds' `["param", "user", <pubkey>]`: the user to compute for. */
+        const val KEY_USER = "user"
+
         fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         fun parse(tag: Array<String>): ParamTag? {

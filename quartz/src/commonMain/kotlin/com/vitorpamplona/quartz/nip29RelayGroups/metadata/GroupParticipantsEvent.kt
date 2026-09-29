@@ -24,15 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParticipantTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -54,15 +53,15 @@ class GroupParticipantsEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-29 LiveKit participants; the group this list belongs to is its own `d`, which restates its ADDRESS: not linked. */
-    override fun links(): List<Link<*>> = links { userTags(Relation.PARTICIPANT, tags, TAG_NAME) }
+    override fun links(): List<Link<*>> = links { each(tags, ParticipantTag::parse) { user(Relation.PARTICIPANT, it, ParticipantTag.TAG_NAME) } }
 
     fun groupId() = dTag()
 
-    fun participants(): List<HexKey> = tags.mapValueTagged(TAG_NAME) { it.takeIf { value -> value.isValid() } }
+    fun participants(): List<HexKey> = tags.mapNotNull(ParticipantTag::parse)
 
     companion object {
         const val KIND = 39004
-        const val TAG_NAME = "participant"
+        const val TAG_NAME = ParticipantTag.TAG_NAME
 
         fun build(
             groupId: String,
@@ -71,7 +70,7 @@ class GroupParticipantsEvent(
             initializer: TagArrayBuilder<GroupParticipantsEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(groupId)
-            participantPubKeys.forEach { add(arrayOf(TAG_NAME, it)) }
+            participantPubKeys.forEach { add(ParticipantTag.assemble(it)) }
             initializer()
         }
     }

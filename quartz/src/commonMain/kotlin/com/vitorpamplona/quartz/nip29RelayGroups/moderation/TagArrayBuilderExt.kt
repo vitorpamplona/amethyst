@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.CodeTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
@@ -58,6 +59,6 @@ fun <T : Event> TagArrayBuilder<T>.userPubKey(pubKey: HexKey) = add(arrayOf("p",
 fun <T : Event> TagArrayBuilder<T>.userPubKeyWithRoles(
     pubKey: HexKey,
     roles: List<String>,
-) = add(arrayOf("p", pubKey, *roles.toTypedArray()))
+) = add(GroupAdminTag.assemble(pubKey, roles))
 
 fun <T : Event> TagArrayBuilder<T>.inviteCode(code: String) = addUnique(CodeTag.assemble(code))

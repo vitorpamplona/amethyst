@@ -27,8 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.userTags
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
@@ -44,7 +44,7 @@ class RelayAddMemberEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    override fun links(): List<Link<*>> = links { userTags(Relation.ADDED_USER, tags) }
+    override fun links(): List<Link<*>> = links { each(tags, PTag::parse) { user(Relation.ADDED_USER, it, PTag.TAG_NAME) } }
 
     fun memberPubKeys() = tags.mapNotNull(PTag::parseKey)
 

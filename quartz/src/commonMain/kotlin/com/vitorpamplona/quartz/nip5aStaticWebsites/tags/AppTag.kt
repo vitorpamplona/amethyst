@@ -18,45 +18,45 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip29RelayGroups.tags
+package com.vitorpamplona.quartz.nip5aStaticWebsites.tags
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-29's `["p", <pubkey>, <role>…]`: a user and the roles they hold. The 39001 admin list
- * states it, and the 9000 put-user request uses the same shape to grant them.
+ * NIP-5A `["app", "<kind>:<pubkey>:<d-tag>", "<relay>"]`: an upstream app descriptor (a 31990,
+ * a 32267, …) the manifest is part of. A manifest may carry several.
  */
-@Stable
-class GroupAdminTag(
-    val pubKey: HexKey,
-    val roles: List<String>,
-) {
-    /** The roles as a link's qualifier; none is no props. */
-    fun linkProps() = RoleProps(roles)
+@Immutable
+data class AppTag(
+    val address: Address,
+    override val relayHint: NormalizedRelayUrl? = null,
+) : AddressReferenceTag {
+    override fun toAddressId() = address.toValue()
+
+    fun toTagArray() = assemble(address, relayHint)
 
     companion object {
-        const val TAG_NAME = "p"
+        const val TAG_NAME = "app"
 
-        fun parse(tag: Array<String>): GroupAdminTag? {
+        fun parse(tag: Array<String>): AppTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
-            val roles =
-                (2 until tag.size).mapNotNull { i ->
-                    tag[i].ifEmpty { null }
-                }
-            return GroupAdminTag(tag[1], roles)
+            ensure(tag[1].isNotEmpty()) { return null }
+            val address = Address.parse(tag[1]) ?: return null
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return AppTag(address, hint)
         }
 
         fun assemble(
-            pubKey: HexKey,
-            roles: List<String>,
-        ) = arrayOf(TAG_NAME, pubKey, *roles.toTypedArray())
-
-        fun assemble(admins: List<GroupAdminTag>) = admins.map { assemble(it.pubKey, it.roles) }
+            address: Address,
+            relayHint: NormalizedRelayUrl? = null,
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relayHint?.url)
     }
 }

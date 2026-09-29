@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -45,15 +47,15 @@ class NwcResponseEvent(
     LinkProvider {
     override fun links(): List<Link<*>> =
         links {
-            event(Relation.REQUEST, requestId(), "e")
-            user(Relation.REQUEST_AUTHOR, requestAuthor(), "p")
+            event(Relation.REQUEST, requestId(), ETag.TAG_NAME)
+            user(Relation.REQUEST_AUTHOR, requestAuthor(), PTag.TAG_NAME)
         }
 
     override fun isContentEncoded() = true
 
-    fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == PTag.TAG_NAME }?.get(1)
 
-    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == ETag.TAG_NAME }?.get(1)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
 

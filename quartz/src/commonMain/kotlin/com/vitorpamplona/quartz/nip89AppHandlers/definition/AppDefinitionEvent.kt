@@ -24,10 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.isTaggedKind
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -44,6 +46,7 @@ import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.client
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.ManifestReleaseTag
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -66,21 +69,15 @@ class AppDefinitionEvent(
     LinkProvider {
     /**
      * NIP-89: "App descriptor events SHOULD tag or otherwise reference related site manifest
-     * events"; `latest` is the current nsite manifest and `next` the one intended for rollout,
-     * both written like an `a`. The `client` tag is linked for every kind by `allLinks()`.
+     * events"; a [ManifestReleaseTag] (`latest`, `next`) says which release a manifest is, a
+     * plain `a` does not. The `client` tag is linked for every kind by `allLinks()`.
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "a" -> address(Relation.SITE_MANIFEST, it[1], "a")
-                    "latest" -> address(Relation.SITE_MANIFEST, it[1], "latest", mapOf("release" to "latest"))
-                    "next" -> address(Relation.SITE_MANIFEST, it[1], "next", mapOf("release" to "next"))
-                    "k" -> tag(Relation.TAG, "k", it[1])
-                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
-                }
-            }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
+            each(tags, ManifestReleaseTag::parse) { address(Relation.SITE_MANIFEST, it, it.release, it.linkProps()) }
+            each(tags, ATag::parse) { address(Relation.SITE_MANIFEST, it, ATag.TAG_NAME) }
+            hashtags(tags)
         }
 
     // App-handler content is JSON; parse it and index the human-meaningful

@@ -24,12 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip29RelayGroups.groups
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -44,13 +46,8 @@ class GroupRemoveUserEvent(
     LinkProvider {
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "h" -> tag(Relation.GROUP, "h", it[1])
-                    "p" -> user(Relation.REMOVED_USER, it[1], "p")
-                }
-            }
+            groups(tags)
+            each(tags, PTag::parse) { user(Relation.REMOVED_USER, it, PTag.TAG_NAME) }
         }
 
     fun groupId() = tags.groupId()

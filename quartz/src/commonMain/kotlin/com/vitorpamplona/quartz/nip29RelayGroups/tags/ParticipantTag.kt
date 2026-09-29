@@ -20,43 +20,26 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups.tags
 
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-29's `["p", <pubkey>, <role>…]`: a user and the roles they hold. The 39001 admin list
- * states it, and the 9000 put-user request uses the same shape to grant them.
+ * `["participant", <pubkey>]`: one user connected to a group's live audio/video room, as the
+ * relay lists them in its kind 39004 (a LiveKit-deployment extension, not NIP-29 proper).
  */
-@Stable
-class GroupAdminTag(
-    val pubKey: HexKey,
-    val roles: List<String>,
-) {
-    /** The roles as a link's qualifier; none is no props. */
-    fun linkProps() = RoleProps(roles)
-
+class ParticipantTag {
     companion object {
-        const val TAG_NAME = "p"
+        const val TAG_NAME = "participant"
 
-        fun parse(tag: Array<String>): GroupAdminTag? {
+        fun parse(tag: Array<String>): HexKey? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
-            val roles =
-                (2 until tag.size).mapNotNull { i ->
-                    tag[i].ifEmpty { null }
-                }
-            return GroupAdminTag(tag[1], roles)
+            ensure(tag[1].isValid()) { return null }
+            return tag[1]
         }
 
-        fun assemble(
-            pubKey: HexKey,
-            roles: List<String>,
-        ) = arrayOf(TAG_NAME, pubKey, *roles.toTypedArray())
-
-        fun assemble(admins: List<GroupAdminTag>) = admins.map { assemble(it.pubKey, it.roles) }
+        fun assemble(pubKey: HexKey) = arrayOf(TAG_NAME, pubKey)
     }
 }

@@ -34,6 +34,14 @@ class InputTag(
     companion object {
         const val TAG_NAME = "i"
 
+        // The input types NIP-90 defines. `text` and `prompt` carry the data inline; the others
+        // point at it.
+        const val TYPE_URL = "url"
+        const val TYPE_EVENT = "event"
+        const val TYPE_JOB = "job"
+        const val TYPE_TEXT = "text"
+        const val TYPE_PROMPT = "prompt"
+
         fun parse(tag: Array<String>): InputTag? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
@@ -43,14 +51,14 @@ class InputTag(
             return InputTag(tag[1], tag[2], relay, marker)
         }
 
-        fun assembleUrl(url: String) = arrayOf(TAG_NAME, url, "url")
+        fun assembleUrl(url: String) = arrayOf(TAG_NAME, url, TYPE_URL)
 
-        fun assembleText(text: String) = arrayOf(TAG_NAME, text, "text")
+        fun assembleText(text: String) = arrayOf(TAG_NAME, text, TYPE_TEXT)
 
-        fun assembleEvent(eventId: String) = arrayOf(TAG_NAME, eventId, "event")
+        fun assembleEvent(eventId: String) = arrayOf(TAG_NAME, eventId, TYPE_EVENT)
 
-        fun assembleJob(jobId: String) = arrayOf(TAG_NAME, jobId, "job")
+        fun assembleJob(jobId: String) = arrayOf(TAG_NAME, jobId, TYPE_JOB)
 
-        fun assemblePrompt(prompt: String) = arrayOf(TAG_NAME, prompt, "prompt")
+        fun assemblePrompt(prompt: String) = arrayOf(TAG_NAME, prompt, TYPE_PROMPT)
     }
 }

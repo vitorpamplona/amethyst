@@ -24,11 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -60,13 +60,8 @@ class ChatMessageEncryptedFileHeaderEvent(
     LinkProvider {
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "p" -> user(Relation.RECIPIENT, it[1], "p")
-                    "e" -> event(Relation.PARENT, it[1], "e")
-                }
-            }
+            each(tags, PTag::parse) { user(Relation.RECIPIENT, it, PTag.TAG_NAME) }
+            each(tags, ETag::parse) { event(Relation.PARENT, it, ETag.TAG_NAME) }
         }
 
     fun replyTo() = tags.mapNotNull(ETag::parseId)

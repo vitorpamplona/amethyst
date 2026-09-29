@@ -24,16 +24,19 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.links.hashtags
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.AcceptedKindTag
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -61,17 +64,15 @@ class RelayDiscoveryEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
-    /** NIP-66: the relay itself is this event's `d` (a URL, not linked); its topics, geohashes and accepted kinds are. */
+    /**
+     * NIP-66: the relay itself is this event's `d` (a URL, not linked); its topics, geohashes and
+     * accepted kinds are. A negated `k` is a kind the relay rejects, so it is not a `k` it has.
+     */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "t" -> tag(Relation.HASHTAG, "t", it[1].lowercase())
-                    "g" -> tag(Relation.TAG, "g", it[1])
-                    "k" -> tag(Relation.TAG, "k", it[1])
-                }
-            }
+            hashtags(tags)
+            each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
+            each(tags, AcceptedKindTag::parse) { if (!it.negated) tag(Relation.TAG, AcceptedKindTag.TAG_NAME, it.kind.toString()) }
         }
 
     fun relay(): NormalizedRelayUrl? = RelayUrlNormalizer.normalizeOrNull(dTag())

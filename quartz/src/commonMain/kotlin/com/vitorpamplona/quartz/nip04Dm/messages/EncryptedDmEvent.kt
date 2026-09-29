@@ -60,8 +60,8 @@ class EncryptedDmEvent(
     /** NIP-04: `p` is the receiver, `e` "the previous message in a conversation or a message we are explicitly replying to". */
     override fun links(): List<Link<*>> =
         links {
-            user(Relation.RECIPIENT, recipientPubKey(), "p")
-            event(Relation.PARENT, replyTo(), "e")
+            user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME)
+            event(Relation.PARENT, replyTo(), MarkedETag.TAG_NAME)
         }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)

@@ -25,9 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.AddressReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -36,7 +38,14 @@ class RecommendationTag(
     val address: Address,
     val relay: NormalizedRelayUrl? = null,
     val platform: String? = null,
-) {
+) : AddressReferenceTag {
+    override val relayHint get() = relay
+
+    override fun toAddressId() = address.toValue()
+
+    /** The platform this handler is recommended for; a blank 4th slot names none. */
+    fun linkProps() = PlatformProps(platform?.ifBlank { null })
+
     fun toTagArray() = assemble(address, relay, platform)
 
     companion object {

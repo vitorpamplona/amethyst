@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip43RelayMembers.list.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.links.props.MemberProps
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -34,7 +35,10 @@ import com.vitorpamplona.quartz.utils.ensure
 data class RelayMember(
     val pubKey: HexKey,
     val roles: List<String> = emptyList(),
-)
+) {
+    /** The role ids as a link's qualifier; none is no props. */
+    fun linkProps() = MemberProps(roles = roles)
+}
 
 /**
  * NIP-43 `["member", <pubkey>, <role-id>...]`. Role ids after the pubkey are

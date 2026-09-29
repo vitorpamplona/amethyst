@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -45,11 +46,11 @@ class NwcRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-47: `p` is the wallet service the request is encrypted to. */
-    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, walletServicePubKey(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, walletServicePubKey(), PTag.TAG_NAME) }
 
     override fun isContentEncoded() = true
 
-    fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == PTag.TAG_NAME }?.get(1)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
 

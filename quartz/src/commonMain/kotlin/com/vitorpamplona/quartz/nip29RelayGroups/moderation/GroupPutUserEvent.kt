@@ -24,13 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip29RelayGroups.groups
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -45,17 +46,9 @@ class GroupPutUserEvent(
     LinkProvider {
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "h" -> tag(Relation.GROUP, "h", it[1])
-                    "p" -> {
-                        // NIP-29 put-user: `["p", <pubkey>, <role>…]`, the roles it grants.
-                        val roles = if (it.size > 2) (2 until it.size).mapNotNull { i -> it[i].ifBlank { null } } else emptyList()
-                        user(Relation.ADDED_USER, it[1], "p", if (roles.isEmpty()) null else RoleProps(roles))
-                    }
-                }
-            }
+            groups(tags)
+            // NIP-29 put-user: `["p", <pubkey>, <role>…]`, the roles it grants.
+            each(tags, GroupAdminTag::parse) { user(Relation.ADDED_USER, it.pubKey, GroupAdminTag.TAG_NAME, it.linkProps()) }
         }
 
     fun groupId() = tags.groupId()

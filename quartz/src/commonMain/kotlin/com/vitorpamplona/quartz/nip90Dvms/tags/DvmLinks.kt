@@ -21,27 +21,30 @@
 package com.vitorpamplona.quartz.nip90Dvms.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.ParamTag
 
 // The NIP-90 job kinds share two shapes, one for every request (5000-5999) and one for every
 // result (6000-6999) and feedback (7000), so each class's links() is one of these calls.
 
 /**
- * One NIP-90 `["i", <data>, <input-type>, <relay>, <marker>]`. An `event` input is the event the
- * job works on; a `job` input is "the output of a previous job with the specified event ID"
- * (job chaining), so it points at that job's request; a `url` is a Tag target. `text` and
- * `prompt` inputs are free text, not references.
+ * The NIP-90 `["i", <data>, <input-type>, <relay>, <marker>]` inputs ([InputTag]). An `event`
+ * input is the event the job works on; a `job` input is "the output of a previous job with the
+ * specified event ID" (job chaining), so it points at that job's request; a `url` is a Tag
+ * target. `text` and `prompt` inputs are free text, not references.
  */
-private fun LinkBuilder.dvmInput(input: Array<String>) {
-    if (input.size < 3) return
-    when (input[2]) {
-        "event" -> event(Relation.INPUT, input[1], InputTag.TAG_NAME)
-        "job" -> event(Relation.INPUT_JOB, input[1], InputTag.TAG_NAME)
-        "url" -> tag(Relation.TAG, InputTag.TAG_NAME, input[1])
+private fun LinkBuilder.dvmInputs(tags: TagArray) =
+    each(tags, InputTag::parse) {
+        when (it.type) {
+            InputTag.TYPE_EVENT -> event(Relation.INPUT, it.value, InputTag.TAG_NAME)
+            InputTag.TYPE_JOB -> event(Relation.INPUT_JOB, it.value, InputTag.TAG_NAME)
+            InputTag.TYPE_URL -> tag(Relation.TAG, InputTag.TAG_NAME, it.value)
+        }
     }
-}
 
 /**
  * A NIP-90 job request: its `i` inputs and, in `p`, the "Service Providers the customer is
@@ -55,12 +58,11 @@ private fun LinkBuilder.dvmInput(input: Array<String>) {
 fun LinkBuilder.dvmRequestLinks(
     tags: TagArray,
     forUserParam: Boolean = false,
-) = tags.fastForEach {
-    if (it.size < 2) return@fastForEach
-    when (it[0]) {
-        InputTag.TAG_NAME -> dvmInput(it)
-        "p" -> user(Relation.SERVICE_PROVIDER, it[1], "p")
-        "param" -> if (forUserParam && it.size > 2 && it[1] == "user") user(Relation.FOR_USER, it[2], "param")
+) {
+    dvmInputs(tags)
+    each(tags, PTag::parse) { user(Relation.SERVICE_PROVIDER, it, PTag.TAG_NAME) }
+    if (forUserParam) {
+        each(tags, ParamTag::parse) { if (it.key == ParamTag.KEY_USER) user(Relation.FOR_USER, it.value, ParamTag.TAG_NAME) }
     }
 }
 
@@ -73,11 +75,8 @@ fun LinkBuilder.dvmRequestLinks(
 fun LinkBuilder.dvmResultLinks(
     tags: TagArray,
     withInputs: Boolean = true,
-) = tags.fastForEach {
-    if (it.size < 2) return@fastForEach
-    when (it[0]) {
-        "e" -> event(Relation.REQUEST, it[1], "e")
-        "p" -> user(Relation.REQUEST_AUTHOR, it[1], "p")
-        InputTag.TAG_NAME -> if (withInputs) dvmInput(it)
-    }
+) {
+    each(tags, ETag::parse) { event(Relation.REQUEST, it, ETag.TAG_NAME) }
+    if (withInputs) dvmInputs(tags)
+    each(tags, PTag::parse) { user(Relation.REQUEST_AUTHOR, it, PTag.TAG_NAME) }
 }

@@ -26,16 +26,19 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -58,18 +61,10 @@ class DraftWrapEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "k" -> tag(Relation.TAG, "k", it[1])
-                    "e" ->
-                        when (it.getOrNull(3)) {
-                            "root" -> event(Relation.ROOT, it[1], "e")
-                            "reply" -> event(Relation.PARENT, it[1], "e")
-                        }
-                    "a" -> address(Relation.ROOT, it[1], "a")
-                }
-            }
+            each(tags, KindTag::parse) { tag(Relation.TAG, KindTag.TAG_NAME, it.toString()) }
+            each(tags, MarkedETag::parseRoot) { event(Relation.ROOT, it, MarkedETag.TAG_NAME) }
+            each(tags, MarkedETag::parseReply) { event(Relation.PARENT, it, MarkedETag.TAG_NAME) }
+            each(tags, ATag::parse) { address(Relation.ROOT, it, ATag.TAG_NAME) }
         }
 
     override fun isContentEncoded() = true

@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
-import com.vitorpamplona.quartz.nip01Core.links.props.RoleProps
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
@@ -49,7 +48,7 @@ class GroupAdminsEvent(
      * NIP-29 group admins, `["p", <pubkey>, <role>…]`: the roles are relay-defined, so they ride on
      * the link. The group this list belongs to is its own `d`, which restates its ADDRESS: not linked.
      */
-    override fun links(): List<Link<*>> = links { each(tags, GroupAdminTag::parse) { user(Relation.ADMIN, it.pubKey, GroupAdminTag.TAG_NAME, RoleProps(it.roles)) } }
+    override fun links(): List<Link<*>> = links { each(tags, GroupAdminTag::parse) { user(Relation.ADMIN, it.pubKey, GroupAdminTag.TAG_NAME, it.linkProps()) } }
 
     fun groupId() = dTag()
 

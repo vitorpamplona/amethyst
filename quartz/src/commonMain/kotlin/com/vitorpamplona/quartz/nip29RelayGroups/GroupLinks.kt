@@ -20,12 +20,30 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups
 
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.links.LinkBuilder
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.props.OrderProps
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
+
+/** The `h` group a user-signed NIP-29 event is scoped to ([GroupIdTag]) → [Relation.GROUP]. */
+fun LinkBuilder.groups(tags: TagArray) = each(tags, GroupIdTag::parse) { tag(Relation.GROUP, GroupIdTag.TAG_NAME, it) }
+
+/**
+ * NIP-29 subgroups: [ParentTag] → [Relation.PARENT], each [ChildTag] → [Relation.CHILD]. Both
+ * hold a group id, so the target is the same `h` node the group's own events scope to; `via`
+ * keeps which tag said it.
+ */
+fun LinkBuilder.subgroups(tags: TagArray) {
+    each(tags, ParentTag::parse) { tag(Relation.PARENT, GroupIdTag.TAG_NAME, it, ParentTag.TAG_NAME) }
+    each(tags, ChildTag::parse) { tag(Relation.CHILD, GroupIdTag.TAG_NAME, it, ChildTag.TAG_NAME) }
+}
 
 /**
  * A NIP-29 pin list (the 9010 request and the relay's 39005): `e` and `a` pins interleaved in

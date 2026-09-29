@@ -75,4 +75,18 @@ class Nip66RelayMonitorLinksTest {
             event.links(),
         )
     }
+
+    @Test
+    fun discoveryDoesNotLinkTheKindsARelayRejects() {
+        val event =
+            RelayDiscoveryEvent(
+                id,
+                monitor,
+                1,
+                arrayOf(arrayOf("d", "wss://relay.example/"), arrayOf("k", "!4"), arrayOf("k", "1")),
+                "",
+                sig,
+            )
+        assertEquals(listOf(Link(Relation.TAG, LinkTarget.Tag("k", "1"), "k")), event.links())
+    }
 }

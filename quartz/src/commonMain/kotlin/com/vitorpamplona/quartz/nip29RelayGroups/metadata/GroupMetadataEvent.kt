@@ -24,12 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.hasTagName
 import com.vitorpamplona.quartz.nip01Core.links.Link
 import com.vitorpamplona.quartz.nip01Core.links.LinkProvider
 import com.vitorpamplona.quartz.nip01Core.links.Relation
+import com.vitorpamplona.quartz.nip01Core.links.each
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip29RelayGroups.subgroups
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -60,15 +61,9 @@ class GroupMetadataEvent(
      */
     override fun links(): List<Link<*>> =
         links {
-            tags.fastForEach {
-                if (it.size < 2) return@fastForEach
-                when (it[0]) {
-                    "parent" -> tag(Relation.PARENT, "h", it[1], "parent")
-                    "child" -> tag(Relation.CHILD, "h", it[1], "child")
-                    "t" -> if (it[1] !in BUZZ_CHANNEL_TYPES) tag(Relation.HASHTAG, "t", it[1].lowercase())
-                    "g" -> tag(Relation.TAG, "g", it[1])
-                }
-            }
+            subgroups(tags)
+            each(tags, HashtagTag::parse) { if (it !in BUZZ_CHANNEL_TYPES) tag(Relation.HASHTAG, HashtagTag.TAG_NAME, it.lowercase()) }
+            each(tags, GeoHashTag::parse) { tag(Relation.TAG, GeoHashTag.TAG_NAME, it) }
         }
 
     override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")

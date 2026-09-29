@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.links.LinkTarget
 import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.allLinks
 import com.vitorpamplona.quartz.nip01Core.links.props.PlatformProps
+import com.vitorpamplona.quartz.nip01Core.links.props.ReleaseProps
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlin.test.Test
@@ -89,8 +90,8 @@ class Nip89AppHandlersLinksTest {
         assertEquals(
             listOf(
                 Link(Relation.TAG, LinkTarget.Tag("k", "1"), "k"),
-                Link(Relation.SITE_MANIFEST, LinkTarget.Address(latest), "latest", mapOf("release" to "latest")),
-                Link(Relation.SITE_MANIFEST, LinkTarget.Address(next), "next", mapOf("release" to "next")),
+                Link(Relation.SITE_MANIFEST, LinkTarget.Address(latest), "latest", ReleaseProps(release = "latest")),
+                Link(Relation.SITE_MANIFEST, LinkTarget.Address(next), "next", ReleaseProps(release = "next")),
                 Link(Relation.SITE_MANIFEST, LinkTarget.Address(repo), "a"),
                 Link(Relation.HASHTAG, LinkTarget.Tag("t", "social"), "t"),
             ),

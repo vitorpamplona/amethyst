@@ -63,7 +63,7 @@ open class GiftWrapEvent(
     HasInnerEvent,
     LinkProvider {
     /** NIP-59: the wrap names only its recipient; the rumor inside is its own event once unwrapped. */
-    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, recipientPubKey(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME) }
 
     // `@Volatile`: set by the decrypting coroutine in [unwrapThrowing], read
     // by relay socket threads walking the wrap → seal → rumor chain.
@@ -113,7 +113,7 @@ open class GiftWrapEvent(
         return signer.nip44Decrypt(content, pubKey)
     }
 
-    fun recipientPubKey() = tags.firstTagValue("p")
+    fun recipientPubKey() = tags.firstTagValue(PTag.TAG_NAME)
 
     companion object {
         const val KIND = 1059

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.links.Relation
 import com.vitorpamplona.quartz.nip01Core.links.links
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -44,7 +45,7 @@ class NostrConnectEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     LinkProvider {
     /** NIP-46: each side `p`-tags the other and encrypts to it. */
-    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, recipientPubKey(), "p") }
+    override fun links(): List<Link<*>> = links { user(Relation.RECIPIENT, recipientPubKey(), PTag.TAG_NAME) }
 
     override fun isContentEncoded() = true
 
@@ -57,7 +58,7 @@ class NostrConnectEvent(
         return OptimizedJsonMapper.fromJsonTo<BunkerMessage>(retVal)
     }
 
-    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == PTag.TAG_NAME }?.get(1)
 
     fun verifiedRecipientPubKey(): HexKey? {
         val recipient = recipientPubKey()
