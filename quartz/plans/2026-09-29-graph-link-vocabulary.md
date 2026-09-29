@@ -1,6 +1,8 @@
 # A link vocabulary: what each kind's references MEAN
 
-Status: **draft for review** (2026-09-29). Nothing is implemented yet. Decided in review: links
+Status: **implemented** in `nip01Core/links/` (2026-09-29): the model below, `Relation` (every
+constant), `LinkBuilder`, `Event.allLinks()`, and `links()` on every `EventFactory` class, held by
+`LinkCoverageTest`. Decided in review: links
 always start at an event (no user-to-user shortcuts); the author of acted-on content gets its OWN
 relation; the kind stays on the source event only; names follow Nostr's own words (rule 7);
 **no fallback** — every class states the meaning of every reference it carries (rule 5). The
@@ -32,7 +34,7 @@ written once, where the tags are already parsed — the pattern `SearchFieldExtr
 A **link** is one statement an event makes about something else:
 
 ```kotlin
-@JvmInline value class Relation(val name: String)   // an open vocabulary: constants below, extensible
+@JvmInline value class Relation(val name: String)   // Relation.ROOT, … Relation.ALL: every constant
 
 sealed interface LinkTarget {
     data class Event(val id: HexKey) : LinkTarget
@@ -48,8 +50,15 @@ data class Link(
     val props: Map<String, Any>? = null,  // relation-specific values (a report's type, a rank)
 )
 
-interface LinkProvider { fun links(): List<Link> }
+interface LinkProvider { fun links(): List<Link> }   // the class's own statements
+interface LinkFree : LinkProvider                    // a class that references nothing
+
+fun Event.allLinks(): List<Link>   // AUTHOR, ADDRESS, the every-kind tags, then links()
 ```
+
+`links { … }` builds a class's list through `LinkBuilder`, which validates every target once
+(64-hex ids and keys, `kind:<64-hex>:d` coordinates, non-blank values), lowercases hex so one key
+is one node, and drops exact duplicates. A malformed value is dropped, never linked.
 
 Rules the vocabulary follows:
 
@@ -102,7 +111,7 @@ the relation comes from today; each row is a golden test when implemented.
 | Relation | Targets | Meaning | Kinds |
 |---|---|---|---|
 | `AUTHOR` | U | The event's signer; from an address, its pubkey (the only link no event states) | every kind; every address |
-| `ADDRESS` | A | The addressable event's own address (NIP-01) | 30000–39999 |
+| `ADDRESS` | A | The event's own address (NIP-01): the coordinate other events' `a` tags point at | replaceable and addressable kinds (0, 3, 10000–19999, 30000–39999) |
 
 ### Conversation
 
@@ -251,10 +260,10 @@ Decided:
 
 Open:
 
-1. **Where it lives.** `nip01Core/links/` (the interface, the value classes, the relation
-   constants) plus one `links()` per class, beside its tags. `Event` contributes only the
-   every-kind tags (`client`, `zap`, emoji sets). The hint providers could later be derived from
-   `links()`, which carry the same ids plus their meaning.
+1. **Decided: where it lives.** `nip01Core/links/` (the interface, the value classes, the
+   relation constants, the builder) plus one `links()` per class, beside its tags.
+   `Event.allLinks()` adds the every-kind tags (`client`, `zap`, emoji sets). The hint providers
+   could later be derived from `links()`, which carry the same ids plus their meaning.
 2. **Vocabulary stability.** Adding a relation or classifying a kind is additive. Renaming or
    re-splitting one breaks graph queries, so this review is the cheap moment.
 
@@ -341,11 +350,13 @@ implementing (each is detailed in its appendix row):
 
 ## Open decisions the review surfaced
 
-1. **The 115 new relations** (appendix, top table): same review as the tables had. Unified
-   already where groups coined synonyms: `ADDED_USER` / `REMOVED_USER`, `REQUEST` /
-   `REQUEST_AUTHOR` (NIP-90's "customer"), `ZAP_SPLIT` (NIP-75's "beneficiary"). Still to
-   decide: `APP` vs `APPLICATION`, `AUTHORED` (10064) beside `AUTHOR`, whether
-   `SERVICE_PROVIDER` spans NIP-85 and NIP-90 or splits (rule 4).
+1. **Decided: the new relations** (appendix, top table) are adopted as named there. Unified
+   where groups coined synonyms: `ADDED_USER` / `REMOVED_USER`, `REQUEST` / `REQUEST_AUTHOR`
+   (NIP-90's "customer"), `ZAP_SPLIT` (NIP-75's "beneficiary"), and `APPLICATION` into `APP` (a
+   release's software application and an nsite's app descriptor are the same role: the app the
+   event belongs to). `AUTHORED` (10064) stays beside `AUTHOR`: it is a list's claim about other
+   events, not the signer. `SERVICE_PROVIDER` spans NIP-85 and NIP-90: the source event's kind
+   already tells a trust provider from a DVM, and one key is rarely both.
 2. **Decided: a group is its `h` value** (a **T** target). Known limit, unsolved: NIP-29 ids are
    only unique per relay, so two relays' groups with one id merge into one node. A group's own
    metadata (39000–39005) is signed by its relay's key, which could scope it; a message carries
