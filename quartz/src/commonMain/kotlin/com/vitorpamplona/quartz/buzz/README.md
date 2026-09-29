@@ -118,6 +118,10 @@ Last reconciled against `block/buzz` `4ef23609b` (2026-09-29); the previous full
 - **NIP-10 threading** follows `buzz-core/src/nip10.rs`: markers need 4+ elements and a 64-hex id,
   the last one wins, and a lone `root` marker is top-level (`threading/BuzzThreadMarkers`). A reply's
   root must be derived with `buzzThreadRootForReplyTo` or the relay rejects it.
+- **Channel messages are written as kind 9** in Buzz's tag shape (`stream/BuzzChatMessage`, mirroring
+  `build_message`): `h`, NIP-10 thread markers, `p` mentions, `broadcast` for a reply that also shows
+  in the channel. That is what Buzz's own clients write; kind 40002 is read-only now, kept so older
+  messages still render. `broadcast` means the same on either kind.
 - **Put-user (9000)** without a `role` tag is "no role change" on Buzz; a plain add sends none.
 - **Compare-and-swap writes**: canvas (40100) and workflow definitions (30620) take
   `["expected-revision", <head id>]` and the relay answers `conflict:` on a stale head. A workflow's
@@ -251,7 +255,7 @@ a Buzz relay once a canvas has arrived.
 The **edit composer (40003)** is wired: `ChannelNewMessageViewModel` has a Buzz edit mode
 (`editBuzzMessage`/`clearBuzzEdit`) whose next send publishes a 40003 targeting the
 original (minimal, mirroring Buzz's `build_edit`); an "Edit" action gated to the user's
-own 40002 messages threads to the composer through the shared chat feed via an optional
+own messages (kind 9 on a Buzz relay, or legacy 40002) threads to the composer through the shared chat feed via an optional
 `onWantsToEditBuzz` callback (default-null, so no other chat surface is affected), and
 `EditFieldRow` shows an editing banner. This closes the render↔create loop (edit overlays
 already rendered).

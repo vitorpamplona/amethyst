@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.buzz.stream.BuzzChatMessage
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -64,7 +65,7 @@ import okhttp3.coroutines.executeAsync
  * `amy buzz …` — first-class access to the `block/buzz` workspace protocol, driving the
  * same `quartz` models + `commons` aggregator the app uses. Buzz workspaces are NIP-29
  * groups, so join/leave/create still go through `amy relaygroup`; this verb group covers
- * the Buzz-native pieces: stream messages (40002), the owner-attestation primitive (OA),
+ * the Buzz-native pieces: channel messages (kind 9 in Buzz's shape), the owner-attestation primitive (OA),
  * and the agent console (turn-metric aggregation + personas).
  */
 object BuzzCommands {
@@ -402,7 +403,7 @@ object BuzzCommands {
             http.newCall(builder.build()).executeAsync().use { it.code to it.body.string() }
         }
 
-    /** `buzz post RELAY GID <text>` → publishes a kind-40002 stream message with an `h` tag. */
+    /** `buzz post RELAY GID <text>` → publishes a kind-9 channel message in Buzz's shape (`build_message`). */
     private suspend fun post(
         dataDir: DataDir,
         rest: Array<String>,
@@ -411,7 +412,7 @@ object BuzzCommands {
         val text = Args(rest).positionalOrNull(2) ?: return Output.error("bad_args", usage)
         if (text.isBlank()) return Output.error("bad_args", "message text must not be blank")
         return publishScoped(dataDir, rest, usage) { _, groupId, _ ->
-            StreamMessageV2Event.build(groupId, text)
+            BuzzChatMessage.build(groupId, text)
         }
     }
 

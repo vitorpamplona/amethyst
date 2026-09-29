@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -278,13 +279,23 @@ fun ChatMessageActionSheet(
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
             // Editing my own chat message. Two surfaces publish an edit today, gated by type:
-            //  - Buzz: kind-40002 stream message → a kind-40003 edit.
+            //  - Buzz: kind-9 message in a Buzz-dialect relay group (or a legacy kind-40002 one)
+            //    → a kind-40003 edit.
             //  - Concord: kind-9 channel message or kind-1111 thread reply (carries a
             //    ConcordChannel gatherer) → a kind-3302 edit wrapped on the channel plane.
             // Both restrict to my own messages; a note is only ever one of the two, so at
             // most one tile shows and both route through the same edit callback.
             val isMine = note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
-            val canEditBuzz = onWantsToEditChatMessage != null && note.event is StreamMessageV2Event && isMine
+            val canEditBuzz =
+                onWantsToEditChatMessage != null &&
+                    isMine &&
+                    (
+                        note.event is StreamMessageV2Event ||
+                            (
+                                note.event is ChatEvent &&
+                                    note.inGatherers?.any { it is RelayGroupChannel && BuzzRelayDialect.isBuzz(it.groupId.relayUrl) } == true
+                            )
+                    )
             val canEditConcord =
                 onWantsToEditChatMessage != null &&
                     (note.event is ChatEvent || note.event is CommentEvent) &&

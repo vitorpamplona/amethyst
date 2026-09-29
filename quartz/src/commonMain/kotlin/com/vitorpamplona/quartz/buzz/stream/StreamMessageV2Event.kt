@@ -36,6 +36,10 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * replaceable range `10002`, which was wrong). Channel-scoped via the `h` tag; the
  * text lives in [content], optionally carrying `p` mentions and a `broadcast` flag.
  * See `KIND_STREAM_MESSAGE_V2` in Buzz's `buzz-core/src/kind.rs`.
+ *
+ * **Read-only in practice.** Buzz's own clients (and Amethyst) now write channel messages as kind 9
+ * in the same tag shape ([BuzzChatMessage]); this class stays so older 40002 messages still parse
+ * and render. [build] is kept for tests and tooling.
  */
 @Immutable
 class StreamMessageV2Event(

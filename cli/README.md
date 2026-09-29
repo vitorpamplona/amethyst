@@ -605,13 +605,13 @@ screen speaks.
 
 [`block/buzz`](https://github.com/block/buzz) workspaces are NIP-29 groups on a Buzz
 relay, so create/join/leave still use `amy relaygroup`. These verbs cover the Buzz-native
-surface: the kind:40002 stream message, the owner-attestation primitive (NIP-OA), and the
+surface: the Buzz channel message (kind:9), the owner-attestation primitive (NIP-OA), and the
 agent console (turn-metric aggregation + personas), all driving the same `quartz` models
 and `commons` aggregator the app uses.
 
 | Command | What it does |
 | --- | --- |
-| `amy buzz post RELAY GID <text>` | Post a kind:40002 stream message (Buzz-native) into a workspace. |
+| `amy buzz post RELAY GID <text>` | Post a channel message into a workspace: kind:9 in Buzz's tag shape, what Buzz's own clients write. |
 | `amy buzz read RELAY GID [--limit N] [--timeout SECS]` | Read the recent human-visible timeline (kinds 9 / 40002 / 40099). |
 | `amy buzz attest AGENT [--kind K] [--after UNIX] [--before UNIX]` | Sign a NIP-OA attestation authorizing AGENT (offline; needs a local key). Prints the `auth` tag to hand to the agent operator. |
 | `amy buzz console [--relays R,R] [--timeout SECS]` | Fetch my kind:44200 turn metrics (`#p`=me), decrypt, and aggregate fleet + per-agent cost/tokens. |

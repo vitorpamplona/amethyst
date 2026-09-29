@@ -127,7 +127,7 @@ private val KIND_OPTIONS =
         DropdownOption("9", "9 · Group chat message"),
         DropdownOption("1111", "1111 · Comment"),
         DropdownOption("30023", "30023 · Long-form article"),
-        DropdownOption("40002", "40002 · Buzz minichat message"),
+        DropdownOption("40002", "40002 · Buzz stream message (legacy)"),
     )
 
 private val KIND_LABELS = KIND_OPTIONS.associate { it.value to it.label }

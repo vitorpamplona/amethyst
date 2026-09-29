@@ -2336,7 +2336,7 @@ open class EventCache :
 
     /**
      * Marks the serving relay as Buzz, but only off a VERIFIED event: the mark changes
-     * what the composer sends (40002 vs kind 9) and how new channels on the relay are
+     * what the composer sends (Buzz's kind-9 shape vs NIP-29's) and how new channels on the relay are
      * treated, so an unverifiable frame from a buggy/hostile relay must not flip it.
      * The note-has-event check is the same verification gate the attach path uses.
      */
