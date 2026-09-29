@@ -75,6 +75,8 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.ReceiveState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import java.text.NumberFormat

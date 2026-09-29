@@ -356,10 +356,43 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      mint screens; relay and relay-group members; communities; Event Sync; the vanish
      screens; and the feed filter spinner with the feed views they share. `ViewModelProvider.Factory`
      implementations now override the multiplatform `create(KClass, CreationExtras)`.
-   - **Next:** re-measure; the exits now in front are the upload/gallery stack, the
-     Android-only `AccountViewModel` actions (`urlPreview`, media saving), `LoadCityName`,
-     `ReactionsRow` imports, the remaining `Amethyst.instance` reads (location, favorites,
-     Tor, browser icons, scheduled posts) and `AppSettingsScreen`.
+   - **Wave 3 cuts:**
+     - An `AppServices` port (`commons/service`) holds the app-wide stores screens read:
+       favorites, browser history and favicons, napplet and signer permissions, Tor
+       settings. It is installed as `LocalAppServices`; `AccountViewModelHost` gained the
+       Tor relay evaluation and the NIP-42 auth state.
+     - `AppPlatform` gained the camera QR scanner, an `AppLauncher` (favorite apps and web
+       links) and the Concord/napplet/manifest/favicon image models.
+     - The QR drawer is shared. Encoding sits behind `encodeQrMatrix`: zxing core on
+       JVM/Android, nothing yet on iOS. `KeepScreenBrightAndAwake` is expect/actual.
+     - `uriToRoute` left `MainActivity`. `ReactionsRow` and `LoadCityName` are imported
+       through the note-platform shims. Settings rows left `AppSettingsScreen`.
+       `formatGrouped` replaced `NumberFormat`.
+   - **Wave 3 moved:** 15 screens, 47 files. That covers the browser, favorite apps,
+     connected apps, bottom-bar settings, public chats, relay info, relay-group browse, the
+     Buzz boards and invite, Concord home, backup conflicts, show-QR and software-app
+     detail. `AppBottomBar` moved with them.
+   - **Main-thread checker deleted:** it was a debug-only Android assertion. Once the cache
+     and feeds were shared, it could only fire through a host hook that is a no-op
+     everywhere else.
+   - **Wave 4 cuts:**
+     - `@SuppressLint` became `@Suppress` app-wide.
+     - `formatHistoryReachDate` is expect/actual.
+     - quartz's `ConcurrentSet`/`ConcurrentMap` replaced `java.util.concurrent` in the Buzz
+       view models.
+     - Settings painter icons are `DrawableResource`s.
+     - Share buttons use `rememberTextSharer`.
+     - `AppPlatform.isCastingAvailable` and `supportsEmbeddedAppTabs` replace
+       `BuildConfig` and an API-level check.
+     - More of the synchronous-tier strings now have Compose copies.
+   - **Wave 4 moved:** 28 screens, 66 files: hashtag, relay and geohash feeds; people lists
+     and follow packs; the hidden/blocked/muted/spam settings; the Cordn hub, key-package,
+     link and coordinator screens; relay auth, privacy, home tabs, security filters, profile
+     UI, drawer and video-player settings; Cashu wallet, NWC and CLINK setup; the Concord
+     channel list and invite links; the attestation screen and the redirect loader.
+   - **Next:** re-measure. Known exits: the upload/gallery stack, the Android-only
+     `AccountViewModel` actions, `CalendarTimeFormat`, the chat views, `NestUiState`,
+     `NappletLauncher`, `UpdateZapAmountDialog` (biometrics), and the `java.time` pickers.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.

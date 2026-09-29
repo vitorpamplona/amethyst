@@ -136,6 +136,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
@@ -154,7 +155,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag

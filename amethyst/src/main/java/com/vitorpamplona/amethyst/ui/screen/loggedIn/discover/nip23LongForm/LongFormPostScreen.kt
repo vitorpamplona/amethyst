@@ -116,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowU
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -141,7 +142,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 

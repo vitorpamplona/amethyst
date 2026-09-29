@@ -67,6 +67,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SettingsSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsEntry
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsIcon

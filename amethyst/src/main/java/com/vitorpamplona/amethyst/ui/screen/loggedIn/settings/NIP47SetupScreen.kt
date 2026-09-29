@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.payment_targets_section_expl
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SettingsCategorySpacingModifier
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsViewMo
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 
 @Composable

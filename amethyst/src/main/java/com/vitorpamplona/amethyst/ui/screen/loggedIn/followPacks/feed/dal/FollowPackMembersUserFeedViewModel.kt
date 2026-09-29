@@ -24,7 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.UserFeedViewModel
 
 class FollowPackMembersUserFeedViewModel(
     val followPackNote: AddressableNote,

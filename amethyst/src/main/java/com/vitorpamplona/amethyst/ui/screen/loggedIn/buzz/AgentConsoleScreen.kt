@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.TokenTotals
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**

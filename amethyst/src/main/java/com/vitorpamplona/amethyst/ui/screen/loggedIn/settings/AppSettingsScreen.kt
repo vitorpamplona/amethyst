@@ -120,6 +120,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SegmentedChoiceTile
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.contentColorOnAccent

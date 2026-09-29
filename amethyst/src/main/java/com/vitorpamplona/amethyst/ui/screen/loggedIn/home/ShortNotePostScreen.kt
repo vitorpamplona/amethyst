@@ -128,6 +128,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraise
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -172,7 +173,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.scheduling.roundUpToNextQuart
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.zappolls.ZapPollField
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

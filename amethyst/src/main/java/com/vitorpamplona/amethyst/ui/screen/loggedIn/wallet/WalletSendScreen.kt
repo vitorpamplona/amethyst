@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_success
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.SendState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 

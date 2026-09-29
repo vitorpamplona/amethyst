@@ -107,6 +107,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuWalletViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletInfo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
@@ -475,10 +477,10 @@ private fun WalletCard(
                 }
             }
 
-            if (walletInfo.error != null) {
+            walletInfo.error?.let { error ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = walletInfo.error,
+                    text = error,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
