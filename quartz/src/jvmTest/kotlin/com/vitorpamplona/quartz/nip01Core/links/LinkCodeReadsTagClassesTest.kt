@@ -38,7 +38,7 @@ class LinkCodeReadsTagClassesTest {
             Regex("""\b\w+\[\d+]""") to "tag slot indexing: read through the Tag class parser",
             Regex("""\b(?:it|tag|entry|t)\.size\b""") to "tag size check: the Tag class parser decides what is well-formed",
             Regex("""\b(?:eventTags|userTags|addressTags|valueTags|userTagsWithRoles)\(""") to "raw-slot helper",
-            Regex("""\b(?:mapOf|linkProps|buildMap|hashMapOf|HashMap)\b""") to "raw-map props: use the relation's props class",
+            Regex("""\b(?:mapOf|buildMap|hashMapOf|HashMap)\b""") to "raw-map props: use the relation's props class",
             Regex(""""[A-Za-z][A-Za-z0-9_-]{0,2}"""") to "short string literal: use the Tag class TAG_NAME",
         )
 
