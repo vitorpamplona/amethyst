@@ -212,7 +212,11 @@ class ChatroomListKnownFeedFilter(
                 when (account.settings.concordViewMode.value) {
                     ConcordViewMode.INLINE ->
                         account.concordSessions.sessions().flatMap { session ->
-                            val state = session.state.value ?: return@flatMap emptyList<Note>()
+                            // Not folded yet (just joined, or its Control Plane never arrived): no
+                            // channels to list, so show the community itself. Skipping it made a
+                            // community whose genesis is missing invisible everywhere, with no way in
+                            // and no way to leave it.
+                            val state = session.state.value ?: return@flatMap listOf<Note>(ConcordServerRoomNote(session.entry.id, null))
                             state.channels.keys.map { channelIdHex ->
                                 val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
                                 channel.newestConcordNote(account) ?: channel.placeholderNote()
@@ -221,10 +225,14 @@ class ChatroomListKnownFeedFilter(
 
                     ConcordViewMode.GROUPED ->
                         // One row per joined community, carrying the newest message across ALL its channels.
-                        account.concordSessions.sessions().mapNotNull { session ->
-                            val state = session.state.value ?: return@mapNotNull null
+                        account.concordSessions.sessions().map { session ->
+                            // An unfolded community still gets its row (see INLINE above).
+                            val state = session.state.value
                             val newest =
-                                state.channels.keys
+                                state
+                                    ?.channels
+                                    ?.keys
+                                    .orEmpty()
                                     .mapNotNull { LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, it)).newestConcordNote(account) }
                                     .maxByOrNull { it.createdAt() ?: 0L }
                             ConcordServerRoomNote(session.entry.id, newest)

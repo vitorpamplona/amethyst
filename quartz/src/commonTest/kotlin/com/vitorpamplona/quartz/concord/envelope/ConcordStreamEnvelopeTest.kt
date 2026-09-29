@@ -28,8 +28,12 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -67,6 +71,21 @@ class ConcordStreamEnvelopeTest {
             assertEquals(rumor.id, opened.rumor.id)
             assertEquals("hello plaintext", opened.rumor.content)
             assertEquals(9, opened.rumor.kind)
+        }
+
+    /**
+     * A rumor is unsigned (NIP-59): its JSON carries no `sig`. applesauce-based clients
+     * (Accordion) treat an object with `"sig": ""` as a signed event whose signature fails,
+     * and silently dropped every Concord message and Guestbook Join we sent.
+     */
+    @Test
+    fun sealedRumorJsonCarriesNoSig() =
+        runTest {
+            val seal = ConcordStreamEnvelope.seal(chatRumor("no sig"), stream, authorSigner, encrypted = false)
+            val rumorJson = Json.parseToJsonElement(seal.content).jsonObject
+
+            assertFalse("sig" in rumorJson, "rumor JSON must not carry a sig: ${seal.content}")
+            assertEquals(chatRumor("no sig").id, rumorJson["id"]?.jsonPrimitive?.content)
         }
 
     @Test

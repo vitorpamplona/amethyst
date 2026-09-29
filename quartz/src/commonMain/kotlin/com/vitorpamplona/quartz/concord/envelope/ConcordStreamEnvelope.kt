@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -78,11 +79,14 @@ object ConcordStreamEnvelope {
         authorSigner: NostrSigner,
         encrypted: Boolean,
     ): Event {
+        // A rumor is unsigned (NIP-59): serialize it without `sig`. applesauce clients read
+        // `"sig": ""` as a signed event with a bad signature and drop it.
+        val rumorJson = Rumor.toJson(Rumor.create(rumor))
         val content =
             if (encrypted) {
-                encryptChecked(rumor.toJson(), stream.conversationKey)
+                encryptChecked(rumorJson, stream.conversationKey)
             } else {
-                rumor.toJson()
+                rumorJson
             }
         val kind = if (encrypted) KIND_SEAL_ENCRYPTED else KIND_SEAL_PLAINTEXT
         return authorSigner.sign(rumor.createdAt, kind, EMPTY_TAGS, content)

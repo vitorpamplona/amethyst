@@ -142,7 +142,22 @@ class ConcordListFragmentSet private constructor(
         val targets = HashMap<Int, MutableSet<String>>()
         for (id in changed) {
             val holders = inRange.filter { id in ConcordListFragments.idsIn(held.getValue(it).fragment.doc) }
-            for (i in holders.ifEmpty { listOf(inRange.first()) }) targets.getOrPut(i) { HashSet() }.add(id)
+            if (holders.isNotEmpty()) {
+                for (i in holders) targets.getOrPut(i) { HashSet() }.add(id)
+                continue
+            }
+            // A new membership may go into any held fragment (CORD-02 §8 scopes the write to the
+            // fragment it touches). Take the lowest one it still fits in: always taking the lowest
+            // refused every join once fragment 0 filled, even with room in another held fragment.
+            // When none fits, the lowest is kept and the size guard below refuses the write, since
+            // opening a new fragment is a repack and needs the complete List.
+            val target =
+                inRange.firstOrNull { i ->
+                    val ids = targets[i].orEmpty() + id
+                    val plaintext = ConcordListFragments.rewriteFragment(held.getValue(i).fragment.doc, newDoc, ids, declared)
+                    ConcordListFragments.projectedEventBytes(plaintext.encodeToByteArray().size) <= ConcordListFragments.EVENT_CEILING_BYTES
+                } ?: inRange.first()
+            targets.getOrPut(target) { HashSet() }.add(id)
         }
         for ((i, ids) in targets.entries.sortedBy { it.key }) {
             val plaintext = ConcordListFragments.rewriteFragment(held.getValue(i).fragment.doc, newDoc, ids, declared)
