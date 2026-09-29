@@ -402,10 +402,24 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
    - **Wave 5 moved:** 11 screens, 23 files: the wallet detail, send, receive and
      transaction screens; on-chain transactions; the Buzz canvas, agent console and DM
      list; badge awarding; old bookmarks; and the settings index.
-   - **Next:** re-measure. Known exits: the upload/gallery stack, the Android-only
-     `AccountViewModel` actions, `CalendarTimeFormat`, the chat views, `NestUiState`,
-     `NappletLauncher`, `UpdateZapAmountDialog` (biometrics), the `java.time` pickers, and
-     the language list in user settings.
+   - **Wave 6 cuts:**
+     - The gallery picker is shared. `SelectedMedia` holds an `expect abstract class
+       MediaUri`, which is `actual typealias MediaUri = android.net.Uri` on Android, so the
+       upload code reading `media.uri` is unchanged. The picker launchers are
+       expect/actual; desktop and iOS report a cancel for now.
+     - Other expect/actuals: `JavaSerializable`, `imageContentReceiver` (image paste) and
+       `SetDialogToEdgeToEdge`.
+     - The editor's URL highlighting uses quartz's `UrlDetector`.
+     - `MediaMimeTypes` moved to commons.
+   - **Wave 6 moved:** the NIP-46 signer screen. The other cuts clear blockers that sit
+     behind the upload stack.
+   - **Next:** the post-composer upload stack is now the main blocker, holding about 30
+     screens. `UploadOrchestrator`/`MultiOrchestrator` thread an Android `Context` through
+     compression, metadata stripping, encryption and the NIP-95/NIP-96/Blossom uploaders,
+     and the composer view models call them directly. The video player stack (media3) is
+     next at about 22. Smaller exits remain: the Android-only `AccountViewModel` actions,
+     `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`, `UpdateZapAmountDialog`
+     (biometrics), the `java.time` pickers and the language list.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
