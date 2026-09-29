@@ -26,10 +26,12 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 
 /**
  * App-wide stores that outlive any one account and that screens read directly: the favorites
- * row, the browser's history and favicons, what connected apps may do, and the Tor settings.
+ * row, the browser's history and favicons, what connected apps may do, the Tor settings and the
+ * Namecoin resolver.
  * Account-scoped services reach screens through the account's ViewModel instead.
  *
  * A front end implements it over its own modules; shared UI reads it through `LocalAppServices`.
@@ -48,4 +50,7 @@ interface AppServices {
     val signerPermissionStore: NostrSignerPermissionStore
 
     val torSettings: TorSettingsFlow
+
+    /** Resolves `.bit` names and `d/`/`id/` identifiers over the configured ElectrumX servers. */
+    val namecoinResolver: NamecoinNameResolver
 }

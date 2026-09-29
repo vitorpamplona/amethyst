@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
+import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
@@ -396,6 +398,16 @@ interface NotePlatform {
         animationModifier: Modifier,
         showCounter: Boolean,
         nav: INav,
+    ) {}
+
+    /** A labelled zap button for [baseNote]'s author, outside a reactions row (DVMs, donations). */
+    @Composable
+    fun ReusableZapButton(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+        config: ZapButtonConfig,
+        callbacks: ZapButtonCallbacks,
     ) {}
 
     /** The editor for a new version of [edit], shown while [versionLookingAt] is on screen. */

@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabResel
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.ArticlesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.BackupConflictReviewScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.award.AwardBadgeScreen
@@ -103,10 +104,13 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.CommunityScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.list.CommunitiesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.contactList.ContactListUsersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drafts.DraftListScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.display.EmojiPackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.list.ListOfEmojiPacksScreen
@@ -114,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.list.met
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membershipManagement.EmojiPackSelectionScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.membershipManagement.MyEmojiListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.hunt.GeocacheHuntScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.hunt.NewGeocacheHuntScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashScreen
@@ -127,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.lists
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlaylistScreen
@@ -141,6 +147,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.polls.results.PollResultsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.publicChats.PublicChatsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.redirect.LoadRedirectScreen
@@ -183,6 +190,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.ReloadMintSc
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TopUpMintScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletReceiveScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
@@ -218,7 +226,6 @@ import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsQrScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display.BookmarkGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadata.BookmarkGroupMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
@@ -259,12 +266,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.CommunitiesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
@@ -272,7 +276,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatch
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.FollowPackFeedScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.FollowPacksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.GeocachesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.create.NewGeocacheScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.detail.GeocacheDetailScreen
@@ -292,7 +295,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.nip75Goals.NewGoalScre
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.FollowPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleListMetadataScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
@@ -308,7 +310,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.EditPodc
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodcastEpisodeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodcastTrailerScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.SendPaymentScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
@@ -337,7 +338,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.UrlScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 
 /**
  * [AppServices] over the main process's app modules. Every member is a getter, so installing
@@ -46,4 +47,6 @@ object AndroidAppServices : AppServices {
     override val signerPermissionStore: NostrSignerPermissionStore get() = Amethyst.instance.signerPermissionStore
 
     override val torSettings: TorSettingsFlow get() = Amethyst.instance.torPrefs.value
+
+    override val namecoinResolver: NamecoinNameResolver get() = Amethyst.instance.namecoinResolver
 }
