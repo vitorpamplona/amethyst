@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
@@ -45,9 +45,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
  * subscription — so `relay.trigger.buzz` undercounts joins, not re-challenges.
  */
 internal fun reconnectPoolAfterJoin(client: INostrClient) {
-    // Guarded like every other ledger write that reaches the application singleton
-    // (MediaPlayTimeTracker, the workers): a diagnostics counter must never break a
-    // user-visible join, and `Amethyst.instance` is lateinit.
-    runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.relayTrigger(UsageKeys.TRIGGER_BUZZ), 1) }
+    LocalCache.appHost.usageCounter.add(UsageKeys.relayTrigger(UsageKeys.TRIGGER_BUZZ), 1)
     client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
 }

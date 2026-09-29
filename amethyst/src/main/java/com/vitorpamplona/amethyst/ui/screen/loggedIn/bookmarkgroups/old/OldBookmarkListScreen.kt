@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +43,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -58,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.old_bookmarks_title
 import com.vitorpamplona.amethyst.commons.resources.private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.public_bookmarks
 import com.vitorpamplona.amethyst.commons.ui.components.DeletedItemsBanner
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
@@ -114,7 +113,7 @@ private fun RenderOldBookmarkScreen(
 ) {
     val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
 
     val cache = accountViewModel.account.cache
     val deletedEventIds = remember(bookmarkState) { mutableSetOf<String>() }
@@ -177,12 +176,7 @@ private fun RenderOldBookmarkScreen(
                         accountViewModel.launchSigner {
                             accountViewModel.account.migrateOldBookmarksToNew()
                             coroutineScope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        loadStringRes(Res.string.migrate_bookmarks_success),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                shortNotice.show(loadStringRes(Res.string.migrate_bookmarks_success))
                             }
                         }
                     },

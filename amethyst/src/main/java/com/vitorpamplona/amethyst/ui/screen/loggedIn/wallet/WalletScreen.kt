@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -67,7 +66,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -103,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_rename_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.resources.wallet_save
 import com.vitorpamplona.amethyst.commons.resources.wallet_set_default
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -110,10 +109,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuWalletV
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletInfo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
 import androidx.compose.material3.Icon as Material3Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -248,7 +247,7 @@ private fun MultiWalletHomeContent(
     cashuMintCount: Int,
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
-    val context = LocalContext.current
+    val longNotice = rememberLongNotice()
     val budgetApprovedMsg = stringRes(Res.string.clink_budget_approved)
     val debitNoResponseMsg = stringRes(Res.string.clink_debit_no_response)
 
@@ -298,7 +297,7 @@ private fun MultiWalletHomeContent(
                                         !error.isNullOrBlank() -> error
                                         else -> debitNoResponseMsg
                                     }
-                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                longNotice.show(msg)
                             }
                         }
                     } else {
@@ -460,8 +459,7 @@ private fun WalletCard(
                     Column(horizontalAlignment = Alignment.End) {
                         val formattedBalance =
                             remember(walletInfo.balanceSats) {
-                                val fmt = NumberFormat.getIntegerInstance()
-                                fmt.format(walletInfo.balanceSats ?: 0L)
+                                formatGrouped(walletInfo.balanceSats ?: 0L)
                             }
                         Text(
                             text = formattedBalance,
@@ -574,7 +572,7 @@ private fun CashuWalletRow(
     onClick: () -> Unit,
 ) {
     val formattedBalance =
-        remember(balanceSats) { NumberFormat.getIntegerInstance().format(balanceSats) }
+        remember(balanceSats) { formatGrouped(balanceSats) }
     Card(
         modifier =
             Modifier

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.FileSystemNip95BlobStore
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCacheHost
 import com.vitorpamplona.amethyst.commons.model.cache.Nip95BlobStore
+import com.vitorpamplona.amethyst.commons.service.UsageCounter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -53,6 +54,8 @@ class AmethystLocalCacheHost(
     override val nip95Blobs: Nip95BlobStore by lazy { FileSystemNip95BlobStore(modules.nip95cache.absolutePath) }
 
     override val relayStats: RelayStats get() = modules.relayStats
+
+    override val usageCounter: UsageCounter = UsageCounter { key, amount -> modules.resourceUsage.add(key, amount) }
 
     override fun relaySelfPubKey(relay: NormalizedRelayUrl): HexKey? = modules.nip11Cache.getFromCache(relay).self
 

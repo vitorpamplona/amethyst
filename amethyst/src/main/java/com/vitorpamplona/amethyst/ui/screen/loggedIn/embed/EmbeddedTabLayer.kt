@@ -29,7 +29,6 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.SystemClock
 import android.view.ViewGroup
-import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.FindInPagePill
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.napplethost.BrowserWebTools
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.buildJsonObject
@@ -306,7 +306,7 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 }
 
             if (pillExpanded) {
-                BackHandler { pillExpanded = false }
+                PlatformBackHandler { pillExpanded = false }
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -361,7 +361,7 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
 
                 // Find in page: opened from the pill's Find tile.
                 if (findShowing && findBridge != null) {
-                    BackHandler { closeFind() }
+                    PlatformBackHandler { closeFind() }
                     val result by findBridge.findResult
                     FindInPagePill(
                         query = findQuery,

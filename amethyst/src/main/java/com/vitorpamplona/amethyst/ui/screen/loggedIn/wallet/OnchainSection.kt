@@ -80,9 +80,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
 
 /**
  * "Bitcoin" card on the wallet screen, shown above the lightning NWC wallet
@@ -277,7 +277,7 @@ private fun BalanceBlock(
             OnchainBalanceStatus.READY -> {
                 val formatted =
                     remember(sats) {
-                        NumberFormat.getIntegerInstance().format(sats ?: 0L)
+                        formatGrouped(sats ?: 0L)
                     }
                 Text(
                     text = formatted,

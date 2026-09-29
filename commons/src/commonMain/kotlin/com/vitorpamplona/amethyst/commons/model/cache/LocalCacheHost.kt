@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11Fetcher
+import com.vitorpamplona.amethyst.commons.service.UsageCounter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -80,6 +81,9 @@ interface LocalCacheHost {
      * relay-signed NIP-29 group metadata. `null` means unknown, which accepts the event.
      */
     fun relaySelfPubKey(relay: NormalizedRelayUrl): HexKey? = null
+
+    /** The resource-usage ledger's counters; counts nothing by default. */
+    val usageCounter: UsageCounter get() = UsageCounter.None
 
     /**
      * The relay's NIP-11 document as far as the shell has it in memory. Never fetches: `null`

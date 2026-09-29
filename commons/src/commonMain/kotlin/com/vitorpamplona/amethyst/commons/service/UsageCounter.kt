@@ -18,22 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.components
+package com.vitorpamplona.amethyst.commons.service
 
-import androidx.compose.runtime.Composable
+/** Adds to a diagnostics counter in the app's resource-usage ledger. Never throws. */
+fun interface UsageCounter {
+    fun add(
+        key: String,
+        amount: Long,
+    )
 
-/** A brief, non-blocking confirmation ("Copied to clipboard"). */
-fun interface ShortNotice {
-    fun show(message: String)
+    companion object {
+        /** Counts nothing: hosts without a ledger. */
+        val None = UsageCounter { _, _ -> }
+    }
 }
-
-/**
- * The platform's brief confirmation: an Android toast. Desktop and iOS have no system toast
- * wired yet and only log the message.
- */
-@Composable
-expect fun rememberShortNotice(): ShortNotice
-
-/** Like [rememberShortNotice], shown longer: for errors the reader needs time to take in. */
-@Composable
-expect fun rememberLongNotice(): ShortNotice

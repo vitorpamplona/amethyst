@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +45,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -98,7 +98,8 @@ fun AllSettingsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
     val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
@@ -186,13 +187,13 @@ fun AllSettingsScreen(
                     try {
                         accountViewModel.resetMarmotState()
                         launch(Dispatchers.Main) {
-                            Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                            shortNotice.show(successMessage)
                         }
                     } catch (e: Exception) {
                         val failureMessage =
                             loadStringRes(Res.string.reset_marmot_failure, e.message ?: "")
                         launch(Dispatchers.Main) {
-                            Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
+                            longNotice.show(failureMessage)
                         }
                     } finally {
                         isResettingMarmot = false

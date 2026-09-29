@@ -21,19 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.backhandler.BackHandler
 
-/** A brief, non-blocking confirmation ("Copied to clipboard"). */
-fun interface ShortNotice {
-    fun show(message: String)
-}
-
-/**
- * The platform's brief confirmation: an Android toast. Desktop and iOS have no system toast
- * wired yet and only log the message.
- */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-expect fun rememberShortNotice(): ShortNotice
-
-/** Like [rememberShortNotice], shown longer: for errors the reader needs time to take in. */
-@Composable
-expect fun rememberLongNotice(): ShortNotice
+actual fun PlatformBackHandler(
+    enabled: Boolean,
+    onBack: () -> Unit,
+) = BackHandler(enabled, onBack)

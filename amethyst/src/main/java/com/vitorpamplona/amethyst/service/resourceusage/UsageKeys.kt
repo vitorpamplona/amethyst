@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadabl
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.RESTRICTED
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.UNSUPPORTED
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
 /**
  * Counter-key grammar for the resource-usage ledger. Keys are flat strings so
@@ -489,8 +489,8 @@ object UsageKeys {
     private const val UP = "up"
     private const val DOWN = "down"
 
-    private val VERB_UP_KEYS = ConcurrentHashMap<String, Array<String>>()
-    private val VERB_DOWN_KEYS = ConcurrentHashMap<String, Array<String>>()
+    private val VERB_UP_KEYS = ConcurrentMap<String, Array<String>>()
+    private val VERB_DOWN_KEYS = ConcurrentMap<String, Array<String>>()
 
     /**
      * `relay.purpose.home_feed.sent` / `.bytes` — REQ frames and REQ bytes by the
@@ -562,7 +562,7 @@ object UsageKeys {
 
     private val PURPOSE_SUFFIXES = arrayOf("sent", "bytes", "down", "downn", "dupbytes")
 
-    private val PURPOSE_KEYS = ConcurrentHashMap<String, Array<String>>()
+    private val PURPOSE_KEYS = ConcurrentMap<String, Array<String>>()
 
     /** The five `relay.purpose.<purpose>.*` keys, indexed by the `P_` constants above. */
     private fun purposeKeys(purpose: String): Array<String> = PURPOSE_KEYS.getOrPut(purpose) { Array(PURPOSE_SUFFIXES.size) { "relay.purpose.$purpose.${PURPOSE_SUFFIXES[it]}" } }

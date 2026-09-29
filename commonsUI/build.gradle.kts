@@ -212,6 +212,8 @@ kotlin {
                 implementation(libs.androidx.ui.tooling.preview)
                 // WindowInsetsControllerCompat, for DisappearingScaffold's immersive status bar.
                 implementation(libs.androidx.core.ktx)
+                // BackHandler, behind the shared PlatformBackHandler. Apache-2.0, already in the app.
+                implementation(libs.androidx.activity.compose)
             }
         }
 
@@ -229,6 +231,11 @@ kotlin {
         val skikoMain =
             create("skikoMain") {
                 dependsOn(commonMain.get())
+                dependencies {
+                    // BackHandler for desktop (Esc) and iOS (swipe), behind PlatformBackHandler.
+                    // JetBrains Compose, Apache-2.0; Android uses AndroidX's instead.
+                    implementation(libs.jetbrains.compose.ui.backhandler)
+                }
             }
         getByName("jvmMain").dependsOn(skikoMain)
         iosMain.dependsOn(skikoMain)

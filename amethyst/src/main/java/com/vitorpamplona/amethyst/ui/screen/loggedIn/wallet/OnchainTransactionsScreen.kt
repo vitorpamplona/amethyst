@@ -51,7 +51,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontFamily
@@ -81,13 +80,14 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.formatMonthDayTime
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.formatMonthDayTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssemblerSubscription
-import java.text.NumberFormat
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -309,15 +309,14 @@ private fun OnchainTransactionItem(
     val amountSats = view.tx.netValueSats.absoluteValue
     val formattedAmount =
         remember(view.tx.netValueSats) {
-            val fmt = NumberFormat.getIntegerInstance()
-            (if (isIncoming) "+" else "-") + fmt.format(amountSats)
+            (if (isIncoming) "+" else "-") + formatGrouped(amountSats)
         }
 
-    val context = LocalContext.current
+    val timeOfDay = rememberTimeOfDayFormatter()
     val dateText =
-        remember(view.tx.blockTime, view.tx.confirmations, context) {
+        remember(view.tx.blockTime, view.tx.confirmations, timeOfDay) {
             val ts = view.tx.blockTime
-            if (ts != null) formatMonthDayTime(ts, context) else ""
+            if (ts != null) formatMonthDayTime(ts, timeOfDay) else ""
         }
 
     val counterpartyPubkeyHex = view.counterpartyPubkeyHex()

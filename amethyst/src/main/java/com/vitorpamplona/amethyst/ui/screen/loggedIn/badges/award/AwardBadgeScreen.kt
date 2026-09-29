@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.resources.award_badge_remove_recipient
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_label
 import com.vitorpamplona.amethyst.commons.resources.award_badge_search_placeholder
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
@@ -93,7 +93,7 @@ fun AwardBadgeScreen(
         onDispose { userSuggestions.reset() }
     }
 
-    BackHandler {
+    PlatformBackHandler {
         nav.popBack()
     }
 

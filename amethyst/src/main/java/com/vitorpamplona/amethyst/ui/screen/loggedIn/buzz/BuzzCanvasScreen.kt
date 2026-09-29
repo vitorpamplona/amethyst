@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_empty
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_save
 import com.vitorpamplona.amethyst.commons.resources.buzz_canvas_title
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -222,7 +222,7 @@ private fun CanvasEditor(
     val scope = rememberCoroutineScope()
 
     // Back cancels the edit and returns to the rendered canvas rather than leaving the screen.
-    BackHandler(enabled = !saving, onBack = onClose)
+    PlatformBackHandler(enabled = !saving, onBack = onClose)
 
     Scaffold(
         topBar = {

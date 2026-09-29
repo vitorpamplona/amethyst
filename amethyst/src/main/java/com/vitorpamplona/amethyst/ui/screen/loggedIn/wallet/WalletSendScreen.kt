@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -47,10 +45,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,11 +62,13 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_pay
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_success
 import com.vitorpamplona.amethyst.commons.resources.wallet_send
+import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.SendState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +90,8 @@ fun WalletSendScreen(
 
     val sendState by walletViewModel.sendState.collectAsState()
     var invoiceText by remember { mutableStateOf("") }
-    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -128,11 +130,7 @@ fun WalletSendScreen(
                         maxLines = 5,
                         trailingIcon = {
                             IconButton(onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = clipboard.primaryClip
-                                if (clip != null && clip.itemCount > 0) {
-                                    invoiceText = clip.getItemAt(0).text?.toString() ?: ""
-                                }
+                                clipboardScope.launch { invoiceText = clipboard.getText() ?: "" }
                             }) {
                                 Icon(
                                     symbol = MaterialSymbols.ContentPaste,

@@ -51,7 +51,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,14 +77,15 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.formatMonthDayTime
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.formatMonthDayTime
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
-import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -278,14 +278,13 @@ private fun TransactionItem(
     val amountSats = (tx.amount ?: 0L) / 1000L
     val formattedAmount =
         remember(amountSats) {
-            val fmt = NumberFormat.getIntegerInstance()
-            (if (isIncoming) "+" else "-") + fmt.format(amountSats)
+            (if (isIncoming) "+" else "-") + formatGrouped(amountSats)
         }
 
-    val context = LocalContext.current
+    val timeOfDay = rememberTimeOfDayFormatter()
     val dateText =
-        remember(tx.created_at, context) {
-            tx.created_at?.let { formatMonthDayTime(it, context) } ?: ""
+        remember(tx.created_at, timeOfDay) {
+            tx.created_at?.let { formatMonthDayTime(it, timeOfDay) } ?: ""
         }
 
     val directionLabel =

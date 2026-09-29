@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,10 +49,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -73,13 +71,15 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_creating_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.ReceiveState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import java.text.NumberFormat
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +102,8 @@ fun WalletReceiveScreen(
     val receiveState by walletViewModel.receiveState.collectAsState()
     var amountText by remember { mutableStateOf("") }
     var descriptionText by remember { mutableStateOf("") }
-    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -194,8 +195,7 @@ fun WalletReceiveScreen(
 
                     val formattedAmount =
                         remember(state.amount) {
-                            val fmt = NumberFormat.getIntegerInstance()
-                            fmt.format(state.amount)
+                            formatGrouped(state.amount)
                         }
 
                     Text(
@@ -233,8 +233,7 @@ fun WalletReceiveScreen(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("invoice", state.invoice))
+                                clipboardScope.launch { clipboard.setText(state.invoice) }
                             },
                             modifier =
                                 Modifier

@@ -65,8 +65,8 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_transactions
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,8 +122,7 @@ fun WalletDetailScreen(
             } else {
                 val formattedBalance =
                     remember(balance) {
-                        val fmt = NumberFormat.getIntegerInstance()
-                        fmt.format(balance ?: 0L)
+                        formatGrouped(balance ?: 0L)
                     }
                 Text(
                     text = formattedBalance,

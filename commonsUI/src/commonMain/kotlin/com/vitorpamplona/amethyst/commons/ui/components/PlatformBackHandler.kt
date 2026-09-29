@@ -22,18 +22,12 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
 
-/** A brief, non-blocking confirmation ("Copied to clipboard"). */
-fun interface ShortNotice {
-    fun show(message: String)
-}
-
 /**
- * The platform's brief confirmation: an Android toast. Desktop and iOS have no system toast
- * wired yet and only log the message.
+ * Intercepts the system back gesture/button while [enabled]: AndroidX's `BackHandler` on
+ * Android, Compose Multiplatform's on desktop (Esc) and iOS (swipe back).
  */
 @Composable
-expect fun rememberShortNotice(): ShortNotice
-
-/** Like [rememberShortNotice], shown longer: for errors the reader needs time to take in. */
-@Composable
-expect fun rememberLongNotice(): ShortNotice
+expect fun PlatformBackHandler(
+    enabled: Boolean = true,
+    onBack: () -> Unit,
+)

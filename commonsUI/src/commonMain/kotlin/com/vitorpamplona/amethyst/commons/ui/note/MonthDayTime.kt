@@ -18,22 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.components
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import androidx.compose.runtime.Composable
-
-/** A brief, non-blocking confirmation ("Copied to clipboard"). */
-fun interface ShortNotice {
-    fun show(message: String)
-}
+private val monthDay = DateSkeletonFormatter("MMMd")
 
 /**
- * The platform's brief confirmation: an Android toast. Desktop and iOS have no system toast
- * wired yet and only log the message.
+ * Locale-ordered month and day followed by [timeOfDay] ("May 28 14:32" / "28 May 2:32 PM"). Pass
+ * [rememberTimeOfDayFormatter] so the clock follows the system 12/24-hour setting.
  */
-@Composable
-expect fun rememberShortNotice(): ShortNotice
-
-/** Like [rememberShortNotice], shown longer: for errors the reader needs time to take in. */
-@Composable
-expect fun rememberLongNotice(): ShortNotice
+fun formatMonthDayTime(
+    epochSeconds: Long,
+    timeOfDay: (epochMillis: Long) -> String,
+): String {
+    val millis = epochSeconds * 1000L
+    return "${monthDay.format(millis)} ${timeOfDay(millis)}"
+}
