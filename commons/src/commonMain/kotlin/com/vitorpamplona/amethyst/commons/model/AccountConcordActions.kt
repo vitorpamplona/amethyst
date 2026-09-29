@@ -1126,6 +1126,13 @@ class AccountConcordActions(
                 roleId.toHexKey()
             }
 
+        // An Admin role published before Amethyst wrote `role_id` into Role content is invisible
+        // to Armada, which then drops this Grant too. Re-issue it at the same id to heal it.
+        if (existing != null && existing.value.roleId.isNullOrEmpty()) {
+            val healWrap = ConcordModeration.defineRole(account.signer, cp, communityId.hexToByteArray(), roleIdHex.hexToByteArray(), existing.value, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+            publishConcordWrap(session.entry, healWrap)
+        }
+
         // Admin carries every management bit, so this Grant makes its member staff: it must
         // deliver the control_root alongside the rank (CORD-04 §3), or the new admin holds
         // authority it cannot publish under.
