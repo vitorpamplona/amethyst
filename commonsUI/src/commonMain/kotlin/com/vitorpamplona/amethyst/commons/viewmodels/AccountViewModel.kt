@@ -75,8 +75,13 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_kick_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_generic
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_message
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
@@ -285,6 +290,18 @@ class AccountViewModel(
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed_retry, kindLabel)
                 } else {
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                }
+            }
+        }
+
+        // An honored Kick made us leave a Concord community (CORD-04 §6); the removal is otherwise silent.
+        viewModelScope.launch {
+            account.concord.concordKicks.collect { notice ->
+                val name = notice.communityName?.takeIf { it.isNotBlank() }
+                if (name != null) {
+                    toastManager.toast(Res.string.concord_kicked_title, Res.string.concord_kicked_message, name)
+                } else {
+                    toastManager.toast(Res.string.concord_kicked_title, Res.string.concord_kicked_message_unnamed)
                 }
             }
         }
@@ -666,6 +683,16 @@ class AccountViewModel(
         ban: Boolean,
     ) = launchSigner {
         if (ban) account.concord.banConcordMember(communityId, member) else account.concord.unbanConcordMember(communityId, member)
+    }
+
+    /** Kick [member] from [communityId] (CORD-04 §6: strip their roles, then the Guestbook directive). */
+    fun kickConcordMember(
+        communityId: String,
+        member: HexKey,
+    ) = launchSigner {
+        if (!account.concord.kickConcordMember(communityId, member)) {
+            toastManager.toast(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
+        }
     }
 
     /**

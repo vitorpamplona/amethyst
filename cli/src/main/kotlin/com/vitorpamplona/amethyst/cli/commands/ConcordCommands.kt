@@ -123,6 +123,8 @@ object ConcordCommands {
         |                                               opens are vended by Direct Invite, the ones it
         |                                               closes are rotated (CORD-03/06)
         |  concord ban COMMUNITY USER                  ban a member
+        |  concord kick COMMUNITY USER                 cooperative kick (CORD-04 §6): strip the member's
+        |                                               roles, then the Guestbook KICK; re-joinable
         |  concord pins COMMUNITY CHANNEL              the channel's verified Pin List (CORD-04 §7)
         |  concord pin COMMUNITY CHANNEL RUMOR_ID      pin a message (PIN_MESSAGES); proves it with
         |                                               its original seal, capped at 25 / 32 KiB
@@ -148,7 +150,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|unban|pins|pin|unpin|refound|dissolve|timer>",
+            "concord <create|list|import|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
@@ -171,6 +173,7 @@ object ConcordCommands {
                     "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
                     "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
                     "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
+                    "kick" to { rest -> ConcordModCommands.kick(dataDir, rest) },
                     "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
                     "pins" to { rest -> ConcordPinCommands.pins(dataDir, rest) },
                     "pin" to { rest -> ConcordPinCommands.pin(dataDir, rest) },

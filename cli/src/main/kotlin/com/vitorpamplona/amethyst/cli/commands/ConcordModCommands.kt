@@ -326,6 +326,61 @@ object ConcordModCommands {
         }
     }
 
+    /**
+     * Kicks a member: `kick <community> <user>` (CORD-04 §6, the Cooperative Kick). Role Removal
+     * first — an empty Grant when the target holds roles and we may strip them (MANAGE_ROLES +
+     * outrank, and the control_root to publish it; best-effort) — then the Guestbook directive
+     * (kind 3309) citing our Grant. Needs KICK and a strict outrank of the target.
+     */
+    suspend fun kick(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        val userRef = args.positional(1, "user")
+        args.rejectUnknown()
+        val store = ConcordStore(dataDir.concordFile)
+        val sc = store.find(handle) ?: return ConcordCommands.notFound(handle)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val member = ctx.requireUserHex(userRef)
+            val loaded = load(ctx, sc, dataDir)
+            val (cp, editions) = loaded
+            val cid = sc.communityId.hexToByteArray()
+            val me = ctx.signer.pubKey
+            val authority = AuthorityResolver.resolve(editions, cid, sc.owner)
+            if (!authority.canActOn(me, member, ConcordPermissions.KICK)) {
+                return Output.error("forbidden", "kicking $member takes KICK and a strict outrank in '$handle' (CORD-04 §6)")
+            }
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+
+            // Strip first, so the target's rank is gone before the departure lands.
+            var chain = editions
+            var access: Map<String, Any?> = emptyMap()
+            val strip = authority.rolesOf(member).isNotEmpty() && cp.canWrite && authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES)
+            if (strip) {
+                val stripWrap = ConcordModeration.grant(ctx.signer, cp, cid, member, emptyList(), editions, TimeUtils.now(), owner = sc.owner)
+                if (ctx.publish(stripWrap, relays).values.any { it.accepted }) {
+                    chain = editions + ConcordActions.controlEditions(listOf(stripWrap), cp)
+                    access = ConcordPrivateChannelCommands.reconcileAccess(ctx, store, loaded.community, authority, chain)
+                } else {
+                    System.err.println("[concord] the role strip for $member was not accepted by any relay; kicking anyway")
+                }
+            }
+
+            val gb = ConcordActions.guestbookPlane(sc.root.hexToByteArray(), cid, sc.rootEpoch)
+            ctx.registerConcordStreamKeys(relays, listOf(gb.secretKey))
+            val citation = AuthorityResolver.resolve(chain, cid, sc.owner).citationFor(me)
+            val wrap = ConcordActions.buildGuestbookKick(ctx.signer, gb, member, citation, TimeUtils.now())
+            val ack = ctx.publish(wrap, relays)
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            Output.emit(mapOf("member" to member, "kicked" to true, "roles_stripped" to (chain !== editions)) + access + RawEventSupport.ackFields(ack))
+            return 0
+        }
+    }
+
     /** Unbans a member: `unban <community> <user>`. */
     suspend fun unban(
         dataDir: DataDir,

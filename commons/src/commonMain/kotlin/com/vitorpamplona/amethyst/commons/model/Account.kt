@@ -4190,6 +4190,8 @@ class Account(
                 runCatching { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
                 // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
                 runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                // An honored Kick naming us (CORD-04 §6): leave the community locally and say so.
+                runCatching { concord.drainConcordKicks() }.onFailure { Log.w("Concord", "kick drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
                 runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }

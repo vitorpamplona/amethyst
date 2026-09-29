@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
+import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
@@ -321,8 +323,21 @@ class ConcordCommunitySession(
 
     private val _members = MutableStateFlow<Set<HexKey>>(emptySet())
 
-    /** The live Guestbook membership set (self-signed joins minus later leaves). */
+    /** The live Guestbook membership set (self-signed joins minus later leaves and honored Kicks). */
     val members: StateFlow<Set<HexKey>> = _members
+
+    private val _guestbook = MutableStateFlow<Map<HexKey, GuestbookEntry>>(emptyMap())
+
+    /**
+     * The coalesced Guestbook (CORD-02 §5): each npub's latest Join, Leave or honored Kick, by
+     * lowercase pubkey. Kicks are judged against the current roster, so this re-derives on every
+     * control fold as well as on every Guestbook arrival.
+     */
+    val guestbook: StateFlow<Map<HexKey, GuestbookEntry>> = _guestbook
+
+    // Author (lowercase) -> the newest CORD-02 §4 ms of a message of theirs we decrypted: observation
+    // only counts *forward* of their latest Leave or Kick (CORD-02 §5).
+    private val observedAtMs = HashMap<HexKey, Long>()
 
     private val _observedAuthors = MutableStateFlow<Set<HexKey>>(emptySet())
 
@@ -371,7 +386,37 @@ class ConcordCommunitySession(
         val s = _state.value
         val roster = if (s != null) s.authority.roleHolders() + s.ownerPubKey.lowercase() else emptySet()
         val banned = s?.authority?.bannedMembers().orEmpty()
-        return (_members.value + _observedAuthors.value + roster) - banned
+        return (_members.value + _observedAuthors.value + roster) - banned - departedMembers().keys
+    }
+
+    /**
+     * Members the Guestbook shows as departed (lowercase hex -> their winning Leave or Kick): their
+     * latest motion is a Leave or an honored Kick and we have seen nothing of theirs since
+     * (CORD-02 §5: observation only counts forward). The owner never departs by a Kick.
+     */
+    fun departedMembers(): Map<HexKey, GuestbookEntry> {
+        val coalesced = _guestbook.value
+        if (coalesced.isEmpty()) return emptyMap()
+        val owner = entry.owner.lowercase()
+        return lock.withLock {
+            coalesced.filter { (pubkey, motion) ->
+                motion.action != GuestbookAction.JOIN &&
+                    pubkey != owner &&
+                    (observedAtMs[pubkey] ?: Long.MIN_VALUE) <= motion.ms
+            }
+        }
+    }
+
+    /**
+     * The honored Kick naming this account that postdates this membership (CORD-04 §6), or null.
+     * A Kick older than the entry's `added_at` judged an earlier membership — a re-join (a later
+     * Join, or a re-invite that re-added the entry) leaves it behind. Never for the owner.
+     */
+    fun kickedMe(): GuestbookEntry? {
+        val me = myPubKey.lowercase()
+        if (me == entry.owner.lowercase()) return null
+        val mine = _guestbook.value[me] ?: return null
+        return mine.takeIf { it.action == GuestbookAction.KICK && it.ms > entry.addedAt }
     }
 
     /** The size of [allMembers] — the community's true (best-effort) member count. */
@@ -750,6 +795,9 @@ class ConcordCommunitySession(
                 next.filterKeys { it !in prevAddresses }.values.map { it.channelIdHex }
             }
 
+        // Kicks are judged against the roster, so a fold can honor (or drop) a held Kick.
+        refoldGuestbook()
+
         // Project only channels whose current plane is new (a first fold, or a plane that moved when a
         // Private Channel's key arrived). Existing planes' wraps were already emitted incrementally as
         // they arrived — re-projecting all channels on every control edition would be
@@ -810,7 +858,9 @@ class ConcordCommunitySession(
                         ConcordActions.guestbookEntry(wrap, guestbookKey).also { guestbookEntryByWrapId[wrap.id] = it }
                     }
                 }
-            _members.value = ConcordActions.projectGuestbook(entries)
+            val coalesced = Guestbook.coalesce(entries, TimeUtils.nowMillis(), _state.value?.authority)
+            _guestbook.value = coalesced
+            _members.value = ConcordActions.joinedMembers(coalesced)
         }
     }
 
@@ -849,7 +899,10 @@ class ConcordCommunitySession(
                 trackExpiring(wrap.id, channelIdHex, rumor.id, expiresAt)
                 if (expiresAt <= now) continue
             }
-            authors.add(rumor.pubKey.lowercase())
+            val author = rumor.pubKey.lowercase()
+            authors.add(author)
+            val atMs = ChannelChat.orderingMs(rumor) ?: (rumor.createdAt * 1000)
+            lock.withLock { if (atMs > (observedAtMs[author] ?: Long.MIN_VALUE)) observedAtMs[author] = atMs }
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the

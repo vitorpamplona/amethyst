@@ -894,11 +894,31 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, guestbook, memberSigner, encrypted = true, createdAt = createdAt)
     }
 
-    /** Opens the guestbook [wraps] into their live membership set (joins minus later leaves). */
+    /**
+     * Builds an authorized Guestbook KICK (kind 3309) wrap naming [target], citing [citation] — the
+     * actor's own Grant head (`vac`, CORD-04 §5), null only for the owner. A Kick is the *second*
+     * layer of a removal: the caller strips the target's roles first (CORD-04 §6).
+     */
+    suspend fun buildGuestbookKick(
+        actorSigner: NostrSigner,
+        guestbook: GroupKey,
+        target: HexKey,
+        citation: AuthorityCitation?,
+        createdAt: Long,
+    ): Event {
+        val rumor = Guestbook.kick(actorSigner.pubKey, target.lowercase(), createdAt, citation = citation)
+        return ConcordStreamEnvelope.wrap(rumor, guestbook, actorSigner, encrypted = true, createdAt = createdAt)
+    }
+
+    /**
+     * Opens the guestbook [wraps] into their live membership set: joins minus later leaves and later
+     * Kicks honored against [authority] (none is honored without it).
+     */
     fun guestbookMembers(
         wraps: List<Event>,
         guestbook: GroupKey,
-    ): Set<HexKey> = projectGuestbook(wraps.mapNotNull { guestbookEntry(it, guestbook) })
+        authority: AuthorityResolver? = null,
+    ): Set<HexKey> = projectGuestbook(wraps.mapNotNull { guestbookEntry(it, guestbook) }, authority)
 
     /**
      * Opens a single guestbook [wrap] into its entry, or null when it doesn't belong to
@@ -913,17 +933,26 @@ object ConcordActions {
     fun guestbookEntry(
         wrap: Event,
         guestbook: GroupKey,
-    ): GuestbookEntry? = ConcordStreamEnvelope.openOrNull(wrap, guestbook)?.rumor?.let { Guestbook.parse(it) }
+    ): GuestbookEntry? =
+        ConcordStreamEnvelope
+            .openOrNull(wrap, guestbook)
+            // The Guestbook's seals MUST be encrypted (CORD-02 §5); a plaintext one is Control-only.
+            ?.takeIf { it.sealKind == ConcordStreamEnvelope.KIND_SEAL_ENCRYPTED }
+            ?.rumor
+            ?.let { Guestbook.parse(it) }
 
-    /** Last-writer-wins projection of already-opened [entries] down to the JOINed member set. */
-    fun projectGuestbook(entries: Collection<GuestbookEntry>): Set<HexKey> {
-        val latest = HashMap<HexKey, GuestbookEntry>()
-        for (entry in entries) {
-            val prev = latest[entry.member.lowercase()]
-            if (prev == null || entry.createdAt > prev.createdAt) latest[entry.member.lowercase()] = entry
-        }
-        return latest.values.filter { it.action == GuestbookAction.JOIN }.mapTo(HashSet()) { it.member.lowercase() }
-    }
+    /**
+     * The CORD-02 §5 coalesce of already-opened [entries] (latest motion per npub, Kicks honored
+     * against [authority]) down to the JOINed member set.
+     */
+    fun projectGuestbook(
+        entries: Collection<GuestbookEntry>,
+        authority: AuthorityResolver? = null,
+        nowMs: Long = TimeUtils.nowMillis(),
+    ): Set<HexKey> = joinedMembers(Guestbook.coalesce(entries, nowMs, authority))
+
+    /** The npubs whose coalesced Guestbook state ([Guestbook.coalesce]) is a Join. */
+    fun joinedMembers(coalesced: Map<HexKey, GuestbookEntry>): Set<HexKey> = coalesced.filterValues { it.action == GuestbookAction.JOIN }.keys
 
     // ---- refounding / rekey (CORD-06) ----------------------------------------
 

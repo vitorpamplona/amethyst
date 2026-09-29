@@ -645,6 +645,15 @@
     <string name="concord_role_owner">Owner</string>
     <string name="concord_role_admin">Admin</string>
     <string name="concord_role_banned">Banned</string>
+    <string name="concord_role_kicked">Kicked</string>
+    <string name="concord_role_left">Left</string>
+    <string name="concord_members_kick">Kick</string>
+    <string name="concord_members_kick_title">Kick this member?</string>
+    <string name="concord_members_kick_message">Their roles are removed and their app is asked to leave the community. A kick is cooperative: it does not change any keys, and they can rejoin with an invite. To cut off their access, ban or remove them instead.</string>
+    <string name="concord_members_kick_failed">Could not kick this member.</string>
+    <string name="concord_kicked_title">Removed from community</string>
+    <string name="concord_kicked_message">A moderator removed you from %1$s. You can rejoin with a new invite.</string>
+    <string name="concord_kicked_message_unnamed">A moderator removed you from a community. You can rejoin with a new invite.</string>
     <string name="concord_invite_card_join">Join community</string>
     <string name="concord_invite_card_subtitle">Concord community invite</string>
     <string name="concord_invite_naddr_label">Concord invite (open the full invite link to join)</string>

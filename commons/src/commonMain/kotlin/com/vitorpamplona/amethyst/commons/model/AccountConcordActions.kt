@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteInbox
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
@@ -58,6 +59,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.concordEpoch
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitations
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
@@ -108,9 +110,12 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -1582,6 +1587,80 @@ class AccountConcordActions(
         val wrap = ConcordModeration.unban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    /**
+     * Kick [member] (CORD-04 §6, the Cooperative Kick): Role Removal first — an empty Grant when they
+     * hold roles and this account may strip them (MANAGE_ROLES + outrank; best-effort, as the
+     * reference client) — so their rank is gone before the departure lands, *then* the Guestbook
+     * directive (kind 3309) citing our Grant (`vac`). Needs KICK and a strict outrank of the target;
+     * the directive rides the Guestbook, so no Control write key is needed for it. A kicked member
+     * may re-join or be re-invited. Refused on a dissolved community (CORD-02 §9).
+     */
+    suspend fun kickConcordMember(
+        communityId: String,
+        member: HexKey,
+    ): Boolean {
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        if (!account.isWriteable()) return false
+        if (!isAuthorizedFor(session, ConcordPermissions.KICK, member)) return false
+        if (session.state.value?.dissolved == true) return false
+        val me = account.signer.pubKey
+        val authority = session.state.value?.authority
+        if (authority != null && authority.rolesOf(member).isNotEmpty() &&
+            (authority.isOwner(me) || authority.canActOn(me, member, ConcordPermissions.MANAGE_ROLES))
+        ) {
+            if (!grantConcordRole(communityId, member, emptyList())) {
+                Log.w("Concord") { "Kick of $member in $communityId: could not strip their roles first; kicking anyway" }
+            }
+        }
+        val entry = session.entry
+        val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
+        val citation =
+            session.state.value
+                ?.authority
+                ?.let { AuthorityCitations.forActor(it, me) }
+        val wrap = ConcordActions.buildGuestbookKick(account.signer, guestbook, member, citation, TimeUtils.now())
+        publishConcordWrap(entry, wrap)
+        return true
+    }
+
+    private val _concordKicks = MutableSharedFlow<ConcordKickNotice>(extraBufferCapacity = 16)
+
+    /** One notice per community this account left because an honored Kick named it ([drainConcordKicks]). */
+    val concordKicks: SharedFlow<ConcordKickNotice> = _concordKicks.asSharedFlow()
+
+    // Rumor ids of the Kicks already complied with, so a revision tick racing the List write acts once.
+    private val handledConcordKicks = ConcurrentSet<HexKey>()
+
+    /**
+     * Compliance with a Kick against this account (CORD-04 §6): a compliant client tears the
+     * Community down locally. For each joined community whose coalesced Guestbook carries an honored
+     * Kick naming us that postdates this membership ([ConcordCommunitySession.kickedMe]), drop the
+     * List entry and tombstone it, exactly as a Leave does, and tell the user
+     * ([concordKicks]). Network-silent beyond the List write (no Guestbook Leave): the Kick already
+     * says we departed. The tombstone never blocks a later re-join — re-adding an entry bumps its
+     * `added_at` past the tombstone, and that newer `added_at` puts this Kick behind the new
+     * membership. Runs on the Concord revision tick; a Guestbook arrival and a control fold (which can
+     * newly honor a parked Kick) both bump it.
+     */
+    internal suspend fun drainConcordKicks() {
+        if (!account.isWriteable()) return
+        for (session in account.concordSessions.sessions()) {
+            val kick = session.kickedMe() ?: continue
+            if (!handledConcordKicks.add(kick.rumorId)) continue
+            val communityId = session.entry.id
+            val name =
+                session.state.value
+                    ?.metadata
+                    ?.name
+            if (leaveConcordCommunity(communityId)) {
+                Log.i("Concord") { "Kicked from $communityId by ${kick.author}: left the community locally (CORD-04 §6)" }
+                _concordKicks.tryEmit(ConcordKickNotice(communityId, name, kick.author))
+            } else {
+                handledConcordKicks.remove(kick.rumorId)
+            }
+        }
     }
 
     // ── Concord pins (CORD-04 §7) ─────────────────────────────────────────────
