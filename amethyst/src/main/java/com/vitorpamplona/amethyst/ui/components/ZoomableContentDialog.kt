@@ -53,8 +53,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
@@ -267,39 +269,54 @@ private fun DialogContent(
                     .graphicsLayer {
                         val src = sourceBounds
                         val img = imageBounds
-                        if (src != null && img != null &&
-                            src.width > 0f && src.height > 0f &&
-                            img.width > 0f && img.height > 0f
-                        ) {
-                            // Account for user-applied zoom: the image is rendered at
-                            // imageBounds transformed by the inner zoomable (uniform scale
-                            // around the layout center, then offset). The exit animation
-                            // must start from those visible bounds, not the unzoomed layout
-                            // bounds — otherwise dismissing a zoomed-in image jumps.
-                            val zoom = currentZoomState
-                            val zScale = zoom?.scale ?: 1f
-                            val zOffX = zoom?.offsetX ?: 0f
-                            val zOffY = zoom?.offsetY ?: 0f
-                            val imgCenter = img.center
-                            val zoomedWidth = img.width * zScale
-                            val zoomedHeight = img.height * zScale
-                            val zoomedCenterX = imgCenter.x + zOffX
-                            val zoomedCenterY = imgCenter.y + zOffY
+                        if (src != null && img != null && src.hasArea() && img.hasArea()) {
+                            // Account for user-applied zoom: the exit animation must start from
+                            // the visible bounds, not the unzoomed layout bounds — otherwise
+                            // dismissing a zoomed-in image jumps.
+                            val zoomed = img.zoomedBy(currentZoomState)
+                            // Uniform scale so non-square images keep their aspect ratio during
+                            // the grow animation. The image covers the source rect; the overflow
+                            // is clipped below.
+                            val startScale = coverScale(src, zoomed)
+                            val p = progress()
 
                             transformOrigin = TransformOrigin(0f, 0f)
-                            // Uniform scale so non-square images keep their aspect ratio during
-                            // the grow animation. max() so the image covers the source rect in
-                            // at least one dimension; the other overflows centered on the tap.
-                            val startScale = maxOf(src.width / zoomedWidth, src.height / zoomedHeight)
-                            val srcCenter = src.center
-                            val p = progress()
                             scaleX = lerp(startScale, 1f, p)
                             scaleY = lerp(startScale, 1f, p)
-                            translationX = lerp(srcCenter.x - startScale * zoomedCenterX, 0f, p)
-                            translationY = lerp(srcCenter.y - startScale * zoomedCenterY, 0f, p)
+                            translationX = lerp(src.center.x - startScale * zoomed.center.x, 0f, p)
+                            translationY = lerp(src.center.y - startScale * zoomed.center.y, 0f, p)
                         } else {
                             // No source bounds: fall back to a plain fade.
                             alpha = progress()
+                        }
+                    }.drawWithContent {
+                        val src = sourceBounds
+                        val img = imageBounds
+                        val p = progress()
+                        if (p < 1f && src != null && img != null && src.hasArea() && img.hasArea()) {
+                            // The thumbnail may be a crop of the image (e.g. a square gallery
+                            // cell showing a 4:3 photo). Clip to a window that morphs from the
+                            // thumbnail's rect into the image's own bounds, so the transition
+                            // opens from and closes into exactly what was on screen. Skipped at
+                            // p = 1 so pager neighbours aren't clipped while swiping.
+                            val zoomed = img.zoomedBy(currentZoomState)
+                            val startScale = coverScale(src, zoomed)
+                            val scale = lerp(startScale, 1f, p)
+                            val tx = lerp(src.center.x - startScale * zoomed.center.x, 0f, p)
+                            val ty = lerp(src.center.y - startScale * zoomed.center.y, 0f, p)
+
+                            // The visible window in window coordinates, mapped back into this
+                            // layer's pre-transform coordinates.
+                            clipRect(
+                                left = (lerp(src.left, zoomed.left, p) - tx) / scale,
+                                top = (lerp(src.top, zoomed.top, p) - ty) / scale,
+                                right = (lerp(src.right, zoomed.right, p) - tx) / scale,
+                                bottom = (lerp(src.bottom, zoomed.bottom, p) - ty) / scale,
+                            ) {
+                                this@drawWithContent.drawContent()
+                            }
+                        } else {
+                            drawContent()
                         }
                     },
         ) {
@@ -440,6 +457,27 @@ internal suspend fun saveMediaToGallery(
         }
     }
 }
+
+private fun Rect.hasArea() = width > 0f && height > 0f
+
+/**
+ * The image's on-screen bounds after the user's pinch zoom: the zoomable scales
+ * uniformly around the layout center, then offsets.
+ */
+private fun Rect.zoomedBy(zoom: ZoomState?): Rect {
+    val zScale = zoom?.scale ?: 1f
+    val halfWidth = width * zScale / 2f
+    val halfHeight = height * zScale / 2f
+    val centerX = center.x + (zoom?.offsetX ?: 0f)
+    val centerY = center.y + (zoom?.offsetY ?: 0f)
+    return Rect(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight)
+}
+
+/** Uniform scale at which [image] covers [source] in both dimensions. */
+private fun coverScale(
+    source: Rect,
+    image: Rect,
+): Float = maxOf(source.width / image.width, source.height / image.height)
 
 @Composable
 private fun RenderImageOrVideo(
