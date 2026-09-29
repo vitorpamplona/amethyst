@@ -25,12 +25,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.User
@@ -63,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_accept
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_accept_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_catch_up
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_decline
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_done
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_expired
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_explainer
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_failed
@@ -72,7 +79,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_from
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_send
-import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_sent
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_sending
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_sent_to
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_title
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invites_title
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
@@ -90,6 +98,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * "Invite by npub" (CORD-05 §6): pick a person with the app's ordinary user typeahead (cache, relay
@@ -106,6 +116,12 @@ fun ConcordDirectInviteDialog(
     var query by remember { mutableStateOf("") }
     var picked by remember { mutableStateOf<User?>(null) }
     var sending by remember { mutableStateOf(false) }
+
+    // The outcome stays inside this dialog: the people invited so far (so several can be invited
+    // in a row) and the last failure, shown under the field. A second modal to say "sent" was one
+    // tap too many for a confirmation.
+    val invited = remember { mutableStateListOf<String>() }
+    var failure by remember { mutableStateOf<StringResource?>(null) }
     val userSuggestions =
         remember(accountViewModel) {
             UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
@@ -124,6 +140,7 @@ fun ConcordDirectInviteDialog(
                     onValueChange = {
                         query = it
                         picked = null
+                        failure = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -144,6 +161,15 @@ fun ConcordDirectInviteDialog(
                         contentPadding = PaddingValues(0.dp),
                     )
                 }
+                failure?.let {
+                    Text(stringRes(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                invited.forEach { name ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SymbolIcon(symbol = MaterialSymbols.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                        Text(stringRes(Res.string.concord_direct_invite_sent_to, name), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -153,29 +179,45 @@ fun ConcordDirectInviteDialog(
                 onClick = {
                     if (target == null) return@TextButton
                     sending = true
+                    failure = null
                     scope.launch {
                         try {
                             val result = accountViewModel.account.concord.sendConcordDirectInvite(communityId, target.pubkeyHex)
-                            accountViewModel.toastManager.toast(Res.string.concord_direct_invite_title, sendResultMessage(result))
-                            if (result == ConcordDirectInviteSendResult.SENT) onDismiss()
+                            if (result == ConcordDirectInviteSendResult.SENT) {
+                                // Ready for the next person; the check mark below is the confirmation.
+                                invited += target.toBestDisplayName()
+                                picked = null
+                                query = ""
+                            } else {
+                                // Keep the person picked so Send retries.
+                                failure = sendFailureMessage(result)
+                            }
                         } finally {
                             sending = false
                         }
                     }
                 },
             ) {
-                Text(stringRes(Res.string.concord_direct_invite_send, picked?.toBestDisplayName() ?: "…"))
+                if (sending) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringRes(Res.string.concord_direct_invite_sending))
+                } else {
+                    Text(stringRes(Res.string.concord_direct_invite_send, picked?.toBestDisplayName() ?: "…"))
+                }
             }
         },
         dismissButton = {
-            TextButton(enabled = !sending, onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
+            TextButton(enabled = !sending, onClick = onDismiss) {
+                Text(stringRes(if (invited.isEmpty()) Res.string.cancel else Res.string.concord_direct_invite_done))
+            }
         },
     )
 }
 
-private fun sendResultMessage(result: ConcordDirectInviteSendResult) =
+private fun sendFailureMessage(result: ConcordDirectInviteSendResult) =
     when (result) {
-        ConcordDirectInviteSendResult.SENT -> Res.string.concord_direct_invite_sent
+        ConcordDirectInviteSendResult.SENT -> null
         ConcordDirectInviteSendResult.ROSTER_NOT_LOADED -> Res.string.concord_direct_invite_failed_loading
         ConcordDirectInviteSendResult.RECIPIENT_BANNED -> Res.string.concord_direct_invite_failed_banned
         ConcordDirectInviteSendResult.NOT_MEMBER, ConcordDirectInviteSendResult.NOT_WRITEABLE -> Res.string.concord_direct_invite_failed_member

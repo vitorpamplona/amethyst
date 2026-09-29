@@ -3677,7 +3677,9 @@
     <string name="concord_direct_invite_from">Invited by %1$s</string>
     <string name="concord_direct_invite_hint">Name, npub or NIP-05</string>
     <string name="concord_direct_invite_send">Send invite to %1$s</string>
-    <string name="concord_direct_invite_sent">Invite sent.</string>
+    <string name="concord_direct_invite_sent_to">Invited %1$s</string>
+    <string name="concord_direct_invite_sending">Sending…</string>
+    <string name="concord_direct_invite_done">Done</string>
     <string name="concord_direct_invite_title">Invite someone directly</string>
     <string name="concord_direct_invites_title">Community invites</string>
     <string name="concord_edit_title">Edit community</string>
