@@ -162,6 +162,9 @@ object ConcordModeration {
         citation: AuthorityCitation? = null,
         owner: HexKey,
     ): Event {
+        // Every reader drops an edition naming an empty or over-cap Channel (CORD-03 §2), so
+        // refuse to mint one rather than publish an edition nobody will honor.
+        require(channel.hasValidName()) { "Channel name must be 1..${ChannelEntity.NAME_MAX_BYTES} UTF-8 bytes" }
         val (version, prev) = versioning(current, channelId, owner)
         val content = contentOver(ChannelEntity.serializer(), channel, current, channelId, owner)
         return wrap(actor, controlPlane, ControlEntityKind.CHANNEL, channelId, version, prev, content, createdAt, citation)
