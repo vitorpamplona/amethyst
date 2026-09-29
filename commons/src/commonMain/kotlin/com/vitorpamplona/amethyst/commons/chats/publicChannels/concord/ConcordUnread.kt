@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -109,12 +110,15 @@ fun concordCommunityHasUnreadFlow(
  * Messages hub row — reuses this so none of them can disagree with the open channel's feed:
  * a trailing comment can't stick the badge at a count the user can never clear, nor show up as a
  * "last message" that isn't in the timeline. Unacceptable (muted/blocked) authors are hidden for
- * the same reason.
+ * the same reason — and so are expired disappearing messages (CORD-08 §3).
+ *
+ * A CORD-08 timer notice renders in the feed as a system line but is not a *message*: it neither
+ * counts as unread nor stands in as the channel's last message (its content is empty).
  */
 fun isConcordTimelineMessage(
     note: Note,
     account: Account,
-): Boolean = note.event.let { it != null && it !is CommentEvent } && account.isAcceptable(note)
+): Boolean = note.event.let { it != null && it !is CommentEvent && it !is ConcordTimerNoticeEvent } && account.isAcceptable(note)
 
 /**
  * The newest timeline message in this channel (see [isConcordTimelineMessage]), or null if none —

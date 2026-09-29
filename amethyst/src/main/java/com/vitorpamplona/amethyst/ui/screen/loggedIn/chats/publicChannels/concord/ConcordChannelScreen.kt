@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_no_key
 import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
+import com.vitorpamplona.amethyst.commons.resources.concord_timer_active
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.concordTimerText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
@@ -255,6 +257,7 @@ fun ConcordChannelScreen(
             ConcordTypingIndicator(communityId, channelId, accountViewModel)
 
             if (channel.canPost()) {
+                ConcordTimerIndicator(communityId, accountViewModel)
                 Spacer(modifier = DoubleVertSpacer)
                 ConcordMessageComposer(
                     newMessageModel = newMessageModel,
@@ -290,6 +293,27 @@ private fun ConcordReadOnlyNotice(message: StringResource) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.placeholderText,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+    )
+}
+
+/**
+ * CORD-08: a slim "Messages disappear after 30 days" line above the composer while the community's
+ * timer is on, so a member knows before sending that the message will not last.
+ */
+@Composable
+private fun ConcordTimerIndicator(
+    communityId: String,
+    accountViewModel: AccountViewModel,
+) {
+    val session = remember(communityId) { accountViewModel.account.concordSessions.sessionFor(communityId) } ?: return
+    val state by session.state.collectAsStateWithLifecycle()
+    val secs = state?.metadata?.messageExpirationSecs() ?: return
+    Text(
+        text = stringRes(Res.string.concord_timer_active, concordTimerText(secs)),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
     )
 }
 

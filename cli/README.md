@@ -690,6 +690,7 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
 | `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
 | `amy concord dissolve COMMUNITY --yes` | Owner only, irreversible: publish the `eid`-bound dissolution tombstone that seals the community read-only (CORD-02 §9). |
+| `amy concord timer COMMUNITY [off\|SECONDS\|1d\|1w\|30d\|90d\|1y]` | CORD-08 disappearing messages. No value: print the folded timer (`0` = off). With one: publish the metadata edition (MANAGE_METADATA) and a kind-1740 notice into every channel whose key we hold. While a timer is set, `send` signs a NIP-40 `expiration` into the rumor and repeats it on the wrap; `read` drops expired messages. |
 
 ### cordn (MLS over an MCP coordinator)
 

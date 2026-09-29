@@ -83,7 +83,7 @@ Ranked security > interop > feature inside each group.
 | # | Spec | Finding | Status |
 |---|---|---|---|
 | F1 | 04 §7 | Pins | open → pins batch |
-| F2 | 08 | Disappearing Messages (sender tags, reader refusal/hiding/purge, 1740 notice, settings UI) | metadata field + parse **fixed**; the rest open → chat-plane batch |
+| F2 | 08 | Disappearing Messages (sender tags, reader refusal/hiding/purge, 1740 notice, settings UI) | **fixed** — every durable Chat rumor (9/1111/7/3302, image variants) signs `created_at + timer` from the send-time fold and its wrap repeats it (`ConcordStreamEnvelope.wrap(outerTags)`, random `p` kept; never on 5/1740/typing); expired rumors refused at ingest (`openChannelRumor`, session, rumor sink), hidden in feed/preview/unread (`Account.isAcceptable`), and purged from LocalCache + wrap note + session buffer by a sweep scheduled on the earliest deadline (`ConcordSessionManager.nextExpiry`); typed `ConcordTimerNoticeEvent` posted per held channel after a timer change and rendered as a system row only for MANAGE_METADATA authors; timer picker in the edit screen + composer indicator; `amy concord timer`, `send` tags, `read` filters |
 | F3 | 07 | A/V calls: only key derivation, the 27235 grant and 23313 presence builders exist; no broker/SFU client, no media E2EE. Needs a LiveKit client whose license must be checked first | open — out of scope for this pass |
 | F4 | 07 | Broker token has no nonce (same-second requests collide in the broker's replay set); presence fold doesn't take latest-per-author | open → chat-plane batch (quartz only) |
 | F5 | 05 §5 | Invite Registry (vsk 8) not published or folded | open |
