@@ -2,7 +2,10 @@
 
 Status: **draft for review** (2026-09-29). Nothing is implemented yet. Decided in review: links
 always start at an event (no user-to-user shortcuts); the author of acted-on content gets its OWN
-relation; the kind stays on the source event only; names follow Nostr's own words (rule 7).
+relation; the kind stays on the source event only; names follow Nostr's own words (rule 7);
+**no fallback** — every class states the meaning of every reference it carries (rule 5). The
+per-class table for all 410 Quartz classes is the
+[appendix](2026-09-29-graph-link-vocabulary-appendix.md).
 
 ## Why
 
@@ -65,12 +68,13 @@ Rules the vocabulary follows:
    So a distinction that is filtered all the time becomes two relations: `REPORTED_USER` (a
    complaint about the person) is not `REPORTED_AUTHOR` (the author of reported content), and
    `FOLLOW` (the kind 3 social graph) is not `SUBSCRIBED` (every other follow-like list).
-5. **Nothing is invisible before it is classified.** A class that implements no `LinkProvider`
-   gets a default `REFERENCE` link (with `via` = the tag it came from) for every id its hint
-   providers name AND every generic reference tag whose value has the right shape: `e`/`E`/`q`
-   with a 64-hex id, `p`/`P` with a 64-hex key, `a`/`A` with a valid address. The shape half is
-   not optional: most kinds Quartz types implement no hint provider (measured below), and without
-   it their references would vanish. Classifying a kind later is an additive change.
+5. **No fallback: every class says what its references mean.** Each of the 410 classes
+   `EventFactory` types implements `links()` (or is declared link-free), and a test holds it: a
+   new kind cannot land without that decision. There is no generic "reference" relation and no
+   rule that guesses from a value's shape. The per-class review showed why guessing is unsafe:
+   a 64-hex `e` in a chess start event is a board hash, the 30174 `d` is a blinded HMAC, `t` is
+   an auth verb in 24242 and `r` holds relay URLs in 10002. A tag that appears on every kind
+   (`client`, `zap`, the emoji tag's set address) is emitted once by `Event`, not per class.
 6. **Values that qualify a link ride on it** (`props`): a report's type, an assertion's rank, a
    zap request's amount. They are what a query filters on after choosing the relation.
 7. **Names are Nostr's own words for the slot.** A relation names what the TARGET is to the
@@ -200,23 +204,21 @@ property of the current graph schema: "user-wide reports of X" is
 | `HASHTAG` | T | A `t` tag | any |
 | `TAG` | T | Any other allowlisted value tag: `i` (external id), `k`, `l`/`L`, `r` (url), `g` (geohash). The target's name says which | any |
 
-### Fallback
+### Every kind: tags any event may carry
 
-| Relation | Targets | Meaning |
-|---|---|---|
-| `REFERENCE` | E, A, U | A link a provider names (or a value shaped like an id) that no relation above claims. Props: `tag` |
+| Relation | Targets | Meaning | Kinds |
+|---|---|---|---|
+| `CLIENT` | A | The NIP-89 `client` tag's handler address (3rd slot) | any |
+| `ZAP_SPLIT` | U | A NIP-57 Appendix G `zap` tag: a split setting, not a payment (rule 4 keeps it apart from `ZAP_RECIPIENT`). Props: `weight` | any |
+| `EMOJI_SET` | A | The optional 4th slot of a NIP-30 `emoji` tag: the 30030 set it comes from | any |
 
-Until classified, these stay `REFERENCE`:
-- NIP-90 DVM requests, results and feedback (5000–7000);
-- NIP-29 group events;
-- experimental kinds (workouts, geocaching, roadstr, attestations, zap polls);
-- wiki merge requests (818 / 819);
-- user status (30315);
-- zap goals (9041);
-- classifieds (30402);
-- video collaboration (34238).
+### Relations the per-class review adds
 
-Each is a small, additive classification when someone needs it.
+The review of all 410 classes needed **115 relations** beyond the tables above, for kinds the
+tables did not reach (NIP-29 groups, NIP-90 DVMs, NIP-34 git roles, NIP-54 wiki merges, NIP-60
+cashu, NIP-71 video credits, buzz, marmot, experimental kinds…). They are listed with their
+kinds and justification at the top of the [appendix](2026-09-29-graph-link-vocabulary-appendix.md)
+and need the same review these tables had before they are final.
 
 ## Reading it back
 
@@ -250,8 +252,9 @@ Decided:
 Open:
 
 1. **Where it lives.** `nip01Core/links/` (the interface, the value classes, the relation
-   constants) plus one `links()` per class, beside its tags. The default (rule 5) sits on `Event`
-   and reads the hint providers.
+   constants) plus one `links()` per class, beside its tags. `Event` contributes only the
+   every-kind tags (`client`, `zap`, emoji sets). The hint providers could later be derived from
+   `links()`, which carry the same ids plus their meaning.
 2. **Vocabulary stability.** Adding a relation or classifying a kind is additive. Renaming or
    re-splitting one breaks graph queries, so this review is the cheap moment.
 
@@ -272,13 +275,34 @@ These were already catalogued in neo4j-eventstore's `docs/appendix-providers.md`
 - `ChannelCreateEvent.linkedEventIds()` returns its own id;
 - `ZapReceiptEvent` omits the zap sender.
 
-New: two classes claim kind **1010**, `experimental/edits/TextNoteModificationEvent` and
-`nip51Lists/goodWikiRelayList/GoodWikiRelayListEvent`. `EventFactory` can only type one of them.
+Found by the per-class review (details in the appendix rows):
+- **Kind collision at 20001:** `GeohashPresenceEvent` and buzz `PresenceUpdateEvent`;
+  `EventFactory` tells them apart by the `g` tag. (An earlier draft claimed a collision at 1010;
+  that was a prefix-matching mistake: `GoodWikiRelayListEvent` is 10102.)
+- **Privacy:** `GeohashListEvent.create(…)` (the `NostrSignerSync` variant) swaps public and
+  private geohashes, publishing the private ones in clear tags.
+- **Addresses:** 15 NIP-51 lists in 10000–19999 extend `PrivateTagArrayEvent`, which builds the
+  address from `d`, without overriding `dTag()`; a stray `d` tag splits their address.
+- **Wrong target:** `ChannelHideMessageEvent.eventsToHide()` includes the channel root; on a
+  spec-conforming 43, `channel()` returns the hidden message. `ForkTag.parse` (30817) requires
+  kind 34550; the attestation `RequestTag` returns `ApprovedAddressTag`.
+- **Copy-paste:** `LiveActivitiesChatMessageEvent.unmarkedReplyTos()` calls
+  `markedReplyTos()`; the 30298 reading state's `build()` overwrites its root and swaps summary
+  and image.
+- **Missing NIP-22 scopes:** `VoiceReplyEvent` (1244) writes only `e`/`k`/`p`, though NIP-A0 says
+  it MUST follow NIP-22.
+- **Missing validation:** `WinnerTag`, `AgentTag`, `ReplacedByTag`, `ConsentTag`,
+  `AddressMemberTag`, `EditTag`, `MarkedETag.parseAllThreadTags` and several list accessors
+  accept values that are not 64-hex ids or valid addresses.
+- **Hint-provider gaps:** the video classes, `PictureEvent`, `VoiceReplyEvent`, the podcast lists
+  and every buzz class implement none, although their tags are references.
 
 ## Coverage
 
-Measured on 2026-09-29: `EventFactory` types **410** classes. The measurement is a text scan, so
-the split below is approximate; an exact per-class table is plan step 2a.
+`EventFactory` types **410** classes. The [appendix](2026-09-29-graph-link-vocabulary-appendix.md)
+classifies every one of them from its code and its NIP: **340** carry references, **70** carry
+none. The first estimate below came from a text scan and is kept for the record; the appendix
+supersedes it.
 - **~150 are classified above.** That covers the NIPs the graph already interprets.
 - **~110 carry no references.** Settings, metadata, relay and server lists, key packages,
   ephemeral auth. They need nothing beyond `AUTHOR` (and `ADDRESS`).
@@ -298,16 +322,57 @@ the split below is approximate; an exact per-class table is plan step 2a.
     (9999 / 39999), torrents (2003).
 
 **Enforced, not hoped for:** a Quartz test walks every `EventFactory` kind and fails unless the
-class is one of: classified (implements `LinkProvider`), explicitly `REFERENCE`-only, or
-explicitly link-free. A new kind then cannot land without a decision about its links.
+class implements `links()` or is explicitly link-free. A new kind then cannot land without a
+decision about its links.
+
+## Corrections from the per-class review
+
+The review checked the tables above against the code and the NIP texts. To apply before
+implementing (each is detailed in its appendix row):
+- `REACTED` / `REACTED_AUTHOR` take the **last** `e` / `p` (NIP-25); earlier ones are `MENTION`.
+  Quartz's `originalPost()` / `originalAuthor()` return all of them, so they cannot be the source.
+- A lowercase `p` on kinds 1 and 1111 is `PARENT_AUTHOR` only when it matches the parent's
+  author; otherwise it is `MENTION`. `ROOT` / `PARENT` also take **T** (NIP-22 `I`/`i` scopes).
+- `PARENT` does not apply to 30818 (NIP-54 articles have none); `FORK` takes E and A.
+- Kind 24's `p` tags are `RECIPIENT` only; `MENTION` there comes from content alone.
+- Kind 1985's `t` / `r` are label targets (`LABELED`), not `HASHTAG` / `TAG`.
+- A Buzz-style lone `reply` marker is a direct reply: both `ROOT` and `PARENT`.
+- The unclassified list shrinks to nothing: every kind is now in the appendix.
+
+## Open decisions the review surfaced
+
+1. **The 115 new relations** (appendix, top table): same review as the tables had. Unified
+   already where groups coined synonyms: `ADDED_USER` / `REMOVED_USER`, `REQUEST` /
+   `REQUEST_AUTHOR` (NIP-90's "customer"), `ZAP_SPLIT` (NIP-75's "beneficiary"). Still to
+   decide: `APP` vs `APPLICATION`, `AUTHORED` (10064) beside `AUTHOR`, whether
+   `SERVICE_PROVIDER` spans NIP-85 and NIP-90 or splits (rule 4).
+2. **What a group is.** NIP-29 names a group by the address of its kind 39000, signed by the
+   relay's key; `h` alone would merge forks that reuse an id. Options: that address when the
+   relay key is known, a tag value `h` with the relay as a prop, or a new `LinkTarget.Group`.
+   Marmot's `h` is a random global id, sound as a tag value.
+3. **URLs and external ids as targets.** Kind 17 reactions, highlight sources (`r`), web
+   bookmarks (39701) and NIP-22 `I` scopes point at URLs or NIP-73 ids. Are those **T**
+   targets in v1?
+4. **Value tags need a per-class opt-in.** The same letter means different things by kind, so
+   `HASHTAG` / `TAG` come from each class's `links()`, never from a global allowlist.
+5. **Links derived from the event's own `d`** (30618 → its repository, 39001–39005 → the group,
+   30177 → its agent): in `links()`, or left to the graph?
+6. **References inside content JSON** (buzz 40099 / 40902 / 44100, DVM results, 30175–30177,
+   marketplace stalls): each needs a new parser.
+7. **Private list entries** (NIP-44 encrypted NIP-51 items, encrypted DVM requests) are invisible
+   to any public index. Stated once, not per row.
+
 
 ## Plan
 
-1. This review: the vocabulary, the model, the open questions. Done except the two open points.
-   - 2a. The exact per-class coverage table (all 410), generated, as an appendix to this plan.
-2. Quartz: `nip01Core/links/` and the default from the hint providers; then `links()` for the
-   kinds the graph already interprets (NIP-10, 18, 22, 25, 56, 57, 85, 51, 58, 72, 09), each with
-   a golden test. The upstream fixes above land with them.
+1. This review: the vocabulary, the model, the open questions. The per-class
+   [appendix](2026-09-29-graph-link-vocabulary-appendix.md) is done; the open decisions above
+   and the 115 new relation names remain.
+2. Quartz: `nip01Core/links/`, the every-kind tags on `Event`, and the coverage test; then
+   `links()` class by class from the appendix, starting with the NIPs the graph already
+   interprets (10, 18, 22, 25, 56, 57, 85, 51, 58, 72, 09), each with a golden test. The Quartz
+   bugs above land with the classes they affect.
 3. neo4j-eventstore: derive from `links()`, schema 2.0, rewrite `docs/schema.md` and the reference
    queries.
-4. The remaining kinds, as someone needs them.
+4. The rest of the appendix, until the coverage test passes for all 410 classes. Kinds with an
+   unmerged or missing spec (`UNCERTAIN` rows) are decided with their maintainers.
