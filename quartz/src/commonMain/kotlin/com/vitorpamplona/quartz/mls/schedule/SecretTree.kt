@@ -57,13 +57,18 @@ class SecretTree(
     private val consumedHandshakeGenerations = mutableMapOf<Int, MutableSet<Int>>()
 
     /**
-     * Cache of key/nonce pairs for skipped APPLICATION generations.
-     * Key: (leafIndex, generation) -> derived KeyNonceGeneration.
+     * Ratchet secrets of skipped APPLICATION generations, for messages that
+     * arrive out of order. Key: (leafIndex, generation) -> that generation's
+     * secret; the key and nonce are derived when it is used.
+     *
+     * The secret rather than the derived pair so the cache can be persisted
+     * (see [exportSkippedApplicationSecrets]) in the same form other MLS
+     * implementations keep it (ts-mls `unusedGenerations`).
      */
-    private val skippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
+    private val skippedKeys = mutableMapOf<Pair<Int, Int>, ByteArray>()
 
     /** Same cache for the HANDSHAKE ratchet. */
-    private val handshakeSkippedKeys = mutableMapOf<Pair<Int, Int>, KeyNonceGeneration>()
+    private val handshakeSkippedKeys = mutableMapOf<Pair<Int, Int>, ByteArray>()
 
     private companion object {
         /** Maximum number of skipped key entries to retain (prevents unbounded memory growth). */
@@ -150,15 +155,15 @@ class SecretTree(
         generation: Int,
     ): KeyNonceGeneration {
         // Check skipped keys cache first (out-of-order message for a previously skipped generation)
-        val cachedKey = skippedKeys.remove(Pair(leafIndex, generation))
-        if (cachedKey != null) {
+        val cachedSecret = skippedKeys.remove(Pair(leafIndex, generation))
+        if (cachedSecret != null) {
             // Still mark as consumed for replay detection
             val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
             if (generation in senderConsumed) {
                 throw StaleGenerationException(leafIndex, generation, null, "Replay detected: generation $generation from sender $leafIndex already consumed")
             }
             senderConsumed.add(generation)
-            return cachedKey
+            return deriveKeyNonce(cachedSecret, generation)
         }
 
         val state = getOrInitSender(leafIndex)
@@ -198,11 +203,10 @@ class SecretTree(
         var secret = state.applicationSecret
         var gen = state.applicationGeneration
         while (gen < generation) {
-            // Save the intermediate generation's key/nonce for later out-of-order retrieval
-            val intermediateKng = deriveKeyNonce(secret, gen)
+            // Save the intermediate generation's secret for later out-of-order retrieval
             val cacheKey = Pair(leafIndex, gen)
             if (skippedKeys.size < MAX_SKIPPED_KEYS) {
-                skippedKeys[cacheKey] = intermediateKng
+                skippedKeys[cacheKey] = secret
             }
             secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             gen++
@@ -235,8 +239,8 @@ class SecretTree(
         leafIndex: Int,
         generation: Int,
     ): KeyNonceGeneration {
-        val cachedKey = handshakeSkippedKeys.remove(Pair(leafIndex, generation))
-        if (cachedKey != null) {
+        val cachedSecret = handshakeSkippedKeys.remove(Pair(leafIndex, generation))
+        if (cachedSecret != null) {
             val senderConsumed = consumedHandshakeGenerations.getOrPut(leafIndex) { mutableSetOf() }
             if (generation in senderConsumed) {
                 throw StaleGenerationException(
@@ -247,7 +251,7 @@ class SecretTree(
                 )
             }
             senderConsumed.add(generation)
-            return cachedKey
+            return deriveKeyNonce(cachedSecret, generation)
         }
 
         val state = getOrInitSender(leafIndex)
@@ -285,10 +289,9 @@ class SecretTree(
         var secret = state.handshakeSecret
         var gen = state.handshakeGeneration
         while (gen < generation) {
-            val intermediateKng = deriveKeyNonce(secret, gen)
             val cacheKey = Pair(leafIndex, gen)
             if (handshakeSkippedKeys.size < MAX_SKIPPED_KEYS) {
-                handshakeSkippedKeys[cacheKey] = intermediateKng
+                handshakeSkippedKeys[cacheKey] = secret
             }
             secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             gen++
@@ -434,6 +437,27 @@ class SecretTree(
      */
     fun importSenderStates(states: Map<Int, SenderRatchetState>) {
         senderState.putAll(states)
+    }
+
+    /**
+     * Secrets of skipped APPLICATION generations, keyed (leafIndex, generation).
+     *
+     * Persisted next to [exportSenderStates]: the ratchet has already moved
+     * past these generations, so a message that was skipped before a restart
+     * can only be opened after it if its secret survives.
+     */
+    fun exportSkippedApplicationSecrets(): Map<Pair<Int, Int>, ByteArray> = skippedKeys.toMap()
+
+    /** Same for the HANDSHAKE ratchet. */
+    fun exportSkippedHandshakeSecrets(): Map<Pair<Int, Int>, ByteArray> = handshakeSkippedKeys.toMap()
+
+    /** Restores skipped-generation secrets, up to the usual cache bound per ratchet. */
+    fun importSkippedSecrets(
+        application: Map<Pair<Int, Int>, ByteArray>,
+        handshake: Map<Pair<Int, Int>, ByteArray>,
+    ) {
+        for ((k, v) in application) if (skippedKeys.size < MAX_SKIPPED_KEYS) skippedKeys[k] = v
+        for ((k, v) in handshake) if (handshakeSkippedKeys.size < MAX_SKIPPED_KEYS) handshakeSkippedKeys[k] = v
     }
 }
 
