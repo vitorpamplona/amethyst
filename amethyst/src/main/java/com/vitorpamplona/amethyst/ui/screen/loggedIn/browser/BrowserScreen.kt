@@ -57,6 +57,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -117,6 +118,8 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -211,19 +214,27 @@ private fun BrowserLauncher(
 
     // Drop ones already pinned — they show under Favorites, not twice.
     val favoriteCoordinates = remember(apps) { apps.filterIsInstance<FavoriteApp.NostrApp>().mapTo(HashSet()) { it.coordinate } }
-    val followedNsites =
-        remember(nsiteNotes, nsiteFollows, favoriteCoordinates) {
-            nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates)
-        }
-    val followedNapplets =
-        remember(nappletNotes, nappletFollows, favoriteCoordinates) {
-            nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates)
-        }
+    // Built off the main thread: these walk every cached nsite/napplet note, and the note lists re-emit as
+    // relays deliver.
+    val followedNsites by produceState(emptyList<DiscoverNostrApp>(), nsiteNotes, nsiteFollows, favoriteCoordinates) {
+        value = withContext(Dispatchers.Default) { nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates) }
+    }
+    val followedNapplets by produceState(emptyList<DiscoverNostrApp>(), nappletNotes, nappletFollows, favoriteCoordinates) {
+        value = withContext(Dispatchers.Default) { nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates) }
+    }
 
     // What the user actually typed, excluding any selected ghost-completion suffix (selection.min is the
     // caret when collapsed, or the start of the highlighted suffix when a completion is showing).
     val typed = field.text.take(field.selection.min.coerceIn(0, field.text.length))
-    val suggestions = remember(typed, candidates) { OmniboxSuggestions.rank(typed, candidates, limit = 12) }
+    // One ranking per typed text: an appended character is ranked in onValueChange (for the inline
+    // completion) and then again for this list on the recomposition that follows — keep the last one.
+    val lastRanking = remember(candidates) { arrayOfNulls<Pair<String, List<OmniboxSuggestions.Suggestion>>>(1) }
+
+    fun ranked(text: String): List<OmniboxSuggestions.Suggestion> =
+        lastRanking[0]?.takeIf { it.first == text }?.second
+            ?: OmniboxSuggestions.rank(text, candidates, limit = 12).also { lastRanking[0] = text to it }
+
+    val suggestions = remember(typed, candidates) { ranked(typed) }
 
     fun open(text: String) {
         val target = OmniboxInput.resolve(text) ?: return
@@ -254,7 +265,8 @@ private fun BrowserLauncher(
                 newText.length > prevTyped.length &&
                 newText.startsWith(prevTyped)
         if (appended) {
-            val completion = OmniboxSuggestions.completion(newText, OmniboxSuggestions.rank(newText, candidates))
+            // The completion has always looked at the top 8 (rank's default limit).
+            val completion = OmniboxSuggestions.completion(newText, ranked(newText).take(8))
             if (completion != null) {
                 // Keep the user's own casing for the typed prefix; append only the remaining suffix.
                 val full = newText + completion.substring(newText.length)

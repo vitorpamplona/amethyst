@@ -57,6 +57,9 @@ object NappletIpc {
     /** Broker → host: the [KEY_LAUNCH_TOKEN] minted for [KEY_BROWSER_ORIGIN]. */
     const val MSG_BROWSER_TOKEN = 6
 
+    /** How long a host waits for [MSG_BROWSER_TOKEN] before failing the origin's queued calls. */
+    const val MINT_TIMEOUT_MS = 20_000L
+
     /**
      * Host → broker: this sandbox surface entered ([KEY_FOREGROUND] true) or left ([KEY_FOREGROUND]
      * false) the foreground. The `:napplet` host runs in its own process and so can't touch the main

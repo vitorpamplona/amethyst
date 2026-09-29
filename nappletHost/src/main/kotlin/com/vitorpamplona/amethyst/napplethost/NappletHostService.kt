@@ -57,7 +57,9 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -118,6 +120,10 @@ class NappletHostService : Service() {
         // The client's last pause/resume. A parked tab is paused before its WebView exists (the WebView is
         // only built when the surface opens), so the flag is applied to every WebView built for the tab.
         var paused = false
+
+        // Requests that act for the user (publish, pay, upload…) sent while the tab was off-screen. Pausing
+        // the WebView doesn't stop JavaScript, so they are held here and sent when the user comes back.
+        val heldWhilePaused = mutableListOf<Message>()
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
@@ -132,6 +138,17 @@ class NappletHostService : Service() {
         // The user's text size, re-applied when a renderer crash forces a fresh WebView.
         var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
         val replyMessenger = Messenger(Handler(Looper.getMainLooper()) { onBrokerReply(this, it) })
+
+        /**
+         * Sends [msg] to this tab's client stamped with the session it belongs to, so the client can drop what
+         * a session it has since replaced still had in flight (a late file-chooser request, a stale
+         * SESSION_READY that would re-arm its view with a dead adapter). Returns whether it was delivered.
+         */
+        fun toClient(msg: Message): Boolean {
+            val client = clientMessenger ?: return false
+            msg.data.putString(NappletEmbedContract.KEY_SESSION_ID, sessionId)
+            return runCatching { client.send(msg) }.isSuccess
+        }
     }
 
     private val tabs = mutableMapOf<String, NappletTab>()
@@ -210,6 +227,7 @@ class NappletHostService : Service() {
             // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
             // pauseTimers()/resumeTimers(): they are process-global and would freeze/thaw every WebView in
             // `:napplet` (the browser embed + other napplets), whose lifecycles are independent of this one.
+            NappletEmbedContract.MSG_CLOSE_SESSION -> tabFor(msg)?.let(::closeTab)
             NappletEmbedContract.MSG_PAUSE ->
                 tabFor(msg)?.let {
                     it.paused = true
@@ -219,11 +237,15 @@ class NappletHostService : Service() {
                 tabFor(msg)?.let {
                     it.paused = false
                     it.webView?.onResume()
+                    val held = it.heldWhilePaused.toList()
+                    it.heldWhilePaused.clear()
+                    held.forEach { request -> if (brokerMessenger == null) pendingBrokerRequests.add(request) else sendToBroker(request) }
                 }
             NappletEmbedContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
-                tab.bridgeReplyProxy?.postMessage(payload)
+                // The proxy can belong to a page that has already gone away; that must not crash the sandbox.
+                runCatching { tab.bridgeReplyProxy?.postMessage(payload) }
             }
             NappletEmbedContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             NappletEmbedContract.MSG_FIND -> {
@@ -315,7 +337,7 @@ class NappletHostService : Service() {
                             putLong(NappletEmbedContract.KEY_MAG_REQ_T, reqT)
                         }
                 }
-            runCatching { tab.clientMessenger?.send(reply) }
+            tab.toClient(reply)
         }
     }
 
@@ -328,7 +350,7 @@ class NappletHostService : Service() {
             Message.obtain(null, NappletEmbedContract.MSG_SESSION_READY).apply {
                 data = Bundle().apply { putBundle(NappletEmbedContract.KEY_CORE_LIB_INFO, coreLibInfo) }
             }
-        runCatching { tab.clientMessenger?.send(reply) }
+        tab.toClient(reply)
     }
 
     /**
@@ -404,8 +426,12 @@ class NappletHostService : Service() {
         // Only the session that currently owns the tab may close it. A late close from a session that was
         // already replaced by a re-open would otherwise reap the live one — its WebView destroyed under a
         // client that had just been told the session opened, leaving the surface black for good.
-        val tab = tabs[sessionId]?.takeIf { it.container === container } ?: return
-        tabs.remove(sessionId)
+        tabs[sessionId]?.takeIf { it.container === container }?.let(::closeTab)
+    }
+
+    /** Drops [tab] and everything it holds (its WebView, content server, broker state, proxy claim). */
+    private fun closeTab(tab: NappletTab) {
+        tabs.remove(tab.sessionId)
         tab.bridgeReplyProxy = null
         WebViewProxyPolicy.release(tab)
         releaseFromBroker(tab)
@@ -535,7 +561,7 @@ class NappletHostService : Service() {
                         putString(NappletEmbedContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
                     }
             }
-        if (runCatching { client.send(msg) }.isFailure) tab.fileChooser.cancel()
+        if (!tab.toClient(msg)) tab.fileChooser.cancel()
         return true
     }
 
@@ -635,7 +661,7 @@ class NappletHostService : Service() {
             Message.obtain(null, NappletEmbedContract.MSG_STATE).apply {
                 data = Bundle().apply { putBoolean(NappletEmbedContract.KEY_CAN_GO_BACK, view.canGoBack()) }
             }
-        runCatching { tab.clientMessenger?.send(message) }
+        tab.toClient(message)
     }
 
     private fun pushFindResult(
@@ -651,7 +677,7 @@ class NappletHostService : Service() {
                         putInt(NappletEmbedContract.KEY_FIND_TOTAL, total)
                     }
             }
-        runCatching { tab.clientMessenger?.send(message) }
+        tab.toClient(message)
     }
 
     private fun pushConsoleLog(
@@ -671,7 +697,7 @@ class NappletHostService : Service() {
                         putInt(NappletEmbedContract.KEY_CONSOLE_LINE, line)
                     }
             }
-        runCatching { tab.clientMessenger?.send(message) }
+        tab.toClient(message)
     }
 
     /** Tells the client whether a main-frame load is in flight and whether it failed, so it can overlay a spinner/retry. */
@@ -689,7 +715,7 @@ class NappletHostService : Service() {
                         putBoolean(NappletEmbedContract.KEY_RENDERER_GONE, rendererGone)
                     }
             }
-        runCatching { tab.clientMessenger?.send(message) }
+        tab.toClient(message)
     }
 
     // ---- bridge: shell <-> native (mirror of NappletHostActivity.onShellMessage) ----
@@ -714,7 +740,7 @@ class NappletHostService : Service() {
                 Message.obtain(null, NappletEmbedContract.MSG_IME_EVENT).apply {
                     data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, raw) }
                 }
-            runCatching { tab.clientMessenger?.send(reply) }
+            tab.toClient(reply)
             return
         }
 
@@ -729,6 +755,11 @@ class NappletHostService : Service() {
                         putString(NappletIpc.KEY_LAUNCH_TOKEN, tab.launchToken)
                     }
             }
+        // Parked off-screen: an act on the user's behalf waits until they're looking at this napplet again.
+        if (tab.paused && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
+            tab.heldWhilePaused += msg
+            return
+        }
         if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
     }
 
@@ -739,6 +770,7 @@ class NappletHostService : Service() {
      * back itself when it is torn down.
      */
     private fun releaseFromBroker(tab: NappletTab) {
+        tab.heldWhilePaused.clear()
         pendingBrokerRequests.removeAll { it.replyTo == tab.replyMessenger }
         if (brokerMessenger == null) return
         sendToBroker(Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = tab.replyMessenger })
@@ -795,7 +827,7 @@ class NappletHostService : Service() {
             Message.obtain(null, NappletEmbedContract.MSG_NOTICE).apply {
                 data = Bundle().apply { putString(NappletEmbedContract.KEY_NOTICE, notice) }
             }
-        runCatching { tab.clientMessenger?.send(message) }
+        tab.toClient(message)
     }
 
     private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }

@@ -117,18 +117,22 @@ object BrowserDownloads {
         suggestedName: String?,
     ) {
         val app = context.applicationContext
-        val header = dataUrl.substringBefore(',', "")
-        val payload = dataUrl.substringAfter(',', "")
-        val mime = header.removePrefix("data:").substringBefore(';').ifBlank { "application/octet-stream" }
-        val bytes =
-            runCatching {
-                if (header.endsWith(";base64", ignoreCase = true)) {
-                    Base64.decode(payload, Base64.DEFAULT)
-                } else {
-                    URLDecoder.decode(payload, "UTF-8").toByteArray()
-                }
-            }.getOrNull() ?: return
-        saveBytes(app, suggestedName, mime, bytes)
+        // Decoding up to MAX_INLINE_BYTES of base64 stalls whatever thread does it; callers are on the main
+        // thread every sandboxed surface renders on, so decode on the io thread with the write.
+        io.execute {
+            val header = dataUrl.substringBefore(',', "")
+            val payload = dataUrl.substringAfter(',', "")
+            val mime = header.removePrefix("data:").substringBefore(';').ifBlank { "application/octet-stream" }
+            val bytes =
+                runCatching {
+                    if (header.endsWith(";base64", ignoreCase = true)) {
+                        Base64.decode(payload, Base64.DEFAULT)
+                    } else {
+                        URLDecoder.decode(payload, "UTF-8").toByteArray()
+                    }
+                }.getOrNull() ?: return@execute
+            saveBytes(app, suggestedName, mime, bytes)
+        }
     }
 
     /** Saves bytes a page handed over (a `blob:` download, via the browser-extras script). */

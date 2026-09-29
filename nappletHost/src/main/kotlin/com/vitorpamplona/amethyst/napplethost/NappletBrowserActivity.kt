@@ -961,6 +961,11 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private fun requestBrowserToken(origin: String) {
         if (!mintInFlight.add(origin)) return
+        // The broker may never answer (it died mid-mint): fail the origin's queued calls rather than let the
+        // page wait forever.
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!isDestroyed && origin in mintInFlight) failMint(origin, MINT_TIMED_OUT)
+        }, NappletIpc.MINT_TIMEOUT_MS)
         val msg =
             Message.obtain(null, NappletIpc.MSG_MINT_BROWSER_TOKEN).apply {
                 replyTo = replyMessenger
@@ -983,6 +988,15 @@ class NappletBrowserActivity : ComponentActivity() {
         pendingBrokerRequests.removeAll { it.what == NappletIpc.MSG_REQUEST }
         val broker = brokerMessenger ?: return
         runCatching { broker.send(Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = replyMessenger }) }
+    }
+
+    /** A token for [origin] won't come: answer each call queued behind it with a failure, and allow a retry. */
+    private fun failMint(
+        origin: String,
+        reason: String,
+    ) {
+        mintInFlight.remove(origin)
+        pendingByOrigin.remove(origin)?.forEach { queued -> bridge.failRequest(queued, reason) }
     }
 
     /** Sends now when the broker is bound, else queues until it is. */
@@ -1034,7 +1048,12 @@ class NappletBrowserActivity : ComponentActivity() {
             }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true
-                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN)
+                if (token == null) {
+                    // Refused (no account signed in): the page's calls fail now instead of hanging.
+                    failMint(origin, NOT_SIGNED_IN)
+                    return true
+                }
                 originTokens[origin] = token
                 mintInFlight.remove(origin)
                 pendingByOrigin.remove(origin)?.forEach { queued ->
@@ -1688,6 +1707,8 @@ class NappletBrowserActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletBrowserActivity"
+        private const val NOT_SIGNED_IN = "Sign in to Amethyst to use this site's Nostr features."
+        private const val MINT_TIMED_OUT = "Amethyst didn't answer. Reload the page to try again."
         private const val ACTIVITY_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
 
         /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */

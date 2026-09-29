@@ -196,6 +196,13 @@ object NappletBrowserContract {
     /** Client → provider: the tab is the visible one again; resume its WebView. */
     const val MSG_RESUME = 35
 
+    /**
+     * Client → provider: the tab was torn down (evicted, or rebuilt for a theme/account change). Drops the
+     * session and its WebView even if the surface never opened — a session created for a view that was
+     * disposed before it attached would otherwise sit in the provider forever, pinning its client.
+     */
+    const val MSG_CLOSE_SESSION = 36
+
     const val KEY_CAN_GO_FORWARD = "canGoForward"
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"

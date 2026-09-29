@@ -151,6 +151,17 @@ class NappletBrowserService : Service() {
         val mintInFlight = mutableSetOf<String>()
 
         val replyMessenger = Messenger(Handler(Looper.getMainLooper()) { onBrokerReply(this, it) })
+
+        /**
+         * Sends [msg] to this tab's client stamped with the session it belongs to, so the client can drop what
+         * a session it has since replaced still had in flight (a late file-chooser request, a stale
+         * SESSION_READY that would re-arm its view with a dead adapter). Returns whether it was delivered.
+         */
+        fun toClient(msg: Message): Boolean {
+            val client = clientMessenger ?: return false
+            msg.data.putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
+            return runCatching { client.send(msg) }.isSuccess
+        }
     }
 
     private val tabs = mutableMapOf<String, BrowserTab>()
@@ -239,6 +250,7 @@ class NappletBrowserService : Service() {
                     WebViewProxyPolicy.whenApplied { if (tab.webView === wv) wv.loadUrl(url) }
                 }
             }
+            NappletBrowserContract.MSG_CLOSE_SESSION -> tabFor(msg)?.let(::closeTab)
             NappletBrowserContract.MSG_PAUSE ->
                 tabFor(msg)?.let {
                     it.paused = true
@@ -378,7 +390,7 @@ class NappletBrowserService : Service() {
                             putLong(NappletBrowserContract.KEY_MAG_REQ_T, reqT)
                         }
                 }
-            runCatching { tab.clientMessenger?.send(reply) }
+            tab.toClient(reply)
         }
     }
 
@@ -391,7 +403,7 @@ class NappletBrowserService : Service() {
             Message.obtain(null, NappletBrowserContract.MSG_SESSION_READY).apply {
                 data = Bundle().apply { putBundle(NappletBrowserContract.KEY_CORE_LIB_INFO, coreLibInfo) }
             }
-        runCatching { tab.clientMessenger?.send(reply) }
+        tab.toClient(reply)
     }
 
     /**
@@ -483,8 +495,12 @@ class NappletBrowserService : Service() {
         // Only the session that currently owns the tab may close it. A late close from a session that was
         // already replaced by a re-open would otherwise reap the live one — its WebView destroyed under a
         // client that had just been told the session opened, leaving the surface black for good.
-        val tab = tabs[sessionId]?.takeIf { it.container === container } ?: return
-        tabs.remove(sessionId)
+        tabs[sessionId]?.takeIf { it.container === container }?.let(::closeTab)
+    }
+
+    /** Drops [tab] and everything it holds (its WebView, broker state, proxy claim). */
+    private fun closeTab(tab: BrowserTab) {
+        tabs.remove(tab.sessionId)
         WebViewProxyPolicy.release(tab)
         releasePage(tab, closing = true)
         tab.bridge.clear()
@@ -526,9 +542,8 @@ class NappletBrowserService : Service() {
         what: Int,
         crossinline block: Bundle.() -> Unit,
     ): Boolean {
-        val client = tab.clientMessenger ?: return false
         val message = Message.obtain(null, what).apply { data = Bundle().apply(block) }
-        return runCatching { client.send(message) }.isSuccess
+        return tab.toClient(message)
     }
 
     private fun pushFindResult(
@@ -730,10 +745,14 @@ class NappletBrowserService : Service() {
             val wanted = request.resources.mapNotNull(::sitePermissionFor).toSet()
             val id =
                 relayPermissionRequest(tab, BrowserChrome.originOf(request.origin.toString()), wanted) { granted ->
+                    // Answered: nothing left for a cancellation to withdraw.
+                    pendingWebPermissions.remove(request)
                     val resources = request.resources.filter { sitePermissionFor(it) in granted }.toTypedArray()
                     if (resources.isEmpty()) request.deny() else request.grant(resources)
                 }
-            if (id != null) pendingWebPermissions[request] = id
+            // Only track it while it is still waiting on the user — it may already have been answered inline
+            // (nothing to ask, or the client unreachable), and an entry kept after that would never be removed.
+            if (id != null && tab?.permissionRequests?.containsKey(id) == true) pendingWebPermissions[request] = id
         }
 
         override fun onPermissionRequestCanceled(request: PermissionRequest) {
@@ -803,7 +822,7 @@ class NappletBrowserService : Service() {
                         putString(NappletBrowserContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
                     }
             }
-        if (runCatching { client.send(msg) }.isFailure) tab.fileChooser.cancel()
+        if (!tab.toClient(msg)) tab.fileChooser.cancel()
         return true
     }
 
@@ -824,7 +843,7 @@ class NappletBrowserService : Service() {
                         putInt(NappletBrowserContract.KEY_CONSOLE_LINE, line)
                     }
             }
-        runCatching { tab.clientMessenger?.send(msg) }
+        tab.toClient(msg)
     }
 
     /** Loads live web pages in-WebView (http/https) and hands other schemes to the system on a user tap. */
@@ -937,7 +956,7 @@ class NappletBrowserService : Service() {
                         putString(NappletBrowserContract.KEY_URL, view.url.orEmpty())
                     }
             }
-        runCatching { tab?.clientMessenger?.send(message) }
+        tab?.toClient(message)
     }
 
     private fun pushUrl(
@@ -958,7 +977,7 @@ class NappletBrowserService : Service() {
                         title?.let { putString(NappletBrowserContract.KEY_TITLE, it) }
                     }
             }
-        runCatching { tab?.clientMessenger?.send(message) }
+        tab?.toClient(message)
     }
 
     /**
@@ -1002,7 +1021,7 @@ class NappletBrowserService : Service() {
                 Message.obtain(null, NappletBrowserContract.MSG_IME_EVENT).apply {
                     data = Bundle().apply { putString(NappletBrowserContract.KEY_IME_PAYLOAD, raw) }
                 }
-            runCatching { tab.clientMessenger?.send(reply) }
+            tab.toClient(reply)
             return
         }
 
@@ -1030,6 +1049,18 @@ class NappletBrowserService : Service() {
             tab.pendingByOrigin.getOrPut(origin) { mutableListOf() }.add(msg)
             requestBrowserToken(tab, origin)
         }
+    }
+
+    private val mintTimeouts = Handler(Looper.getMainLooper())
+
+    /** A token for [origin] won't come: answer each call queued behind it with a failure, and allow a retry. */
+    private fun failMint(
+        tab: BrowserTab,
+        origin: String,
+        reason: String,
+    ) {
+        tab.mintInFlight.remove(origin)
+        tab.pendingByOrigin.remove(origin)?.forEach { queued -> tab.bridge.failRequest(queued, reason) }
     }
 
     /**
@@ -1066,6 +1097,11 @@ class NappletBrowserService : Service() {
         origin: String,
     ) {
         if (!tab.mintInFlight.add(origin)) return
+        // The broker may never answer (it died mid-mint): fail the origin's queued calls rather than let the
+        // page wait forever.
+        mintTimeouts.postDelayed({
+            if (tabs[tab.sessionId] === tab && origin in tab.mintInFlight) failMint(tab, origin, MINT_TIMED_OUT)
+        }, NappletIpc.MINT_TIMEOUT_MS)
         val msg =
             Message.obtain(null, NappletIpc.MSG_MINT_BROWSER_TOKEN).apply {
                 replyTo = tab.replyMessenger
@@ -1166,7 +1202,12 @@ class NappletBrowserService : Service() {
             }
             NappletIpc.MSG_BROWSER_TOKEN -> {
                 val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN) ?: return true
-                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
+                val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN)
+                if (token == null) {
+                    // Refused (no account signed in): the page's calls fail now instead of hanging.
+                    failMint(tab, origin, NOT_SIGNED_IN)
+                    return true
+                }
                 tab.originTokens[origin] = token
                 tab.mintInFlight.remove(origin)
                 tab.pendingByOrigin.remove(origin)?.forEach { queued ->
@@ -1186,6 +1227,8 @@ class NappletBrowserService : Service() {
 
     private companion object {
         private const val TAG = "NappletBrowserService"
+        private const val NOT_SIGNED_IN = "Sign in to Amethyst to use this site's Nostr features."
+        private const val MINT_TIMED_OUT = "Amethyst didn't answer. Reload the page to try again."
         private const val ABOUT_BLANK = "about:blank"
 
         /** Max favicon edge (px) before sending over IPC — keeps the PNG tiny, well under the Binder limit. */

@@ -109,6 +109,9 @@ class EmbeddedWebAppController(
     // Set after the first connection, so a later onServiceConnected is recognised as `:napplet` coming back.
     private var everConnected = false
 
+    // Set by [unbind]: nothing that arrives afterwards may act.
+    private var tornDown = false
+
     // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
     private var createOnShow = false
 
@@ -228,6 +231,10 @@ class EmbeddedWebAppController(
     }
 
     fun unbind() {
+        // Tell the provider to drop this tab's session now: one created for a view that was disposed before
+        // it attached never gets the surface close that would otherwise clean it up.
+        send(NappletBrowserContract.MSG_CLOSE_SESSION) {}
+        tornDown = true
         if (bound) {
             runCatching { appContext.unbindService(connection) }
             bound = false
@@ -317,6 +324,12 @@ class EmbeddedWebAppController(
         }
     }
 
+    override fun detachView(view: SandboxedSdkView) {
+        if (sandboxedSdkView !== view) return
+        view.setEventListener(null)
+        sandboxedSdkView = null
+    }
+
     /**
      * Asks the sandbox for a brand-new session; the [NappletBrowserContract.MSG_SESSION_READY] reply arms
      * the current view with its adapter.
@@ -327,6 +340,9 @@ class EmbeddedWebAppController(
      * surface stayed black. A new id makes the stale close target only the corpse it belongs to.
      */
     private fun rearmSession() {
+        // The session being replaced may never have opened a surface (its view went away first), in which
+        // case no surface close will ever reach the provider for it.
+        send(NappletBrowserContract.MSG_CLOSE_SESSION) {}
         sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
         adapterDelivered = false
         sessionDead = false
@@ -414,6 +430,12 @@ class EmbeddedWebAppController(
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
+        // Nothing may act on a torn-down tab (a late file-chooser request would still open a picker), nor on
+        // what a session this controller has since replaced still had in flight — a stale SESSION_READY
+        // would re-arm the view with that dead session's adapter.
+        if (tornDown) return true
+        val from = msg.data?.getString(NappletBrowserContract.KEY_SESSION_ID)
+        if (from != null && from != sessionId) return true
         when (msg.what) {
             NappletBrowserContract.MSG_SESSION_READY -> {
                 val coreLibInfo = msg.data?.getBundle(NappletBrowserContract.KEY_CORE_LIB_INFO) ?: return true

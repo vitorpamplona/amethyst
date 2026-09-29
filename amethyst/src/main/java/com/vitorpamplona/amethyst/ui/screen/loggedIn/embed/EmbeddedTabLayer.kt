@@ -65,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -161,13 +162,10 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
     var layerSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
 
-    // While the soft keyboard is up (hosted by [RemoteImeView] in this window), shrink the active
-    // surface so its bottom clears the keyboard — the embedded WebView then reflows and scrolls the
-    // focused field into view. Only the portion of the keyboard that overlaps the surface counts.
-    // Use the *snapped* animation target rather than the animated `ime` inset: the cross-process surface
-    // resize is expensive (a SurfaceControlViewHost reconfigure each frame), so we resize once to the
-    // final height instead of on every frame of the keyboard slide-in/out.
-    val imeBottomPx = WindowInsets.imeAnimationTarget.getBottom(density)
+    // The keyboard's *snapped* target inset (not the animated one). Only the insets object is taken here;
+    // its value is read inside the effect below, so a keyboard showing or hiding doesn't recompose this whole
+    // layer (every surface, the pill, the selection overlay).
+    val imeTarget = WindowInsets.imeAnimationTarget
 
     Box(
         Modifier
@@ -199,8 +197,6 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                             // SurfaceControlViewHost surface, and the first frame presented after that reconfigure
                             // stalls ~1s (the per-focus "freeze"). Keep the surface full-size and let the page bring
                             // the focused field above the keyboard via the shim's scrollIntoView on focus.
-                            @Suppress("UNUSED_EXPRESSION")
-                            imeBottomPx
                             Modifier
                                 .absoluteOffset(left, (bounds.top - layerOrigin.y).toDp())
                                 .size(bounds.width.toDp(), bounds.height.toDp())
@@ -223,6 +219,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         }
                     },
                     modifier = placement,
+                    onRelease = { holder ->
+                        (holder.getChildAt(0) as? SandboxedSdkView)?.let { session.controller.detachView(it) }
+                    },
                 )
             }
         }
@@ -302,6 +301,12 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 findQuery = ""
             }
 
+            // Switching tabs drops the find bar (its state is per tab), but the page it searched keeps its
+            // highlights until told otherwise — clear them on the tab being left.
+            DisposableEffect(findBridge) {
+                onDispose { if (findShowing) findBridge?.find("") }
+            }
+
             val tabModifier =
                 with(density) {
                     Modifier
@@ -353,8 +358,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     },
                     showClose = false,
                     suggestionsFor = chrome.suggestionsFor,
+                    // A clipboard query is a binder call: only make it while the pill is open to use it.
                     onPasteAndGo =
-                        if (BrowserWebTools.clipboardHasText(context)) {
+                        if (pillExpanded && BrowserWebTools.clipboardHasText(context)) {
                             {
                                 pillExpanded = false
                                 BrowserWebTools.clipboardText(context)?.let { chrome.onEvent(BrowserPillEvent.Navigate(it)) }
@@ -413,8 +419,10 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // doesn't pop the keyboard back over the page. A tab switch also collapses the insets but does NOT
         // look like this: measured on device, the switch takes focus off the view in the same frame, so
         // isMirroringPageField() is already false there and the mark this tab was owed survives.
-        LaunchedEffect(activeId, imeBottomPx) {
-            if (imeBottomPx == 0 && imeView.isMirroringPageField()) imeView.noteKeyboardDismissed()
+        LaunchedEffect(activeId) {
+            snapshotFlow { imeTarget.getBottom(density) }.collect { imeBottomPx ->
+                if (imeBottomPx == 0 && imeView.isMirroringPageField()) imeView.noteKeyboardDismissed()
+            }
         }
         DisposableEffect(imeBridge) {
             val boundId = activeId
@@ -495,7 +503,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 // mid-typing — which is exactly the case this restore exists for. [wantsKeyboardForPageField]
                 // also answers the other half: only a keyboard THIS mirror holds counts, so typing in the
                 // browser's own address bar never arms a restore for a page field.
-                if (boundId != null) {
+                // Only for the session that is still warm under this id: after a rebuild (theme, account) or an
+                // eviction this disposal runs late, and a mark recorded now would be restored onto a fresh page.
+                if (boundId != null && EmbeddedTabHost.isWarm(boundId, imeBridge)) {
                     EmbeddedTabHost.noteKeyboardOnLeave(boundId, imeView.wantsKeyboardForPageField())
                 }
                 imeView.onPageBlur()

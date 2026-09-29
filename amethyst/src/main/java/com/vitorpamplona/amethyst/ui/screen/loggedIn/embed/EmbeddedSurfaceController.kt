@@ -40,6 +40,13 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 interface EmbeddedSurfaceController {
     fun attachView(view: SandboxedSdkView)
 
+    /**
+     * [view] left the composition. The controller outlives it (it lives in the process-scoped host), so it
+     * must let go of it — a view holds its Activity, and a warm controller still pointing at the view of an
+     * Activity the user backed out of would keep that whole Activity alive.
+     */
+    fun detachView(view: SandboxedSdkView)
+
     /** The session became the visible tab. */
     fun onShown() {
         // Optional hook: default no-op. Controllers that don't pause/resume applet JS need no action.

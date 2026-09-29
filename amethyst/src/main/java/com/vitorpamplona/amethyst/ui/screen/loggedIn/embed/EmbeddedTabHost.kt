@@ -119,6 +119,28 @@ object EmbeddedTabHost {
     /** True if a warm session already exists for [id] (used by the preloader to skip re-acquiring). */
     fun isWarm(id: String): Boolean = warm.any { it.id == id }
 
+    /** True if [controller] is still the warm session for [id] (not torn down or replaced by a rebuild). */
+    fun isWarm(
+        id: String,
+        controller: Any?,
+    ): Boolean = warm.any { it.id == id && it.controller === controller }
+
+    /**
+     * The theme (dark or not) the warm sessions were built in. Kept here, next to the sessions, rather than in
+     * the watcher's `remember`: an Activity recreated while the process lives re-seeds a remembered value to
+     * the CURRENT theme, so a system dark-mode flip that happened meanwhile was never noticed and the warm
+     * pages stayed in the old theme.
+     */
+    private var builtDark: Boolean? = null
+
+    /** Rebuilds every warm session when the resolved theme differs from the one they were built in. */
+    fun rebuildIfThemeChanged(dark: Boolean) {
+        val previous = builtDark
+        builtDark = dark
+        // The first report only records what the sessions (built from the same preference) already use.
+        if (previous != null && previous != dark) rebuildAll()
+    }
+
     /**
      * Seeds [contentBounds] with an approximate full-content rect when no tab has reported real bounds
      * yet, so surfaces preloaded before the user visits any tab lay out at a realistic viewport (and so

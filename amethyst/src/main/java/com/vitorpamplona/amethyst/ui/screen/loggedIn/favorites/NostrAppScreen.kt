@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites
 
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
@@ -41,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,10 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
-import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
-import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
-import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -81,13 +75,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
-import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 
 /**
  * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
@@ -152,7 +143,6 @@ private fun EmbeddedNostrAppTab(
     // Only nSites have a route of their own to choose, and only when Tor is running.
     val torOn = if (profile.exposesNetwork && params.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1) > 0) useTor else null
 
-    val scope = rememberCoroutineScope()
     var showAccess by remember { mutableStateOf(false) }
 
     val apps by Amethyst.instance.favoriteApps.favorites
@@ -171,11 +161,6 @@ private fun EmbeddedNostrAppTab(
     // Keep the controller callbacks fresh (cheap, need the latest closures).
     SideEffect {
         controller.onStateChanged = { canGoBack = it }
-        controller.onNotice = { notice ->
-            noticeResId(notice)?.let { res ->
-                scope.launch { Toast.makeText(context, loadStringRes(res), Toast.LENGTH_SHORT).show() }
-            }
-        }
     }
 
     // The permission-ledger key is the addressable coordinate without its kind prefix (`pubkey:dtag`),
@@ -335,11 +320,3 @@ private fun UnavailableTab(
         }
     }
 }
-
-private fun noticeResId(notice: String): StringResource? =
-    when (notice) {
-        NappletEmbedContract.NOTICE_PUBLISHED -> Res.string.favorite_notice_published
-        NappletEmbedContract.NOTICE_UPLOADED -> Res.string.favorite_notice_uploaded
-        NappletEmbedContract.NOTICE_PAID -> Res.string.favorite_notice_paid
-        else -> null
-    }

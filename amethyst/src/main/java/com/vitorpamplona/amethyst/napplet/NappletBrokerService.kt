@@ -348,7 +348,17 @@ class NappletBrokerService : Service() {
             val identity = NappletIdentity(authorPubKey = BROWSER_IDENTITY_AUTHOR, identifier = origin)
             // Bind to the account active at mint time: a browser token minted for one account must
             // never sign as another if the user switches while the page is still open.
-            val mintAccount = Amethyst.instance.sessionManager.loggedInAccount() ?: return true
+            val mintAccount = Amethyst.instance.sessionManager.loggedInAccount()
+            if (mintAccount == null) {
+                // No one to act as: answer anyway (with no token), so the page's queued calls fail right away
+                // instead of waiting forever for a token that will never come.
+                val refusal =
+                    Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
+                        this.data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
+                    }
+                runCatching { replyTo.send(refusal) }
+                return true
+            }
             val token = NappletLaunchRegistry.register(identity, NappletCapability.WEBSITE_CAPABILITIES, mintAccount.pubKey)
             val response =
                 Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {

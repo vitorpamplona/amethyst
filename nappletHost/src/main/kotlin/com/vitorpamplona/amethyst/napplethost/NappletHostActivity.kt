@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
@@ -230,6 +231,10 @@ class NappletHostActivity : ComponentActivity() {
     // the broker binds after this surface is already resumed (bindService is async).
     private var resumed = false
 
+    // Requests that act for the user (publish, pay, upload…) made while this napplet was in the background.
+    // Pausing the WebView doesn't stop JavaScript, so they are held here and sent on the next resume.
+    private val heldWhilePaused = mutableListOf<Message>()
+
     // Renews the broker's foreground lease while resumed. If this process dies, the heartbeat stops and
     // the broker reaps the stale lease, so a crash can't pin the main process's network up forever.
     private var foregroundHeartbeat: Job? = null
@@ -380,6 +385,9 @@ class NappletHostActivity : ComponentActivity() {
         // keep renewing that lease so a crash here can't pin the network up forever.
         resumed = true
         startForegroundHeartbeat()
+        val held = heldWhilePaused.toList()
+        heldWhilePaused.clear()
+        held.forEach { if (brokerMessenger == null) pendingRequests.add(it) else sendToBroker(it) }
     }
 
     override fun onPause() {
@@ -767,6 +775,11 @@ class NappletHostActivity : ComponentActivity() {
                     }
             }
 
+        // In the background: an act on the user's behalf waits until they're looking at this napplet again.
+        if (!resumed && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
+            heldWhilePaused += msg
+            return
+        }
         val messenger = brokerMessenger
         if (messenger == null) {
             pendingRequests.add(msg)

@@ -34,6 +34,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -41,8 +42,14 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
+import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.napplet.NappletLaunchRegistry
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
@@ -61,6 +68,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.consoleLevelOf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -110,9 +120,6 @@ class EmbeddedNostrAppController(
     /** (canGoBack) — drives the in-tab back gesture. */
     var onStateChanged: ((Boolean) -> Unit)? = null
 
-    /** A granted "allow always" sensitive op just ran (one of NappletEmbedContract.NOTICE_*). */
-    var onNotice: ((String) -> Unit)? = null
-
     private var hasLoadedReal = false
 
     // Brings the tab back when its sandbox-side surface dies (see [onSurfaceLost]).
@@ -123,6 +130,9 @@ class EmbeddedNostrAppController(
 
     // Set after the first connection, so a later onServiceConnected is recognised as `:napplet` coming back.
     private var everConnected = false
+
+    // Set by [unbind]: nothing that arrives afterwards may act.
+    private var tornDown = false
 
     // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
     private var createOnShow = false
@@ -198,6 +208,10 @@ class EmbeddedNostrAppController(
     }
 
     fun unbind() {
+        // Tell the provider to drop this tab's session now: one created for a view that was disposed before
+        // it attached never gets the surface close that would otherwise clean it up.
+        send(NappletEmbedContract.MSG_CLOSE_SESSION)
+        tornDown = true
         if (bound) {
             runCatching { appContext.unbindService(connection) }
             bound = false
@@ -212,7 +226,6 @@ class EmbeddedNostrAppController(
         pendingAdapter = null
         adapterDelivered = false
         onStateChanged = null
-        onNotice = null
         onImeEvent = null
         onMagnifierFrame = null
         onLoadStatusChanged = null
@@ -253,6 +266,12 @@ class EmbeddedNostrAppController(
         }
     }
 
+    override fun detachView(view: SandboxedSdkView) {
+        if (sandboxedSdkView !== view) return
+        view.setEventListener(null)
+        sandboxedSdkView = null
+    }
+
     /**
      * Asks the sandbox for a brand-new session; the [NappletEmbedContract.MSG_SESSION_READY] reply arms the
      * current view with its adapter.
@@ -262,6 +281,9 @@ class EmbeddedNostrAppController(
      * leaving the surface black.
      */
     private fun rearmSession() {
+        // The session being replaced may never have opened a surface (its view went away first), in which
+        // case no surface close will ever reach the provider for it.
+        send(NappletEmbedContract.MSG_CLOSE_SESSION)
         sessionId = "napplet-${SESSION_SEQ.incrementAndGet()}"
         adapterDelivered = false
         sessionDead = false
@@ -363,6 +385,12 @@ class EmbeddedNostrAppController(
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
+        // Nothing may act on a torn-down tab (a late file-chooser request would still open a picker), nor on
+        // what a session this controller has since replaced still had in flight — a stale SESSION_READY
+        // would re-arm the view with that dead session's adapter.
+        if (tornDown) return true
+        val from = msg.data?.getString(NappletEmbedContract.KEY_SESSION_ID)
+        if (from != null && from != sessionId) return true
         when (msg.what) {
             NappletEmbedContract.MSG_SESSION_READY -> {
                 val coreLibInfo = msg.data?.getBundle(NappletEmbedContract.KEY_CORE_LIB_INFO) ?: return true
@@ -382,7 +410,7 @@ class EmbeddedNostrAppController(
             }
             NappletEmbedContract.MSG_NOTICE -> {
                 val notice = msg.data?.getString(NappletEmbedContract.KEY_NOTICE) ?: return true
-                onNotice?.invoke(notice)
+                showNotice(notice)
             }
             NappletEmbedContract.MSG_IME_EVENT -> {
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
@@ -500,6 +528,26 @@ class EmbeddedNostrAppController(
     private fun publishLoadStatus(status: EmbeddedLoadStatus) {
         loadStatus = status
         onLoadStatusChanged?.invoke(status)
+    }
+
+    /**
+     * A granted "allow always" sensitive op just ran (one of NappletEmbedContract.NOTICE_*): tell the user.
+     * Shown from here, on the app's own scope, rather than by the tab's screen: the op can complete after
+     * the user has left the tab, when that screen — and the coroutine scope it would have toasted from — is
+     * already gone, and the notice was silently dropped.
+     */
+    private fun showNotice(notice: String) {
+        val res =
+            when (notice) {
+                NappletEmbedContract.NOTICE_PUBLISHED -> Res.string.favorite_notice_published
+                NappletEmbedContract.NOTICE_UPLOADED -> Res.string.favorite_notice_uploaded
+                NappletEmbedContract.NOTICE_PAID -> Res.string.favorite_notice_paid
+                else -> return
+            }
+        Amethyst.instance.applicationIOScope.launch {
+            val text = loadStringRes(res)
+            withContext(Dispatchers.Main) { Toast.makeText(appContext, text, Toast.LENGTH_SHORT).show() }
+        }
     }
 
     /** Pause/resume the applet's JS when the tab leaves/returns to the foreground (background gating). */
