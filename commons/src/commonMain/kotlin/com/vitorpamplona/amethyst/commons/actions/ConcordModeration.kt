@@ -183,7 +183,12 @@ object ConcordModeration {
         createdAt: Long,
         citation: AuthorityCitation? = null,
         owner: HexKey,
-    ): Event = edit(actor, controlPlane, communityId, ControlEntityKind.CHANNEL, channelId, ChannelEntity.serializer(), channel, current, createdAt, citation, owner)
+    ): Event {
+        // Every reader drops an edition naming an empty or over-cap Channel (CORD-03 §2), so
+        // refuse to mint one rather than publish an edition nobody will honor.
+        require(channel.hasValidName()) { "Channel name must be 1..${ChannelEntity.NAME_MAX_BYTES} UTF-8 bytes" }
+        return edit(actor, controlPlane, communityId, ControlEntityKind.CHANNEL, channelId, ChannelEntity.serializer(), channel, current, createdAt, citation, owner)
+    }
 
     /**
      * Sets the community's disappearing-messages timer (CORD-08 §1) to [secs] seconds, or turns it

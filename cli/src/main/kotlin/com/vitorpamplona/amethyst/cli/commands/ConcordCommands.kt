@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
+import com.vitorpamplona.amethyst.cli.stores.StoredPrivateChannel
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEven
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
+import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -252,6 +254,7 @@ object ConcordCommands {
                             // Survives every merge: losing the anchor makes the NEXT exclusion
                             // unrecoverable, so a list entry without one must not clear ours.
                             inviteRef = e.inviteRef ?: prior?.inviteRef ?: "",
+                            privateChannels = e.privateChannels.filter { it.key.isNotBlank() }.map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
                         ),
                     )
                     mapOf(
@@ -481,6 +484,7 @@ object ConcordCommands {
                     // The stranded-recovery anchor: if a later Refounding leaves us out, re-resolving
                     // this link is the only way back (CORD-05/06). Stored bare, domain-agnostic.
                     inviteRef = ConcordActions.bareInviteRef(url) ?: "",
+                    privateChannels = ConcordActions.privateChannelKeysOf(bundle).map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
                 ),
             )
             Output.emit(mapOf("community_id" to bundle.communityId, "name" to bundle.name, "relays" to bundle.relays))
@@ -550,6 +554,7 @@ object ConcordCommands {
             controlPk = sc.controlPk.ifBlank { null },
             controlRoot = sc.controlRoot.ifBlank { null },
             heldRoots = sc.heldRoots.map { HeldRoot(it.epoch, it.root, it.controlPk.ifBlank { null }, it.controlRoot.ifBlank { null }) },
+            privateChannels = sc.privateChannels.map { PrivateChannelKey(it.channelId, it.key, it.epoch, it.name) },
             relays = sc.relays,
             name = sc.name,
             inviteRef = sc.inviteRef.ifBlank { null },
@@ -568,6 +573,7 @@ object ConcordCommands {
         relays = entry.relays,
         name = entry.name.ifBlank { sc.name },
         inviteRef = entry.inviteRef ?: sc.inviteRef,
+        privateChannels = entry.privateChannels.filter { it.key.isNotBlank() }.map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
     )
 
     /**

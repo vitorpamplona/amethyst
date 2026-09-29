@@ -373,8 +373,10 @@ class ConcordRefoundingTest {
             val pins = editions.filter { it.vsk == "11" }
             assertEquals(1, pins.size, "the Pin List head rides through")
             assertEquals(pinsV2.id, pins.single().rumorId, "its current head, verbatim")
-            assertNull(pins.single().entityKind, "a sub-kind we don't model")
-            assertEquals(signal.id, editions.single { it.vsk == "12" }.rumorId, "the Signal head rides through")
+            assertEquals(ControlEntityKind.PIN_LIST, pins.single().entityKind)
+            val signals = editions.single { it.vsk == "12" }
+            assertEquals(signal.id, signals.rumorId, "the Signal head rides through")
+            assertNull(signals.entityKind, "a sub-kind we don't model")
 
             val meta = editions.single { it.entityKind == ControlEntityKind.METADATA }
             assertEquals("Test", ConcordJson.decodeOrNull<MetadataEntity>(meta.content)?.name, "the encrypted-seal edition is never the head")

@@ -212,8 +212,26 @@ data class ConcordCommunityState(
                     ?.let { ConcordJson.decodeOrNull<MetadataEntity>(it.content) }
 
             // Channels are gated by MANAGE_CHANNELS, per channel entity, dropping the tombstoned ones.
+            // The gate also enforces the name rule (non-empty, <= 64 UTF-8 bytes, CORD-03 §2): an
+            // edition breaking it is unauthorized and the fold falls back to the previous candidate.
+            val channelEditions = editions.filter { it.entityKind == ControlEntityKind.CHANNEL }
+            // The same gate every entity folds under (well-formed, owner or MANAGE_CHANNELS holder, `vac`
+            // satisfied), plus the Channel name rule: an empty or over-cap name is an edition no reader honors.
+            val channelGate = { edition: ControlEdition ->
+                authority.admits(edition, ConcordPermissions.MANAGE_CHANNELS) &&
+                    ConcordJson.decodeOrNull<ChannelEntity>(edition.content)?.hasValidName() == true
+            }
+            // Deletion is terminal (CORD-03 §2): any gated edition anywhere in a channel's accepted
+            // chain that says `deleted` retires it for good, even if a later edition "restores" it —
+            // members may already have discarded its keys, so a resurrection would split them.
+            val everDeleted =
+                channelEditions
+                    .filter { edition ->
+                        channelGate(edition) && ConcordJson.decodeOrNull<ChannelEntity>(edition.content)?.deleted == true
+                    }.mapTo(HashSet()) { it.entityIdHex }
             val channels = LinkedHashMap<String, ConcordChannel>()
-            for (head in foldGatedBy(ControlEntityKind.CHANNEL, ConcordPermissions.MANAGE_CHANNELS).values) {
+            for (head in EditionFold.foldGated(channelEditions, floors, snapshot = snapshot, rank = authority::tieBreakRank, gate = channelGate).values) {
+                if (head.entityIdHex in everDeleted) continue
                 val def = ConcordJson.decodeOrNull<ChannelEntity>(head.content) ?: continue
                 if (def.deleted) continue
                 channels[head.entityIdHex] = ConcordChannel(head.entityIdHex, def)

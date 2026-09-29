@@ -180,7 +180,23 @@ data class ChannelEntity(
     val name: String = "",
     val private: Boolean = false,
     val deleted: Boolean = false,
-)
+) {
+    /** True when [name] is within the protocol's name rule ([isValidName]). */
+    fun hasValidName(): Boolean = isValidName(name)
+
+    companion object {
+        /** The protocol-wide name cap, in UTF-8 bytes (CORD-03 §2, CORD-04). */
+        const val NAME_MAX_BYTES = 64
+
+        /**
+         * A Channel name must be non-empty and at most [NAME_MAX_BYTES] UTF-8 bytes. Enforced when
+         * building an edition and again when folding one: an edition naming an empty or over-cap
+         * Channel is unauthorized, and the fold falls back to the previous candidate (the reference
+         * client's channel gate).
+         */
+        fun isValidName(name: String): Boolean = name.isNotEmpty() && name.encodeToByteArray().size <= NAME_MAX_BYTES
+    }
+}
 
 /**
  * A community's Metadata content (CORD-02): display [name], optional [description], the community's

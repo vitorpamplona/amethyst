@@ -157,11 +157,13 @@ class ControlEditionTest {
         for (vsk in listOf("6", "7", "9", "10")) {
             assertNull(parse(arrayOf("vsk", vsk), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1")), "vsk $vsk")
         }
-        // A sub-kind this client does not model (Pins 11, Signals 12, anything newer) is kept, raw.
-        val pins = parse(arrayOf("vsk", "11"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1"))
-        assertNotNull(pins)
-        assertNull(pins.entityKind)
-        assertEquals("11", pins.vsk)
+        // A sub-kind this client does not model (Signals 12, anything newer) is kept, raw.
+        val signals = parse(arrayOf("vsk", "12"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1"))
+        assertNotNull(signals)
+        assertNull(signals.entityKind)
+        assertEquals("12", signals.vsk)
+        // Pins (11) are modeled.
+        assertEquals(ControlEntityKind.PIN_LIST, parse(arrayOf("vsk", "11"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1"))?.entityKind)
         assertEquals(ControlEntityKind.CHANNEL.wire, parse(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "1"))?.vsk)
     }
 

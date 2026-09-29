@@ -46,7 +46,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  */
 object ConcordDisappearing {
     /** The timer-notice kind, shared with NIP-17 disappearing DMs (§4). */
-    const val KIND_TIMER_NOTICE = 1740
+    const val KIND_TIMER_NOTICE = ChannelChat.KIND_TIMER_NOTICE
 
     const val TIMER_TAG = "timer"
 

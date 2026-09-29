@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions.Companion.BAN
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -166,6 +167,22 @@ class ControlPlaneConformanceTest {
 
         // The owner cites nothing.
         assertTrue(AuthorityResolver.resolve(listOf(banlist(1, null, owner, "b1", carol)), cid, owner).isBanned(carol))
+    }
+
+    @Test
+    fun aChannelEditionWithoutACitationIsDroppedToo() {
+        // Channels fold under their own gate (the name rule), which must still require the vac.
+        val channelsRole = "33".repeat(32)
+        val channelsDef = ed(ControlEntityKind.ROLE, channelsRole, 1, null, roleJson("Chans", 3, ConcordPermissions.of(ConcordPermissions.MANAGE_CHANNELS).toWire()), owner, "role-chans")
+        val aliceChans = ed(ControlEntityKind.GRANT, ControlFixtures.grantEid(alice), 1, null, grantJson(alice, listOf(channelsRole)), owner, "grant-alice-chans")
+        val channelId = "ce".repeat(32)
+
+        fun channel(vac: AuthorityCitation?) = ed(ControlEntityKind.CHANNEL, channelId, 1, null, """{"name":"news"}""", alice, "chan-1", vac)
+
+        val uncited = ConcordCommunityState.fold(listOf(channelsDef, aliceChans, channel(null)), cid, owner)
+        assertTrue(uncited.channels.isEmpty(), "an uncited channel edition is not honored")
+        val cited = ConcordCommunityState.fold(listOf(channelsDef, aliceChans, channel(citation(aliceChans))), cid, owner)
+        assertEquals("news", cited.channels[channelId]?.definition?.name)
     }
 
     @Test

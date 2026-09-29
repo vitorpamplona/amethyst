@@ -53,6 +53,18 @@ data class StoredCommunity(
     // rekey has no message to miss: re-resolving this link is the only way back. Blank for a direct
     // invite or a community joined before amy stored it.
     val inviteRef: String = "",
+    // Private Channel keys this account holds (CORD-03 §1), from the Community List or an invite.
+    // A private channel is read and written ONLY on the plane its own key derives; without one it
+    // is unreadable and `send` refuses rather than fall back to the root-derived plane.
+    val privateChannels: List<StoredPrivateChannel> = emptyList(),
+)
+
+/** A held Private Channel key at its channel epoch, mirroring quartz `PrivateChannelKey`. */
+data class StoredPrivateChannel(
+    val channelId: String = "",
+    val key: String = "",
+    val epoch: Long = 0,
+    val name: String = "",
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */

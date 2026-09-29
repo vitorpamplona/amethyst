@@ -126,24 +126,51 @@ class ControlPlaneVersionExhaustionTest {
         )
     }
 
+    /**
+     * The poison here renames rather than deletes: CORD-03 §2 makes a Channel deletion by any
+     * authorized holder terminal across the whole accepted edition set (the reference client's
+     * `everDeleted`), whatever its version, so a max-version *delete* from bob now retires the
+     * Channel by design. What must still hold is that a max-version edition cannot pin the Channel
+     * to bob's content.
+     */
     @Test
-    fun oneEditionAtMaxVersionNoLongerDeletesAChannel() {
+    fun oneEditionAtMaxVersionNoLongerPinsAChannel() {
         val channelV0 = edition(ControlEntityKind.CHANNEL, channelEntity, 0, null, """{"name":"general"}""", owner, "chan-0")
         val community = communityWhereBobHolds(ConcordPermissions.of(ConcordPermissions.MANAGE_CHANNELS).toWire(), channelV0)
 
         val floorsBefore = ControlFixtures.authorizedHeads(community, owner)
-        val poison = edition(ControlEntityKind.CHANNEL, channelEntity, Long.MAX_VALUE, channelV0.hash, """{"name":"general","deleted":true}""", bob, "chan-poison")
+        val poison = edition(ControlEntityKind.CHANNEL, channelEntity, Long.MAX_VALUE, channelV0.hash, """{"name":"PWNED"}""", bob, "chan-poison")
         val floorsAfter = ControlFixtures.authorizedHeads(community + poison, owner, floorsBefore)
 
         val repair = edition(ControlEntityKind.CHANNEL, channelEntity, 1, channelV0.hash, """{"name":"general"}""", owner, "chan-1")
         val pool = community + poison + repair
 
-        assertEquals(1, ControlFixtures.fold(pool, owner).channels.size, "a fresh joiner still sees the channel")
-        assertEquals(1, ControlFixtures.fold(pool, owner, floorsAfter).channels.size, "and so does a client holding a floor")
         assertEquals(
-            1,
-            ControlFixtures.fold(community + repair, owner, floorsAfter).channels.size,
-            "the channel survives a Refounding too",
+            "general",
+            ControlFixtures
+                .fold(pool, owner)
+                .channels[channelEntity]
+                ?.definition
+                ?.name,
+            "a fresh joiner follows the honest chain",
+        )
+        assertEquals(
+            "general",
+            ControlFixtures
+                .fold(pool, owner, floorsAfter)
+                .channels[channelEntity]
+                ?.definition
+                ?.name,
+            "and so does a client holding a floor",
+        )
+        assertEquals(
+            "general",
+            ControlFixtures
+                .fold(community + repair, owner, floorsAfter)
+                .channels[channelEntity]
+                ?.definition
+                ?.name,
+            "the channel stays repaired across a Refounding too",
         )
     }
 

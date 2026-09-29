@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordListTooLargeExcep
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.concordEpoch
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
@@ -71,6 +72,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -597,6 +599,9 @@ class AccountConcordActions(
                 // Read access to the Control Plane, never write (CORD-05 §1). Absent = the
                 // community is still pre-split, so we fold it at the legacy address.
                 controlPk = bundle.controlPk,
+                // Private Channel keys the invite delivered (CORD-03 §1 / CORD-05 §1), so those
+                // channels are read and written on their own planes from the first fold.
+                privateChannels = ConcordActions.privateChannelKeysOf(bundle),
                 relays = bundle.relays,
                 name = bundle.name,
                 addedAt = TimeUtils.nowMillis(),
@@ -628,7 +633,10 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        // The channel's own plane: root-derived for a Public Channel, its held key for a Private one,
+        // and no plane at all (refuse) for a Private Channel whose key we do not hold (CORD-03 §1).
+        val plane = session.currentChannelPlane(channelIdHex) ?: return false
+        val channelKey = plane.key
 
         // NIP-30 custom-emoji tags for any `:shortcode:` the user typed, so the message renders the
         // custom image everywhere (the kind-9 rumor carries them; recipients render via the tags).
@@ -645,13 +653,13 @@ class AccountConcordActions(
                 // the user attached media); an inline reply is a kind-9 message quoting the parent; a
                 // fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, imetas, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelImageReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelInlineReply(account.signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
                 else ->
-                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags)
             }
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
@@ -673,14 +681,15 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val plane = session.currentChannelPlane(channelIdHex) ?: return false
+        val channelKey = plane.key
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
         val emojiTags =
             account.emoji
                 .findEmojiTags(text)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelImageMessage(account.signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags)
         sendConcordChannelWrap(entry, channelKey, wrap)
         return true
     }
@@ -702,9 +711,11 @@ class AccountConcordActions(
         val target = note.event ?: return false
         val communityId = channel.channelId.communityId
         val channelIdHex = channel.channelId.channelId
-        val entry = account.concordSessions.sessionFor(communityId)?.entry ?: return false
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        val entry = session.entry
 
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val plane = session.currentChannelPlane(channelIdHex) ?: return false
+        val channelKey = plane.key
         // A custom-emoji reaction is a `:shortcode:` content that needs its NIP-30 `emoji` tag to
         // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
         val emojiTags =
@@ -712,7 +723,7 @@ class AccountConcordActions(
                 .findEmojiTags(reaction)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelReaction(account.signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -723,7 +734,8 @@ class AccountConcordActions(
      * message's channel/epoch, wraps it on the plane, and publishes it — so the edit stays
      * inside the encrypted channel (a public edit would e-tag the private rumor id onto
      * public relays). The receiving side overlays the newest edit onto the target message;
-     * only the *original author's* edits are applied, so we gate to my own kind-9 messages.
+     * only the *original author's* edits are applied, so we gate to my own messages — a kind-9
+     * message or a kind-1111 thread reply (CORD-03 §3: edits target either by rumor id).
      * Returns false if [note] isn't an editable Concord message I authored.
      */
     suspend fun editConcordChannelMessage(
@@ -733,23 +745,85 @@ class AccountConcordActions(
         if (!account.isWriteable()) return false
         val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
         val target = note.event ?: return false
-        // Edits only apply to plain kind-9 messages, and only the author may edit their own.
-        if (target !is ChatEvent || target.pubKey != account.signer.pubKey) return false
+        // Edits apply to messages and thread replies, and only the author may edit their own.
+        if (!isConcordEditable(target)) return false
 
         val communityId = channel.channelId.communityId
         val channelIdHex = channel.channelId.channelId
-        val entry = account.concordSessions.sessionFor(communityId)?.entry ?: return false
+        val session = account.concordSessions.sessionFor(communityId) ?: return false
+        val entry = session.entry
 
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val plane = session.currentChannelPlane(channelIdHex) ?: return false
+        val channelKey = plane.key
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the new text, same as a fresh message.
         val emojiTags =
             account.emoji
                 .findEmojiTags(newText)
                 .map { it.toTagArray() }
                 .toTypedArray()
-        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, entry.rootEpoch, target, newText, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelEdit(account.signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
+    }
+
+    /** True when [target] is a Concord message this account may edit: my own kind-9 message or kind-1111 reply. */
+    fun isConcordEditable(target: Event): Boolean = (target is ChatEvent || target is CommentEvent) && target.pubKey == account.signer.pubKey
+
+    /**
+     * The Concord channel [note] belongs to: its own gatherer for a message or thread reply, else
+     * (a reaction, a delete) the channel of the note it points at. Null when it is not Concord.
+     */
+    fun concordChannelOf(note: Note): ConcordChannel? =
+        note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+            ?: note.replyTo?.firstNotNullOfOrNull { target -> target.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } }
+
+    /**
+     * Delete my own Concord rumors [notes] (messages, thread replies, reactions) in [channel] the
+     * way CORD-01 prescribes: a kind-5 rumor with `e` + `k` tags, sealed (20013) and wrapped on the
+     * channel's own plane, so only the community sees it. Never a signed kind 5 or a NIP-17 delete,
+     * both of which would carry the rumor ids to people and relays outside the community.
+     *
+     * Each target is retracted on the plane that carried it (its bound epoch), falling back to the
+     * channel's current plane when this account no longer holds that one. A member's delete of
+     * their own message stays honored after Dissolution (CORD-02 §9), so this is not gated on it.
+     * Returns false when nothing could be sent (not writeable, no session, no plane, no own notes).
+     */
+    suspend fun deleteConcordRumors(
+        channel: ConcordChannel,
+        notes: List<Note>,
+    ): Boolean {
+        if (!account.isWriteable()) return false
+        val session = account.concordSessions.sessionFor(channel.channelId.communityId) ?: return false
+        val channelIdHex = channel.channelId.channelId
+        val mine = notes.mapNotNull { it.event }.filter { it.pubKey == account.signer.pubKey }.distinctBy { it.id }
+        if (mine.isEmpty()) return false
+        val current = session.currentChannelPlane(channelIdHex)
+        val byPlane =
+            mine.groupBy { target ->
+                target.tags.concordEpoch()?.let { session.channelPlaneFor(channelIdHex, it) } ?: current
+            }
+        var sent = false
+        for ((plane, targets) in byPlane) {
+            if (plane == null) continue
+            val wrap = ConcordActions.buildChannelDelete(account.signer, plane.key, channelIdHex, plane.epoch, targets, TimeUtils.now())
+            publishConcordWrap(session.entry, wrap)
+            sent = true
+        }
+        return sent
+    }
+
+    /**
+     * Toggle my [reaction] on Concord message [note]: retract my existing reactions of that content
+     * with an in-channel delete, else add it ([reactToConcordMessage]). Returns false when nothing
+     * was sent.
+     */
+    suspend fun toggleConcordReaction(
+        note: Note,
+        reaction: String,
+    ): Boolean {
+        val channel = concordChannelOf(note) ?: return false
+        val mine = note.allReactionsOfContentByAuthor(account.userProfile(), reaction)
+        return if (mine.isNotEmpty()) deleteConcordRumors(channel, mine) else reactToConcordMessage(note, reaction)
     }
 
     /**
@@ -773,8 +847,8 @@ class AccountConcordActions(
             return
         }
         val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildChannelTyping(account.signer, channelKey, channelIdHex, entry.rootEpoch, TimeUtils.now())
+        val plane = session.currentChannelPlane(channelIdHex) ?: return
+        val wrap = ConcordActions.buildChannelTyping(account.signer, plane.key, channelIdHex, plane.epoch, TimeUtils.now())
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) account.client.publish(wrap, relays)
     }
@@ -1530,6 +1604,8 @@ class AccountConcordActions(
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_CHANNELS) ?: return false
         val channelId = RandomInstance.bytes(32)
         val channel = ChannelEntity(name = name.trim())
+        // Readers drop an empty or over-64-byte name (CORD-03 §2); never mint one.
+        if (!channel.hasValidName()) return false
         val wrap = ConcordModeration.defineChannel(account.signer, cp, communityId.hexToByteArray(), channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -1553,6 +1629,7 @@ class AccountConcordActions(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = (standing ?: ChannelEntity()).copy(name = name.trim())
+        if (!channel.hasValidName()) return false
         val wrap = ConcordModeration.defineChannel(account.signer, cp, communityId.hexToByteArray(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -1575,6 +1652,7 @@ class AccountConcordActions(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = (standing ?: ChannelEntity()).copy(name = name.trim(), deleted = true)
+        if (!channel.hasValidName()) return false
         val wrap = ConcordModeration.defineChannel(account.signer, cp, communityId.hexToByteArray(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true

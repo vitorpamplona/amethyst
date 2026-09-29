@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -783,7 +784,9 @@ class Account(
                 // Invalidate the channel's metadata flow only on a real change so the Messages-row
                 // name + community chip recompose when the fold first resolves them (they observe
                 // metadata.stateFlow via observeChannel), without churning every row every tick.
-                if (channel.updateFrom(state, relays, myPubKey)) channel.updateChannelInfo()
+                // A Private Channel is readable/postable only with its held key (CORD-03 §1).
+                val keyHeld = ConcordActions.canAccessChannel(session.entry, state, channelIdHex)
+                if (channel.updateFrom(state, relays, myPubKey, keyHeld)) channel.updateChannelInfo()
                 channel.notes
                     .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
                     .forEach { channel.removeNote(it) }
@@ -1747,9 +1750,16 @@ class Account(
 
         // Marmot messages are retracted inside their group. A public NIP-09 here would e-tag
         // the group's private rumor ids onto public relays.
-        val (marmotNotes, otherNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
+        val (marmotNotes, nonMarmotNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
         marmotNotes.groupBy { marmot.marmotGroupOf(it)!! }.forEach { (groupId, groupNotes) ->
             marmot.deleteMarmotMessages(groupId, groupNotes)
+        }
+
+        // Concord rumors are retracted inside their channel's plane (CORD-01 Deletions), for the
+        // same reason: any other route carries the community's rumor ids outside it.
+        val (concordNotes, otherNotes) = nonMarmotNotes.partition { concord.concordChannelOf(it) != null }
+        concordNotes.groupBy { concord.concordChannelOf(it)!! }.forEach { (channel, channelNotes) ->
+            concord.deleteConcordRumors(channel, channelNotes)
         }
 
         val (myRumors, myNotes) =
@@ -1793,6 +1803,13 @@ class Account(
         // In a Marmot group the deletion goes to the group, not to the target's author as a DM.
         marmot.marmotGroupOf(target)?.let { groupId ->
             marmot.deleteMarmotMessages(groupId, notes)
+            return
+        }
+
+        // In a Concord channel it is an in-channel kind-5 on the channel's plane (CORD-01), never a
+        // NIP-17 DM to the p-tagged users, which would leak the rumor ids outside the community.
+        concord.concordChannelOf(target)?.let { channel ->
+            concord.deleteConcordRumors(channel, notes)
             return
         }
 

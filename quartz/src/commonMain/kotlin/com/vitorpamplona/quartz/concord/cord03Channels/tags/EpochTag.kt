@@ -35,11 +35,19 @@ class EpochTag {
 
         fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
+        /**
+         * The epoch, or null when the value is not its canonical decimal form (CORD-01 Encoding:
+         * "no leading zeros"). `"04"`, `"+4"`, `"-1"` and `" 4"` are all refused: the binding is a
+         * strict string comparison, so a spelling that merely parses to the same number is a
+         * different binding.
+         */
         fun parse(tag: Array<String>): Long? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1].toLongOrNull()
+            val epoch = tag[1].toLongOrNull() ?: return null
+            ensure(epoch >= 0 && epoch.toString() == tag[1]) { return null }
+            return epoch
         }
 
         fun assemble(epoch: Long) = arrayOf(TAG_NAME, epoch.toString())

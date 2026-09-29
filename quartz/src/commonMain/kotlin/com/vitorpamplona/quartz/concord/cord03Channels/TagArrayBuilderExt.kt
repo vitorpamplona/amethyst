@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.concord.cord03Channels
 
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.MsTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -36,6 +37,9 @@ fun <T : Event> TagArrayBuilder<T>.channel(channelId: HexKey) = addUnique(Channe
 
 fun <T : Event> TagArrayBuilder<T>.epoch(epoch: Long) = addUnique(EpochTag.assemble(epoch))
 
+/** The CORD-02 §4 sub-second remainder (0..999) of the rumor's send time. */
+fun <T : Event> TagArrayBuilder<T>.ms(ms: Int) = addUnique(MsTag.assemble(ms))
+
 /** Binds an event to [channelId] at [epoch] — both tags every Chat Plane rumor carries. */
 fun <T : Event> TagArrayBuilder<T>.channelBinding(
     channelId: HexKey,
@@ -43,4 +47,15 @@ fun <T : Event> TagArrayBuilder<T>.channelBinding(
 ) = apply {
     channel(channelId)
     epoch(epoch)
+}
+
+/** [channelBinding] plus the `["ms", …]` remainder every Chat rumor carries (CORD-02 §4). */
+fun <T : Event> TagArrayBuilder<T>.channelBinding(
+    channelId: HexKey,
+    epoch: Long,
+    ms: Int,
+) = apply {
+    channel(channelId)
+    epoch(epoch)
+    ms(ms)
 }
