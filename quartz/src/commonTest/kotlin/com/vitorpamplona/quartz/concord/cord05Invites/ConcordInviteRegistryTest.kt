@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord05Invites
 
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
@@ -274,6 +275,18 @@ class ConcordInviteRegistryTest {
         // Before its expiry the link is still live; an unreadable list prunes nothing.
         assertTrue(expiredPk in ConcordInviteRegistry.nextLinks(emptyList(), doc, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 50))
         assertEquals(listOf(expiredPk), ConcordInviteRegistry.nextLinks(listOf(expiredPk), null, ControlFixtures.COMMUNITY_ID_HEX, nowSecs = 200))
+    }
+
+    @Test
+    fun theMemoizedRegistryCoordinateIsTheDerivedOne() {
+        val author = KeyPair().pubKey.toHexKey()
+        val derived = ConcordInviteRegistry.coordinateHex(ControlFixtures.COMMUNITY_ID_HEX.hexToByteArray(), author)
+        repeat(2) {
+            assertEquals(derived, AuthorityResolver.inviteLinksCoordinateHex(ControlFixtures.COMMUNITY_ID_HEX.hexToByteArray(), ControlFixtures.COMMUNITY_ID_HEX, author))
+        }
+        // Keyed by community too: the same author elsewhere is a different coordinate.
+        val other = "ab".repeat(32)
+        assertEquals(ConcordInviteRegistry.coordinateHex(other.hexToByteArray(), author), AuthorityResolver.inviteLinksCoordinateHex(other.hexToByteArray(), other, author))
     }
 
     @Test

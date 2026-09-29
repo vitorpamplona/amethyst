@@ -74,6 +74,8 @@ data class ExpiredConcordRumor(
     val wrapId: HexKey,
     val rumorId: HexKey,
     val expiresAt: Long,
+    /** The URLs of the rumor's encrypted attachments, whose decryption keys go with it (CORD-08 §3). */
+    val attachmentUrls: List<String> = emptyList(),
 )
 
 /**
@@ -711,6 +713,8 @@ class ConcordCommunitySession(
             ingestTyping(wrap, channelIdHex, key, epoch)
             return ConcordIngestOutcome.NON_STRUCTURAL
         }
+        // An expired wrap this session already swept, delivered again: ours, but never opened again.
+        if (wasSwept(wrap.id)) return ConcordIngestOutcome.NON_STRUCTURAL
         val isNew =
             lock.withLock {
                 channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap) == null
@@ -887,7 +891,7 @@ class ConcordCommunitySession(
             // never handed to the store — and queued for the next sweep so its wrap goes too.
             val expiresAt = ConcordDisappearing.expirationOf(rumor)
             if (expiresAt != null) {
-                trackExpiring(wrap.id, channelIdHex, rumor.id, expiresAt)
+                trackExpiring(wrap.id, channelIdHex, rumor.id, expiresAt, ChannelChat.encryptedImagesOf(rumor).map { it.url })
                 if (expiresAt <= now) continue
             }
             authors.add(rumor.pubKey.lowercase())
@@ -920,41 +924,85 @@ class ConcordCommunitySession(
      */
     fun messageExpirationSecs(): Long? = _state.value?.metadata?.messageExpirationSecs()
 
+    /**
+     * The same entries as [expiringByWrapId], kept sorted by `expiresAt` (then wrap id), so a sweep
+     * pops only what is due instead of scanning every tracked message, and the next deadline is the
+     * head. Common code has no priority queue; a binary-searched insert into an array list is the
+     * same order of cost here.
+     */
+    private val expiringByDeadline = ArrayList<ExpiredConcordRumor>()
+
+    /**
+     * Wrap ids this session already swept, newest last and bounded: relays keep re-delivering an
+     * expired wrap (a relay that ignores NIP-40, a backfill page), and each would otherwise be opened
+     * again only to be refused and swept again.
+     */
+    private val sweptWrapIds = LinkedHashSet<HexKey>()
+
+    private val deadlineOrder = compareBy<ExpiredConcordRumor>({ it.expiresAt }, { it.wrapId })
+
     private fun trackExpiring(
         wrapId: HexKey,
         channelIdHex: HexKey,
         rumorId: HexKey,
         expiresAt: Long,
+        attachmentUrls: List<String> = emptyList(),
     ) {
-        lock.withLock {
-            expiringByWrapId[wrapId] = ExpiredConcordRumor(channelIdHex, wrapId, rumorId, expiresAt)
-            _nextExpiry.update { if (it == null || expiresAt < it) expiresAt else it }
-        }
+        lock.withLock { trackLocked(ExpiredConcordRumor(channelIdHex, wrapId, rumorId, expiresAt, attachmentUrls)) }
     }
+
+    private fun trackLocked(entry: ExpiredConcordRumor) {
+        val prior = expiringByWrapId[entry.wrapId]
+        if (prior != null) {
+            // A re-projection re-emits the same wrap: same rumor, same deadline — nothing to move.
+            if (prior.expiresAt == entry.expiresAt) return
+            val at = expiringByDeadline.binarySearch(prior, deadlineOrder)
+            if (at >= 0) expiringByDeadline.removeAt(at)
+        }
+        expiringByWrapId[entry.wrapId] = entry
+        val at = expiringByDeadline.binarySearch(entry, deadlineOrder)
+        expiringByDeadline.add(if (at < 0) -at - 1 else at, entry)
+        _nextExpiry.value = expiringByDeadline.first().expiresAt
+    }
+
+    /** True when [wrapId] was already swept as expired: a re-delivery is dropped before it is opened. */
+    private fun wasSwept(wrapId: HexKey): Boolean = lock.withLock { wrapId in sweptWrapIds }
 
     /**
      * Forgets every rumor whose `expiration` is at or before [now] (CORD-08 §3): its wrap leaves the
      * channel buffer, so no re-projection can resurrect it, and it is returned so the caller purges
-     * the rumor's note and the wrap's note from its store. A wrap re-delivered later is refused again
-     * at ingest.
+     * the rumor's note and the wrap's note from its store. A wrap re-delivered later is dropped at
+     * ingest without being opened.
      */
     fun sweepExpired(now: Long = TimeUtils.now()): List<ExpiredConcordRumor> =
         lock.withLock {
-            if (expiringByWrapId.isEmpty()) return@withLock emptyList()
+            if (expiringByDeadline.isEmpty() || expiringByDeadline.first().expiresAt > now) return@withLock emptyList()
             val out = ArrayList<ExpiredConcordRumor>()
-            val it = expiringByWrapId.values.iterator()
-            while (it.hasNext()) {
-                val expiring = it.next()
-                if (expiring.expiresAt <= now) {
-                    channelWrapsById[expiring.channelIdHex]?.remove(expiring.wrapId)
-                    wrapIdByRumorId.remove(expiring.rumorId)
-                    out.add(expiring)
-                    it.remove()
-                }
+            while (expiringByDeadline.isNotEmpty() && expiringByDeadline.first().expiresAt <= now) {
+                val expiring = expiringByDeadline.removeAt(0)
+                expiringByWrapId.remove(expiring.wrapId)
+                channelWrapsById[expiring.channelIdHex]?.remove(expiring.wrapId)
+                wrapIdByRumorId.remove(expiring.rumorId)
+                sweptWrapIds.add(expiring.wrapId)
+                out.add(expiring)
             }
-            _nextExpiry.value = expiringByWrapId.values.minOfOrNull { it.expiresAt }
+            while (sweptWrapIds.size > MAX_SWEPT_WRAP_IDS) sweptWrapIds.remove(sweptWrapIds.first())
+            _nextExpiry.value = expiringByDeadline.firstOrNull()?.expiresAt
             out
         }
+
+    /** Every disappearing rumor this session still tracks — handed to the session that replaces it. */
+    fun trackedExpiring(): List<ExpiredConcordRumor> = lock.withLock { expiringByDeadline.toList() }
+
+    /**
+     * Adopts [entries] tracked by the session this one replaces (a Refounding rebuilds the session):
+     * their rumors are already in the store, and without this nothing would ever purge them once
+     * their deadline passes, since the new session never sees the old epoch's wraps again.
+     */
+    fun carryExpiring(entries: Collection<ExpiredConcordRumor>) {
+        if (entries.isEmpty()) return
+        lock.withLock { entries.forEach { trackLocked(it) } }
+    }
 
     /** True while [channelIdHex]'s buffer holds [wrapId] — for tests of the sweep. */
     internal fun isBuffered(
@@ -1023,5 +1071,8 @@ class ConcordCommunitySession(
 
         /** A typing heartbeat is considered current for this many seconds after it's seen. */
         const val TYPING_STALE_SECS = 8L
+
+        /** How many swept (expired) wrap ids a session remembers to drop their re-deliveries unopened. */
+        const val MAX_SWEPT_WRAP_IDS = 4096
     }
 }

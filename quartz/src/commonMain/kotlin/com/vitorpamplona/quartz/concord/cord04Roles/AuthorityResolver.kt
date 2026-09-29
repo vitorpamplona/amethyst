@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
 /**
  * Resolves the owner-rooted authority state of a Concord community from its
@@ -280,6 +281,25 @@ data class AuthorityResolver private constructor(
             return g.takeIf { coordinate == edition.entityIdHex }
         }
 
+        /**
+         * `invite_links_locator(community, author)` as hex, memoized: it is an HKDF per call, and the
+         * well-formedness gate asks it for every registry edition on every refold of every community.
+         * The derivation is a pure function of its inputs, so a cached value can never go stale.
+         */
+        private val inviteLinksCoordinates = ConcurrentLruCache<String, String>(1024)
+
+        internal fun inviteLinksCoordinateHex(
+            communityId: ByteArray,
+            communityIdHex: String,
+            author: String,
+        ): String {
+            val key = communityIdHex + author.lowercase()
+            inviteLinksCoordinates.get(key)?.let { return it }
+            val coordinate = ConcordKeyDerivation.inviteLinksCoordinate(communityId, author.hexToByteArray()).toHexKey()
+            inviteLinksCoordinates.put(key, coordinate)
+            return coordinate
+        }
+
         /** See [isWellFormed]. */
         private fun wellFormed(
             edition: ControlEdition,
@@ -297,7 +317,7 @@ data class AuthorityResolver private constructor(
                 // CORD-05 §5: the coordinate binds to the author, so each creator owns exactly their own
                 // list; the content must be a JSON array (a malformed one falls back to the previous head).
                 ControlEntityKind.INVITE_REGISTRY ->
-                    edition.entityIdHex == ConcordKeyDerivation.inviteLinksCoordinate(communityId, edition.author.hexToByteArray()).toHexKey() &&
+                    edition.entityIdHex == inviteLinksCoordinateHex(communityId, communityIdHex, edition.author) &&
                         ConcordInviteRegistry.isWellFormed(edition.content)
                 else -> true
             }

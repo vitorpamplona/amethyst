@@ -2951,5 +2951,32 @@ class AccountConcordActions(
             if (session.controlPlaneAddress in drainedAddresses) session.markControlDrained()
         }
         Log.d("Concord") { "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), swept $swept control wrap(s), ${drainedAddresses.size} plane(s) drained" }
+        pruneExpiredConcordRegistries(entries)
+    }
+
+    // Communities (at an epoch) whose registry was already checked for elapsed links this process.
+    private val registryPruneChecked = ConcurrentSet<String>()
+
+    /**
+     * CORD-05 §5: once a community's Control Plane has drained, republish this account's Invite
+     * Registry there pruned when it still lists a link the Invite List says has expired (or no longer
+     * holds). Otherwise an elapsed link — which nothing else ever retires — keeps the community Public
+     * forever, and a Private ban would never Refound. Once per community and epoch per process; the
+     * Invite List is read only when some drained community actually has a registry of ours.
+     */
+    private suspend fun pruneExpiredConcordRegistries(entries: List<ConcordCommunityListEntry>) {
+        if (!account.isWriteable()) return
+        val me = account.signer.pubKey
+        val due =
+            entries.filter { entry ->
+                val state = account.concordSessions.sessionFor(entry.id)?.foldForWrite() ?: return@filter false
+                !state.dissolved && state.registryOf(me).isNotEmpty() && registryPruneChecked.add("${entry.id}@${entry.rootEpoch}")
+            }
+        if (due.isEmpty()) return
+        val list = readConcordInviteList() ?: return
+        for (entry in due) {
+            // Publishes only when the pruned list differs from the honored one.
+            if (publishConcordInviteRegistry(entry, list)) Log.i("Concord") { "Pruned elapsed invite links from this account's registry in ${entry.id}" }
+        }
     }
 }

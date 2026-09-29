@@ -79,6 +79,9 @@ class ConcordSessionManager(
      */
     val nextExpiry: StateFlow<Long?> = _nextExpiry
 
+    // Guards the compute-and-assign of [nextExpiry]. Declared before `init` for the same reason.
+    private val expiryLock = KmpLock()
+
     private val lock = KmpLock()
     private val stateWatchers = HashMap<HexKey, Job>() // communityId -> state collector
 
@@ -118,7 +121,11 @@ class ConcordSessionManager(
     }
 
     private fun recomputeNextExpiry() {
-        _nextExpiry.value = registry.sessions().mapNotNull { it.nextExpiry.value }.minOrNull()
+        // Computed and assigned under one lock: two watchers racing could otherwise let a slower,
+        // staler computation overwrite an earlier deadline, and the sweep would sleep past it.
+        expiryLock.withLock {
+            _nextExpiry.value = registry.sessions().mapNotNull { it.nextExpiry.value }.minOrNull()
+        }
     }
 
     /**
