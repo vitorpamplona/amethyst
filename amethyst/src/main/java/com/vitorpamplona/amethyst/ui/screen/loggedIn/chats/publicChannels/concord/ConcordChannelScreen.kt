@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -83,7 +84,11 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinDuties
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedMessagesSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordChannelPins
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -179,9 +184,29 @@ fun ConcordChannelScreen(
     newMessageModel.init(accountViewModel)
     newMessageModel.load(communityId, channelId)
 
+    // CORD-04 §7 Pins: the header's entry point, the sheet it opens, the jump it requests, and the
+    // delayed duty writes (deletion omission / Edit refresh) a PIN_MESSAGES holder owes.
+    val pins by rememberConcordChannelPins(communityId, channelId, accountViewModel)
+    ConcordPinDuties(communityId, channelId, pins, accountViewModel)
+    var showPins by remember { mutableStateOf(false) }
+    val jumpToNoteId = remember { mutableStateOf<String?>(null) }
+    pins?.let { current ->
+        if (showPins) {
+            ConcordPinnedMessagesSheet(
+                communityId = communityId,
+                channelId = channelId,
+                pins = current,
+                accountViewModel = accountViewModel,
+                onJumpToMessage = { jumpToNoteId.value = it },
+                onDismiss = { showPins = false },
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                actions = { ConcordPinnedButton(pins) { showPins = true } },
                 title = {
                     Column {
                         Text(channel.toBestDisplayName(), maxLines = 1)
@@ -218,6 +243,8 @@ fun ConcordChannelScreen(
                     onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
                     onWantsToEditChatMessage = { newMessageModel.editConcordMessage(it) },
+                    jumpToNoteId = jumpToNoteId,
+                    onJumpHandled = { jumpToNoteId.value = null },
                     // A status card at the oldest end: shows what it's reaching for while it pages and
                     // crossfades to "All caught up" when every relay runs dry.
                     olderBoundary = {

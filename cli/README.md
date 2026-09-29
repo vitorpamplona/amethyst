@@ -689,6 +689,8 @@ also carried on-relay as the encrypted, fragmented kind:33302 Community List
 | `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`; also `MANAGE_ROLES`, `MANAGE_CHANNELS`, `MANAGE_METADATA`, `MANAGE_MESSAGES`, `CREATE_INVITE`, `VIEW_AUDIT_LOG`, `MENTION_EVERYONE`, `PIN_MESSAGES`). |
 | `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
 | `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
+| `amy concord pins COMMUNITY CHANNEL` | The channel's Pin List (CORD-04 §7), every entry verified from its proof bundle; entries the author deleted are listed under `deleted`, `edited`/`stale_edit` flag revisions, and `sealed_unavailable` means the list is sealed under a key this account never held (unreadable, not empty). |
+| `amy concord pin COMMUNITY CHANNEL RUMOR_ID` / `unpin COMMUNITY CHANNEL RUMOR_ID` | Pin / unpin a message (PIN_MESSAGES or owner, plus the control write key). Pinning reopens the message's wrap to prove it with its original seal; a private channel's list is sealed under its current key. Refused (`list_unavailable`, `too_many_pins`, `too_large`, …) rather than published when the list is unreadable or a cap would break. |
 | `amy concord dissolve COMMUNITY --yes` | Owner only, irreversible: publish the `eid`-bound dissolution tombstone that seals the community read-only (CORD-02 §9). |
 
 ### cordn (MLS over an MCP coordinator)
