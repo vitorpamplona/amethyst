@@ -118,4 +118,30 @@ class ConcordInviteRegistryPublishTest {
             add(ConcordModeration.setInviteRegistry(inviter, cp, cid, emptyList(), editions, createdAt = 7L, owner = community.ownerPubKey))
             assertFalse(fold().isPublic)
         }
+
+    @Test
+    fun aRegistryEditChainsOntoTheFloorAwareHeadAcrossARefounding() =
+        runTest {
+            // The prior epoch reached v2 of the owner's registry; the current epoch has not (yet)
+            // re-wrapped it, so the honored head is the floor, not "no registry".
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val cp = community.controlPlane
+            val cid = community.communityId
+            val prior = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
+            prior += ConcordActions.controlEditions(listOf(ConcordModeration.setInviteRegistry(owner, cp, cid, listOf(link1), prior, 2L, owner = community.ownerPubKey)), cp)
+            prior += ConcordActions.controlEditions(listOf(ConcordModeration.setInviteRegistry(owner, cp, cid, listOf(link1, link2), prior, 3L, owner = community.ownerPubKey)), cp)
+            val v2 = prior.last()
+            assertEquals(2L, v2.version)
+            val floors = ConcordCommunityState.authorizedHeads(prior, cid, community.ownerPubKey)
+
+            val current = ConcordActions.controlEditions(community.genesisWraps, cp)
+            val naive = ConcordActions.controlEditions(listOf(ConcordModeration.setInviteRegistry(owner, cp, cid, listOf(link2), current, 4L, owner = community.ownerPubKey)), cp).single()
+            assertEquals(1L, naive.version, "ignoring the floor forks a fresh v1 below the honored v2")
+
+            val chained = ConcordActions.controlEditions(listOf(ConcordModeration.setInviteRegistry(owner, cp, cid, listOf(link2), current, 4L, owner = community.ownerPubKey, floors = floors)), cp).single()
+            assertEquals(3L, chained.version)
+            assertEquals(v2.hashHex, chained.prevHash?.toHexKey())
+            // And the fold with the same floors honors it.
+            assertEquals(listOf(link2), ConcordCommunityState.fold(current + chained, cid, community.ownerPubKey, floors).registryOf(owner.pubKey))
+        }
 }

@@ -21,17 +21,21 @@
 package com.vitorpamplona.quartz.concord.cord07Voice
 
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConcordVoiceTest {
     private val alice = KeyPair().pubKey.toHexKey()
     private val bob = KeyPair().pubKey.toHexKey()
+    private val carol = KeyPair().pubKey.toHexKey()
     private val channelId = "42".repeat(32)
 
     @Test
@@ -44,20 +48,75 @@ class ConcordVoiceTest {
         assertEquals(channelId, info?.channelId)
         assertEquals(0L, info?.epoch)
         assertTrue(info?.joined == true)
+        // The examples' tag order: channel, epoch, identity, broker, ms.
+        assertEquals(listOf("channel", "epoch", "identity", "broker", "ms"), rumor.tags.map { it[0] })
     }
 
     @Test
     fun onlyUncontestedIdentitiesVerify() {
-        val aliceP = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-alice", 1L))!!
+        val aliceP = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-x", 1L))!!
         val bobP = VoicePresence.parse(VoicePresence.joined(bob, channelId, 0, "id-bob", 1L))!!
-        // both Alice and Bob claim the same identity -> contested
-        val contestedA = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-x", 1L))!!
-        val contestedB = VoicePresence.parse(VoicePresence.joined(bob, channelId, 0, "id-x", 1L))!!
+        val carolP = VoicePresence.parse(VoicePresence.joined(carol, channelId, 0, "id-x", 1L))!!
 
-        val verified = VoicePresence.verifiedParticipants(listOf(aliceP, bobP, contestedA, contestedB))
-        assertEquals(alice, verified["id-alice"])
-        assertEquals(bob, verified["id-bob"])
-        assertFalse(verified.containsKey("id-x")) // contested identity omitted
+        val fold = VoicePresence.fold(listOf(aliceP, bobP, carolP), nowMs = 1_000L)
+        assertEquals(bob, fold.verified["id-bob"])
+        assertFalse(fold.verified.containsKey("id-x")) // Alice and Carol both claim it: contested
+        assertEquals(3, fold.present.size)
+    }
+
+    @Test
+    fun latestPresencePerAuthorWins() {
+        // Alice joined as id-a, left, then rejoined as id-b: only her latest counts.
+        val joinedA = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-a", 10L, subMs = 0))!!
+        val left = VoicePresence.parse(VoicePresence.left(alice, channelId, 0, 20L, subMs = 0))!!
+        val joinedB = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-b", 30L, subMs = 0))!!
+        // Bob's older heartbeat claimed id-b too, but his latest presence is a left.
+        val bobOld = VoicePresence.parse(VoicePresence.joined(bob, channelId, 0, "id-b", 5L, subMs = 0))!!
+        val bobLeft = VoicePresence.parse(VoicePresence.left(bob, channelId, 0, 6L, subMs = 0))!!
+
+        // Arrival order must not matter.
+        val fold = VoicePresence.fold(listOf(joinedB, bobLeft, joinedA, left, bobOld), nowMs = 31_000L)
+        assertEquals(listOf(alice), fold.present.map { it.author })
+        assertEquals("id-b", fold.present.single().identity)
+        assertEquals(mapOf("id-b" to alice), fold.verified)
+
+        // Before the rejoin arrived, Alice's latest is the left: absent.
+        assertTrue(VoicePresence.fold(listOf(left, joinedA), nowMs = 21_000L).present.isEmpty())
+    }
+
+    @Test
+    fun msTagOrdersPresencesWithinOneSecond() {
+        val early = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-a", 10L, subMs = 100))!!
+        val late = VoicePresence.parse(VoicePresence.left(alice, channelId, 0, 10L, subMs = 900))!!
+        assertEquals(10_100L, early.ms)
+        assertEquals(10_900L, late.ms)
+        assertTrue(VoicePresence.fold(listOf(late, early), nowMs = 11_000L).present.isEmpty())
+    }
+
+    @Test
+    fun equalTimeTiesBreakByLowerRumorId() {
+        val a = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-a", 10L, subMs = 0))!!
+        val b = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-b", 10L, subMs = 0))!!
+        val winner = if (a.rumorId < b.rumorId) a else b
+        assertEquals(winner.rumorId, VoicePresence.latestPerAuthor(listOf(a, b))[alice]?.rumorId)
+        assertEquals(winner.rumorId, VoicePresence.latestPerAuthor(listOf(b, a))[alice]?.rumorId)
+    }
+
+    @Test
+    fun staleLatestJoinedIsAbsent() {
+        val p = VoicePresence.parse(VoicePresence.joined(alice, channelId, 0, "id-a", 10L, subMs = 0))!!
+        assertEquals(1, VoicePresence.fold(listOf(p), nowMs = 10_000L + VoicePresence.STALE_MS).present.size)
+        assertTrue(VoicePresence.fold(listOf(p), nowMs = 10_001L + VoicePresence.STALE_MS).present.isEmpty())
+    }
+
+    @Test
+    fun malformedPresenceIsDropped() {
+        val base = VoicePresence.joined(alice, channelId, 0, "id-a", 10L, subMs = 0)
+        assertNull(VoicePresence.parse(Event(base.id, base.pubKey, base.createdAt, base.kind, base.tags, "here", "")))
+        val noIdentity = base.tags.filterNot { it[0] == VoicePresence.TAG_IDENTITY }.toTypedArray()
+        assertNull(VoicePresence.parse(Event(base.id, base.pubKey, base.createdAt, base.kind, noIdentity, "joined", "")))
+        val badMs = base.tags.map { if (it[0] == "ms") arrayOf("ms", "1000") else it }.toTypedArray()
+        assertNull(VoicePresence.parse(Event(base.id, base.pubKey, base.createdAt, base.kind, badMs, "joined", "")))
     }
 
     @Test
@@ -81,6 +140,23 @@ class ConcordVoiceTest {
 
         val header = ConcordBrokerToken.authorizationHeader(event)
         assertTrue(header.startsWith("Concord "))
+    }
+
+    @Test
+    fun sameSecondBrokerGrantsNeverShareAnId() {
+        // Every member signs with the same voice_key.sk; without the nonce two joiners in one
+        // second build one id and the broker's anti-replay set drops the second (CORD-07 §2).
+        val voiceSigner = ConcordKeyDerivation.voiceSignerKey(ByteArray(32) { 0x5A }, channelId.chunkedToBytes(), epoch = 0)
+        val url = "https://broker.example" + ConcordBrokerToken.wellKnownPath(voiceSigner.publicKeyHex)
+        val a = ConcordBrokerToken.buildAuthEvent(voiceSigner, url, createdAt = 1_700_000_000L)
+        val b = ConcordBrokerToken.buildAuthEvent(voiceSigner, url, createdAt = 1_700_000_000L)
+
+        val nonceOf = { e: Event -> e.tags.firstOrNull { it[0] == ConcordBrokerToken.TAG_NONCE }?.getOrNull(1) }
+        assertTrue(Regex("^[0-9a-f]{64}$").matches(nonceOf(a)!!))
+        assertNotEquals(nonceOf(a), nonceOf(b))
+        assertNotEquals(a.id, b.id)
+        // Tag order matches the reference client: u, method, nonce.
+        assertEquals(listOf("u", "method", "nonce"), a.tags.map { it[0] })
     }
 
     private fun String.chunkedToBytes(): ByteArray = ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }

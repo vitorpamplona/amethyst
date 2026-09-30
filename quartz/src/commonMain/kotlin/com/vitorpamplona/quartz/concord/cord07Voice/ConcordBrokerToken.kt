@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.concord.cord07Voice
 
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -42,6 +44,10 @@ object ConcordBrokerToken {
     const val AUTH_SCHEME = "Concord"
     const val TAG_URL = "u"
     const val TAG_METHOD = "method"
+    const val TAG_NONCE = "nonce"
+
+    /** Bytes of fresh entropy in the grant's [TAG_NONCE] tag (64 lowercase hex chars, as the reference client). */
+    const val NONCE_BYTES = 32
 
     /** The broker path for a voice room (the room = the voice signer's x-only pubkey hex). */
     fun wellKnownPath(voiceRoomHex: String): String = "/.well-known/concord/av/$voiceRoomHex"
@@ -49,15 +55,27 @@ object ConcordBrokerToken {
     /**
      * Builds the kind-27235 auth event for [url]/[method], signed by the channel's
      * [voiceSigner] key (its public key is the voice room / SFU name).
+     *
+     * Every member of a Channel signs with the **same** `voice_key.sk`, so two members
+     * requesting in the same second would otherwise build byte-identical events — one id —
+     * and the broker's anti-replay set (keyed on the id, CORD-07 §2) would refuse the second.
+     * The random [nonce] tag (`["nonce", <64 hex>]`, after `u` and `method`, as the reference
+     * client signs it) keeps every grant's id unique.
      */
     fun buildAuthEvent(
         voiceSigner: GroupKey,
         url: String,
         createdAt: Long,
         method: String = "GET",
+        nonce: String = RandomInstance.bytes(NONCE_BYTES).toHexKey(),
     ): Event {
         val signer = NostrSignerSync(KeyPair(privKey = voiceSigner.secretKey))
-        return signer.signNormal(createdAt, KIND, arrayOf(arrayOf(TAG_URL, url), arrayOf(TAG_METHOD, method)), "")
+        return signer.signNormal(
+            createdAt,
+            KIND,
+            arrayOf(arrayOf(TAG_URL, url), arrayOf(TAG_METHOD, method), arrayOf(TAG_NONCE, nonce)),
+            "",
+        )
     }
 
     /** The `Authorization` header value carrying a base64 of the signed auth [event]. */

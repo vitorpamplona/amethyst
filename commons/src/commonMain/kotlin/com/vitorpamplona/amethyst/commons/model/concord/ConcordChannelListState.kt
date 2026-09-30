@@ -196,6 +196,19 @@ class ConcordChannelListState(
                 emptyList(),
             )
 
+    /**
+     * When this account left each community it no longer holds (community id → the List
+     * tombstone's `removed_at`, unix ms, CORD-02 §8). A Direct Invite sent at or before that moment
+     * stays buried instead of resurfacing right after the leave.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val removedAt: StateFlow<Map<String, Long>> =
+        listChanges
+            .transformLatest { emit(document().residue.removals()) }
+            .onStart { emit(document().residue.removals()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     /** The distinct community ids across the joined list — the "servers" rail. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveServers: StateFlow<Set<String>> =
@@ -241,6 +254,28 @@ class ConcordChannelListState(
             val removedAt = doc.residue.removedAt(entry.id)
             val live = if (removedAt != null && entry.addedAt <= removedAt) entry.withAddedAt(maxOf(TimeUtils.nowMillis(), removedAt + 1)) else entry
             write(set, doc.entries.filterNot { it.id == entry.id } + live, doc.residue)
+        }
+
+    /**
+     * Read-modify-write one membership: [transform] receives the entry for [communityId] **as the
+     * List holds it inside the write lock** and returns its replacement, or null to write nothing.
+     * Returns the fragment events to publish (empty when the community isn't held or nothing
+     * changed).
+     *
+     * Use this, never [follow] with a snapshot, for any change that touches one field of a live
+     * entry (a channel key, a cut): the List can move between reading a snapshot and writing it —
+     * a rekey adopted, a new root imported — and following the stale copy would write the old
+     * root back over it.
+     */
+    suspend fun update(
+        communityId: String,
+        transform: (ConcordCommunityListEntry) -> ConcordCommunityListEntry?,
+    ): List<Event> =
+        writeLock.withLock {
+            val (set, doc) = snapshot()
+            val current = doc.entries.firstOrNull { it.id == communityId } ?: return@withLock emptyList()
+            val next = transform(current) ?: return@withLock emptyList()
+            write(set, doc.entries.map { if (it.id == communityId) next else it }, doc.residue)
         }
 
     /**
