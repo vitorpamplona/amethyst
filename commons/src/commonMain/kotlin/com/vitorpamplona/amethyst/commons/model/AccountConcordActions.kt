@@ -721,9 +721,20 @@ class AccountConcordActions(
         if (entry != null && account.isWriteable()) {
             val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
             if (relays.isNotEmpty()) {
-                val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
-                val leave = ConcordActions.buildGuestbookLeave(account.signer, guestbook, TimeUtils.now())
-                if (!runCatching { account.client.publishAndConfirm(leave, relays, LEAVE_CONFIRM_SECS) }.getOrDefault(false)) {
+                // Best-effort from signing on: a remote signer that refuses or times out must not
+                // keep the user in a community they asked to leave.
+                val announced =
+                    try {
+                        val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
+                        val leave = ConcordActions.buildGuestbookLeave(account.signer, guestbook, TimeUtils.now())
+                        account.client.publishAndConfirm(leave, relays, LEAVE_CONFIRM_SECS)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("Concord", "Leaving $communityId: could not sign or publish the Guestbook LEAVE", e)
+                        false
+                    }
+                if (!announced) {
                     Log.w("Concord") { "Leaving $communityId: no relay accepted the Guestbook LEAVE; members keep listing us" }
                 }
             }
