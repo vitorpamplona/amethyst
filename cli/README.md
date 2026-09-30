@@ -597,7 +597,7 @@ screen speaks.
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
 | `amy relaygroup edit RELAY GID [--name X] [--about A] [--picture URL] [--banner URL] [--parent GID\|--root] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads the current 39000 and changes only what you pass: picture, banner, subgroup links, other flags and unknown tags are carried over. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
-| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
+| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator] [--buzz-role owner\|admin\|member\|guest\|bot]` | Add or promote a user (9000, moderator). On Buzz, only `--buzz-role` sets a role; without it an existing member keeps theirs. |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 | `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
 
@@ -605,13 +605,13 @@ screen speaks.
 
 [`block/buzz`](https://github.com/block/buzz) workspaces are NIP-29 groups on a Buzz
 relay, so create/join/leave still use `amy relaygroup`. These verbs cover the Buzz-native
-surface: the kind:40002 stream message, the owner-attestation primitive (NIP-OA), and the
+surface: the Buzz channel message (kind:9), the owner-attestation primitive (NIP-OA), and the
 agent console (turn-metric aggregation + personas), all driving the same `quartz` models
 and `commons` aggregator the app uses.
 
 | Command | What it does |
 | --- | --- |
-| `amy buzz post RELAY GID <text>` | Post a kind:40002 stream message (Buzz-native) into a workspace. |
+| `amy buzz post RELAY GID <text>` | Post a channel message into a workspace: kind:9 in Buzz's tag shape, what Buzz's own clients write. |
 | `amy buzz read RELAY GID [--limit N] [--timeout SECS]` | Read the recent human-visible timeline (kinds 9 / 40002 / 40099). |
 | `amy buzz attest AGENT [--kind K] [--after UNIX] [--before UNIX]` | Sign a NIP-OA attestation authorizing AGENT (offline; needs a local key). Prints the `auth` tag to hand to the agent operator. |
 | `amy buzz console [--relays R,R] [--timeout SECS]` | Fetch my kind:44200 turn metrics (`#p`=me), decrypt, and aggregate fleet + per-agent cost/tokens. |

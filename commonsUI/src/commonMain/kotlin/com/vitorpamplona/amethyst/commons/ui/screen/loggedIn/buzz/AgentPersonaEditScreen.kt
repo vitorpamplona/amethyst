@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.commons.buzz.ui.DropdownOption
 import com.vitorpamplona.amethyst.commons.buzz.ui.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_avatar
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_description
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_description_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_display_name
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_edit_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_model
@@ -49,12 +51,17 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_persona_provider
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_publish
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_publishing
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_runtime
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_shared
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_shared_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_slug_help
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_thread_sessions
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_thread_sessions_help
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -160,6 +167,28 @@ fun AgentPersonaEditScreen(
                 label = { Text(stringRes(Res.string.buzz_persona_avatar)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = state.description,
+                onValueChange = viewModel::onDescriptionChange,
+                label = { Text(stringRes(Res.string.buzz_persona_description)) },
+                supportingText = { Text(stringRes(Res.string.buzz_persona_description_help)) },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SettingSwitchItem(
+                modifier = Modifier.fillMaxWidth(),
+                checked = state.shared,
+                onCheckedChange = viewModel::onSharedChange,
+                title = Res.string.buzz_persona_shared,
+                description = Res.string.buzz_persona_shared_help,
+            )
+            SettingSwitchItem(
+                modifier = Modifier.fillMaxWidth(),
+                checked = state.threadSessions,
+                onCheckedChange = viewModel::onThreadSessionsChange,
+                title = Res.string.buzz_persona_thread_sessions,
+                description = Res.string.buzz_persona_thread_sessions_help,
             )
 
             state.error?.let {

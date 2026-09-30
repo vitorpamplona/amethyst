@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip38UserStatus.tags
+
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
+/**
+ * A plain status emoji on a NIP-38 user status: the **2-element** `["emoji", <emoji>]` that
+ * Buzz writes (`build_user_status` in `buzz-sdk/src/builders.rs`), e.g. `["emoji", "🎉"]`.
+ *
+ * This is not a NIP-30 custom emoji: those are `["emoji", <shortcode>, <image url>, …]` with at
+ * least three elements and are read by
+ * [com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag]. The two shapes never overlap, so
+ * [parse] only takes the exact 2-element form and leaves the NIP-30 one alone.
+ */
+class StatusEmojiTag {
+    companion object {
+        const val TAG_NAME = "emoji"
+
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag.size == 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            val emoji = tag[1].trim()
+            ensure(emoji.isNotEmpty()) { return null }
+            return emoji
+        }
+
+        fun assemble(emoji: String) = arrayOf(TAG_NAME, emoji)
+    }
+}

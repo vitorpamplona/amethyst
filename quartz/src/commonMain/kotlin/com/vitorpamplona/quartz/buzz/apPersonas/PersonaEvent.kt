@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.apPersonas
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.apPersonas.tags.SharedTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -39,6 +40,11 @@ import kotlinx.coroutines.CancellationException
  *
  * The `content` is a plaintext JSON [PersonaContent]. Ground truth for the content projection
  * is `desktop/src-tauri/src/managed_agents/persona_events.rs`.
+ *
+ * Read access is **author-only unless shared**: the relay serves a persona to anyone but its
+ * author only when it carries exactly `["shared","true"]` ([SharedTag]); otherwise it is
+ * silently withheld from foreign REQs, COUNTs and id lookups. Device sync reads
+ * `authors:[self]`, so the owner always sees their own.
  */
 @Immutable
 class PersonaEvent(
@@ -63,6 +69,9 @@ class PersonaEvent(
     /** The persona slug — the `d` tag. */
     fun slug() = dTag()
 
+    /** True when the persona is published to the community catalog (`["shared","true"]`). */
+    fun isShared() = SharedTag.isShared(tags)
+
     /** Parses the persona configuration, or throws if the JSON is malformed. */
     fun persona(): PersonaContent = PersonaContent.decodeFromJson(content)
 
@@ -77,14 +86,31 @@ class PersonaEvent(
     companion object {
         const val KIND = 30175
 
+        /**
+         * Builds a persona the way Buzz's `build_persona_event` does: a `d` slug tag, plus
+         * `["shared","true"]` when [shared]. A shared head publishes the portable catalog
+         * projection of its content ([PersonaContent.forSharedCatalog]).
+         *
+         * An edit should pass [priorHeadCreatedAt] (the replaced head's `created_at`) so the new
+         * head sorts after it even when this clock lags (`monotonic_created_at` upstream).
+         */
         fun build(
             persona: PersonaContent,
             slug: String,
-            createdAt: Long = TimeUtils.now(),
+            shared: Boolean = false,
+            priorHeadCreatedAt: Long? = null,
+            createdAt: Long = monotonicCreatedAt(priorHeadCreatedAt),
             initializer: TagArrayBuilder<PersonaEvent>.() -> Unit = {},
-        ) = eventTemplate<PersonaEvent>(KIND, persona.encodeToJson(), createdAt) {
+        ) = eventTemplate<PersonaEvent>(KIND, (if (shared) persona.forSharedCatalog() else persona).encodeToJson(), createdAt) {
             dTag(slug)
+            if (shared) addUnique(SharedTag.assemble())
             initializer()
+        }
+
+        /** `max(now, prior + 1)`: a replacement head never sorts behind the one it replaces. */
+        fun monotonicCreatedAt(priorHeadCreatedAt: Long?): Long {
+            val now = TimeUtils.now()
+            return if (priorHeadCreatedAt == null) now else maxOf(now, priorHeadCreatedAt + 1)
         }
     }
 }

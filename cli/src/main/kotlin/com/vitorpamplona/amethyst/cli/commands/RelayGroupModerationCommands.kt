@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLES
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -258,13 +259,19 @@ object RelayGroupModerationCommands {
         }
     }
 
-    /** `relaygroup put-user RELAY GROUP_ID PUBKEY [--role admin|moderator]` → 9000. */
+    /**
+     * `relaygroup put-user RELAY GROUP_ID PUBKEY [--role admin|moderator] [--buzz-role ROLE]` → 9000.
+     *
+     * Buzz ignores the roles in the `p` tag and reads only a top-level `role` tag
+     * (owner|admin|member|guest|bot); `--buzz-role` sets it. Without it a Buzz relay makes no
+     * role change: an existing member keeps their role and a newcomer joins as `member`.
+     */
     suspend fun putUser(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val usage = "relaygroup put-user RELAY GROUP_ID PUBKEY [--role admin|moderator]"
+        val usage = "relaygroup put-user RELAY GROUP_ID PUBKEY [--role admin|moderator] [--buzz-role owner|admin|member|guest|bot]"
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
         val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
         val user = args.positionalOrNull(2) ?: return Output.error("bad_args", usage)
@@ -275,12 +282,14 @@ object RelayGroupModerationCommands {
                 ?.split(',')
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() } ?: emptyList()
+        val buzzRole = args.flag("buzz-role")?.trim()?.lowercase()
+        if (buzzRole != null && buzzRole !in BUZZ_ROLES) return Output.error("bad_args", usage)
         args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
-            val signed = ctx.signer.sign(GroupPutUserEvent.build(groupId, listOf(pubkey to roles)))
+            val signed = ctx.signer.sign(GroupPutUserEvent.build(groupId, listOf(pubkey to roles), buzzRole = buzzRole))
             val ack = ctx.publish(signed, setOf(relay))
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
@@ -290,6 +299,7 @@ object RelayGroupModerationCommands {
                     "relay" to relay.url,
                     "pubkey" to pubkey,
                     "roles" to roles,
+                    "buzz_role" to buzzRole,
                     "published" to ack.values.any { it.accepted },
                 ),
             )

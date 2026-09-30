@@ -218,7 +218,7 @@ private fun RelayGroupMembers(
             if (iCanModerate) {
                 AddMemberBar(
                     isAlreadyIn = { channel.membershipOf(it) != RelayGroupMembership.NONE },
-                    onAdd = { accountViewModel.putRelayGroupUser(channel, it, emptyList()) },
+                    onAdd = { accountViewModel.addRelayGroupUser(channel, it) },
                     accountViewModel = accountViewModel,
                 )
             }

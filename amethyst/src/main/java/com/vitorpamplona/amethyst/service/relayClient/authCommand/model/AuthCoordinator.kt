@@ -298,7 +298,7 @@ class AuthCoordinator(
         relayUrl: NormalizedRelayUrl,
     ): EventTemplate<RelayAuthEvent> {
         if (!BuzzRelayDialect.isBuzz(relayUrl)) return template
-        val authTag = account.buzzAttestation.authTag() ?: return template
+        val authTag = account.buzzAttestation.authTag(template.createdAt) ?: return template
         return EventTemplate(template.createdAt, template.kind, template.tags + arrayOf(authTag), template.content)
     }
 

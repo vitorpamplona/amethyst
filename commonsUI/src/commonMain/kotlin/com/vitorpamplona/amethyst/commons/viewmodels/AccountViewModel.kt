@@ -1905,6 +1905,11 @@ class AccountViewModel(
         pubkey: HexKey,
     ) = launchSigner { account.relayGroups.removeRelayGroupUser(channel, pubkey) }
 
+    fun addRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) = launchSigner { account.relayGroups.addRelayGroupUser(channel, pubkey) }
+
     fun putRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,
