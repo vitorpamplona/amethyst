@@ -65,6 +65,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
+import com.vitorpamplona.amethyst.commons.browser.DownloadCooldown
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -146,6 +147,11 @@ class NappletBrowserService : Service() {
         val pendingByOrigin = mutableMapOf<String, MutableList<Message>>()
         val mintInFlight = mutableSetOf<String>()
 
+        // Page-initiated downloads: how often each site may ask, and whether an offer is being prepared
+        // (decoded) — one at a time, so a page can't queue up decodes.
+        val downloadCooldown = DownloadCooldown()
+        var preparingDownload = false
+
         val replyMessenger = Messenger(Handler(Looper.getMainLooper()) { onBrokerReply(this, it) })
     }
 
@@ -153,6 +159,17 @@ class NappletBrowserService : Service() {
 
     // WebView's PermissionRequest → our relay id, so a page's cancellation can withdraw the prompt.
     private val pendingWebPermissions = mutableMapOf<PermissionRequest, Long>()
+
+    // Download consent cards the main process is showing, by relay id, until the client answers or the
+    // tab closes. The offer holds the decoded bytes (or the URL to fetch) the card describes.
+    private class PendingDownload(
+        val sessionId: String,
+        val origin: String,
+        val offer: BrowserDownloads.DownloadOffer,
+    )
+
+    private val pendingDownloads = mutableMapOf<Long, PendingDownload>()
+    private var downloadSeq = 0L
 
     // The shim never changes; read+decode it once instead of per tab on the main thread.
     private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
@@ -294,6 +311,14 @@ class NappletBrowserService : Service() {
                         .mapNotNull(BrowserSitePermission::fromKey)
                         .toSet(),
                 )
+            }
+            NappletBrowserContract.MSG_DOWNLOAD_CONSENT_RESULT -> {
+                val data = msg.data ?: return true
+                val pending = pendingDownloads.remove(data.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)) ?: return true
+                val tab = tabs[pending.sessionId] ?: return true
+                val allowed = data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_ALLOWED, false)
+                tab.downloadCooldown.answered(pending.origin, allowed)
+                if (allowed) pending.offer.save(this)
             }
             NappletBrowserContract.MSG_EXIT_FULLSCREEN -> tabFor(msg)?.let { exitFullscreen(it) }
             NappletBrowserContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
@@ -446,6 +471,12 @@ class NappletBrowserService : Service() {
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
         cancelPending(tab)
+        // An unanswered download card dies with its tab: nothing is saved, its bytes are freed, and the
+        // client is told so its card doesn't linger with a Save that does nothing.
+        pendingDownloads.entries.filter { it.value.sessionId == sessionId }.forEach { (id, _) ->
+            pendingDownloads.remove(id)
+            sendToClient(tab, NappletBrowserContract.MSG_DOWNLOAD_CANCEL) { putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id) }
+        }
         tab.customViewCallback?.onCustomViewHidden()
         tab.customViewCallback = null
         tab.customView = null
@@ -461,9 +492,16 @@ class NappletBrowserService : Service() {
         BrowserWebTools.applyBrowserSettings(wv)
         wv.webViewClient = BrowserClient(tab)
         wv.webChromeClient = BrowserChromeClient(tab)
-        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            val route = if (tab != null && tab.useTor) tab.proxyPort else -1
-            BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), route)
+        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            if (tab == null) return@setDownloadListener
+            // The page's origin; a fresh popup still on about:blank has none, so name the file's own.
+            val origin = wv.url?.let(BrowserChrome::originOf) ?: BrowserChrome.originOf(url) ?: return@setDownloadListener
+            if (!canOfferDownload(tab, origin)) return@setDownloadListener
+            // Read on the main thread: the cookie jar is the tab's own per-account WebView profile.
+            val cookie = BrowserWebTools.cookieManager(wv).getCookie(url)
+            prepareDownloadOffer(tab, origin) { ready ->
+                BrowserDownloads.offerListenerDownload(url, userAgent, contentDisposition, mimeType, contentLength, cookie, if (tab.useTor) tab.proxyPort else -1, ready)
+            }
         }
     }
 
@@ -953,21 +991,22 @@ class NappletBrowserService : Service() {
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
-        // Browser conveniences (share, blob downloads) are handled here, never brokered. The theme colour
-        // only matters to a window with system bars, which an embedded tab doesn't own.
+        // The origin the WebView reports, which the page can't forge, keys every decision below.
+        val origin = trustedOrigin(sourceOrigin) ?: return
+
+        // Browser conveniences (share, blob downloads) are handled here, never brokered; a download still
+        // asks the user first ([offerInlineDownload]), since any top-frame script can post one. The theme
+        // colour only matters to a window with system bars, which an embedded tab doesn't own.
         when (envelope.stringOrNull("type")) {
             "browser.share" -> {
                 BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
                 return
             }
+            "browser.themeColor" -> return
             "browser.download" -> {
-                val data = envelope.stringOrNull("data") ?: return
-                if (data.startsWith("data:") && data.length <= BrowserDownloads.MAX_INLINE_BYTES / 3 * 4 + 256) {
-                    BrowserDownloads.saveDataUrl(this, data, envelope.stringOrNull("name"))
-                }
+                offerInlineDownload(tab, origin, envelope)
                 return
             }
-            "browser.themeColor" -> return
         }
 
         // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
@@ -979,10 +1018,6 @@ class NappletBrowserService : Service() {
             runCatching { tab.clientMessenger?.send(reply) }
             return
         }
-
-        val scheme = sourceOrigin.scheme ?: return
-        val host = sourceOrigin.host ?: return
-        val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
 
         val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
         val msg =
@@ -1003,6 +1038,78 @@ class NappletBrowserService : Service() {
             tab.pendingByOrigin.getOrPut(origin) { mutableListOf() }.add(msg)
             requestBrowserToken(tab, origin)
         }
+    }
+
+    /** `scheme://host[:port]` of the WebView-reported origin, or null when it has no usable one. */
+    private fun trustedOrigin(sourceOrigin: Uri): String? {
+        val scheme = sourceOrigin.scheme ?: return null
+        val host = sourceOrigin.host ?: return null
+        return "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+    }
+
+    /**
+     * A `browser.download` envelope: the bytes a page wants saved (a `blob:` download the extras script
+     * read, or one a script forged). Keyed on the WebView-reported [origin], never an envelope field.
+     */
+    private fun offerInlineDownload(
+        tab: BrowserTab,
+        origin: String,
+        envelope: JsonObject,
+    ) {
+        if (!canOfferDownload(tab, origin)) return
+        val data = envelope.stringOrNull("data") ?: return
+        prepareDownloadOffer(tab, origin) { ready -> BrowserDownloads.offerInline(data, envelope.stringOrNull("name"), ready) }
+    }
+
+    /**
+     * Whether [origin] may put a download card up in [tab] now: never over another of the tab's page prompts
+     * (so a page can't swap the name under the user's finger, or pop the card where a dialog's button just
+     * was), never while an offer is still being prepared (so a page can't queue decodes), and not within
+     * its cooldown.
+     */
+    private fun canOfferDownload(
+        tab: BrowserTab,
+        origin: String,
+    ) = !tab.preparingDownload &&
+        tab.jsDialogs.isEmpty() &&
+        tab.permissionRequests.isEmpty() &&
+        pendingDownloads.values.none { it.sessionId == tab.sessionId } &&
+        tab.downloadCooldown.allows(origin)
+
+    /** Runs [prepare] (which answers exactly once, on the main thread) and relays the offer it produces. */
+    private fun prepareDownloadOffer(
+        tab: BrowserTab,
+        origin: String,
+        prepare: ((BrowserDownloads.DownloadOffer?) -> Unit) -> Unit,
+    ) {
+        tab.preparingDownload = true
+        prepare { offer ->
+            tab.preparingDownload = false
+            if (offer != null) showDownloadOffer(tab, origin, offer)
+        }
+    }
+
+    /**
+     * Asks the main process to show [offer]'s consent card (this provider has no window of its own); the
+     * file is fetched or written only if the user taps Save there.
+     */
+    private fun showDownloadOffer(
+        tab: BrowserTab,
+        origin: String,
+        offer: BrowserDownloads.DownloadOffer,
+    ) {
+        if (tabs[tab.sessionId] !== tab || !canOfferDownload(tab, origin)) return
+        val id = ++downloadSeq
+        val sent =
+            sendToClient(tab, NappletBrowserContract.MSG_DOWNLOAD_CONSENT) {
+                putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id)
+                putString(NappletBrowserContract.KEY_BROWSER_ORIGIN, origin)
+                putString(NappletBrowserContract.KEY_DOWNLOAD_NAME, offer.fileName)
+                putLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, offer.sizeBytes)
+                putString(NappletBrowserContract.KEY_DOWNLOAD_SOURCE, offer.sourceHost)
+                putBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, offer.risky)
+            }
+        if (sent) pendingDownloads[id] = PendingDownload(tab.sessionId, origin, offer)
     }
 
     private fun requestBrowserToken(

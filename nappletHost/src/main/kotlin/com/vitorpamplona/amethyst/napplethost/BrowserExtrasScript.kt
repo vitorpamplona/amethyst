@@ -29,7 +29,9 @@ package com.vitorpamplona.amethyst.napplethost
  * - `<meta name="theme-color">` — reported (`browser.themeColor`, normalized to `rgb(r, g, b)`) whenever it
  *   or the colour scheme changes, so the window can tint its system bars and Recents entry.
  * - `blob:` / `data:` downloads — only the page can read a `blob:` URL, so a click on (or a programmatic
- *   `.click()` of) an `<a download>` pointing at one is turned into its bytes (`browser.download`).
+ *   `.click()` of) an `<a download>` pointing at one is turned into its bytes (`browser.download`). The
+ *   native side treats it as a request: the user confirms every save on a consent card, so a page that
+ *   posts the envelope itself gains nothing over using the script.
  *
  * Messages travel over the same origin-scoped native bridge as NIP-07; the host handles `browser.*` types
  * itself and never forwards them to the broker.

@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.DownloadPromptCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageInfoSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PermissionPromptCard
@@ -324,8 +325,9 @@ private fun EmbeddedWebAppTab(
 /**
  * Everything an embedded page asks the user for, drawn by the main process because the provider has no
  * window: JS dialogs, camera / microphone / location prompts (remembered per origin in
- * [WebSitePermissionRegistry], then Android's own runtime permission), and page info — the shared
- * [PageDialogCard], [PermissionPromptCard] and [PageInfoSheet].
+ * [WebSitePermissionRegistry], then Android's own runtime permission), inline-download consent, and
+ * page info — the shared [PageDialogCard], [PermissionPromptCard], [DownloadPromptCard] and
+ * [PageInfoSheet].
  */
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
@@ -405,6 +407,25 @@ private fun EmbeddedPageUi(
                     onDeny = { answer(allow = false, remember = true) },
                 )
             }
+        }
+    }
+
+    // A download the page started: nothing is fetched or saved until this is answered. The card shows the
+    // file name that would be saved, its size and source host, headed by the WebView-reported origin (never
+    // a page-supplied field), with a warning for names that can be installed or run ("invoice.apk").
+    val downloadRequest by controller.pendingDownload
+    downloadRequest?.let { request ->
+        Dialog(onDismissRequest = { controller.answerDownload(request.id, allowed = false) }) {
+            DownloadPromptCard(
+                host = hostLabel(request.origin),
+                security = ui.security,
+                fileName = request.fileName,
+                sizeBytes = request.sizeBytes,
+                sourceHost = request.sourceHost,
+                risky = request.risky,
+                onAllow = { controller.answerDownload(request.id, allowed = true) },
+                onDeny = { controller.answerDownload(request.id, allowed = false) },
+            )
         }
     }
 
