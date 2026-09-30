@@ -349,7 +349,7 @@ class ConcordDirectInviteInbox(
         ): DirectInviteAcceptPlan {
             if (opened.isExpired(nowMs)) return DirectInviteAcceptPlan.Expired
             if (held == null) return DirectInviteAcceptPlan.Join
-            if (isReadmission(held, heldState, opened.invite, me)) return DirectInviteAcceptPlan.Readmit
+            if (isReadmission(held, heldState, opened, me)) return DirectInviteAcceptPlan.Readmit
             if (ConcordInviteVend.catchUpChannelIds(held, opened.invite).isEmpty()) return DirectInviteAcceptPlan.NothingNew
             if (heldState == null) return DirectInviteAcceptPlan.RosterNotLoaded
             // Death wins every race (CORD-02 §9): a dissolved community takes no new keys.
@@ -369,18 +369,26 @@ class ConcordDirectInviteInbox(
          * could never be accepted. A banned member has no live membership a bundle could hijack
          * (the reason a bundle may never move a held base, CORD-06 §2), and the join re-checks the
          * ban against the NEW epoch's roster, failing closed.
+         *
+         * A bundle's `community_root` is not bound to its id, so anyone could mint a "newer epoch"
+         * under a root of their own and, on one tap, replace the held base (and, with a huge epoch,
+         * block every genuine readmission after it). So, as for a catch-up, only a sender who is
+         * staff in the held fold (seal-verified) may readmit us, into the same owner's community.
          */
         fun isReadmission(
             held: ConcordCommunityListEntry,
             heldState: ConcordCommunityState?,
-            invite: CommunityInvite,
+            opened: OpenedDirectInvite,
             me: HexKey,
         ): Boolean =
             heldState != null &&
                 !heldState.dissolved &&
                 heldState.authority.isBanned(me) &&
-                invite.communityId.equals(held.id, ignoreCase = true) &&
-                invite.rootEpoch > held.rootEpoch
+                opened.invite.communityId.equals(held.id, ignoreCase = true) &&
+                opened.invite.owner.equals(held.owner, ignoreCase = true) &&
+                opened.invite.rootEpoch > held.rootEpoch &&
+                heldState.authority.isStaff(opened.sender) &&
+                !heldState.authority.isBanned(opened.sender)
 
         /**
          * What a UI shows out of [pending], given the communities this account already holds
@@ -424,7 +432,7 @@ class ConcordDirectInviteInbox(
                 // a catch-up from a non-staff sender, for channels the fold doesn't know as Private,
                 // or into a dissolved community is refused by [acceptPlan], so it is not offered.
                 val heldState = held?.let { heldStateOf(it.id) }
-                val readmit = held != null && me != null && isReadmission(held, heldState, opened.invite, me)
+                val readmit = held != null && me != null && isReadmission(held, heldState, opened, me)
                 val newChannels =
                     when {
                         held == null || readmit -> emptyList()

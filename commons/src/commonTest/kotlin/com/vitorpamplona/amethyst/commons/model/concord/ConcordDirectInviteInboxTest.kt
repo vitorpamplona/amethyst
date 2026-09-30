@@ -503,5 +503,12 @@ class ConcordDirectInviteInboxTest {
 
             // Dissolved: death wins.
             assertNotEquals(DirectInviteAcceptPlan.Readmit, ConcordDirectInviteInbox.acceptPlan(reInvite, held, banned.withDissolved(true), me.pubKey))
+
+            // A bundle's root is not bound to the community id, so anyone can mint a "newer epoch"
+            // under their own root. Only staff of the held community may readmit us: a stranger's
+            // forgery must not move the held base, nor even be offered.
+            val forged = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(stranger, me.pubKey, inviteFor(c, root = "66".repeat(32), epoch = c.rootEpoch + 50)), me))
+            assertNotEquals(DirectInviteAcceptPlan.Readmit, ConcordDirectInviteInbox.acceptPlan(forged, held, banned, me.pubKey))
+            assertTrue(ConcordDirectInviteInbox.visible(listOf(forged), listOf(held), heldStateOf = { banned }, me = me.pubKey).isEmpty())
         }
 }
