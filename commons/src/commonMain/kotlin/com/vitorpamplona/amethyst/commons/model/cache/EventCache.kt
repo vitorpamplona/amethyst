@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
@@ -1105,6 +1106,7 @@ open class EventCache :
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null && (wasVerified || justVerify(event))) {
                 user.updateUserInfo(newUserMetadata, event)
+                BuzzIdentityNames.invalidate()
                 if (relay != null) {
                     user.addRelayBeingUsed(relay, event.createdAt)
                 }
@@ -3788,6 +3790,9 @@ open class EventCache :
                     BuzzPresenceState.record(event.subjectPubKey(), event.status(), event.createdAt)
                     false
                 }
+                // An agent profile makes its author an agent, which can change how names in a
+                // channel are told apart.
+                is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { BuzzIdentityNames.invalidate() }
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
                 // Relay-synthesized "this huddle session is live" (48104): only produced on demand
@@ -3923,7 +3928,6 @@ open class EventCache :
                 is TeamCatalogEvent,
                 is ProjectEvent,
                 is ManagedAgentEvent,
-                is AgentProfileEvent,
                 is EngramEvent,
                 is WorkflowDefEvent,
                 is EventReminderEvent,

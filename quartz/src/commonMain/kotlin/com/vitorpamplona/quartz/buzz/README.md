@@ -129,6 +129,11 @@ Last reconciled against `block/buzz` `4ef23609b` (2026-09-29); the previous full
   original's (`stream/BuzzEditTagOverlay`): attachments only from the edit, custom emoji from the
   edit when it has any, added `p` mentions merged. So an edit re-sends every attachment and emoji
   the new text still uses.
+- **Contextual identity names** (`identityNames/IdentityNamePolicy`, Buzz's portable v1 contract,
+  run against its vendored fixtures in `IdentityNamePolicyTest`): within one context (a channel's
+  members) a name only grows on a real collision: a person keeps it, an agent becomes `Alice’s Honey`
+  or `Honey (agent)`, and anyone still colliding gets an npub suffix. `commons/.../BuzzIdentityNames`
+  applies it per relay group; agents are authors with a 10100 profile or a verified NIP-OA owner.
 - **Put-user (9000)** without a `role` tag is "no role change" on Buzz; a plain add sends none.
 - **Compare-and-swap writes**: canvas (40100) and workflow definitions (30620) take
   `["expected-revision", <head id>]` and the relay answers `conflict:` on a stale head. A workflow's

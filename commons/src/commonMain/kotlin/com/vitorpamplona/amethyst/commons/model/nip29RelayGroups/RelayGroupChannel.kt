@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -139,6 +140,8 @@ class RelayGroupChannel(
 
     private fun recomputeAllMembers() {
         allMembers = if (admins.isEmpty()) members else members + admins.mapTo(HashSet()) { it.pubKey }
+        // Who is in the channel decides which names collide there.
+        if (BuzzRelayDialect.isBuzz(groupId.relayUrl)) BuzzIdentityNames.invalidate()
     }
 
     /**
@@ -315,6 +318,9 @@ class RelayGroupChannel(
 
     /** Number of known members (admins are members too). */
     fun memberCount(): Int = allMembers.size
+
+    /** Every known member and admin. The set is replaced, never mutated, when the roster changes. */
+    fun allMemberKeys(): Set<HexKey> = allMembers
 
     /**
      * The subset of this group's members/admins that [follows] contains — "people you follow who

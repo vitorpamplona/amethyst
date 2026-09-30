@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.buzz.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,8 +29,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_agent_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_agent_managed_by
@@ -38,7 +42,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.ob
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
+import com.vitorpamplona.quartz.buzz.identityNames.ResolvedIdentityName
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 
 /**
  * Whether [author] has published a Buzz agent profile (kind 10100). The profile is requested with
@@ -67,15 +74,17 @@ fun BuzzAgentLabel(
     owner: HexKey?,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    showOwner: Boolean = true,
+    onOwnerClick: ((HexKey) -> Unit)? = null,
 ) {
     val hasAgentProfile = rememberHasBuzzAgentProfile(author)
     if (owner == null && !hasAgentProfile) return
 
     val agent = stringRes(Res.string.buzz_agent_label)
     val text =
-        when (owner) {
-            null -> agent
-            accountViewModel.userProfile().pubkeyHex -> "$agent · ${stringRes(Res.string.buzz_agent_managed_by_you)}"
+        when {
+            owner == null || !showOwner -> agent
+            owner == accountViewModel.userProfile().pubkeyHex -> "$agent · ${stringRes(Res.string.buzz_agent_managed_by_you)}"
             else -> "$agent · ${stringRes(Res.string.buzz_agent_managed_by, observeUserNameByHex(owner, accountViewModel))}"
         }
 
@@ -85,6 +94,24 @@ fun BuzzAgentLabel(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier,
+        modifier = if (owner != null && showOwner && onOwnerClick != null) modifier.clickable { onOwnerClick(owner) } else modifier,
     )
+}
+
+/**
+ * [author]'s contextual name in the Buzz [channel] ([BuzzIdentityNames]): the plain name unless
+ * another member shares it, then "Alice’s Honey", "Honey (agent)" or "Honey · 7xk2". Recomputed when
+ * profiles, agent profiles or the roster change, at most every quarter second.
+ */
+@OptIn(FlowPreview::class)
+@Composable
+fun rememberBuzzContextualName(
+    channel: RelayGroupChannel,
+    author: User,
+    accountViewModel: AccountViewModel,
+): ResolvedIdentityName? {
+    val versions = remember { BuzzIdentityNames.version.debounce(250) }
+    val version by versions.collectAsStateWithLifecycle(BuzzIdentityNames.version.value)
+    val viewer = accountViewModel.userProfile().pubkeyHex
+    return remember(channel, author, viewer, version) { BuzzIdentityNames.labelFor(channel, author.pubkeyHex, viewer) }
 }
