@@ -23,7 +23,10 @@ package com.vitorpamplona.quartz.concord.cord03Channels
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordEntryResidue
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
+import com.vitorpamplona.quartz.concord.cord06Rekey.SteppedChannelKey
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -43,11 +46,12 @@ class HistoricalChannelKey(
  *  - **Current keys** are the entry's `channels` (`privateChannels`): exactly one per channel, the
  *    newest epoch held. A rotation replaces it in place, keeping any unknown keys another client
  *    wrote inside the channel object (the round-trip rule, CORD-02 §6/§8).
- *  - **Older keys** are never written by this client: CORD-02 §8 keeps intermediate keys out of the
- *    List ("a client's own optimisation … it does not belong in the List"). They are still *read*
- *    wherever they already are — the entry's `seed` snapshot (the earliest epoch held, the backfill
- *    anchor) and the reference client's `priors` extension inside a channel object — so history
- *    written before a rotation stays readable.
+ *  - **Older keys** are read from the entry's `seed` snapshot (the earliest epoch held, the backfill
+ *    anchor) and from the reference client's `priors` extension inside a channel object, and a
+ *    rotation writes the key it replaces into `priors` (`{key, epoch, retired_at}`, as Armada
+ *    does). CORD-02 §8 would rather keep intermediate keys out of the List and re-walk rotations
+ *    from `seed`, but a channel created or privatised after the join has no `seed` key to walk
+ *    from: without `priors` its pre-rotation history was unreadable after the next restart.
  *  - **Cuts** are the reference client's `channel_cuts` extension on the entry: per channel, the
  *    channel epoch whose rotation cut this member out. A floor, never rolled back: a key below it is
  *    refused, so a stale bundle or catch-up cannot quietly restore revoked access. Kept as the raw
@@ -118,18 +122,27 @@ object ConcordChannelKeyring {
     fun withChannelKey(
         entry: ConcordCommunityListEntry,
         key: PrivateChannelKey,
+        retiredAt: Long = TimeUtils.now(),
+        steppedOver: List<SteppedChannelKey> = emptyList(),
     ): ConcordCommunityListEntry? {
         if (!HEX64.matches(key.key) || !HEX64.matches(key.channelId)) return null
         if (isCutOff(entry, key.channelId, key.epoch)) return null
         val held = entry.privateChannels.firstOrNull { it.channelId.equals(key.channelId, ignoreCase = true) }
         if (held != null && HEX64.matches(held.key) && held.epoch >= key.epoch) return null
+        val retired =
+            // A walk's stepped keys carry when their rotation was published, so they win the dedupe
+            // over the held key's local "now".
+            buildList {
+                steppedOver.forEach { add(Triple(it.key.toHexKey(), it.epoch, it.retiredAt)) }
+                if (held != null && HEX64.matches(held.key)) add(Triple(held.key, held.epoch, retiredAt))
+            }
         val next =
             PrivateChannelKey(
                 channelId = key.channelId.lowercase(),
                 key = key.key.lowercase(),
                 epoch = key.epoch,
                 name = key.name.ifBlank { held?.name ?: "" },
-                extras = held?.extras ?: key.extras,
+                extras = withPriors(held?.extras ?: key.extras, retired, key.key),
             )
         return entry.copyChannels(entry.privateChannels.filterNot { it.channelId.equals(key.channelId, ignoreCase = true) } + next, entry.residue)
     }
@@ -140,9 +153,39 @@ object ConcordChannelKeyring {
         channelIdHex: HexKey,
         newKeyHex: HexKey,
         newEpoch: Long,
+        retiredAt: Long = TimeUtils.now(),
+        steppedOver: List<SteppedChannelKey> = emptyList(),
     ): ConcordCommunityListEntry? {
         val held = heldKey(entry, channelIdHex) ?: return null
-        return withChannelKey(entry, PrivateChannelKey(held.channelId, newKeyHex, newEpoch, held.name, held.extras))
+        return withChannelKey(entry, PrivateChannelKey(held.channelId, newKeyHex, newEpoch, held.name, held.extras), retiredAt, steppedOver)
+    }
+
+    /**
+     * [extras] with each [retired] `(key, epoch, retired_at)` appended to `priors`, skipping one
+     * already there at that epoch and key, and never [currentKey] itself. Unknown fields inside
+     * existing prior objects ride through.
+     */
+    private fun withPriors(
+        extras: JsonObject,
+        retired: List<Triple<HexKey, Long, Long>>,
+        currentKey: HexKey,
+    ): JsonObject {
+        val existing = (extras[PRIORS] as? JsonArray)?.toList() ?: emptyList()
+        val seen =
+            existing.mapNotNullTo(HashSet()) { p ->
+                val obj = p as? JsonObject ?: return@mapNotNullTo null
+                val k = (obj["key"] as? JsonPrimitive)?.contentOrNull?.lowercase() ?: return@mapNotNullTo null
+                val e = (obj["epoch"] as? JsonPrimitive)?.longOrNull ?: return@mapNotNullTo null
+                e to k
+            }
+        val added =
+            retired.mapNotNull { (key, epoch, at) ->
+                val k = key.lowercase()
+                if (!HEX64.matches(k) || k == currentKey.lowercase() || !seen.add(epoch to k)) return@mapNotNull null
+                JsonObject(mapOf("key" to JsonPrimitive(k), "epoch" to JsonPrimitive(epoch), "retired_at" to JsonPrimitive(at)))
+            }
+        if (added.isEmpty()) return extras
+        return JsonObject(extras + (PRIORS to JsonArray(existing + added)))
     }
 
     /**
