@@ -410,7 +410,7 @@ private fun EmbeddedPageUi(
         }
     }
 
-    // A page's inline download: nothing reaches the shared Downloads collection until this is answered.
+    // A download the page started: nothing is fetched or saved until this is answered.
     // The card shows the sanitized file name and exact byte count the sandbox will write, headed by the
     // WebView-reported origin (never a page-supplied field), with a warning for installer/script-like
     // extensions — the social-engineering payload names the disclosure calls out ("invoice.apk").

@@ -386,7 +386,7 @@ class EmbeddedWebAppController(
                         id = id,
                         origin = origin,
                         fileName = name,
-                        sizeBytes = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, 0L),
+                        sizeBytes = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, -1L),
                         risky = data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, false),
                     )
             }

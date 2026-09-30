@@ -132,9 +132,9 @@ class BrowserChromeHost(
     )
 
     /**
-     * An inline download (`browser.download` bridge message) waiting for consent before its bytes are
-     * written into the shared Downloads collection. [fileName]/[sizeBytes] describe exactly what the
-     * native sink would write; nothing is saved until [answer] runs with true.
+     * A download the page started, waiting for consent before anything is fetched or written into the
+     * shared Downloads collection. [fileName]/[sizeBytes] (-1 when unknown) describe exactly what would
+     * be saved; nothing is saved until [answer] runs with true.
      */
     class PendingDownload(
         val host: String?,

@@ -52,14 +52,14 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_cancel
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_download_risky
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_download_save
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_download_title
+import com.vitorpamplona.amethyst.commons.ui.note.types.formatBytes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.util.DecimalPatternFormatter
 
 /**
- * A page's inline download waiting for consent before its bytes are written to the shared Downloads
- * collection. The bridge envelope is forgeable (any top-frame script can post it, no gesture needed),
- * so the gate lives here: the card names the exact file the sink would write — the WebView-reported
- * origin, never a page-supplied field — and nothing is saved until the user taps Save.
+ * A download the page started, waiting for consent before anything is fetched or written to the shared
+ * Downloads collection. A page can start one without any gesture, so the card names the site (the
+ * WebView-reported origin, never a page-supplied field), the exact file name that would be saved and its
+ * size ([sizeBytes] is -1 when the server didn't say), and nothing is saved until the user taps Save.
  */
 @Composable
 fun DownloadPromptCard(
@@ -90,8 +90,11 @@ fun DownloadPromptCard(
             }
             Spacer(Modifier.width(14.dp))
             Column {
-                Text(fileName, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(formatBytes(sizeBytes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Never cut the end off: the extension is what tells "invoice.pdf" from "invoice.pdf.apk".
+                Text(fileName, style = MaterialTheme.typography.titleSmall, maxLines = 3, overflow = TextOverflow.MiddleEllipsis)
+                if (sizeBytes >= 0) {
+                    Text(formatBytes(sizeBytes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         if (risky) {
@@ -116,13 +119,4 @@ fun DownloadPromptCard(
             Button(onClick = onAllow) { Text(stringRes(Res.string.browser_pill_download_save)) }
         }
     }
-}
-
-/** Rounded byte count for the consent card ("412 B", "1.2 MB", "25.0 MB"). */
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024L) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "${DecimalPatternFormatter("0.0").format(kb)} KB"
-    val mb = kb / 1024
-    return "${DecimalPatternFormatter("0.0").format(mb)} MB"
 }

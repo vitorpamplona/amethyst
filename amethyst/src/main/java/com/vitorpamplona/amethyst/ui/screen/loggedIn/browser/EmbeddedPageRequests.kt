@@ -42,9 +42,9 @@ data class EmbeddedPermissionRequest(
 )
 
 /**
- * An inline download (`browser.download`) from an embedded page, waiting for consent before its bytes
- * are written into the shared Downloads collection. [fileName]/[sizeBytes] are the sanitized name and
- * exact decoded size the sandbox reports; [origin] is the WebView-reported origin, not a page field.
+ * A download an embedded page started, waiting for consent before anything is fetched or written into
+ * the shared Downloads collection. [fileName]/[sizeBytes] are the sanitized name and size (-1 when
+ * unknown) the sandbox reports; [origin] is the WebView-reported origin, not a page field.
  */
 data class EmbeddedDownloadRequest(
     val id: Long,

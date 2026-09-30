@@ -185,13 +185,12 @@ object NappletBrowserContract {
     const val MSG_EXIT_FULLSCREEN = 33
 
     /**
-     * Provider → client: a page's inline download needs the user's consent before its bytes are
-     * written into the shared Downloads collection ([browser.download] reaches a native file-write
-     * sink, so the gate lives at the sink, keyed on the WebView-reported [KEY_BROWSER_ORIGIN] — never
-     * a page-supplied field). Carries [KEY_DOWNLOAD_ID], the sanitized [KEY_DOWNLOAD_NAME], the exact
-     * byte size in [KEY_DOWNLOAD_SIZE], and [KEY_DOWNLOAD_RISKY] (an install-or-script-like extension).
-     * Answered with [MSG_DOWNLOAD_CONSENT_RESULT] on every outcome; the bytes themselves never leave
-     * the `:napplet` process.
+     * Provider → client: a download the page started (an attachment, `<a download>`, or an inline
+     * `browser.download`) needs the user's consent before anything is fetched or written into the shared
+     * Downloads collection. Carries [KEY_DOWNLOAD_ID], the WebView-reported [KEY_BROWSER_ORIGIN] (never a
+     * page-supplied field), the sanitized [KEY_DOWNLOAD_NAME], [KEY_DOWNLOAD_SIZE], and
+     * [KEY_DOWNLOAD_RISKY] (an install-or-script-like extension). Answered with
+     * [MSG_DOWNLOAD_CONSENT_RESULT] on every outcome; the bytes themselves never leave the `:napplet` process.
      */
     const val MSG_DOWNLOAD_CONSENT = 34
 
@@ -226,7 +225,7 @@ object NappletBrowserContract {
     /** The sanitized file name the consented download will be stored under (already path/control-char stripped). */
     const val KEY_DOWNLOAD_NAME = "downloadName"
 
-    /** The exact decoded byte count the consented download will write. */
+    /** The size in bytes the consented download will write, or -1 when the server didn't say. */
     const val KEY_DOWNLOAD_SIZE = "downloadSize"
 
     /** Whether [KEY_DOWNLOAD_NAME]'s extension is one the user should double-check (installer/script-like). */

@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome.Action
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
+import com.vitorpamplona.amethyst.commons.browser.DownloadCooldown
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
@@ -225,6 +226,8 @@ class NappletBrowserActivity : ComponentActivity() {
     private val originTokens = mutableMapOf<String, String>()
     private val pendingByOrigin = mutableMapOf<String, MutableList<Message>>()
     private val mintInFlight = mutableSetOf<String>()
+    private val downloadCooldown = DownloadCooldown()
+    private var preparingDownload = false
 
     /**
      * Back walks out of fullscreen video, then the find bar, then the page's history, then leaves. Enabled
@@ -361,17 +364,18 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.webViewClient = BrowserClient()
         wv.webChromeClient = BrowserChromeClient()
         wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
-        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            BrowserDownloads.downloadWithConsent(
-                context = this,
-                url = url,
-                contentDisposition = contentDisposition,
-                mimeType = mimeType,
-                cookieHolder = { BrowserWebTools.cookieManager(wv).getCookie(url) },
-                userAgent = userAgent,
-                proxyPort = if (useTor) proxyPort else -1,
-            ) { fileName, sizeBytes, risky, consent ->
-                offerListenerDownloadConsent(fileName, sizeBytes, risky, consent)
+        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            val origin =
+                chrome
+                    ?.ui
+                    ?.chrome
+                    ?.url
+                    ?.let(BrowserChrome::originOf) ?: return@setDownloadListener
+            if (!canOfferDownload(origin)) return@setDownloadListener
+            // Read on the main thread: the cookie jar is the tab's own per-account WebView profile.
+            val cookie = BrowserWebTools.cookieManager(wv).getCookie(url)
+            prepareDownloadOffer(origin) { ready ->
+                BrowserDownloads.offerListenerDownload(url, userAgent, contentDisposition, mimeType, contentLength, cookie, if (useTor) proxyPort else -1, ready)
             }
         }
         wv.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
@@ -903,14 +907,11 @@ class NappletBrowserActivity : ComponentActivity() {
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
-        // The origin the WebView REPORTS — the page cannot forge this — keys every consent decision,
-        // including browser.* ones. Page-supplied fields are never trusted for that.
+        // The origin the WebView reports, which the page can't forge, keys every decision below.
         val origin = trustedOrigin(sourceOrigin) ?: return
 
-        // Browser conveniences (share, theme colour, blob downloads) are handled here, never forwarded
-        // to the broker's capability router. That is NOT a consent exemption: browser.download writes
-        // into the shared Downloads collection, so it is gated below by [offerDownloadConsent] on
-        // this WebView-reported origin.
+        // Browser conveniences (share, theme colour, blob downloads) are handled here, never brokered.
+        // A download still asks the user first ([offerInlineDownload]): any top-frame script can post one.
         when (envelope.stringOrNull("type")) {
             "browser.share" -> {
                 if (resumed) BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
@@ -923,7 +924,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 return
             }
             "browser.download" -> {
-                offerDownloadConsent(origin, envelope)
+                offerInlineDownload(origin, envelope)
                 return
             }
         }
@@ -957,66 +958,54 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     /**
-     * The one-shot native consent card for a `browser.download` envelope, then the save. Shown keyed on
-     * the WebView-reported [origin] only; nothing about the envelope can trigger the save alone. The
-     * byte payload is fully decoded here — before the prompt — so the dialog names the true size and
-     * malformed or oversized payloads are refused without ever reaching MediaStore. Exactly one card is
-     * live per origin on this window at a time (a second request drops), so a page can't swap the name
-     * under the user's finger.
+     * A `browser.download` envelope: the bytes a page wants saved (a `blob:` download the extras script
+     * read, or one a script forged). Keyed on the WebView-reported [origin], never an envelope field.
      */
-    private fun offerDownloadConsent(
+    private fun offerInlineDownload(
         origin: String,
         envelope: JsonObject,
     ) {
-        val data = envelope.stringOrNull("data")?.takeIf { it.startsWith("data:", ignoreCase = true) } ?: return
-        val save = BrowserDownloadGate.preludeInlineSave(data, envelope.stringOrNull("name")) ?: return
-        val host = chrome ?: return
-        if (!BrowserDownloadGate.shouldPrompt(SURFACE_KEY, origin)) return
-        // One live prompt per window: a second request while a card is up is dropped, and a live card is
-        // never replaced — the anti-swap rule the fingerprint under the user's finger relies on.
-        if (host.downloadPrompt != null) return
-        host.downloadPrompt =
-            BrowserChromeHost.PendingDownload(
-                host = BrowserChrome.displayHost(origin),
-                security = BrowserChrome.security(host.ui.chrome),
-                fileName = save.fileName,
-                sizeBytes = save.bytes.size.toLong(),
-                risky = BrowserDownloadGate.isRisky(save.fileName),
-            ) { allowed ->
-                if (allowed) BrowserDownloads.saveInlineBytes(this, save.fileName, save.mimeType, save.bytes)
-            }
+        if (!canOfferDownload(origin)) return
+        val data = envelope.stringOrNull("data") ?: return
+        prepareDownloadOffer(origin) { ready -> BrowserDownloads.offerInline(data, envelope.stringOrNull("name"), ready) }
     }
 
     /**
-     * The consent card for a WebView `DownloadListener` hit (a page-initiated `<a download>` navigation
-     * or `Content-Disposition: attachment`), offered by [BrowserDownloads.downloadWithConsent] after it
-     * probed the size. Shares the exact same gate and anti-swap rule as the `browser.download` bridge
-     * envelope: one live card per window, a live card is never replaced.
+     * Whether [origin] may put a download card up now: never over a card already showing (so a page can't
+     * swap the name under the user's finger) or one still being prepared (so a page can't queue decodes),
+     * and not within the cooldown after its last card was answered.
      */
-    private fun offerListenerDownloadConsent(
-        fileName: String,
-        sizeBytes: Long,
-        risky: Boolean,
-        consent: BrowserDownloads.Consent,
+    private fun canOfferDownload(origin: String) = chrome?.downloadPrompt == null && !preparingDownload && downloadCooldown.allows(origin)
+
+    /** Runs [prepare] (which answers exactly once, on the main thread) and shows the offer it produces. */
+    private fun prepareDownloadOffer(
+        origin: String,
+        prepare: ((BrowserDownloads.DownloadOffer?) -> Unit) -> Unit,
     ) {
-        val origin =
-            chrome
-                ?.ui
-                ?.chrome
-                ?.url
-                ?.let(BrowserChrome::originOf) ?: return
-        if (!BrowserDownloadGate.shouldPrompt(SURFACE_KEY, origin)) return
+        preparingDownload = true
+        prepare { offer ->
+            preparingDownload = false
+            if (offer != null) showDownloadOffer(origin, offer)
+        }
+    }
+
+    /** Shows [offer]'s consent card; the file is fetched or written only if the user taps Save. */
+    private fun showDownloadOffer(
+        origin: String,
+        offer: BrowserDownloads.DownloadOffer,
+    ) {
         val host = chrome ?: return
-        if (host.downloadPrompt != null) return
+        if (isDestroyed || !canOfferDownload(origin)) return
         host.downloadPrompt =
             BrowserChromeHost.PendingDownload(
                 host = BrowserChrome.displayHost(origin),
                 security = BrowserChrome.security(host.ui.chrome),
-                fileName = fileName,
-                sizeBytes = sizeBytes,
-                risky = risky,
+                fileName = offer.fileName,
+                sizeBytes = offer.sizeBytes,
+                risky = offer.risky,
             ) { allowed ->
-                if (allowed) consent.run()
+                downloadCooldown.answered(origin)
+                if (allowed) offer.save(this)
             }
     }
 
@@ -1729,11 +1718,6 @@ class NappletBrowserActivity : ComponentActivity() {
     companion object {
         private const val TAG = "NappletBrowserActivity"
 
-        /**
-         * The one consent-gate surface key for this single-window Activity: unlike the embedded Service,
-         * one Activity hosts exactly one WebView, so there is only ever one surface to book.
-         */
-        private const val SURFACE_KEY = "full-screen"
         private const val ACTIVITY_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
 
         /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */

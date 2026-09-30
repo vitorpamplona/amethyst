@@ -30,13 +30,11 @@ package com.vitorpamplona.amethyst.napplethost
  *   or the colour scheme changes, so the window can tint its system bars and Recents entry.
  * - `blob:` / `data:` downloads — only the page can read a `blob:` URL, so a click on (or a programmatic
  *   `.click()` of) an `<a download>` pointing at one is turned into its bytes (`browser.download`). The
- *   native side treats that type as a request, not an authority: the sink stays gated behind this
- *   origin's consent token plus a per-download confirmation, so a page that forges the envelope gains
- *   nothing over using the script.
+ *   native side treats it as a request: the user confirms every save on a consent card, so a page that
+ *   posts the envelope itself gains nothing over using the script.
  *
  * Messages travel over the same origin-scoped native bridge as NIP-07; the host handles `browser.*` types
- * itself and never forwards them to the broker's capability router (which is not a consent exemption —
- * the download type is consent-gated by the host itself).
+ * itself and never forwards them to the broker.
  */
 object BrowserExtrasScript {
     val JS: String =
