@@ -334,6 +334,8 @@ fun ConcordDirectInviteCard(
                         try {
                             when (val result = accountViewModel.account.concord.acceptConcordDirectInvite(invite.wrapId)) {
                                 is ConcordInviteResult.Joined -> nav.nav(Route.ConcordServer(result.communityId))
+                                // The accept already running reports; this tap did nothing.
+                                is ConcordInviteResult.InProgress -> Unit
                                 is ConcordInviteResult.Expired -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_expired)
                                 is ConcordInviteResult.Banned -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_banned)
                                 is ConcordInviteResult.InvalidLink -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_invalid)

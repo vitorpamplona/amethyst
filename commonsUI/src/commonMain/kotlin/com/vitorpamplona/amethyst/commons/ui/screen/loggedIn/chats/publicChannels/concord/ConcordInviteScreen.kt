@@ -147,6 +147,9 @@ fun ConcordInviteScreen(
                         RedeemState.Failed(Res.string.concord_invite_failed, canRetry = true)
                     is ConcordInviteResult.NotSaved ->
                         RedeemState.Failed(Res.string.concord_invite_failed_not_saved, canRetry = true)
+                    // Only a Direct Invite accept reports this; a link redeem never does.
+                    is ConcordInviteResult.InProgress ->
+                        RedeemState.Failed(Res.string.concord_invite_failed, canRetry = true)
                 }
         }
     }

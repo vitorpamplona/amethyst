@@ -1169,7 +1169,14 @@ class AccountConcordActions(
      */
     suspend fun acceptConcordDirectInvite(wrapId: HexKey): ConcordInviteResult {
         if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
-        acceptingConcordDirectInvites.update { it + wrapId }
+        // Check-and-set in one step: two accepts of one invite would run two joins and announce two
+        // Guestbook JOINs.
+        var claimed = false
+        acceptingConcordDirectInvites.update { current ->
+            claimed = wrapId !in current
+            if (claimed) current + wrapId else current
+        }
+        if (!claimed) return ConcordInviteResult.InProgress
         try {
             return acceptConcordDirectInviteNow(wrapId)
         } finally {
