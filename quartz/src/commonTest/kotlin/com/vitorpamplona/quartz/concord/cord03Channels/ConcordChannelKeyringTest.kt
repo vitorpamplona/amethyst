@@ -146,6 +146,17 @@ class ConcordChannelKeyringTest {
     }
 
     @Test
+    fun priorsKeepOnlyTheNewestEpochs() {
+        var e = entry(listOf(PrivateChannelKey(chan, 1.toString(16).padStart(64, '0'), 1, "mods")))
+        for (epoch in 2L..(ConcordChannelKeyring.MAX_PRIORS + 10)) {
+            e = assertNotNull(ConcordChannelKeyring.withRotatedKey(e, chan, epoch.toString(16).padStart(64, '0'), epoch, retiredAt = epoch))
+        }
+        val epochs = ConcordChannelKeyring.historicalKeys(e, chan).map { it.epoch }
+        assertEquals(ConcordChannelKeyring.MAX_PRIORS, epochs.size)
+        assertEquals(ConcordChannelKeyring.MAX_PRIORS + 9L, epochs.first())
+    }
+
+    @Test
     fun aRotationKeepsEveryEarlierKeyReadableAfterARoundTrip() {
         // A channel created after the join has no `seed` anchor: the List is the only place its
         // older keys can live, so a rotation that dropped them lost that history on the next restart.

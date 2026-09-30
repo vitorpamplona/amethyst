@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -60,6 +61,9 @@ class HistoricalChannelKey(
 object ConcordChannelKeyring {
     const val CHANNEL_CUTS = "channel_cuts"
     const val PRIORS = "priors"
+
+    /** How many retired keys a channel keeps in `priors`, newest epochs first. */
+    const val MAX_PRIORS = 32
 
     private val HEX64 = Regex("^[0-9a-fA-F]{64}$")
 
@@ -185,8 +189,14 @@ object ConcordChannelKeyring {
                 JsonObject(mapOf("key" to JsonPrimitive(k), "epoch" to JsonPrimitive(epoch), "retired_at" to JsonPrimitive(at)))
             }
         if (added.isEmpty()) return extras
-        return JsonObject(extras + (PRIORS to JsonArray(existing + added)))
+        // Bounded: every rotation adds one, and a List entry that outgrows its fragment fails every
+        // List write (joins and leaves included), which is worse than losing the oldest era's history.
+        val all = existing + added
+        val kept = if (all.size <= MAX_PRIORS) all else all.sortedByDescending { priorEpoch(it) }.take(MAX_PRIORS)
+        return JsonObject(extras + (PRIORS to JsonArray(kept)))
     }
+
+    private fun priorEpoch(prior: JsonElement): Long = ((prior as? JsonObject)?.get("epoch") as? JsonPrimitive)?.longOrNull ?: Long.MIN_VALUE
 
     /**
      * [entry] after a rotation to [cutEpoch] cut this member from [channelIdHex] (CORD-06 §2): the
