@@ -1618,7 +1618,11 @@ class AccountConcordActions(
         return Triple(communityId, author, isAdmin)
     }
 
-    /** Promote [member] to the community Admin role, defining that role first if it doesn't exist yet. */
+    /**
+     * Promote [member] to the community Admin role, defining that role first if it doesn't exist
+     * yet. A Grant replaces the member's whole role set, so Admin is added to the roles they already
+     * hold — granting it alone would silently strip, say, a private channel's access role.
+     */
     suspend fun makeConcordAdmin(
         communityId: String,
         member: HexKey,
@@ -1626,6 +1630,7 @@ class AccountConcordActions(
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
+        val before = session.state.value?.authority
 
         val existing =
             session.state.value
@@ -1656,7 +1661,7 @@ class AccountConcordActions(
                 controlPlane = cp,
                 communityId = communityId.hexToByteArray(),
                 member = member,
-                roleIds = listOf(roleIdHex),
+                roleIds = (before?.rolesOf(member).orEmpty() + roleIdHex).toList(),
                 current = session.controlEditions(),
                 createdAt = TimeUtils.now(),
                 owner = session.entry.owner,
@@ -1664,10 +1669,11 @@ class AccountConcordActions(
                 epoch = session.entry.rootEpoch,
             )
         publishConcordWrap(session.entry, grantWrap)
+        reconcileConcordChannelAccess(communityId, before)
         return true
     }
 
-    /** Revoke all roles from [member] (demote an admin back to a plain member). */
+    /** Take the Admin role away from [member], keeping every other role they hold (e.g. a channel's access role). */
     suspend fun removeConcordAdmin(
         communityId: String,
         member: HexKey,
@@ -1675,8 +1681,14 @@ class AccountConcordActions(
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
-        val before = session.state.value?.authority
-        val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val state = session.state.value ?: return false
+        val before = state.authority
+        val adminRoleIds =
+            state.roles.entries
+                .filter { it.value.name == CONCORD_ADMIN_ROLE && it.value.position == 1L }
+                .mapTo(HashSet()) { it.key }
+        val kept = before.rolesOf(member) - adminRoleIds
+        val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, kept.toList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, grantWrap)
         reconcileConcordChannelAccess(communityId, before)
         return true
