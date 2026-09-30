@@ -854,12 +854,25 @@ class Account(
                 // A Private Channel is readable/postable only with its held key (CORD-03 §1).
                 val keyHeld = ConcordActions.canAccessChannel(session.entry, state, channelIdHex)
                 if (channel.updateFrom(state, relays, myPubKey, keyHeld)) channel.updateChannelInfo()
-                channel.notes
-                    .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
-                    .forEach { channel.removeNote(it) }
             }
+            // Dropping a banned author's loaded notes walks every note of every channel, so it runs
+            // when the community's banlist moves, not on every fold tick. New notes from a banned
+            // author are already refused at ingest.
+            val banned = state.authority.bannedMembers()
+            if (banned.isNotEmpty() && concordBannedSwept[communityId] != banned) {
+                for (channelIdHex in state.channels.keys) {
+                    val channel = cache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
+                    channel.notes
+                        .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
+                        .forEach { channel.removeNote(it) }
+                }
+            }
+            concordBannedSwept[communityId] = banned
         }
     }
+
+    /** The banlist each community's loaded notes were last swept against ([refreshConcordChannelIndex]). */
+    private val concordBannedSwept = HashMap<String, Set<HexKey>>()
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
@@ -4188,11 +4201,6 @@ class Account(
             }
         }
 
-        // Keep Concord channel metadata (community name/icon, membership) live across the whole
-        // app — not just the hub screen — so the Messages tab renders each channel's community
-        // chip, and per-community bans apply, as soon as a Control Plane folds. The revision now
-        // bumps only on *structural* change (a fold / membership / rekey, never a plain message),
-        // so this fires rarely; sample() stays as a cheap coalescer for a burst of folds.
         // Direct Invites (CORD-05 §6) are shown on Notifications and Messages, not only on the Concord
         // hub, so they have to be looked for without the hub open. Invites delivered to our DM relays
         // also arrive through the normal gift-wrap path; this sweep covers the stock relays a sender
@@ -4206,6 +4214,11 @@ class Account(
             }
         }
 
+        // Keep Concord channel metadata (community name/icon, membership) live across the whole
+        // app — not just the hub screen — so the Messages tab renders each channel's community
+        // chip, and per-community bans apply, as soon as a Control Plane folds. The revision now
+        // bumps only on *structural* change (a fold / membership / rekey, never a plain message),
+        // so this fires rarely; sample() stays as a cheap coalescer for a burst of folds.
         // The channel index is what every open Concord screen reads (canPost, the dissolved/banned/cut
         // notices), so it refreshes on its own collector. Sharing the loop below made it wait behind
         // the network-bound drains: a dissolution landing live left the composer up until a restart.
