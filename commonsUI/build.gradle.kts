@@ -216,6 +216,8 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
                 // Camera permission prompt for TakePicture. Apache-2.0, already in the app.
                 implementation(libs.accompanist.permissions)
+                // BiometricPrompt behind rememberDeviceAuthenticator. Apache-2.0, already in the app.
+                implementation(libs.androidx.biometric.ktx)
             }
         }
 

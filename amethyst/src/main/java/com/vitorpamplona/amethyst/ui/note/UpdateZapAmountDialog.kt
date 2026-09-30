@@ -20,14 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import android.app.KeyguardManager
-import android.content.Context
-import android.content.Intent
-import android.os.Build
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.result.ActivityResult
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -59,7 +51,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -86,10 +77,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add
-import com.vitorpamplona.amethyst.commons.resources.app_name
-import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed
-import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed_explainer
-import com.vitorpamplona.amethyst.commons.resources.biometric_authentication_failed_explainer_with_error
 import com.vitorpamplona.amethyst.commons.resources.new_amount_in_sats
 import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
 import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts_explainer
@@ -121,10 +108,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -447,120 +432,5 @@ private fun ZapAmountPresetChip(
                 )
             }
         }
-    }
-}
-
-/**
- * Labels the device-credential and biometric prompts need. Resolved in
- * composition and passed down because [authenticate] runs from an onClick
- * lambda and from Android's own biometric callbacks, neither of which can
- * reach a Compose resource.
- */
-@Immutable
-data class AuthPromptLabels(
-    val appName: String,
-    val failedTitle: String,
-    val failedExplainer: String,
-    val failedExplainerWithError: String,
-)
-
-@Composable
-fun rememberAuthPromptLabels(): AuthPromptLabels =
-    AuthPromptLabels(
-        appName = stringRes(Res.string.app_name),
-        failedTitle = stringRes(Res.string.biometric_authentication_failed),
-        failedExplainer = stringRes(Res.string.biometric_authentication_failed_explainer),
-        failedExplainerWithError = stringRes(Res.string.biometric_authentication_failed_explainer_with_error),
-    )
-
-fun authenticate(
-    title: String,
-    context: Context,
-    labels: AuthPromptLabels,
-    keyguardLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>,
-    onApproved: () -> Unit,
-    onError: (String, String) -> Unit,
-) {
-    val fragmentContext = context.getFragmentActivity()!!
-    val keyguardManager =
-        fragmentContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-
-    if (!keyguardManager.isDeviceSecure) {
-        onApproved()
-        return
-    }
-
-    @Suppress("DEPRECATION")
-    fun keyguardPrompt() {
-        val intent =
-            keyguardManager.createConfirmDeviceCredentialIntent(
-                labels.appName,
-                title,
-            )
-
-        keyguardLauncher.launch(intent)
-    }
-
-    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-        keyguardPrompt()
-        return
-    }
-
-    val biometricManager = BiometricManager.from(context)
-    val authenticators =
-        BiometricManager.Authenticators.BIOMETRIC_STRONG or
-            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-
-    val promptInfo =
-        BiometricPrompt.PromptInfo
-            .Builder()
-            .setTitle(labels.appName)
-            .setSubtitle(title)
-            .setAllowedAuthenticators(authenticators)
-            .build()
-
-    val biometricPrompt =
-        BiometricPrompt(
-            fragmentContext,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence,
-                ) {
-                    super.onAuthenticationError(errorCode, errString)
-
-                    when (errorCode) {
-                        BiometricPrompt.ERROR_NEGATIVE_BUTTON -> {
-                            keyguardPrompt()
-                        }
-
-                        BiometricPrompt.ERROR_LOCKOUT -> {
-                            keyguardPrompt()
-                        }
-
-                        else -> {
-                            onError(
-                                labels.failedTitle,
-                                labels.failedExplainerWithError.format(errString.toString()),
-                            )
-                        }
-                    }
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    onError(labels.failedTitle, labels.failedExplainer)
-                }
-
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    onApproved()
-                }
-            },
-        )
-
-    when (biometricManager.canAuthenticate(authenticators)) {
-        BiometricManager.BIOMETRIC_SUCCESS -> biometricPrompt.authenticate(promptInfo)
-        else -> keyguardPrompt()
     }
 }
