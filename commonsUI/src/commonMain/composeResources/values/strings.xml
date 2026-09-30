@@ -3706,7 +3706,7 @@
     <string name="concord_invite_revoked_ok">Invite link revoked.</string>
     <string name="concord_invite_title">Invite link</string>
     <string name="concord_leave_community">Leave community</string>
-    <string name="concord_leave_message">Leave %1$s? It is removed from this account's list and stops syncing on your devices. The community is not notified and you are not removed from its member roster. Messages you can no longer decrypt may be unrecoverable, and you can only return with a new invite.</string>
+    <string name="concord_leave_message">Leave %1$s? It is removed from this account's list and stops syncing on your devices, and members see that you left. Messages you can no longer decrypt may be unrecoverable, and you can only return with a new invite.</string>
     <string name="concord_leave_owner_warning">You created this community. Leaving does not delete it or hand it to anyone else, but it discards the owner key stored on your list — you would not be able to manage it again.</string>
     <string name="concord_leave_title">Leave community?</string>
     <string name="concord_make_admin">Make admin</string>

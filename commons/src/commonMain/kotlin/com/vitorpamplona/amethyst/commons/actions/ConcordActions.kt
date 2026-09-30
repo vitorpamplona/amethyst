@@ -902,6 +902,17 @@ object ConcordActions {
     }
 
     /**
+     * Builds a self-signed Guestbook LEAVE (kind 3306) wrap on the community's Guestbook Plane
+     * (CORD-02 §5): the member's own word that they left, so everyone else's coalesced roster drops
+     * them and a later Refounding stops re-keying them.
+     */
+    suspend fun buildGuestbookLeave(
+        memberSigner: NostrSigner,
+        guestbook: GroupKey,
+        createdAt: Long,
+    ): Event = ConcordStreamEnvelope.wrap(Guestbook.leave(memberSigner.pubKey, createdAt), guestbook, memberSigner, encrypted = true, createdAt = createdAt)
+
+    /**
      * Builds an authorized Guestbook KICK (kind 3309) wrap naming [target], citing [citation] — the
      * actor's own Grant head (`vac`, CORD-04 §5), null only for the owner. A Kick is the *second*
      * layer of a removal: the caller strips the target's roles first (CORD-04 §6).

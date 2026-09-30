@@ -165,6 +165,9 @@ private const val MAX_REFOUNDING_RECIPIENTS = 5_000
 // How many channel epochs a privatisation probes for earlier rotations (Armada MAX_PROBED_CHANNEL_EPOCH).
 private const val MAX_PROBED_CHANNEL_EPOCH = 32L
 
+/** How long leaving waits for a relay to take the Guestbook LEAVE before dropping the community anyway. */
+private const val LEAVE_CONFIRM_SECS = 10L
+
 /** A lowercase 32-byte hex key (the Guestbook `invite` tag's creator). */
 private val HEX64 = Regex("^[0-9a-f]{64}$")
 
@@ -702,8 +705,29 @@ class AccountConcordActions(
         return if (privatizeConcordCommunity(communityId)) ConcordRevokeResult.PRIVATIZED else ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING
     }
 
-    /** Leave a joined Concord community: drop it from the Community List and tombstone it (CORD-02 §8). */
-    suspend fun leaveConcordCommunity(communityId: String): Boolean = writeConcordList { it.unfollow(communityId) }
+    /**
+     * Leave a joined Concord community: tell it with a self-signed Guestbook LEAVE (CORD-02 §5), then
+     * drop it from the Community List and tombstone it (CORD-02 §8). Without the LEAVE we stayed on
+     * everyone's roster, and every later Refounding kept re-keying us.
+     *
+     * The LEAVE goes first, confirmed: gated relays only take a plane wrap after AUTH as the plane
+     * key, and those secrets come from the live session, which the List write tears down. The wait
+     * is bounded so a community whose relays are dead still gets left; callers run this off the UI.
+     */
+    suspend fun leaveConcordCommunity(communityId: String): Boolean {
+        val entry = account.concordSessions.sessionFor(communityId)?.entry
+        if (entry != null && account.isWriteable()) {
+            val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+            if (relays.isNotEmpty()) {
+                val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
+                val leave = ConcordActions.buildGuestbookLeave(account.signer, guestbook, TimeUtils.now())
+                if (!runCatching { account.client.publishAndConfirm(leave, relays, LEAVE_CONFIRM_SECS) }.getOrDefault(false)) {
+                    Log.w("Concord") { "Leaving $communityId: no relay accepted the Guestbook LEAVE; members keep listing us" }
+                }
+            }
+        }
+        return writeConcordList { it.unfollow(communityId) }
+    }
 
     /**
      * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
