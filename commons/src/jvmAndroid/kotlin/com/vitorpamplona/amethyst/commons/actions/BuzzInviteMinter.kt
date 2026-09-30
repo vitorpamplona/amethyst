@@ -45,26 +45,47 @@ import okhttp3.coroutines.executeAsync
  * `crates/buzz-relay/src/api/invites.rs`.
  */
 object BuzzInviteMinter {
-    /** A freshly minted invite: the opaque [code], the shareable [url], and its [expiresAt] (secs). */
+    /** Shortest lifetime the relay accepts (`MIN_INVITE_TTL_SECS` in `buzz-core/src/invite.rs`). */
+    const val MIN_TTL_SECS = 60L
+
+    /** Longest lifetime the relay accepts: 30 days (`MAX_INVITE_TTL_SECS`). */
+    const val MAX_TTL_SECS = 30L * 24 * 60 * 60
+
+    /** Largest `max_uses` the relay accepts (`MAX_INVITE_USES`, the database constraint). */
+    const val MAX_USES = 10_000
+
+    /**
+     * A freshly minted invite: the opaque [code], the shareable [url], and its [expiresAt] (secs).
+     * [maxUses] / [usesRemaining] are null for an unlimited invite (the default).
+     */
     data class MintedInvite(
         val code: String,
         val url: String,
         val expiresAt: Long,
+        val maxUses: Int? = null,
+        val usesRemaining: Int? = null,
     )
 
     /**
-     * POST `/api/invites` on [relay]'s host with an optional [ttlSecs] (relay clamps to [60, 30d];
-     * default 72 h). [httpAuth] signs the NIP-98 event over the exact URL + body; [okHttpClient]
-     * supplies the transport (use a trusted-relay-posture client so a Cloudflare-fronted relay is
-     * reached over clearnet). Throws [IllegalStateException] with the relay's error slug on failure.
+     * POST `/api/invites` on [relay]'s host with an optional [ttlSecs] (default 72 h) and an
+     * optional [maxUses] cap (default unlimited). The relay does **not** clamp: a [ttlSecs] outside
+     * [[MIN_TTL_SECS], [MAX_TTL_SECS]] or a [maxUses] outside [1, [MAX_USES]] is refused with a 400,
+     * so both are checked here first. [httpAuth] signs the NIP-98 event over the exact URL + body;
+     * [okHttpClient] supplies the transport (use a trusted-relay-posture client so a
+     * Cloudflare-fronted relay is reached over clearnet). Throws [IllegalStateException] with the
+     * relay's error message on failure.
      */
     suspend fun mint(
         relay: NormalizedRelayUrl,
         ttlSecs: Long?,
         okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (url: String, method: String, body: ByteArray?) -> HTTPAuthorizationEvent,
+        maxUses: Int? = null,
     ): MintedInvite =
         withContext(Dispatchers.IO) {
+            require(ttlSecs == null || ttlSecs in MIN_TTL_SECS..MAX_TTL_SECS) { "ttl_secs must be between $MIN_TTL_SECS and $MAX_TTL_SECS" }
+            require(maxUses == null || maxUses in 1..MAX_USES) { "max_uses must be between 1 and $MAX_USES" }
+
             // wss://host[/..] -> https://host ; ws://host -> http://host. The endpoint is host-root.
             val wsUrl = relay.url
             val scheme = if (wsUrl.startsWith("wss", ignoreCase = true)) "https" else "http"
@@ -75,7 +96,7 @@ object BuzzInviteMinter {
             val url = httpUrl.toString()
 
             // Exact bytes the NIP-98 payload hash is computed over — must equal what we send.
-            val bodyStr = ttlSecs?.let { "{\"ttl_secs\":$it}" } ?: "{}"
+            val bodyStr = requestBody(ttlSecs, maxUses)
             val bodyBytes = bodyStr.toByteArray(Charsets.UTF_8)
 
             val auth = httpAuth(url, "POST", bodyBytes)
@@ -101,9 +122,21 @@ object BuzzInviteMinter {
                     code = tree?.get("code")?.stringOrNull().orEmpty(),
                     url = tree?.get("url")?.stringOrNull().orEmpty(),
                     expiresAt = tree?.get("expires_at")?.longOrNull() ?: 0L,
+                    maxUses = tree?.get("max_uses")?.longOrNull()?.toInt(),
+                    usesRemaining = tree?.get("uses_remaining")?.longOrNull()?.toInt(),
                 )
             }
         }
+
+    /** The exact JSON body of a mint request; omitted fields take the relay's defaults (72 h, unlimited). */
+    fun requestBody(
+        ttlSecs: Long?,
+        maxUses: Int?,
+    ): String =
+        buildList {
+            ttlSecs?.let { add("\"ttl_secs\":$it") }
+            maxUses?.let { add("\"max_uses\":$it") }
+        }.joinToString(",", prefix = "{", postfix = "}")
 }
 
 private fun JsonElement.stringOrNull(): String? = (this as? JsonPrimitive)?.takeIf { it.isString }?.content

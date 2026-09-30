@@ -90,7 +90,7 @@ interface QTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length != 64) { return null }
-            ensure(!tag[1].contains(':')) { return null }
+            ensure(tag[1].contains(':')) { return null }
             return tag[1]
         }
 
@@ -99,7 +99,7 @@ interface QTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length != 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            ensure(!tag[1].contains(':')) { return null }
+            ensure(tag[1].contains(':')) { return null }
 
             val relayHint = pickRelayHint(tag)
             ensure(relayHint != null) { return null }

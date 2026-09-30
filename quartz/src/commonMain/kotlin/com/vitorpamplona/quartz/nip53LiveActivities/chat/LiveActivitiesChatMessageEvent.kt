@@ -121,15 +121,9 @@ class LiveActivitiesChatMessageEvent(
         return pHints + nip19Hints
     }
 
-    private fun activityHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
-
     fun activity() = tags.firstNotNullOfOrNull(ATag::parse)
 
     fun activityAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
-
-    override fun markedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
-
-    override fun unmarkedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
 
     override fun exposeInDraft() =
         tagArray<LiveActivitiesChatMessageEvent> {

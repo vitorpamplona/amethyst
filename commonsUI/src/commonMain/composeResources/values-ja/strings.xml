@@ -2958,4 +2958,6 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s の受信者の Lightning サービスが利用できません。Lightning アドレス "%2$s" から計算されました。エラー: %3$s。サーバーが稼働しているか、Lightning アドレスが正しいかを確認してください</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s から Lightning 請求書を作成できませんでした: 結果の JSON に要素 pr が見つかりませんでした。</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Lightning 請求書を作成できませんでした。%1$s からのメッセージ: %2$s</string>
+    <string name="browser_address_hint">検索またはアドレスを入力</string>
+    <string name="napplet_untitled">無題の nApplet</string>
 </resources>

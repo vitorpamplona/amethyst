@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -77,7 +79,9 @@ object ConcordSubscriptionPlanner {
             // the entry, per epoch, exactly as it was delivered.
             val cp = ConcordActions.controlPlaneKeysFor(e)
             val historical =
-                e.heldRoots
+                // Losing-fork roots of a healed race are kept for their messages only (CORD-06 §3).
+                ConcordRefounding
+                    .canonicalHeldRoots(e.heldRoots)
                     .filter { it.epoch < e.rootEpoch }
                     .sortedByDescending { it.epoch }
                     .take(ConcordActions.MAX_BACKFILL_EPOCHS)
@@ -92,7 +96,9 @@ object ConcordSubscriptionPlanner {
      * The off-channel planes every joined community subscribes to upfront (known
      * from the entry alone): the Guestbook Plane (membership motions) and the
      * next-epoch base-rekey address (so an inbound Refounding is received live,
-     * CORD-06). Both are kind-1059 wraps authored by their derived stream address.
+     * CORD-06), the dissolution tombstone address (CORD-02 §9), and every held Private Channel's
+     * next channel-rekey addresses (CORD-06 §2). All are kind-1059
+     * wraps authored by their derived stream address.
      */
     fun auxiliaryPlaneSubs(entries: List<ConcordCommunityListEntry>): List<ConcordPlaneSub> =
         entries.flatMap { e ->
@@ -101,10 +107,18 @@ object ConcordSubscriptionPlanner {
             val relays = normalize(e.relays)
             val guestbook = ConcordActions.guestbookPlane(root, communityId, e.rootEpoch)
             val nextRekey = ConcordActions.nextBaseRekeyPlane(root, communityId, e.rootEpoch)
-            listOf(
+            val dissolved = ConcordDissolution.planeKey(e.id)
+            val sibling = ConcordActions.siblingBaseRekeyPlane(e)
+            listOfNotNull(
                 ConcordPlaneSub(channelId = null, pubKeyHex = guestbook.publicKeyHex, relays = relays),
                 ConcordPlaneSub(channelId = null, pubKeyHex = nextRekey.publicKeyHex, relays = relays),
-            )
+                ConcordPlaneSub(channelId = null, pubKeyHex = dissolved.publicKeyHex, relays = relays),
+                // The current epoch's own rekey address, so a racing sibling can heal us (CORD-06 §3).
+                sibling?.let { ConcordPlaneSub(channelId = null, pubKeyHex = it.publicKeyHex, relays = relays) },
+            ) +
+                // Each held Private Channel's next channel-rekey addresses (CORD-06 §2), so a rotation
+                // that moves the key forward — or cuts us — is received live.
+                ConcordPrivateChannels.watchKeys(e).keys.map { ConcordPlaneSub(channelId = null, pubKeyHex = it, relays = relays) }
         }
 
     /**
@@ -118,24 +132,28 @@ object ConcordSubscriptionPlanner {
         entry: ConcordCommunityListEntry,
         state: ConcordCommunityState,
     ): List<ConcordPlaneSub> {
-        val root = entry.root.hexToByteArray()
         val relays = normalize(entry.relays)
+        // A Private Channel is subscribed on its own key's plane only, and not at all without a held
+        // key (CORD-03 §1): never on the root-derived plane every member can read.
         val current =
-            state.channels.keys.map { channelIdHex ->
-                val ch = ConcordActions.publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-                ConcordPlaneSub(
-                    channelId = ConcordChannelId(entry.id, channelIdHex),
-                    pubKeyHex = ch.publicKeyHex,
-                    relays = relays,
-                )
+            state.channels.values.mapNotNull { channel ->
+                ConcordActions.currentChannelPlane(entry, channel.channelIdHex, channel.definition.private)?.let { plane ->
+                    ConcordPlaneSub(
+                        channelId = ConcordChannelId(entry.id, plane.channelIdHex),
+                        pubKeyHex = plane.key.publicKeyHex,
+                        relays = relays,
+                    )
+                }
             }
         val historical =
-            ConcordActions.historicalChannelPlanes(entry.heldRoots, state.channels.keys).map { plane ->
-                ConcordPlaneSub(
-                    channelId = ConcordChannelId(entry.id, plane.channelIdHex),
-                    pubKeyHex = plane.key.publicKeyHex,
-                    relays = relays,
-                )
+            state.channels.values.flatMap { channel ->
+                ConcordActions.historicalChannelPlanes(entry, channel.channelIdHex, channel.definition.private).map { plane ->
+                    ConcordPlaneSub(
+                        channelId = ConcordChannelId(entry.id, plane.channelIdHex),
+                        pubKeyHex = plane.key.publicKeyHex,
+                        relays = relays,
+                    )
+                }
             }
         return current + historical
     }
@@ -244,16 +262,22 @@ object ConcordSubscriptionPlanner {
         accountPubKey: HexKey? = null,
         stateOf: (ConcordCommunityListEntry) -> ConcordCommunityState?,
     ): List<RelayBasedFilter> {
-        val controlSubs = controlPlaneSubs(entries)
+        // A community whose Control Plane hasn't folded yet (just joined, or its editions never
+        // arrived) is fetched without the relay's `since`: that cursor was set by the OTHER
+        // communities on the relay, and applying it here skips every edition older than it — the
+        // genesis included — so the community showed no channels until a restart dropped the cursor.
+        val (folded, unfolded) = entries.partition { stateOf(it) != null }
 
         val otherSubs = ArrayList<ConcordPlaneSub>()
-        otherSubs += auxiliaryPlaneSubs(entries)
-        for (entry in entries) {
-            val state = stateOf(entry) ?: continue
-            otherSubs += channelPlaneSubs(entry, state)
+        otherSubs += auxiliaryPlaneSubs(folded)
+        for (entry in folded) {
+            otherSubs += channelPlaneSubs(entry, stateOf(entry) ?: continue)
         }
 
-        return relayBasedFilters(controlSubs, since, accountPubKey).orEmpty() + relayBasedFilters(otherSubs, since, accountPubKey).orEmpty()
+        return relayBasedFilters(controlPlaneSubs(folded), since, accountPubKey).orEmpty() +
+            relayBasedFilters(otherSubs, since, accountPubKey).orEmpty() +
+            relayBasedFilters(controlPlaneSubs(unfolded), null, accountPubKey).orEmpty() +
+            relayBasedFilters(auxiliaryPlaneSubs(unfolded), null, accountPubKey).orEmpty()
     }
 
     /**

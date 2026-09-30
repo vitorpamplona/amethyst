@@ -104,24 +104,16 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_grant_camera
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_settings
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
+import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.call.openAppSettings
-import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-
-/** What the caller did with a decoded payload — and therefore what the scanner does next. */
-enum class ScanOutcome {
-    /** The caller acted on it. Close the scanner. */
-    Handled,
-
-    /** Decoded fine, but this screen has nothing to do with it. Explain, and keep scanning. */
-    NotSupported,
-}
 
 /**
  * Full-screen QR scanner.

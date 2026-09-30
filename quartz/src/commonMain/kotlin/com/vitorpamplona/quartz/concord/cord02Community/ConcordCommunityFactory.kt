@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.concord.cord02Community
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
@@ -86,6 +87,10 @@ object ConcordCommunityFactory {
         relays: List<String> = emptyList(),
         icon: ImagePointer? = null,
     ): NewConcordCommunity {
+        // CORD-02 §6 caps, which every reader also enforces at fold: an over-long genesis name
+        // would leave the community with no metadata at all.
+        require(ConcordLimits.nameFits(name)) { "community name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes" }
+        require(ConcordLimits.descriptionFits(description)) { "description exceeds ${ConcordLimits.DESCRIPTION_MAX_BYTES} bytes" }
         val ownerXOnly = ownerSigner.pubKey.hexToByteArray()
         val ownerSalt = ConcordKeyDerivation.newOwnerSalt()
         val communityId = ConcordKeyDerivation.communityId(ownerXOnly, ownerSalt)
@@ -114,7 +119,7 @@ object ConcordCommunityFactory {
                 authorPubKey = ownerSigner.pubKey,
                 entityKind = ControlEntityKind.METADATA,
                 entityId = communityId, // metadata eid == community id
-                version = 0,
+                version = 1,
                 prevHash = null,
                 content = metadataJson,
                 createdAt = createdAt,
@@ -124,7 +129,7 @@ object ConcordCommunityFactory {
                 authorPubKey = ownerSigner.pubKey,
                 entityKind = ControlEntityKind.CHANNEL,
                 entityId = generalChannelId, // channel eid == channel id
-                version = 0,
+                version = 1,
                 prevHash = null,
                 content = channelJson,
                 createdAt = createdAt,

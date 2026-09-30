@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.dTag
 
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-fun Event.dTag() = tags.dTag()
+/**
+ * The d-tag that places this event in its address. An [AddressableEvent] decides it (a
+ * replaceable kind's is always "", whatever `d` tags it carries), so a caller holding a plain
+ * [Event] gets the same answer as one holding the concrete class; anything else reads the tag.
+ */
+fun Event.dTag(): String = (this as? AddressableEvent)?.dTag() ?: tags.dTag()

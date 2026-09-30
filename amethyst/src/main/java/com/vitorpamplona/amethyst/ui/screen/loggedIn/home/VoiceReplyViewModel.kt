@@ -38,12 +38,12 @@ import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_e
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
@@ -204,7 +204,7 @@ class VoiceReplyViewModel : ViewModel() {
                                 compressionQuality = CompressorQuality.UNCOMPRESSED,
                                 server = serverToUse,
                                 account = accountViewModel.account,
-                                context = Amethyst.instance.appContext,
+                                uploader = accountViewModel.host.mediaUploader,
                                 useH265 = false,
                             )
                         }

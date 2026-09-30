@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.chats.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -91,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you_by
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_from
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_label
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
 import com.vitorpamplona.amethyst.commons.resources.concord_server_label
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_no_messages_yet
@@ -132,9 +135,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
@@ -153,8 +158,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotOtherMembers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupAvatarUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
@@ -195,6 +198,7 @@ fun ChatroomHeaderCompose(
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
             baseNote is ConcordServerRoomNote ||
+            baseNote is ConcordDirectInviteNote ||
             (
                 baseNote.event == null &&
                     baseNote.inGatherers?.any {
@@ -245,6 +249,11 @@ private fun ChatroomEntry(
 
     if (lastMessage is ConcordServerRoomNote) {
         ConcordServerRoomCompose(lastMessage, accountViewModel, nav)
+        return
+    }
+
+    if (lastMessage is ConcordDirectInviteNote) {
+        ConcordDirectInviteRoomCompose(lastMessage, accountViewModel, nav)
         return
     }
 
@@ -1027,6 +1036,43 @@ private fun RelayGroupServerRoomCompose(
     )
 }
 
+/**
+ * A pending Concord Direct Invite as a New Request: the community's name and image, who sent it, and
+ * a tap into the Concord hub, where the invite waits with Accept / Decline.
+ */
+@Composable
+private fun ConcordDirectInviteRoomCompose(
+    row: ConcordDirectInviteNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val invite = row.invite
+    val senderName = observeUserNameByHex(invite.sender, accountViewModel)
+
+    ChannelName(
+        channelIdHex = invite.communityId,
+        channelPicture = rememberConcordImageModel(invite.icon, accountViewModel),
+        channelTitle = { modifier ->
+            ChannelTitleWithLabelInfo(
+                invite.name.ifBlank { stringRes(Res.string.concord_home_title) },
+                MaterialSymbols.Group,
+                Res.string.concord_direct_invite_label,
+                modifier,
+            )
+        },
+        channelLastTime = row.createdAt(),
+        channelLastContent = stringRes(Res.string.concord_direct_invite_from, senderName),
+        hasNewMessages = true,
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.Concords) },
+    )
+}
+
 @Composable
 private fun ConcordServerRoomCompose(
     row: ConcordServerRoomNote,
@@ -1036,15 +1082,17 @@ private fun ConcordServerRoomCompose(
     // Community name/icon from the folded Control Plane (bumped via the session revision).
     val revision by accountViewModel.account.concordSessions.revision
         .collectAsStateWithLifecycle()
-    val metadata =
+    val session =
         remember(row.communityId, revision) {
-            accountViewModel.account.concordSessions
-                .sessionFor(row.communityId)
-                ?.state
-                ?.value
-                ?.metadata
+            accountViewModel.account.concordSessions.sessionFor(row.communityId)
         }
-    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.concord_home_title)
+    val metadata = remember(session, revision) { session?.state?.value?.metadata }
+    // Before the Control Plane folds there is no metadata; the name the community was joined under
+    // still tells the user which one it is.
+    val name =
+        metadata?.name?.takeIf { it.isNotBlank() }
+            ?: session?.entry?.name?.takeIf { it.isNotBlank() }
+            ?: stringRes(Res.string.concord_home_title)
 
     val author = row.newestMessage?.author
     val noteEvent = row.newestMessage?.event

@@ -27,8 +27,11 @@ import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
@@ -41,6 +44,7 @@ import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
@@ -62,6 +66,7 @@ import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.mpProjects.ProjectEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
@@ -82,6 +87,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teamCatalog.TeamCatalogEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
@@ -99,7 +105,9 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
@@ -344,6 +352,7 @@ import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
+import com.vitorpamplona.quartz.nip71Video.views.VideoViewEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -438,6 +447,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
 
 interface EventBuilder {
     fun build(
@@ -466,6 +478,7 @@ class EventFactory {
             when (kind) {
                 AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordChatEditEvent.KIND -> ConcordChatEditEvent(id, pubKey, createdAt, tags, content, sig)
+                ConcordTimerNoticeEvent.KIND -> ConcordTimerNoticeEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 CvmServerAnnouncementEvent.KIND -> CvmServerAnnouncementEvent(id, pubKey, createdAt, tags, content, sig)
                 CvmToolsListEvent.KIND -> CvmToolsListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -474,8 +487,11 @@ class EventFactory {
                 AgentProfileEvent.KIND -> AgentProfileEvent(id, pubKey, createdAt, tags, content, sig)
                 ObserverFrameEvent.KIND -> ObserverFrameEvent(id, pubKey, createdAt, tags, content, sig)
                 PersonaEvent.KIND -> PersonaEvent(id, pubKey, createdAt, tags, content, sig)
+                ArtifactEvent.KIND -> ArtifactEvent(id, pubKey, createdAt, tags, content, sig)
+                ArtifactRemovalEvent.KIND -> ArtifactRemovalEvent(id, pubKey, createdAt, tags, content, sig)
                 AuditEntryEvent.KIND -> AuditEntryEvent(id, pubKey, createdAt, tags, content, sig)
                 WindowBoundsEvent.KIND -> WindowBoundsEvent(id, pubKey, createdAt, tags, content, sig)
+                ThreadWindowBoundsEvent.KIND -> ThreadWindowBoundsEvent(id, pubKey, createdAt, tags, content, sig)
                 DmAddMemberEvent.KIND -> DmAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 DmCreatedEvent.KIND -> DmCreatedEvent(id, pubKey, createdAt, tags, content, sig)
                 DmHideEvent.KIND -> DmHideEvent(id, pubKey, createdAt, tags, content, sig)
@@ -487,6 +503,7 @@ class EventFactory {
                 ForumVoteEvent.KIND -> ForumVoteEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleEndedEvent.KIND -> HuddleEndedEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleGuidelinesEvent.KIND -> HuddleGuidelinesEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleLivenessEvent.KIND -> HuddleLivenessEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleParticipantJoinedEvent.KIND -> HuddleParticipantJoinedEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleParticipantLeftEvent.KIND -> HuddleParticipantLeftEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleReactionEvent.KIND -> HuddleReactionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -508,6 +525,7 @@ class EventFactory {
                 ModerationTimeoutEvent.KIND -> ModerationTimeoutEvent(id, pubKey, createdAt, tags, content, sig)
                 ModerationUntimeoutEvent.KIND -> ModerationUntimeoutEvent(id, pubKey, createdAt, tags, content, sig)
                 ProductFeedbackEvent.KIND -> ProductFeedbackEvent(id, pubKey, createdAt, tags, content, sig)
+                ProjectEvent.KIND -> ProjectEvent(id, pubKey, createdAt, tags, content, sig)
                 MemberAddedNotificationEvent.KIND -> MemberAddedNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 MemberRemovedNotificationEvent.KIND -> MemberRemovedNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 PairingEvent.KIND -> PairingEvent(id, pubKey, createdAt, tags, content, sig)
@@ -528,6 +546,7 @@ class EventFactory {
                 ChannelSummaryEvent.KIND -> ChannelSummaryEvent(id, pubKey, createdAt, tags, content, sig)
                 PresenceSnapshotEvent.KIND -> PresenceSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
                 TeamEvent.KIND -> TeamEvent(id, pubKey, createdAt, tags, content, sig)
+                TeamCatalogEvent.KIND -> TeamCatalogEvent(id, pubKey, createdAt, tags, content, sig)
                 ApprovalDenyEvent.KIND -> ApprovalDenyEvent(id, pubKey, createdAt, tags, content, sig)
                 ApprovalGrantEvent.KIND -> ApprovalGrantEvent(id, pubKey, createdAt, tags, content, sig)
                 WorkflowApprovalDeniedEvent.KIND -> WorkflowApprovalDeniedEvent(id, pubKey, createdAt, tags, content, sig)
@@ -873,6 +892,7 @@ class EventFactory {
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordCommunityListEvent.KIND -> ConcordCommunityListEvent(id, pubKey, createdAt, tags, content, sig)
+                ConcordCommunityListFragmentEvent.KIND -> ConcordCommunityListFragmentEvent(id, pubKey, createdAt, tags, content, sig)
                 ControlEditionEvent.KIND -> ControlEditionEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordInviteListEvent.KIND -> ConcordInviteListEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordInviteBundleEvent.KIND -> ConcordInviteBundleEvent(id, pubKey, createdAt, tags, content, sig)
@@ -894,6 +914,10 @@ class EventFactory {
                 AddressableNormalVideoEvent.KIND -> AddressableNormalVideoEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableShortVideoEvent.KIND -> AddressableShortVideoEvent(id, pubKey, createdAt, tags, content, sig)
                 TextTrackEvent.KIND -> TextTrackEvent(id, pubKey, createdAt, tags, content, sig)
+                VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
+                PushRegistrationEvent.KIND -> PushRegistrationEvent(id, pubKey, createdAt, tags, content, sig)
+                PushDeregistrationEvent.KIND -> PushDeregistrationEvent(id, pubKey, createdAt, tags, content, sig)
+                PushPreferencesEvent.KIND -> PushPreferencesEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoCollaborationEvent.KIND -> VideoCollaborationEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoNormalEvent.KIND -> VideoNormalEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoShortEvent.KIND -> VideoShortEvent(id, pubKey, createdAt, tags, content, sig)

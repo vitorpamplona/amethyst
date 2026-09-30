@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStore
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
+import kotlin.reflect.KClass
 
 /**
  * Factory for the shared [ChessViewModel], wired with the Android adapters.
@@ -34,8 +36,11 @@ class ChessViewModelFactory(
     private val account: Account,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChessViewModel::class.java)) {
+    override fun <T : ViewModel> create(
+        modelClass: KClass<T>,
+        extras: CreationExtras,
+    ): T {
+        if (modelClass == ChessViewModel::class) {
             return ChessViewModel(
                 userPubkey = account.userProfile().pubkeyHex,
                 publisher = AndroidChessPublisher(account),

@@ -30,13 +30,16 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.collections.immutable.ImmutableList
@@ -174,7 +177,7 @@ class NewMusicTrackViewModel : ViewModel() {
         audioMedia.value = MultiOrchestrator(persistentListOf(uri))
         // Fall back to the last path segment of the content:// URI — Android picker URIs
         // rarely expose a clean filename, but the segment is at least stable across recomposes.
-        pickedAudioName.value = uri.uri.lastPathSegment?.substringAfterLast('/')
+        pickedAudioName.value = uri.uri.lastPathSegmentOrNull()?.substringAfterLast('/')
 
         // Auto-fill title/artist/album/duration from the picked file's embedded metadata so
         // the user doesn't have to retype what's already in the ID3 / mp4 / FLAC tags.
@@ -257,10 +260,7 @@ class NewMusicTrackViewModel : ViewModel() {
      * Errors are reported through the global toast manager rather than a callback because
      * the screen may already be gone by the time we know the outcome.
      */
-    fun saveAndPublish(
-        context: Context,
-        accountViewModel: AccountViewModel,
-    ) {
+    fun saveAndPublish(accountViewModel: AccountViewModel) {
         if (isSending.value) return // double-tap guard
 
         // Snapshot every input the upload needs into immutable locals BEFORE launching, so
@@ -288,10 +288,10 @@ class NewMusicTrackViewModel : ViewModel() {
                 existingCoverUrl = coverUrl.value.trim().ifBlank { null },
                 existingAudioUrl = audioUrl.value.trim(),
                 server = server,
-                quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value),
+                quality = CompressorQuality.fromSlider(mediaQualitySlider.value),
                 stripMetadata = stripMetadata.value,
                 loadedEvent = loadedEvent,
-                appContext = context.applicationContext,
+                uploader = accountViewModel.host.mediaUploader,
             )
 
         isSending.value = true
@@ -362,7 +362,7 @@ class NewMusicTrackViewModel : ViewModel() {
         val quality: CompressorQuality,
         val stripMetadata: Boolean,
         val loadedEvent: MusicTrackEvent?,
-        val appContext: Context,
+        val uploader: MediaUploader,
     )
 
     /**
@@ -403,13 +403,13 @@ class NewMusicTrackViewModel : ViewModel() {
                 mediaQuality = snapshot.quality,
                 server = snapshot.server,
                 account = account,
-                context = snapshot.appContext,
+                uploader = snapshot.uploader,
                 useH265 = false,
                 stripMetadata = snapshot.stripMetadata,
                 onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
             )
         if (!res.allGood) {
-            throw UploadException(kind, formatUploadErrors(res.errors, snapshot.appContext))
+            throw UploadException(kind, formatUploadErrors(res.errors))
         }
         return firstUploadedUrl(res.successful)
             ?: throw UploadException(kind, "Server didn't return a URL for the uploaded $kind.")
@@ -420,15 +420,12 @@ class NewMusicTrackViewModel : ViewModel() {
         details: String,
     ) : Exception("$kind upload failed: $details")
 
-    private fun firstUploadedUrl(successful: List<com.vitorpamplona.amethyst.service.uploads.UploadingState.Finished>): String? =
+    private fun firstUploadedUrl(successful: List<UploadingState.Finished>): String? =
         successful
             .firstNotNullOfOrNull { it.result as? UploadOrchestrator.OrchestratorResult.ServerResult }
             ?.url
 
-    private suspend fun formatUploadErrors(
-        errors: List<com.vitorpamplona.amethyst.service.uploads.UploadingState.Error>,
-        context: Context,
-    ): String =
+    private suspend fun formatUploadErrors(errors: List<UploadingState.Error>): String =
         errors
             .map { loadStringRes(it.errorResource, *it.params) }
             .distinct()

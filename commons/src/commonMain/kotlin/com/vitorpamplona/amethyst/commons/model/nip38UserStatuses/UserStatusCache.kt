@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip38UserStatuses
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import kotlinx.collections.immutable.ImmutableList
@@ -42,7 +43,7 @@ class UserStatusCache : UserDependencies {
 
     fun addStatus(note: AddressableNote) {
         // if it's already there, quick exit
-        if (statuses.value.contains(note) || note.event?.content.isNullOrBlank()) return
+        if (statuses.value.contains(note) || note.isEmptyStatus()) return
 
         // don't add expired statuses
         if (note.event?.isExpired() == true) return
@@ -50,6 +51,15 @@ class UserStatusCache : UserDependencies {
         statuses.update {
             (it + note).sortedWith(sortModel).toImmutableList()
         }
+    }
+
+    /**
+     * Nothing to show: no event, or blank text with no plain status emoji. An emoji-only status
+     * (Buzz writes `["emoji", "🌴"]` with blank content) is still a status.
+     */
+    private fun Note.isEmptyStatus(): Boolean {
+        val event = event ?: return true
+        return if (event is UserStatusEvent) event.isCleared() else event.content.isBlank()
     }
 
     fun removeStatus(deleteNote: AddressableNote) {

@@ -20,17 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
 
-import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.parseIsoDateToUnixSeconds
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -157,7 +157,7 @@ class NewCalendarEventViewModel : ViewModel() {
     suspend fun uploadAndSetImage(
         uri: Uri,
         mimeType: String?,
-        context: Context,
+        uploader: MediaUploader,
     ): Boolean {
         if (!::account.isInitialized) return false
         isUploadingImage.value = true
@@ -172,7 +172,7 @@ class NewCalendarEventViewModel : ViewModel() {
                     compressionQuality = CompressorQuality.MEDIUM,
                     server = server,
                     account = account,
-                    context = context,
+                    uploader = uploader,
                 )
             val serverResult =
                 (result as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzAgentLabel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -152,6 +153,15 @@ fun DrawAdditionalInfo(
 
                 DrawPlayName(displayName)
             }
+
+            // A Buzz agent says so, and whose it is: the owner from the NIP-OA tag on its kind 0,
+            // which opens the owner's profile.
+            BuzzAgentLabel(
+                author = baseUser,
+                owner = user.nipOaOwner,
+                accountViewModel = accountViewModel,
+                onOwnerClick = { nav.nav(Route.Profile(it)) },
+            )
         }
 
         if (displayName != user.info.name && !user.info.name.isNullOrBlank()) {

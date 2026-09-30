@@ -63,7 +63,13 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_members_ban
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_message
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_message_refound
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_empty
+import com.vitorpamplona.amethyst.commons.resources.concord_members_kick
+import com.vitorpamplona.amethyst.commons.resources.concord_members_kick_message
+import com.vitorpamplona.amethyst.commons.resources.concord_members_kick_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_make_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove
 import com.vitorpamplona.amethyst.commons.resources.concord_members_remove_admin
@@ -80,6 +86,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_unban
 import com.vitorpamplona.amethyst.commons.resources.concord_role_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_role_banned
+import com.vitorpamplona.amethyst.commons.resources.concord_role_kicked
+import com.vitorpamplona.amethyst.commons.resources.concord_role_left
 import com.vitorpamplona.amethyst.commons.resources.concord_role_owner
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -89,9 +97,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -131,12 +142,16 @@ fun ConcordMembersScreen(
     // roster collapses to just the owner + privileged roles.
     val guestbookMembers by (session?.members ?: remember { MutableStateFlow(emptySet<HexKey>()) }).collectAsStateWithLifecycle()
     val observedAuthors by (session?.observedAuthors ?: remember { MutableStateFlow(emptySet<HexKey>()) }).collectAsStateWithLifecycle()
+    // The coalesced Guestbook: a member whose latest motion is a Leave or an honored Kick (and who has
+    // not posted since) shows as departed (CORD-02 §5, CORD-04 §6).
+    val guestbook by (session?.guestbook ?: remember { MutableStateFlow(emptyMap<HexKey, GuestbookEntry>()) }).collectAsStateWithLifecycle()
 
     val myPubKey = account.signer.pubKey
     val roster =
-        remember(state, guestbookMembers, observedAuthors) {
+        remember(state, guestbookMembers, observedAuthors, guestbook) {
             val s = state ?: return@remember emptyList<RosterEntry>()
             val authority = s.authority
+            val departed = session?.departedMembers().orEmpty()
             val pubkeys =
                 (listOf(s.ownerPubKey) + authority.roleHolders() + authority.bannedMembers() + guestbookMembers + observedAuthors)
                     .map { it.lowercase() }
@@ -151,8 +166,8 @@ fun ConcordMembersScreen(
                             .minByOrNull { r -> r.position }
                             ?.name
                             ?.takeIf { n -> n.isNotBlank() }
-                    RosterEntry(it, ConcordMembership.of(authority, it), roleName, authority.rolesOf(it))
-                }.sortedWith(compareBy({ it.membership.sortRank() }, { it.pubkey }))
+                    RosterEntry(it, ConcordMembership.of(authority, it), roleName, authority.rolesOf(it), departed[it]?.action)
+                }.sortedWith(compareBy({ it.sortRank() }, { it.pubkey }))
         }
 
     val iAmOwner = state?.authority?.isOwner(myPubKey) == true
@@ -161,6 +176,7 @@ fun ConcordMembersScreen(
     // which IS ban-aware — a thin margin for the escalation in docs/concord-soft-ban-audit.md.
     val iCanBan = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.BAN) } == true
     val iCanManageRoles = state?.authority?.hasPermission(myPubKey, ConcordPermissions.MANAGE_ROLES) == true
+    val iCanKick = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.KICK) } == true
 
     // The roles this viewer may actually hand out. The fold drops a grant whose granter does
     // not *strictly* outrank every assigned role, so offering a role at or above our own
@@ -221,6 +237,11 @@ fun ConcordMembersScreen(
                         canBanTarget =
                             iAmOwner ||
                                 state?.authority?.canActOn(myPubKey, entry.pubkey, ConcordPermissions.BAN) == true,
+                        // A Kick needs KICK and a strict outrank of the target (CORD-04 §6), the same rank rule.
+                        canKickTarget = iCanKick && state?.authority?.canActOn(myPubKey, entry.pubkey, ConcordPermissions.KICK) == true,
+                        // In a Private community a ban also Refounds (CORD-05 §5), so the dialog must not
+                        // promise they keep reading.
+                        banRotatesKeys = state?.banRequiresRefounding(listOf(entry.pubkey)) == true,
                         viewerCanManageRoles = iCanManageRoles,
                         // canActOn folds the whole rank rule for us: we hold MANAGE_ROLES, we're not
                         // banned, the target isn't the owner (unremovable), and we strictly outrank
@@ -245,6 +266,8 @@ private fun ConcordMemberRow(
     viewerIsOwner: Boolean,
     viewerCanBan: Boolean,
     canBanTarget: Boolean,
+    canKickTarget: Boolean,
+    banRotatesKeys: Boolean,
     viewerCanManageRoles: Boolean,
     canManageRolesOnTarget: Boolean,
     assignableRoles: List<AssignableRole>,
@@ -263,6 +286,8 @@ private fun ConcordMemberRow(
     val canBan = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf
     // Hard removal (CORD-06 Refounding) rotates the community key; same authority as ban.
     val canRemove = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf
+    // A Kick is the cooperative removal (CORD-04 §6): pointless against a banned or already-kicked member.
+    val canKick = canKickTarget && !isOwnerTarget && !isSelf && !isBanned && entry.departure != GuestbookAction.KICK
     // Shown to any MANAGE_ROLES holder, but disabled with a reason when this particular
     // member (or every defined role) is out of our reach — a grant we don't outrank
     // publishes fine and is then dropped by every client's fold, so a silently no-op
@@ -274,7 +299,7 @@ private fun ConcordMemberRow(
             assignableRoles.isEmpty() -> stringRes(Res.string.concord_members_roles_none_assignable)
             else -> null
         }
-    val hasMenu = canToggleAdmin || canBan || canRemove || viewerCanManageRoles
+    val hasMenu = canToggleAdmin || canBan || canRemove || canKick || viewerCanManageRoles
 
     var editRoles by remember { mutableStateOf(false) }
     if (editRoles) {
@@ -289,9 +314,39 @@ private fun ConcordMemberRow(
         )
     }
 
+    var confirmKick by remember { mutableStateOf(false) }
+    if (confirmKick) {
+        ConcordKickMemberDialog(
+            onConfirm = {
+                accountViewModel.kickConcordMember(communityId, entry.pubkey)
+                confirmKick = false
+            },
+            onDismiss = { confirmKick = false },
+        )
+    }
+
+    // A ban is reversible here, but not for the banned member: clients such as Armada drop the
+    // community from a banned member's list on sight, so a mis-tap still costs them the community.
+    var confirmBan by remember { mutableStateOf(false) }
+    if (confirmBan) {
+        ConcordConfirmMemberActionDialog(
+            title = Res.string.concord_members_ban_title,
+            message = if (banRotatesKeys) Res.string.concord_members_ban_message_refound else Res.string.concord_members_ban_message,
+            confirm = Res.string.concord_members_ban,
+            onConfirm = {
+                accountViewModel.setConcordBan(communityId, entry.pubkey, ban = true)
+                confirmBan = false
+            },
+            onDismiss = { confirmBan = false },
+        )
+    }
+
     var confirmRemove by remember { mutableStateOf(false) }
     if (confirmRemove) {
-        ConcordRemoveMemberDialog(
+        ConcordConfirmMemberActionDialog(
+            title = Res.string.concord_members_remove_title,
+            message = Res.string.concord_members_remove_message,
+            confirm = Res.string.concord_members_remove_confirm,
             onConfirm = {
                 accountViewModel.removeConcordMember(communityId, entry.pubkey)
                 confirmRemove = false
@@ -313,7 +368,7 @@ private fun ConcordMemberRow(
                 Text(entry.pubkey.take(8), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        MemberBadge(entry.membership, entry.roleName)
+        MemberBadge(entry.membership, entry.roleName, entry.departure)
         if (hasMenu) {
             var expanded by remember { mutableStateOf(false) }
             // One Box for button + menu: an expanded DropdownMenu emits a node, and as a direct child
@@ -353,11 +408,21 @@ private fun ConcordMemberRow(
                             },
                         )
                     }
+                    if (canKick) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(Res.string.concord_members_kick)) },
+                            onClick = {
+                                confirmKick = true
+                                expanded = false
+                            },
+                        )
+                    }
                     if (canBan) {
                         DropdownMenuItem(
                             text = { Text(stringRes(if (isBanned) Res.string.concord_members_unban else Res.string.concord_members_ban)) },
                             onClick = {
-                                accountViewModel.setConcordBan(communityId, entry.pubkey, ban = !isBanned)
+                                // Unbanning restores access, so only a ban asks first.
+                                if (isBanned) accountViewModel.setConcordBan(communityId, entry.pubkey, ban = false) else confirmBan = true
                                 expanded = false
                             },
                         )
@@ -382,15 +447,18 @@ private fun ConcordMemberRow(
     }
 }
 
-/** A small pill labelling the member's standing (owner / role name / banned; plain members render nothing). */
+/** A small pill labelling the member's standing (owner / role name / banned / kicked / left; plain members render nothing). */
 @Composable
 private fun MemberBadge(
     membership: ConcordMembership,
     roleName: String?,
+    departure: GuestbookAction?,
 ) {
     val label =
         when {
             membership == ConcordMembership.BANNED -> stringRes(Res.string.concord_role_banned)
+            departure == GuestbookAction.KICK -> stringRes(Res.string.concord_role_kicked)
+            departure == GuestbookAction.LEAVE -> stringRes(Res.string.concord_role_left)
             membership == ConcordMembership.OWNER -> stringRes(Res.string.concord_role_owner)
             // Show the actual granted role ("Admin", "Moderator", or a custom role) rather than a
             // one-size-fits-all badge; fall back to the generic "Admin" label if a role-holder's
@@ -399,8 +467,18 @@ private fun MemberBadge(
             membership == ConcordMembership.ADMIN -> stringRes(Res.string.concord_role_admin)
             else -> return
         }
-    val container = if (membership == ConcordMembership.BANNED) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-    val content = if (membership == ConcordMembership.BANNED) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    val container =
+        when {
+            membership == ConcordMembership.BANNED -> MaterialTheme.colorScheme.errorContainer
+            departure != null -> MaterialTheme.colorScheme.surfaceVariant
+            else -> MaterialTheme.colorScheme.primaryContainer
+        }
+    val content =
+        when {
+            membership == ConcordMembership.BANNED -> MaterialTheme.colorScheme.onErrorContainer
+            departure != null -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> MaterialTheme.colorScheme.onPrimaryContainer
+        }
     Surface(shape = RoundedCornerShape(6.dp), color = container) {
         Text(
             text = label,
@@ -469,19 +547,43 @@ private fun ConcordRolesDialog(
     )
 }
 
-/** Confirms a hard removal — spells out that it rotates the community key (CORD-06). */
+/** Confirms a Kick — spells out that it is cooperative and re-joinable (CORD-04 §6). */
 @Composable
-private fun ConcordRemoveMemberDialog(
+private fun ConcordKickMemberDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(Res.string.concord_members_remove_title)) },
-        text = { Text(stringRes(Res.string.concord_members_remove_message)) },
+        title = { Text(stringRes(Res.string.concord_members_kick_title)) },
+        text = { Text(stringRes(Res.string.concord_members_kick_message)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringRes(Res.string.concord_members_remove_confirm), color = MaterialTheme.colorScheme.error)
+                Text(stringRes(Res.string.concord_members_kick), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
+        },
+    )
+}
+
+/** Confirms a hard removal — spells out that it rotates the community key (CORD-06). */
+@Composable
+private fun ConcordConfirmMemberActionDialog(
+    title: StringResource,
+    message: StringResource,
+    confirm: StringResource,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(title)) },
+        text = { Text(stringRes(message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(confirm), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
@@ -497,6 +599,8 @@ private class RosterEntry(
     val roleName: String?,
     /** Every role id the member currently holds — the preselection for the role picker. */
     val roleIds: Set<String>,
+    /** Their winning Leave or honored Kick when the Guestbook shows them departed, else null. */
+    val departure: GuestbookAction?,
 )
 
 /** One role the viewer is allowed to hand out, ordered by [position] (lower ranks higher). */
@@ -506,7 +610,9 @@ private class AssignableRole(
     val position: Long,
 )
 
-/** Owner first, then admins, then plain members, then banned last. */
+/** Owner first, then admins, then plain members, then departed (left/kicked) members, then banned last. */
+private fun RosterEntry.sortRank(): Int = if (departure != null && membership != ConcordMembership.BANNED && membership != ConcordMembership.OWNER) 35 else membership.sortRank() * 10
+
 private fun ConcordMembership.sortRank(): Int =
     when (this) {
         ConcordMembership.OWNER -> 0

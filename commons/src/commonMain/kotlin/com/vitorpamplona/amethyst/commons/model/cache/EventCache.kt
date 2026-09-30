@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
@@ -64,7 +66,10 @@ import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
@@ -77,6 +82,7 @@ import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
@@ -98,6 +104,7 @@ import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.mpProjects.ProjectEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
@@ -119,6 +126,7 @@ import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessagePayload
 import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teamCatalog.TeamCatalogEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
@@ -137,8 +145,11 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
@@ -970,11 +981,18 @@ open class EventCache :
         rumor: Event,
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
+        // Defense in depth behind the session's Chat ingest gate: a channel plane carries Chat kinds
+        // only (CORD-02 Appendix B). Another plane's kind — a Control edition, a Guestbook motion, a
+        // rekey blob — must never land in the store as if it came from its own plane.
+        if (!ChannelChat.isChatKind(rumor.kind)) return
+
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through
         // the Messages-list incremental filter (which routes rows by that gatherer).
         val messageRow =
-            if (rumor is ChatEvent || rumor is CommentEvent) {
+            // A CORD-08 timer notice is a channel row too: the inline "… set disappearing messages" line
+            // (the feed shows it only when its author holds MANAGE_METADATA, see Account.isAcceptable).
+            if (rumor is ChatEvent || rumor is CommentEvent || rumor is ConcordTimerNoticeEvent) {
                 val ch = getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
                 val note = getOrCreateNote(rumor.id)
                 // Skip attaching a row for a message we already know is deleted (its kind-5 delete
@@ -1088,6 +1106,7 @@ open class EventCache :
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null && (wasVerified || justVerify(event))) {
                 user.updateUserInfo(newUserMetadata, event)
+                BuzzIdentityNames.invalidate()
                 if (relay != null) {
                     user.addRelayBeingUsed(relay, event.createdAt)
                 }
@@ -2319,7 +2338,7 @@ open class EventCache :
 
     /**
      * Marks the serving relay as Buzz, but only off a VERIFIED event: the mark changes
-     * what the composer sends (40002 vs kind 9) and how new channels on the relay are
+     * what the composer sends (Buzz's kind-9 shape vs NIP-29's) and how new channels on the relay are
      * treated, so an unverifiable frame from a buggy/hostile relay must not flip it.
      * The note-has-event check is the same verification gate the attach path uses.
      */
@@ -3357,8 +3376,6 @@ open class EventCache :
     var verifyMeter: ((elapsedNanos: Long, valid: Boolean) -> Unit)? = null
 
     fun justVerify(event: Event): Boolean {
-        appHost.assertNotMainThread()
-
         val meter = verifyMeter
         if (meter == null) return justVerifyInner(event)
 
@@ -3749,6 +3766,11 @@ open class EventCache :
                 is AuditEntryEvent,
                 is ChannelSummaryEvent,
                 is PresenceSnapshotEvent,
+                // NIP-AR artifact revisions and relay-signed removal markers: queryable state, never
+                // chat rows - the spec keeps them out of chat, reply and unread counts. The current
+                // head per `d` is derived with ArtifactHeadResolver (by `prev`, not by time).
+                is ArtifactEvent,
+                is ArtifactRemovalEvent,
                 -> consumeBuzzRegularEvent(event, relay, wasVerified)
 
                 // Buzz ephemeral signals: transient by definition (20000-29999) — do not
@@ -3768,8 +3790,19 @@ open class EventCache :
                     BuzzPresenceState.record(event.subjectPubKey(), event.status(), event.createdAt)
                     false
                 }
+                // An agent profile makes its author an agent, which can change how names in a
+                // channel are told apart.
+                is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { BuzzIdentityNames.invalidate() }
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
+                // Relay-synthesized "this huddle session is live" (48104): only produced on demand
+                // for a dedicated REQ and never stored, so record it and keep no note.
+                is HuddleLivenessEvent -> {
+                    val channel = event.channelId()
+                    val session = event.sessionId()
+                    if (channel != null && session != null) BuzzHuddleLivenessState.record(channel, session, TimeUtils.now())
+                    false
+                }
                 // Pairing (24134) is deliberately dialect-neutral: it flows during device
                 // pairing before any workspace relationship is established.
                 is PairingEvent -> false
@@ -3837,6 +3870,8 @@ open class EventCache :
                 // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
                 // hub stays empty even after the event arrives.
                 is ConcordCommunityListEvent,
+                // Its successor (CORD-02 §8): the List split into addressable fragments at d = index.
+                is ConcordCommunityListFragmentEvent,
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
@@ -3890,13 +3925,15 @@ open class EventCache :
                 // Buzz addressable/replaceable state.
                 is PersonaEvent,
                 is TeamEvent,
+                is TeamCatalogEvent,
+                is ProjectEvent,
                 is ManagedAgentEvent,
-                is AgentProfileEvent,
                 is EngramEvent,
                 is WorkflowDefEvent,
                 is EventReminderEvent,
                 is PushLeaseEvent,
                 is WindowBoundsEvent,
+                is ThreadWindowBoundsEvent,
                 is ArchivedIdentitiesListEvent,
                 is RelayDiscoveryEvent,
                 is RelayMonitorEvent,
@@ -3921,6 +3958,10 @@ open class EventCache :
                 is PublicationContentEvent,
                 is RelayReviewEvent,
                 is EntityRatingEvent,
+                // NIP-87 mint announcements and recommendations (kind 38172 / 38173 / 38000).
+                is CashuMintEvent,
+                is FedimintEvent,
+                is MintRecommendationEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 // ============================================================
@@ -3937,16 +3978,6 @@ open class EventCache :
                 is CashuTokenEvent,
                 is CashuSpendingHistoryEvent,
                 is CashuMintQuoteEvent,
-                // NIP-87 Cashu mint discovery + recommendations: all three are kind 3xxxx
-                // (parameterized-replaceable per the spec) but neither CashuMintEvent /
-                // FedimintEvent / MintRecommendationEvent extends AddressableEvent in Quartz
-                // today, so consumeBaseReplaceable's `check(event is AddressableEvent)` would
-                // crash. Route them as regular events — downstream consumers
-                // (CashuMintDirectoryState, CashuWalletState) already dedupe by (pubKey, dTag)
-                // and keep the newest.
-                is CashuMintEvent,
-                is FedimintEvent,
-                is MintRecommendationEvent,
                 is ChatMessageEncryptedFileHeaderEvent,
                 is ChatMessageEvent,
                 is BirdDetectionEvent,
@@ -4020,6 +4051,7 @@ open class EventCache :
                 is WakeUpEvent,
                 is WelcomeEvent,
                 is WorkoutRecordEvent,
+                is ConcordTimerNoticeEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {

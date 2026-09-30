@@ -830,7 +830,7 @@ private fun printUsage() {
         |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
         |
         |Buzz (block/buzz agent workspaces — NIP-29 dialect):
-        |  buzz post RELAY GID <text>                 post a kind-40002 stream message
+        |  buzz post RELAY GID <text>                 post a channel message (kind 9)
         |  buzz read RELAY GID [--limit N]            read recent workspace messages
         |  buzz attest AGENT [--kind K]               issue a NIP-OA attestation (offline)
         |  buzz console [--relays R,R]                aggregate my kind-44200 agent turn metrics
@@ -884,6 +884,9 @@ private fun printUsage() {
         |  concord send COMMUNITY CHANNEL TEXT        post a message (CHANNEL = general|name|id)
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages
         |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
+        |  concord invite COMMUNITY --to USER         send a Direct Invite (giftwrapped bundle)
+        |  concord invites                            list Direct Invites waiting for you
+        |  concord accept|decline WRAP-ID             join from / discard a Direct Invite
         |  concord revoke COMMUNITY TOKEN|URL         retire a link you minted (vsk=9 tombstone)
         |  concord join URL                           redeem an invite link and save the community
         |

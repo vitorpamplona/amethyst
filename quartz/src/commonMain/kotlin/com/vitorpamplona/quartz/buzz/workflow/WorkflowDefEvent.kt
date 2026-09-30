@@ -36,6 +36,11 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * a channel; an optional `name` tag labels it. The relay parses the YAML, upserts by the
  * `(owner, d)` address, and preserves any webhook secret across updates. Ground truth:
  * `handle_workflow_def` in Buzz's `buzz-relay/src/handlers/command_executor.rs`.
+ *
+ * The `d` tag MUST parse as a UUID (the relay refuses anything else with
+ * `invalid: bad workflow_id format`). An update should carry `expected-revision` = the id of the
+ * head it was edited from, as Buzz's `build_workflow_update` does, so a concurrent edit is
+ * refused with `conflict:` instead of silently overwritten.
  */
 @Immutable
 class WorkflowDefEvent(
@@ -65,6 +70,9 @@ class WorkflowDefEvent(
     /** The optional human-readable workflow name. */
     fun name() = tags.workflowName()
 
+    /** The head this update was made against (the CAS precondition), if any. */
+    fun expectedRevision() = tags.workflowExpectedRevision()
+
     /** The workflow YAML source - the event `content`. */
     fun yaml() = content
 
@@ -76,12 +84,14 @@ class WorkflowDefEvent(
             channelId: String,
             yaml: String,
             name: String? = null,
+            expectedRevision: HexKey? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<WorkflowDefEvent>.() -> Unit = {},
         ) = eventTemplate<WorkflowDefEvent>(KIND, yaml, createdAt) {
             dTag(workflowId)
             workflowChannel(channelId)
             name?.let { workflowName(it) }
+            expectedRevision?.let { workflowExpectedRevision(it) }
             initializer()
         }
     }

@@ -597,7 +597,7 @@ screen speaks.
 | `amy relaygroup message RELAY GID TEXT` | Post a kind:9 chat message into the group. |
 | `amy relaygroup edit RELAY GID [--name X] [--about A] [--picture URL] [--banner URL] [--parent GID\|--root] [--private\|--public] [--closed\|--open]` | Edit metadata (9002, admin only). Reads the current 39000 and changes only what you pass: picture, banner, subgroup links, other flags and unknown tags are carried over. |
 | `amy relaygroup invite RELAY GID --code CODE` | Mint an invite code (9009, moderator). |
-| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
+| `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator] [--buzz-role owner\|admin\|member\|guest\|bot]` | Add or promote a user (9000, moderator). On Buzz, only `--buzz-role` sets a role; without it an existing member keeps theirs. |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 | `amy relaygroup pin RELAY GID REF` / `unpin …` | Add/remove a pin (9010, moderator). REF is a note1/nevent1/hex id (`e`) or naddr1/`kind:pubkey:d` (`a`); the rest of the current 39005 list (signed by the relay's NIP-11 `self`) is kept; if that list cannot be read the command aborts (`timeout` → 124, `fetch_failed`/`no_relay_key` → 1) rather than overwrite it. |
 
@@ -605,13 +605,13 @@ screen speaks.
 
 [`block/buzz`](https://github.com/block/buzz) workspaces are NIP-29 groups on a Buzz
 relay, so create/join/leave still use `amy relaygroup`. These verbs cover the Buzz-native
-surface: the kind:40002 stream message, the owner-attestation primitive (NIP-OA), and the
+surface: the Buzz channel message (kind:9), the owner-attestation primitive (NIP-OA), and the
 agent console (turn-metric aggregation + personas), all driving the same `quartz` models
 and `commons` aggregator the app uses.
 
 | Command | What it does |
 | --- | --- |
-| `amy buzz post RELAY GID <text>` | Post a kind:40002 stream message (Buzz-native) into a workspace. |
+| `amy buzz post RELAY GID <text>` | Post a channel message into a workspace: kind:9 in Buzz's tag shape, what Buzz's own clients write. |
 | `amy buzz read RELAY GID [--limit N] [--timeout SECS]` | Read the recent human-visible timeline (kinds 9 / 40002 / 40099). |
 | `amy buzz attest AGENT [--kind K] [--after UNIX] [--before UNIX]` | Sign a NIP-OA attestation authorizing AGENT (offline; needs a local key). Prints the `auth` tag to hand to the agent operator. |
 | `amy buzz console [--relays R,R] [--timeout SECS]` | Fetch my kind:44200 turn metrics (`#p`=me), decrypt, and aggregate fleet + per-agent cost/tokens. |
@@ -668,23 +668,40 @@ author** — every 46010 gate names its approver in a `p` tag — and matched to
 
 Encrypted, serverless communities (the CORD specs). Community secrets
 persist in `~/.amy/<account>/concord.json`; your joined-community list is
-also carried on-relay as an encrypted kind:13302.
+also carried on-relay as the encrypted, fragmented kind:33302 Community List
+(CORD-02 §8; the retired kind:13302 is still read on import).
 
 | Command | What it does |
 |---|---|
 | `amy concord create --name NAME [--about T] [--relay wss://a,wss://b]` | Create an encrypted Concord community. `--relay` is canonical; `--relays` is accepted as an alias. |
 | `amy concord list` | List joined Concord communities. |
-| `amy concord import` | Fetch + decrypt this account's kind:13302 community list (carries heldRoots, CORD-06). |
-| `amy concord channels COMMUNITY` | List a community's channels. |
-| `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). |
-| `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane. |
-| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link. |
-| `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, then records it in your Invite List. |
-| `amy concord join URL` | Redeem an invite link and save the community. |
-| `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04). |
-| `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`). |
-| `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
-| `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
+| `amy concord import` | Fetch + decrypt this account's Community List — the kind:33302 fragments plus the retired kind:13302 (carries heldRoots, CORD-06). |
+| `amy concord channels COMMUNITY` | List a community's channels; `readable` is false for a private channel whose key this account does not hold (CORD-03 §1). |
+| `amy concord channel create COMMUNITY NAME [--private [--role NAME]]` | Create a channel (MANAGE_CHANNELS). `--private` gives it its own independent key at channel epoch 0 (stored before anything publishes) plus a bit-less access Role scoped to it (CORD-04 §2, default name = the channel's); nobody holds that Role yet — `concord grant` it to let members read. |
+| `amy concord channel privatize COMMUNITY CHANNEL [--role NAME]` | Convert a Public channel to Private (CORD-03 §2): a fresh key at the next channel epoch — floored at the highest channel rotation found on the wire, refused (`inconclusive`) past 32 — plus an access Role, then the flag. Protects the future only. |
+| `amy concord channel publicize COMMUNITY CHANNEL` | Convert a Private channel back to Public (flag only); the held key stays so the private era keeps reading. |
+| `amy concord channel rekey COMMUNITY CHANNEL` | Rotate a Private channel's key (CORD-06 §1-2) to exactly the members its Roles entitle today plus us: 72-byte scope-bound blobs at the channel-rekey address, `vac` on every chunk. Needs MANAGE_CHANNELS and outranking every cut role holder; the key is reserved in `concord.json` so a re-run re-delivers the same one. |
+| `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). A private channel posts on its own key's plane; without a held key it fails with `no_channel_key` instead of falling back to the community-wide plane. |
+| `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane (public channels; a private channel reads its held key's plane). Banned members' messages are left out and counted in `hidden_banned`. |
+| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link (at most 3 bootstrap relays ride in the fragment, CORD-05 §3; the bundle names this account as creator), then publish this account's Invite Registry (`vsk 8`, CORD-05 §5) listing its live link signers — expired links pruned. Output adds `registry_published`, `public` and `live_invite_links`. |
+| `amy concord invite COMMUNITY --to USER [--expires-in SECS]` | Send a Direct Invite (CORD-05 §6): the bundle giftwrapped as standard NIP-59 (kind-3313 rumor, `k=3313` wrap tag, NIP-40 expiration when `--expires-in` is set) to USER (npub, hex, nprofile or NIP-05) on their kind-10050 relays, else NIP-65 read relays, else the stock set. Carries only the private-channel keys USER's roles grant; refused for a banned recipient. No registry entry, never flips the community Public, cannot be revoked. |
+| `amy concord invites` | List Direct Invites waiting for this account (sender, community name/icon, expired, catch-up). Read-only: nothing joins or contacts the community's relays. Communities you already hold are hidden unless the invite carries new channel keys on the same base (a catch-up). |
+| `amy concord accept WRAP-ID` | Accept a Direct Invite (full wrap id or a unique prefix): the same join path as a link (ban-gated, Guestbook Join attributed to the seal-verified sender); refused past `expires_at`. For a community you hold, only adopts newly granted private-channel keys on the same root/epoch/control_pk, never moving the base. |
+| `amy concord decline WRAP-ID` | Discard a Direct Invite; its wrap id is remembered in `concord-invites.json` so it never resurfaces. |
+| `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, records it in your Invite List, then republishes your Invite Registry without it. When it was the community's last live link the output carries `privatized: true` / `refound_required: true`: the community is Private now, and `concord refound COMMUNITY --privatize` rotates its keys (CORD-05 §2). |
+| `amy concord join URL` | Redeem an invite link, save the community, and publish a Guestbook Join echoing the link's attribution (CORD-05 §1/§6). |
+| `amy concord rekey [COMMUNITY]` | Follow a Refounding we were re-keyed for. Honors only a BAN-holding rotator whose `vac` cites a Grant our fold has synced (the owner cites none); racing rotations converge on the lowest root (CORD-06 §3). Then follows every held private channel's own rotations (`channel_rekeys`): a complete, honored rotation off the key we hold is adopted; one from a rotator who outranks us that leaves us out drops the key and records the cut, so no older key comes back. |
+| `amy concord recover [COMMUNITY] [--rejoin]` | Report whether a Refounding left us behind (our joined-through link resolves to a higher epoch). A bundle never moves the base on its own (CORD-06 §2); `--rejoin` explicitly re-accepts the link. Ban-gated, fails closed. |
+| `amy concord refound COMMUNITY --remove U[,U…]` / `--privatize` | CORD-06 Refounding. Aborts unless the whole Control Plane folds; publishes the rekey chunks first (each confirmed), the compacted plane after, then rotates every held private channel to its entitled kept set, sealed under the prior root (`channels_rotated`); reserves its keys so a re-run resumes with the same root; refused for a dissolved community. `--privatize` removes nobody: it converts a Public community to Private (owed once its last live invite link is revoked). |
+| `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04), plus the community's mode from the folded Invite Registries (CORD-05 §5): `public` (true while any live invite link exists), `live_invite_links`, and `invite_registries` (links per creator). |
+| `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`; also `MANAGE_ROLES`, `MANAGE_CHANNELS`, `MANAGE_METADATA`, `MANAGE_MESSAGES`, `CREATE_INVITE`, `VIEW_AUDIT_LOG`, `MENTION_EVERYONE`, `PIN_MESSAGES`). |
+| `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. Private-channel keys follow the Grant (CORD-03/06): every channel it opens to a member is vended to them by Direct Invite carrying only those channels (`channel_keys_vended`); every channel it closes is rotated (`channels_rotated`, or `channels_not_rotated` with the reason). Only keys this account holds can move (`channels_not_held`). |
+| `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. A ban reports `public` and `refound_required`: a Public ban is the Banlist alone, while a ban from a Private community owes a Refounding (`concord refound COMMUNITY --remove USER`, CORD-06 §3). |
+| `amy concord kick COMMUNITY USER` | Cooperative Kick (CORD-04 §6): strips the member's roles first (when you may — MANAGE_ROLES + outrank), then publishes the Guestbook KICK (kind 3309) citing your Grant. Needs KICK and a strict outrank. Reports `roles_stripped`; changes no key — the member can rejoin, and a compliant client leaves on its own. |
+| `amy concord pins COMMUNITY CHANNEL` | The channel's Pin List (CORD-04 §7), every entry verified from its proof bundle; entries the author deleted are listed under `deleted`, `edited`/`stale_edit` flag revisions, and `sealed_unavailable` means the list is sealed under a key this account never held (unreadable, not empty). Expired (CORD-08) pinned messages are hidden like deleted ones. |
+| `amy concord pin COMMUNITY CHANNEL RUMOR_ID [--force]` / `unpin COMMUNITY CHANNEL RUMOR_ID` | Pin / unpin a message (PIN_MESSAGES or owner, plus the control write key). A disappearing message (one carrying a CORD-08 `expiration`) is refused with `expiring_message` unless `--force`: the pin would keep its words past the timer. Pinning reopens the message's wrap to prove it with its original seal; a private channel's list is sealed under its current key. Refused (`list_unavailable`, `too_many_pins`, `too_large`, …) rather than published when the list is unreadable or a cap would break. |
+| `amy concord dissolve COMMUNITY --yes` | Owner only, irreversible: publish the `eid`-bound dissolution tombstone that seals the community read-only (CORD-02 §9). |
+| `amy concord timer COMMUNITY [off\|SECONDS\|1d\|1w\|30d\|90d\|1y]` | CORD-08 disappearing messages. No value: print the folded timer (`0` = off). With one: publish the metadata edition (MANAGE_METADATA) and a kind-1740 notice into every channel whose key we hold. While a timer is set, `send` signs a NIP-40 `expiration` into the rumor and repeats it on the wrap; `read` drops expired messages. |
 
 ### cordn (MLS over an MCP coordinator)
 
@@ -982,6 +999,7 @@ matches that:
 │   ├── aliases.json           # local name → npub map
 │   ├── cashu.json             # NIP-60 NUT-13 counters
 │   ├── concord.json           # Concord community secrets
+│   ├── concord-invites.json   # declined Concord Direct Invite wrap ids
 │   └── marmot/                # MLS state per group
 └── bob/
     └── …

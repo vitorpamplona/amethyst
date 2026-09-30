@@ -62,6 +62,13 @@ object ConcordInviteLink {
     const val VERSION = 4
     const val FLAG_STOCK_RELAYS = 0x01
 
+    /**
+     * The fragment carries at most this many bootstrap relays (CORD-05 §3): it only has to *find*
+     * the bundle, which then carries the Community's authoritative relay set. The reference
+     * client's decoder refuses a longer list, so an encoder must never emit one.
+     */
+    const val MAX_BOOTSTRAP_RELAYS = 3
+
     private const val MARKER_WSS_HOST = 0
     private const val MARKER_FULL_URL = 255
     private const val WSS_PREFIX = "wss://"
@@ -69,13 +76,10 @@ object ConcordInviteLink {
 
     /**
      * Encodes the fragment for [token] and optional [relays]. Passing null or the
-     * exact stock set uses flag `0x01` and emits no relay bytes; otherwise every
-     * relay is encoded (dictionary id, `wss://` host, or full URL).
-     *
-     * The only ceiling is the format's own: the relay count is a single byte, so at
-     * most 255 relays fit. Each carries its own byte cost, so a long list makes a long
-     * link — pick relays that can actually serve the bundle rather than pasting a
-     * whole relay list in.
+     * exact stock set uses flag `0x01` and emits no relay bytes (the stock set is
+     * flag-selected, so exempt from the cap); otherwise the first
+     * [MAX_BOOTSTRAP_RELAYS] relays are encoded (dictionary id, `wss://` host, or full
+     * URL) and the rest dropped (CORD-05 §3) — the bundle carries the full set.
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun encodeFragment(
@@ -90,10 +94,10 @@ object ConcordInviteLink {
         if (useStock) {
             out.add(FLAG_STOCK_RELAYS.toByte())
         } else {
-            require(relays.size <= 255) { "relay count must fit in one byte, was ${relays.size}" }
+            val bounded = relays.distinct().take(MAX_BOOTSTRAP_RELAYS)
             out.add(0)
-            out.add(relays.size.toByte())
-            for (r in relays) {
+            out.add(bounded.size.toByte())
+            for (r in bounded) {
                 val id = InviteRelayDictionary.idOf(r)
                 when {
                     id != null -> out.add(id.toByte())
@@ -119,8 +123,9 @@ object ConcordInviteLink {
     }
 
     /**
-     * Decodes an invite [fragment]. Throws for a malformed fragment or a version
-     * other than [VERSION] (lower = legacy, higher = newer than this client).
+     * Decodes an invite [fragment]. Throws for a malformed fragment, a version
+     * other than [VERSION] (lower = legacy, higher = newer than this client), or more
+     * than [MAX_BOOTSTRAP_RELAYS] relays (CORD-05 §3, as the reference client does).
      * Unknown dictionary ids are skipped rather than aborting the parse.
      */
     @OptIn(ExperimentalEncodingApi::class)
@@ -138,7 +143,9 @@ object ConcordInviteLink {
             relays.addAll(InviteRelayDictionary.STOCK)
             usedStock = true
         } else {
+            require(pos < bytes.size) { "fragment truncated" }
             val count = bytes[pos++].toInt() and 0xFF
+            require(count <= MAX_BOOTSTRAP_RELAYS) { "too many bootstrap relays ($count, cap $MAX_BOOTSTRAP_RELAYS)" }
             repeat(count) {
                 val marker = bytes[pos++].toInt() and 0xFF
                 when (marker) {
@@ -162,8 +169,9 @@ object ConcordInviteLink {
     }
 
     /**
-     * Builds a full shareable invite URL under [base], carrying every relay in [relays]
-     * as the bootstrap set (or the stock flag when null / exactly the stock set).
+     * Builds a full shareable invite URL under [base], carrying the first
+     * [MAX_BOOTSTRAP_RELAYS] of [relays] as the bootstrap set (or the stock flag when
+     * null / exactly the stock set).
      */
     fun buildUrl(
         base: String,

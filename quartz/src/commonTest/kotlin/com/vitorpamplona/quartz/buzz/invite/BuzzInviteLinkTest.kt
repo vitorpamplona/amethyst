@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.buzz.invite
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -104,5 +105,42 @@ class BuzzInviteLinkTest {
         assertNull(BuzzInviteLink.parse("https://host.example/invite/notbase64json.sig"))
         // `v2` without the dot is a dotless token like any other.
         assertNull(BuzzInviteLink.parse("https://host.example/invite/v2"))
+    }
+
+    /** Exactly what `validate_v2_code` in `buzz-core/src/invite.rs` accepts — the relay never falls back to v1 for `v2.`. */
+    @Test
+    fun v2CodesMustBeCanonicalBase64UrlOfThirtyTwoBytes() {
+        assertTrue(BuzzInviteLink.isValidV2Code(v2Token))
+
+        val secret = v2Token.removePrefix("v2.")
+        listOf(
+            // Upstream's own malformed cases.
+            "v2.",
+            "v2.not-base64!",
+            "v2.${secret.dropLast(2)}", // 31 bytes' worth
+            "$v2Token=", // padded alias
+            // Same 32 bytes, but the unused low bits of the last symbol are set: a non-canonical alias.
+            "v2.${secret.dropLast(1)}5",
+            // Standard (not url-safe) alphabet, and extra segments.
+            "v2.${secret.replace('_', '/')}+",
+            "$v2Token.sig",
+            // 33 bytes.
+            "v2.${secret}AA",
+        ).forEach { code ->
+            assertFalse(BuzzInviteLink.isValidV2Code(code), "accepted malformed v2 code: $code")
+            assertNull(BuzzInviteLink.parse("https://host.example/invite/$code"), "parsed malformed v2 invite: $code")
+        }
+    }
+
+    @Test
+    fun claimResponseSlugsAreRead() {
+        assertEquals(BuzzInviteClaim.ERROR_EXHAUSTED, BuzzInviteClaim.errorOf("""{"error":"invite_exhausted"}"""))
+        assertEquals(BuzzInviteClaim.ERROR_EXPIRED, BuzzInviteClaim.errorOf("""{"error":"invite_expired"}"""))
+        assertEquals(
+            BuzzInviteClaim.STATUS_ALREADY_MEMBER,
+            BuzzInviteClaim.statusOf("""{"status":"already_member","community_id":"c","host":"h","role":"member"}"""),
+        )
+        assertNull(BuzzInviteClaim.errorOf("<html>bad gateway</html>"))
+        assertNull(BuzzInviteClaim.statusOf("""{"error":"invite_invalid"}"""))
     }
 }

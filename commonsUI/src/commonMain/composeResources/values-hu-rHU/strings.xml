@@ -327,6 +327,7 @@
     <string name="relay_discovery_geohash">Helyszín</string>
     <string name="calendar_rsvp_going">Ott leszek</string>
     <string name="calendar_rsvp_maybe">Talán</string>
+    <string name="calendar_rsvp_loading_event">Esemény betöltése…</string>
     <string name="calendar_rsvp_not_going">Nem leszek ott</string>
     <plurals name="calendar_collection_count">
         <item quantity="one">%1$d esemény</item>
@@ -3424,6 +3425,13 @@
     <string name="calendar_reminder_settings_title">Naptár-emlékeztetők</string>
     <string name="calendar_view_day">Nap</string>
     <string name="calendar_view_feed">Hírfolyam</string>
+    <string name="calendar_view_follows_going">A barátai részt vesznek rajta</string>
+    <string name="calendar_follows_going_empty_title">Még nincsenek tervek</string>
+    <string name="calendar_follows_going_empty_subtitle">Amikor a listán szereplő személyek jelzik, hogy részt vesznek egy közelgő eseményen, az itt jelenik meg.</string>
+    <plurals name="calendar_follows_going_count">
+        <item quantity="one">%1$d ember vesz részt rajta</item>
+        <item quantity="other">%1$d ember vesz részt rajta</item>
+    </plurals>
     <string name="calendar_view_month">Hónap</string>
     <string name="calendar_view_week">Hét</string>
     <string name="call_accept">Elfogadás</string>
@@ -3864,6 +3872,7 @@
     <string name="home_content_type_podcasts">Podcastok</string>
     <string name="home_content_type_polls">Szavazások</string>
     <string name="home_content_type_ratings">Értékelések és megjegyzések</string>
+    <string name="home_content_type_calendar_rsvps">Esemény-visszajelzések</string>
     <string name="home_content_type_reposts">Továbbosztások</string>
     <string name="home_content_type_shorts">Rövid videók</string>
     <string name="home_content_type_text_notes">Szöveges jegyzetek</string>
@@ -4126,7 +4135,7 @@
     <string name="login_with_a_private_key_to_like_posts">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be a privát kulccsal a hozzászólások kedveléséhez</string>
     <string name="longs">Videók</string>
     <string name="m">p</string>
-    <string name="manage_emoji_packs">Saját emodzsicsomagok</string>
+    <string name="manage_emoji_packs">Emodzsicsomagok</string>
     <string name="marmot_add_photo">Fotó hozzáadása</string>
     <string name="marmot_adding_user">%1$s hozzáadása…</string>
     <string name="marmot_admin_granted">Adminisztrátori jogosultságok megadva</string>
@@ -4208,9 +4217,9 @@
     <string name="mute_button">Hang bekapcsolva. Koppintson a némításhoz</string>
     <string name="mute_notifications">Értesítések némítása</string>
     <string name="muted_button">Némítva. Koppintson a némitás megszüntetéséhez</string>
-    <string name="my_blossom_data">Az én Blossom fájljaim</string>
+    <string name="my_blossom_data">Blossom fájlok</string>
     <string name="my_fitness">Fitnesz</string>
-    <string name="my_lists">Saját listák</string>
+    <string name="my_lists">Listák</string>
     <string name="name_is_required">Név megadása kötelező</string>
     <string name="namecoin_response_time">%1$d ms</string>
     <string name="namecoin_settings">Namecoin-beállítások</string>

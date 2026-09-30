@@ -24,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.appContext
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.contentUriFor
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.copyAssetToCache
+import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Test

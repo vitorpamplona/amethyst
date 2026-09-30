@@ -30,7 +30,6 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -91,7 +90,6 @@ object LanguageTranslatorService {
         source: String,
         target: String,
     ): Task<ResultOrError> {
-        checkNotInMainThread()
         val sourceLangCode = TranslateLanguage.fromLanguageTag(source)
         val targetLangCode = TranslateLanguage.fromLanguageTag(target)
 
@@ -110,8 +108,6 @@ object LanguageTranslatorService {
         val translator = translators[options]
 
         return translator.downloadModelIfNeeded().onSuccessTask(executorService) {
-            checkNotInMainThread()
-
             val dict = TranslationDictionary.build(text)
             val encoded = TranslationDictionary.encode(text, dict)
 

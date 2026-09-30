@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 class ScreenAuthAccount(
@@ -53,7 +54,7 @@ class ScreenAuthAccount(
 @Stable
 class AuthCoordinator(
     val client: INostrClient,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     val promptBus: RelayAuthPromptBus = RelayAuthPromptBus(),
 ) {
     private val authWithAccounts = ListWithUniqueSetCache<ScreenAuthAccount, Account> { it.account }
@@ -117,69 +118,34 @@ class AuthCoordinator(
                         when (account.relayAuthLedger.decide(context, firstParty)) {
                             RelayAuthVerdict.ALLOW -> true
                             RelayAuthVerdict.DENY -> false
-                            RelayAuthVerdict.ASK -> {
-                                // Prompt PER ACCOUNT, not once per challenge. The dialog names whose
-                                // npub is about to be revealed, so answering it for @a must not also
-                                // reveal @b — an answer is only about the identity it was shown for.
-                                // The bus still collapses concurrent challenges for the same
-                                // (relay, account) pair, which is the case the shared prompt was for.
-                                // In practice this rarely means two dialogs: for everything except
-                                // reading a follow, isFirstParty already drops every account without
-                                // its own reason to be on this relay.
-                                //
-                                // But never block the derived stream-key AUTH behind that dialog: on a
-                                // relay that hosts our Concord planes we DISMISS the user-auth ASK
-                                // (skip account auth) so the stream AUTHs return immediately instead of
-                                // waiting on a prompt.
-                                //
-                                // A non-[interactive] pass is an automatic re-auth off an `auth-required:`
-                                // CLOSED (e.g. a Concord channel-plane REQ refused because the connection
-                                // AUTHed before the control plane folded in its channel stream keys). It
-                                // must never raise a fresh dialog: DISMISS the account ASK and let only the
-                                // already-approved identities (ledger-ALLOW accounts + stream keys) re-send.
-                                val choice =
-                                    if (streamAuths.isNotEmpty() || !interactive) {
-                                        UserAuthChoice.DISMISS
-                                    } else {
-                                        promptBus.requestDecision(
-                                            relayUrl = relayUrl,
-                                            purposes = context.purposes,
-                                            askingAccount = account.pubKey,
-                                            isMyOwnRelay = account.relayAuthLedger.isInMyRelayList(relayUrl.url),
-                                        )
-                                    }
-                                when (choice) {
-                                    UserAuthChoice.ALLOW_ONCE -> {
-                                        // Not literally once: relays re-challenge on every reconnect,
-                                        // so answering only the in-flight challenge meant the same
-                                        // dialog came back minutes later. The grant is kept in memory
-                                        // for the rest of this run and dies with the process.
-                                        account.relayAuthLedger.grantForSession(relayUrl.url)
-                                        true
-                                    }
-                                    UserAuthChoice.ALWAYS_ALLOW -> {
-                                        account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.ALLOW)
-                                        true
-                                    }
-                                    UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE -> {
-                                        // No per-relay decision is stored: the policy already answers this
-                                        // relay, and an exception on top of it would survive a later switch
-                                        // back to "decide per relay". The UI has normally applied this
-                                        // already (see [applyPolicyEverywhere]); repeating it is free.
-                                        applyPolicyEverywhere(account.pubKey, RelayAuthPolicy.ALWAYS)
-                                        true
-                                    }
-                                    UserAuthChoice.BLOCK -> {
-                                        account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.DENY)
+                            RelayAuthVerdict.ASK ->
+                                when {
+                                    // A non-[interactive] pass is an automatic re-auth off an
+                                    // `auth-required:` CLOSED (e.g. a Concord channel-plane REQ refused
+                                    // because the connection AUTHed before the control plane folded in
+                                    // its channel stream keys). It never raises a dialog: only identities
+                                    // already approved (ledger ALLOWs, session grants, stream keys) re-send.
+                                    !interactive -> false
+
+                                    // On a relay that hosts our Concord planes, the derived stream-key AUTHs
+                                    // ride this same answer and must not wait on a dialog. The account's
+                                    // question used to be dropped outright here, which left the account
+                                    // unauthenticated on every Concord relay: it could not read its own
+                                    // gift wraps there (Direct Invites, DMs). Ask it in the background
+                                    // instead; an approval re-authenticates with the stored challenge.
+                                    streamAuths.isNotEmpty() -> {
+                                        askInBackground(account, relayUrl, context)
                                         false
                                     }
-                                    UserAuthChoice.NEVER_ALLOW_EVERYWHERE -> {
-                                        applyPolicyEverywhere(account.pubKey, RelayAuthPolicy.NEVER)
-                                        false
-                                    }
-                                    UserAuthChoice.DISMISS -> false
+
+                                    // Prompt PER ACCOUNT, not once per challenge. The dialog names whose
+                                    // npub is about to be revealed, so answering it for @a must not also
+                                    // reveal @b. The bus still collapses concurrent challenges for the same
+                                    // (relay, account) pair. In practice this rarely means two dialogs: for
+                                    // everything except reading a follow, isFirstParty already drops every
+                                    // account without its own reason to be on this relay.
+                                    else -> applyChoice(account, relayUrl, prompt(account, relayUrl, context))
                                 }
-                            }
                         }
 
                     if (approve) {
@@ -196,6 +162,68 @@ class AuthCoordinator(
                 signed + streamAuths
             },
         )
+
+    private suspend fun prompt(
+        account: Account,
+        relayUrl: NormalizedRelayUrl,
+        context: RelayAuthContext,
+    ): UserAuthChoice =
+        promptBus.requestDecision(
+            relayUrl = relayUrl,
+            purposes = context.purposes,
+            askingAccount = account.pubKey,
+            isMyOwnRelay = account.relayAuthLedger.isInMyRelayList(relayUrl.url),
+        )
+
+    /** Asks about [account] on [relayUrl] without holding up the challenge's other AUTHs; see the ASK branch. */
+    private fun askInBackground(
+        account: Account,
+        relayUrl: NormalizedRelayUrl,
+        context: RelayAuthContext,
+    ) {
+        scope.launch {
+            if (applyChoice(account, relayUrl, prompt(account, relayUrl, context))) {
+                account.relayAuthLedger.recordGrant(context)
+                receiver.reauthenticate(relayUrl)
+            }
+        }
+    }
+
+    /** Stores what the user chose for [account] on [relayUrl]; true when it means "authenticate". */
+    private suspend fun applyChoice(
+        account: Account,
+        relayUrl: NormalizedRelayUrl,
+        choice: UserAuthChoice,
+    ): Boolean =
+        when (choice) {
+            UserAuthChoice.ALLOW_ONCE -> {
+                // Not literally once: relays re-challenge on every reconnect, so answering only the
+                // in-flight challenge meant the same dialog came back minutes later. The grant is kept
+                // in memory for the rest of this run and dies with the process.
+                account.relayAuthLedger.grantForSession(relayUrl.url)
+                true
+            }
+            UserAuthChoice.ALWAYS_ALLOW -> {
+                account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.ALLOW)
+                true
+            }
+            UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE -> {
+                // No per-relay decision is stored: the policy already answers this relay, and an
+                // exception on top of it would survive a later switch back to "decide per relay". The UI
+                // has normally applied this already (see [applyPolicyEverywhere]); repeating it is free.
+                applyPolicyEverywhere(account.pubKey, RelayAuthPolicy.ALWAYS)
+                true
+            }
+            UserAuthChoice.BLOCK -> {
+                account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.DENY)
+                false
+            }
+            UserAuthChoice.NEVER_ALLOW_EVERYWHERE -> {
+                applyPolicyEverywhere(account.pubKey, RelayAuthPolicy.NEVER)
+                false
+            }
+            UserAuthChoice.DISMISS -> false
+        }
 
     /**
      * Sets [askingAccount]'s top-level NIP-42 policy — the "Always, all relays" / "Never, all relays"
@@ -270,7 +298,7 @@ class AuthCoordinator(
         relayUrl: NormalizedRelayUrl,
     ): EventTemplate<RelayAuthEvent> {
         if (!BuzzRelayDialect.isBuzz(relayUrl)) return template
-        val authTag = account.buzzAttestation.authTag() ?: return template
+        val authTag = account.buzzAttestation.authTag(template.createdAt) ?: return template
         return EventTemplate(template.createdAt, template.kind, template.tags + arrayOf(authTag), template.content)
     }
 

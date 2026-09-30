@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderConcordTimerNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -86,6 +87,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -124,7 +126,7 @@ fun ChatroomMessageCompose(
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
-    // Edit my own chat message on surfaces that support it (Buzz kind-40002 → 40003,
+    // Edit my own chat message on surfaces that support it (Buzz kind-9 or legacy 40002 → 40003,
     // Concord kind-9 → 1010). Null for chat surfaces without message editing, which hides
     // the action.
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,
@@ -174,6 +176,9 @@ fun ChatroomMessageCompose(
             } else if (event is ForumVoteEvent) {
                 // Buzz kind-45002: a forum up/down vote.
                 RenderBuzzForumVote(baseNote, accountViewModel)
+            } else if (event is ConcordTimerNoticeEvent) {
+                // Concord kind-1740: "Alice set disappearing messages to 30 days" (CORD-08 §4).
+                RenderConcordTimerNotice(baseNote, accountViewModel, nav)
             } else if (isBuzzActivityRow(event)) {
                 // Buzz agent-job (43xxx) and huddle (48xxx) lifecycle narration. Huddles
                 // especially must be caught here — their content is JSON, not chat text.

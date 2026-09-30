@@ -292,7 +292,7 @@ fun RenderAttestationRequest(
 
     val aboutAddress = remember(noteEvent) { noteEvent.assertionAddress() }
     val aboutEvent = remember(noteEvent) { noteEvent.assertionEventId() }
-    val aboutPubkey = remember(noteEvent) { noteEvent.assertionPubkey() }
+    val aboutPubkey = remember(noteEvent) { noteEvent.attestorPubKeys().firstOrNull() }
 
     Column(
         modifier =

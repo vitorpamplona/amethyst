@@ -254,6 +254,22 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Pending Concord Direct Invites are rows on Notifications and on Messages › New Requests, and
+        // like the channel invites above none of their arrivals or answers flow through
+        // newEventBundles (they are not cache events). Rebuild both, clearing the card feeds first so
+        // an answered invite's row can disappear.
+        scope.launch(Dispatchers.IO) {
+            account.concord.pendingConcordDirectInviteNotes
+                .drop(1)
+                .collect {
+                    listOf(notifications, notificationsFollowing, notificationsEveryone).forEach {
+                        it.clear()
+                        it.invalidateData()
+                    }
+                    dmNew.invalidateData()
+                }
+        }
+
         // Joining/leaving a geohash location channel (kind 10081 list) changes the Messages list but
         // no event flows through LocalCache, so force a rebuild — otherwise a just-joined cell (whose
         // ephemeral messages haven't arrived yet) wouldn't show its placeholder row until later.
@@ -373,8 +389,6 @@ class AccountFeedContentStates(
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
-        LocalCache.appHost.assertNotMainThread()
-
         homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
@@ -447,8 +461,6 @@ class AccountFeedContentStates(
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
-        LocalCache.appHost.assertNotMainThread()
-
         homeLive.deleteFromFeed(newNotes)
         homeNewThreads.deleteFromFeed(newNotes)
         homeReplies.deleteFromFeed(newNotes)

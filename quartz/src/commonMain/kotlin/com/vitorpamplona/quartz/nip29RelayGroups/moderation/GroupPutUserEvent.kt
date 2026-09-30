@@ -50,8 +50,10 @@ class GroupPutUserEvent(
          * what relay29 reads.
          *
          * [buzzRole] additionally emits a top-level `["role", …]` tag. Buzz reads **only** that —
-         * `extract_tag_value(event, "role")`, defaulting to `member` — so without it every put-user
-         * lands as a plain member and a promotion silently does nothing. Its vocabulary is also its
+         * `extract_tag_value(event, "role")` — so a promotion must carry it. Without it Buzz makes
+         * **no role change**: an existing member keeps their role and only a newcomer defaults to
+         * `member`, which is what a plain "add" wants. Changing an active member's role (either way)
+         * is owner/admin-only, and the last owner can't be demoted. Its vocabulary is also its
          * own (`owner`/`admin`/`member`/`guest`/`bot`, no moderator); an unparseable role fails the
          * whole handler, so callers map to Buzz's set before passing it here. Harmless on relay29,
          * which ignores the extra tag.

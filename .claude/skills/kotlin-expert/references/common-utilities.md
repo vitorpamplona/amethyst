@@ -47,7 +47,6 @@ Under `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/`:
 
 - **`commons/src/commonMain/.../threading/Threading.kt`** — shared dispatchers and `CoroutineScope` helpers for commonMain code.
 - **`amethyst/src/main/java/.../service/CoroutinesExt.kt`** — Android-only helpers: `launchIO(block)`, `launchMain(block)` built on top of `Dispatchers.IO` / `Dispatchers.Main`. Use these in ViewModels and services to stop re-spelling the dispatcher every time.
-- **`amethyst/src/main/java/.../service/MainThreadChecker.kt`** — debug assertion helper for catching main-thread misuse during dev.
 
 ## Quartz iterables & JSON
 

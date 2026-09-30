@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.getNoteIfExists
+import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
@@ -123,8 +124,6 @@ class CardFeedContentState(
     private fun refreshSuspended() = refreshLock.withLock { refreshLocked() }
 
     private fun refreshLocked() {
-        LocalCache.appHost.assertNotMainThread()
-
         try {
             isRefreshing.value = true
 
@@ -170,8 +169,6 @@ class CardFeedContentState(
     }
 
     private fun convertToCard(notes: Collection<Note>): List<Card> {
-        LocalCache.appHost.assertNotMainThread()
-
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is ReactionEvent }
@@ -371,7 +368,9 @@ class CardFeedContentState(
                         it.event !is NutzapEvent
                 }.map {
                     val pendingInvite = if (it.event is MemberAddedNotificationEvent) pendingInvites[it.idHex] else null
-                    if (pendingInvite != null) {
+                    if (it is ConcordDirectInviteNote) {
+                        ConcordDirectInviteNotificationCard(it)
+                    } else if (pendingInvite != null) {
                         ChannelInviteCard(it, pendingInvite)
                     } else if (it.event is EncryptedDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
                         MessageSetCard(it)
@@ -544,8 +543,6 @@ class CardFeedContentState(
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
-        LocalCache.appHost.assertNotMainThread()
-
         if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
             invalidateInsertData(newNotes)
         } else {

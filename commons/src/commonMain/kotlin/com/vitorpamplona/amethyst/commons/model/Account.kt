@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -185,10 +186,12 @@ import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -357,15 +360,21 @@ import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -373,6 +382,15 @@ import okio.Path
 import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
+
+/** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
+private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
+
+/** Delay before the first Direct Invite sweep, so it doesn't compete with the start-up fetches. */
+private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
+
+/** How often to sweep for Direct Invites while the account is loaded. */
+private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -738,8 +756,57 @@ class Account(
                 ?.value
                 ?.authority
         if (authority?.isBanned(rumor.pubKey) == true) return
+        // CORD-08 §3: an already-expired rumor is never stored. The session refuses it first; this
+        // backs it up for any other caller of the sink.
+        if (ConcordDisappearing.isExpired(rumor)) return
         registerConcordEncryptedImages(rumor)
         cache.consumeConcordRumor(communityId, channelIdHex, rumor, seenOnRelays)
+    }
+
+    /**
+     * The CORD-08 §3 purge: drops every Concord rumor whose `expiration` has passed — its note, the
+     * note of the wrap that carried it, and the wrap in its session's buffer (so no re-projection can
+     * resurrect it). The rumor's own children (a reply, a reaction) are independent events and stay,
+     * as on a delete; they carry their own expiration when the timer was on. Scheduled on
+     * [ConcordSessionManager.nextExpiry], so it only ever runs when something is due.
+     */
+    fun sweepExpiredConcordMessages(now: Long = TimeUtils.now()) {
+        val expired = concordSessions.sweepExpired(now)
+        for (rumors in expired.values) {
+            for (gone in rumors) {
+                // Its attachments' decryption keys go with it: a cached key would keep the blob readable.
+                gone.attachmentUrls.forEach { encryptionKeyCache.remove(it) }
+                cache.getNoteIfExists(gone.rumorId)?.let { note ->
+                    note.detachFromChildren()
+                    cache.pruner.unlinkAndRemove(note)
+                }
+                cache.getNoteIfExists(gone.wrapId)?.let { cache.pruner.unlinkAndRemove(it) }
+            }
+        }
+    }
+
+    /** True for a Concord rumor whose own `expiration` has passed: never displayed (CORD-08 §3). */
+    private fun isConcordExpired(note: Note): Boolean {
+        val event = note.event ?: return false
+        if (note.inGatherers?.any { it is ConcordChannel } != true) return false
+        return ConcordDisappearing.isExpired(event)
+    }
+
+    /**
+     * True for a Concord timer notice (CORD-08 §4) that must not be shown: malformed, or authored by
+     * someone who does not hold MANAGE_METADATA in the community's current fold — anyone can spell
+     * the tag, only staff are believed about policy.
+     */
+    private fun isUnbelievedConcordTimerNotice(note: Note): Boolean {
+        val event = note.event as? ConcordTimerNoticeEvent ?: return false
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return true
+        val authority =
+            concordSessions
+                .sessionFor(channel.channelId.communityId)
+                ?.state
+                ?.value
+                ?.authority ?: return true
+        return !ConcordDisappearing.isBelievedNotice(event, authority)
     }
 
     /**
@@ -749,7 +816,7 @@ class Account(
      * decrypts the blob transparently on fetch (keyed by URL) — the same path NIP-17 encrypted media
      * uses. Runs for both inbound wraps and our own local echo, so a sent image renders immediately.
      */
-    private fun registerConcordEncryptedImages(rumor: Event) {
+    internal fun registerConcordEncryptedImages(rumor: Event) {
         val images = ChannelChat.encryptedImagesOf(rumor)
         if (images.isEmpty()) return
         images.forEach { img ->
@@ -783,13 +850,28 @@ class Account(
                 // Invalidate the channel's metadata flow only on a real change so the Messages-row
                 // name + community chip recompose when the fold first resolves them (they observe
                 // metadata.stateFlow via observeChannel), without churning every row every tick.
-                if (channel.updateFrom(state, relays, myPubKey)) channel.updateChannelInfo()
-                channel.notes
-                    .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
-                    .forEach { channel.removeNote(it) }
+                // A Private Channel is readable/postable only with its held key (CORD-03 §1).
+                val keyHeld = ConcordActions.canAccessChannel(session.entry, state, channelIdHex)
+                if (channel.updateFrom(state, relays, myPubKey, keyHeld)) channel.updateChannelInfo()
             }
+            // Dropping a banned author's loaded notes walks every note of every channel, so it runs
+            // when the community's banlist moves, not on every fold tick. New notes from a banned
+            // author are already refused at ingest.
+            val banned = state.authority.bannedMembers()
+            if (banned.isNotEmpty() && concordBannedSwept[communityId] != banned) {
+                for (channelIdHex in state.channels.keys) {
+                    val channel = cache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
+                    channel.notes
+                        .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
+                        .forEach { channel.removeNote(it) }
+                }
+            }
+            concordBannedSwept[communityId] = banned
         }
     }
+
+    /** The banlist each community's loaded notes were last swept against ([refreshConcordChannelIndex]). */
+    private val concordBannedSwept = HashMap<String, Set<HexKey>>()
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
     val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
@@ -1747,9 +1829,16 @@ class Account(
 
         // Marmot messages are retracted inside their group. A public NIP-09 here would e-tag
         // the group's private rumor ids onto public relays.
-        val (marmotNotes, otherNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
+        val (marmotNotes, nonMarmotNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
         marmotNotes.groupBy { marmot.marmotGroupOf(it)!! }.forEach { (groupId, groupNotes) ->
             marmot.deleteMarmotMessages(groupId, groupNotes)
+        }
+
+        // Concord rumors are retracted inside their channel's plane (CORD-01 Deletions), for the
+        // same reason: any other route carries the community's rumor ids outside it.
+        val (concordNotes, otherNotes) = nonMarmotNotes.partition { concord.concordChannelOf(it) != null }
+        concordNotes.groupBy { concord.concordChannelOf(it)!! }.forEach { (channel, channelNotes) ->
+            concord.deleteConcordRumors(channel, channelNotes)
         }
 
         val (myRumors, myNotes) =
@@ -1793,6 +1882,13 @@ class Account(
         // In a Marmot group the deletion goes to the group, not to the target's author as a DM.
         marmot.marmotGroupOf(target)?.let { groupId ->
             marmot.deleteMarmotMessages(groupId, notes)
+            return
+        }
+
+        // In a Concord channel it is an in-channel kind-5 on the channel's plane (CORD-01), never a
+        // NIP-17 DM to the p-tagged users, which would leak the rumor ids outside the community.
+        concord.concordChannelOf(target)?.let { channel ->
+            concord.deleteConcordRumors(channel, notes)
             return
         }
 
@@ -2142,7 +2238,7 @@ class Account(
                     // [com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply]).
                     //
                     // Attached media rides as URLs appended to the content.
-                    val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
+                    val root = rootEvent.tags.buzzThreadRootForReplyTo(rootEvent.id)
                     signer.sign(
                         ChatEvent.build(finalText) {
                             hTag(group.groupId.id)
@@ -3735,6 +3831,7 @@ class Account(
 
     override fun isAcceptable(note: Note): Boolean {
         if (isConcordBanned(note)) return false
+        if (isConcordExpired(note) || isUnbelievedConcordTimerNotice(note)) return false
         val mutedThreads = hiddenUsers.flow.value.mutedThreads
         if (mutedThreads.isNotEmpty() && mutedThreads.contains(resolveThreadRoot(note))) return false
         return note.author?.let { isAcceptable(it) } ?: true &&
@@ -4103,23 +4200,80 @@ class Account(
             }
         }
 
+        // Direct Invites (CORD-05 §6) are shown on Notifications and Messages, not only on the Concord
+        // hub, so they have to be looked for without the hub open. Invites delivered to our DM relays
+        // also arrive through the normal gift-wrap path; this sweep covers the stock relays a sender
+        // falls back to when it can't find our lists. Single-flight, so an overlap with the hub's own
+        // request is dropped.
+        scope.launch {
+            delay(DIRECT_INVITE_SWEEP_START_MS)
+            while (isActive) {
+                concord.requestConcordDirectInviteSweep()
+                delay(DIRECT_INVITE_SWEEP_EVERY_MS)
+            }
+        }
+
         // Keep Concord channel metadata (community name/icon, membership) live across the whole
         // app — not just the hub screen — so the Messages tab renders each channel's community
         // chip, and per-community bans apply, as soon as a Control Plane folds. The revision now
         // bumps only on *structural* change (a fold / membership / rekey, never a plain message),
         // so this fires rarely; sample() stays as a cheap coalescer for a burst of folds.
+        // The channel index is what every open Concord screen reads (canPost, the dissolved/banned/cut
+        // notices), so it refreshes on its own collector. Sharing the loop below made it wait behind
+        // the network-bound drains: a dissolution landing live left the composer up until a restart.
+        scope.launch {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
+            concordSessions.revision.sample(500).collect { refreshConcordChannelIndex() }
+        }
+
         scope.launch {
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             concordSessions.revision.sample(500).collect {
-                refreshConcordChannelIndex()
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
                 runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
                 // A promotion to staff delivers the Control Plane write key inside the Grant
                 // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
                 runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
+                // A Private Channel rotation lands on its channel-rekey address (CORD-06 §2): adopt the new
+                // key, or drop the channel when it cut us.
+                runCatching { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
+                // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
+                runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                // An honored Kick naming us (CORD-04 §6): leave the community locally and say so.
+                runCatching { concord.drainConcordKicks() }.onFailure { Log.w("Concord", "kick drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
                 runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
+            }
+        }
+
+        // CORD-04 §7: a PIN_MESSAGES holder owes keyless readers the deletion omission and the Edit
+        // refresh whether or not the channel is open, so the delayed pin duties run from the account —
+        // on every structural tick (a new Pin List head, a fold) and whenever a delete or an Edit lands.
+        // The scheduler itself waits 3–15 s, keeps one duty per channel and one attempt per debt.
+        scope.launch {
+            @OptIn(FlowPreview::class)
+            merge(
+                concordSessions.revision.map { },
+                cache.live.newEventBundles
+                    .filter { notes -> notes.any { it.event is DeletionRequestEvent || it.event is ConcordChatEditEvent } }
+                    .map { },
+            ).sample(1000).collect {
+                runCatching { concord.scheduleConcordPinDuties(scope) }.onFailure { Log.w("Concord", "pin duty scheduling failed", it) }
+            }
+        }
+
+        // CORD-08 §3: purge disappearing Concord messages when they expire. Sleeps until the earliest
+        // deadline any joined community holds and never wakes while nothing carries one, so a
+        // community without a timer costs nothing. A new earlier deadline restarts the wait.
+        scope.launch(Dispatchers.IO) {
+            concordSessions.nextExpiry.collectLatest { at ->
+                if (at == null) return@collectLatest
+                // Coalesced: sleep a little past the deadline and sweep everything due by then, so a
+                // burst of messages sent seconds apart expires in one pass instead of one sweep each.
+                val waitMs = (at - TimeUtils.now()) * 1000 + CONCORD_EXPIRY_COALESCE_MS
+                if (waitMs > 0) delay(waitMs)
+                runCatching { sweepExpiredConcordMessages() }.onFailure { Log.w("Concord", "expired-message sweep failed", it) }
             }
         }
 

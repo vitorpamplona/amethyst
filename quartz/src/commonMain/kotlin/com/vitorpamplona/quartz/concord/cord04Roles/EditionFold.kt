@@ -61,6 +61,12 @@ fun ControlEdition.asFloor(): EntityFloor = EntityFloor(version, hashHex, this)
 typealias GapReporter = (entityIdHex: String, floorVersion: Long, offeredVersion: Long) -> Unit
 
 /**
+ * An author's standing for the equal-version tie-break ([EditionFold.pickHead]): lower is
+ * higher authority — the owner lowest, then Role position, a roleless author last.
+ */
+typealias AuthorRank = (author: String) -> Long
+
+/**
  * Folds Control Plane editions into the current head of each entity (CORD-04
  * §Edition Hashing & Chain Integrity).
  *
@@ -88,12 +94,14 @@ typealias GapReporter = (entityIdHex: String, floorVersion: Long, offeredVersion
  *  - **Intact chain / no downgrades** — the head advances to `version + 1` only
  *    when that edition's `ep` cites the current head's [ControlEdition.hash].
  *    Lower or non-chaining versions are ignored.
- *  - **Deterministic convergence** — at equal version, ties break on the lower
- *    rumor id, so every honest client folds to the same head.
+ *  - **Deterministic convergence** — at equal version the spec's tie-break is
+ *    "authority first, then the lower rumor id, never the author-settable
+ *    timestamp" (CORD-04 §1). The bare structural fold only knows the rumor id;
+ *    [foldEntityGated] / [foldGated] with a rank apply authority first both in the
+ *    walk (which sibling anchors and extends the chain) and in the head pick
+ *    ([pickHead]), so every honest client lands on the same head.
  *
- * Authority-weighted tie-break ("authority first, then the lower rumor id") and
- * the owner-rooted `vac` verification are applied by the resolver layer on top of
- * this structural fold; this class is purely the chain walk.
+ * The owner-rooted `vac` verification rides the callers' gates.
  */
 object EditionFold {
     private const val TAG = "ConcordEditionFold"
@@ -148,10 +156,17 @@ object EditionFold {
     private fun bootstrapHead(
         editions: List<ControlEdition>,
         floorVersion: Long,
+        tie: Comparator<ControlEdition>,
     ): ControlEdition? =
         editions
             .filter { it.version >= floorVersion && it.version - floorVersion <= MAX_COMPACTION_VERSION_JUMP }
-            .minWithOrNull(compareByDescending<ControlEdition> { it.version }.thenBy { it.rumorId })
+            .minWithOrNull(compareByDescending<ControlEdition> { it.version }.then(tie))
+
+    /**
+     * The structural tie-break among equal-version siblings when nothing better is known: the
+     * lower rumor id. [foldEntityGated] replaces it with authority first (CORD-04 §1).
+     */
+    val BY_RUMOR_ID: Comparator<ControlEdition> = compareBy { it.rumorId }
 
     /**
      * How far above the floor the compaction arm will follow an edition in one step.
@@ -183,29 +198,45 @@ object EditionFold {
     private fun chainHead(
         editions: List<ControlEdition>,
         floor: EntityFloor,
+        tie: Comparator<ControlEdition>,
     ): ControlEdition? {
         val byVersion = HashMap<Long, MutableList<ControlEdition>>()
         for (e in editions) byVersion.getOrPut(e.version) { ArrayList() }.add(e)
 
         val lowest = byVersion.keys.filter { it >= floor.version }.minOrNull() ?: return null
-        val winner = byVersion[lowest]?.minByOrNull { it.rumorId } ?: return null
-        var head =
-            when (lowest) {
-                floor.version -> winner.takeIf { it.hashHex == floor.hashHex }
-                floor.version + 1 -> winner.takeIf { it.prevHash != null && it.prevHash.toHexKey() == floor.hashHex }
-                else -> null
-            } ?: return null
-
-        while (true) {
-            val next =
-                byVersion[head.version + 1]
-                    ?.filter { it.prevHash != null && it.prevHash.toHexKey() == head.hashHex }
-                    ?.minByOrNull { it.rumorId }
-                    ?: break
-            head = next
-        }
+        var head = floorAnchor(byVersion[lowest] ?: return null, lowest, floor, tie) ?: return null
+        while (true) head = nextLink(byVersion, head, tie) ?: break
         return head
     }
+
+    /**
+     * The edition at the lowest offered version [lowest] (at or above the floor) that connects
+     * to [floor], or null. Only two shapes connect: the floor edition itself (same version AND
+     * hash — a same-version sibling is a fork, not our chain, but its presence does not hide
+     * the edition we hold), or the floor's immediate successor citing the floor's hash, the
+     * [tie] winner among several.
+     */
+    private fun floorAnchor(
+        siblings: List<ControlEdition>,
+        lowest: Long,
+        floor: EntityFloor,
+        tie: Comparator<ControlEdition>,
+    ): ControlEdition? =
+        when (lowest) {
+            floor.version -> siblings.firstOrNull { it.hashHex == floor.hashHex }
+            floor.version + 1 -> siblings.filter { it.prevHash != null && it.prevHash.toHexKey() == floor.hashHex }.minWithOrNull(tie)
+            else -> null
+        }
+
+    /** The [tie] winner among the `version + 1` editions citing [head], or null when the chain ends there. */
+    private fun nextLink(
+        byVersion: Map<Long, List<ControlEdition>>,
+        head: ControlEdition,
+        tie: Comparator<ControlEdition>,
+    ): ControlEdition? =
+        byVersion[head.version + 1]
+            ?.filter { it.prevHash != null && it.prevHash.toHexKey() == head.hashHex }
+            ?.minWithOrNull(tie)
 
     /**
      * Groups mixed [editions] by entity id and folds each to its head, honoring the
@@ -225,7 +256,7 @@ object EditionFold {
         val byEntity = editions.groupBy { it.entityIdHex }
         val out = HashMap<String, ControlEdition>(byEntity.size)
         for ((entity, list) in byEntity) {
-            foldEntity(list, floors[entity], snapshot, onGap)?.let { out[entity] = it }
+            foldEntity(list, floors[entity], snapshot, onGap = onGap)?.let { out[entity] = it }
         }
         return out
     }
@@ -246,11 +277,18 @@ object EditionFold {
      * the version-anchored compaction arm instead of the chain walk — see the arm
      * itself for why. Null (the default) keeps the pure chain walk, which is right for
      * a single-epoch fold and for every caller that has no epoch to speak of.
+     *
+     * [tie] picks among equal-version siblings wherever the walk has a choice (the genesis
+     * anchor, each next link, the compaction head): the lower rumor id by default, authority
+     * first when [foldEntityGated] supplies one. Without authority in the walk, a lower-ranked
+     * member's fork with a grindable low rumor id would anchor the chain, and an honest
+     * successor chained onto the owner's sibling would be unreachable.
      */
     fun foldEntity(
         editions: List<ControlEdition>,
         floor: EntityFloor? = null,
         snapshot: Set<String>? = null,
+        tie: Comparator<ControlEdition> = BY_RUMOR_ID,
         onGap: GapReporter = LOG_GAP,
     ): ControlEdition? {
         if (editions.isEmpty()) return floor?.known
@@ -269,8 +307,8 @@ object EditionFold {
             // strictly better evidence than "highest number wins", and preferring it denies a stray
             // high-version edition its free win in every ordinary fold. The bootstrap keeps the
             // cross-epoch case working, now bounded by MAX_COMPACTION_VERSION_JUMP.
-            chainHead(editions, floor)?.let { return it }
-            return bootstrapHead(editions, floor.version)
+            chainHead(editions, floor, tie)?.let { return it }
+            return bootstrapHead(editions, floor.version, tie)
                 ?: run {
                     // Nothing admissible at or above the floor was served: the head we already
                     // accepted vanished from the offered set — withheld, so fail closed.
@@ -279,8 +317,7 @@ object EditionFold {
                 }
         }
 
-        // Index editions by version, keeping the tie-break winner where several
-        // share a version (lower rumor id wins).
+        // Index editions by version; where several share one, [tie] picks among them.
         val byVersion = HashMap<Long, MutableList<ControlEdition>>()
         for (e in editions) byVersion.getOrPut(e.version) { ArrayList() }.add(e)
 
@@ -295,15 +332,7 @@ object EditionFold {
                 // refuse; walking up from the anchor also makes a head below the floor version
                 // structurally impossible.
                 val lowest = byVersion.keys.filter { it >= floor.version }.minOrNull()
-                val winner = lowest?.let { v -> byVersion[v]?.minByOrNull { it.rumorId } }
-                val anchor =
-                    when {
-                        winner == null -> null
-                        lowest == floor.version -> winner.takeIf { it.hashHex == floor.hashHex }
-                        lowest == floor.version + 1 ->
-                            winner.takeIf { it.prevHash != null && it.prevHash.toHexKey() == floor.hashHex }
-                        else -> null
-                    }
+                val anchor = lowest?.let { v -> floorAnchor(byVersion[v] ?: emptyList(), v, floor, tie) }
                 anchor
                     ?: run {
                         onGap(editions[0].entityIdHex, floor.version, editions.maxOf { it.version })
@@ -315,22 +344,16 @@ object EditionFold {
                 // Refounded community carries a prev citing the prior epoch — a fresh joiner
                 // anchors at the lowest-version edition it does hold and accepts it as the
                 // baseline (CORD-04 §1 / CORD-06 §3). `editions` is non-empty here.
+                val byVersionThenTie = compareBy<ControlEdition> { it.version }.then(tie)
                 editions
                     .filter { it.prevHash == null }
-                    .minWithOrNull(compareBy({ it.version }, { it.rumorId }))
-                    ?: editions.minWithOrNull(compareBy({ it.version }, { it.rumorId }))
+                    .minWithOrNull(byVersionThenTie)
+                    ?: editions.minWithOrNull(byVersionThenTie)
                     ?: return null
             }
 
         // Walk the chain upward while the next version chains from the current head.
-        while (true) {
-            val next =
-                byVersion[head.version + 1]
-                    ?.filter { it.prevHash != null && it.prevHash.toHexKey() == head.hashHex }
-                    ?.minByOrNull { it.rumorId }
-                    ?: break
-            head = next
-        }
+        while (true) head = nextLink(byVersion, head, tie) ?: break
         return head
     }
 
@@ -370,13 +393,14 @@ object EditionFold {
         floor: EntityFloor? = null,
         snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
+        tie: Comparator<ControlEdition> = BY_RUMOR_ID,
     ): List<ControlEdition> {
         // Ask the fold whether it gapped rather than re-deriving the condition here: with the
         // compaction arm and the successor anchor there are three ways to connect, and a second
         // copy of that test is a bug waiting to drift out of sync with the first.
         var gapped = false
         val head =
-            foldEntity(editions, floor, snapshot) { e, f, o ->
+            foldEntity(editions, floor, snapshot, tie) { e, f, o ->
                 gapped = true
                 onGap(e, f, o)
             } ?: return emptyList()
@@ -389,7 +413,7 @@ object EditionFold {
         out.add(head)
         editions
             .filterTo(ArrayList()) { it.rumorId != head.rumorId && (floor == null || it.version >= floor.version) }
-            .sortedWith(compareByDescending<ControlEdition> { it.version }.thenBy { it.rumorId })
+            .sortedWith(compareByDescending<ControlEdition> { it.version }.then(tie))
             .let(out::addAll)
         return out
     }
@@ -397,31 +421,83 @@ object EditionFold {
     /**
      * The head of one entity: the highest-priority [candidates] entry that passes
      * [gate], or null when none does. See [candidates] for why the gate is applied
-     * *after* the chain walk rather than before it.
+     * *after* the chain walk rather than before it, and [pickHead] for how [rank]
+     * settles an equal-version tie.
      */
     fun foldEntityGated(
         editions: List<ControlEdition>,
         floor: EntityFloor? = null,
         snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
+        rank: AuthorRank? = null,
         gate: (ControlEdition) -> Boolean,
-    ): ControlEdition? = candidates(editions, floor, snapshot, onGap).firstOrNull(gate)
+    ): ControlEdition? {
+        if (rank == null) return pickHead(candidates(editions, floor, snapshot, onGap), null, gate)
+        // Authority first everywhere the walk has a choice, judged only over editions the gate
+        // admits (a rejected sibling ranks last, so it can never anchor the chain on authority it
+        // does not hold), then the lower rumor id. Memoized: a gate decodes the content.
+        val score = HashMap<String, Long>()
+        val tie =
+            compareBy<ControlEdition> { e -> score.getOrPut(e.rumorId) { if (gate(e)) rank(e.author) else Long.MAX_VALUE } }
+                .then(BY_RUMOR_ID)
+        return pickHead(candidates(editions, floor, snapshot, onGap, tie), rank, gate)
+    }
+
+    /**
+     * The first of the ordered [candidates] passing [gate], with an equal-version tie broken
+     * **authority first** (CORD-04 §1: "authority first, then the lower rumor id, never the
+     * author-settable timestamp"): among the gate-passing candidates at the winner's version,
+     * the one whose author [rank]s highest (lowest number) takes it, and only a rank tie falls
+     * back to the candidate order — the chain-verified head, then the lower rumor id.
+     *
+     * A rumor id is author-grindable, so without this a lower-ranked bit holder could mint
+     * editions until one sorted below the owner's at the same version and win the entity.
+     * This is Armada's `pickHead` (control.ts), which both clients must agree on. With no
+     * [rank] the first passing candidate wins, the old rumor-id-only rule.
+     */
+    fun pickHead(
+        candidates: List<ControlEdition>,
+        rank: AuthorRank?,
+        gate: (ControlEdition) -> Boolean,
+    ): ControlEdition? {
+        var head: ControlEdition? = null
+        var headRank = 0L
+        for (c in candidates) {
+            if (!gate(c)) continue
+            if (head == null) {
+                if (rank == null) return c
+                head = c
+                headRank = rank(c.author)
+                continue
+            }
+            // Candidates are version-descending after the head: nothing at a lower version can win.
+            if (c.version != head.version) break
+            val r = rank!!(c.author)
+            if (r < headRank) {
+                head = c
+                headRank = r
+            }
+        }
+        return head
+    }
 
     /**
      * Groups mixed [editions] by entity id and folds each to the highest-priority
-     * head passing [gate] — the gated counterpart of [fold]. See [candidates].
+     * head passing [gate] — the gated counterpart of [fold]. See [candidates] and
+     * [pickHead].
      */
     fun foldGated(
         editions: Collection<ControlEdition>,
         floors: Map<String, EntityFloor> = emptyMap(),
         snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
+        rank: AuthorRank? = null,
         gate: (ControlEdition) -> Boolean,
     ): Map<String, ControlEdition> {
         val byEntity = editions.groupBy { it.entityIdHex }
         val out = HashMap<String, ControlEdition>(byEntity.size)
         for ((entity, list) in byEntity) {
-            foldEntityGated(list, floors[entity], snapshot, onGap, gate)?.let { out[entity] = it }
+            foldEntityGated(list, floors[entity], snapshot, onGap, rank, gate)?.let { out[entity] = it }
         }
         return out
     }

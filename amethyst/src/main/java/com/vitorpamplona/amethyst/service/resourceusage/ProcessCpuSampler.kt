@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.resourceusage
 
 import android.os.Process
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 
 /**
  * Samples whole-process CPU time (user+system, [Process.getElapsedCpuTime])

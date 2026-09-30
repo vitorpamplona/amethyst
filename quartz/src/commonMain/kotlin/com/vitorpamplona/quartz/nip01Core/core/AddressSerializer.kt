@@ -75,6 +75,6 @@ class AddressSerializer {
         fun isOfKind(
             addressId: String,
             kind: String,
-        ) = addressId.startsWith(kind) && addressId[kind.length] == ':'
+        ) = addressId.length > kind.length && addressId.startsWith(kind) && addressId[kind.length] == ':'
     }
 }

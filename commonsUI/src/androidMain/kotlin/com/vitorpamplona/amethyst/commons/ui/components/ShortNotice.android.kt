@@ -30,3 +30,9 @@ actual fun rememberShortNotice(): ShortNotice {
     val context = LocalContext.current
     return remember(context) { ShortNotice { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() } }
 }
+
+@Composable
+actual fun rememberLongNotice(): ShortNotice {
+    val context = LocalContext.current
+    return remember(context) { ShortNotice { message -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() } }
+}

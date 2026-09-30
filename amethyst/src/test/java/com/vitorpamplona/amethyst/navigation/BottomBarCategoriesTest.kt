@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.navigation
 
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.BottomBarCategories
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

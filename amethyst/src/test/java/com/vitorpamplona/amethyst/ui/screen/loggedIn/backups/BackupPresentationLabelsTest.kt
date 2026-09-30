@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.backups
 
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.labelsWrittenBy
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.presentationOf
 import com.vitorpamplona.quartz.nip01Core.diff.EventDiff
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataDiff

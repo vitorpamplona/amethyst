@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -30,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourc
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun NWCFinderFilterAssemblerSubscription(
     note: Note,

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.isVideoOnline
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -65,8 +66,8 @@ suspend fun AccountViewModel.checkVideoIsOnline(videoUrl: String): Boolean = htt
 suspend fun AccountViewModel.uploadMarmotGroupIcon(
     uri: Uri,
     mimeType: String?,
-    context: Context,
-): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, context)
+    uploader: MediaUploader,
+): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, uploader)
 
 fun AccountViewModel.saveMediaToGallery(
     videoUri: String?,

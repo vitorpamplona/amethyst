@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
 import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -124,7 +125,7 @@ class TextNoteEvent(
 
     override fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
 
-    override fun forkFromAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+    override fun forkFromAddress() = tags.firstNotNullOfOrNull(::parseForkedAddress)
 
     override fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseForkedEventId)
 

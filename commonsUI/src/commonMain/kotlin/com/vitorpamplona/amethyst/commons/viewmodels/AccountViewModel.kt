@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
@@ -74,8 +75,24 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_done
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_kick_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_title
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_generic
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_message
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_large
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_too_many
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_unavailable
 import com.vitorpamplona.amethyst.commons.resources.draft_note
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
@@ -278,6 +295,18 @@ class AccountViewModel(
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed_retry, kindLabel)
                 } else {
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                }
+            }
+        }
+
+        // An honored Kick made us leave a Concord community (CORD-04 §6); the removal is otherwise silent.
+        viewModelScope.launch {
+            account.concord.concordKicks.collect { notice ->
+                val name = notice.communityName?.takeIf { it.isNotBlank() }
+                if (name != null) {
+                    toastManager.toast(Res.string.concord_kicked_title, Res.string.concord_kicked_message, name)
+                } else {
+                    toastManager.toast(Res.string.concord_kicked_title, Res.string.concord_kicked_message_unnamed)
                 }
             }
         }
@@ -515,10 +544,10 @@ class AccountViewModel(
         reaction: String,
     ) {
         // Concord messages are encrypted: a public kind-7 would e-tag the private rumor id onto
-        // public relays. Route the reaction through a channel-plane wrap instead. (Retraction of an
-        // existing Concord reaction is a follow-up; for now this only adds one.)
+        // public relays. Route the reaction through a channel-plane wrap instead; tapping it again
+        // retracts it with an in-channel kind-5 delete (CORD-01), never a NIP-17 one.
         if (note.inGatherers?.any { it is ConcordChannel } == true) {
-            launchSigner { account.concord.reactToConcordMessage(note, reaction) }
+            launchSigner { account.concord.toggleConcordReaction(note, reaction) }
             return
         }
 
@@ -597,6 +626,58 @@ class AccountViewModel(
         }
     }
 
+    /** Pin or unpin Concord message [note] (CORD-04 §7, PIN_MESSAGES holders); a refusal surfaces as a toast. */
+    fun toggleConcordPin(note: Note) {
+        val pinned = account.concord.concordPinState(note) ?: return
+        launchSigner {
+            toastConcordPinOutcome(if (pinned) account.concord.unpinConcordMessage(note) else account.concord.pinConcordMessage(note))
+        }
+    }
+
+    /** Unpin the entry [rumorId] from [channelIdHex]'s Pin List — also for a pin whose message this account never held. */
+    fun unpinConcordRumor(
+        communityId: String,
+        channelIdHex: String,
+        rumorId: HexKey,
+    ) = launchSigner { toastConcordPinOutcome(account.concord.unpinConcordRumor(communityId, channelIdHex, rumorId)) }
+
+    private fun toastConcordPinOutcome(outcome: ConcordPinOutcome) {
+        val message =
+            when (outcome) {
+                ConcordPinOutcome.PUBLISHED, ConcordPinOutcome.ALREADY_PINNED, ConcordPinOutcome.NOT_PINNED, ConcordPinOutcome.NOTHING_TO_DO -> return
+                ConcordPinOutcome.LIST_UNAVAILABLE -> Res.string.concord_pin_failed_unavailable
+                ConcordPinOutcome.TOO_MANY_PINS -> Res.string.concord_pin_failed_too_many
+                ConcordPinOutcome.TOO_LARGE -> Res.string.concord_pin_failed_too_large
+                ConcordPinOutcome.MESSAGE_UNAVAILABLE, ConcordPinOutcome.UNVERIFIABLE -> Res.string.concord_pin_failed_message
+                else -> Res.string.concord_pin_failed_generic
+            }
+        toastManager.toast(Res.string.concord_pin_failed_title, message)
+    }
+
+    /** Dissolve [communityId] for good (CORD-02 §9, owner only); a refusal surfaces as a toast. */
+    fun dissolveConcordCommunity(communityId: String) =
+        launchSigner {
+            if (!account.concord.dissolveConcordCommunity(communityId)) {
+                toastManager.toast(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+            }
+        }
+
+    /**
+     * Rotate Private Channel [channelIdHex]'s key (CORD-06). The rotation publishes a chunk per
+     * member and can take a while, so both outcomes are toasted: a silent menu item left the
+     * user unsure whether anything happened, and a refused rotation keeps the old key live.
+     */
+    fun rotateConcordChannelKey(
+        communityId: String,
+        channelIdHex: HexKey,
+    ) = launchSigner {
+        if (account.concord.rekeyConcordChannel(communityId, channelIdHex)) {
+            toastManager.toast(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)
+        } else {
+            toastManager.toast(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
+        }
+    }
+
     /** Promote/demote [member] as an Admin of [communityId] (from the Members roster; owner only takes effect). */
     fun setConcordAdmin(
         communityId: String,
@@ -631,6 +712,16 @@ class AccountViewModel(
         ban: Boolean,
     ) = launchSigner {
         if (ban) account.concord.banConcordMember(communityId, member) else account.concord.unbanConcordMember(communityId, member)
+    }
+
+    /** Kick [member] from [communityId] (CORD-04 §6: strip their roles, then the Guestbook directive). */
+    fun kickConcordMember(
+        communityId: String,
+        member: HexKey,
+    ) = launchSigner {
+        if (!account.concord.kickConcordMember(communityId, member)) {
+            toastManager.toast(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
+        }
     }
 
     /**
@@ -694,8 +785,6 @@ class AccountViewModel(
         accountChoices: LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
-        LocalCache.appHost.assertNotMainThread()
-
         val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
         val isFromLoggedInFollow = note.author?.let { followUsers.contains(it.pubkeyHex) } ?: true
         val isPostHidden = note.isHiddenFor(accountChoices)
@@ -1815,6 +1904,11 @@ class AccountViewModel(
         channel: RelayGroupChannel,
         pubkey: HexKey,
     ) = launchSigner { account.relayGroups.removeRelayGroupUser(channel, pubkey) }
+
+    fun addRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) = launchSigner { account.relayGroups.addRelayGroupUser(channel, pubkey) }
 
     fun putRelayGroupUser(
         channel: RelayGroupChannel,

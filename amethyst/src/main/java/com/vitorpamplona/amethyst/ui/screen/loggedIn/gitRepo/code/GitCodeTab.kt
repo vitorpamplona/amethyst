@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_no_clone_url
 import com.vitorpamplona.amethyst.commons.resources.git_repo_no_search_results
 import com.vitorpamplona.amethyst.commons.resources.git_repo_root
 import com.vitorpamplona.amethyst.commons.resources.git_repo_search_files
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -141,7 +141,7 @@ private fun CodeBrowser(
 
     if (openPath != null) {
         val entry = remember(openFilePath) { snapshot.entryAt(openPath) }
-        BackHandler { openFilePath = null }
+        PlatformBackHandler { openFilePath = null }
         Column(Modifier.fillMaxSize().padding(scaffoldPaddingTop)) {
             FileHeader(name = openPath.lastOrNull() ?: "", onBack = { openFilePath = null })
             HorizontalDivider(thickness = 0.5.dp)
@@ -164,7 +164,7 @@ private fun CodeBrowser(
     var query by rememberSaveable(snapshot.headCommit) { mutableStateOf("") }
     val searching = query.isNotBlank()
 
-    BackHandler(enabled = searching || path.isNotEmpty()) {
+    PlatformBackHandler(enabled = searching || path.isNotEmpty()) {
         if (searching) query = "" else pathString = path.dropLast(1).joinToString("/")
     }
 

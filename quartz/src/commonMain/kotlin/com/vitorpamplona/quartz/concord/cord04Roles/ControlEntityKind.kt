@@ -56,6 +56,9 @@ enum class ControlEntityKind(
 
     /** The dissolution tombstone (terminal). */
     DISSOLVED("10"),
+
+    /** A Channel's Pin List (CORD-04 §7), gated by PIN_MESSAGES. */
+    PIN_LIST("11"),
     ;
 
     companion object {

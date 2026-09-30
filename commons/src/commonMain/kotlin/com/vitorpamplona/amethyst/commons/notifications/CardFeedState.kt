@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
+import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -127,6 +128,19 @@ class MessageSetCard(
     val note: Note,
 ) : Card {
     override fun createdAt(): Long = note.createdAt() ?: 0L
+
+    override fun id() = note.idHex
+}
+
+/**
+ * A Concord Direct Invite (CORD-05 §6) waiting on an answer. Renders the same Accept / Decline card
+ * as the Concord hub; answering it drops the row on the next rebuild. Sorted ahead
+ * of dated cards like [ChannelInviteCard], so an old invite can't sink into history.
+ */
+class ConcordDirectInviteNotificationCard(
+    val note: ConcordDirectInviteNote,
+) : Card {
+    override fun createdAt(): Long = note.createdAt()
 
     override fun id() = note.idHex
 }

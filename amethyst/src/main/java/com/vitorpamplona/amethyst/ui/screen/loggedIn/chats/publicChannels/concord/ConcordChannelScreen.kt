@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -62,17 +63,24 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.concord_banned_notice
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
+import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_cut
+import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_no_key
 import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
+import com.vitorpamplona.amethyst.commons.resources.concord_timer_active
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
 import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
@@ -82,7 +90,11 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.concordTimerText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordPinnedMessagesSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordChannelPins
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -93,8 +105,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightCh
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
@@ -109,6 +119,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplying
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -123,6 +134,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -177,9 +189,29 @@ fun ConcordChannelScreen(
     newMessageModel.init(accountViewModel)
     newMessageModel.load(communityId, channelId)
 
+    // CORD-04 §7 Pins: the header's entry point, the sheet it opens and the jump it requests. The
+    // delayed duty writes a PIN_MESSAGES holder owes run from the account (scheduleConcordPinDuties).
+    val pins by rememberConcordChannelPins(communityId, channelId, accountViewModel)
+    var showPins by remember { mutableStateOf(false) }
+    val jumpToNoteId = remember { mutableStateOf<String?>(null) }
+    pins?.let { current ->
+        if (showPins) {
+            ConcordPinnedMessagesSheet(
+                communityId = communityId,
+                channelId = channelId,
+                pins = current,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onJumpToMessage = { jumpToNoteId.value = it },
+                onDismiss = { showPins = false },
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                actions = { ConcordPinnedButton(communityId, pins, accountViewModel) { showPins = true } },
                 title = {
                     Column {
                         Text(channel.toBestDisplayName(), maxLines = 1)
@@ -216,6 +248,8 @@ fun ConcordChannelScreen(
                     onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
                     onWantsToEditChatMessage = { newMessageModel.editConcordMessage(it) },
+                    jumpToNoteId = jumpToNoteId,
+                    onJumpHandled = { jumpToNoteId.value = null },
                     // A status card at the oldest end: shows what it's reaching for while it pages and
                     // crossfades to "All caught up" when every relay runs dry.
                     olderBoundary = {
@@ -252,7 +286,16 @@ fun ConcordChannelScreen(
 
             ConcordTypingIndicator(communityId, channelId, accountViewModel)
 
-            if (channel.canPost()) {
+            // canPost()/keyHeld are plain fields the revision tick rewrites; observing the channel's
+            // metadata flow (invalidated on every such change) is what makes a key cut, a ban or a
+            // dissolution landing while this screen is open swap the composer for its notice.
+            val channelInfo by channel
+                .flow()
+                .metadata.stateFlow
+                .collectAsStateWithLifecycle()
+            val canPost = remember(channelInfo) { channel.canPost() }
+            if (canPost) {
+                ConcordTimerIndicator(communityId, accountViewModel)
                 Spacer(modifier = DoubleVertSpacer)
                 ConcordMessageComposer(
                     newMessageModel = newMessageModel,
@@ -264,6 +307,22 @@ fun ConcordChannelScreen(
                 // CORD-02 §9: an owner-signed tombstone seals the community read-only — the composer is
                 // gone (canPost() is false) and this replaces it so the seal is explained, not silent.
                 ConcordDissolvedNotice()
+            } else if (channel.membership == ConcordMembership.BANNED) {
+                // CORD-04 §4: every reader drops a banned author's messages, so the composer is gone;
+                // say why instead of leaving the bottom of the screen silently empty.
+                ConcordReadOnlyNotice(Res.string.concord_banned_notice)
+            } else if (!channel.keyHeld) {
+                // CORD-03 §1: a Private Channel is keyed independently; without its key there is no
+                // plane only its members can read, so nothing may be posted (never to the root plane).
+                // A rotation that left us out (CORD-06 §2): say we were removed, not that we never had access.
+                val wasCut =
+                    remember(channelInfo) {
+                        account.concordSessions
+                            .sessionFor(communityId)
+                            ?.entry
+                            ?.let { ConcordChannelKeyring.cutsOf(it).containsKey(channelId.lowercase()) } == true
+                    }
+                ConcordReadOnlyNotice(if (wasCut) Res.string.concord_private_channel_cut else Res.string.concord_private_channel_no_key)
             }
         }
     }
@@ -274,12 +333,41 @@ fun ConcordChannelScreen(
  * The tombstone seals the community: history stays readable, but no member may post again.
  */
 @Composable
-private fun ConcordDissolvedNotice() {
+private fun ConcordDissolvedNotice() = ConcordReadOnlyNotice(Res.string.concord_dissolved_read_only)
+
+/** A one-line explanation shown where the composer would be when this channel cannot be posted to. */
+@Composable
+private fun ConcordReadOnlyNotice(message: StringResource) {
     Text(
-        text = stringRes(Res.string.concord_dissolved_read_only),
+        text = stringRes(message),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.placeholderText,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+    )
+}
+
+/**
+ * CORD-08: a slim "Messages disappear after 30 days" line above the composer while the community's
+ * timer is on, so a member knows before sending that the message will not last.
+ */
+@Composable
+private fun ConcordTimerIndicator(
+    communityId: String,
+    accountViewModel: AccountViewModel,
+) {
+    // Re-resolved on every session-set change: the session may not exist yet at first composition, and
+    // a Refounding replaces it (a captured one would keep reading the dead epoch's fold).
+    val sessions = accountViewModel.account.concordSessions
+    val revision by sessions.revision.collectAsStateWithLifecycle()
+    val session = remember(communityId, revision) { sessions.sessionFor(communityId) } ?: return
+    val state by session.state.collectAsStateWithLifecycle()
+    val secs = state?.metadata?.messageExpirationSecs() ?: return
+    Text(
+        text = stringRes(Res.string.concord_timer_active, concordTimerText(secs)),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
     )
 }
 
@@ -578,7 +666,7 @@ private fun ConcordFileUploadDialog(
                     onEncryptedUploadError = { title, message ->
                         scope.launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
                     },
-                    context = context,
+                    uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->
                         val imetas = uploads.mapNotNull { it.toConcordImeta() }
                         if (imetas.isNotEmpty()) {

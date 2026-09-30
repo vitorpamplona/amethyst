@@ -53,6 +53,40 @@ data class StoredCommunity(
     // rekey has no message to miss: re-resolving this link is the only way back. Blank for a direct
     // invite or a community joined before amy stored it.
     val inviteRef: String = "",
+    // Private Channel keys this account holds (CORD-03 §1), from the Community List or an invite.
+    // A private channel is read and written ONLY on the plane its own key derives; without one it
+    // is unreadable and `send` refuses rather than fall back to the root-derived plane.
+    val privateChannels: List<StoredPrivateChannel> = emptyList(),
+    // Per Private Channel, the channel epoch whose rotation cut this account out (CORD-06 §2; the
+    // reference client's `channel_cuts`): a key below it is never adopted again from a bundle.
+    val channelCuts: Map<String, Long> = emptyMap(),
+    // Channel keys reserved for a Private Channel rotation this account started but has not yet
+    // adopted, keyed "channelId:newEpoch:prevcommit" (CORD-06): a retried `channel rekey` must
+    // re-deliver the SAME key, never a sibling that splits the members at one epoch.
+    val pendingChannelRotations: Map<String, String> = emptyMap(),
+    // Keys reserved for a Refounding this account started but has not yet adopted (CORD-06 §3): a
+    // retried `refound` must re-deliver the SAME root, never mint a sibling that splits the members.
+    val pendingRefounding: StoredPendingRefounding? = null,
+    // When this membership began (ms, the Community List's `added_at`). A Kick older than this
+    // judged an earlier membership that a re-join put behind us (CORD-04 §6). 0 = unknown, stored
+    // before amy tracked it: then any honored Kick that is still our latest Guestbook motion counts.
+    val addedAt: Long = 0,
+)
+
+/** A held Private Channel key at its channel epoch, mirroring quartz `PrivateChannelKey`. */
+data class StoredPrivateChannel(
+    val channelId: String = "",
+    val key: String = "",
+    val epoch: Long = 0,
+    val name: String = "",
+)
+
+/** A Refounding's reserved keys, mirroring quartz `PendingRefounding`. */
+data class StoredPendingRefounding(
+    val rootEpoch: Long = 0,
+    val prevCommit: String = "",
+    val newRoot: String = "",
+    val newControlRoot: String = "",
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */
@@ -91,6 +125,9 @@ class ConcordStore(
         val next = load().filterNot { it.communityId == community.communityId } + community
         save(next)
     }
+
+    /** Drop [communityId] from the list, as a Leave or a complied-with Kick does locally. */
+    fun remove(communityId: String) = save(load().filterNot { it.communityId == communityId })
 
     /** Resolve a user-supplied handle: exact name, exact id, or a unique id/name prefix. */
     fun find(handle: String): StoredCommunity? {

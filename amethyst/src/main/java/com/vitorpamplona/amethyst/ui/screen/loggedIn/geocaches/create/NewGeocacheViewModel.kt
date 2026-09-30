@@ -20,17 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.create
 
-import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -177,7 +177,7 @@ class NewGeocacheViewModel : ViewModel() {
     suspend fun uploadImage(
         uri: Uri,
         mimeType: String?,
-        context: Context,
+        uploader: MediaUploader,
     ): Boolean {
         if (!::account.isInitialized) return false
         isUploading.value = true
@@ -191,7 +191,7 @@ class NewGeocacheViewModel : ViewModel() {
                     compressionQuality = CompressorQuality.MEDIUM,
                     server = account.settings.defaultFileServer,
                     account = account,
-                    context = context,
+                    uploader = uploader,
                 )
             val url =
                 ((result as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.url

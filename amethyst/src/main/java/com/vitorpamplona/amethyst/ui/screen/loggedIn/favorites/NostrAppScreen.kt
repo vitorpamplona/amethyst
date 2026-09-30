@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites
 
 import android.os.Build
-import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -240,7 +240,7 @@ private fun EmbeddedNostrAppTab(
     // (EmbeddedTabHost.onAppStopped), which holds the applet's acting requests at once and pauses its page on
     // the relays' 30 s schedule.
 
-    BackHandler(enabled = canGoBack) { controller.back() }
+    PlatformBackHandler(enabled = canGoBack) { controller.back() }
 
     if (showAccess) {
         Dialog(onDismissRequest = { showAccess = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {

@@ -22,11 +22,15 @@ package com.vitorpamplona.quartz.concord.cord03Channels
 
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.MsTag
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.concord.envelope.OpenedStreamEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionAlgo
 import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionKey
 import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionNonce
@@ -66,12 +70,13 @@ object ChannelChat {
         text: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event =
         RumorAssembler.assembleRumor(
             authorPubKey,
             ChatEvent.build(text, createdAt) {
-                channelBinding(channelId, epoch)
-                extraTags.forEach { addUnique(it) }
+                channelBinding(channelId, epoch, ms)
+                withoutBinding(extraTags).forEach { add(it) }
             },
         )
 
@@ -82,6 +87,10 @@ object ChannelChat {
      * into a minichat), an inline quote stays in the main chat timeline — the two
      * reply modes the composer offers. Matches Armada, where a kind-9 `q` is an
      * inline quote deliberately kept out of threads.
+     *
+     * The `q` tag is the four-element NIP-C7 form `["q", <rumor id>, "", <author>]` the spec's
+     * examples (§2.1) and Armada write: an empty relay hint (a rumor lives on no relay) and the
+     * quoted author, so a reader can render the card before the quoted rumor arrives.
      */
     fun inlineReply(
         authorPubKey: HexKey,
@@ -92,6 +101,7 @@ object ChannelChat {
         parentAuthor: HexKey,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event =
         message(
             authorPubKey = authorPubKey,
@@ -99,7 +109,8 @@ object ChannelChat {
             epoch = epoch,
             text = text,
             createdAt = createdAt,
-            extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)) + extraTags,
+            extraTags = arrayOf(arrayOf("q", parentId, "", parentAuthor), arrayOf("p", parentAuthor)) + extraTags,
+            ms = ms,
         )
 
     /**
@@ -124,19 +135,47 @@ object ChannelChat {
         newText: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event =
         RumorAssembler.assembleRumor<ConcordChatEditEvent>(
             pubKey = authorPubKey,
             createdAt = createdAt,
             kind = ConcordChatEditEvent.KIND,
-            tags =
-                arrayOf(
-                    ChannelTag.assemble(channelId),
-                    EpochTag.assemble(epoch),
-                    arrayOf("e", targetId),
-                ) + extraTags,
+            tags = bindingTags(channelId, epoch, ms) + arrayOf(arrayOf("e", targetId)) + withoutBinding(extraTags),
             content = newText,
         )
+
+    /**
+     * Builds an unsigned kind-5 **delete** rumor (CORD-01 Deletions, examples §2.4) retracting
+     * the author's own [targets] inside the channel, bound to [channelId]/[epoch].
+     *
+     * NIP-09 shape: one `["e", <rumor id>]` per target, then one `["k", <kind>]` per distinct
+     * target kind (`9` for a message, `1111` for a thread reply, `7` for a reaction), and the
+     * optional [reason] as content. It names *rumor* ids relays never saw, so it must be wrapped
+     * on the channel plane like any other Chat rumor — never published as a signed kind 5 or a
+     * NIP-17 DM, both of which would leak the rumor ids outside the community. Receivers honor it
+     * only for targets the delete's own author wrote. A delete never expires (CORD-08).
+     */
+    fun delete(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        targets: List<Event>,
+        createdAt: Long,
+        reason: String = "",
+        ms: Int = MsTag.remainderFor(createdAt),
+    ): Event {
+        require(targets.isNotEmpty()) { "A delete must name at least one target" }
+        val eTags = targets.map { arrayOf("e", it.id) }
+        val kTags = targets.map { it.kind }.distinct().map { arrayOf("k", it.toString()) }
+        return RumorAssembler.assembleRumor<DeletionRequestEvent>(
+            pubKey = authorPubKey,
+            createdAt = createdAt,
+            kind = DeletionRequestEvent.KIND,
+            tags = bindingTags(channelId, epoch, ms) + eTags.toTypedArray() + kTags.toTypedArray(),
+            content = reason,
+        )
+    }
 
     /**
      * Builds an unsigned kind-1111 **thread reply** ([CommentEvent], NIP-22) to
@@ -160,12 +199,13 @@ object ChannelChat {
         parent: Event,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event =
         RumorAssembler.assembleRumor(
             authorPubKey,
             CommentEvent.replyBuilder(text, EventHintBundle(parent), createdAt) {
-                channelBinding(channelId, epoch)
-                extraTags.forEach { add(it) }
+                channelBinding(channelId, epoch, ms)
+                withoutBinding(extraTags).forEach { add(it) }
             },
         )
 
@@ -186,6 +226,7 @@ object ChannelChat {
         parent: Event,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event {
         val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
         val finalText = (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
@@ -197,6 +238,7 @@ object ChannelChat {
             parent = parent,
             createdAt = createdAt,
             extraTags = imetas.map { it.toTagArray() }.toTypedArray() + extraTags,
+            ms = ms,
         )
     }
 
@@ -218,19 +260,19 @@ object ChannelChat {
         content: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event =
         RumorAssembler.assembleRumor<ReactionEvent>(
             pubKey = authorPubKey,
             createdAt = createdAt,
             kind = ReactionEvent.KIND,
             tags =
-                arrayOf(
-                    ChannelTag.assemble(channelId),
-                    EpochTag.assemble(epoch),
-                    arrayOf("e", targetId),
-                    arrayOf("p", targetAuthor),
-                    arrayOf("k", targetKind.toString()),
-                ) + extraTags,
+                bindingTags(channelId, epoch, ms) +
+                    arrayOf(
+                        arrayOf("e", targetId),
+                        arrayOf("p", targetAuthor),
+                        arrayOf("k", targetKind.toString()),
+                    ) + withoutBinding(extraTags),
             content = content,
         )
 
@@ -250,6 +292,7 @@ object ChannelChat {
         imetas: List<IMetaTag>,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event {
         val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
         val finalText = (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
@@ -260,6 +303,7 @@ object ChannelChat {
             text = finalText,
             createdAt = createdAt,
             extraTags = imetas.map { it.toTagArray() }.toTypedArray() + extraTags,
+            ms = ms,
         )
     }
 
@@ -337,12 +381,13 @@ object ChannelChat {
         channelId: HexKey,
         epoch: Long,
         createdAt: Long,
+        ms: Int = MsTag.remainderFor(createdAt),
     ): Event =
         RumorAssembler.assembleRumor<Event>(
             pubKey = authorPubKey,
             createdAt = createdAt,
             kind = KIND_TYPING,
-            tags = arrayOf(ChannelTag.assemble(channelId), EpochTag.assemble(epoch)),
+            tags = bindingTags(channelId, epoch, ms),
             content = "",
         )
 
@@ -364,6 +409,85 @@ object ChannelChat {
         channelId: HexKey,
         epoch: Long,
     ): Boolean = rumor.tags.isConcordBoundTo(channelId, epoch)
+
+    /** Timer notice (CORD-08 §4), a Chat Plane kind. */
+    const val KIND_TIMER_NOTICE = 1740
+
+    /**
+     * Every rumor kind a Chat Plane may carry into the app (CORD-02 Appendix B): messages,
+     * thread replies, reactions, deletes, edits, the typing heartbeat and the CORD-08 timer
+     * notice. Chat ingest refuses anything else — above all the other planes' kinds (a Control
+     * edition 3308, a Guestbook 3306/3309/3312, a rekey 3303, a direct invite 3313): the planes
+     * share one store, so without this a channel key-holder could inject a rumor another reader
+     * would take for a Control edition (the reference client's `PLANE_KINDS` refusal).
+     */
+    val CHAT_KINDS: Set<Int> =
+        setOf(
+            ChatEvent.KIND,
+            CommentEvent.KIND,
+            ReactionEvent.KIND,
+            DeletionRequestEvent.KIND,
+            ConcordChatEditEvent.KIND,
+            KIND_TYPING,
+            KIND_TIMER_NOTICE,
+        )
+
+    /** True when [kind] may ride a Chat Plane ([CHAT_KINDS]). */
+    fun isChatKind(kind: Int): Boolean = kind in CHAT_KINDS
+
+    /**
+     * Every rumor kind a Chat Plane carries (CORD-02 Appendix B): the chat kinds plus the WebXDC
+     * signal ([ConcordWebxdc], kind 3310), which rides the plane under the same binding but is never
+     * a chat row — so it is kept out of [CHAT_KINDS], and only a caller that routes it apart (the
+     * session's WebXDC buffer) opens a plane with this set.
+     */
+    val PLANE_KINDS: Set<Int> = CHAT_KINDS + ConcordWebxdc.KIND
+
+    /**
+     * The Chat Plane ingest gate for a wrap already opened under [channelId]'s key at [epoch]:
+     * returns its rumor only when every Chat rule holds, else null (drop it).
+     *  - the seal is the encrypted kind 20013 (CORD-02 §5: a plaintext 20014 seal is Control-only);
+     *  - the rumor kind is one of [kinds] — by default the Chat kinds ([CHAT_KINDS]), never another
+     *    plane's; [PLANE_KINDS] also admits the WebXDC signal for a caller that routes it apart;
+     *  - the binding is strict: exactly one `channel` and one `epoch`, equal to the plane's
+     *    ([isBoundTo], CORD-03 §3);
+     *  - its `ms` tag, if any, is well formed (CORD-02 §4/§5 — a malformed one is dropped, never
+     *    interpreted).
+     */
+    fun acceptOpened(
+        opened: OpenedStreamEvent,
+        channelId: HexKey,
+        epoch: Long,
+        kinds: Set<Int> = CHAT_KINDS,
+    ): Event? {
+        if (opened.sealKind != ConcordStreamEnvelope.KIND_SEAL_ENCRYPTED) return null
+        val rumor = opened.rumor
+        if (rumor.kind !in kinds) return null
+        if (!isBoundTo(rumor, channelId, epoch)) return null
+        if (orderingMs(rumor) == null) return null
+        return rumor
+    }
+
+    /**
+     * The rumor's CORD-02 §4 ordering time, `createdAt * 1000 + ms`, or null when its `ms` tag is
+     * malformed or duplicated (such a rumor is dropped, never interpreted). See [MsTag].
+     */
+    fun orderingMs(rumor: Event): Long? = MsTag.orderingMs(rumor.createdAt, rumor.tags)
+
+    /** The binding every Chat rumor commits, in the examples' order: channel, epoch, ms. */
+    private fun bindingTags(
+        channelId: HexKey,
+        epoch: Long,
+        ms: Int,
+    ): Array<Array<String>> = arrayOf(ChannelTag.assemble(channelId), EpochTag.assemble(epoch), MsTag.assemble(ms))
+
+    private val BINDING_TAG_NAMES = setOf(ChannelTag.TAG_NAME, EpochTag.TAG_NAME, MsTag.TAG_NAME)
+
+    /**
+     * [extraTags] minus any binding tag: a caller's extra `channel`/`epoch`/`ms` would make the
+     * binding ambiguous, and strict receivers (ours included) drop a duplicated binding.
+     */
+    private fun withoutBinding(extraTags: Array<Array<String>>): Array<Array<String>> = extraTags.filterNot { it.isNotEmpty() && it[0] in BINDING_TAG_NAMES }.toTypedArray()
 }
 
 /**

@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPrompt
 import com.vitorpamplona.amethyst.commons.relayClient.auth.UserAuthChoice
+import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.LoadRelayAuthUser
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose

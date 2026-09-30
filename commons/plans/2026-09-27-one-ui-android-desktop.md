@@ -119,7 +119,7 @@ Each leaving edge is a seam to cut before the group can move.
 | `Amethyst.kt` | `keyCache` (Account), `encryptedStorage` (Geohash), `appContext` (Nip46 bridge), `notificationDispatcher` (EventProcessor) | constructor parameters / ports; the notification dispatcher gets an interface. **Done 2026-09-28**: `keyCache` → `Account.encryptionKeyCache`; the notifications → `MarmotGroupNotifier`, which `NotificationDispatcher` implements; `encryptedStorage` and `appContext` left with the Geohash and Nip46 cuts. |
 | `LocalPreferences.kt` | `saveToEncryptedStorage(accountSettings)` on settings change | **Done 2026-09-28** as a constructor lambda, `Account.saveSettings: suspend (AccountSettings) -> Unit`, rather than a named port. |
 | `DebugUtils.kt` | `logTime` (2 sites) | **Done 2026-09-28.** `commons/util` already had an identical `logTime`; its Android `isDebug` was hard-coded `false`, so it now reads `AndroidDebugFlag.enabled`, which `Amethyst.onCreate` sets. The app copy is gone. |
-| `service/MainThreadChecker.kt` | `checkNotInMainThread` (HiddenUsersState) | **Done 2026-09-28**: `LocalCache.appHost.assertNotMainThread()`, which the app host delegates to the same check. |
+| `service/MainThreadChecker.kt` | `checkNotInMainThread` (HiddenUsersState) | **Done 2026-09-28**: `LocalCache.appHost.assertNotMainThread()`. **Deleted 2026-09-29**: a debug-only Android assertion that shared code could no longer rely on; the checker, its call sites and the host hook are gone. |
 | `service/location/LocationState.kt` | the `LocationResult` type in `geolocationFlow` and the around-me feed | **Done 2026-09-28**: `commons/model/location/LocationResult.kt`; 25 files repointed. |
 | `service/uploads/FileHeader.kt` | the `FileHeader` data type in three send methods | **Done 2026-09-28**: `commons/service/upload/FileHeader.kt` (with `BlurhashWrapper`/`ThumbhashWrapper` moved from commonsUI, same package); `prepare` stays in the app as `FileHeader.Companion` extensions. |
 | `service/relayClient/…/BuzzMembershipEoseManager.kt` | the `MembershipNotificationKinds` constant | **Done 2026-09-28**: `commons/model/buzz/BuzzMembershipKinds.kt`. |
@@ -356,10 +356,83 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      mint screens; relay and relay-group members; communities; Event Sync; the vanish
      screens; and the feed filter spinner with the feed views they share. `ViewModelProvider.Factory`
      implementations now override the multiplatform `create(KClass, CreationExtras)`.
-   - **Next:** re-measure; the exits now in front are the upload/gallery stack, the
-     Android-only `AccountViewModel` actions (`urlPreview`, media saving), `LoadCityName`,
-     `ReactionsRow` imports, the remaining `Amethyst.instance` reads (location, favorites,
-     Tor, browser icons, scheduled posts) and `AppSettingsScreen`.
+   - **Wave 3 cuts:**
+     - An `AppServices` port (`commons/service`) holds the app-wide stores screens read:
+       favorites, browser history and favicons, napplet and signer permissions, Tor
+       settings. It is installed as `LocalAppServices`; `AccountViewModelHost` gained the
+       Tor relay evaluation and the NIP-42 auth state.
+     - `AppPlatform` gained the camera QR scanner, an `AppLauncher` (favorite apps and web
+       links) and the Concord/napplet/manifest/favicon image models.
+     - The QR drawer is shared. Encoding sits behind `encodeQrMatrix`: zxing core on
+       JVM/Android, nothing yet on iOS. `KeepScreenBrightAndAwake` is expect/actual.
+     - `uriToRoute` left `MainActivity`. `ReactionsRow` and `LoadCityName` are imported
+       through the note-platform shims. Settings rows left `AppSettingsScreen`.
+       `formatGrouped` replaced `NumberFormat`.
+   - **Wave 3 moved:** 15 screens, 47 files. That covers the browser, favorite apps,
+     connected apps, bottom-bar settings, public chats, relay info, relay-group browse, the
+     Buzz boards and invite, Concord home, backup conflicts, show-QR and software-app
+     detail. `AppBottomBar` moved with them.
+   - **Main-thread checker deleted:** it was a debug-only Android assertion. Once the cache
+     and feeds were shared, it could only fire through a host hook that is a no-op
+     everywhere else.
+   - **Wave 4 cuts:**
+     - `@SuppressLint` became `@Suppress` app-wide.
+     - `formatHistoryReachDate` is expect/actual.
+     - quartz's `ConcurrentSet`/`ConcurrentMap` replaced `java.util.concurrent` in the Buzz
+       view models.
+     - Settings painter icons are `DrawableResource`s.
+     - Share buttons use `rememberTextSharer`.
+     - `AppPlatform.isCastingAvailable` and `supportsEmbeddedAppTabs` replace
+       `BuildConfig` and an API-level check.
+     - More of the synchronous-tier strings now have Compose copies.
+   - **Wave 4 moved:** 28 screens, 66 files: hashtag, relay and geohash feeds; people lists
+     and follow packs; the hidden/blocked/muted/spam settings; the Cordn hub, key-package,
+     link and coordinator screens; relay auth, privacy, home tabs, security filters, profile
+     UI, drawer and video-player settings; Cashu wallet, NWC and CLINK setup; the Concord
+     channel list and invite links; the attestation screen and the redirect loader.
+   - **Wave 5 cuts:**
+     - `PlatformBackHandler` wraps AndroidX's `BackHandler` on Android and Compose
+       Multiplatform's `ui-backhandler` on desktop and iOS.
+     - `rememberLongNotice` joins `rememberShortNotice`.
+     - The wallet screens use `formatGrouped` and the shared clipboard extensions.
+     - A shared `formatMonthDayTime` builds its label from `DateSkeletonFormatter` and the
+       time-of-day formatter.
+     - `LocalCacheHost.usageCounter` feeds the resource-usage ledger.
+     - The flavour-specific legal settings section is `AppPlatform.legalSettingsCategory`.
+   - **Wave 5 moved:** 11 screens, 23 files: the wallet detail, send, receive and
+     transaction screens; on-chain transactions; the Buzz canvas, agent console and DM
+     list; badge awarding; old bookmarks; and the settings index.
+   - **Wave 6 cuts:**
+     - The gallery picker is shared. `SelectedMedia` holds an `expect abstract class
+       MediaUri`, which is `actual typealias MediaUri = android.net.Uri` on Android, so the
+       upload code reading `media.uri` is unchanged. The picker launchers are
+       expect/actual; desktop and iOS report a cancel for now.
+     - Other expect/actuals: `JavaSerializable`, `imageContentReceiver` (image paste) and
+       `SetDialogToEdgeToEdge`.
+     - The editor's URL highlighting uses quartz's `UrlDetector`.
+     - `MediaMimeTypes` moved to commons.
+   - **Wave 6 moved:** the NIP-46 signer screen. The other cuts clear blockers that sit
+     behind the upload stack.
+   - **Upload port (2026-09-29):**
+     - The upload model is in `commons.service.uploads`: `UploadOrchestrator`,
+       `MultiOrchestrator`, `UploadingState`, `CompressorQuality`, `MediaCompressorResult`
+       and the `MediaUploader` port.
+     - Errors are an `UploadError` enum. commonsUI maps it to a string (`errorResource`).
+     - The Android pipeline (compression, metadata stripping, encryption, the
+       NIP-95/NIP-96/Blossom uploaders) stays in the app as `AndroidMediaUploader`. It is
+       reached through `AccountViewModelHost.mediaUploader`.
+     - Composer view models take a `MediaUploader` instead of a `Context`.
+     - Five view models had their own copy of strip, compress and upload for a single
+       image. They now call the shared `uploadToDefaultServer`.
+     - Moved: the profile editor, the emoji pack screen and the emoji pack metadata screen
+       (7 files).
+   - **Next:** most composer screens still exit through `ShowImageUploadItem` (the upload
+     preview, which uses Android media APIs to show a thumbnail) and `SelectFromFiles`.
+     After those comes the per-composer state: `ShortNotePostViewModel`, `PreviewState`
+     and the location pickers. The video player stack (media3) holds about 22 screens.
+     Smaller exits remain: the Android-only `AccountViewModel` actions,
+     `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`, `UpdateZapAmountDialog`
+     (biometrics), the `java.time` pickers and the language list.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.

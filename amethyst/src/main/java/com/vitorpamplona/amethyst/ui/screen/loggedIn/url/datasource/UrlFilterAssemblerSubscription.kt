@@ -20,14 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.url.UrlQueryState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
-@SuppressLint("StateFlowValueCalledInComposition")
+@Suppress("StateFlowValueCalledInComposition")
 @Composable
 fun UrlFilterAssemblerSubscription(
     url: String,

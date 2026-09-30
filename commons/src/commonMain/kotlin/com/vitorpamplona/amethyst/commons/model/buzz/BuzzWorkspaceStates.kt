@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +47,10 @@ import kotlin.concurrent.Volatile
 class BuzzWorkspaceState {
     private val lock = KmpLock()
 
-    /** The newest canvas (kind 40100) note for this channel, or null when none seen. */
+    /**
+     * The live canvas (kind 40100) note for this channel, or null when none seen — picked the way
+     * the relay reads its head: `created_at DESC, id ASC` (see [CanvasEvent.isNewerHead]).
+     */
     @Volatile
     var canvasNote: Note? = null
         private set
@@ -58,7 +62,10 @@ class BuzzWorkspaceState {
 
     fun updateCanvas(note: Note) =
         lock.withLock {
-            if ((note.createdAt() ?: 0L) > (canvasNote?.createdAt() ?: 0L)) {
+            val current = canvasNote
+            // A same-second tie goes to the smallest id, not the last arrival, so every client
+            // (and the relay's own CAS check) agrees on which revision is the head.
+            if (CanvasEvent.isNewerHead(note.createdAt() ?: 0L, note.idHex, current?.createdAt(), current?.idHex)) {
                 canvasNote = note
                 canvasVersion.value = canvasVersion.value + 1
             }

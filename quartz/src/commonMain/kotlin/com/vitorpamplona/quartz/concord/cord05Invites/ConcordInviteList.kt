@@ -33,6 +33,7 @@ import kotlinx.serialization.descriptors.elementNames
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -86,12 +87,16 @@ class ConcordInviteListTombstone(
  * a newer schema. They are carried verbatim rather than dropped (re-encoding without them would
  * delete somebody's `signer_sk`) and rather than failing the whole read (which would refuse every
  * future mint and revoke for this account until someone else repaired the list).
+ *
+ * [opaqueTombstones] is the same for tombstones: one that does not type-check is residue we carry
+ * verbatim, never drop — dropping a retirement is how a stale device resurrects a revoked link.
  */
 class ConcordInviteListDocument(
     val entries: List<ConcordInviteListEntry> = emptyList(),
     val tombstones: List<ConcordInviteListTombstone> = emptyList(),
     val residue: JsonObject = NoExtras,
     val opaqueEntries: List<JsonObject> = emptyList(),
+    val opaqueTombstones: List<JsonElement> = emptyList(),
 ) {
     companion object {
         val EMPTY = ConcordInviteListDocument()
@@ -201,14 +206,16 @@ object ConcordInviteList {
                     }
                 }
 
+            val opaqueTombstones = mutableListOf<JsonElement>()
             val tombstones =
                 (root["tombstones"]?.jsonArray ?: JsonArray(emptyList())).mapNotNull { element ->
                     try {
                         val it = ConcordJson.instance.decodeFromJsonElement(WireTombstoneSerializer, element.jsonObject)
                         ConcordInviteListTombstone(it.token, it.communityId, it.extras)
                     } catch (_: Exception) {
-                        // A tombstone we cannot read must not silently un-retire its link, but we
-                        // have no token to key it by, so it can only ride along as document residue.
+                        // A tombstone we cannot type must not silently un-retire its link: carry it
+                        // verbatim as residue (and still honor its token in the merge, if it has one).
+                        opaqueTombstones.add(element)
                         null
                     }
                 }
@@ -218,6 +225,7 @@ object ConcordInviteList {
                 tombstones = tombstones,
                 residue = JsonObject(root - "entries" - "tombstones"),
                 opaqueEntries = opaque,
+                opaqueTombstones = opaqueTombstones,
             )
         } catch (_: Exception) {
             null
@@ -238,30 +246,43 @@ object ConcordInviteList {
                     ),
                 ).jsonObject
 
-        // Entries we could not type ride back out untouched. Dropping them here is the data loss
-        // this whole class exists to prevent — they are somebody's link signer too.
-        if (doc.opaqueEntries.isEmpty()) return ConcordJson.instance.encodeToString(JsonObject.serializer(), wire)
-        val entries = JsonArray((wire["entries"]?.jsonArray ?: JsonArray(emptyList())) + doc.opaqueEntries)
-        return ConcordJson.instance.encodeToString(JsonObject.serializer(), JsonObject(wire + ("entries" to entries)))
+        // Entries and tombstones we could not type ride back out untouched. Dropping them here is
+        // the data loss this whole class exists to prevent — a link signer, or a link's retirement.
+        if (doc.opaqueEntries.isEmpty() && doc.opaqueTombstones.isEmpty()) return ConcordJson.instance.encodeToString(JsonObject.serializer(), wire)
+        var out = wire
+        if (doc.opaqueEntries.isNotEmpty()) {
+            out = JsonObject(out + ("entries" to JsonArray((out["entries"]?.jsonArray ?: JsonArray(emptyList())) + doc.opaqueEntries)))
+        }
+        if (doc.opaqueTombstones.isNotEmpty()) {
+            out = JsonObject(out + ("tombstones" to JsonArray((out["tombstones"]?.jsonArray ?: JsonArray(emptyList())) + doc.opaqueTombstones)))
+        }
+        return ConcordJson.instance.encodeToString(JsonObject.serializer(), out)
     }
 
+    /** The `token` an untyped tombstone still names, if it names one as a string. */
+    private fun opaqueTombstoneToken(element: JsonElement): String? = ((element as? JsonObject)?.get("token") as? JsonPrimitive)?.takeIf { it.isString }?.content
+
     /**
-     * Merges [patch] onto [base], keyed by `token` — the spec's own merge key. A token present in
-     * either side's tombstones is dropped from the result and kept tombstoned, so a retired link
-     * cannot be resurrected by a device that still has it cached. [patch] wins field-by-field on a
-     * token both sides carry, which is what makes "read remote, apply my change, publish" converge.
+     * Merges [patch] onto [base], keyed by `token` — the spec's own merge key (CORD-05 §4). An entry
+     * is **immutable once minted**, so the first copy of a token wins ([base], the published list,
+     * before [patch]) and a later copy can never rewrite its `signer_sk` or url; tombstones union
+     * (first wins likewise), and a tombstone always beats an entry — terminally, so a retired link
+     * cannot be resurrected by a device that still has it cached. Mirrors the reference client's
+     * `mergeInviteLists`. A tombstone we could not type still retires the token it names.
      */
     fun merge(
         base: ConcordInviteListDocument,
         patch: ConcordInviteListDocument,
     ): ConcordInviteListDocument {
         val tombstones = LinkedHashMap<String, ConcordInviteListTombstone>()
-        for (t in base.tombstones + patch.tombstones) tombstones[t.token] = t
+        for (t in base.tombstones + patch.tombstones) tombstones.getOrPut(t.token) { t }
+        val opaqueTombstones = (base.opaqueTombstones + patch.opaqueTombstones).distinct()
+        val retired = tombstones.keys + opaqueTombstones.mapNotNull { opaqueTombstoneToken(it) }
 
         val entries = LinkedHashMap<String, ConcordInviteListEntry>()
         for (e in base.entries + patch.entries) {
-            if (e.token in tombstones) continue
-            entries[e.token] = e
+            if (e.token in retired) continue
+            entries.getOrPut(e.token) { e }
         }
         return ConcordInviteListDocument(
             entries = entries.values.toList(),
@@ -270,6 +291,7 @@ object ConcordInviteList {
             // Untyped entries survive the merge for the same reason they survive a decode: we cannot
             // read them, so we are in no position to decide they are disposable.
             opaqueEntries = (base.opaqueEntries + patch.opaqueEntries).distinct(),
+            opaqueTombstones = opaqueTombstones,
         )
     }
 }
