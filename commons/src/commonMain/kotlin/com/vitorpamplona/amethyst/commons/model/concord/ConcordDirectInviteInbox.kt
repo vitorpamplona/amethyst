@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
@@ -389,6 +391,42 @@ class ConcordDirectInviteInbox(
                 opened.invite.rootEpoch > held.rootEpoch &&
                 heldState.authority.isStaff(opened.sender) &&
                 !heldState.authority.isBanned(opened.sender)
+
+        /**
+         * The List entry a readmission writes: [fresh]'s base (the new root, epoch, Control Plane key,
+         * relays, name and join time) on top of everything [held] knew. Kept from [held]: every root
+         * it held plus the one it is leaving (pre-ban history), its `seed` and entry extras such as
+         * `channel_cuts` (so a cut key never comes back), and its private channel keys, each moved to
+         * the key [fresh] delivers through [ConcordChannelKeyring.withChannelKey], which keeps the one
+         * it replaces in `priors`. Built fresh, a readmission lost all of that.
+         *
+         * Apply it to the entry the List holds inside the write, never to a snapshot from before
+         * the join's suspensions.
+         */
+        fun readmittedEntry(
+            held: ConcordCommunityListEntry,
+            fresh: ConcordCommunityListEntry,
+        ): ConcordCommunityListEntry {
+            val base =
+                ConcordCommunityListEntry(
+                    id = held.id,
+                    owner = held.owner,
+                    ownerSalt = held.ownerSalt,
+                    root = fresh.root,
+                    rootEpoch = fresh.rootEpoch,
+                    controlPk = fresh.controlPk,
+                    // A staff write key belongs to its epoch; the new one arrives with a Grant.
+                    controlRoot = null,
+                    heldRoots = (held.heldRoots + HeldRoot(held.rootEpoch, held.root, held.controlPk, held.controlRoot)).distinctBy { it.epoch to it.key.lowercase() },
+                    privateChannels = held.privateChannels,
+                    relays = fresh.relays.ifEmpty { held.relays },
+                    name = fresh.name.ifBlank { held.name },
+                    addedAt = fresh.addedAt,
+                    inviteRef = fresh.inviteRef ?: held.inviteRef,
+                    residue = held.residue,
+                )
+            return fresh.privateChannels.fold(base) { entry, key -> ConcordChannelKeyring.withChannelKey(entry, key) ?: entry }
+        }
 
         /**
          * What a UI shows out of [pending], given the communities this account already holds

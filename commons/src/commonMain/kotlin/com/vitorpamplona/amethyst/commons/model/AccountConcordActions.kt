@@ -195,11 +195,19 @@ class AccountConcordActions(
         inviteCreator: HexKey? = null,
         inviteLabel: String? = null,
         fetchedWraps: List<Event> = emptyList(),
+        readmit: Boolean = false,
     ): Boolean {
         // False when the List could not take the membership (not loaded, or every held fragment is
         // full while others are missing, CORD-02 §8). Callers must say so: the community would
         // otherwise look joined now and be gone after a restart.
-        if (!persistConcordEntry(entry)) return false
+        // A readmission merges into the entry the List holds at write time, keeping what it knew.
+        val persisted =
+            if (readmit) {
+                updateConcordEntry(entry.id) { cur -> ConcordDirectInviteInbox.readmittedEntry(cur, entry) } || persistConcordEntry(entry)
+            } else {
+                persistConcordEntry(entry)
+            }
+        if (!persisted) return false
         // The session is built asynchronously from the Community List flow. Every wrap that reaches
         // the cache before it exists is kept as an unclaimed note, and the live subscription's copy
         // of the same wrap is then deduplicated away, so the community showed "No channels yet"
@@ -917,16 +925,12 @@ class AccountConcordActions(
                 privateChannels = ConcordActions.privateChannelKeysOf(bundle),
                 relays = bundle.relays,
                 name = bundle.name,
-                // A readmission keeps the roots it held, so the history from before the ban stays readable.
-                heldRoots =
-                    readmitting
-                        ?.let { (it.heldRoots + HeldRoot(it.rootEpoch, it.root, it.controlPk, it.controlRoot)).distinctBy { r -> r.epoch to r.key.lowercase() } }
-                        .orEmpty(),
                 addedAt = TimeUtils.nowMillis(),
                 // Anchor for stranded recovery (null for a Direct Invite, which has no link).
                 inviteRef = inviteRef,
             )
-        if (!joinConcordCommunity(entry, creator, label, planeWraps)) return ConcordInviteResult.NotSaved
+        // A readmission keeps the held entry's roots, cuts and keys (ConcordDirectInviteInbox.readmittedEntry).
+        if (!joinConcordCommunity(entry, creator, label, planeWraps, readmit = readmitting != null)) return ConcordInviteResult.NotSaved
         return ConcordInviteResult.Joined(bundle.communityId)
     }
 

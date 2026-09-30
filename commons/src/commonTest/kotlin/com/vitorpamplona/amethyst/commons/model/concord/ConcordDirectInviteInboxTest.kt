@@ -25,8 +25,10 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteChannel
@@ -510,5 +512,66 @@ class ConcordDirectInviteInboxTest {
             val forged = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(stranger, me.pubKey, inviteFor(c, root = "66".repeat(32), epoch = c.rootEpoch + 50)), me))
             assertNotEquals(DirectInviteAcceptPlan.Readmit, ConcordDirectInviteInbox.acceptPlan(forged, held, banned, me.pubKey))
             assertTrue(ConcordDirectInviteInbox.visible(listOf(forged), listOf(held), heldStateOf = { banned }, me = me.pubKey).isEmpty())
+        }
+
+    @Test
+    fun aReadmissionKeepsWhatTheHeldEntryKnew() =
+        runTest {
+            val c = community()
+            val chan = "a1".repeat(32)
+            val gone = "c3".repeat(32)
+            // Held while banned: a private channel key at epoch 1 with an older prior, a cut on another
+            // channel, and a root from before an earlier Refounding.
+            val withKey = assertNotNull(ConcordChannelKeyring.withChannelKey(heldEntryOf(c), PrivateChannelKey(chan, "10".repeat(32), 0, "mods")))
+            val rotated = assertNotNull(ConcordChannelKeyring.withRotatedKey(withKey, chan, "11".repeat(32), 1, retiredAt = 5))
+            val held = ConcordChannelKeyring.withCut(rotated, gone, 3)
+            val heldWithRoots =
+                ConcordCommunityListEntry(
+                    id = held.id,
+                    owner = held.owner,
+                    ownerSalt = held.ownerSalt,
+                    root = held.root,
+                    rootEpoch = held.rootEpoch,
+                    controlPk = held.controlPk,
+                    heldRoots = listOf(HeldRoot(held.rootEpoch - 1, "55".repeat(32), null, null)),
+                    privateChannels = held.privateChannels,
+                    relays = held.relays,
+                    name = held.name,
+                    addedAt = 1,
+                    inviteRef = held.inviteRef,
+                    residue = held.residue,
+                )
+
+            // The owner's readmission at the next epoch re-delivers the channel at epoch 2.
+            val fresh =
+                ConcordCommunityListEntry(
+                    id = c.communityIdHex,
+                    owner = c.ownerPubKey,
+                    ownerSalt = c.ownerSalt.toHexKey(),
+                    root = "77".repeat(32),
+                    rootEpoch = held.rootEpoch + 1,
+                    controlPk = "88".repeat(32),
+                    privateChannels = listOf(PrivateChannelKey(chan, "12".repeat(32), 2, "mods")),
+                    relays = listOf("wss://new.example"),
+                    name = "Renamed",
+                    addedAt = 99,
+                )
+            val merged = ConcordDirectInviteInbox.readmittedEntry(heldWithRoots, fresh)
+
+            // The new base.
+            assertEquals("77".repeat(32), merged.root)
+            assertEquals(held.rootEpoch + 1, merged.rootEpoch)
+            assertEquals("88".repeat(32), merged.controlPk)
+            assertEquals(listOf("wss://new.example"), merged.relays)
+            assertEquals(99, merged.addedAt)
+            // Every root it held, the one it is leaving included, so pre-ban history stays readable.
+            assertEquals(setOf(held.rootEpoch - 1, held.rootEpoch), merged.heldRoots.map { it.epoch }.toSet())
+            // The channel moved to the delivered key, and both older keys still read their eras.
+            assertEquals(2, ConcordChannelKeyring.heldKey(merged, chan)?.epoch)
+            assertEquals(listOf(1L, 0L), ConcordChannelKeyring.historicalKeys(merged, chan).map { it.epoch })
+            // The cut survives: a stale key for that channel can never come back.
+            assertEquals(3L, ConcordChannelKeyring.cutsOf(merged)[gone])
+            // The anchor for stranded recovery is kept when the invite carries none.
+            assertEquals("anchor", merged.inviteRef)
         }
 }
