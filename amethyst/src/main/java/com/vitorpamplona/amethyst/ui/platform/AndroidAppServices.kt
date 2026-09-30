@@ -29,7 +29,9 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 
 /**
@@ -55,6 +57,8 @@ object AndroidAppServices : AppServices {
     override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
 
     override val deviceLocation: DeviceLocation get() = Amethyst.instance.locationManager
+
+    override fun createAltTextSuggester(): AltTextSuggester = MLKitImageLabelService(Amethyst.instance.appContext)
 }
 
 /** [BlossomServerFinder] over the app's BUD-10 resolver, read lazily (main process only). */

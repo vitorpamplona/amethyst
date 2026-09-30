@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
@@ -104,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
@@ -133,7 +132,6 @@ fun ImageVideoDescription(
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
     val firstImageUri =
         remember(uris) {
             uris
@@ -142,12 +140,13 @@ fun ImageVideoDescription(
                 ?.media
                 ?.uri
         }
-    val labelService = remember { MLKitImageLabelService(context.applicationContext) }
+    val appServices = LocalAppServices.current
+    val labelService = remember { appServices.createAltTextSuggester() }
     var isLabeling by remember { mutableStateOf(false) }
     var aiSuggested by remember { mutableStateOf(false) }
 
     DisposableEffect(labelService) {
-        onDispose { labelService.close() }
+        onDispose { labelService?.close() }
     }
 
     LaunchedEffect(firstImageUri) {
@@ -155,7 +154,7 @@ fun ImageVideoDescription(
         isLabeling = true
         val suggestion =
             try {
-                labelService.suggestAltText(firstImageUri)
+                labelService?.suggestAltText(firstImageUri)
             } finally {
                 isLabeling = false
             }

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 
@@ -60,4 +61,7 @@ interface AppServices {
 
     /** The device's position as geohashes. */
     val deviceLocation: DeviceLocation get() = DeviceLocation.None
+
+    /** A new on-device alt-text suggester for image uploads, or null where the platform has none. */
+    fun createAltTextSuggester(): AltTextSuggester? = null
 }

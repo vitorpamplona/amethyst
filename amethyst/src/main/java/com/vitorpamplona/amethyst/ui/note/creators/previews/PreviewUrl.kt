@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,10 +50,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.platform.VideoView
+import com.vitorpamplona.amethyst.commons.ui.note.platform.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 
 @Composable
 fun PreviewUrl(
@@ -202,16 +200,7 @@ private fun MyLoadUrlPreviewDirect(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val urlPreviewState by
-        produceState(
-            initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
-            key1 = url,
-        ) {
-            if (value == UrlPreviewState.Loading) {
-                accountViewModel.urlPreview(url) { value = it }
-            }
-        }
+    val urlPreviewState = rememberUrlPreviewState(url, accountViewModel)
 
     CrossfadeIfEnabled(
         targetState = urlPreviewState,
@@ -269,16 +258,7 @@ private fun MyLoadUrlPreviewDirectFillWidth(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val urlPreviewState by
-        produceState(
-            initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
-            key1 = url,
-        ) {
-            if (value == UrlPreviewState.Loading) {
-                accountViewModel.urlPreview(url) { value = it }
-            }
-        }
+    val urlPreviewState = rememberUrlPreviewState(url, accountViewModel)
 
     CrossfadeIfEnabled(
         targetState = urlPreviewState,

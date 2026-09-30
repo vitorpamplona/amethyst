@@ -18,19 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.ai
+package com.vitorpamplona.amethyst.commons.service.ai
 
-import android.content.Context
-import android.net.Uri
-import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 
-@Suppress("UNUSED_PARAMETER")
-class MLKitImageLabelService(
-    context: Context,
-) : AltTextSuggester {
-    suspend fun labelImage(uri: Uri): List<Pair<String, Float>> = emptyList()
+/** Proposes alt text for an image the user is about to upload, using an on-device model. */
+interface AltTextSuggester {
+    /** A one-line description of the image at [uri], or null when none could be produced. */
+    suspend fun suggestAltText(uri: MediaUri): String?
 
-    override suspend fun suggestAltText(uri: Uri): String? = null
-
-    override fun close() {}
+    /** Releases the model. */
+    fun close()
 }

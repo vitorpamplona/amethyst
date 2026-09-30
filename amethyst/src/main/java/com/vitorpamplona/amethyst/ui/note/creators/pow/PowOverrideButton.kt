@@ -53,10 +53,10 @@ import com.vitorpamplona.amethyst.commons.resources.pow_option_off
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.pow.deviceHashesPerSecond
+import com.vitorpamplona.amethyst.commons.ui.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
-import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 
 val POW_PRESETS = listOf(16, 20, 24, 28)
 

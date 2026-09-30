@@ -18,19 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.ai
+package com.vitorpamplona.amethyst.commons.util
 
-import android.content.Context
-import android.net.Uri
-import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import platform.Foundation.NSProcessInfo
 
-@Suppress("UNUSED_PARAMETER")
-class MLKitImageLabelService(
-    context: Context,
-) : AltTextSuggester {
-    suspend fun labelImage(uri: Uri): List<Pair<String, Float>> = emptyList()
-
-    override suspend fun suggestAltText(uri: Uri): String? = null
-
-    override fun close() {}
-}
+actual fun availableProcessors(): Int = NSProcessInfo.processInfo.activeProcessorCount.toInt()
