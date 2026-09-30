@@ -47,6 +47,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -72,12 +73,13 @@ class ConcordDirectInviteInboxTest {
         expiresAt: Long? = null,
         channels: List<InviteChannel> = emptyList(),
         root: String = c.communityRoot.toHexKey(),
+        epoch: Long = c.rootEpoch,
     ) = CommunityInvite(
         communityId = c.communityIdHex,
         owner = c.ownerPubKey,
         ownerSalt = c.ownerSalt.toHexKey(),
         communityRoot = root,
-        rootEpoch = c.rootEpoch,
+        rootEpoch = epoch,
         controlPk = c.controlPkHex,
         channels = channels,
         relays = listOf("wss://relay.example"),
@@ -472,5 +474,34 @@ class ConcordDirectInviteInboxTest {
 
             val catchUp = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(sender, me.pubKey, inviteFor(c, channels = listOf(InviteChannel(vip, "db".repeat(32), 0, "vip")))), me))
             assertEquals(DirectInviteAcceptPlan.Banned, ConcordDirectInviteInbox.acceptPlan(catchUp, heldEntryOf(c), banned, me.pubKey))
+        }
+
+    @Test
+    fun aBannedMemberReInvitedAtANewerEpochIsOfferedAReadmission() =
+        runTest {
+            val c = community()
+            val held = heldEntryOf(c)
+            val editions = ConcordActions.controlEditions(c.genesisWraps, c.controlPlane).toMutableList()
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, c.controlPlane, c.communityId, me.pubKey, editions, createdAt = 2L, owner = c.ownerPubKey)), c.controlPlane)
+            val banned = ConcordCommunityState.fold(editions, c.communityId, c.ownerPubKey)
+
+            // The ban Refounded; the owner unbanned us and re-invited us at the new epoch.
+            val reInvite = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(owner, me.pubKey, inviteFor(c, root = "77".repeat(32), epoch = c.rootEpoch + 1)), me))
+            assertEquals(DirectInviteAcceptPlan.Readmit, ConcordDirectInviteInbox.acceptPlan(reInvite, held, banned, me.pubKey))
+            val shown = ConcordDirectInviteInbox.visible(listOf(reInvite), listOf(held), heldStateOf = { banned }, me = me.pubKey)
+            assertEquals(1, shown.size)
+            assertFalse(shown.single().catchUp)
+
+            // Still banned at the SAME epoch: nothing to readmit into.
+            val sameEpoch = assertNotNull(ConcordActions.openDirectInvite(ConcordActions.buildDirectInvite(owner, me.pubKey, inviteFor(c)), me))
+            assertNotEquals(DirectInviteAcceptPlan.Readmit, ConcordDirectInviteInbox.acceptPlan(sameEpoch, held, banned, me.pubKey))
+            assertTrue(ConcordDirectInviteInbox.visible(listOf(sameEpoch), listOf(held), heldStateOf = { banned }, me = me.pubKey).isEmpty())
+
+            // Not banned: a newer-epoch bundle still never moves a held base (CORD-06 §2).
+            assertEquals(DirectInviteAcceptPlan.NothingNew, ConcordDirectInviteInbox.acceptPlan(reInvite, held, stateOf(c), me.pubKey))
+            assertTrue(ConcordDirectInviteInbox.visible(listOf(reInvite), listOf(held), heldStateOf = { stateOf(c) }, me = me.pubKey).isEmpty())
+
+            // Dissolved: death wins.
+            assertNotEquals(DirectInviteAcceptPlan.Readmit, ConcordDirectInviteInbox.acceptPlan(reInvite, held, banned.withDissolved(true), me.pubKey))
         }
 }

@@ -788,6 +788,7 @@ class AccountConcordActions(
         inviteRef: String?,
         inviteCreator: HexKey?,
         inviteLabel: String?,
+        readmitting: ConcordCommunityListEntry? = null,
     ): ConcordInviteResult {
         val relays = servedBy
 
@@ -804,7 +805,7 @@ class AccountConcordActions(
             account.concordChannelList.liveCommunities.value
                 .firstOrNull { it.id == bundle.communityId }
         var rejoined: ConcordCommunityListEntry? = null
-        if (held != null) {
+        if (held != null && readmitting == null) {
             val heldState =
                 account.concordSessions
                     .sessionFor(held.id)
@@ -879,6 +880,11 @@ class AccountConcordActions(
                 privateChannels = ConcordActions.privateChannelKeysOf(bundle),
                 relays = bundle.relays,
                 name = bundle.name,
+                // A readmission keeps the roots it held, so the history from before the ban stays readable.
+                heldRoots =
+                    readmitting
+                        ?.let { (it.heldRoots + HeldRoot(it.rootEpoch, it.root, it.controlPk, it.controlRoot)).distinctBy { r -> r.epoch to r.key.lowercase() } }
+                        .orEmpty(),
                 addedAt = TimeUtils.nowMillis(),
                 // Anchor for stranded recovery (null for a Direct Invite, which has no link).
                 inviteRef = inviteRef,
@@ -927,6 +933,7 @@ class AccountConcordActions(
                         ?.state
                         ?.value
                 },
+                me = account.signer.pubKey,
             )
         }.stateIn(account.scope, SharingStarted.Eagerly, emptyList())
 
@@ -1120,7 +1127,7 @@ class AccountConcordActions(
                     val ok = writeConcordList { list -> list.update(plan.entry.id) { cur -> ConcordInviteVend.adoptCatchUp(cur, bundle, plan.channelIds) } }
                     if (ok) ConcordInviteResult.Joined(bundle.communityId) else ConcordInviteResult.NotReachable
                 }
-                DirectInviteAcceptPlan.Join ->
+                DirectInviteAcceptPlan.Join, DirectInviteAcceptPlan.Readmit ->
                     joinValidatedConcordInvite(
                         bundle = bundle,
                         servedBy = emptySet(),
@@ -1128,6 +1135,7 @@ class AccountConcordActions(
                         // Attributed to the seal-verified sender (Armada), never the bundle's claim.
                         inviteCreator = opened.sender,
                         inviteLabel = bundle.label,
+                        readmitting = held?.takeIf { plan == DirectInviteAcceptPlan.Readmit },
                     )
             }
         if (result is ConcordInviteResult.Joined) directInviteInbox.resolve(opened.wrapId)

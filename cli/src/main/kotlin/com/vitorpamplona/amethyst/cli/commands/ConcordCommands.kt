@@ -765,6 +765,19 @@ object ConcordCommands {
                 }
                 // The Join is attributed to the seal-verified sender, never the bundle's claim.
                 DirectInviteAcceptPlan.Join -> joinBundle(ctx, dataDir, opened.invite, emptySet(), inviteRef = "", inviteCreator = opened.sender, inviteLabel = opened.invite.label)
+                // Readmitted at a newer epoch after a ban: the join re-checks the ban there, and the
+                // roots we already held stay banked so the history from before the ban reads.
+                DirectInviteAcceptPlan.Readmit -> {
+                    val code = joinBundle(ctx, dataDir, opened.invite, emptySet(), inviteRef = "", inviteCreator = opened.sender, inviteLabel = opened.invite.label)
+                    val old = heldSc
+                    if (code == 0 && old != null) {
+                        store.find(old.communityId)?.let { now ->
+                            val banked = (now.heldRoots + old.heldRoots + StoredHeldRoot(old.rootEpoch, old.root, old.controlPk, old.controlRoot)).distinctBy { it.epoch to it.root.lowercase() }
+                            store.upsert(now.copy(heldRoots = banked))
+                        }
+                    }
+                    code
+                }
             }
         }
     }

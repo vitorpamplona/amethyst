@@ -91,6 +91,12 @@ sealed interface DirectInviteAcceptPlan {
     data object Join : DirectInviteAcceptPlan
 
     /**
+     * A held community whose fold still bans us, re-invited at a newer epoch (see [ConcordDirectInviteInbox.isReadmission]):
+     * run the shared join path over the held entry, which re-checks the ban at the new epoch.
+     */
+    data object Readmit : DirectInviteAcceptPlan
+
+    /**
      * A held community: store [entry] — the held one plus the newly granted Private Channel keys
      * ([channelIds]). A writer re-applies [channelIds] to the entry it reads inside the List write
      * ([ConcordInviteVend.adoptCatchUp] with `only`), never [entry] itself, which is a snapshot.
@@ -343,6 +349,7 @@ class ConcordDirectInviteInbox(
         ): DirectInviteAcceptPlan {
             if (opened.isExpired(nowMs)) return DirectInviteAcceptPlan.Expired
             if (held == null) return DirectInviteAcceptPlan.Join
+            if (isReadmission(held, heldState, opened.invite, me)) return DirectInviteAcceptPlan.Readmit
             if (ConcordInviteVend.catchUpChannelIds(held, opened.invite).isEmpty()) return DirectInviteAcceptPlan.NothingNew
             if (heldState == null) return DirectInviteAcceptPlan.RosterNotLoaded
             // Death wins every race (CORD-02 §9): a dissolved community takes no new keys.
@@ -353,6 +360,27 @@ class ConcordDirectInviteInbox(
             val adopted = ConcordInviteVend.adoptCatchUp(held, opened.invite, ids) ?: return DirectInviteAcceptPlan.NothingNew
             return DirectInviteAcceptPlan.CatchUp(adopted, ids)
         }
+
+        /**
+         * True when [invite] readmits a member [heldState] still bans: a ban in a Private community
+         * Refounds, so an owner who later unbans and re-invites us can only do it at a newer epoch.
+         * Armada drops a banned community from the list, so there its re-invite is a plain one; we
+         * keep the banned community (read-only), and without this the re-invite was hidden and
+         * could never be accepted. A banned member has no live membership a bundle could hijack
+         * (the reason a bundle may never move a held base, CORD-06 §2), and the join re-checks the
+         * ban against the NEW epoch's roster, failing closed.
+         */
+        fun isReadmission(
+            held: ConcordCommunityListEntry,
+            heldState: ConcordCommunityState?,
+            invite: CommunityInvite,
+            me: HexKey,
+        ): Boolean =
+            heldState != null &&
+                !heldState.dissolved &&
+                heldState.authority.isBanned(me) &&
+                invite.communityId.equals(held.id, ignoreCase = true) &&
+                invite.rootEpoch > held.rootEpoch
 
         /**
          * What a UI shows out of [pending], given the communities this account already holds
@@ -379,6 +407,7 @@ class ConcordDirectInviteInbox(
             isFollowed: (HexKey) -> Boolean = { false },
             isHidden: (HexKey) -> Boolean = { false },
             heldStateOf: (communityId: HexKey) -> ConcordCommunityState? = { null },
+            me: HexKey? = null,
         ): List<ConcordDirectInviteView> {
             val nowSecs = nowMs / 1000
             val heldById = joined.associateBy { it.id.lowercase() }
@@ -395,15 +424,16 @@ class ConcordDirectInviteInbox(
                 // a catch-up from a non-staff sender, for channels the fold doesn't know as Private,
                 // or into a dissolved community is refused by [acceptPlan], so it is not offered.
                 val heldState = held?.let { heldStateOf(it.id) }
+                val readmit = held != null && me != null && isReadmission(held, heldState, opened.invite, me)
                 val newChannels =
                     when {
-                        held == null -> emptyList()
+                        held == null || readmit -> emptyList()
                         heldState == null -> ConcordInviteVend.catchUpChannelIds(held, opened.invite)
                         heldState.dissolved -> emptyList()
                         else -> ConcordInviteVend.admissibleCatchUpIds(held, opened.invite, heldState.authority, heldState.privateChannelIds, opened.sender)
                     }
-                if (held != null && newChannels.isEmpty()) continue
-                val catchUp = held != null
+                if (held != null && !readmit && newChannels.isEmpty()) continue
+                val catchUp = held != null && !readmit
                 val base = communityId + "|" + opened.sender.lowercase()
                 val key = if (catchUp) base + "|" + newChannels.sorted().joinToString(",") else base
                 val view = ConcordDirectInviteView(opened, catchUp, opened.isExpired(nowMs), newChannels.toList(), sentAt, isFollowed(opened.sender))
