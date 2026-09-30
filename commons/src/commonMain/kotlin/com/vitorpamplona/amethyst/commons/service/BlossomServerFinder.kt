@@ -18,20 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.service
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.navigation.compose.rememberNavController
+/**
+ * Resolves a BUD-10 `blossom:` URI to the URL of a server that holds the blob, probing the
+ * author's (and the viewer's) Blossom servers.
+ */
+interface BlossomServerFinder {
+    /** The server URL already resolved for [blossomUri], without probing. */
+    fun cachedServerUrl(blossomUri: String): String?
 
-@Composable
-fun rememberNav(): Nav {
-    val navController = rememberNavController()
-    val scope = rememberCoroutineScope()
-    val ime = rememberImeSettler()
+    /** Probes until a server answers for [blossomUri]; null when none does. */
+    suspend fun findServerUrl(blossomUri: String): String?
 
-    return remember(navController, scope, ime) {
-        Nav(navController, scope, ime)
+    /** Resolves nothing: front ends without a Blossom client yet. */
+    object None : BlossomServerFinder {
+        override fun cachedServerUrl(blossomUri: String): String? = null
+
+        override suspend fun findServerUrl(blossomUri: String): String? = null
     }
 }

@@ -80,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPa
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
@@ -103,7 +102,7 @@ fun NewProductScreen(
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: NewProductViewModel = viewModel()
     postViewModel.init(accountViewModel)

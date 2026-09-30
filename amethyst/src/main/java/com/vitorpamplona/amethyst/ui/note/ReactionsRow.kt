@@ -66,7 +66,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
@@ -77,7 +76,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -95,7 +93,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -124,7 +121,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
 import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
@@ -138,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReposts
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.boost
@@ -164,7 +161,6 @@ import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
 import com.vitorpamplona.amethyst.commons.resources.quote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
-import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
@@ -181,11 +177,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.commons.ui.note.OutlinedZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RenderBoostGallery
 import com.vitorpamplona.amethyst.commons.ui.note.RenderLikeGallery
 import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.commons.ui.note.RenderZapGallery
+import com.vitorpamplona.amethyst.commons.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.commons.ui.note.RepostIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ShareIcon
@@ -203,10 +201,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.Height24dpFilledModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpFilledModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
-import com.vitorpamplona.amethyst.commons.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowExpandButton
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightWithPadding
@@ -223,11 +218,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.commons.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenDuration
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenFloatSpec
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenIntOffsetSpec
-import com.vitorpamplona.amethyst.commons.ui.theme.fundraiserProgressColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
@@ -239,7 +232,6 @@ import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
@@ -268,7 +260,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import androidx.compose.material3.Icon as Material3Icon
@@ -520,57 +511,6 @@ fun LoadAndDisplayZapraiser(
             contentAlignment = CenterStart,
         ) {
             RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)
-        }
-    }
-}
-
-@Composable
-fun RenderZapRaiser(
-    baseNote: Note,
-    zapraiserAmount: Long,
-    details: Boolean,
-    accountViewModel: AccountViewModel,
-) {
-    val zapsState by observeNoteZaps(baseNote, accountViewModel)
-
-    var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
-
-    LaunchedEffect(key1 = zapsState) {
-        zapsState?.note?.let {
-            val newStatus = accountViewModel.calculateZapraiser(baseNote)
-            if (zapraiserStatus != newStatus) {
-                zapraiserStatus = newStatus
-            }
-        }
-    }
-
-    LinearProgressIndicator(
-        modifier = if (details) Height24dpFilledModifier else Height4dpFilledModifier,
-        color = MaterialTheme.colorScheme.fundraiserProgressColor,
-        progress = { zapraiserStatus.progress },
-        gapSize = 0.dp,
-        strokeCap = StrokeCap.Square,
-        drawStopIndicator = {},
-    )
-
-    if (details) {
-        Box(
-            contentAlignment = Center,
-            modifier = TinyBorders,
-        ) {
-            val totalPercentage by
-                remember(zapraiserStatus) {
-                    derivedStateOf { "${(zapraiserStatus.progress * 100).roundToInt()}%" }
-                }
-
-            Text(
-                text =
-                    stringRes(id = Res.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
-                modifier = NoSoTinyBorders,
-                // color = MaterialTheme.colorScheme.placeholderText,
-                fontSize = Font14SP,
-                maxLines = 1,
-            )
         }
     }
 }
@@ -1666,45 +1606,6 @@ fun ObserveZapIcon(
     }
 
     inner(wasZappedByLoggedInUser)
-}
-
-@Composable
-fun ObserveZapAmountText(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    inner: @Composable (String) -> Unit,
-) {
-    val zapsState by observeNoteZaps(baseNote, accountViewModel)
-
-    if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
-        zapsState?.note?.zapPayments?.forEach {
-            if (it.value == null) {
-                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
-            }
-        }
-
-        @Suppress("ProduceStateDoesNotAssignValue")
-        val zapAmountTxt by
-            produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
-                zapsState?.note?.let {
-                    val newZapAmount = accountViewModel.calculateZapAmount(it)
-                    if (value != newZapAmount) {
-                        value = newZapAmount
-                    }
-                }
-            }
-
-        inner(zapAmountTxt)
-    } else {
-        // Include the signed-in user's own pending onchain zaps so
-        // the counter reflects the optimistic value the gallery shows.
-        val ownPubKey = accountViewModel.account.userProfile().pubkeyHex
-        val note = zapsState?.note
-        val total =
-            (note?.zapsAmount ?: java.math.BigDecimal(0)) +
-                java.math.BigDecimal(note?.extraOwnPendingOnchainSats(ownPubKey) ?: 0L)
-        inner(showAmount(total))
-    }
 }
 
 @Composable

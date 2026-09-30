@@ -136,6 +136,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 @Stable
 open class ChannelNewMessageViewModel :
@@ -465,10 +467,9 @@ open class ChannelNewMessageViewModel :
         val mined =
             withContext(Dispatchers.Default) {
                 // Bitchat mines 8 bits by default; cap the effort so a slow device still sends.
-                val deadline = System.nanoTime() + 2_000_000_000L
-                val threads = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+                val started = TimeSource.Monotonic.markNow()
                 runCatching {
-                    PoWMiner.mine(template, pubKeyHex, 8, threads, isActive = { System.nanoTime() < deadline })
+                    PoWMiner.mine(template, pubKeyHex, 8, account.powMinerWorkers(), isActive = { started.elapsedNow() < 2.seconds })
                 }.getOrDefault(template)
             }
 
@@ -1051,7 +1052,7 @@ open class ChannelNewMessageViewModel :
     }
 
     override fun onCleared() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
     }
 
     fun updateZapPercentage(

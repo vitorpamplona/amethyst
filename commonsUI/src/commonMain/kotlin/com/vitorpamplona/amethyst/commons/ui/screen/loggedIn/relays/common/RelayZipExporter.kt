@@ -18,66 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common
 
-import android.content.Context
-import android.content.Intent
-import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
+import com.vitorpamplona.amethyst.commons.ui.components.FileSharer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
-import java.io.File
-import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
+/** Exports each non-empty relay section as `<section>.json` (an array of URLs) in one zip. */
 class RelayZipExporter(
-    val context: Context,
+    val sharer: FileSharer,
 ) {
     suspend fun export(collection: RelayListCollection) {
-        val zipFile = buildZipFile(collection)
-
-        val uri =
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.provider",
-                zipFile,
-            )
-
-        val sendIntent =
-            Intent().apply {
-                action = Intent.ACTION_SEND
-                type = "application/zip"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.export_relay_settings))
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-
-        val shareIntent =
-            Intent.createChooser(
-                sendIntent,
-                loadStringRes(Res.string.export_relay_settings),
-            )
-        context.startActivity(shareIntent)
+        sharer.shareTextFilesAsZip(
+            zipName = "relay_settings.zip",
+            files = buildFiles(collection),
+            title = loadStringRes(Res.string.export_relay_settings),
+        )
     }
 
-    fun buildZipFile(collection: RelayListCollection): File {
-        val zipFile = File(context.cacheDir, "relay_settings.zip")
-
-        ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
-            collection.sections().forEach { section ->
-                if (section.relays.isNotEmpty()) {
-                    val json = buildJsonArray(section.relays)
-                    zip.putNextEntry(ZipEntry("${section.fileName}.json"))
-                    zip.write(json.toByteArray())
-                    zip.closeEntry()
-                }
-            }
+    fun buildFiles(collection: RelayListCollection): List<Pair<String, String>> =
+        collection.sections().mapNotNull { section ->
+            if (section.relays.isEmpty()) null else "${section.fileName}.json" to buildJsonArray(section.relays)
         }
-
-        return zipFile
-    }
 
     private fun buildJsonArray(relays: List<BasicRelaySetupInfo>): String {
         val builder = StringBuilder()

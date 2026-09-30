@@ -125,7 +125,6 @@ import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.NewPostInvoiceRequest
@@ -148,7 +147,7 @@ fun NewGroupDMScreen(
     message: String? = null,
     attachment: String? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     NewGroupDMScreen(message, attachment?.ifBlank { null }?.toUri(), accountViewModel, nav)
 }
@@ -159,7 +158,7 @@ fun NewGroupDMScreen(
     message: String? = null,
     attachment: Uri? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: ChatNewMessageViewModel = viewModel()
     postViewModel.init(accountViewModel)

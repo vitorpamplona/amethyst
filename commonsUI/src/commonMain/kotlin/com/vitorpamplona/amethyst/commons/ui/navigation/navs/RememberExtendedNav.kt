@@ -18,20 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.navigation.compose.rememberNavController
 
+/** [nav], calling [onBeforeNavigate] first on every navigation (to close a sheet or dialog). */
 @Composable
-fun rememberNav(): Nav {
-    val navController = rememberNavController()
+fun rememberExtendedNav(
+    nav: INav,
+    onBeforeNavigate: () -> Unit,
+): INav {
     val scope = rememberCoroutineScope()
-    val ime = rememberImeSettler()
-
-    return remember(navController, scope, ime) {
-        Nav(navController, scope, ime)
+    return remember(nav, scope) {
+        ObservableNav(nav, scope, onBeforeNavigate)
     }
 }

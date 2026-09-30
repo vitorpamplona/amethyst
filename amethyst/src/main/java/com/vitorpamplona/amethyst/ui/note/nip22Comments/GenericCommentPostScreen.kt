@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
@@ -114,7 +115,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
@@ -144,7 +144,7 @@ fun ReplyCommentPostScreen(
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: CommentPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
@@ -184,7 +184,7 @@ fun ReplyCommentPostScreen(
 fun GenericCommentPostScreen(
     postViewModel: CommentPostViewModel,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
@@ -279,7 +279,7 @@ fun GenericCommentPostScreen(
 private fun GenericCommentPostBody(
     postViewModel: CommentPostViewModel,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val scrollState = rememberScrollState()
     val audienceLists = rememberAudienceLists(accountViewModel)

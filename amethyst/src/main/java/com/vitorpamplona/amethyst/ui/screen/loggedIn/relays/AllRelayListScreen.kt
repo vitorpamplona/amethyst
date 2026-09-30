@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
@@ -87,9 +86,14 @@ import com.vitorpamplona.amethyst.commons.resources.trusted_section_explainer
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberFileSharer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayExporter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayListCollection
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayZipExporter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -102,9 +106,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.BroadcastRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.renderBroadcastItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
@@ -621,7 +622,8 @@ fun SettingsCategoryWithButton(
 @Composable
 fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+    val textSharer = rememberTextSharer()
+    val fileSharer = rememberFileSharer()
     val scope = rememberCoroutineScope()
 
     IconButton(onClick = { expanded = true }) {
@@ -642,14 +644,14 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
                     text = stringRes(Res.string.export_as_text),
                 ) {
                     expanded = false
-                    scope.launch { RelayExporter(context).export(collection()) }
+                    scope.launch { RelayExporter(textSharer).export(collection()) }
                 }
                 M3ActionRow(
                     icon = MaterialSymbols.FolderZip,
                     text = stringRes(Res.string.export_as_zip),
                 ) {
                     expanded = false
-                    scope.launch { RelayZipExporter(context).export(collection()) }
+                    scope.launch { RelayZipExporter(fileSharer).export(collection()) }
                 }
             }
         }

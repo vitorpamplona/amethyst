@@ -24,9 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
@@ -43,7 +44,7 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
  *
  * The blob is content-addressed on Blossom by [MarmotGroupImage.hash]; the canonical
  * scheme stores only the hash, and the icon usually lives on the *uploader's* Blossom
- * server rather than the viewer's. So we resolve it through [Amethyst.blossomResolver],
+ * server rather than the viewer's. So we resolve it through the app's BUD-10 resolver ([BlossomServerFinder]),
  * which probes the viewer's default server (passed as a first-try `xs` hint) and the
  * group admins' configured servers (via their pubkeys as `as` authors, BUD-03). While
  * that async probe runs, we optimistically load from the viewer's default server so the
@@ -77,9 +78,9 @@ fun rememberMarmotGroupIconUrl(
             ).toUriString()
         }
 
-    val resolver = Amethyst.instance.blossomResolver
-    val url by produceState(resolver.cachedFindServer(blossomUri)?.serverUrl ?: fallbackUrl, blossomUri) {
-        value = resolver.findServers(blossomUri)?.serverUrl ?: fallbackUrl
+    val finder = LocalAppServices.current.blossomServerFinder
+    val url by produceState(finder.cachedServerUrl(blossomUri) ?: fallbackUrl, blossomUri) {
+        value = finder.findServerUrl(blossomUri) ?: fallbackUrl
     }
 
     val cipher = remember(image) { MarmotGroupImageCipher(image.key, image.nonce) }

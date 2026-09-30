@@ -53,4 +53,7 @@ interface AppServices {
 
     /** Resolves `.bit` names and `d/`/`id/` identifiers over the configured ElectrumX servers. */
     val namecoinResolver: NamecoinNameResolver
+
+    /** Finds the server behind a `blossom:` URI (BUD-10). */
+    val blossomServerFinder: BlossomServerFinder get() = BlossomServerFinder.None
 }

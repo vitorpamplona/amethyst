@@ -64,13 +64,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewGoalScreen(
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val goalViewModel: NewGoalViewModel = viewModel()
     goalViewModel.init(accountViewModel)

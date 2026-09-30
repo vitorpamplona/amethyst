@@ -18,35 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common
 
-import android.content.Context
-import android.content.Intent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.export_relay_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
+import com.vitorpamplona.amethyst.commons.ui.components.TextSharer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 
 class RelayExporter(
-    val context: Context,
+    val sharer: TextSharer,
 ) {
     suspend fun export(collection: RelayListCollection) {
-        val text = buildExportText(collection)
-
-        val sendIntent =
-            Intent().apply {
-                action = Intent.ACTION_SEND
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
-                putExtra(Intent.EXTRA_TITLE, loadStringRes(Res.string.export_relay_settings))
-            }
-
-        val shareIntent =
-            Intent.createChooser(
-                sendIntent,
-                loadStringRes(Res.string.export_relay_settings),
-            )
-        context.startActivity(shareIntent)
+        val title = loadStringRes(Res.string.export_relay_settings)
+        sharer.share(buildExportText(collection), title, title)
     }
 
     suspend fun buildExportText(collection: RelayListCollection): String {

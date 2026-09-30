@@ -18,20 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.navigation.compose.rememberNavController
 
+private val NoFileSharer = FileSharer { _, _, _ -> }
+
+/** No share sheet wired yet. */
 @Composable
-fun rememberNav(): Nav {
-    val navController = rememberNavController()
-    val scope = rememberCoroutineScope()
-    val ime = rememberImeSettler()
-
-    return remember(navController, scope, ime) {
-        Nav(navController, scope, ime)
-    }
-}
+actual fun rememberFileSharer(): FileSharer = NoFileSharer

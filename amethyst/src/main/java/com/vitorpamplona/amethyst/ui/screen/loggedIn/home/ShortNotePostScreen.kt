@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
@@ -156,7 +157,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
@@ -195,7 +195,7 @@ fun ShortNotePostScreen(
     groupThreadId: HexKey? = null,
     groupThreadRelayUrl: String? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: ShortNotePostViewModel = viewModel()
     postViewModel.init(accountViewModel)
@@ -269,7 +269,7 @@ fun ShortNotePostScreen(
 internal fun NewPostScreenInner(
     postViewModel: ShortNotePostViewModel,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
@@ -324,7 +324,7 @@ internal fun NewPostScreenInner(
 private fun NewPostScreenBody(
     postViewModel: ShortNotePostViewModel,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val scrollState = rememberScrollState()
     val audienceLists = rememberAudienceLists(accountViewModel)

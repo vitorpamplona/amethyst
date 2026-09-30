@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.MarkAsSensitiveButton
@@ -133,7 +134,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
@@ -150,7 +150,7 @@ fun LongFormPostScreen(
     draftId: HexKey? = null,
     versionId: HexKey? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: LongFormPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
@@ -214,7 +214,7 @@ fun LongFormPostScreen(
 private fun MarkdownPostScreenBody(
     postViewModel: LongFormPostViewModel,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val scrollState = rememberScrollState()
     Column(

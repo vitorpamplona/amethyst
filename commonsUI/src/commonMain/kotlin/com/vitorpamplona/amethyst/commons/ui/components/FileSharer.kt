@@ -18,20 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.navigation.compose.rememberNavController
 
-@Composable
-fun rememberNav(): Nav {
-    val navController = rememberNavController()
-    val scope = rememberCoroutineScope()
-    val ime = rememberImeSettler()
-
-    return remember(navController, scope, ime) {
-        Nav(navController, scope, ime)
-    }
+/** Hands generated files to the platform's share sheet. */
+fun interface FileSharer {
+    /**
+     * Packs [files] (name to text content) into a zip named [zipName] and shares it, behind a
+     * chooser titled [title] where the platform has one.
+     */
+    fun shareTextFilesAsZip(
+        zipName: String,
+        files: List<Pair<String, String>>,
+        title: String,
+    )
 }
+
+/**
+ * The platform's file sharing: Android writes the zip to its cache and shares it through the
+ * app's `FileProvider`. Desktop and iOS have no share sheet wired yet and do nothing.
+ */
+@Composable
+expect fun rememberFileSharer(): FileSharer

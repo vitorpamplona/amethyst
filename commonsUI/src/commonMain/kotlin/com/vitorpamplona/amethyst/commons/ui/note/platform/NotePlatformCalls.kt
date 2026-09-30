@@ -560,6 +560,15 @@ fun ReusableZapButton(
 ) = LocalNotePlatform.current.ReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
 
 @Composable
+fun QuickZapAmountRow(
+    note: Note,
+    onDismiss: () -> Unit,
+    onOnchainRequest: (Long?) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = LocalNotePlatform.current.QuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
+
+@Composable
 fun EditPostView(
     onClose: () -> Unit,
     edit: Note,

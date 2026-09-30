@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRende
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent as AppRenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent as AppRenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack as AppRenderVoiceTrack
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.QuickZapAmountRow as AppQuickZapAmountRow
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
@@ -620,6 +621,15 @@ object AndroidNotePlatform : NotePlatform {
         isFullscreen = true,
         accountViewModel = accountViewModel,
     )
+
+    @Composable
+    override fun QuickZapAmountRow(
+        note: Note,
+        onDismiss: () -> Unit,
+        onOnchainRequest: (Long?) -> Unit,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = AppQuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
 
     @Composable
     override fun EditPostView(

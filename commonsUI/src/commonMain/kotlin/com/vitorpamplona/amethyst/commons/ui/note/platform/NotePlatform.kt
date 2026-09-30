@@ -426,6 +426,19 @@ interface NotePlatform {
         callbacks: ZapButtonCallbacks,
     ) {}
 
+    /**
+     * The user's zap presets as rail-aware amount chips that zap [note] straight away (the chat
+     * long-press sheet). [onOnchainRequest] hands an on-chain amount to the caller's dialog.
+     */
+    @Composable
+    fun QuickZapAmountRow(
+        note: Note,
+        onDismiss: () -> Unit,
+        onOnchainRequest: (Long?) -> Unit,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {}
+
     /** The editor for a new version of [edit], shown while [versionLookingAt] is on screen. */
     @Composable
     fun EditPostView(

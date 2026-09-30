@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.AppServices
+import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 
@@ -49,4 +50,19 @@ object AndroidAppServices : AppServices {
     override val torSettings: TorSettingsFlow get() = Amethyst.instance.torPrefs.value
 
     override val namecoinResolver: NamecoinNameResolver get() = Amethyst.instance.namecoinResolver
+
+    override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
+}
+
+/** [BlossomServerFinder] over the app's BUD-10 resolver, read lazily (main process only). */
+private object AndroidBlossomServerFinder : BlossomServerFinder {
+    override fun cachedServerUrl(blossomUri: String): String? =
+        Amethyst.instance.blossomResolver
+            .cachedFindServer(blossomUri)
+            ?.serverUrl
+
+    override suspend fun findServerUrl(blossomUri: String): String? =
+        Amethyst.instance.blossomResolver
+            .findServers(blossomUri)
+            ?.serverUrl
 }

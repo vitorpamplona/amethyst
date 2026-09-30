@@ -28,8 +28,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.GenericCommentPostScreen
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -47,7 +47,7 @@ fun UrlPostScreen(
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: CommentPostViewModel = viewModel()
     postViewModel.init(accountViewModel)

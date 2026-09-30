@@ -49,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -69,16 +67,13 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_edit_message
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.edit_message
-import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.more_options
-import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete_dialog_btn
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.show_less
-import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
@@ -93,9 +88,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomShe
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
+import com.vitorpamplona.amethyst.commons.ui.note.platform.QuickZapAmountRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
@@ -104,17 +99,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
-import com.vitorpamplona.amethyst.ui.note.observeZapRailCapability
-import com.vitorpamplona.amethyst.ui.note.payViaIntentOrManualSplit
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
-import kotlin.uuid.ExperimentalUuidApi
 
 // null amount = open the on-chain dialog with no prefill.
 @Immutable
@@ -620,100 +609,5 @@ private fun QuickReactionRow(
         ) {
             ChangeReactionIcon(Size28Modifier, MaterialTheme.colorScheme.placeholderText)
         }
-    }
-}
-
-/**
- * The user's zap presets unpacked as rail-aware amount chips (same grid the zap
- * amount popup shows), firing directly from the sheet. Lightning/cashu zaps
- * dismiss immediately — errors surface as toasts and the receipt lands on the
- * bubble's sats chip; on-chain amounts hand off to the dialog hosted by the sheet.
- */
-@OptIn(ExperimentalUuidApi::class)
-@Composable
-private fun QuickZapAmountRow(
-    note: Note,
-    onDismiss: () -> Unit,
-    onOnchainRequest: (Long?) -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
-    val zapAmountChoices by
-        accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
-            .collectAsStateWithLifecycle()
-
-    val amountChoices = remember(zapAmountChoices) { zapAmountChoices.distinct().toImmutableList() }
-    if (amountChoices.isEmpty()) return
-
-    val railCapability =
-        observeZapRailCapability(
-            baseNote = note,
-            accountViewModel = accountViewModel,
-            // Onchain zap events are public and would e-tag the rumor id.
-            onchainSupported = !note.isPrivateRumor(),
-        )
-
-    val context = LocalContext.current
-
-    val onError = { _: String, message: String, user: User? ->
-        // Payment failed — drop the optimistic "zapping" indicator on the bubble.
-        accountViewModel.endZapInFlight(note.idHex)
-        accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, message, user)
-    }
-
-    val onPayViaIntent = { payables: ImmutableList<ZapPaymentHandler.Payable> ->
-        // Handoff to an external wallet: we can't observe whether it completes, so clear
-        // the optimistic indicator rather than leave it spinning forever.
-        accountViewModel.endZapInFlight(note.idHex)
-        payViaIntentOrManualSplit(payables, context, noWalletFoundStr, accountViewModel, nav)
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        ZapAmountChoiceGrid(
-            amountChoices = amountChoices,
-            railCapability = railCapability,
-            onLightningZap = { amountInSats ->
-                // Show a pending zap chip on the bubble immediately; it settles into the
-                // real sats chip once the receipt lands (or clears on error/timeout).
-                accountViewModel.markZapInFlight(note.idHex)
-                accountViewModel.zap(
-                    note,
-                    amountInSats * 1000,
-                    null,
-                    "",
-                    true,
-                    onError,
-                    { },
-                    onPayViaIntent,
-                )
-                onDismiss()
-            },
-            onNutzap = { amountInSats ->
-                accountViewModel.markZapInFlight(note.idHex)
-                accountViewModel.sendNutzap(
-                    baseNote = note,
-                    amountSats = amountInSats,
-                    message = "",
-                    onError = onError,
-                    onProgress = { },
-                )
-                onDismiss()
-            },
-            onOnchainAmount = onOnchainRequest,
-            onReloadNutzap = { amount ->
-                navigateToReloadMint(accountViewModel, nav, note, amount)
-                onDismiss()
-            },
-            onChangeAmount = {
-                nav.nav(Route.UpdateZapAmount())
-                onDismiss()
-            },
-            // Hands off to another app; the sheet must not stay stacked behind it.
-            onHandedOff = onDismiss,
-        )
     }
 }

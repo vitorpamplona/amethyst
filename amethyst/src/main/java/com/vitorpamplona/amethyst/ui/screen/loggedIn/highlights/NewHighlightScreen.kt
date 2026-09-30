@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.new_highlight_passage_placeh
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_source_label
 import com.vitorpamplona.amethyst.commons.resources.new_highlight_title
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 
@@ -111,7 +111,7 @@ fun NewHighlightScreen(
     sourceEventId: String? = null,
     author: String? = null,
     accountViewModel: AccountViewModel,
-    nav: Nav,
+    nav: INav,
 ) {
     val postViewModel: NewHighlightPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
