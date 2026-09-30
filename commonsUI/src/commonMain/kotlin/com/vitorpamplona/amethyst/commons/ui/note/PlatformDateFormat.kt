@@ -45,6 +45,10 @@ expect fun calendarYearAndDay(epochMillis: Long): Int
 @Composable
 expect fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String
 
+/** Whether times should be shown on a 24-hour clock, under the same rules as [rememberTimeOfDayFormatter]. */
+@Composable
+expect fun rememberIs24HourClock(): Boolean
+
 /**
  * The platform's abbreviated relative span ("5 min. ago", "Yesterday"), [nowLabel] for an
  * instant that rounds to now or lies ahead, or null where the platform has no such formatter.

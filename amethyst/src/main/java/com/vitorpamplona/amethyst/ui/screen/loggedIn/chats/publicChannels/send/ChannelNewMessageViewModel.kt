@@ -30,7 +30,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
@@ -44,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
@@ -1016,9 +1015,7 @@ open class ChannelNewMessageViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link) {
-                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
-            }
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)
@@ -1041,7 +1038,7 @@ open class ChannelNewMessageViewModel :
         message.insertUrlAtCursor(newElement)
     }
 
-    override fun locationManager(): LocationState = Amethyst.instance.locationManager
+    override fun locationManager(): DeviceLocation = accountViewModel.host.deviceLocation
 
     override fun locationFlow(): StateFlow<LocationResult> {
         if (location == null) {

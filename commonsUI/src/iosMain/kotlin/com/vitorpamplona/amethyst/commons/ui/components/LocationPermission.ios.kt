@@ -18,36 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model.composer
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.richtext.CachedUrlParser
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.Composable
 
-@Stable
-class PreviewState {
-    var source = MutableStateFlow("")
+private object NoLocationPermission : PlatformPermission {
+    override val isGranted: Boolean = false
 
-    @OptIn(FlowPreview::class)
-    val results =
-        source
-            .debounce(500)
-            .map {
-                CachedUrlParser.parseValidUrls(it)
-            }.distinctUntilChanged()
-            .flowOn(Dispatchers.IO)
-
-    fun reset() {
-        source.tryEmit("")
-    }
-
-    fun update(text: String) {
-        source.tryEmit(text)
-    }
+    override fun launchRequest() = Unit
 }
+
+/** No location source on this platform yet. */
+@Composable
+actual fun rememberCoarseLocationPermission(): PlatformPermission = NoLocationPermission

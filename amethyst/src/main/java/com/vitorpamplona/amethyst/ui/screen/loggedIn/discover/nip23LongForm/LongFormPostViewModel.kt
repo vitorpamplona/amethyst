@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -43,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
@@ -72,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
@@ -686,9 +685,7 @@ class LongFormPostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link) {
-                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
-            }
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)
@@ -762,5 +759,5 @@ class LongFormPostViewModel :
         draftTag.newVersion()
     }
 
-    override fun locationManager(): LocationState = Amethyst.instance.locationManager
+    override fun locationManager(): DeviceLocation = accountViewModel.host.deviceLocation
 }

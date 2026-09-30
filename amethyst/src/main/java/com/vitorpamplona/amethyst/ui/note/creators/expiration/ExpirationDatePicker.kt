@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.expiration
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,14 +62,15 @@ import com.vitorpamplona.amethyst.commons.resources.expiration_date_select
 import com.vitorpamplona.amethyst.commons.resources.expiration_expires_in
 import com.vitorpamplona.amethyst.commons.resources.expiration_time
 import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
+import com.vitorpamplona.quartz.utils.currentTimeMillis
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,24 +78,26 @@ fun ExpirationDatePicker(model: IExpiration) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
-    val currentTime = Instant.ofEpochMilli(model.expirationDate * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime()
+    // The expiration as a local wall-clock time: seconds since the epoch shifted by this zone's offset.
+    val localSeconds = model.expirationDate + LocalClock.utcOffsetSeconds(model.expirationDate)
+    val localSecondOfDay = localSeconds.mod(TimeUtils.ONE_DAY)
+    val currentYear = SearchDate.civilFromDays(localSeconds.floorDiv(TimeUtils.ONE_DAY)).year
 
     val datePickerState =
         rememberDatePickerState(
             initialSelectedDateMillis = model.expirationDate * 1000,
-            yearRange = currentTime.year..2050,
+            yearRange = currentYear..2050,
             selectableDates =
                 object : SelectableDates {
-                    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= System.currentTimeMillis() - 86400000
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= currentTimeMillis() - 86400000
                 },
         )
 
-    val context = LocalContext.current
     val timePickerState =
         rememberTimePickerState(
-            initialHour = currentTime.hour,
-            initialMinute = currentTime.minute,
-            is24Hour = DateFormat.is24HourFormat(context),
+            initialHour = localSecondOfDay / TimeUtils.ONE_HOUR,
+            initialMinute = (localSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE,
+            is24Hour = rememberIs24HourClock(),
         )
 
     Column(Modifier.fillMaxWidth()) {
@@ -183,9 +184,7 @@ fun ExpirationDatePicker(model: IExpiration) {
                                     (timePickerState.minute * TimeUtils.ONE_MINUTE)
                             } ?: TimeUtils.oneDayAhead()
 
-                        val offset: ZoneOffset = ZoneId.systemDefault().rules.getOffset(Instant.now())
-
-                        model.expirationDate = datetimeLocalTimeZone - offset.totalSeconds
+                        model.expirationDate = datetimeLocalTimeZone - LocalClock.utcOffsetSeconds(TimeUtils.now())
 
                         showTimePicker = false
                     },

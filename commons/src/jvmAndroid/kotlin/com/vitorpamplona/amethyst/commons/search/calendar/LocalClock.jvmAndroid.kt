@@ -54,6 +54,13 @@ actual object LocalClock {
             SearchDate(it.year, it.monthValue, it.dayOfMonth)
         }
 
+    actual fun utcOffsetSeconds(unixSeconds: Long): Long =
+        zone()
+            .rules
+            .getOffset(Instant.ofEpochSecond(unixSeconds))
+            .totalSeconds
+            .toLong()
+
     actual fun epochDayCounter(): EpochDayCounter {
         val rules = zone().rules
         val offsets = ZoneOffsets { rules.getOffset(Instant.ofEpochSecond(it)).totalSeconds.toLong() }

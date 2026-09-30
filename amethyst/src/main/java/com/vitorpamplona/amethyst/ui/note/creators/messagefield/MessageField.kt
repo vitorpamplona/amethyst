@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.messagefield
 
-import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalTextStyle
@@ -40,6 +39,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
@@ -55,7 +55,7 @@ fun MessageField(
     placeholder: StringResource,
     viewModel: IMessageField,
     requestFocus: Boolean = true,
-    onContentReceived: ((Uri, String?) -> Unit)? = null,
+    onContentReceived: ((MediaUri, String?) -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current

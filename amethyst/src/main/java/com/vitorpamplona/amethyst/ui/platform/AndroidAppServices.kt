@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
@@ -52,6 +53,8 @@ object AndroidAppServices : AppServices {
     override val namecoinResolver: NamecoinNameResolver get() = Amethyst.instance.namecoinResolver
 
     override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
+
+    override val deviceLocation: DeviceLocation get() = Amethyst.instance.locationManager
 }
 
 /** [BlossomServerFinder] over the app's BUD-10 resolver, read lazily (main process only). */

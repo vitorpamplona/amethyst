@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.AppModules
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
@@ -73,6 +74,8 @@ class AndroidAccountViewModelHost(
         get() = modules.authCoordinator.receiver.authStateFlow
 
     override val mediaUploader: MediaUploader by lazy { AndroidMediaUploader(modules.appContext) }
+
+    override val deviceLocation: DeviceLocation get() = modules.locationManager
 
     override val savedAccounts: Flow<Set<HexKey>> =
         LocalPreferences

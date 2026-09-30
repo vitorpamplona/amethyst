@@ -18,21 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.location
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
-import com.vitorpamplona.amethyst.commons.model.location.LocationResult
-import kotlinx.coroutines.flow.StateFlow
+import android.Manifest
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 
-interface ILocationGrabber {
-    fun locationManager(): DeviceLocation
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+actual fun rememberCoarseLocationPermission(): PlatformPermission {
+    val state = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+    return remember(state) {
+        object : PlatformPermission {
+            override val isGranted: Boolean get() = state.status.isGranted
 
-    fun locationFlow(): StateFlow<LocationResult>
-
-    /**
-     * A geohash the user picked on the map (via [GeohashLocationPickerDialog]), which
-     * overrides the live GPS location at build time. Null means "use my current GPS
-     * location" — the default behavior. Implementers back this with a Compose state.
-     */
-    var pickedGeoHash: String?
+            override fun launchRequest() = state.launchPermissionRequest()
+        }
+    }
 }

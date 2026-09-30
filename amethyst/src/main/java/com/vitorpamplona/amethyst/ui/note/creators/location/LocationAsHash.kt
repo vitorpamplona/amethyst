@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
-import android.Manifest
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,37 +38,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geohash_explainer
 import com.vitorpamplona.amethyst.commons.resources.geohash_title
+import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun LocationAsHash(
     postViewModel: ILocationGrabber,
     innerContent: @Composable () -> Unit = {},
 ) {
-    val locationPermissionState =
-        rememberPermissionState(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        )
+    val locationPermission = rememberCoarseLocationPermission()
 
-    LaunchedEffect(locationPermissionState.status.isGranted) {
-        postViewModel.locationManager().setLocationPermission(locationPermissionState.status.isGranted)
+    LaunchedEffect(locationPermission.isGranted) {
+        postViewModel.locationManager().setLocationPermission(locationPermission.isGranted)
     }
 
-    if (locationPermissionState.status.isGranted) {
+    if (locationPermission.isGranted) {
         DisplayLocationBox(postViewModel, innerContent)
     } else {
-        LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
+        LaunchedEffect(locationPermission) { locationPermission.launchRequest() }
     }
 }
 

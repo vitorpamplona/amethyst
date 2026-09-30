@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarUnitDay
 import platform.Foundation.NSCalendarUnitYear
@@ -87,6 +88,10 @@ private val timeOfDay: (Long) -> String = { epochMillis -> timeOfDayFormatter.st
 
 @Composable
 actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String = timeOfDay
+
+// The "j" template asks for the locale's preferred hour; an "a" in the result means an AM/PM clock.
+@Composable
+actual fun rememberIs24HourClock(): Boolean = remember { NSDateFormatter.dateFormatFromTemplate("j", 0u, NSLocale.currentLocale)?.contains('a') != true }
 
 actual fun relativeTimeSpanShortOrNull(
     epochMillis: Long,

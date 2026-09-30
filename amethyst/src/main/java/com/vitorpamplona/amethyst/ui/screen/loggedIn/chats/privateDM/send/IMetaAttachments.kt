@@ -20,13 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
-import android.webkit.MimeTypeMap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.prepare
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetaTagBuilder
@@ -40,21 +39,17 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
-import okhttp3.OkHttpClient
-import java.util.Locale
 
 class IMetaAttachments {
     var iMetaAttachments by mutableStateOf<List<IMetaTag>>(emptyList())
 
     suspend fun downloadAndPrepare(
         url: String,
-        okHttpClient: (String) -> OkHttpClient,
+        uploader: MediaUploader,
+        httpClients: IRoleBasedHttpClientBuilder,
     ) {
-        val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(url)
-        val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
-
         val imeta =
-            FileHeader.prepare(url, mimeType, null, okHttpClient).getOrNull()?.let {
+            uploader.remoteFileHeader(url, httpClients)?.let {
                 IMetaTagBuilder(url)
                     .apply {
                         hash(it.hash)

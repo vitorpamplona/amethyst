@@ -70,6 +70,12 @@ actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String {
     return remember(context) { { epochMillis -> DateFormat.getTimeFormat(context).format(Date(epochMillis)) } }
 }
 
+@Composable
+actual fun rememberIs24HourClock(): Boolean {
+    val context = LocalContext.current
+    return remember(context) { DateFormat.is24HourFormat(context) }
+}
+
 actual fun relativeTimeSpanShortOrNull(
     epochMillis: Long,
     nowMillis: Long,

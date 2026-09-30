@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -69,6 +70,9 @@ interface AccountViewModelHost {
 
     /** Compresses, strips, encrypts and uploads picked media for the composers. */
     val mediaUploader: MediaUploader
+
+    /** The device's position as geohashes. */
+    val deviceLocation: DeviceLocation get() = DeviceLocation.None
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

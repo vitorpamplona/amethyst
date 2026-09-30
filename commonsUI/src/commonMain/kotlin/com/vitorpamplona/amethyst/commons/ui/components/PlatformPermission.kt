@@ -18,21 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.location
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
-import com.vitorpamplona.amethyst.commons.model.location.LocationResult
-import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.Stable
 
-interface ILocationGrabber {
-    fun locationManager(): DeviceLocation
+/** A runtime permission the user may grant or deny. [isGranted] is observable from composition. */
+@Stable
+interface PlatformPermission {
+    val isGranted: Boolean
 
-    fun locationFlow(): StateFlow<LocationResult>
-
-    /**
-     * A geohash the user picked on the map (via [GeohashLocationPickerDialog]), which
-     * overrides the live GPS location at build time. Null means "use my current GPS
-     * location" — the default behavior. Implementers back this with a Compose state.
-     */
-    var pickedGeoHash: String?
+    /** Asks the user for the permission; [isGranted] updates when they answer. */
+    fun launchRequest()
 }

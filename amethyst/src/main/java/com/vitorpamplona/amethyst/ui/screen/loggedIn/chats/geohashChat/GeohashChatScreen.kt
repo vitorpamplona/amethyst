@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
-import android.Manifest
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,16 +56,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -74,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatActingIdentities
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatDisplayNameResolver
@@ -121,7 +118,6 @@ fun GeohashChatScreen(
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun GeohashChatRoom(
     channel: GeohashChatChannel,
@@ -159,13 +155,14 @@ private fun GeohashChatRoom(
     // otherwise we fall back to how the user arrived — the map picker passes teleported=true, "near me"
     // and manual entry default to false. This drives the ["t","teleport"] tag honestly. rememberPermissionState
     // only reads the current grant (it never prompts), so opening a location chat can't trigger a GPS dialog.
-    val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
-    LaunchedEffect(locationPermission.status.isGranted) {
-        if (locationPermission.status.isGranted) {
-            Amethyst.instance.locationManager.setLocationPermission(true)
+    val locationPermission = rememberCoarseLocationPermission()
+    val locationSource = LocalAppServices.current.deviceLocation
+    LaunchedEffect(locationPermission.isGranted) {
+        if (locationPermission.isGranted) {
+            locationSource.setLocationPermission(true)
         }
     }
-    val deviceLocation by Amethyst.instance.locationManager.preciseGeohashStateFlow
+    val deviceLocation by locationSource.preciseGeohashStateFlow
         .collectAsStateWithLifecycle()
     val isTeleported =
         remember(deviceLocation, geohash, teleported) {

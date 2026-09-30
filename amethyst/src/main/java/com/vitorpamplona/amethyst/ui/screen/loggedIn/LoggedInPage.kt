@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer_description
+import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
@@ -133,13 +135,13 @@ fun LoggedInPage(
     )
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WatchLocationPermissions() {
-    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+    val locationPermissionState = rememberCoarseLocationPermission()
 
-    LaunchedEffect(locationPermissionState.status.isGranted) {
-        Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
+    val locationSource = LocalAppServices.current.deviceLocation
+    LaunchedEffect(locationPermissionState.isGranted) {
+        locationSource.setLocationPermission(locationPermissionState.isGranted)
     }
 }
 

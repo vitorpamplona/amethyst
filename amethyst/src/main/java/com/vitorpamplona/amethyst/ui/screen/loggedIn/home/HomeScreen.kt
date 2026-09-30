@@ -59,7 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.ChannelFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
@@ -92,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -334,7 +334,7 @@ fun HomeScreenFloatingButton(
 
     when (val filter = list.value) {
         TopFilter.AroundMe -> {
-            val location by Amethyst.instance.locationManager.geohashStateFlow
+            val location by LocalAppServices.current.deviceLocation.geohashStateFlow
                 .collectAsStateWithLifecycle()
 
             when (val myLocation = location) {

@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.mediaServers.blossomUploadOrder
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
@@ -52,6 +54,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.File
+import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -592,4 +595,14 @@ class AndroidMediaUploader(
             }
         }
     }
+
+    override suspend fun remoteFileHeader(
+        url: String,
+        httpClients: IRoleBasedHttpClientBuilder,
+    ): FileHeader? =
+        withContext(Dispatchers.IO) {
+            val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(url)
+            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
+            FileHeader.prepare(url, mimeType, null) { httpClients.okHttpClientForImage(it) }.getOrNull()
+        }
 }

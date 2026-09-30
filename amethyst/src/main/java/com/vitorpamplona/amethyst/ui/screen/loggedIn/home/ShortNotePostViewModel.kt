@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
@@ -91,7 +92,6 @@ import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
-import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -1822,9 +1822,7 @@ open class ShortNotePostViewModel :
         val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link) {
-                accountViewModel.httpClientBuilder.okHttpClientForImage(item.link)
-            }
+            iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
         message.replaceCurrentWord(wordToInsert)
@@ -2120,5 +2118,5 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    override fun locationManager(): LocationState = Amethyst.instance.locationManager
+    override fun locationManager(): DeviceLocation = accountViewModel.host.deviceLocation
 }

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
@@ -56,4 +57,7 @@ interface AppServices {
 
     /** Finds the server behind a `blossom:` URI (BUD-10). */
     val blossomServerFinder: BlossomServerFinder get() = BlossomServerFinder.None
+
+    /** The device's position as geohashes. */
+    val deviceLocation: DeviceLocation get() = DeviceLocation.None
 }

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
-import android.Manifest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,18 +55,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
@@ -274,18 +271,18 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun NearMeSection(onOpen: (String) -> Unit) {
     Column {
         SectionHeader(MaterialSymbols.Explore, "Near me")
 
-        val permission = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
-        LaunchedEffect(permission.status.isGranted) {
-            Amethyst.instance.locationManager.setLocationPermission(permission.status.isGranted)
+        val permission = rememberCoarseLocationPermission()
+        val locationSource = LocalAppServices.current.deviceLocation
+        LaunchedEffect(permission.isGranted) {
+            locationSource.setLocationPermission(permission.isGranted)
         }
 
-        if (!permission.status.isGranted) {
+        if (!permission.isGranted) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth(),
@@ -297,7 +294,7 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
-                    FilledTonalButton(onClick = { permission.launchPermissionRequest() }) {
+                    FilledTonalButton(onClick = { permission.launchRequest() }) {
                         SymbolIcon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("  Use my location")
                     }
@@ -306,7 +303,7 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
             return
         }
 
-        val location by Amethyst.instance.locationManager.preciseGeohashStateFlow
+        val location by LocalAppServices.current.deviceLocation.preciseGeohashStateFlow
             .collectAsStateWithLifecycle()
         when (val loc = location) {
             is LocationResult.Success -> {
