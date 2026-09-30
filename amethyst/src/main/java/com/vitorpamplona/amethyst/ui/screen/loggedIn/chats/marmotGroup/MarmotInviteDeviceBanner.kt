@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -57,6 +55,8 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_failure
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_publish
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_rejected
 import com.vitorpamplona.amethyst.commons.resources.marmot_invite_device_success
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -96,7 +96,8 @@ fun MarmotInviteDeviceBanner(
     // has already read and waved away.
     var dismissed by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
     // A read-only login cannot publish at all, so the only action this banner
     // offers is impossible for it. Better to say nothing than to offer a button
     // that silently does nothing.
@@ -178,9 +179,9 @@ fun MarmotInviteDeviceBanner(
                                 val accepted = accountViewModel.republishKeyPackage()
                                 launch(Dispatchers.Main) {
                                     if (accepted) {
-                                        Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
+                                        shortNotice.show(successMessage)
                                     } else {
-                                        Toast.makeText(context, rejectedMessage, Toast.LENGTH_LONG).show()
+                                        longNotice.show(rejectedMessage)
                                         owner = LatestKeyPackageOwner.OTHER_DEVICE
                                     }
                                 }
@@ -194,7 +195,7 @@ fun MarmotInviteDeviceBanner(
                                 val failureMessage =
                                     loadStringRes(Res.string.marmot_invite_device_failure, e.message ?: "")
                                 launch(Dispatchers.Main) {
-                                    Toast.makeText(context, failureMessage, Toast.LENGTH_LONG).show()
+                                    longNotice.show(failureMessage)
                                     // The warning was right after all, so put it back.
                                     owner = LatestKeyPackageOwner.OTHER_DEVICE
                                 }

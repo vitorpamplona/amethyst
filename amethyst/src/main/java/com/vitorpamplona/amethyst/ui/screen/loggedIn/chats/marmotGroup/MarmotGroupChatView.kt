@@ -45,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -232,7 +231,6 @@ fun MarmotGroupMessageComposer(
 ) {
     val scope = rememberCoroutineScope()
     val canPost by remember { derivedStateOf { newMessageModel.canPost() } }
-    val context = LocalContext.current
     val shortNotice = rememberShortNotice()
 
     var isUploading by remember { mutableStateOf(false) }
@@ -350,7 +348,6 @@ private fun MarmotGroupFileUploadDialog(
     onUpload: suspend () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val context = LocalContext.current
     val shortNotice = rememberShortNotice()
     val longNotice = rememberLongNotice()
     val scope = rememberCoroutineScope()
@@ -382,7 +379,6 @@ private fun MarmotGroupFileUploadDialog(
                             longNotice.show("$title: $message")
                         }
                     },
-                    context = context,
                     uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->
                         MarmotFileSender(nostrGroupId, accountViewModel).send(uploads)

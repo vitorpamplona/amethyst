@@ -86,6 +86,9 @@ interface MediaUploader {
         url: String,
         httpClients: IRoleBasedHttpClientBuilder,
     ): FileHeader?
+
+    /** The file name the picker reported for [uri] (Android's `DISPLAY_NAME`), if any. */
+    fun displayName(uri: MediaUri): String? = uri.lastPathSegmentOrNull()
 }
 
 /** No media pipeline on this front end yet: every upload fails with a clear message. */

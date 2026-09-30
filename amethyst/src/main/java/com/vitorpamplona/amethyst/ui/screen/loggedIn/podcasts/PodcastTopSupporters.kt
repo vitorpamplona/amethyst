@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
-import java.math.BigDecimal
+import com.vitorpamplona.quartz.utils.BigDecimal
 
 private val Gold = Color(0xFFFFC300)
 private val Silver = Color(0xFFB0B7C0)
@@ -151,7 +151,7 @@ private fun SupporterRow(
 
         ZapIcon(Size16Modifier, BitcoinOrange)
         Text(
-            text = showAmountInteger(BigDecimal.valueOf(entry.totalSats)),
+            text = showAmountInteger(BigDecimal(entry.totalSats)),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
         )

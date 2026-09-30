@@ -18,30 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.wallet
+package com.vitorpamplona.amethyst.commons.util
 
-import android.content.Intent
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
-import kotlin.coroutines.cancellation.CancellationException
+/** A language the user can pick: its ISO code and its name in the user's own language. */
+data class LanguageOption(
+    val language: String,
+    val displayName: String,
+)
 
-@Composable
-actual fun rememberWalletAppLauncher(): WalletAppLauncher {
-    val context = LocalContext.current
-    return remember(context) {
-        WalletAppLauncher { uri, noWalletFound, onPaid, onError ->
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+/** Every language the platform can name, one entry per language code (no regional variants). */
+expect fun availableLanguages(): List<LanguageOption>
 
-                context.startActivity(intent)
-                onPaid()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                onError(noWalletFound)
-            }
-        }
-    }
-}
+/** The name of the language [tag] (a BCP-47 tag such as `pt` or `pt-BR`) in the user's language. */
+expect fun languageDisplayName(tag: String): String

@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
-import android.content.Context
-import android.net.Uri
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
@@ -79,7 +77,6 @@ class MarmotFileUploader(
         viewState: ChatFileUploadState,
         exporterSecret: ByteArray,
         onError: (title: String, message: String) -> Unit,
-        context: Context,
         uploader: MediaUploader,
         /**
          * Produce `encrypted-media-v2` references instead of MIP-04 ones.
@@ -98,7 +95,7 @@ class MarmotFileUploader(
             val item = multiOrchestrator.get(i)
             val media = item.media
             val mimeType = media.mimeType ?: "application/octet-stream"
-            val filename = resolveFilename(context, media.uri, mimeType)
+            val filename = uploader.displayName(media.uri) ?: fallbackFilename(mimeType)
 
             // v2 puts `m` inside both the key derivation and the AEAD
             // associated data, so it has to be the canonical form and not
@@ -197,19 +194,7 @@ class MarmotFileUploader(
         viewState.mediaUploadTracker.finishUpload()
     }
 
-    private fun resolveFilename(
-        context: Context,
-        uri: Uri,
-        mimeType: String,
-    ): String {
-        val cursor = context.contentResolver.query(uri, null, null, null, null)
-        val name =
-            cursor?.use {
-                val idx = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                if (idx >= 0 && it.moveToFirst()) it.getString(idx) else null
-            }
-        if (name != null) return name
-
+    private fun fallbackFilename(mimeType: String): String {
         val ext =
             when {
                 mimeType.startsWith("image/jpeg") -> "jpg"

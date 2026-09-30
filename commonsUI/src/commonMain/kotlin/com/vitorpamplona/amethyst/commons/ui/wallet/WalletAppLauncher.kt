@@ -25,16 +25,33 @@ import androidx.compose.runtime.Composable
 /** Hands a payment to a wallet app installed on the device. */
 fun interface WalletAppLauncher {
     /**
-     * Opens [invoice] (BOLT-11) in the wallet app. [onPaid] runs once the wallet took it, which is
-     * not a payment confirmation; [onError] gets [noWalletFound] when no wallet can open it.
+     * Opens the payment [uri] (`lightning:` or `bitcoin:`) in the wallet app. [onPaid] runs once
+     * the wallet took it, which is not a payment confirmation; [onError] gets [noWalletFound] when
+     * no wallet can open it.
      */
-    fun payInvoice(
-        invoice: String,
+    fun openPaymentUri(
+        uri: String,
         noWalletFound: String,
         onPaid: () -> Unit,
         onError: (String) -> Unit,
     )
 }
+
+/** Opens a BOLT-11 [invoice] in the wallet app; see [WalletAppLauncher.openPaymentUri]. */
+fun WalletAppLauncher.payInvoice(
+    invoice: String,
+    noWalletFound: String,
+    onPaid: () -> Unit,
+    onError: (String) -> Unit,
+) = openPaymentUri("lightning:$invoice", noWalletFound, onPaid, onError)
+
+/** Opens a BOLT-12 [offer] in the wallet app; see [WalletAppLauncher.openPaymentUri]. */
+fun WalletAppLauncher.payBolt12Offer(
+    offer: String,
+    noWalletFound: String,
+    onPaid: () -> Unit,
+    onError: (String) -> Unit,
+) = openPaymentUri("bitcoin:?lno=$offer", noWalletFound, onPaid, onError)
 
 @Composable
 expect fun rememberWalletAppLauncher(): WalletAppLauncher

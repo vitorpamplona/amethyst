@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,7 +58,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -89,12 +87,14 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_select_date
 import com.vitorpamplona.amethyst.commons.resources.vanish_select_time
 import com.vitorpamplona.amethyst.commons.resources.vanish_send_request
 import com.vitorpamplona.amethyst.commons.resources.vanish_target_relay
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
@@ -108,9 +108,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,14 +146,13 @@ fun RequestToVanishScreen(
             initialSelectedDateMillis = vanishDate * 1000,
         )
 
-    val currentTime = Instant.ofEpochMilli(vanishDate * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime()
-
-    val context = LocalContext.current
+    // The vanish time as a local wall-clock time: seconds since the epoch shifted by this zone's offset.
+    val localSecondOfDay = (vanishDate + LocalClock.utcOffsetSeconds(vanishDate)).mod(TimeUtils.ONE_DAY)
     val timePickerState =
         rememberTimePickerState(
-            initialHour = currentTime.hour,
-            initialMinute = currentTime.minute,
-            is24Hour = DateFormat.is24HourFormat(context),
+            initialHour = localSecondOfDay / TimeUtils.ONE_HOUR,
+            initialMinute = (localSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE,
+            is24Hour = rememberIs24HourClock(),
         )
 
     val relayOptions =
@@ -387,9 +383,7 @@ fun RequestToVanishScreen(
                                     (timePickerState.minute * TimeUtils.ONE_MINUTE)
                             } ?: TimeUtils.now()
 
-                        val offset: ZoneOffset = ZoneId.systemDefault().rules.getOffset(Instant.now())
-
-                        vanishDate = datetimeLocalTimeZone - offset.totalSeconds
+                        vanishDate = datetimeLocalTimeZone - LocalClock.utcOffsetSeconds(TimeUtils.now())
 
                         showTimePicker = false
                     },

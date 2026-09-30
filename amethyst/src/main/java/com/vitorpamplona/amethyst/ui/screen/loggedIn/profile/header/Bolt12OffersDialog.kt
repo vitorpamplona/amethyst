@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,13 +60,15 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.wallet.payBolt12Offer
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.payViaBolt12Intent
 import kotlinx.coroutines.launch
 
 @Composable
@@ -78,7 +78,8 @@ fun Bolt12OffersDialog(
     onDismiss: () -> Unit,
 ) {
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
-    val context = LocalContext.current
+    val walletApp = rememberWalletAppLauncher()
+    val shortNotice = rememberShortNotice()
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -101,22 +102,16 @@ fun Bolt12OffersDialog(
                     onCopy = {
                         scope.launch {
                             clipboardManager.setText(offer)
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(Res.string.copied_to_clipboard),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                            shortNotice.show(loadStringRes(Res.string.copied_to_clipboard))
                         }
                     },
                     onPayViaIntent = {
-                        payViaBolt12Intent(
+                        walletApp.payBolt12Offer(
                             offer = offer,
-                            context = context,
-                            noWalletFoundStr,
+                            noWalletFound = noWalletFoundStr,
                             onPaid = { onDismiss() },
                             onError = { msg ->
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                shortNotice.show(msg)
                             },
                         )
                     },

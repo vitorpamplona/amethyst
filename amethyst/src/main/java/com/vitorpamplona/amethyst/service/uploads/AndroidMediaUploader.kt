@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -604,5 +605,11 @@ class AndroidMediaUploader(
             val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(url)
             val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
             FileHeader.prepare(url, mimeType, null) { httpClients.okHttpClientForImage(it) }.getOrNull()
+        }
+
+    override fun displayName(uri: MediaUri): String? =
+        appContext.contentResolver.query(uri, null, null, null, null)?.use {
+            val idx = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && it.moveToFirst()) it.getString(idx) else null
         }
 }

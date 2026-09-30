@@ -91,9 +91,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.commons.util.LanguageOption
+import com.vitorpamplona.amethyst.commons.util.availableLanguages
+import com.vitorpamplona.amethyst.commons.util.languageDisplayName
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import java.util.Locale as JavaLocale
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
@@ -134,18 +136,12 @@ fun UserSettingsScreen(
     }
 }
 
-private fun getAllLanguagesSorted(): List<JavaLocale> {
-    val seen = mutableSetOf<String>()
-    return JavaLocale
-        .getAvailableLocales()
-        .filter { it.language.isNotBlank() && it.country.isBlank() && seen.add(it.language) }
-        .sortedBy { it.displayName.lowercase() }
-}
+private fun getAllLanguagesSorted(): List<LanguageOption> = availableLanguages().sortedBy { it.displayName.lowercase() }
 
 @Composable
 private fun SearchableLanguageList(
-    languages: List<JavaLocale>,
-    onSelect: (JavaLocale) -> Unit,
+    languages: List<LanguageOption>,
+    onSelect: (LanguageOption) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -225,7 +221,7 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = JavaLocale.forLanguageTag(currentTranslateTo).displayName,
+                        text = languageDisplayName(currentTranslateTo),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                     )
@@ -277,7 +273,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                 InputChip(
                     selected = true,
                     onClick = { accountViewModel.removeDontTranslateFrom(languageCode) },
-                    label = { Text(JavaLocale.forLanguageTag(languageCode).displayName) },
+                    label = { Text(languageDisplayName(languageCode)) },
                     trailingIcon = {
                         Icon(
                             symbol = MaterialSymbols.Close,
@@ -379,8 +375,8 @@ private fun LanguagePreferenceCard(
     preference: String,
     accountViewModel: AccountViewModel,
 ) {
-    val sourceName = JavaLocale.forLanguageTag(source).displayName
-    val targetName = JavaLocale.forLanguageTag(target).displayName
+    val sourceName = languageDisplayName(source)
+    val targetName = languageDisplayName(target)
 
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -464,9 +460,9 @@ private fun AddLanguagePairCard(
     onDismiss: () -> Unit,
 ) {
     val allLanguages = remember { getAllLanguagesSorted() }
-    var selectedSource by remember { mutableStateOf<JavaLocale?>(null) }
-    var selectedTarget by remember { mutableStateOf<JavaLocale?>(null) }
-    var selectedPreference by remember { mutableStateOf<JavaLocale?>(null) }
+    var selectedSource by remember { mutableStateOf<LanguageOption?>(null) }
+    var selectedTarget by remember { mutableStateOf<LanguageOption?>(null) }
+    var selectedPreference by remember { mutableStateOf<LanguageOption?>(null) }
     var pickingSource by remember { mutableStateOf(false) }
     var pickingTarget by remember { mutableStateOf(false) }
 

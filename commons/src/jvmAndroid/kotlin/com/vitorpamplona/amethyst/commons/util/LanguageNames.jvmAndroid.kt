@@ -18,30 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.wallet
+package com.vitorpamplona.amethyst.commons.util
 
-import android.content.Intent
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
-import kotlin.coroutines.cancellation.CancellationException
+import java.util.Locale
 
-@Composable
-actual fun rememberWalletAppLauncher(): WalletAppLauncher {
-    val context = LocalContext.current
-    return remember(context) {
-        WalletAppLauncher { uri, noWalletFound, onPaid, onError ->
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                context.startActivity(intent)
-                onPaid()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                onError(noWalletFound)
-            }
-        }
-    }
+actual fun availableLanguages(): List<LanguageOption> {
+    val seen = mutableSetOf<String>()
+    return Locale
+        .getAvailableLocales()
+        .filter { it.language.isNotBlank() && it.country.isBlank() && seen.add(it.language) }
+        .map { LanguageOption(it.language, it.displayName) }
 }
+
+actual fun languageDisplayName(tag: String): String = Locale.forLanguageTag(tag).displayName
