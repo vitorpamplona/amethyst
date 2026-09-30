@@ -92,6 +92,10 @@ object ConcordChannelCommands {
             if (state.dissolved) {
                 return Output.error("dissolved", "community '$handle' has been dissolved and is read-only (CORD-02 §9)")
             }
+            // CORD-04 §4: every reader drops a banned author's messages, so a post would vanish unseen.
+            if (state.authority.isBanned(ctx.signer.pubKey)) {
+                return Output.error("banned", "this account is banned from '$handle' (CORD-04 §4); its messages are hidden from everyone")
+            }
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
             // The channel's own plane (CORD-03 §1): root-derived when Public, its held key when
             // Private — and a refusal, never the root plane, for a Private Channel we hold no key for.

@@ -3713,6 +3713,7 @@
     <string name="concord_members_ban">Ban</string>
     <string name="concord_members_ban_title">Ban member?</string>
     <string name="concord_members_ban_message">They can no longer post, and their messages are hidden from everyone. Other apps may remove the community from their list. They can still read new messages until you also remove them from the community. You can unban them later.</string>
+    <string name="concord_members_ban_message_refound">They can no longer post, and their messages are hidden from everyone. This community is Private, so banning also rotates its keys: they lose access to new messages. You can unban them later, but they will need a new invite to read again.</string>
     <string name="concord_members_make_admin">Make admin</string>
     <string name="concord_members_remove_admin">Remove admin</string>
     <string name="concord_members_roles_failed">Could not update this member's roles.</string>
