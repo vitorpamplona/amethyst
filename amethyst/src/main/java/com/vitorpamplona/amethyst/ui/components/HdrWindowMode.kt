@@ -38,25 +38,25 @@ import java.util.WeakHashMap
  * An Ultra HDR photo (a JPEG with a gain map) only renders brighter than SDR white while its
  * window is in [ActivityInfo.COLOR_MODE_HDR]; otherwise the platform silently draws the SDR base
  * image. The window is shared by every card in a feed, so HDR stays on until the last image
- * asking for it leaves composition.
+ * asking for it leaves composition, and then the window gets its [originalColorMode] back.
  */
-class HdrRequests {
-    private val tokens = mutableListOf<Request>()
+class HdrRequests(
+    val originalColorMode: Int,
+) {
+    private val headrooms = mutableListOf<Float>()
 
-    private class Request(
-        val headroom: Float,
-    )
+    val wantsHdr: Boolean get() = headrooms.isNotEmpty()
 
-    val wantsHdr: Boolean get() = tokens.isNotEmpty()
+    /** [UNCAPPED] if any request is uncapped or there are none, else the largest cap asked for. */
+    val headroom: Float get() = if (UNCAPPED in headrooms) UNCAPPED else headrooms.maxOrNull() ?: UNCAPPED
 
-    /** [UNCAPPED] if any request is uncapped, else the largest cap asked for. */
-    val headroom: Float
-        get() = if (tokens.any { it.headroom == UNCAPPED }) UNCAPPED else tokens.maxOfOrNull { it.headroom } ?: UNCAPPED
+    fun add(headroom: Float) {
+        headrooms.add(headroom)
+    }
 
-    fun add(headroom: Float): Any = Request(headroom).also { tokens.add(it) }
-
-    fun remove(token: Any) {
-        tokens.removeAll { it === token }
+    /** Drops one request for [headroom]; equal requests are interchangeable. */
+    fun remove(headroom: Float) {
+        headrooms.remove(headroom)
     }
 
     companion object {
@@ -71,23 +71,16 @@ class HdrRequests {
     }
 }
 
-private class HdrWindowState(
-    val originalColorMode: Int,
-) {
-    val requests = HdrRequests()
-}
-
 // Main-thread only: composition and disposal both run there.
-private val windowStates = WeakHashMap<Window, HdrWindowState>()
+private val windowRequests = WeakHashMap<Window, HdrRequests>()
 
 // Each setter dispatches the window attributes to the window manager even when the value is
 // unchanged, and cards scroll in and out of a feed constantly: only write what actually changed.
-private fun Window.applyHdr(state: HdrWindowState) {
-    val mode = if (state.requests.wantsHdr) ActivityInfo.COLOR_MODE_HDR else state.originalColorMode
+private fun Window.applyHdr(requests: HdrRequests) {
+    val mode = if (requests.wantsHdr) ActivityInfo.COLOR_MODE_HDR else requests.originalColorMode
     if (colorMode != mode) colorMode = mode
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-        val headroom = if (state.requests.wantsHdr) state.requests.headroom else HdrRequests.UNCAPPED
-        if (desiredHdrHeadroom != headroom) desiredHdrHeadroom = headroom
+        if (desiredHdrHeadroom != requests.headroom) desiredHdrHeadroom = requests.headroom
     }
 }
 
@@ -96,24 +89,26 @@ fun Image.hasGainmap(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.U
 /**
  * Puts the hosting window (the dialog's own window inside a `Dialog`) into HDR mode while this
  * is in composition and [image] carries a gain map, so an Ultra HDR photo shows its highlights.
+ * A [fullscreen] image gets the display's full HDR range; a feed card is capped.
  */
 @Composable
 fun RequestHdrFor(
     image: Image,
-    headroom: Float,
+    fullscreen: Boolean,
 ) {
     if (!remember(image) { image.hasGainmap() }) return
     val window = getDialogWindow() ?: getActivityWindow() ?: return
+    val headroom = if (fullscreen) HdrRequests.UNCAPPED else HdrRequests.FEED_HEADROOM
 
     DisposableEffect(window, headroom) {
-        val state = windowStates.getOrPut(window) { HdrWindowState(window.colorMode) }
-        val token = state.requests.add(headroom)
-        window.applyHdr(state)
+        val requests = windowRequests.getOrPut(window) { HdrRequests(window.colorMode) }
+        requests.add(headroom)
+        window.applyHdr(requests)
 
         onDispose {
-            state.requests.remove(token)
-            window.applyHdr(state)
-            if (!state.requests.wantsHdr) windowStates.remove(window)
+            requests.remove(headroom)
+            window.applyHdr(requests)
+            if (!requests.wantsHdr) windowRequests.remove(window)
         }
     }
 }

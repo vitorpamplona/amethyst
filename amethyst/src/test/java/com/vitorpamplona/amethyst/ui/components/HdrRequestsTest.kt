@@ -26,28 +26,31 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HdrRequestsTest {
+    private fun requests() = HdrRequests(originalColorMode = 0)
+
     @Test
     fun noRequestsMeansSdr() {
-        val requests = HdrRequests()
+        val requests = requests()
         assertFalse(requests.wantsHdr)
+        assertEquals(HdrRequests.UNCAPPED, requests.headroom)
     }
 
     @Test
     fun hdrStaysOnUntilTheLastRequestLeaves() {
-        val requests = HdrRequests()
-        val first = requests.add(2f)
-        val second = requests.add(2f)
+        val requests = requests()
+        requests.add(2f)
+        requests.add(2f)
 
-        requests.remove(first)
+        requests.remove(2f)
         assertTrue(requests.wantsHdr)
 
-        requests.remove(second)
+        requests.remove(2f)
         assertFalse(requests.wantsHdr)
     }
 
     @Test
     fun theLargestCappedHeadroomWins() {
-        val requests = HdrRequests()
+        val requests = requests()
         requests.add(2f)
         requests.add(3f)
         assertEquals(3f, requests.headroom)
@@ -55,23 +58,12 @@ class HdrRequestsTest {
 
     @Test
     fun anUncappedRequestLiftsTheCap() {
-        val requests = HdrRequests()
+        val requests = requests()
         requests.add(2f)
-        val fullscreen = requests.add(HdrRequests.UNCAPPED)
+        requests.add(HdrRequests.UNCAPPED)
         assertEquals(HdrRequests.UNCAPPED, requests.headroom)
 
-        requests.remove(fullscreen)
+        requests.remove(HdrRequests.UNCAPPED)
         assertEquals(2f, requests.headroom)
-    }
-
-    @Test
-    fun equalHeadroomsAreStillSeparateRequests() {
-        val requests = HdrRequests()
-        val first = requests.add(2f)
-        requests.add(2f)
-
-        requests.remove(first)
-        requests.remove(first)
-        assertTrue("removing one token twice must not release the other", requests.wantsHdr)
     }
 }

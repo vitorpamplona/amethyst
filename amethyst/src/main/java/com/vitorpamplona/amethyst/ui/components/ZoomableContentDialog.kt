@@ -184,8 +184,8 @@ fun ZoomableImageDialog(
         val activityWindow = getActivityWindow()
         val dialogWindow = getDialogWindow()
 
-        // Keyed, not inline: this content recomposes on every frame of a pager swipe (the image
-        // bounds it reads move), and each assignment below is a window-manager round trip.
+        // Keyed, not inline: each assignment below is a window-manager round trip, so it must run
+        // on orientation changes only, not on every recomposition of this content.
         DisposableEffect(orientation, activityWindow, dialogWindow) {
             if (activityWindow != null && dialogWindow != null) {
                 // Preserve what the dialog window owns: the brightness override applied by the
@@ -226,9 +226,9 @@ fun ZoomableImageDialog(
                 allImages = allImages,
                 imageUrl = imageUrl,
                 sourceBounds = sourceBounds,
-                imageBounds = imageBounds,
+                imageBounds = { imageBounds },
                 onImageBoundsChanged = updateImageBounds,
-                currentZoomState = currentZoomState,
+                currentZoomState = { currentZoomState },
                 onZoomStateChanged = { currentZoomState = it },
                 progress = progressProvider,
                 onDismiss = dismissWithAnimation,
@@ -243,9 +243,9 @@ private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
     sourceBounds: Rect?,
-    imageBounds: Rect?,
+    imageBounds: () -> Rect?,
     onImageBoundsChanged: (Rect) -> Unit,
-    currentZoomState: ZoomState?,
+    currentZoomState: () -> ZoomState?,
     onZoomStateChanged: (ZoomState) -> Unit,
     progress: () -> Float,
     onDismiss: () -> Unit,
@@ -282,12 +282,12 @@ private fun DialogContent(
                     .fillMaxSize()
                     .graphicsLayer {
                         val src = sourceBounds
-                        val img = imageBounds
+                        val img = imageBounds()
                         if (src != null && img != null && src.hasArea() && img.hasArea()) {
                             // Account for user-applied zoom: the exit animation must start from
                             // the visible bounds, not the unzoomed layout bounds — otherwise
                             // dismissing a zoomed-in image jumps.
-                            val zoomed = img.zoomedBy(currentZoomState)
+                            val zoomed = img.zoomedBy(currentZoomState())
                             // Uniform scale so non-square images keep their aspect ratio during
                             // the grow animation. The image covers the source rect; the overflow
                             // is clipped below.

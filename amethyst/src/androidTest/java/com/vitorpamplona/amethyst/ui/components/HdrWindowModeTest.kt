@@ -65,8 +65,8 @@ class HdrWindowModeTest {
 
         rule.setContent {
             window = getActivityWindow()
-            if (showFirst) RequestHdrFor(image, HdrRequests.FEED_HEADROOM)
-            if (showSecond) RequestHdrFor(image, HdrRequests.FEED_HEADROOM)
+            if (showFirst) RequestHdrFor(image, fullscreen = false)
+            if (showSecond) RequestHdrFor(image, fullscreen = false)
         }
         rule.waitForIdle()
         assertEquals(ActivityInfo.COLOR_MODE_HDR, window!!.colorMode)
@@ -85,7 +85,7 @@ class HdrWindowModeTest {
         var window: Window? = null
         rule.setContent {
             window = getActivityWindow()
-            RequestHdrFor(sdrImage(), HdrRequests.FEED_HEADROOM)
+            RequestHdrFor(sdrImage(), fullscreen = false)
         }
         rule.waitForIdle()
         assertEquals(ActivityInfo.COLOR_MODE_DEFAULT, window!!.colorMode)
@@ -101,7 +101,7 @@ class HdrWindowModeTest {
             activityWindow = getActivityWindow()
             Dialog(onDismissRequest = {}) {
                 dialogWindow = getDialogWindow()
-                RequestHdrFor(image, HdrRequests.UNCAPPED)
+                RequestHdrFor(image, fullscreen = true)
             }
         }
         rule.waitForIdle()
@@ -118,7 +118,7 @@ class HdrWindowModeTest {
 
         rule.setContent {
             window = getActivityWindow()
-            repeat(count) { RequestHdrFor(image, HdrRequests.FEED_HEADROOM) }
+            repeat(count) { RequestHdrFor(image, fullscreen = false) }
         }
         rule.waitForIdle()
         rule.runOnUiThread {

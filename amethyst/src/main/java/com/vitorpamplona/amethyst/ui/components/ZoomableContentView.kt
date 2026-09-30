@@ -458,7 +458,7 @@ fun LocalImageView(
                             SubcomposeAsyncImageContent(loadedImageModifier)
 
                             val image = (state as AsyncImagePainter.State.Success).result.image
-                            RequestHdrFor(image, if (fullResolution) HdrRequests.UNCAPPED else HdrRequests.FEED_HEADROOM)
+                            RequestHdrFor(image, fullscreen = fullResolution)
 
                             SideEffect {
                                 MediaAspectRatioCache.add(content.localJavaFile.toString(), image.width, image.height)
@@ -602,7 +602,7 @@ fun UrlImageView(
                         ShowHashAnimated(content, controllerVisible, Modifier.align(Alignment.TopEnd))
 
                         val image = (state as AsyncImagePainter.State.Success).result.image
-                        RequestHdrFor(image, if (fullResolution) HdrRequests.UNCAPPED else HdrRequests.FEED_HEADROOM)
+                        RequestHdrFor(image, fullscreen = fullResolution)
 
                         SideEffect {
                             MediaAspectRatioCache.add(content.url, image.width, image.height)
