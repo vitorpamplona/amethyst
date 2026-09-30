@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -46,20 +44,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.IntentCompat
-import androidx.core.net.toUri
-import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -79,10 +71,12 @@ import com.vitorpamplona.amethyst.commons.resources.what_s_on_your_mind
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.OnIncomingShare
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -114,7 +108,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
@@ -132,9 +125,6 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ReplyCommentPostScreen(
@@ -149,7 +139,7 @@ fun ReplyCommentPostScreen(
     val postViewModel: CommentPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
-    val context = LocalContext.current
+    val mediaResolver = rememberSharedMediaResolver()
 
     LaunchedEffect(postViewModel, accountViewModel) {
         replyId?.let { LocalCache.getNoteIfExists(it) }?.let {
@@ -165,11 +155,8 @@ fun ReplyCommentPostScreen(
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)
             postViewModel.onMessageChanged()
         }
-        attachment?.ifBlank { null }?.toUri()?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
-            }
+        mediaResolver.resolve(attachment)?.let {
+            postViewModel.selectImage(persistentListOf(it))
         }
         if (draftId == null) {
             postViewModel.applySignature()
@@ -188,32 +175,11 @@ fun GenericCommentPostScreen(
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    val context = LocalContext.current
-    val activity = context.getActivity()
-    val scope = rememberCoroutineScope()
-
-    DisposableEffect(nav, activity) {
-        // Microsoft's swift key sends Gifs as new actions
-        val consumer =
-            Consumer<Intent> { intent ->
-                if (intent.action == Intent.ACTION_SEND) {
-                    intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.let {
-                        postViewModel.addToMessage(it)
-                    }
-
-                    // Use the `intent` parameter (the new intent), not activity.intent (the launch intent).
-                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let { uri ->
-                        scope.launch(Dispatchers.IO) {
-                            val mediaType = context.contentResolver.getType(uri)
-                            postViewModel.selectImage(persistentListOf(SelectedMedia(uri, mediaType)))
-                        }
-                    }
-                }
-            }
-
-        activity.addOnNewIntentListener(consumer)
-        onDispose { activity.removeOnNewIntentListener(consumer) }
-    }
+    // Microsoft's swift key sends Gifs as new actions
+    OnIncomingShare(
+        onText = postViewModel::addToMessage,
+        onMedia = { postViewModel.selectImage(persistentListOf(it)) },
+    )
 
     // NIP-9B: when replying into a NIP-72 community, mount the community feed
     // subscription so the latest kind:34551 rules document is fetched and
@@ -466,7 +432,6 @@ private fun GenericCommentPostBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
-                        val context = LocalContext.current
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,

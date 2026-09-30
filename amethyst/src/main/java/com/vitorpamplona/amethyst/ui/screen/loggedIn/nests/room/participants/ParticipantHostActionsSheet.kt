@@ -555,7 +555,7 @@ private fun broadcastWithDiagnostics(
         } catch (ce: CancellationException) {
             throw ce
         } catch (e: Throwable) {
-            val klass = e::class.simpleName ?: "Throwable"
+            val klass = e.javaClass.simpleName ?: "Throwable"
             val msg = e.message?.takeIf { it.isNotBlank() } ?: "no message"
             accountViewModel.toastManager.toast(failedTitle, "$klass: $msg")
         }

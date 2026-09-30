@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideo
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -63,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
-import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -103,9 +102,9 @@ fun NewShortVideoButton(
         }
     }
 
-    val context = LocalContext.current
+    val mediaResolver = rememberSharedMediaResolver()
     LaunchedEffect(sharedAttachments) {
-        resolveSharedMedia(context, sharedAttachments).takeIf { it.isNotEmpty() }?.let { pickedURIs = it }
+        mediaResolver.resolve(sharedAttachments).takeIf { it.isNotEmpty() }?.let { pickedURIs = it }
     }
 
     if (wantsToRecordVideo) {

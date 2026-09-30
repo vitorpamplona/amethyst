@@ -823,7 +823,7 @@ class ChatNewMessageViewModel :
     }
 
     override fun onCleared() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
     }
 
     // NIP-04 sending is deprecated. NIP-17 is always used.

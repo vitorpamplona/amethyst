@@ -1995,7 +1995,7 @@ open class ShortNotePostViewModel :
         } catch (e: Exception) {
             onError(
                 uploadErrorTitle,
-                loadStringRes(Res.string.upload_error_voice_message_exception, e.message ?: e.javaClass.simpleName),
+                loadStringRes(Res.string.upload_error_voice_message_exception, e.message ?: e::class.simpleName.orEmpty()),
             )
             voiceRecording = null
         } finally {
@@ -2015,7 +2015,7 @@ open class ShortNotePostViewModel :
     override fun onCleared() {
         writingAssistant?.close()
         writingAssistant = null
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
     }
 
     override fun updateZapPercentage(

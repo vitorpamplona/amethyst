@@ -34,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip04
 import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip17
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.hea
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
@@ -144,10 +143,10 @@ fun ChatroomView(
             newPostModel.onMessageChanged()
         }
     }
-    val context = LocalContext.current
+    val mediaResolver = rememberSharedMediaResolver()
     if (attachmentUri != null) {
         LaunchedEffect(key1 = attachmentUri) {
-            resolveSharedMedia(context, attachmentUri)?.let {
+            mediaResolver.resolve(attachmentUri)?.let {
                 newPostModel.pickedMedia(persistentListOf(it))
             }
         }

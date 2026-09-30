@@ -157,7 +157,7 @@ fun BuzzWorkspaceOverflowMenu(
                             )
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        error = e.message ?: e::class.simpleName
+                        error = e.message ?: e.javaClass.simpleName
                     } finally {
                         minting = false
                     }

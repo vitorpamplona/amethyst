@@ -616,7 +616,7 @@ open class NewProductViewModel :
     }
 
     override fun onCleared() {
-        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
     }
 
     override fun updateZapPercentage(
