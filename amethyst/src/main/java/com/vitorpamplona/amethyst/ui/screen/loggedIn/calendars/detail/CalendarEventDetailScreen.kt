@@ -97,16 +97,17 @@ import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.types.CalendarRsvpRow
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.addToPhoneCalendar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.shareIcs
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -347,7 +348,8 @@ private fun EventBody(
             )
         }
         val context = LocalContext.current
-        formatCalendarRange(note, context)?.let { range ->
+        val timeFormatter = rememberTimeOfDayFormatter()
+        formatCalendarRange(note, timeFormatter)?.let { range ->
             Text(
                 text = range,
                 style = MaterialTheme.typography.bodyLarge,

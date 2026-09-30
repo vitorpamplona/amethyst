@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
+import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -66,6 +67,8 @@ object AndroidAppServices : AppServices {
     override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
 
     override val deviceLocation: DeviceLocation get() = Amethyst.instance.locationManager
+
+    override fun cachedPlaceName(geohash: String): String? = CachedReversedGeoLocations.cached(geohash)
 
     override fun createAltTextSuggester(): AltTextSuggester = MLKitImageLabelService(Amethyst.instance.appContext)
 }

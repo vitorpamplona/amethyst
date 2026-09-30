@@ -70,6 +70,9 @@ interface AppServices {
     /** The device's position as geohashes. */
     val deviceLocation: DeviceLocation get() = DeviceLocation.None
 
+    /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
+    fun cachedPlaceName(geohash: String): String? = null
+
     /** A new on-device alt-text suggester for image uploads, or null where the platform has none. */
     fun createAltTextSuggester(): AltTextSuggester? = null
 }

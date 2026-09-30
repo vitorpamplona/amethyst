@@ -146,7 +146,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.collections.immutable.toImmutableList
@@ -584,6 +583,7 @@ private fun SearchTextField(
         // fields rather than search terms. The value stays the plain text, so a query can still
         // be copied out and pasted back.
         val fieldState = remember { SearchFieldState(searchBarViewModel.searchValue) }
+        val appServices = LocalAppServices.current
 
         // Reported up rather than read down: the scaffold that has to stop moving is composed
         // above this field, and it is the only thing that can keep a picker's scroll off the bars.
@@ -650,7 +650,7 @@ private fun SearchTextField(
             groupName = { groupNames[it] },
             // The same reverse-geocode cache the feed spinner and thread view already read
             // through LoadCityName; null until it resolves, which leaves the geohash showing.
-            scopeName = { field, value -> if (field == "geo") CachedReversedGeoLocations.cached(value) else null },
+            scopeName = { field, value -> if (field == "geo") appServices.cachedPlaceName(value) else null },
             groups = groupCandidates,
             onPeopleQuery = { userSuggestions.processCurrentWord(it) },
             onGroupQuery = { partial -> groupQuery = partial },

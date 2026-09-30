@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraise
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
@@ -139,7 +140,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
@@ -387,12 +387,13 @@ private fun MarkdownPostScreenBody(
                                 .fillMaxWidth()
                                 .padding(Size10dp),
                     ) {
-                        RenderContentAsMarkdown(
+                        LocalRichTextPlatform.current.Markdown(
                             content = postViewModel.message.text.toString(),
                             tags = EmptyTagList,
                             canPreview = true,
                             quotesLeft = 1,
                             backgroundColor = backgroundColor,
+                            callbackUri = null,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )

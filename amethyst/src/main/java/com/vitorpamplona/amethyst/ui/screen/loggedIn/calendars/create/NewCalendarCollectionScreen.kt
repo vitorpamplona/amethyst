@@ -71,9 +71,9 @@ import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatLongDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
