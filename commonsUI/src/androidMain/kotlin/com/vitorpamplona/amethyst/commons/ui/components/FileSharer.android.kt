@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -33,29 +34,62 @@ import java.util.zip.ZipOutputStream
 @Composable
 actual fun rememberFileSharer(): FileSharer {
     val context = LocalContext.current
-    return remember(context) {
-        FileSharer { zipName, files, title ->
-            val zipFile = File(context.cacheDir, zipName)
-            ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
-                files.forEach { (name, content) ->
-                    zip.putNextEntry(ZipEntry(name))
-                    zip.write(content.toByteArray())
-                    zip.closeEntry()
-                }
+    return remember(context) { AndroidFileSharer(context) }
+}
+
+private class AndroidFileSharer(
+    val context: Context,
+) : FileSharer {
+    override fun shareTextFilesAsZip(
+        zipName: String,
+        files: List<Pair<String, String>>,
+        title: String,
+    ) {
+        val zipFile = File(context.cacheDir, zipName)
+        ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
+            files.forEach { (name, content) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content.toByteArray())
+                zip.closeEntry()
+            }
+        }
+
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", zipFile)
+
+        val sendIntent =
+            Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TITLE, title)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", zipFile)
+        context.startActivity(Intent.createChooser(sendIntent, title))
+    }
 
-            val sendIntent =
-                Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "application/zip"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_TITLE, title)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
+    /**
+     * The file lives in `cacheDir/shared/`, covered by the `<cache-path>` entry in
+     * `file_paths.xml`; the receiver's read grant lasts only for the share.
+     */
+    override fun shareTextFile(
+        fileName: String,
+        mimeType: String,
+        content: String,
+        title: String,
+    ) {
+        val dir = File(context.cacheDir, "shared").apply { mkdirs() }
+        val file = File(dir, fileName)
+        file.writeText(content)
 
-            context.startActivity(Intent.createChooser(sendIntent, title))
-        }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+        val intent =
+            Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        context.startActivity(Intent.createChooser(intent, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

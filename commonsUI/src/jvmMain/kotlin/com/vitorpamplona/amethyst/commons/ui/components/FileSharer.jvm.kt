@@ -22,7 +22,20 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
 
-private val NoFileSharer = FileSharer { _, _, _ -> }
+private object NoFileSharer : FileSharer {
+    override fun shareTextFilesAsZip(
+        zipName: String,
+        files: List<Pair<String, String>>,
+        title: String,
+    ) {}
+
+    override fun shareTextFile(
+        fileName: String,
+        mimeType: String,
+        content: String,
+        title: String,
+    ) {}
+}
 
 /** No share sheet wired yet. */
 @Composable

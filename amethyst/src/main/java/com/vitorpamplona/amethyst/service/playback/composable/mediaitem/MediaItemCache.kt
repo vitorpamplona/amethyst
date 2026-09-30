@@ -25,9 +25,9 @@ import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.MimeTypes
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
 import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
+import com.vitorpamplona.amethyst.commons.video.normalizeStreamMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -45,23 +45,7 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
         internal fun toExoPlayerMimeType(
             mimeType: String?,
             videoUri: String? = null,
-        ): String? {
-            if (!mimeType.isNullOrBlank()) {
-                return when (mimeType.lowercase()) {
-                    "application/vnd.apple.mpegurl",
-                    "application/x-mpegurl",
-                    "audio/x-mpegurl",
-                    "audio/mpegurl",
-                    -> MimeTypes.APPLICATION_M3U8
-
-                    else -> mimeType
-                }
-            }
-            if (videoUri != null && hasM3u8PathExtension(videoUri)) {
-                return MimeTypes.APPLICATION_M3U8
-            }
-            return null
-        }
+        ): String? = normalizeStreamMimeType(mimeType, videoUri)
 
         // A side-loaded track needs its media type declared: a NIP-71 `text-track` says nothing
         // about the format, and a blossom-hosted one is `https://host/<sha256>` with no extension
@@ -81,14 +65,6 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
                 language != null && type != null -> "$language \u00B7 $type"
                 else -> language ?: type
             }
-
-        // Restrict `.m3u8` matching to the path component so a query param or
-        // fragment that happens to mention .m3u8 (e.g. `?ref=a.m3u8`) on an
-        // MP4 URI doesn't misroute to HlsMediaSource.
-        private fun hasM3u8PathExtension(uri: String): Boolean {
-            val path = uri.substringBefore('?').substringBefore('#')
-            return path.endsWith(".m3u8", ignoreCase = true)
-        }
     }
 
     override suspend fun compute(key: MediaItemData): LoadedMediaItem =

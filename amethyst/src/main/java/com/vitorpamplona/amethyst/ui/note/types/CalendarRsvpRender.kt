@@ -48,13 +48,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarAppointmentLines
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarDateBadge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detailRouteFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent

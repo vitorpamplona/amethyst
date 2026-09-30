@@ -99,6 +99,8 @@ class AndroidAccountViewModelHost(
     ): Result<AnonymizedResult> = VoiceAnonymizer().anonymize(input.toFile(), VoicePreset.valueOf(presetName))
 
     // Built on the application context: the assistant outlives any one Activity inside the ViewModel.
+    override val supportsWritingAssistant: Boolean get() = WritingAssistantFactory.IS_SUPPORTED
+
     override fun createWritingAssistant(): WritingAssistant = WritingAssistantFactory.create(modules.appContext)
 
     override val savedAccounts: Flow<Set<HexKey>> =

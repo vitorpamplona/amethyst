@@ -91,6 +91,9 @@ interface AccountViewModelHost {
         presetName: String,
     ): Result<AnonymizedResult> = Result.failure(UnsupportedOperationException("Voice anonymization is not available on this platform"))
 
+    /** Whether this build can offer an on-device writing assistant at all (it shows the setting). */
+    val supportsWritingAssistant: Boolean get() = false
+
     /** A new on-device writing assistant, or null where the platform has none. */
     fun createWritingAssistant(): WritingAssistant? = null
 

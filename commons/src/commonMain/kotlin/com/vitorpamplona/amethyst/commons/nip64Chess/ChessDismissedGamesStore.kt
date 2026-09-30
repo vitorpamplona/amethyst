@@ -25,6 +25,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import okio.IOException
@@ -64,3 +65,11 @@ class ChessDismissedGamesStore(
         }
     }
 }
+
+/**
+ * Where the app keeps the dismissed-chess-games store.
+ *
+ * A new file rather than a migration of `chess_dismissed_games`: anyone who had dismissed a game
+ * sees it once more and dismisses it again.
+ */
+fun AppPreferenceStores.chessDismissedGamesStore(): ChessDismissedGamesStore = ChessDismissedGamesStore(getDataStore("chess_dismissed_games_v2"))

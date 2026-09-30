@@ -466,7 +466,18 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      wraps BiometricPrompt with the keyguard fallback. `CalendarTimeFormat` is shared on
      `DateSkeletonFormatter`. Moved: search, the long-form composer, the calendar collection
      editor, NWC setup and the zap-amount settings. 185 of 252 screens shared.
-   - **Next:** 67 screens remain, and what blocks them is the platform itself:
+   - **Wave 10 (2026-09-30):** Home, Discover, the nest lobby and the Marmot group editor
+     first; then the date pickers on `LocalClock` (poll and zap-poll deadlines, schedule-at
+     with its presets), `FileSharer.shareTextFile` (the .ics export), `PhoneCalendar` (the
+     system event composer), `relativeTimeSpan` (`DateUtils` / `NSRelativeDateTimeFormatter`),
+     `rememberWindowViewModel` + `LocalWindowViewModelStoreOwner` (state shared across
+     destinations: the chess lobby and board, the Cordn group draft), `isHlsMedia` in
+     `commons.video`, `ChessEventBroadcaster` in commonMain and `supportsWritingAssistant` on
+     the host. `geo:` links go through `LocalUriHandler`. Moved: the note and poll composers,
+     voice reply, the calendar collections and event detail, the geocache detail and editor,
+     the live-activity channel, chess, Cordn group creation, the QR share and the compose
+     settings. 204 of 252 screens shared.
+   - **Next:** 48 screens remain, and what blocks them is the platform itself:
      - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
      - The Nests activity and PiP.
      - The call screens.

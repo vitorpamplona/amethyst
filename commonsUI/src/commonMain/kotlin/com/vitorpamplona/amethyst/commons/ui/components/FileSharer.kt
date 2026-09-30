@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.runtime.Composable
 
 /** Hands generated files to the platform's share sheet. */
-fun interface FileSharer {
+interface FileSharer {
     /**
      * Packs [files] (name to text content) into a zip named [zipName] and shares it, behind a
      * chooser titled [title] where the platform has one.
@@ -31,6 +31,17 @@ fun interface FileSharer {
     fun shareTextFilesAsZip(
         zipName: String,
         files: List<Pair<String, String>>,
+        title: String,
+    )
+
+    /**
+     * Writes [content] to a file named [fileName] and shares it as [mimeType], behind a chooser
+     * titled [title] where the platform has one.
+     */
+    fun shareTextFile(
+        fileName: String,
+        mimeType: String,
+        content: String,
         title: String,
     )
 }
