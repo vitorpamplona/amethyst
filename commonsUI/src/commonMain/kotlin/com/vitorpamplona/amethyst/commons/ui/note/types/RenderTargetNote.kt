@@ -20,50 +20,39 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.nip34Git.ui.statusKind
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
-import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
- * Renders a NIP-34 status event (kinds 1630-1633). These usually carry an
- * empty `content`, so the text fallback drew a blank note: show the new
- * status as a pill, the optional comment, and the issue/patch/PR it
- * targets (linked through the event's marked-`root` `e` tag) quoted below.
+ * Quotes the note that [note] acts on (the last entry of its `replyTo`) as a
+ * short embedded card: the post a zap or reaction targets, the issue/patch/PR
+ * a git status changes, and so on.
  */
 @Composable
-fun RenderGitStatusEvent(
+fun RenderTargetNote(
     note: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = note.event as? GitStatusEvent ?: return
-    val kind = remember(event) { event.statusKind() }
-
-    GitStatusPill(kind)
-
-    if (event.content.isNotBlank()) {
-        Spacer(modifier = StdVertSpacer)
-        Text(
-            text = event.content,
-            style = MaterialTheme.typography.bodyMedium,
+    note.replyTo?.lastOrNull()?.let {
+        NoteCompose(
+            it,
+            modifier = Modifier,
+            isBoostedNote = true,
+            makeItShort = true,
+            unPackReply = ReplyRenderType.NONE,
+            quotesLeft = quotesLeft - 1,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
-    }
-
-    if (note.replyTo?.lastOrNull() != null) {
-        Spacer(modifier = StdVertSpacer)
-        RenderTargetNote(note, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }

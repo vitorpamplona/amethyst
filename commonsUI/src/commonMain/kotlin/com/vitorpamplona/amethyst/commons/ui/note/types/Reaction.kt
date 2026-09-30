@@ -81,6 +81,6 @@ fun RenderReaction(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
+        RenderTargetNote(note, quotesLeft, cardBackground, accountViewModel, nav)
     }
 }

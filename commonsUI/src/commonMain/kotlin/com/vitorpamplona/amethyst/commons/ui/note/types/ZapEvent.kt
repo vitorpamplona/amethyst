@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ActivityCardFrame
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityHeaderRow
 import com.vitorpamplona.amethyst.commons.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayBlankAuthor
-import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -69,33 +68,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-
-/**
- * Shows the post a zap targets above the transfer card, mirroring how
- * reactions and reposts embed their target.
- */
-@Composable
-fun RenderZappedPost(
-    zapNote: Note,
-    quotesLeft: Int,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    zapNote.replyTo?.lastOrNull()?.let {
-        NoteCompose(
-            it,
-            modifier = Modifier,
-            isBoostedNote = true,
-            makeItShort = true,
-            unPackReply = ReplyRenderType.NONE,
-            quotesLeft = quotesLeft - 1,
-            parentBackgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
-}
 
 @Composable
 fun RenderZapReceipt(
@@ -155,7 +127,7 @@ fun RenderZapReceiptCard(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
+        RenderTargetNote(note, quotesLeft, cardBackground, accountViewModel, nav)
 
         card.amount?.let { ActivityAmountRow(it, orange) }
 
