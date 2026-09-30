@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
@@ -71,12 +70,16 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatIsOneOnOne
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotNewMessageViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
@@ -90,14 +93,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotNewMessageViewModel
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 
 @Composable
@@ -109,7 +110,7 @@ fun MarmotGroupChatView(
     nav: INav,
 ) {
     val feedViewModel: MarmotGroupFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = nostrGroupId + "MarmotGroupFeedViewModel",
             factory =
                 MarmotGroupFeedViewModel.Factory(
@@ -125,7 +126,7 @@ fun MarmotGroupChatView(
             accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         }
 
-    val newMessageModel: MarmotNewMessageViewModel = viewModel(key = nostrGroupId + "MarmotNewMessageViewModel")
+    val newMessageModel: MarmotNewMessageViewModel = rememberViewModel(key = nostrGroupId + "MarmotNewMessageViewModel") { MarmotNewMessageViewModel() }
     newMessageModel.init(accountViewModel)
     newMessageModel.load(nostrGroupId)
 

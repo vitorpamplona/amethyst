@@ -18,28 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup
 
-import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.vitorpamplona.amethyst.commons.feeds.MarmotGroupFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlin.reflect.KClass
 
-@Stable
-class OnePodcastFeedViewModel(
-    val podcastPubkey: HexKey,
-    val account: Account,
-) : AndroidFeedViewModel(
-        OnePodcastEpisodesFeedFilter(podcastPubkey, account, LocalCache),
+class MarmotGroupFeedViewModel(
+    nostrGroupId: HexKey,
+    account: Account,
+) : ListChangeFeedViewModel(
+        MarmotGroupFeedFilter(nostrGroupId, account.marmotGroupList, account),
+        LocalCache,
     ) {
     class Factory(
-        val podcastPubkey: HexKey,
+        val nostrGroupId: HexKey,
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = OnePodcastFeedViewModel(podcastPubkey, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = MarmotGroupFeedViewModel(nostrGroupId, account) as T
     }
 }

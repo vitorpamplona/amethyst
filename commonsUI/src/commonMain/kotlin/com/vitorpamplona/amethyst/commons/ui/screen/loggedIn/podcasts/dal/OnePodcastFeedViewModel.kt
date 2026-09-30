@@ -18,25 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.dal
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.relayClient.podcasts.OnePodcastQueryState
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlin.reflect.KClass
 
-@Composable
-fun OnePodcastFilterAssemblerSubscription(
-    podcast: User,
-    accountViewModel: AccountViewModel,
-) {
-    // Different screens get their own state even when tracking the same podcast key.
-    val state =
-        remember(podcast) {
-            OnePodcastQueryState(podcast)
-        }
-
-    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().onePodcast)
+@Stable
+class OnePodcastFeedViewModel(
+    val podcastPubkey: HexKey,
+    val account: Account,
+) : AndroidFeedViewModel(
+        OnePodcastEpisodesFeedFilter(podcastPubkey, account, LocalCache),
+    ) {
+    class Factory(
+        val podcastPubkey: HexKey,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = OnePodcastFeedViewModel(podcastPubkey, account) as T
+    }
 }

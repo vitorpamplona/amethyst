@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.bolt12Offers
+package com.vitorpamplona.amethyst.commons.ui.actions.bolt12Offers
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,7 +51,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -63,9 +62,11 @@ import com.vitorpamplona.amethyst.commons.resources.bolt12_offers_section_explai
 import com.vitorpamplona.amethyst.commons.resources.delete_bolt12_offer
 import com.vitorpamplona.amethyst.commons.resources.invalid_bolt12_offer
 import com.vitorpamplona.amethyst.commons.resources.no_bolt12_offers_message
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.abbreviateBolt12Offer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -76,14 +77,13 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.abbreviateBolt12Offer
 
 @Composable
 fun Bolt12OffersScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: Bolt12OffersViewModel = viewModel()
+    val viewModel: Bolt12OffersViewModel = rememberViewModel { Bolt12OffersViewModel() }
     viewModel.init(accountViewModel)
 
     LaunchedEffect(key1 = accountViewModel) {

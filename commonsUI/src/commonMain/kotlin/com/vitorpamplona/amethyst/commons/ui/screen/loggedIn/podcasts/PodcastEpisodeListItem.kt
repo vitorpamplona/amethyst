@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,7 +78,6 @@ fun PodcastEpisodeListItem(
     val season = remember(noteEvent) { episode.episodeSeason() }
     val episodeNumber = remember(noteEvent) { episode.episodeNumber() }
 
-    val context = LocalContext.current
     val timeLabels = rememberTimeAgoLabels()
     val dateStr = remember(noteEvent, timeLabels) { timeAgoWith(noteEvent.createdAt, timeLabels, prefix = "") }
     val seasonEpisodeLabel =

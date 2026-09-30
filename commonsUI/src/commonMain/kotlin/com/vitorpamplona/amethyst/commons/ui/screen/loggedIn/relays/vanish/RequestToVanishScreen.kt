@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11Fetcher
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.confirm
@@ -481,7 +482,7 @@ private fun ConfirmVanishDialog(
 fun RequestToVanishScreenPreview() {
     ThemeComparisonColumn {
         RequestToVanishScreen(
-            nip11CachedRetriever = Nip11CachedRetriever { TODO() },
+            nip11CachedRetriever = Nip11CachedRetriever(Nip11Fetcher.Offline),
             accountViewModel = mockAccountViewModel(),
             nav = EmptyNav(),
         )

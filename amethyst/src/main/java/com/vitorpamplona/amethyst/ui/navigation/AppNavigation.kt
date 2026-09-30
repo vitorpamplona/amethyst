@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
 import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataScreen
+import com.vitorpamplona.amethyst.commons.ui.actions.bolt12Offers.Bolt12OffersScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
@@ -101,7 +102,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.G
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.GeohashChatsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.GeohashTeleportScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.NewGeohashChatScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.minichat.MinichatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
@@ -175,6 +178,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nsites.NsitesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.pictures.PicturesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastEpisodesScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.EditPodcastShowScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.NewPodcastTrailerScreen
@@ -193,6 +197,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.RelayInforma
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip43.RelayMembersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.subscriptions.ActiveSubscriptionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
@@ -208,6 +213,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ProfileUiS
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ReactionsSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SpammingUsersScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnCoordinatorsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnHubScreen
@@ -245,7 +251,6 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
-import com.vitorpamplona.amethyst.ui.actions.bolt12Offers.Bolt12OffersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomImportScreen
@@ -279,8 +284,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChannelListScreen
@@ -315,14 +318,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodcastEpisodeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.SendPaymentScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
@@ -333,7 +334,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen

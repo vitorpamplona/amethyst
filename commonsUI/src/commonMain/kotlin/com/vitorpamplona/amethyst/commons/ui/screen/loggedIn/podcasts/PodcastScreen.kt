@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -41,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -50,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_no_episodes
 import com.vitorpamplona.amethyst.commons.resources.route_podcasts
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
@@ -61,14 +61,14 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.types.PodcastBookmarkButton
 import com.vitorpamplona.amethyst.commons.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.dal.OnePodcastFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.datasource.OnePodcastFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.OnePodcastFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodcastFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
@@ -98,7 +98,7 @@ fun PodcastScreen(
         }
 
     val feedViewModel: OnePodcastFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = pubkey + "OnePodcastFeedViewModel",
             factory = OnePodcastFeedViewModel.Factory(pubkey, accountViewModel.account),
         )
