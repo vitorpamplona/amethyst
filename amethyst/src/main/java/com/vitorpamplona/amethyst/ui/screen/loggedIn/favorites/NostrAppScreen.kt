@@ -140,7 +140,9 @@ private fun EmbeddedNostrAppTab(
     val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
     // Only nSites have a route of their own to choose, and only when Tor is on.
-    val torOn = if (profile.exposesNetwork && Amethyst.instance.torPrefs.torType.value != TorType.OFF) useTor else null
+    val torType by Amethyst.instance.torPrefs.torType
+        .collectAsStateWithLifecycle()
+    val torOn = if (profile.exposesNetwork && torType != TorType.OFF) useTor else null
 
     var showAccess by remember { mutableStateOf(false) }
 
