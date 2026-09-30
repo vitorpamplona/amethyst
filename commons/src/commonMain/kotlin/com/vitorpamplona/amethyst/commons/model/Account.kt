@@ -4206,10 +4206,17 @@ class Account(
             }
         }
 
+        // The channel index is what every open Concord screen reads (canPost, the dissolved/banned/cut
+        // notices), so it refreshes on its own collector. Sharing the loop below made it wait behind
+        // the network-bound drains: a dissolution landing live left the composer up until a restart.
+        scope.launch {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
+            concordSessions.revision.sample(500).collect { refreshConcordChannelIndex() }
+        }
+
         scope.launch {
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             concordSessions.revision.sample(500).collect {
-                refreshConcordChannelIndex()
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
                 runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
                 // A promotion to staff delivers the Control Plane write key inside the Grant
