@@ -186,6 +186,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
@@ -332,6 +333,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -1026,6 +1028,8 @@ private fun FullBleedNoteCompose(
                     RenderGitPullRequestEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is GitPullRequestUpdateEvent) {
                     RenderGitPullRequestUpdateEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is GitStatusEvent) {
+                    RenderGitStatusEvent(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
                 } else if (noteEvent is AppRecommendationEvent) {
