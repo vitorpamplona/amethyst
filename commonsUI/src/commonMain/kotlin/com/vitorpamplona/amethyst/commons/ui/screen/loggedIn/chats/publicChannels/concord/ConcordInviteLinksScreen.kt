@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChanne
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -75,7 +75,9 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_faile
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_ok
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_privatize_pending
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoked_privatized
+import com.vitorpamplona.amethyst.commons.resources.concord_invite_revoking
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -130,6 +132,8 @@ fun ConcordInviteLinksScreen(
     var reloads by remember(communityId) { mutableIntStateOf(0) }
     var confirming by remember { mutableStateOf<ConcordInviteListEntry?>(null) }
     var revoking by remember { mutableStateOf(false) }
+    // The last revoke's outcome, shown inline above the list rather than in a second dialog.
+    var outcome by remember(communityId) { mutableStateOf<ConcordRevokeResult?>(null) }
 
     // The folded Control Plane, for the Public/Private mode (CORD-05 §5): revoking the community's
     // last live link flips it Private, which is a Refounding, so the dialog says so before it happens.
@@ -169,30 +173,33 @@ fun ConcordInviteLinksScreen(
             )
         },
     ) { padding ->
-        when (val current = state) {
-            is LinksState.Loading ->
-                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            outcome?.let { RevokeOutcome(it, onDismiss = { outcome = null }) }
+            when (val current = state) {
+                is LinksState.Loading ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
 
-            is LinksState.Unreadable -> CenteredMessage(padding, stringRes(Res.string.concord_invite_links_unreadable))
+                is LinksState.Unreadable -> CenteredMessage(stringRes(Res.string.concord_invite_links_unreadable))
 
-            is LinksState.Loaded ->
-                if (current.links.isEmpty()) {
-                    CenteredMessage(padding, stringRes(Res.string.concord_invite_links_empty))
-                } else {
-                    LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                        items(current.links, key = { it.token }) { link ->
-                            InviteLinkRow(
-                                link = link,
-                                enabled = !revoking,
-                                onCopy = { scope.launch { clipboard.setText(link.url) } },
-                                onRevoke = { confirming = link },
-                            )
-                            HorizontalDivider()
+                is LinksState.Loaded ->
+                    if (current.links.isEmpty()) {
+                        CenteredMessage(stringRes(Res.string.concord_invite_links_empty))
+                    } else {
+                        LazyColumn(Modifier.fillMaxSize()) {
+                            items(current.links, key = { it.token }) { link ->
+                                InviteLinkRow(
+                                    link = link,
+                                    enabled = !revoking,
+                                    onCopy = { scope.launch { clipboard.setText(link.url) } },
+                                    onRevoke = { confirming = link },
+                                )
+                                HorizontalDivider()
+                            }
                         }
                     }
-                }
+            }
         }
     }
 
@@ -220,16 +227,7 @@ fun ConcordInviteLinksScreen(
                         revoking = true
                         scope.launch {
                             try {
-                                val result = account.concord.revokeConcordInvite(communityId, link.token)
-                                accountViewModel.toastManager.toast(
-                                    Res.string.concord_invite_links_title,
-                                    when (result) {
-                                        ConcordRevokeResult.FAILED -> Res.string.concord_invite_revoked_failed
-                                        ConcordRevokeResult.REVOKED -> Res.string.concord_invite_revoked_ok
-                                        ConcordRevokeResult.PRIVATIZED -> Res.string.concord_invite_revoked_privatized
-                                        ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING -> Res.string.concord_invite_revoked_privatize_pending
-                                    },
-                                )
+                                outcome = account.concord.revokeConcordInvite(communityId, link.token)
                                 // Re-read either way: on success the link is gone from the list, and on
                                 // failure the list is the only thing that can say whether it changed.
                                 reloads++
@@ -240,7 +238,15 @@ fun ConcordInviteLinksScreen(
                         }
                     },
                 ) {
-                    Text(stringRes(Res.string.concord_invite_revoke_confirm), color = MaterialTheme.colorScheme.error)
+                    if (revoking) {
+                        // A last-link revoke runs a Refounding, which takes several seconds.
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Text(stringRes(Res.string.concord_invite_revoking))
+                        }
+                    } else {
+                        Text(stringRes(Res.string.concord_invite_revoke_confirm), color = MaterialTheme.colorScheme.error)
+                    }
                 }
             },
             dismissButton = {
@@ -252,12 +258,43 @@ fun ConcordInviteLinksScreen(
     }
 }
 
+/** The last revoke's result as a dismissible row above the list: a check when it worked, an error when not. */
 @Composable
-private fun CenteredMessage(
-    padding: PaddingValues,
-    message: String,
+private fun RevokeOutcome(
+    result: ConcordRevokeResult,
+    onDismiss: () -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().padding(padding).padding(24.dp), contentAlignment = Alignment.Center) {
+    val failed = result == ConcordRevokeResult.FAILED || result == ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING
+    val color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SymbolIcon(symbol = if (failed) MaterialSymbols.Warning else MaterialSymbols.Check, contentDescription = null, tint = color)
+        Text(
+            stringRes(
+                when (result) {
+                    ConcordRevokeResult.FAILED -> Res.string.concord_invite_revoked_failed
+                    ConcordRevokeResult.REVOKED -> Res.string.concord_invite_revoked_ok
+                    ConcordRevokeResult.PRIVATIZED -> Res.string.concord_invite_revoked_privatized
+                    ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING -> Res.string.concord_invite_revoked_privatize_pending
+                },
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onDismiss) {
+            SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.dismiss))
+        }
+    }
+    HorizontalDivider()
+}
+
+@Composable
+private fun CenteredMessage(message: String) {
+    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Text(
             message,
             // This Box sits on the bare window background, so LocalContentColor is still the M3

@@ -590,6 +590,7 @@
     <string name="concord_invite_revoke_title">Revoke this link?</string>
     <string name="concord_invite_revoke_explainer">Anyone still holding this link will no longer be able to join. People who already joined with it stay in the community. This can't be undone.</string>
     <string name="concord_invite_revoke_confirm">Revoke</string>
+    <string name="concord_invite_revoking">Revoking…</string>
     <string name="concord_invite_revoke_privatize_warning">This is the community's last live invite link. Revoking it makes the community Private and rotates its keys, so only current members keep access.</string>
     <string name="concord_invite_revoked_privatized">Link revoked. The community is now Private and its keys were rotated.</string>
     <string name="concord_invite_revoked_privatize_pending">Link revoked. The community is now Private, but its keys were not rotated: an admin who can ban members needs to rotate them.</string>
