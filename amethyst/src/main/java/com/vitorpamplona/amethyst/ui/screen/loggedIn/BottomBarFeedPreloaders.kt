@@ -36,24 +36,24 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.datasourc
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.datasource.HighlightsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.longs.datasource.LongsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.datasource.MusicTracksFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.polls.datasource.PollsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.products.datasource.ProductsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 
 /**
  * Activates the relay subscription for each feed the user has pinned to the bottom

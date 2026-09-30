@@ -79,7 +79,9 @@ import com.vitorpamplona.amethyst.commons.resources.classifieds_location_placeho
 import com.vitorpamplona.amethyst.commons.resources.classifieds_price
 import com.vitorpamplona.amethyst.commons.resources.classifieds_title
 import com.vitorpamplona.amethyst.commons.resources.classifieds_title_placeholder
+import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
@@ -91,8 +93,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import kotlinx.collections.immutable.toImmutableList
 
