@@ -6356,4 +6356,10 @@
     <string name="browser_permission_ask">Ask</string>
     <string name="browser_permission_allowed">Allowed</string>
     <string name="browser_permission_blocked">Blocked</string>
+
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <string name="browser_pill_download_title">Download this file?</string>
+    <string name="browser_pill_download_risky">This file type can run code. Check that the name matches what you meant to get.</string>
+    <string name="browser_pill_download_save">Save</string>
+    <string name="browser_pill_download_from">From %1$s</string>
 </resources>

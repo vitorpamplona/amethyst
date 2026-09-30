@@ -197,6 +197,9 @@ class EmbeddedWebAppController(
     /** The camera / microphone / location request the page is waiting on, if any. */
     val pendingPermission = mutableStateOf<EmbeddedPermissionRequest?>(null)
 
+    /** The download the page started that awaits the user's consent, if any. */
+    val pendingDownload = mutableStateOf<EmbeddedDownloadRequest?>(null)
+
     /** The certificate of the page on screen, once page info asked for it (null for none, or not yet). */
     val pageCertificate = mutableStateOf<CertificateInfo?>(null)
 
@@ -281,6 +284,7 @@ class EmbeddedWebAppController(
     private fun resetPageState() {
         pendingDialog.value = null
         pendingPermission.value = null
+        pendingDownload.value = null
         isFullscreen.value = false
         _findResult.value = null
     }
@@ -619,6 +623,30 @@ class EmbeddedWebAppController(
                 if (pendingPermission.value?.id == id) pendingPermission.value = null
             }
             NappletBrowserContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
+            NappletBrowserContract.MSG_DOWNLOAD_CONSENT -> {
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)
+                val origin = data.getString(NappletBrowserContract.KEY_BROWSER_ORIGIN)
+                val name = data.getString(NappletBrowserContract.KEY_DOWNLOAD_NAME).orEmpty()
+                // An unnamed/absent origin means the sandbox couldn't even state who is asking: refuse.
+                if (origin == null || name.isEmpty() || pendingDownload.value != null || pendingDialog.value != null || pendingPermission.value != null) {
+                    answerDownload(id, allowed = false)
+                    return true
+                }
+                pendingDownload.value =
+                    EmbeddedDownloadRequest(
+                        id = id,
+                        origin = origin,
+                        fileName = name,
+                        sizeBytes = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, -1L),
+                        sourceHost = data.getString(NappletBrowserContract.KEY_DOWNLOAD_SOURCE),
+                        risky = data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, false),
+                    )
+            }
+            NappletBrowserContract.MSG_DOWNLOAD_CANCEL -> {
+                val id = msg.data?.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)
+                if (pendingDownload.value?.id == id) pendingDownload.value = null
+            }
             NappletBrowserContract.MSG_FULLSCREEN -> isFullscreen.value = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
             NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true
@@ -745,6 +773,18 @@ class EmbeddedWebAppController(
         send(NappletBrowserContract.MSG_PERMISSION_RESULT) {
             putLong(NappletBrowserContract.KEY_PERMISSION_ID, id)
             putStringArray(NappletBrowserContract.KEY_PERMISSIONS, granted.map { it.key }.toTypedArray())
+        }
+    }
+
+    /** Answers the download-consent card for [id]: true lets the sandbox fetch or write the file it described. */
+    fun answerDownload(
+        id: Long,
+        allowed: Boolean,
+    ) {
+        if (pendingDownload.value?.id == id) pendingDownload.value = null
+        send(NappletBrowserContract.MSG_DOWNLOAD_CONSENT_RESULT) {
+            putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id)
+            putBoolean(NappletBrowserContract.KEY_DOWNLOAD_ALLOWED, allowed)
         }
     }
 

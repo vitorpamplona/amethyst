@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome.Action
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
+import com.vitorpamplona.amethyst.commons.browser.DownloadCooldown
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
@@ -231,6 +232,8 @@ class NappletBrowserActivity : ComponentActivity() {
     private val originTokens = mutableMapOf<String, String>()
     private val pendingByOrigin = mutableMapOf<String, MutableList<Message>>()
     private val mintInFlight = mutableSetOf<String>()
+    private val downloadCooldown = DownloadCooldown()
+    private var preparingDownload = false
 
     // The page's requests that act for the user (NIP-07 sign / encrypt / decrypt) made while this window was in
     // the background, as (origin, request): sent on the next resume, so a site can't sign — even with
@@ -388,8 +391,20 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.webViewClient = BrowserClient()
         wv.webChromeClient = BrowserChromeClient()
         wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
-        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), if (useTor) proxyPort else -1)
+        wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            // The page's origin; a fresh popup still on about:blank has none, so name the file's own.
+            val origin =
+                chrome
+                    ?.ui
+                    ?.chrome
+                    ?.url
+                    ?.let(BrowserChrome::originOf) ?: BrowserChrome.originOf(url) ?: return@setDownloadListener
+            if (!canOfferDownload(origin)) return@setDownloadListener
+            // Read on the main thread: the cookie jar is the tab's own per-account WebView profile.
+            val cookie = BrowserWebTools.cookieManager(wv).getCookie(url)
+            prepareDownloadOffer(origin) { ready ->
+                BrowserDownloads.offerListenerDownload(url, userAgent, contentDisposition, mimeType, contentLength, cookie, if (useTor) proxyPort else -1, ready)
+            }
         }
         wv.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         wv.dropSystemBarInsets()
@@ -478,6 +493,7 @@ class NappletBrowserActivity : ComponentActivity() {
         // A dialog still up would leak its window and leave the page's JS blocked on an unanswered result.
         chrome?.dialog?.answer?.invoke(false, null, false)
         chrome?.permissionPrompt?.answer?.invoke(false, false)
+        chrome?.downloadPrompt?.answer?.invoke(false)
         customViewCallback?.onCustomViewHidden()
         destroyWebView()
         super.onDestroy()
@@ -959,15 +975,27 @@ class NappletBrowserActivity : ComponentActivity() {
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
-        // Browser conveniences (share, theme colour, blob downloads) are handled here, never brokered.
-        if (envelope.stringOrNull("type").orEmpty().startsWith("browser.")) {
-            onBrowserMessage(envelope)
-            return
-        }
+        // The origin the WebView reports, which the page can't forge, keys every decision below.
+        val origin = trustedOrigin(sourceOrigin) ?: return
 
-        val scheme = sourceOrigin.scheme ?: return
-        val host = sourceOrigin.host ?: return
-        val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+        // Browser conveniences (share, theme colour, blob downloads) are handled here, never brokered.
+        // A download still asks the user first ([offerInlineDownload]): any top-frame script can post one.
+        when (envelope.stringOrNull("type")) {
+            "browser.share" -> {
+                if (resumed) BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
+                return
+            }
+            "browser.themeColor" -> {
+                themeColor = BrowserChrome.parseCssRgb(envelope.stringOrNull("color"))
+                applyThemeColor(themeColor)
+                updateTaskDescription()
+                return
+            }
+            "browser.download" -> {
+                offerInlineDownload(origin, envelope)
+                return
+            }
+        }
 
         val pageId = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${fireSeq++}" }
         val id = bridge.brokerIdFor(pageId)
@@ -1013,25 +1041,67 @@ class NappletBrowserActivity : ComponentActivity() {
         }
     }
 
-    /** A `browser.*` message from [BrowserExtrasScript]. */
-    private fun onBrowserMessage(envelope: JsonObject) {
-        when (envelope.stringOrNull("type")) {
-            "browser.share" ->
-                if (resumed) {
-                    BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
-                }
-            "browser.themeColor" -> {
-                themeColor = BrowserChrome.parseCssRgb(envelope.stringOrNull("color"))
-                applyThemeColor(themeColor)
-                updateTaskDescription()
-            }
-            "browser.download" -> {
-                val data = envelope.stringOrNull("data") ?: return
-                if (data.startsWith("data:") && data.length <= BrowserDownloads.MAX_INLINE_BYTES / 3 * 4 + 256) {
-                    BrowserDownloads.saveDataUrl(this, data, envelope.stringOrNull("name"))
-                }
-            }
+    /** `scheme://host[:port]` of the WebView-reported origin, or null when it has no usable one. */
+    private fun trustedOrigin(sourceOrigin: Uri): String? {
+        val scheme = sourceOrigin.scheme ?: return null
+        val host = sourceOrigin.host ?: return null
+        return "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+    }
+
+    /**
+     * A `browser.download` envelope: the bytes a page wants saved (a `blob:` download the extras script
+     * read, or one a script forged). Keyed on the WebView-reported [origin], never an envelope field.
+     */
+    private fun offerInlineDownload(
+        origin: String,
+        envelope: JsonObject,
+    ) {
+        if (!canOfferDownload(origin)) return
+        val data = envelope.stringOrNull("data") ?: return
+        prepareDownloadOffer(origin) { ready -> BrowserDownloads.offerInline(data, envelope.stringOrNull("name"), ready) }
+    }
+
+    /**
+     * Whether [origin] may put a download card up now: never over another page prompt (so a page can't swap
+     * the name under the user's finger, or pop the card where a dialog's button just was), never while an
+     * offer is still being prepared (so a page can't queue decodes), and not within its cooldown.
+     */
+    private fun canOfferDownload(origin: String): Boolean {
+        val host = chrome ?: return false
+        return host.downloadPrompt == null && host.dialog == null && host.permissionPrompt == null && !preparingDownload && downloadCooldown.allows(origin)
+    }
+
+    /** Runs [prepare] (which answers exactly once, on the main thread) and shows the offer it produces. */
+    private fun prepareDownloadOffer(
+        origin: String,
+        prepare: ((BrowserDownloads.DownloadOffer?) -> Unit) -> Unit,
+    ) {
+        preparingDownload = true
+        prepare { offer ->
+            preparingDownload = false
+            if (offer != null) showDownloadOffer(origin, offer)
         }
+    }
+
+    /** Shows [offer]'s consent card; the file is fetched or written only if the user taps Save. */
+    private fun showDownloadOffer(
+        origin: String,
+        offer: BrowserDownloads.DownloadOffer,
+    ) {
+        val host = chrome ?: return
+        if (isDestroyed || !canOfferDownload(origin)) return
+        host.downloadPrompt =
+            BrowserChromeHost.PendingDownload(
+                host = BrowserChrome.displayHost(origin),
+                security = BrowserChrome.security(host.ui.chrome),
+                fileName = offer.fileName,
+                sizeBytes = offer.sizeBytes,
+                sourceHost = offer.sourceHost,
+                risky = offer.risky,
+            ) { allowed ->
+                downloadCooldown.answered(origin, allowed)
+                if (allowed) offer.save(this)
+            }
     }
 
     private fun requestBrowserToken(origin: String) {
