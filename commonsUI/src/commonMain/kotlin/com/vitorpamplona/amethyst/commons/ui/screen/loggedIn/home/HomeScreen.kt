@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -92,8 +92,14 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.zonedDrawerSwipeIfM
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.BackupConflictCards
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.NewHashtagPostButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderEphemeralBubble
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderGeohashBubble
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup.BackupKeysNudge
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -103,12 +109,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.backups.BackupConflictCards
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderGeohashBubble
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.BackupKeysNudge
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch

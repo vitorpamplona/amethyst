@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,16 +37,16 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
-fun DiscoveryTopBar(
+fun HomeTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val list by accountViewModel.account.settings.defaultDiscoveryFollowList
+    val list by accountViewModel.account.settings.defaultHomeFollowList
         .collectAsStateWithLifecycle()
 
-    // No kind seed here: Discover's tabs span live streams, communities, classifieds and DVM
-    // feeds at once, so there is no one window to hand over. What the list spinner narrowed to
-    // still seeds, when it is something the token language can say.
+    // No kind seed: the home feed spans every kind Amethyst can render, so there is no one
+    // window to hand over. What the list spinner narrowed to still seeds, when the token
+    // language can say it.
     val me = accountViewModel.userProfile().pubkeyHex
     val seed = remember(list, me) { list.asSearchQuery(me) }
 
@@ -55,8 +55,14 @@ fun DiscoveryTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = { accountViewModel.account.settings.changeDefaultDiscoveryFollowList(it.code) },
-        )
+        ) { listName ->
+            val route = listName.route
+            if (route != null) {
+                nav.nav(route)
+            } else {
+                accountViewModel.account.settings.changeDefaultHomeFollowList(listName.code)
+            }
+        }
     }
 }
 
@@ -67,7 +73,7 @@ private fun TopNavFilterBar(
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
-    val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,

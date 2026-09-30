@@ -18,55 +18,59 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannelNoteAuthors
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.Gallery
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
-/**
- * A "live near you" bubble for a geohash location channel with recent activity.
- * Anonymous by design — no participant avatars, just the cell and a location pin.
- */
 @Composable
-fun RenderGeohashBubble(
-    channel: GeohashChatChannel,
+fun RenderEphemeralBubble(
+    channel: EphemeralChatChannel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     FilledTonalButton(
         contentPadding = PaddingValues(start = 8.dp, end = 10.dp, bottom = 0.dp, top = 0.dp),
-        onClick = { nav.nav(Route.GeohashChat(channel.geohash)) },
+        onClick = {
+            nav.nav { routeFor(channel) }
+        },
     ) {
-        SymbolIcon(
-            symbol = MaterialSymbols.LocationOn,
-            contentDescription = null,
-            modifier = Modifier.align(Alignment.CenterVertically).size(18.dp),
-            tint = MaterialTheme.colorScheme.primary,
+        LiveStatusIndicatorForChannel(
+            channel = channel,
+            accountViewModel = accountViewModel,
+            modifier = Modifier.align(Alignment.CenterVertically),
         )
         Spacer(StdHorzSpacer)
-        // Users care about the place, not the geohash code — resolve the cell to a city name, falling
-        // back to the "#geohash" display name while the reverse-geocode is in flight (or unavailable).
-        LoadCityName(
-            geohashStr = channel.geohash,
-            onLoading = { Text(channel.toBestDisplayName()) },
-        ) { city ->
-            Text(city)
-        }
+        RenderUsers(channel, accountViewModel, nav)
+        Spacer(StdHorzSpacer)
+        Text(
+            channel.toBestDisplayName(),
+        )
     }
+}
+
+@Composable
+fun RenderUsers(
+    channel: EphemeralChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authors by observeChannelNoteAuthors(channel, accountViewModel)
+
+    Gallery(authors, Modifier, accountViewModel, nav, 3)
 }

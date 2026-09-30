@@ -41,20 +41,32 @@ import java.io.File
  * asks for, added with the first screen rather than after the fifth.
  */
 class CordnScreenIndependenceTest {
-    private val screensRoot: File by lazy {
+    /**
+     * The chats screen packages, in the app and in `commonsUI`: screens move from the first to the
+     * second one by one, and the guard has to follow them.
+     */
+    private val screensRoots: List<File> by lazy {
         // Resolved, not assumed: a wrong root makes an architecture test pass
         // for the wrong reason, which is worse than not having one.
-        generateSequence(File(".").absoluteFile) { it.parentFile }
-            .map { File(it, "amethyst/src/main/java/com/vitorpamplona/amethyst/ui/screen/loggedIn/chats") }
-            .firstOrNull { it.isDirectory }
-            ?: error("cannot locate the chats screen package from ${File(".").absolutePath}")
+        val repo =
+            generateSequence(File(".").absoluteFile) { it.parentFile }
+                .firstOrNull { File(it, "commonsUI").isDirectory && File(it, "amethyst").isDirectory }
+                ?: error("cannot locate the repository root from ${File(".").absolutePath}")
+        listOf(
+            "amethyst/src/main/java/com/vitorpamplona/amethyst/ui/screen/loggedIn/chats",
+            "commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/screen/loggedIn/chats",
+        ).map { File(repo, it) }
+            .filter { it.isDirectory }
+            .ifEmpty { error("cannot locate the chats screen packages under $repo") }
     }
 
     private fun kotlinFilesIn(pkg: String): List<File> =
-        File(screensRoot, pkg)
-            .walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }
-            .toList()
+        screensRoots.flatMap { root ->
+            File(root, pkg)
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .toList()
+        }
 
     private fun importsMatching(
         pkg: String,
