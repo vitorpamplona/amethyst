@@ -3676,7 +3676,6 @@
     <string name="concord_direct_invite_from">Zaproszono przez %1$s</string>
     <string name="concord_direct_invite_hint">Nazwa, npub lub NIP-05</string>
     <string name="concord_direct_invite_send">Wyślij zaproszenie do %1$s</string>
-    <string name="concord_direct_invite_sent">Zaproszenie zostało wysłane</string>
     <string name="concord_direct_invite_title">Zaproś kogoś bezpośrednio</string>
     <string name="concord_direct_invites_title">Zaproszenia do społeczności</string>
     <string name="concord_edit_title">Edytuj społeczność</string>
