@@ -66,7 +66,7 @@ object RelayIdentity {
         val key = KeyPair()
         file.absoluteFile.parentFile?.mkdirs()
         val tmp = File(file.absoluteFile.parentFile, "${file.name}.tmp")
-        tmp.delete()
+        Files.deleteIfExists(tmp.toPath())
         try {
             Files.createFile(tmp.toPath(), PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
         } catch (_: UnsupportedOperationException) {
