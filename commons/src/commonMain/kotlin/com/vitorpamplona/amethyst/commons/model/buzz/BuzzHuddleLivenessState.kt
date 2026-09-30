@@ -56,7 +56,7 @@ object BuzzHuddleLivenessState {
         val sessions = mutableSeen.value[channelId] ?: persistentMapOf()
         val prev = sessions[sessionId]
         if (prev != null && seenAtSecs <= prev) return@withLock
-        mutableSeen.value = mutableSeen.value.put(channelId, sessions.put(sessionId, seenAtSecs))
+        mutableSeen.value = mutableSeen.value.putting(channelId, sessions.putting(sessionId, seenAtSecs))
     }
 
     /** The sessions in [channelId] reported live within [LIVE_WINDOW_SECS] of [nowSecs]. */

@@ -75,43 +75,48 @@ object BuzzIdentityNames {
         pubkey: HexKey,
         viewer: HexKey,
         users: (HexKey) -> User? = LocalCache::getUserIfExists,
+        hasAgentProfile: (HexKey) -> Boolean = ::hasCachedAgentProfile,
     ): ResolvedIdentityName? {
         val members = channel.allMemberKeys()
         val version = mutableVersion.value
         val entry =
             lock.withLock {
                 cache[channel.groupId]?.takeIf { it.members === members && it.version == version && it.viewer == viewer }
-            } ?: Entry(members, version, viewer, resolve(members, viewer, users)).also { lock.withLock { cache[channel.groupId] = it } }
+            } ?: Entry(members, version, viewer, resolve(members, viewer, users, hasAgentProfile)).also { lock.withLock { cache[channel.groupId] = it } }
 
         val key = pubkey.lowercase()
         if (key in entry.resolved) return entry.resolved[key]
         return lock.withLock { entry.outside[key] }
-            ?: resolve(members + key, viewer, users)[key].also { found -> lock.withLock { entry.outside[key] = found } }
+            ?: resolve(members + key, viewer, users, hasAgentProfile)[key].also { found -> lock.withLock { entry.outside[key] = found } }
     }
 
     /** The naming fact for [pubkey]: its profile name, and whether (and whose) agent it is. */
     fun factFor(
         pubkey: HexKey,
         users: (HexKey) -> User?,
+        hasAgentProfile: (HexKey) -> Boolean = ::hasCachedAgentProfile,
     ): NamingIdentity {
         val user = users(pubkey)
         val info = user?.metadataOrNull()?.flow?.value
         val owner = info?.nipOaOwner
-        val hasAgentProfile = LocalCache.getAddressableNoteIfExists(AgentProfileEvent.createAddress(pubkey))?.event is AgentProfileEvent
         return NamingIdentity(
             pubkey = pubkey,
             name = info?.info?.bestName()?.takeIf { IdentityNamePolicy.trim(it).isNotEmpty() } ?: user?.pubkeyDisplayHex() ?: pubkey.take(8),
-            isAgent = owner != null || hasAgentProfile,
+            isAgent = owner != null || hasAgentProfile(pubkey),
             ownerPubkey = owner,
         )
     }
+
+    /** Whether the cache holds a kind-10100 agent profile by [pubkey]. */
+    fun hasCachedAgentProfile(pubkey: HexKey): Boolean = LocalCache.getAddressableNoteIfExists(AgentProfileEvent.createAddress(pubkey))?.event is AgentProfileEvent
 
     private fun resolve(
         candidates: Set<HexKey>,
         viewer: HexKey,
         users: (HexKey) -> User?,
+        hasAgentProfile: (HexKey) -> Boolean,
     ): Map<HexKey, ResolvedIdentityName> {
-        val facts = candidates.filter { isKey(it) }.map { factFor(it, users) }
+        val facts = candidates.filter { isKey(it) }.map { factFor(it, users, hasAgentProfile) }
         // Owners outside the channel only lend their names ("Alice’s Honey"); they don't compete.
         // Listed first so a member's own fact stays the preferred one.
         val ownerFacts =

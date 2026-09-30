@@ -65,7 +65,7 @@ class BuzzIdentityNamesTest {
         channel: RelayGroupChannel,
         pubkey: HexKey,
         viewer: HexKey,
-    ) = BuzzIdentityNames.labelFor(channel, pubkey, viewer) { users[it] }?.name
+    ) = BuzzIdentityNames.labelFor(channel, pubkey, viewer, users = { users[it] }, hasAgentProfile = { false })?.name
 
     @Test
     fun anAgentSharingAMembersNameIsNamedAfterItsOwner() {
