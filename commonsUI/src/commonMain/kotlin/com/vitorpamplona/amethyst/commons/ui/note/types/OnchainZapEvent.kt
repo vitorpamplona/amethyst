@@ -150,7 +150,7 @@ fun RenderOnchainZap(
                 nav = nav,
             )
 
-            RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
+            RenderTargetNote(note, quotesLeft, cardBackground, accountViewModel, nav)
 
             AmountRow(sats = sats, orange = orange)
 

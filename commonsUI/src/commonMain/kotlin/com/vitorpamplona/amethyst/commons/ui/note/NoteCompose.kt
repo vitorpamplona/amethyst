@@ -194,6 +194,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
@@ -362,6 +363,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -1391,6 +1393,10 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        is GitStatusEvent -> {
+            RenderGitStatusEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is EncryptedDmEvent -> {

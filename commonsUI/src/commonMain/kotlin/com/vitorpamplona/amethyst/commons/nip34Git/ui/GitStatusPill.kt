@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
-private fun GitStatusEvent.statusKind(): StatusKind =
+fun GitStatusEvent.statusKind(): StatusKind =
     when (this) {
         is GitStatusAppliedEvent -> StatusKind.APPLIED
         is GitStatusClosedEvent -> StatusKind.CLOSED
