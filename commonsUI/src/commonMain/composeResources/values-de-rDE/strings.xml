@@ -6152,4 +6152,5 @@
     <string name="cordn_voice_play">Sprachnachricht abspielen</string>
     <string name="cordn_voice_record">Sprachnachricht aufnehmen</string>
     <string name="cordn_voice_stop">Stoppen und senden</string>
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
 </resources>
