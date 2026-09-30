@@ -126,6 +126,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -949,7 +950,19 @@ class AccountConcordActions(
             visibleConcordDirectInvites(),
             acceptingConcordDirectInvites,
         ) { visible, accepting -> if (accepting.isEmpty()) visible else visible.filterNot { it.wrapId in accepting } }
+            // `visible()` re-runs on every session revision and mints new (identity-equal only) views,
+            // and each emission clears and rebuilds every Notifications feed. Emit only when something
+            // a row shows or ranks by actually moved.
+            .distinctUntilChangedBy { list -> list.map { InviteRowKey(it.wrapId, it.catchUp, it.expired, it.followedSender, it.newChannelIds) } }
             .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
+
+    private data class InviteRowKey(
+        val wrapId: HexKey,
+        val catchUp: Boolean,
+        val expired: Boolean,
+        val followedSender: Boolean,
+        val newChannelIds: List<HexKey>,
+    )
 
     private fun visibleConcordDirectInvites() =
         combine(
