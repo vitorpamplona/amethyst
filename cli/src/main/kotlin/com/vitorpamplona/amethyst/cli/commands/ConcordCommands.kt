@@ -703,8 +703,17 @@ object ConcordCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val inbox = sweepDirectInvites(ctx, dataDir)
-            val joined = ConcordStore(dataDir.concordFile).load().map { entryFor(it) }
-            val views = ConcordDirectInviteInbox.visible(inbox.pending.value.values, joined)
+            val stored = ConcordStore(dataDir.concordFile).load()
+            val joined = stored.map { entryFor(it) }
+            val pending = inbox.pending.value.values
+            // Fold only a held community some invite would move to a newer epoch: that is the one
+            // case (a readmission after a ban) whose visibility depends on the held roster.
+            val newerEpochIds =
+                pending
+                    .filter { p -> stored.any { it.communityId.equals(p.invite.communityId, ignoreCase = true) && p.invite.rootEpoch > it.rootEpoch } }
+                    .mapTo(HashSet()) { it.invite.communityId.lowercase() }
+            val folded = stored.filter { it.communityId.lowercase() in newerEpochIds }.associate { it.communityId.lowercase() to ConcordChannelCommands.foldState(ctx, it) }
+            val views = ConcordDirectInviteInbox.visible(pending, joined, heldStateOf = { folded[it.lowercase()] }, me = ctx.signer.pubKey)
             Output.emit(mapOf("invites" to views.map { directInviteJson(it) })) {
                 if (views.isEmpty()) {
                     "no pending direct invites"
