@@ -35,6 +35,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
+import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -99,7 +101,7 @@ class NappletBrowserService : Service() {
         val sessionId: String,
         var clientMessenger: Messenger?,
         val url: String,
-        val proxyPort: Int,
+        var proxyPort: Int,
         var useTor: Boolean,
         val bgColor: Int,
         val themeType: String,
@@ -117,8 +119,9 @@ class NappletBrowserService : Service() {
 
         // Whether the user is looking at this tab (see NappletBrowserContract.MSG_SET_ATTENDED), and the page's
         // requests that act for the user held while they aren't: (origin, request), sent when they're back.
-        var attended = true
-        val heldWhileAway = mutableListOf<Pair<String, Message>>()
+        // Unattended until the client says otherwise: it sends its state right after every create.
+        var attended = false
+        val heldWhileAway = NappletHeldRequests<Pair<String, Message>>(SystemClock::elapsedRealtime)
 
         // The session's root view (holds the WebView, and the page's fullscreen view when it has one).
         var container: FrameLayout? = null
@@ -193,6 +196,8 @@ class NappletBrowserService : Service() {
                 brokerMessenger = Messenger(service)
                 pendingBrokerRequests.forEach { sendToBroker(it) }
                 pendingBrokerRequests.clear()
+                // A broker that restarted knows nothing about who is watching.
+                tabs.values.forEach { if (it.attended) reportAttended(it) }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -219,6 +224,17 @@ class NappletBrowserService : Service() {
         super.onDestroy()
     }
 
+    /** The client re-reads Tor's port on every load it asks for: Tor may have come up (or moved) since the tab was made. */
+    private fun refreshProxyPort(
+        tab: BrowserTab,
+        msg: Message,
+    ) {
+        msg.data
+            ?.getInt(NappletBrowserContract.KEY_PROXY_PORT, 0)
+            ?.takeIf { it != 0 }
+            ?.let { tab.proxyPort = it }
+    }
+
     private fun tabFor(msg: Message): BrowserTab? = msg.data?.getString(NappletBrowserContract.KEY_SESSION_ID)?.let { tabs[it] }
 
     private fun onClientMessage(msg: Message): Boolean {
@@ -226,6 +242,9 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_CREATE_SESSION -> {
                 val data = msg.data ?: return true
                 val sessionId = data.getString(NappletBrowserContract.KEY_SESSION_ID) ?: return true
+                // A re-sent create for an id that is still live (a client that lost track of it) must not
+                // strand the old tab's WebView, broker state and proxy claim with nothing left to close them.
+                tabs[sessionId]?.let(::closeTab)
                 val tab =
                     BrowserTab(
                         sessionId = sessionId,
@@ -247,24 +266,27 @@ class NappletBrowserService : Service() {
             }
             NappletBrowserContract.MSG_NAVIGATE -> {
                 val tab = tabFor(msg) ?: return true
+                refreshProxyPort(tab, msg)
                 val url = normalizeUrl(msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty())
                 // A renderer crash destroyed this tab's WebView; the user's retry builds a fresh one.
                 val wv = tab.webView
                 if (wv == null) {
                     rebuildWebView(tab, url)
                 } else {
-                    // Right after a Tor toggle the new route may still be applying; don't let this load race it.
-                    WebViewProxyPolicy.whenApplied { if (tab.webView === wv) wv.loadUrl(url) }
+                    // Right after a Tor toggle the new route may still be applying; don't let this load race it
+                    // (nor go out at all when Tor is wanted but unavailable).
+                    claimRoute(tab) { if (tab.webView === wv) wv.loadUrl(url) }
                 }
             }
             NappletBrowserContract.MSG_CLOSE_SESSION -> tabFor(msg)?.let(::closeTab)
             NappletBrowserContract.MSG_SET_ATTENDED -> {
                 val tab = tabFor(msg) ?: return true
-                tab.attended = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, true) ?: true
+                tab.attended = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
+                reportAttended(tab)
                 if (tab.attended) {
-                    val held = tab.heldWhileAway.toList()
-                    tab.heldWhileAway.clear()
-                    held.forEach { (origin, request) -> dispatchToBroker(tab, origin, request) }
+                    val held = tab.heldWhileAway.drain()
+                    held.fail.forEach { (_, request) -> tab.bridge.failRequest(request, NappletHeldRequests.EXPIRED) }
+                    held.send.forEach { (origin, request) -> dispatchToBroker(tab, origin, request) }
                 }
             }
             NappletBrowserContract.MSG_PAUSE ->
@@ -349,8 +371,9 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_EXIT_FULLSCREEN -> tabFor(msg)?.let { exitFullscreen(it) }
             NappletBrowserContract.MSG_RELOAD -> {
                 val tab = tabFor(msg) ?: return true
+                refreshProxyPort(tab, msg)
                 // A renderer death destroyed this tab's WebView: rebuild it on the page it was showing.
-                if (tab.webView == null) rebuildWebView(tab, tab.recoverUrl ?: tab.url) else tab.webView?.reload()
+                if (tab.webView == null) rebuildWebView(tab, tab.recoverUrl ?: tab.url) else claimRoute(tab) { tab.webView?.reload() }
             }
             NappletBrowserContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
             NappletBrowserContract.MSG_IME_OP -> {
@@ -361,6 +384,7 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_SET_TOR -> {
                 val tab = tabFor(msg) ?: return true
                 tab.useTor = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
+                refreshProxyPort(tab, msg)
                 // Reload only after the route actually applies — the override is async, so reloading
                 // immediately would re-fetch through the old route.
                 claimRoute(tab) { tab.webView?.reload() }
@@ -450,17 +474,40 @@ class NappletBrowserService : Service() {
     }
 
     /**
-     * Files [tab]'s Tor / open-web choice with the process-wide [WebViewProxyPolicy]; [onReady] runs once the
-     * shared route is in effect. An open-web tab exempts its own site from other tabs' Tor route.
+     * Files [tab]'s Tor / open-web choice with the process-wide [WebViewProxyPolicy] and runs [onReady] (the
+     * load) once the shared route is in effect. Fails closed: a tab that wants Tor while Tor has no port yet
+     * doesn't claim or load at all, and a route that can't be applied blocks the load too — either way the
+     * client hears [NappletBrowserContract.KEY_ROUTE_BLOCKED] and offers Retry. Also keeps the client told
+     * which route is really in effect ([NappletBrowserContract.MSG_ROUTE]).
      */
     private fun claimRoute(
         tab: BrowserTab,
         onReady: () -> Unit = {},
     ) {
-        if (tab.useTor && tab.proxyPort > 0) {
-            WebViewProxyPolicy.claim(tab, tab.proxyPort, onReady = onReady)
-        } else {
-            WebViewProxyPolicy.claim(tab, NappletProxyClaims.NO_PROXY, WebViewProxyPolicy.directHostsOf(tab.webView?.url ?: tab.url), onReady)
+        WebViewProxyPolicy.observeRoute(tab) { usesTor ->
+            if (tabs[tab.sessionId] === tab) sendToClient(tab, NappletBrowserContract.MSG_ROUTE) { putBoolean(NappletBrowserContract.KEY_USE_TOR, usesTor) }
+        }
+        if (tab.useTor && tab.proxyPort <= 0) {
+            reportRouteBlocked(tab)
+            return
+        }
+        WebViewProxyPolicy.claim(
+            owner = tab,
+            torPort = if (tab.useTor) tab.proxyPort else NappletProxyClaims.NO_PROXY,
+            onFailed = { reportRouteBlocked(tab) },
+            onReady = onReady,
+        )
+    }
+
+    /** The page wasn't loaded because its route can't be honored: tell the client, which shows the error. */
+    private fun reportRouteBlocked(tab: BrowserTab) {
+        if (tabs[tab.sessionId] !== tab) return
+        tab.loadFailed = true
+        sendToClient(tab, NappletBrowserContract.MSG_LOAD_STATE) {
+            putBoolean(NappletBrowserContract.KEY_IS_LOADING, false)
+            putBoolean(NappletBrowserContract.KEY_LOAD_FAILED, true)
+            putBoolean(NappletBrowserContract.KEY_ROUTE_BLOCKED, true)
+            putString(NappletBrowserContract.KEY_URL, tab.webView?.url ?: tab.url)
         }
     }
 
@@ -516,7 +563,8 @@ class NappletBrowserService : Service() {
 
     /** Drops [tab] and everything it holds (its WebView, broker state, proxy claim). */
     private fun closeTab(tab: BrowserTab) {
-        tabs.remove(tab.sessionId)
+        // By identity: a replaced tab closing late must not take its replacement (same id) with it.
+        tabs.remove(tab.sessionId, tab)
         WebViewProxyPolicy.release(tab)
         releasePage(tab, closing = true)
         tab.bridge.clear()
@@ -883,6 +931,9 @@ class NappletBrowserService : Service() {
         ) {
             // A new main-frame navigation cleared any prior error, and lifts "block this page's dialogs".
             tab?.loadFailed = false
+            // The page is being replaced: nothing it asked for (replies, subscription pushes) may reach the next
+            // one, even a next one that never talks to the bridge.
+            if (tab != null && tab.bridge.onNavigation()) releasePage(tab)
             tab?.jsDialogsOnPage = 0
             tab?.jsDialogsBlocked = false
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
@@ -1047,23 +1098,39 @@ class NappletBrowserService : Service() {
 
         val pageId = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
         val id = tab.bridge.brokerIdFor(pageId)
+        // A relay subscription is named by the page, and its pushes (decrypted events included) come back
+        // under that name: stamp this document on it so the next page can never receive them.
+        val outgoing = tab.bridge.stampSubscription(envelope)?.toString() ?: raw
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = tab.replyMessenger
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_REQUEST_ID, id)
-                        putString(NappletIpc.KEY_PAYLOAD, raw)
+                        putString(NappletIpc.KEY_PAYLOAD, outgoing)
                     }
             }
 
         // Nobody is looking at this tab (it's parked, or the app is in the background): a sign / encrypt /
         // decrypt waits until they are, even when "allow always" would let it through without a prompt.
         if (!tab.attended && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
-            tab.heldWhileAway += origin to msg
+            val refused = tab.heldWhileAway.hold(origin to msg)
+            if (refused != null) {
+                tab.bridge.failRequest(refused.second, NappletHeldRequests.TOO_MANY)
+            } else {
+                // Settle it with an error if nobody comes back for it, so the page isn't left waiting forever.
+                heldExpiry.postDelayed({ expireHeld(tab) }, NappletHeldRequests.MAX_AGE_MS)
+            }
             return
         }
         dispatchToBroker(tab, origin, msg)
+    }
+
+    private val heldExpiry = Handler(Looper.getMainLooper())
+
+    private fun expireHeld(tab: BrowserTab) {
+        if (tabs[tab.sessionId] !== tab) return
+        tab.heldWhileAway.expire().forEach { (_, request) -> tab.bridge.failRequest(request, NappletHeldRequests.EXPIRED) }
     }
 
     /** Sends [msg] with [origin]'s launch token, minting the token first if the origin has none yet. */
@@ -1122,6 +1189,18 @@ class NappletBrowserService : Service() {
             }
         if (closing) tab.originTokens.clear()
         if (brokerMessenger != null) sendToBroker(release)
+        // The release forgets the tab's attendance along with the rest; the next page is watched just the same.
+        if (!closing && tab.attended) reportAttended(tab)
+    }
+
+    /** Tells the broker whether [tab] is being looked at, which gates decrypting its relay reads. */
+    private fun reportAttended(tab: BrowserTab) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_SET_ATTENDED).apply {
+                replyTo = tab.replyMessenger
+                data = Bundle().apply { putBoolean(NappletIpc.KEY_ATTENDED, tab.attended) }
+            }
+        if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
     }
 
     private fun requestBrowserToken(
@@ -1137,7 +1216,11 @@ class NappletBrowserService : Service() {
         val msg =
             Message.obtain(null, NappletIpc.MSG_MINT_BROWSER_TOKEN).apply {
                 replyTo = tab.replyMessenger
-                data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                        putString(NappletIpc.KEY_WEBVIEW_PROFILE, tab.webViewProfile)
+                    }
             }
         if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
     }
@@ -1225,7 +1308,9 @@ class NappletBrowserService : Service() {
             }
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                runCatching { tab.bridge.currentProxy?.postMessage(payload) }
+                // Dropped when it is for a subscription a replaced document opened.
+                val push = parseJsonObjectOrNull(payload)?.let { tab.bridge.resolvePush(it) } ?: return true
+                runCatching { tab.bridge.currentProxy?.postMessage(push.toString()) }
             }
             NappletIpc.MSG_TOKEN_UNKNOWN -> {
                 // The broker no longer knows this token (evicted): forget it so the origin re-mints.

@@ -46,3 +46,19 @@ fun NappletBridgeDocuments<JavaScriptReplyProxy>.failRequest(
     val reply = parseJsonObjectOrNull(NappletProtocolJson.encodeResponse(type, NappletResponse.Failed(reason))) ?: JsonObject(emptyMap())
     runCatching { proxy.postMessage(reply.withString("id", pageId).toString()) }
 }
+
+/**
+ * Answers a napplet's queued broker [request] with a failure on [this] proxy. A napplet's request ids aren't
+ * stamped per document (its shell never navigates), so the id goes back as the page sent it.
+ */
+fun JavaScriptReplyProxy.failRequest(
+    request: Message,
+    reason: String,
+) {
+    val data = request.data ?: return
+    val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return
+    val raw = data.getString(NappletIpc.KEY_PAYLOAD) ?: return
+    val type = runCatching { NappletProtocolJson.readType(raw) }.getOrNull() ?: "napplet"
+    val reply = parseJsonObjectOrNull(NappletProtocolJson.encodeResponse(type, NappletResponse.Failed(reason))) ?: JsonObject(emptyMap())
+    runCatching { postMessage(reply.withString("id", id).toString()) }
+}

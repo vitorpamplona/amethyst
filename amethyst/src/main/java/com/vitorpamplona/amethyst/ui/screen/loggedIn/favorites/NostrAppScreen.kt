@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -138,8 +139,8 @@ private fun EmbeddedNostrAppTab(
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()
     val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
-    // Only nSites have a route of their own to choose, and only when Tor is running.
-    val torOn = if (profile.exposesNetwork && params.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1) > 0) useTor else null
+    // Only nSites have a route of their own to choose, and only when Tor is on.
+    val torOn = if (profile.exposesNetwork && Amethyst.instance.torPrefs.torType.value != TorType.OFF) useTor else null
 
     var showAccess by remember { mutableStateOf(false) }
 
@@ -165,9 +166,12 @@ private fun EmbeddedNostrAppTab(
     // matching how the Connected Apps screen keys napplet/nsite grants (see NappletIdentity.coordinate).
     val permissionCoordinate = remember(coordinate) { coordinate.substringAfter(':') }
 
+    // Off for this site, yet on Tor because another open page needs it (Tor always wins in `:napplet`).
+    val torForced = controller.isTorForced
+
     // Stable per app (title/coordinate/isFavorite don't change often), so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(title, coordinate, isFavorite, torOn, textZoom, controller) {
+        remember(title, coordinate, isFavorite, torOn, torForced, textZoom, controller) {
             EmbeddedTabChrome(
                 ui =
                     BrowserPillUi(
@@ -179,6 +183,7 @@ private fun EmbeddedNostrAppTab(
                                 url = "",
                                 startUrl = "",
                                 torOn = torOn,
+                                torForced = torForced,
                                 hasAccessInfo = true,
                             ),
                         isFavorite = isFavorite,

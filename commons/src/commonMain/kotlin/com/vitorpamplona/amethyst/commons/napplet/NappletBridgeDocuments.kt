@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.util.withString
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
 /**
  * Keeps a browser surface's NIP-07 traffic with the document that started it.
  *
@@ -34,6 +38,11 @@ package com.vitorpamplona.amethyst.commons.napplet
  * back the proxy to post it on — when it belongs to the document on screen now. Replies for a replaced
  * document are dropped. The stamp is deterministic per (document, page id), so a later message that
  * reuses a request's id (a cancel) still reaches the same broker-side request.
+ *
+ * Relay subscriptions get the same treatment: a page names its own (`s0`, …), and the broker pushes their
+ * events — decrypted DMs included — keyed by that name. [stampSubscription] stamps the document on the
+ * `subId` of what the page sends, and [resolvePush] only lets a push through, with the page's own name
+ * back, when it is for the document on screen now.
  *
  * Single-threaded: call from the WebView's (main) thread.
  */
@@ -70,6 +79,40 @@ class NappletBridgeDocuments<P : Any> {
         return brokerId.substring(cut + 1) to proxy
     }
 
+    /**
+     * [envelope] with the current document stamped on its `subId` (`relay.subscribe`, `relay.close`), or
+     * null when it carries none and goes to the broker unchanged.
+     */
+    fun stampSubscription(envelope: JsonObject): JsonObject? {
+        val subId = envelope.quotedString(SUB_ID) ?: return null
+        return envelope.withString(SUB_ID, brokerIdFor(subId))
+    }
+
+    /**
+     * A broker push to hand to the page on screen: unchanged when it isn't for a subscription, with the page's
+     * own `subId` back when it is for one this document opened, or null — drop it — when it is for a
+     * subscription of a document that is gone (or when nothing is on screen).
+     */
+    fun resolvePush(push: JsonObject): JsonObject? {
+        if (current == null) return null
+        val brokerSubId = push.quotedString(SUB_ID) ?: return push
+        val cut = brokerSubId.indexOf(SEPARATOR)
+        if (cut <= 0 || brokerSubId.substring(0, cut).toLongOrNull() != document) return null
+        return push.withString(SUB_ID, brokerSubId.substring(cut + 1))
+    }
+
+    private fun JsonObject.quotedString(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+    /**
+     * A main-frame navigation began: whatever document was on screen is on its way out, even if the new one
+     * never talks to the bridge. Returns true when there was one — the caller then drops its broker state.
+     */
+    fun onNavigation(): Boolean {
+        val had = current != null
+        clear()
+        return had
+    }
+
     /** The surface went away (session closed, renderer died): nothing on screen can receive a reply. */
     fun clear() {
         current = null
@@ -78,5 +121,6 @@ class NappletBridgeDocuments<P : Any> {
 
     private companion object {
         const val SEPARATOR = ':'
+        const val SUB_ID = "subId"
     }
 }

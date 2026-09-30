@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.os.Messenger
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -55,6 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class NappletLiveSubscriptions(
     private val scope: CoroutineScope,
+    private val attendance: NappletAttendance<Messenger>,
 ) {
     private data class Key(
         val owner: Messenger,
@@ -71,6 +73,10 @@ class NappletLiveSubscriptions(
         val eoseSent = AtomicBoolean(false)
         val deliveries = Channel<Delivery>(Channel.UNLIMITED)
         var deliveryJob: Job? = null
+
+        // Encrypted events that arrived while nobody was looking at the page, still encrypted: they are
+        // decrypted and delivered when it is attended again. Touched only by the delivery coroutine.
+        val heldEncrypted = ArrayDeque<Event>()
     }
 
     private sealed interface Delivery {
@@ -79,6 +85,9 @@ class NappletLiveSubscriptions(
         ) : Delivery
 
         data object Eose : Delivery
+
+        // The page is being looked at again: deliver what was held.
+        data object Attended : Delivery
 
         data class Closed(
             val reason: String,
@@ -114,9 +123,23 @@ class NappletLiveSubscriptions(
                 for (delivery in sub.deliveries) {
                     if (liveSubs[key] !== sub) break
                     when (delivery) {
-                        is Delivery.RelayEvent ->
-                            NappletRelayCleartext.forDelivery(delivery.event, account.signer)?.let {
-                                push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                        is Delivery.RelayEvent -> {
+                            val event = delivery.event
+                            if (NappletRelayCleartext.isEncrypted(event) && !attendance.isAttended(owner)) {
+                                // Don't decrypt for a page nobody is watching: keep it (bounded) for later.
+                                if (sub.heldEncrypted.size >= MAX_HELD_ENCRYPTED) sub.heldEncrypted.removeFirst()
+                                sub.heldEncrypted.addLast(event)
+                            } else {
+                                NappletRelayCleartext.forDelivery(event, account.signer)?.let {
+                                    push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                                }
+                            }
+                        }
+                        Delivery.Attended ->
+                            while (sub.heldEncrypted.isNotEmpty() && attendance.isAttended(owner)) {
+                                NappletRelayCleartext.forDelivery(sub.heldEncrypted.removeFirst(), account.signer)?.let {
+                                    push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                                }
                             }
                         Delivery.Eose -> push(NappletProtocolJson.encodeRelayEose(nappletSubId))
                         is Delivery.Closed -> push(NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason))
@@ -156,6 +179,11 @@ class NappletLiveSubscriptions(
         runCatching { sub.client.subscribe(sub.clientSubId, relays.associateWith { filters }, listener) }
     }
 
+    /** [owner] is being looked at again: its subscriptions deliver the encrypted events they held. */
+    fun onAttended(owner: Messenger) {
+        liveSubs.forEach { (key, sub) -> if (key.owner == owner) sub.deliveries.trySend(Delivery.Attended) }
+    }
+
     /** Stops [owner]'s live subscription [nappletSubId], unsubscribing from the client that opened it. */
     fun close(
         owner: Messenger,
@@ -181,5 +209,10 @@ class NappletLiveSubscriptions(
         sub.deliveries.close()
         sub.deliveryJob?.cancel()
         runCatching { sub.client.unsubscribe(sub.clientSubId) }
+    }
+
+    private companion object {
+        // Per subscription: past this, the oldest held encrypted event is dropped.
+        const val MAX_HELD_ENCRYPTED = 500
     }
 }

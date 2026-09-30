@@ -151,6 +151,13 @@ object NappletEmbedContract {
      */
     const val MSG_SET_ATTENDED = 26
 
+    /**
+     * Provider → client: whether the process's pages currently go through Tor ([KEY_ROUTE_TOR]). Sent on every
+     * change for an nSite (it has off-origin traffic of its own). Tor always wins process-wide, so an nSite
+     * set to the open web can still be on Tor because another open page needs it — the client shows why.
+     */
+    const val MSG_ROUTE = 27
+
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"
     const val KEY_FIND_ACTIVE = "findActive"
@@ -190,6 +197,15 @@ object NappletEmbedContract {
     const val KEY_IS_LOADING = "isLoading"
     const val KEY_LOAD_FAILED = "loadFailed"
     const val KEY_RENDERER_GONE = "rendererGone"
+    const val KEY_ROUTE_TOR = "routeTor"
+
+    /**
+     * On [MSG_LOAD_STATE]: the applet was not loaded because its network route can't be honored (Tor wanted
+     * but not running yet, this WebView can't proxy, or applying the proxy failed). Nothing went out; the
+     * client offers Retry, whose [MSG_RELOAD] carries the current Tor port
+     * ([NappletHostContract.EXTRA_PROXY_PORT]).
+     */
+    const val KEY_ROUTE_BLOCKED = "routeBlocked"
     const val KEY_NOTICE = "notice"
     const val KEY_IME_PAYLOAD = "imePayload"
 

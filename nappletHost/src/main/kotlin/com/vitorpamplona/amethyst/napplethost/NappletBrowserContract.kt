@@ -211,6 +211,20 @@ object NappletBrowserContract {
      */
     const val MSG_SET_ATTENDED = 37
 
+    /**
+     * Provider → client: whether the process's pages currently go through Tor ([KEY_USE_TOR]). Sent on every
+     * change. Tor always wins process-wide, so a tab set to the open web can still be on Tor because another
+     * open page needs it — the client shows why.
+     */
+    const val MSG_ROUTE = 38
+
+    /**
+     * On [MSG_LOAD_STATE]: the page was not loaded because its network route can't be honored (Tor wanted but
+     * not running yet, this WebView can't proxy, or applying the proxy failed). Nothing went out; the client
+     * shows the error + Retry even over a page that loaded before.
+     */
+    const val KEY_ROUTE_BLOCKED = "routeBlocked"
+
     const val KEY_CAN_GO_FORWARD = "canGoForward"
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"

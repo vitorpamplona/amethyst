@@ -28,43 +28,37 @@ package com.vitorpamplona.amethyst.commons.napplet
  * the last one to do so won for everyone — opening an open-web page silently moved an already-open Tor
  * page onto the open web, with no reload and nothing on screen to say so.
  *
- * So every live surface files a claim, and the route is derived from all of them:
- * - while ANY claim wants Tor, the whole process goes through Tor (the most recent Tor claim's port — a
- *   Tor restart can move it). A Tor page is never downgraded because another surface opened.
- * - an open-web claim can name the hosts it was opted out for ([Claim.directHosts]); those, and only those,
- *   bypass the proxy. Without that, one Tor favorite pinned to the bottom bar would force every site the
- *   user took off Tor back onto it for good. The cost: a Tor page requesting one of those exact hosts
- *   reaches it directly too — only hosts the user explicitly put on the open web.
- * - with no Tor claim at all, there is no proxy.
+ * So every live surface files a claim, and the route is derived from all of them: **Tor always wins.**
+ * While ANY claim wants Tor, the whole process goes through Tor (the most recent Tor claim's port — a Tor
+ * restart can move it), open-web surfaces included; with no Tor claim at all there is no proxy.
+ *
+ * There are deliberately no per-host exemptions. Exempting an open-web page's host would let a Tor page
+ * reach that host directly — and an attacker who got one page onto the open web (a site opened before Tor
+ * was up, say) could then have a Tor page load `https://x.attacker.com/<id>` and tie the user's real IP to
+ * the Tor session. The cost is that an open-web page goes through Tor while another open page needs it;
+ * surfaces show why (see [Route.usesTor]).
  *
  * Not thread-safe: the caller serializes access (the sandbox touches it only on its main thread).
  */
 class NappletProxyClaims {
-    data class Claim(
-        /** The Tor SOCKS port this surface wants, or [NO_PROXY] for the open web. */
-        val torPort: Int,
-        /** For an open-web claim: hosts that must go direct even while Tor is on for others. */
-        val directHosts: Set<String> = emptySet(),
-    )
-
-    /** The route to apply: [torPort] > 0 routes through Tor except [bypassHosts]; else no proxy. */
+    /** The route to apply: through Tor on [torPort] when [usesTor], else no proxy. */
     data class Route(
         val torPort: Int,
-        val bypassHosts: Set<String>,
     ) {
         val usesTor: Boolean get() = torPort > 0
     }
 
     // Insertion-ordered; a re-claim moves the owner to the end, so the last entry is the latest claim.
-    private val claims = LinkedHashMap<Any, Claim>()
+    // Each value is the Tor SOCKS port the owner wants, or [NO_PROXY] for the open web.
+    private val claims = LinkedHashMap<Any, Int>()
 
-    /** Files (or replaces) [owner]'s claim and returns the resulting route. */
+    /** Files (or replaces) [owner]'s claim — Tor on [torPort] (> 0), or [NO_PROXY] — and returns the route. */
     fun claim(
         owner: Any,
-        claim: Claim,
+        torPort: Int,
     ): Route {
         claims.remove(owner)
-        claims[owner] = claim
+        claims[owner] = torPort
         return route()
     }
 
@@ -74,17 +68,10 @@ class NappletProxyClaims {
         return route()
     }
 
-    fun route(): Route {
-        val torPort = claims.values.lastOrNull { it.torPort > 0 }?.torPort ?: return DIRECT
-        val bypass =
-            claims.values
-                .filter { it.torPort <= 0 }
-                .flatMapTo(HashSet()) { it.directHosts }
-        return Route(torPort, bypass)
-    }
+    fun route(): Route = Route(claims.values.lastOrNull { it > 0 } ?: NO_PROXY)
 
     companion object {
         const val NO_PROXY = -1
-        val DIRECT = Route(NO_PROXY, emptySet())
+        val DIRECT = Route(NO_PROXY)
     }
 }

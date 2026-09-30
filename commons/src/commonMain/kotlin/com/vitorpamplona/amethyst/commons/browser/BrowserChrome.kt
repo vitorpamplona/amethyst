@@ -91,6 +91,11 @@ object BrowserChrome {
         val isLoading: Boolean = false,
         /** Tor routing state, or null when this surface offers no Tor choice. */
         val torOn: Boolean? = null,
+        /**
+         * The site is set to the open web ([torOn] false) but still goes through Tor, because another open page
+         * needs Tor and the app's pages share one route (Tor always wins). Shown so the user knows why.
+         */
+        val torForced: Boolean = false,
         /** Whether the star is offered at all. */
         val canFavorite: Boolean = true,
         /** Whether an editable permissions screen exists for this surface. */

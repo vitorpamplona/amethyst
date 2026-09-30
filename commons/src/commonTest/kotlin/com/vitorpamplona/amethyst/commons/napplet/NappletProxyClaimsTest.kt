@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Claim
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Companion.DIRECT
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Companion.NO_PROXY
 import kotlin.test.Test
@@ -39,44 +38,36 @@ class NappletProxyClaimsTest {
 
     @Test
     fun anOpenWebSurfaceDoesNotDowngradeATorOne() {
-        claims.claim(torTab, Claim(9050))
+        claims.claim(torTab, 9050)
         // The open-web page opening later must not clear Tor for the page already on it.
-        val route = claims.claim(openTab, Claim(NO_PROXY, setOf("example.com")))
-        assertEquals(9050, route.torPort)
-        assertEquals(setOf("example.com"), route.bypassHosts)
+        assertEquals(9050, claims.claim(openTab, NO_PROXY).torPort)
     }
 
     @Test
     fun orderDoesNotMatter() {
-        claims.claim(openTab, Claim(NO_PROXY, setOf("example.com")))
-        assertTrue(claims.claim(torTab, Claim(9050)).usesTor)
+        claims.claim(openTab, NO_PROXY)
+        assertTrue(claims.claim(torTab, 9050).usesTor)
     }
 
     @Test
     fun releasingTheLastTorSurfaceGoesDirect() {
-        claims.claim(torTab, Claim(9050))
-        claims.claim(openTab, Claim(NO_PROXY, setOf("example.com")))
+        claims.claim(torTab, 9050)
+        claims.claim(openTab, NO_PROXY)
         assertEquals(DIRECT, claims.release(torTab))
     }
 
     @Test
     fun switchingASurfaceOffTorReleasesTheProxy() {
-        claims.claim(torTab, Claim(9050))
-        assertEquals(DIRECT, claims.claim(torTab, Claim(NO_PROXY)))
+        claims.claim(torTab, 9050)
+        assertEquals(DIRECT, claims.claim(torTab, NO_PROXY))
     }
 
     @Test
     fun theLatestTorPortWins() {
-        claims.claim(torTab, Claim(9050))
+        claims.claim(torTab, 9050)
         val other = Any()
-        assertEquals(9150, claims.claim(other, Claim(9150)).torPort)
+        assertEquals(9150, claims.claim(other, 9150).torPort)
         // Re-claiming moves an owner to the end, making its port the latest.
-        assertEquals(9050, claims.claim(torTab, Claim(9050)).torPort)
-    }
-
-    @Test
-    fun directHostsOnlyComeFromOpenWebClaims() {
-        claims.claim(torTab, Claim(9050, setOf("tor-only.example")))
-        assertEquals(emptySet(), claims.route().bypassHosts)
+        assertEquals(9050, claims.claim(torTab, 9050).torPort)
     }
 }

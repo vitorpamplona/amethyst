@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.os.Handler
+import android.os.Looper
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
-import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
-import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Claim
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims.Route
 import com.vitorpamplona.quartz.utils.Log
 import java.util.concurrent.Executor
@@ -33,108 +33,127 @@ import java.util.concurrent.Executor
 /**
  * The single owner of the `:napplet` process's WebView proxy override. Every surface — embedded browser
  * tab, embedded nSite, full-screen browser or host — files a claim here instead of setting the override
- * itself; [NappletProxyClaims] derives the one route they all share (see there for the policy).
+ * itself; [NappletProxyClaims] derives the one route they all share (Tor always wins, see there).
  *
- * The override applies asynchronously, so a surface's page load waits for [claim]'s `onReady`: a Tor
- * page's first request can no longer leave before the Tor route is in place.
+ * It fails CLOSED. A surface's page load waits for [claim]'s `onReady`, which only runs once the route is
+ * actually in effect: if applying it fails, or this WebView can't take a proxy override at all while Tor is
+ * wanted, the waiting loads get `onFailed` instead of going out directly, and the next claim tries again.
+ * (A surface that wants Tor but has no Tor port yet must not claim at all — it blocks its own load.)
  *
- * Main thread only.
+ * Main thread only; the WebKit callback is delivered back to the main thread too.
  */
 object WebViewProxyPolicy {
     private const val TAG = "WebViewProxyPolicy"
+
+    /** Why a surface's load can't go ahead. */
+    enum class Failure {
+        /** This device's WebView can't route through a proxy, so Tor can't be honored. */
+        TOR_UNSUPPORTED,
+
+        /** Setting the proxy override failed. */
+        APPLY_FAILED,
+    }
+
+    private class Waiter(
+        val wantsTor: Boolean,
+        val onReady: () -> Unit,
+        val onFailed: (Failure) -> Unit,
+    )
 
     private val claims = NappletProxyClaims()
 
     // What the WebView currently runs with (a fresh process has no override), and what is being applied.
     private var applied: Route = NappletProxyClaims.DIRECT
     private var applying: Route? = null
-    private val waiting = mutableListOf<() -> Unit>()
+    private val waiting = mutableListOf<Waiter>()
+
+    // Surfaces told which route is really in effect (an open-web page can be on Tor because another needs it).
+    private val routeListeners = LinkedHashMap<Any, (Boolean) -> Unit>()
+
+    private val main = Handler(Looper.getMainLooper())
+    private val mainExecutor = Executor { if (Looper.myLooper() == Looper.getMainLooper()) it.run() else main.post(it) }
 
     private val supported by lazy { WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE) }
 
     /**
-     * Files [owner]'s route: through Tor on [torPort] (> 0), or the open web ([NappletProxyClaims.NO_PROXY])
-     * with [directHosts] exempt from any Tor route other surfaces need. [onReady] runs on the main thread
-     * once the resulting process route is in effect — immediately when nothing had to change.
+     * Files [owner]'s route: through Tor on [torPort] (> 0), or the open web ([NappletProxyClaims.NO_PROXY]).
+     * [onReady] runs on the main thread once the resulting process route is in effect — immediately when
+     * nothing had to change; [onFailed] instead when it can't be.
      */
     fun claim(
         owner: Any,
         torPort: Int,
-        directHosts: Set<String> = emptySet(),
+        onFailed: (Failure) -> Unit = {},
         onReady: () -> Unit = {},
     ) {
-        claims.claim(owner, Claim(torPort, directHosts))
-        sync(onReady)
+        claims.claim(owner, torPort)
+        sync(Waiter(torPort > 0, onReady, onFailed))
     }
 
-    /** Withdraws [owner]'s claim; the route relaxes once no remaining surface needs it. */
+    /** Withdraws [owner]'s claim and route listener; the route relaxes once no remaining surface needs it. */
     fun release(owner: Any) {
         claims.release(owner)
-        sync {}
+        routeListeners.remove(owner)
+        sync(null)
     }
 
-    /**
-     * The hosts an open-web surface showing [url] exempts from other surfaces' Tor route: its site, and its
-     * subdomains through the bypass rule. Only for web pages, and never an onion (those only resolve via Tor).
-     */
-    fun directHostsOf(url: String?): Set<String> {
-        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return emptySet()
-        val host = OmniboxInput.hostOf(url)?.lowercase()?.removePrefix("www.") ?: return emptySet()
-        return if (host.endsWith(".onion")) emptySet() else setOf(host)
+    /** Tells [listener] (now, and on every change) whether the process currently routes through Tor. */
+    fun observeRoute(
+        owner: Any,
+        listener: (usesTor: Boolean) -> Unit,
+    ) {
+        routeListeners[owner] = listener
+        listener(applied.usesTor)
     }
 
-    /** Runs [onReady] once no route change is in flight (e.g. a navigation right after a Tor toggle). */
-    fun whenApplied(onReady: () -> Unit) = sync(onReady)
-
-    private fun sync(onReady: () -> Unit) {
-        if (!supported) {
-            onReady()
-            return
-        }
+    private fun sync(waiter: Waiter?) {
         val target = claims.route()
-        if (target == applied && applying == null) {
-            onReady()
+        if (!supported) {
+            // Nothing can be proxied. The open web still works; a surface that wants Tor fails closed.
+            if (waiter?.wantsTor == true) waiter.onFailed(Failure.TOR_UNSUPPORTED) else waiter?.onReady?.invoke()
             return
         }
-        waiting += onReady
+        if (target == applied && applying == null) {
+            waiter?.onReady?.invoke()
+            return
+        }
+        waiter?.let { waiting += it }
         if (target == applying) return
         applying = target
-        apply(target) {
-            applied = target
-            // A newer route superseded this one while it applied: its own callback releases the waiters.
-            if (applying == target) {
-                applying = null
-                val ready = waiting.toList()
-                waiting.clear()
-                ready.forEach { it() }
+        apply(target) { ok ->
+            // A newer route superseded this one while it applied: its own callback settles the waiters.
+            if (applying != target) {
+                if (ok) applied = target
+                return@apply
+            }
+            applying = null
+            val settled = waiting.toList()
+            waiting.clear()
+            if (ok) {
+                applied = target
+                routeListeners.values.toList().forEach { it(target.usesTor) }
+                settled.forEach { it.onReady() }
+            } else {
+                // Keep `applied` as it was, so the next claim tries again; nothing waiting goes out unrouted.
+                settled.forEach { it.onFailed(Failure.APPLY_FAILED) }
             }
         }
     }
 
     private fun apply(
         route: Route,
-        onApplied: () -> Unit,
+        done: (ok: Boolean) -> Unit,
     ) {
-        val executor = Executor { it.run() }
         runCatching {
             if (route.usesTor) {
-                val config =
-                    ProxyConfig
-                        .Builder()
-                        .addProxyRule("socks5://127.0.0.1:${route.torPort}")
-                        .apply {
-                            route.bypassHosts.forEach { host ->
-                                addBypassRule(host)
-                                addBypassRule("*.$host")
-                            }
-                        }.build()
-                ProxyController.getInstance().setProxyOverride(config, executor, onApplied)
+                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:${route.torPort}").build()
+                ProxyController.getInstance().setProxyOverride(config, mainExecutor) { done(true) }
             } else {
-                ProxyController.getInstance().clearProxyOverride(executor, onApplied)
+                ProxyController.getInstance().clearProxyOverride(mainExecutor) { done(true) }
             }
         }.onFailure {
             Log.w(TAG, "Failed to apply WebView proxy override", it)
-            onApplied()
+            done(false)
         }
     }
 }

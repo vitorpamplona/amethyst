@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
+import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -93,5 +95,61 @@ class NappletBridgeDocumentsTest {
         docs.onMessage(a)
         assertNull(docs.resolve("r0"))
         assertNull(docs.resolve(":r0"))
+    }
+
+    private fun json(raw: String) = parseJsonObjectOrNull(raw)!!
+
+    @Test
+    fun subscriptionPushesReachTheDocumentThatSubscribed() {
+        docs.onMessage(a)
+        val stamped = docs.stampSubscription(json("""{"type":"relay.subscribe","id":"r0","subId":"s0"}"""))!!
+        val brokerSubId = stamped.stringOrNull("subId")!!
+        val push = docs.resolvePush(json("""{"type":"relay.event","subId":"$brokerSubId"}"""))!!
+        assertEquals("s0", push.stringOrNull("subId"))
+    }
+
+    @Test
+    fun subscriptionPushesForANavigatedAwayDocumentAreDropped() {
+        docs.onMessage(a)
+        val brokerSubId = docs.stampSubscription(json("""{"type":"relay.subscribe","subId":"s0"}"""))!!.stringOrNull("subId")!!
+        docs.onMessage(b)
+        // b.com names its own subscription s0 too: a.com's decrypted events must not reach it.
+        docs.stampSubscription(json("""{"type":"relay.subscribe","subId":"s0"}"""))
+        assertNull(docs.resolvePush(json("""{"type":"relay.event","subId":"$brokerSubId"}""")))
+    }
+
+    @Test
+    fun closeIsStampedLikeTheSubscribeItEnds() {
+        docs.onMessage(a)
+        val open = docs.stampSubscription(json("""{"type":"relay.subscribe","subId":"s0"}"""))!!
+        val close = docs.stampSubscription(json("""{"type":"relay.close","subId":"s0"}"""))!!
+        assertEquals(open.stringOrNull("subId"), close.stringOrNull("subId"))
+    }
+
+    @Test
+    fun pushesWithoutASubscriptionGoToThePageOnScreen() {
+        assertNull(docs.resolvePush(json("""{"type":"identity.changed"}""")))
+        docs.onMessage(a)
+        assertEquals("identity.changed", docs.resolvePush(json("""{"type":"identity.changed"}"""))!!.stringOrNull("type"))
+        assertNull(docs.stampSubscription(json("""{"type":"nostr.signEvent","id":"r0"}""")))
+    }
+
+    @Test
+    fun unstampedSubscriptionPushesAreDropped() {
+        docs.onMessage(a)
+        assertNull(docs.resolvePush(json("""{"type":"relay.event","subId":"s0"}""")))
+    }
+
+    @Test
+    fun navigationEndsTheDocumentEvenIfTheNextNeverTalks() {
+        docs.onMessage(a)
+        val request = docs.brokerIdFor("r0")
+        assertTrue(docs.onNavigation())
+        assertNull(docs.resolve(request))
+        assertNull(docs.resolvePush(json("""{"type":"identity.changed"}""")))
+        // Nothing on screen talked yet: a second navigation has nothing to release.
+        assertFalse(docs.onNavigation())
+        // The next page's first message is not a "replacement": its predecessor was already released.
+        assertFalse(docs.onMessage(b))
     }
 }

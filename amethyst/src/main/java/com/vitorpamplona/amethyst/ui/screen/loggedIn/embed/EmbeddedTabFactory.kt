@@ -51,6 +51,9 @@ object EmbeddedTabFactory {
 
     fun nostrAppId(coordinate: String) = "nostr:$coordinate"
 
+    /** Tor's SOCKS port right now, or -1 while it is off or still starting. */
+    fun currentTorPort(): Int = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+
     /** Acquires (or returns) the warm browser controller for [url], routing over Tor per the site's choice. */
     fun acquireWebApp(
         context: Context,
@@ -58,8 +61,8 @@ object EmbeddedTabFactory {
         backgroundColor: Int,
     ): EmbeddedWebAppController =
         EmbeddedTabHost.acquire(webAppId(url)) {
-            val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-            val initialUseTor = proxyPort > 0 && WebAppNetworkRegistry.useTor(url)
+            // Tor ON, not "port known": the provider blocks a Tor page until the port is there (fails closed).
+            val initialUseTor = Amethyst.instance.torPrefs.torType.value != TorType.OFF && WebAppNetworkRegistry.useTor(url)
             val themeType = Amethyst.instance.uiPrefs.value.theme.value
             val theme =
                 when (themeType) {
@@ -70,7 +73,7 @@ object EmbeddedTabFactory {
                         if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
                     }
                 }
-            EmbeddedWebAppController(context.applicationContext, proxyPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
+            EmbeddedWebAppController(context.applicationContext, ::currentTorPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
         } as EmbeddedWebAppController
 
     /**

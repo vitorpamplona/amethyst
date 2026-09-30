@@ -260,12 +260,15 @@ object EmbeddedTabHost {
     /** A screen showing [id] entered composition. Pair with [release]. */
     fun hold(id: String) {
         holders[id] = (holders[id] ?: 0) + 1
-        parked.remove(id)
     }
 
     // Non-bar tabs whose screen left composition while their back-stack entry lives on — another screen
-    // was pushed on top (even the tab's own Site settings). They stay warm until that entry is destroyed.
-    private val parked = mutableSetOf<String>()
+    // was pushed on top (even the tab's own Site settings). They stay warm until EVERY such entry is
+    // destroyed: the same tab can sit in the back stack twice (opened again from inside itself), and popping
+    // the top one must not take the session from under the one still waiting below.
+    private val parked = mutableMapOf<String, MutableSet<Lifecycle>>()
+
+    private fun isParked(id: String) = !parked[id].isNullOrEmpty()
 
     /**
      * The last screen showing [id] left composition. A bottom-bar tab ([keepWarm]) stays warm. Any other tab
@@ -281,15 +284,20 @@ object EmbeddedTabHost {
         if (keepWarm()) return
 
         fun gone() {
-            parked.remove(id)
-            // A screen may have come back to this tab meanwhile, or it may have joined the bottom bar.
-            if ((holders[id] ?: 0) == 0 && !keepWarm()) evict(id)
+            parked[id]?.let {
+                it.remove(entry)
+                if (it.isEmpty()) parked.remove(id)
+            }
+            // A screen may have come back to this tab meanwhile, another entry may still hold it, or it may
+            // have joined the bottom bar.
+            if ((holders[id] ?: 0) == 0 && !isParked(id) && !keepWarm()) evict(id)
         }
         if (entry.currentState == Lifecycle.State.DESTROYED) {
             gone()
             return
         }
-        parked.add(id)
+        // Already watched from an earlier time this entry was covered.
+        if (!parked.getOrPut(id) { mutableSetOf() }.add(entry)) return
         entry.addObserver(
             object : LifecycleEventObserver {
                 override fun onStateChanged(
@@ -314,7 +322,7 @@ object EmbeddedTabHost {
     /** Drops every warm session whose id isn't in [keep] (bottom-row membership + the active tab). */
     fun retainOnly(keep: Set<String>) {
         warm
-            .filter { it.id !in keep && it.id !in parked }
+            .filter { it.id !in keep && !isParked(it.id) }
             .forEach { evict(it.id) }
     }
 

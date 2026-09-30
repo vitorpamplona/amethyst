@@ -56,6 +56,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -91,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.EmbeddedLoadOverlay
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.FindInPagePill
@@ -348,47 +350,48 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
             }
 
             val consoleLogs = consoleBridge?.consoleLogs
-            val ui =
+            val baseUi =
                 chrome.ui.copy(
                     chrome = chrome.ui.chrome.copy(hasFind = chrome.ui.chrome.hasFind && findBridge != null),
                     consoleShowing = consoleShowing,
-                    consoleErrors = consoleBridge?.consoleErrorCount?.intValue ?: 0,
                 )
 
             Box(tabModifier) {
-                BrowserPill(
-                    ui = ui,
-                    expanded = pillExpanded,
-                    onExpandedChange = { pillExpanded = it },
-                    onEvent = { event ->
-                        val action = (event as? BrowserPillEvent.Action)?.action
-                        when {
-                            action == BrowserChrome.Action.FIND_IN_PAGE && findBridge != null -> {
-                                // One bottom panel at a time: find replaces the console.
-                                consoleShowing = false
-                                findShowing = true
+                WithConsoleErrors(baseUi, consoleBridge?.consoleErrorCount) { ui ->
+                    BrowserPill(
+                        ui = ui,
+                        expanded = pillExpanded,
+                        onExpandedChange = { pillExpanded = it },
+                        onEvent = { event ->
+                            val action = (event as? BrowserPillEvent.Action)?.action
+                            when {
+                                action == BrowserChrome.Action.FIND_IN_PAGE && findBridge != null -> {
+                                    // One bottom panel at a time: find replaces the console.
+                                    consoleShowing = false
+                                    findShowing = true
+                                }
+                                action == BrowserChrome.Action.CONSOLE && consoleBridge != null -> {
+                                    if (!consoleShowing) closeFind()
+                                    consoleShowing = !consoleShowing
+                                }
+                                else -> chrome.onEvent(event)
                             }
-                            action == BrowserChrome.Action.CONSOLE && consoleBridge != null -> {
-                                if (!consoleShowing) closeFind()
-                                consoleShowing = !consoleShowing
-                            }
-                            else -> chrome.onEvent(event)
-                        }
-                    },
-                    showClose = false,
-                    suggestionsFor = chrome.suggestionsFor,
-                    // A clipboard query is a binder call: only make it while the pill is open to use it.
-                    onPasteAndGo =
-                        if (pillExpanded && BrowserWebTools.clipboardHasText(context)) {
-                            {
-                                pillExpanded = false
-                                BrowserWebTools.clipboardText(context)?.let { chrome.onEvent(BrowserPillEvent.Navigate(it)) }
-                            }
-                        } else {
-                            null
                         },
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
+                        showClose = false,
+                        suggestionsFor = chrome.suggestionsFor,
+                        // A clipboard query is a binder call: only make it while the pill is open to use it.
+                        onPasteAndGo =
+                            if (pillExpanded && BrowserWebTools.clipboardHasText(context)) {
+                                {
+                                    pillExpanded = false
+                                    BrowserWebTools.clipboardText(context)?.let { chrome.onEvent(BrowserPillEvent.Navigate(it)) }
+                                }
+                            } else {
+                                null
+                            },
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                }
 
                 // Find in page: opened from the pill's Find tile.
                 if (findShowing && findBridge != null) {
@@ -1112,3 +1115,16 @@ private fun formatConsoleLine(line: ConsoleLine): String =
                 .append(')')
         }
     }
+
+/**
+ * Reads the page's console error count in a scope of its own: a page that keeps logging errors then
+ * recomposes just the pill, not the whole tab layer around it.
+ */
+@Composable
+private fun WithConsoleErrors(
+    ui: BrowserPillUi,
+    errors: IntState?,
+    content: @Composable (BrowserPillUi) -> Unit,
+) {
+    content(ui.copy(consoleErrors = errors?.intValue ?: 0))
+}

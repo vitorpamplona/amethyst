@@ -169,6 +169,17 @@ object NappletIpc {
      */
     const val MSG_TOKEN_UNKNOWN = 20
 
+    /**
+     * Host → broker: whether the user is looking at the surface behind [android.os.Message.replyTo]
+     * ([KEY_ATTENDED]). The broker decrypts relay reads for a page — events pushed to its subscriptions, and
+     * `relay.query` results — only while it is; until then encrypted events wait. A surface is unattended
+     * until it says otherwise, and after each [MSG_RELEASE_CLIENT].
+     */
+    const val MSG_SET_ATTENDED = 21
+
+    /** Boolean for [MSG_SET_ATTENDED]. */
+    const val KEY_ATTENDED = "attended"
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 
@@ -210,6 +221,9 @@ object NappletIpc {
 
     /** The visited web origin (e.g. `https://example.com`) a browser-mode request belongs to. */
     const val KEY_BROWSER_ORIGIN = "browserOrigin"
+
+    /** [MSG_MINT_BROWSER_TOKEN]: the opaque storage profile the asking surface runs in (its account's jar). */
+    const val KEY_WEBVIEW_PROFILE = "webViewProfile"
 
     /** Boolean: route this site through Tor (true) or over the open web (false). */
     const val KEY_NETWORK_USE_TOR = "networkUseTor"

@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FindResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -110,13 +112,13 @@ class EmbeddedNostrAppController(
     // its own id on every message; the provider uses it to route controls/state/IME to this tab.
     // Re-minted whenever the remote session is re-created (see [attachView]), so a late close() from the
     // previous view can never reap the replacement.
-    private var sessionId: String = "napplet-${SESSION_SEQ.incrementAndGet()}"
+    private var sessionId: String = newSessionId()
 
     // What the provider was last told (see [syncPageState]). A parked tab can be hidden before the service
     // even binds, when the message is dropped (no messenger yet), so both are replayed right after each
     // session is created — otherwise an applet that was never shown comes up running, and acting, unwatched.
     private var wantPaused = false
-    private var wantAttended = true
+    private var wantAttended = false
 
     // The app is on screen / has been in the background long enough to pause even the visible tab.
     private var appVisible = true
@@ -141,6 +143,18 @@ class EmbeddedNostrAppController(
 
     // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
     private var createOnShow = false
+
+    // A create is in flight: the view's old session erroring out now is the one being replaced, not news.
+    private var awaitingReady = false
+
+    // The current session's surface has shown in the view at least once (see [retry]).
+    private var uiDisplayed = false
+
+    // Whether `:napplet` routes through Tor right now: another surface that needs Tor puts every page on it.
+    private val routedOverTor = mutableStateOf(false)
+
+    /** This nSite is set to the open web but goes through Tor anyway, because another open page needs Tor. */
+    val isTorForced: Boolean get() = !params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true) && routedOverTor.value
 
     /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
     override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
@@ -289,7 +303,9 @@ class EmbeddedNostrAppController(
         // The session being replaced may never have opened a surface (its view went away first), in which
         // case no surface close will ever reach the provider for it.
         send(NappletEmbedContract.MSG_CLOSE_SESSION)
-        sessionId = "napplet-${SESSION_SEQ.incrementAndGet()}"
+        sessionId = newSessionId()
+        // This create IS the re-creation a `:napplet` restart deferred to the next show.
+        createOnShow = false
         adapterDelivered = false
         sessionDead = false
         _findResult.value = null
@@ -304,12 +320,15 @@ class EmbeddedNostrAppController(
     private fun surfaceListener(view: SandboxedSdkView) =
         object : SandboxedSdkViewEventListener {
             override fun onUiDisplayed() {
-                // Nothing to do: the load state reports when the page itself paints.
+                // The load state reports when the page itself paints; this only says the surface opened.
+                if (sandboxedSdkView === view) uiDisplayed = true
             }
 
             override fun onUiError(error: Throwable) {
-                // A view this controller has since moved past (disposed, replaced) is not ours to revive.
-                if (sandboxedSdkView === view) onSurfaceLost(sessionDead = true)
+                // A view this controller has since moved past (disposed, replaced) is not ours to revive, and an
+                // error landing while a new session is on its way is the old one dying: that create already
+                // is the rebuild.
+                if (sandboxedSdkView === view && !awaitingReady) onSurfaceLost(sessionDead = true)
             }
 
             override fun onUiClosed() {
@@ -400,6 +419,8 @@ class EmbeddedNostrAppController(
     override fun teardown() = unbind()
 
     private fun sendCreateSession() {
+        awaitingReady = true
+        uiDisplayed = false
         val msg =
             Message.obtain(null, NappletEmbedContract.MSG_CREATE_SESSION).apply {
                 replyTo = incoming
@@ -411,14 +432,17 @@ class EmbeddedNostrAppController(
                         // [attachView]) must land in the CURRENT account's jar, never the one this
                         // controller was originally built for.
                         putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
+                        // Likewise Tor's port: it may have come up (or moved) since [params] were minted.
+                        putInt(NappletHostContract.EXTRA_PROXY_PORT, EmbeddedTabFactory.currentTorPort())
                     }
             }
         runCatching { serviceMessenger?.send(msg) }
-        // Replay a pause / not-attended that was decided before we had a messenger to send it on
+        // Replay a pause / the attended state decided before we had a messenger to send it on
         // (parked-before-bound), so a never-shown applet doesn't start running or acting. Messenger preserves
         // order, so these land after CREATE in the host.
         if (wantPaused) send(NappletEmbedContract.MSG_PAUSE)
-        if (!wantAttended) send(NappletEmbedContract.MSG_SET_ATTENDED) { putBoolean(NappletEmbedContract.KEY_ATTENDED, false) }
+        // Always: a new session starts unattended, so a tab created in view must say it is being watched.
+        send(NappletEmbedContract.MSG_SET_ATTENDED) { putBoolean(NappletEmbedContract.KEY_ATTENDED, wantAttended) }
         if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
     }
 
@@ -432,6 +456,7 @@ class EmbeddedNostrAppController(
         when (msg.what) {
             NappletEmbedContract.MSG_SESSION_READY -> {
                 val coreLibInfo = msg.data?.getBundle(NappletEmbedContract.KEY_CORE_LIB_INFO) ?: return true
+                awaitingReady = false
                 val adapter = SandboxedUiAdapterFactory.createFromCoreLibInfo(coreLibInfo)
                 val view = sandboxedSdkView
                 if (view != null) {
@@ -482,6 +507,7 @@ class EmbeddedNostrAppController(
                     }
                 }
             }
+            NappletEmbedContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletEmbedContract.KEY_ROUTE_TOR, false) ?: false
             NappletEmbedContract.MSG_FIND_RESULT -> {
                 val data = msg.data ?: return true
                 _findResult.value = FindResult(data.getInt(NappletEmbedContract.KEY_FIND_ACTIVE), data.getInt(NappletEmbedContract.KEY_FIND_TOTAL))
@@ -534,7 +560,7 @@ class EmbeddedNostrAppController(
 
     fun back() = send(NappletEmbedContract.MSG_BACK)
 
-    fun reload() = send(NappletEmbedContract.MSG_RELOAD)
+    fun reload() = send(NappletEmbedContract.MSG_RELOAD) { putInt(NappletHostContract.EXTRA_PROXY_PORT, EmbeddedTabFactory.currentTorPort()) }
 
     override fun find(query: String) {
         if (query.isEmpty()) _findResult.value = null
@@ -552,7 +578,8 @@ class EmbeddedNostrAppController(
     override fun retry() {
         recovery.clearPending()
         showRecovering()
-        if (sessionDead) rearmSession() else reload()
+        // A surface that never opened has nothing to reload: only a new session can paint it.
+        if (sessionDead || (sandboxedSdkView != null && !uiDisplayed)) rearmSession() else reload()
     }
 
     private fun onLoadState(
@@ -605,6 +632,12 @@ class EmbeddedNostrAppController(
 
     private companion object {
         private val SESSION_SEQ = AtomicLong()
+
+        // The provider outlives this process's restarts (and this counter with them): without a per-process
+        // nonce a fresh main process would hand out ids a still-running `:napplet` already holds.
+        private val PROCESS_NONCE = UUID.randomUUID().toString().take(8)
+
+        private fun newSessionId() = "napplet-$PROCESS_NONCE-${SESSION_SEQ.incrementAndGet()}"
 
         private const val MAX_CONSOLE_LOGS = 200
     }

@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.consoleLevelOf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -73,7 +74,9 @@ import java.util.concurrent.atomic.AtomicLong
 @RequiresApi(Build.VERSION_CODES.R)
 class EmbeddedWebAppController(
     private val appContext: Context,
-    private val proxyPort: Int,
+    // Read on every create and load rather than once: Tor may still be starting when the tab is made, and a
+    // Tor page loads nothing (fails closed) until its port is known.
+    private val proxyPort: () -> Int,
     private val initialUseTor: Boolean,
     private val backgroundColor: Int,
     private val themeType: String = "SYSTEM",
@@ -115,10 +118,16 @@ class EmbeddedWebAppController(
     // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
     private var createOnShow = false
 
+    // A create is in flight: the view's old session erroring out now is the one being replaced, not news.
+    private var awaitingReady = false
+
+    // The current session's surface has shown in the view at least once (see [retry]).
+    private var uiDisplayed = false
+
     // What the provider was last told (see [syncPageState]). Remembered so both are replayed right after each
     // session is created: a parked tab can be hidden before the service even binds.
     private var wantPaused = false
-    private var wantAttended = true
+    private var wantAttended = false
 
     // The app is on screen / has been in the background long enough to pause even the visible tab.
     private var appVisible = true
@@ -159,6 +168,12 @@ class EmbeddedWebAppController(
 
     /** The user's per-tab settings as last set, for a screen coming back to this tab. */
     val isTorOn: Boolean get() = useTor
+
+    // Whether `:napplet` routes through Tor right now: another surface that needs Tor puts every page on it.
+    private val routedOverTor = mutableStateOf(false)
+
+    /** This page is set to the open web but goes through Tor anyway, because another open page needs Tor. */
+    val isTorForced: Boolean get() = !useTor && routedOverTor.value
     val isDesktopSite: Boolean get() = desktopSite
     val currentTextZoom: Int get() = textZoom
 
@@ -166,7 +181,7 @@ class EmbeddedWebAppController(
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
     // Re-minted whenever the remote session is re-created (see [attachView]), so a late close() from the
     // previous view can never reap the replacement.
-    private var sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
+    private var sessionId: String = newSessionId()
 
     /** Invoked on the main thread when the page navigates or retitles: (url, title or null, canGoBack, canGoForward). */
     var onUrlChanged: ((String, String?, Boolean, Boolean) -> Unit)? = null
@@ -376,7 +391,9 @@ class EmbeddedWebAppController(
         // The session being replaced may never have opened a surface (its view went away first), in which
         // case no surface close will ever reach the provider for it.
         send(NappletBrowserContract.MSG_CLOSE_SESSION) {}
-        sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
+        sessionId = newSessionId()
+        // This create IS the re-creation a `:napplet` restart deferred to the next show.
+        createOnShow = false
         adapterDelivered = false
         sessionDead = false
         resetPageState()
@@ -391,12 +408,15 @@ class EmbeddedWebAppController(
     private fun surfaceListener(view: SandboxedSdkView) =
         object : SandboxedSdkViewEventListener {
             override fun onUiDisplayed() {
-                // Nothing to do: the load state reports when the page itself paints.
+                // The load state reports when the page itself paints; this only says the surface opened.
+                if (sandboxedSdkView === view) uiDisplayed = true
             }
 
             override fun onUiError(error: Throwable) {
-                // A view this controller has since moved past (disposed, replaced) is not ours to revive.
-                if (sandboxedSdkView === view) onSurfaceLost(sessionDead = true)
+                // A view this controller has since moved past (disposed, replaced) is not ours to revive, and an
+                // error landing while a new session is on its way is the old one dying: that create already
+                // is the rebuild.
+                if (sandboxedSdkView === view && !awaitingReady) onSurfaceLost(sessionDead = true)
             }
 
             override fun onUiClosed() {
@@ -439,6 +459,8 @@ class EmbeddedWebAppController(
     }
 
     private fun sendCreateSession() {
+        awaitingReady = true
+        uiDisplayed = false
         val msg =
             Message.obtain(null, NappletBrowserContract.MSG_CREATE_SESSION).apply {
                 replyTo = incoming
@@ -446,7 +468,7 @@ class EmbeddedWebAppController(
                     Bundle().apply {
                         putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
                         putString(NappletBrowserContract.KEY_URL, startUrl)
-                        putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort)
+                        putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
                         putString(NappletBrowserContract.KEY_THEME, themeType)
@@ -460,7 +482,8 @@ class EmbeddedWebAppController(
         if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
         if (desktopSite) setDesktopSite(true)
         if (wantPaused) send(NappletBrowserContract.MSG_PAUSE) {}
-        if (!wantAttended) send(NappletBrowserContract.MSG_SET_ATTENDED) { putBoolean(NappletBrowserContract.KEY_ENABLED, false) }
+        // Always: a new session starts unattended, so a tab created in view must say it is being watched.
+        send(NappletBrowserContract.MSG_SET_ATTENDED) { putBoolean(NappletBrowserContract.KEY_ENABLED, wantAttended) }
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
@@ -473,6 +496,7 @@ class EmbeddedWebAppController(
         when (msg.what) {
             NappletBrowserContract.MSG_SESSION_READY -> {
                 val coreLibInfo = msg.data?.getBundle(NappletBrowserContract.KEY_CORE_LIB_INFO) ?: return true
+                awaitingReady = false
                 val adapter = SandboxedUiAdapterFactory.createFromCoreLibInfo(coreLibInfo)
                 val view = sandboxedSdkView
                 if (view != null) {
@@ -594,6 +618,7 @@ class EmbeddedWebAppController(
                 val id = msg.data?.getLong(NappletBrowserContract.KEY_PERMISSION_ID)
                 if (pendingPermission.value?.id == id) pendingPermission.value = null
             }
+            NappletBrowserContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
             NappletBrowserContract.MSG_FULLSCREEN -> isFullscreen.value = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
             NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true
@@ -613,9 +638,13 @@ class EmbeddedWebAppController(
         return true
     }
 
-    fun navigate(url: String) = send(NappletBrowserContract.MSG_NAVIGATE) { putString(NappletBrowserContract.KEY_URL, url) }
+    fun navigate(url: String) =
+        send(NappletBrowserContract.MSG_NAVIGATE) {
+            putString(NappletBrowserContract.KEY_URL, url)
+            putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
+        }
 
-    fun reload() = send(NappletBrowserContract.MSG_RELOAD) {}
+    fun reload() = send(NappletBrowserContract.MSG_RELOAD) { putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort()) }
 
     /**
      * User-triggered recovery for a stuck, blank, or failed session: reload the canonical [startUrl] from
@@ -625,7 +654,8 @@ class EmbeddedWebAppController(
     override fun retry() {
         recovery.clearPending()
         showRecovering()
-        if (sessionDead) rearmSession() else navigate(startUrl)
+        // A surface that never opened has nothing to navigate: only a new session can paint it.
+        if (sessionDead || (sandboxedSdkView != null && !uiDisplayed)) rearmSession() else navigate(startUrl)
     }
 
     private fun onLoadState(
@@ -720,7 +750,10 @@ class EmbeddedWebAppController(
 
     fun setTor(useTor: Boolean) {
         this.useTor = useTor
-        send(NappletBrowserContract.MSG_SET_TOR) { putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor) }
+        send(NappletBrowserContract.MSG_SET_TOR) {
+            putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
+            putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
+        }
     }
 
     override fun sendImeOp(json: String) = send(NappletBrowserContract.MSG_IME_OP) { putString(NappletBrowserContract.KEY_IME_PAYLOAD, json) }
@@ -758,6 +791,12 @@ class EmbeddedWebAppController(
 
     private companion object {
         private val SESSION_SEQ = AtomicLong()
+
+        // The provider outlives this process's restarts (and this counter with them): without a per-process
+        // nonce a fresh main process would hand out ids a still-running `:napplet` already holds.
+        private val PROCESS_NONCE = UUID.randomUUID().toString().take(8)
         private const val MAX_CONSOLE_LOGS = 200
+
+        private fun newSessionId() = "browser-$PROCESS_NONCE-${SESSION_SEQ.incrementAndGet()}"
     }
 }

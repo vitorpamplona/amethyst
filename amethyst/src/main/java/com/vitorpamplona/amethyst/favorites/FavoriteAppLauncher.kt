@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
@@ -87,7 +88,10 @@ object FavoriteAppLauncher {
         preferTor: Boolean = false,
     ) {
         val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-        val useTor = proxyPort > 0 && (preferTor || WebAppNetworkRegistry.useTor(url))
+        // Whether Tor is ON, not whether its port is known yet: a surface that wants Tor with no port refuses
+        // to load (fails closed) rather than quietly going out on the open web while Tor is still starting.
+        val torEnabled = Amethyst.instance.torPrefs.torType.value != TorType.OFF
+        val useTor = torEnabled && (preferTor || WebAppNetworkRegistry.useTor(url))
         val themeType = Amethyst.instance.uiPrefs.value.theme.value
         val theme =
             when (themeType) {

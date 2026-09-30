@@ -40,6 +40,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.ContextMenu
 import android.view.Gravity
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
+import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
@@ -233,7 +235,7 @@ class NappletBrowserActivity : ComponentActivity() {
     // The page's requests that act for the user (NIP-07 sign / encrypt / decrypt) made while this window was in
     // the background, as (origin, request): sent on the next resume, so a site can't sign — even with
     // "allow always" — while nobody is looking at it.
-    private val heldWhileAway = mutableListOf<Pair<String, Message>>()
+    private val heldWhileAway = NappletHeldRequests<Pair<String, Message>>(SystemClock::elapsedRealtime)
 
     /**
      * Back walks out of fullscreen video, then the find bar, then the page's history, then leaves. Enabled
@@ -271,6 +273,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 pendingBrokerRequests.forEach { sendToBroker(it) }
                 pendingBrokerRequests.clear()
                 if (resumed) setBrokerForeground(true)
+                reportAttended()
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -309,6 +312,14 @@ class NappletBrowserActivity : ComponentActivity() {
         }
         title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
 
+        // Fail closed: Tor is on but its port isn't known yet (still starting). This window can't learn it
+        // later, so refuse now rather than sit blank — or go out on the open web.
+        if (popup == null && useTor && proxyPort <= 0) {
+            Toast.makeText(this, R.string.napplet_route_blocked, Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
             finish()
@@ -316,7 +327,13 @@ class NappletBrowserActivity : ComponentActivity() {
         }
 
         shimJs = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        claimRoute()
+        // Which route is really in effect: an open-web page goes through Tor while another page needs it.
+        WebViewProxyPolicy.observeRoute(this) {
+            routedOverTor = it
+            updateChromeState { copy(torForced = !useTor && it) }
+        }
+        // A popup's WebView is already loading: its route is claimed now, not before a load.
+        if (popup != null) claimRoute()
 
         bindService(Intent().setClassName(this, NappletHostContract.BROKER_SERVICE_CLASS), brokerConnection, BIND_AUTO_CREATE)
         onBackPressedDispatcher.addCallback(this, backCallback)
@@ -341,8 +358,8 @@ class NappletBrowserActivity : ComponentActivity() {
         contentFrame.addView(wv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         if (popup == null) {
             loadingView = buildLoadingView().also { contentFrame.addView(it) }
-            // Wait for this page's route (claimed above) to be in effect before the first request leaves.
-            WebViewProxyPolicy.whenApplied { if (webView === wv) wv.loadUrl(startUrl) }
+            // Wait for this page's route to be in effect before the first request leaves.
+            claimRoute { if (webView === wv) wv.loadUrl(startUrl) }
         } else {
             wv.url?.let { if (it.isNotBlank() && it != "about:blank") startUrl = it }
         }
@@ -401,13 +418,19 @@ class NappletBrowserActivity : ComponentActivity() {
             }
         }
 
+    private val expireHeld =
+        Runnable {
+            if (!isDestroyed) heldWhileAway.expire().forEach { (_, request) -> bridge.failRequest(request, NappletHeldRequests.EXPIRED) }
+        }
+
     override fun onResume() {
         super.onResume()
         webView?.onResume()
         resumed = true
-        val held = heldWhileAway.toList()
-        heldWhileAway.clear()
-        held.forEach { (origin, request) -> dispatchToBroker(origin, request) }
+        reportAttended()
+        val held = heldWhileAway.drain()
+        held.fail.forEach { (_, request) -> bridge.failRequest(request, NappletHeldRequests.EXPIRED) }
+        held.send.forEach { (origin, request) -> dispatchToBroker(origin, request) }
         heartbeatHandler.removeCallbacks(heartbeat)
         heartbeat.run()
     }
@@ -434,6 +457,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onPause() {
         resumed = false
+        reportAttended()
         heartbeatHandler.removeCallbacks(heartbeat)
         setBrokerForeground(false)
         super.onPause()
@@ -441,6 +465,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     override fun onDestroy() {
         heartbeatHandler.removeCallbacks(backgroundPause)
+        heartbeatHandler.removeCallbacks(expireHeld)
         // Tell the broker to drop every reference to our reply Messenger BEFORE unbinding — a retained
         // Messenger is a binder, and it would pin this Activity (and its WebView) in `:napplet` for the
         // life of the process. `unbindService` alone does not release it. See [replyMessenger].
@@ -697,6 +722,9 @@ class NappletBrowserActivity : ComponentActivity() {
             // A fresh main-frame navigation: arm history gating and show the new address.
             pendingMainFrameUrl = url
             mainFrameLoadFailed = false
+            // The page is being replaced: nothing it asked for (replies, subscription pushes) may reach the next
+            // one, even a next one that never talks to the bridge.
+            if (bridge.onNavigation()) releasePage()
             // A window a page opened takes its first real page as its home ("scope").
             if (startUrl == "about:blank" && url.startsWith("http")) startUrl = url
             // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
@@ -908,13 +936,12 @@ class NappletBrowserActivity : ComponentActivity() {
     /** Loads a user-typed address from "Edit address", forcing Tor for `.onion` when available. */
     private fun loadAddress(text: String) {
         val resolved = OmniboxInput.resolve(text) ?: return
-        if (resolved.forceTor && proxyPort > 0 && !useTor) {
+        if (resolved.forceTor && !useTor) {
             useTor = true
-            claimRoute()
-            updateChromeState { copy(torOn = true) }
+            updateChromeState { copy(torOn = true, torForced = false) }
         }
         // An onion must not leave before the Tor route it just claimed is in place.
-        WebViewProxyPolicy.whenApplied { webView?.loadUrl(resolved.url) }
+        claimRoute { webView?.loadUrl(resolved.url) }
     }
 
     // ---- bridge: page <-> native (mirror of NappletBrowserService.onBridgeMessage) ----
@@ -944,19 +971,28 @@ class NappletBrowserActivity : ComponentActivity() {
 
         val pageId = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${fireSeq++}" }
         val id = bridge.brokerIdFor(pageId)
+        // A relay subscription is named by the page, and its pushes (decrypted events included) come back
+        // under that name: stamp this document on it so the next page can never receive them.
+        val outgoing = bridge.stampSubscription(envelope)?.toString() ?: raw
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = replyMessenger
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_REQUEST_ID, id)
-                        putString(NappletIpc.KEY_PAYLOAD, raw)
+                        putString(NappletIpc.KEY_PAYLOAD, outgoing)
                     }
             }
 
         // In the background: a sign / encrypt / decrypt waits until the user is back on this window.
         if (!resumed && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
-            heldWhileAway += origin to msg
+            val refused = heldWhileAway.hold(origin to msg)
+            if (refused != null) {
+                bridge.failRequest(refused.second, NappletHeldRequests.TOO_MANY)
+            } else {
+                // Settle it with an error if nobody comes back for it, so the page isn't left waiting forever.
+                heartbeatHandler.postDelayed(expireHeld, NappletHeldRequests.MAX_AGE_MS)
+            }
             return
         }
         dispatchToBroker(origin, msg)
@@ -1008,7 +1044,11 @@ class NappletBrowserActivity : ComponentActivity() {
         val msg =
             Message.obtain(null, NappletIpc.MSG_MINT_BROWSER_TOKEN).apply {
                 replyTo = replyMessenger
-                data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_BROWSER_ORIGIN, origin)
+                        putString(NappletIpc.KEY_WEBVIEW_PROFILE, webViewProfile)
+                    }
             }
         queueToBroker(msg)
     }
@@ -1028,6 +1068,18 @@ class NappletBrowserActivity : ComponentActivity() {
         pendingBrokerRequests.removeAll { it.what == NappletIpc.MSG_REQUEST }
         val broker = brokerMessenger ?: return
         runCatching { broker.send(Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = replyMessenger }) }
+        // The release forgets this window's attendance along with the rest; the next page is watched the same.
+        if (resumed) reportAttended()
+    }
+
+    /** Tells the broker whether this window is being looked at, which gates decrypting its relay reads. */
+    private fun reportAttended() {
+        queueToBroker(
+            Message.obtain(null, NappletIpc.MSG_SET_ATTENDED).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putBoolean(NappletIpc.KEY_ATTENDED, resumed) }
+            },
+        )
     }
 
     /** A token for [origin] won't come: answer each call queued behind it with a failure, and allow a retry. */
@@ -1071,7 +1123,9 @@ class NappletBrowserActivity : ComponentActivity() {
             }
             NappletIpc.MSG_PUSH -> {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                runCatching { bridge.currentProxy?.postMessage(payload) }
+                // Dropped when it is for a subscription a replaced document opened.
+                val push = parseJsonObjectOrNull(payload)?.let { bridge.resolvePush(it) } ?: return true
+                runCatching { bridge.currentProxy?.postMessage(push.toString()) }
             }
             NappletIpc.MSG_WEB_FAVORITE_STATE -> {
                 val url = data.getString(NappletIpc.KEY_FAVORITE_URL) ?: return true
@@ -1389,18 +1443,30 @@ class NappletBrowserActivity : ComponentActivity() {
 
     // ---- network ----
 
+    /** Whether the process route is Tor right now, whatever this page asked for. */
+    private var routedOverTor = false
+
     /**
      * Files this page's Tor / open-web choice with the process-wide [WebViewProxyPolicy] (the override is
      * shared by every WebView in `:napplet`, so no surface sets it directly); [onReady] runs once the shared
-     * route is in effect. An open-web page exempts its own site from other surfaces' Tor route.
+     * route is in effect. Fails closed: a page that wants Tor loads nothing until Tor's port is known and the
+     * route is really applied.
      */
     private fun claimRoute(onReady: () -> Unit = {}) {
-        if (useTor && proxyPort > 0) {
-            WebViewProxyPolicy.claim(this, proxyPort, onReady = onReady)
-        } else {
-            val shown = webView?.url?.takeIf { it.startsWith("http") } ?: startUrl
-            WebViewProxyPolicy.claim(this, NappletProxyClaims.NO_PROXY, WebViewProxyPolicy.directHostsOf(shown), onReady)
+        if (useTor && proxyPort <= 0) {
+            showRouteBlocked()
+            return
         }
+        WebViewProxyPolicy.claim(
+            owner = this,
+            torPort = if (useTor) proxyPort else NappletProxyClaims.NO_PROXY,
+            onFailed = { showRouteBlocked() },
+            onReady = onReady,
+        )
+    }
+
+    private fun showRouteBlocked() {
+        if (!isDestroyed) Toast.makeText(this, R.string.napplet_route_blocked, Toast.LENGTH_LONG).show()
     }
 
     /** Persists the per-host Tor choice in the main process and re-applies it to the live WebView. */
@@ -1408,7 +1474,7 @@ class NappletBrowserActivity : ComponentActivity() {
         useTor = newUseTor
         // Reload only once the new route is in effect, or the reload would go out the old way.
         claimRoute { webView?.reload() }
-        updateChromeState { copy(torOn = useTor) }
+        updateChromeState { copy(torOn = useTor, torForced = !useTor && routedOverTor) }
         // Key the persisted choice on the host actually displayed (which may differ from startUrl after
         // in-page navigation), so the preference sticks to the right site.
         val host = runCatching { currentUrl().toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
@@ -1447,6 +1513,7 @@ class NappletBrowserActivity : ComponentActivity() {
                             url = startUrl,
                             startUrl = startUrl,
                             torOn = if (proxyPort > 0) useTor else null,
+                            torForced = !useTor && routedOverTor,
                         ),
                     isFavorite = intent.getBooleanExtra(EXTRA_IS_FAVORITE, false),
                     defaultBrowserName = DefaultBrowser.label(this),
@@ -1694,7 +1761,7 @@ class NappletBrowserActivity : ComponentActivity() {
                                 crashView = null
                                 val wv = buildWebView()
                                 contentFrame.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-                                WebViewProxyPolicy.whenApplied { if (webView === wv) wv.loadUrl(url) }
+                                claimRoute { if (webView === wv) wv.loadUrl(url) }
                             }
                         },
                     )

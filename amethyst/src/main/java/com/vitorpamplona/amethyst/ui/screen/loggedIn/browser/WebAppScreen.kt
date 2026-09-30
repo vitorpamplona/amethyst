@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -131,7 +132,8 @@ private fun EmbeddedWebAppTab(
 
     var showPageInfo by remember { mutableStateOf(false) }
 
-    val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
+    // Tor is ON (its port may still be coming up: a Tor page then waits, it never falls back to the open web).
+    val proxyAvailable = remember { Amethyst.instance.torPrefs.torType.value != TorType.OFF }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
@@ -242,9 +244,12 @@ private fun EmbeddedWebAppTab(
     val siteDecisions by WebSitePermissionRegistry.decisions.collectAsStateWithLifecycle()
     val sitePermissions = remember(siteDecisions, currentUrl) { browserOrigin(currentUrl)?.let { siteDecisions[it] }.orEmpty() }
 
+    // Off for this site, yet on Tor because another open page needs it (Tor always wins in `:napplet`).
+    val torForced = controller.isTorForced
+
     // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(currentUrl, pageTitle, canGoBack, canGoForward, isLoading, torOn, proxyAvailable, isFavorite, desktopSite, textZoom, sitePermissions, candidates, controller) {
+        remember(currentUrl, pageTitle, canGoBack, canGoForward, isLoading, torOn, torForced, proxyAvailable, isFavorite, desktopSite, textZoom, sitePermissions, candidates, controller) {
             EmbeddedTabChrome(
                 ui =
                     BrowserPillUi(
@@ -259,6 +264,7 @@ private fun EmbeddedWebAppTab(
                                 canGoForward = canGoForward,
                                 isLoading = isLoading,
                                 torOn = if (proxyAvailable) torOn else null,
+                                torForced = torForced,
                                 hasSiteSettings = browserOrigin(currentUrl) != null,
                             ),
                         isFavorite = isFavorite,
