@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
@@ -185,4 +186,22 @@ class ConcordKickTest {
             val byOwner = ConcordActions.buildGuestbookKick(owner, gb, target.pubKey, citation = null, createdAt = 10L)
             assertNotNull(session(c, target.pubKey, w.controlWraps + join + byOwner).kickedMe())
         }
+
+    /** The shared rule both the app session and amy apply (CORD-04 §6). */
+    @Test
+    fun honoredKickAgainstOnlyCountsAKickNewerThanTheMembership() {
+        val me = "a".repeat(64)
+        val owner = "b".repeat(64)
+        val kick = GuestbookEntry(member = me, action = GuestbookAction.KICK, createdAt = 100, inviteCreator = null, inviteLabel = null, author = owner)
+        val coalesced = mapOf(me to kick)
+
+        assertNotNull(ConcordActions.honoredKickAgainst(coalesced, me.uppercase(), owner, addedAtMs = 0))
+        assertNotNull(ConcordActions.honoredKickAgainst(coalesced, me, owner, addedAtMs = 99_999))
+        // Re-joined after the Kick: it judged the earlier membership.
+        assertNull(ConcordActions.honoredKickAgainst(coalesced, me, owner, addedAtMs = 100_000))
+        // The owner is never kicked; a latest motion that is a Join is not a Kick.
+        assertNull(ConcordActions.honoredKickAgainst(mapOf(owner to kick), owner, owner, addedAtMs = 0))
+        val join = GuestbookEntry(member = me, action = GuestbookAction.JOIN, createdAt = 200, inviteCreator = null, inviteLabel = null)
+        assertNull(ConcordActions.honoredKickAgainst(mapOf(me to join), me, owner, addedAtMs = 0))
+    }
 }

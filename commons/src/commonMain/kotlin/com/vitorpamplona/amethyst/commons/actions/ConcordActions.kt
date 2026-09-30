@@ -949,6 +949,22 @@ object ConcordActions {
             ?.let { Guestbook.parse(it) }
 
     /**
+     * The honored Kick naming [me] in a [coalesced] Guestbook (CORD-04 §6), or null. Only a Kick
+     * newer than [addedAtMs] — when this membership began — counts: an older one judged an earlier
+     * membership that a re-join has already put behind us. The owner is never kicked.
+     */
+    fun honoredKickAgainst(
+        coalesced: Map<HexKey, GuestbookEntry>,
+        me: HexKey,
+        owner: HexKey,
+        addedAtMs: Long,
+    ): GuestbookEntry? {
+        val self = me.lowercase()
+        if (self == owner.lowercase()) return null
+        return coalesced[self]?.takeIf { it.action == GuestbookAction.KICK && it.ms > addedAtMs }
+    }
+
+    /**
      * The CORD-02 §5 coalesce of already-opened [entries] (latest motion per npub, Kicks honored
      * against [authority]) down to the JOINed member set.
      */

@@ -740,14 +740,7 @@ object ConcordModCommands {
     private suspend fun guestbookMembersOf(
         ctx: Context,
         sc: StoredCommunity,
-    ): Set<String> =
-        runCatching {
-            val gb = ConcordActions.guestbookPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
-            val relays = ConcordCommands.relaysFor(ctx, sc)
-            ctx.registerConcordStreamKeys(relays, listOf(gb.secretKey))
-            val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(gb.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
-            ConcordActions.guestbookMembers(wraps, gb).mapTo(HashSet()) { it.lowercase() }
-        }.getOrDefault(emptySet())
+    ): Set<String> = ConcordActions.projectGuestbook(ConcordCommands.guestbookEntriesOf(ctx, sc)).mapTo(HashSet()) { it.lowercase() }
 
     /**
      * Authors of every channel message we can decrypt. Most members never send a Guestbook motion,
