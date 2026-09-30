@@ -18,13 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.searchCommand
+package com.vitorpamplona.amethyst.commons.relayClient.searchCommand
 
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search.SearchBarViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchBarViewModel
 
 @Composable
 fun TextSearchDataSourceSubscription(

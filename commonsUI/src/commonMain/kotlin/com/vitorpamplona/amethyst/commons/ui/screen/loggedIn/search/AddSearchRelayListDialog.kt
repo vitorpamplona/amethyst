@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.default_relays_longer
@@ -44,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_edit
 import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_examples
 import com.vitorpamplona.amethyst.commons.resources.search_relays_title
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
@@ -62,7 +62,7 @@ fun AddSearchRelayListDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val postViewModel: SearchRelayListViewModel = viewModel()
+    val postViewModel: SearchRelayListViewModel = rememberViewModel { SearchRelayListViewModel() }
 
     postViewModel.init(accountViewModel)
 

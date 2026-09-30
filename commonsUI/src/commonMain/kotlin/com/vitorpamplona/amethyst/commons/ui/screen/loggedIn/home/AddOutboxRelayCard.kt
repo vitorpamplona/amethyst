@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,10 +40,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dm_relays_not_found_create_now
-import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found
-import com.vitorpamplona.amethyst.commons.resources.search_relays_not_found_description
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found
+import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_description
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.AddInboxRelayCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
@@ -55,9 +56,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 
 @Preview
 @Composable
-fun AddInboxRelayForSearchCardPreview() {
+fun AddOutboxRelayCardPreview() {
     ThemeComparisonColumn {
-        AddInboxRelayForSearchCard(
+        AddInboxRelayCard(
             accountViewModel = mockAccountViewModel(),
             nav = EmptyNav(),
         )
@@ -65,15 +66,15 @@ fun AddInboxRelayForSearchCardPreview() {
 }
 
 @Composable
-fun ObserveRelayListForSearchAndDisplayIfNotFound(
+fun ObserveInboxRelayListAndDisplayIfNotFound(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val searchRelayList by accountViewModel.account.searchRelayList.flowNoDefaults
+    val outboxRelayList by accountViewModel.account.nip65RelayList.outboxFlowNoDefaults
         .collectAsStateWithLifecycle()
 
-    if (searchRelayList.isEmpty()) {
-        AddInboxRelayForSearchCard(
+    if (outboxRelayList.isEmpty()) {
+        AddOutboxRelayCard(
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -81,7 +82,7 @@ fun ObserveRelayListForSearchAndDisplayIfNotFound(
 }
 
 @Composable
-fun AddInboxRelayForSearchCard(
+fun AddOutboxRelayCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -94,7 +95,7 @@ fun AddInboxRelayForSearchCard(
             ) {
                 // Title
                 Text(
-                    text = stringRes(id = Res.string.search_relays_not_found),
+                    text = stringRes(id = Res.string.outbox_relays_not_found),
                     style =
                         TextStyle(
                             fontSize = 20.sp,
@@ -105,14 +106,18 @@ fun AddInboxRelayForSearchCard(
                 Spacer(modifier = StdVertSpacer)
 
                 Text(
-                    text = stringRes(id = Res.string.search_relays_not_found_description),
+                    text = stringRes(id = Res.string.outbox_relays_not_found_description),
                 )
 
                 Spacer(modifier = StdVertSpacer)
 
                 var wantsToEditRelays by remember { mutableStateOf(false) }
                 if (wantsToEditRelays) {
-                    AddSearchRelayListDialog({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+                    AddOutboxRelayListDialog(
+                        { wantsToEditRelays = false },
+                        accountViewModel,
+                        nav = nav,
+                    )
                 }
 
                 Button(

@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRe
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes

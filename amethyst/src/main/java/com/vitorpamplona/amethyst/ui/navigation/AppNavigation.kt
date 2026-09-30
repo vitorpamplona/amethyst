@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzInviteScre
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzNewDmScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.JobBoardScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.WorkflowRunBoardScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupInfoScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnInvitationsScreen
@@ -133,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.list.Co
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.contactList.ContactListUsersScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
@@ -199,6 +201,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip43.RelayM
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.subscriptions.ActiveSubscriptionsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BlockedUsersScreen
@@ -276,7 +279,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
@@ -291,7 +293,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
@@ -325,7 +326,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.SendPayment
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen

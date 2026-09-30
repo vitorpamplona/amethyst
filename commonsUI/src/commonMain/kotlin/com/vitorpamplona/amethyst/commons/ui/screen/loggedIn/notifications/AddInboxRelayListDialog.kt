@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,15 +35,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_editing
-import com.vitorpamplona.amethyst.commons.resources.outbox_relays_not_found_examples
-import com.vitorpamplona.amethyst.commons.resources.outbox_relays_title
+import com.vitorpamplona.amethyst.commons.resources.inbox_relays_not_found_editing
+import com.vitorpamplona.amethyst.commons.resources.inbox_relays_not_found_examples
+import com.vitorpamplona.amethyst.commons.resources.inbox_relays_title
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip65.Nip65OutboxRelayList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip65.Nip65InboxRelayList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip65.Nip65RelayListViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -52,12 +52,12 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddOutboxRelayListDialog(
+fun AddInboxRelayListDialog(
     onClose: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val postViewModel: Nip65RelayListViewModel = viewModel()
+    val postViewModel: Nip65RelayListViewModel = rememberViewModel { Nip65RelayListViewModel() }
 
     postViewModel.init(accountViewModel)
 
@@ -73,7 +73,7 @@ fun AddOutboxRelayListDialog(
         Scaffold(
             topBar = {
                 SavingTopBar(
-                    titleRes = Res.string.outbox_relays_title,
+                    titleRes = Res.string.inbox_relays_title,
                     onCancel = {
                         postViewModel.clear()
                         onClose()
@@ -97,7 +97,7 @@ fun AddOutboxRelayListDialog(
             ) {
                 Explanation(postViewModel)
 
-                Nip65OutboxRelayList(postViewModel, accountViewModel, onClose, nav)
+                Nip65InboxRelayList(postViewModel, accountViewModel, onClose, nav)
             }
         }
     }
@@ -108,13 +108,13 @@ private fun Explanation(postViewModel: Nip65RelayListViewModel) {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(id = Res.string.outbox_relays_not_found_editing),
+                text = stringRes(id = Res.string.inbox_relays_not_found_editing),
             )
 
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(id = Res.string.outbox_relays_not_found_examples),
+                text = stringRes(id = Res.string.inbox_relays_not_found_examples),
             )
         }
     }

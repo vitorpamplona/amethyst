@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateListOf
@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 

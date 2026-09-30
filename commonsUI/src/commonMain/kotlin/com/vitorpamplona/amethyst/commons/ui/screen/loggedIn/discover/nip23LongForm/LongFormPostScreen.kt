@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23LongForm
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -75,7 +75,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -110,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
@@ -131,6 +131,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRe
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
@@ -140,7 +141,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 
@@ -152,7 +152,7 @@ fun LongFormPostScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val postViewModel: LongFormPostViewModel = viewModel()
+    val postViewModel: LongFormPostViewModel = rememberViewModel { LongFormPostViewModel() }
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(postViewModel, accountViewModel) {

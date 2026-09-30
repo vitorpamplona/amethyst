@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -78,13 +78,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.npub_hex_username
@@ -111,12 +111,13 @@ import com.vitorpamplona.amethyst.commons.resources.search_source_relays
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin
 import com.vitorpamplona.amethyst.commons.resources.search_type_to_begin_explainer
 import com.vitorpamplona.amethyst.commons.resources.search_waiting_on_relays
-import com.vitorpamplona.amethyst.commons.search.DataStoreSearchHistoryStorage
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
+import com.vitorpamplona.amethyst.commons.search.searchHistoryStorage
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -146,11 +147,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
@@ -168,9 +169,9 @@ fun SearchScreen(
     nav: INav,
 ) {
     val appStores = LocalAppServices.current.appStores
-    val historyStorage = remember { DataStoreSearchHistoryStorage(appStores.getDataStore(DataStoreSearchHistoryStorage.FILE_NAME)) }
+    val historyStorage = remember { appStores.searchHistoryStorage() }
     val searchBarViewModel: SearchBarViewModel =
-        viewModel(
+        rememberViewModel(
             // Keyed on the seed: navigating from one screen's search button to another's has to
             // build a model holding that screen's filter, not hand back the previous one.
             key = "SearchBarViewModel${initialQuery?.let { " $it" }.orEmpty()}",

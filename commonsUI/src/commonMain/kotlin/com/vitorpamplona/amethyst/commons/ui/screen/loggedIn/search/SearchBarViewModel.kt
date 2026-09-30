@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.model.Account
@@ -77,6 +78,7 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,6 +99,7 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
 @Stable
 @OptIn(FlowPreview::class)
@@ -688,6 +691,9 @@ class SearchBarViewModel(
         val initialQuery: String? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
     }
 }

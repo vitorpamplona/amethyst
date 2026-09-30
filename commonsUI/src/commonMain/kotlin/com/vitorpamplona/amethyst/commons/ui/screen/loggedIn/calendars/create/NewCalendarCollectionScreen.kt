@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete
@@ -68,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_collection
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
@@ -82,7 +82,7 @@ fun NewCalendarCollectionScreen(
     accountViewModel: AccountViewModel,
     editDTag: String? = null,
 ) {
-    val vm: NewCalendarCollectionViewModel = viewModel()
+    val vm: NewCalendarCollectionViewModel = rememberViewModel { NewCalendarCollectionViewModel() }
     vm.init(accountViewModel, editDTag)
 
     Scaffold(
