@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
+import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_cut
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_no_key
 import com.vitorpamplona.amethyst.commons.resources.concord_send_image_title
 import com.vitorpamplona.amethyst.commons.resources.concord_timer_active
@@ -116,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplying
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -282,7 +284,15 @@ fun ConcordChannelScreen(
 
             ConcordTypingIndicator(communityId, channelId, accountViewModel)
 
-            if (channel.canPost()) {
+            // canPost()/keyHeld are plain fields the revision tick rewrites; observing the channel's
+            // metadata flow (invalidated on every such change) is what makes a key cut, a ban or a
+            // dissolution landing while this screen is open swap the composer for its notice.
+            val channelInfo by channel
+                .flow()
+                .metadata.stateFlow
+                .collectAsStateWithLifecycle()
+            val canPost = remember(channelInfo) { channel.canPost() }
+            if (canPost) {
                 ConcordTimerIndicator(communityId, accountViewModel)
                 Spacer(modifier = DoubleVertSpacer)
                 ConcordMessageComposer(
@@ -298,7 +308,15 @@ fun ConcordChannelScreen(
             } else if (!channel.keyHeld) {
                 // CORD-03 §1: a Private Channel is keyed independently; without its key there is no
                 // plane only its members can read, so nothing may be posted (never to the root plane).
-                ConcordReadOnlyNotice(Res.string.concord_private_channel_no_key)
+                // A rotation that left us out (CORD-06 §2): say we were removed, not that we never had access.
+                val wasCut =
+                    remember(channelInfo) {
+                        account.concordSessions
+                            .sessionFor(communityId)
+                            ?.entry
+                            ?.let { ConcordChannelKeyring.cutsOf(it).containsKey(channelId.lowercase()) } == true
+                    }
+                ConcordReadOnlyNotice(if (wasCut) Res.string.concord_private_channel_cut else Res.string.concord_private_channel_no_key)
             }
         }
     }

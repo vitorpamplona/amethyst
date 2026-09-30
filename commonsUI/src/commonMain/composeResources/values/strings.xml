@@ -616,6 +616,7 @@
     <string name="concord_timer_active">Messages disappear after %1$s</string>
     <string name="concord_dissolved_read_only">This community has been dissolved and is now read-only. You can still read its history, but no new messages can be posted.</string>
     <string name="concord_private_channel_no_key">This is a private channel and you don't hold its key, so you can't read it or post here.</string>
+    <string name="concord_private_channel_cut">You no longer have access to this private channel: its key was rotated without you, so you can't read new messages or post here.</string>
     <string name="concord_pinned_title">Pinned messages</string>
     <string name="concord_pinned_empty">No pinned messages in this channel yet.</string>
     <string name="concord_pinned_unavailable">This channel's pins are sealed under a key you don't hold, so they can't be shown here, and pinning is paused until they can be read.</string>
