@@ -248,7 +248,7 @@ class Amethyst : Application() {
         // memory stays freed until the user comes back.
         val pressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
         if (pressure && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            EmbeddedTabHost.rebuildAll()
+            EmbeddedTabHost.rebuildAll(keepPages = true)
         }
     }
 }

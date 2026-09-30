@@ -33,6 +33,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController
 
 /**
  * Process-level holder of **warm embedded sessions** — the persistent-surface-layer half of keep-warm.
@@ -178,7 +179,7 @@ object EmbeddedTabHost {
         val previous = builtDark
         builtDark = dark
         // The first report only records what the sessions (built from the same preference) already use.
-        if (previous != null && previous != dark) rebuildAll()
+        if (previous != null && previous != dark) rebuildAll(keepPages = true)
     }
 
     /**
@@ -332,15 +333,30 @@ object EmbeddedTabHost {
      * screen and the preloader re-acquire freshly built sessions. This keeps [activeId], so the visible tab
      * re-activates the instant its screen re-acquires — the user just sees the current tab reload, not a
      * blanked-out surface.
+     *
+     * [keepPages]: each browser tab's rebuilt controller resumes the page it showed, with the user's Tor, zoom
+     * and desktop choices ([EmbeddedWebAppController.PageSnapshot]). Android sends the memory trim routinely,
+     * about a minute into the background, so without this every pinned site came back on its start URL. Never
+     * across an account switch: the next account must not open the previous one's pages.
      */
-    fun rebuildAll() {
+    fun rebuildAll(keepPages: Boolean) {
         // Every page is about to be rebuilt from scratch, so no field survives to restore a keyboard onto.
         keyboardUpOnLeave.clear()
         val copy = warm.toList()
         warm.clear()
+        pageSnapshots.clear()
+        if (keepPages) {
+            copy.forEach { w -> (w.controller as? EmbeddedWebAppController)?.let { pageSnapshots[w.id] = it.snapshot() } }
+        }
         copy.forEach { it.controller.teardown() }
         rebuildEpoch += 1
     }
+
+    // Page state carried from a torn-down browser tab to its rebuilt controller (see [rebuildAll]).
+    private val pageSnapshots = mutableMapOf<String, EmbeddedWebAppController.PageSnapshot>()
+
+    /** The page state [rebuildAll] saved for tab [id], handed over once. */
+    fun takePageSnapshot(id: String): EmbeddedWebAppController.PageSnapshot? = pageSnapshots.remove(id)
 
     /**
      * Account the warm sessions were built for, as the opaque WebView storage-profile name (null while
@@ -372,6 +388,6 @@ object EmbeddedTabHost {
         builtForProfile = profileName
         // Seeding on the first call (app start) must not bump the epoch: nothing is stale yet, and a
         // needless bump would restart the preload sweep that is just getting going.
-        if (!isFirstCall) rebuildAll()
+        if (!isFirstCall) rebuildAll(keepPages = false)
     }
 }

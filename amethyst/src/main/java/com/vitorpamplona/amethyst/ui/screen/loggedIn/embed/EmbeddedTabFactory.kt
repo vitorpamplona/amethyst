@@ -73,7 +73,10 @@ object EmbeddedTabFactory {
                         if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
                     }
                 }
-            EmbeddedWebAppController(context.applicationContext, ::currentTorPort, initialUseTor, backgroundColor, theme).also { it.bind(url) }
+            EmbeddedWebAppController(context.applicationContext, ::currentTorPort, initialUseTor, backgroundColor, theme).also {
+                EmbeddedTabHost.takePageSnapshot(webAppId(url))?.let(it::restore)
+                it.bind(url)
+            }
         } as EmbeddedWebAppController
 
     /**

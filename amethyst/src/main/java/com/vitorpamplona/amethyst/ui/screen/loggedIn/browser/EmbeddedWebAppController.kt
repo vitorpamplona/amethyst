@@ -166,6 +166,24 @@ class EmbeddedWebAppController(
     var lastCanGoForward = false
         private set
 
+    /** A tab's page and per-tab settings, carried to the controller that replaces this one on a rebuild. */
+    class PageSnapshot(
+        val url: String?,
+        val useTor: Boolean,
+        val textZoom: Int,
+        val desktopSite: Boolean,
+    )
+
+    fun snapshot() = PageSnapshot(lastUrl, useTor, textZoom, desktopSite)
+
+    /** Takes over a torn-down predecessor's page and settings; call before [bind], which creates the session. */
+    fun restore(snapshot: PageSnapshot) {
+        lastUrl = snapshot.url
+        useTor = snapshot.useTor
+        textZoom = snapshot.textZoom
+        desktopSite = snapshot.desktopSite
+    }
+
     /** The user's per-tab settings as last set, for a screen coming back to this tab. */
     val isTorOn: Boolean get() = useTor
 
@@ -462,6 +480,17 @@ class EmbeddedWebAppController(
         publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
     }
 
+    // Set by the user's Retry: the next session starts over at [startUrl]. Every other re-creation (a crashed
+    // renderer, a `:napplet` restart, a memory-trim rebuild) resumes the page the user was on.
+    private var restartAtStart = false
+
+    /** Where a new session opens: the page on screen before it was lost, else the tab's own [startUrl]. */
+    private fun sessionUrl(): String {
+        val resume = lastUrl?.takeUnless { restartAtStart || it.isBlankPage() }
+        restartAtStart = false
+        return resume ?: startUrl
+    }
+
     private fun sendCreateSession() {
         awaitingReady = true
         uiDisplayed = false
@@ -471,7 +500,7 @@ class EmbeddedWebAppController(
                 data =
                     Bundle().apply {
                         putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
-                        putString(NappletBrowserContract.KEY_URL, startUrl)
+                        putString(NappletBrowserContract.KEY_URL, sessionUrl())
                         putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
@@ -683,7 +712,12 @@ class EmbeddedWebAppController(
         recovery.clearPending()
         showRecovering()
         // A surface that never opened has nothing to navigate: only a new session can paint it.
-        if (sessionDead || (sandboxedSdkView != null && !uiDisplayed)) rearmSession() else navigate(startUrl)
+        if (sessionDead || (sandboxedSdkView != null && !uiDisplayed)) {
+            restartAtStart = true
+            rearmSession()
+        } else {
+            navigate(startUrl)
+        }
     }
 
     private fun onLoadState(
