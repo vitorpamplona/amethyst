@@ -461,11 +461,24 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        geohash, DM, Marmot, Concord, Minichat and relay-group chats; the media feeds; the
        relay settings; the metadata editors; podcasts; Bolt12 offers; the vanish and
        language settings. 180 of 252 screens shared.
-   - **Next:** 72 screens remain. `Amethyst.instance` reads block 16 of them, and
-     `LocalPreferences` another 5. Smaller exits: `UpdateZapAmountDialog` (biometrics),
-     `NestActivity` (PiP), `CalendarTimeFormat`, `GalleryThumb` (media3),
-     `AccountSessionManager`, the Blossom health probe, `ReactionsRow`, `NappletLauncher`
-     and the call permissions.
+   - **Wave 9 (2026-09-30):** `AppServices` gained `appStores`, `torBootstrapped` and
+     `cachedPlaceName`; the host gained the backed-up-keys flag. `rememberDeviceAuthenticator`
+     wraps BiometricPrompt with the keyguard fallback. `CalendarTimeFormat` is shared on
+     `DateSkeletonFormatter`. Moved: search, the long-form composer, the calendar collection
+     editor, NWC setup and the zap-amount settings. 185 of 252 screens shared.
+   - **Next:** 67 screens remain, and what blocks them is the platform itself:
+     - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
+     - The Nests activity and PiP.
+     - The call screens.
+     - The WebView browser and napplet launcher.
+     - The osmdroid geocache map.
+     - Health Connect workouts.
+     - The Cordn backup/migrate file flows.
+     - Share-as-image (bitmaps).
+     - `AccountSessionManager` (login and sign-up).
+     - The Blossom health probe.
+     - `AppSettingsScreen` (`BuildConfig`).
+     Each needs a slot or a port of its own, so step 7 can start alongside them.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
