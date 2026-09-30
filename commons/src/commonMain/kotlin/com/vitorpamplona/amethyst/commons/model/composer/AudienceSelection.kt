@@ -31,7 +31,7 @@ import kotlinx.collections.immutable.persistentListOf
  * of the Account so they can be unit tested on the JVM.
  *
  * The picker never mutates anything itself: it produces a set of pubkeys the
- * screen hands to [com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel.addAllToReplyList].
+ * screen hands to [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel.addAllToReplyList].
  */
 enum class AudienceListKind {
     /** NIP-51 kind 30000 people list. Can carry encrypted (private) members. */

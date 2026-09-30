@@ -115,6 +115,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraise
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.EncryptedUploadErrorDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.RecipientMissingRelaysWarning
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
@@ -133,7 +137,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -622,13 +625,14 @@ fun ShowImageUploadGallery(
 ) {
     val isImage = data.result.mimeTypeBeforeEncryption?.startsWith("image/") == true || RichTextParser.isImageUrl(data.result.url)
 
-    if (data.cipher != null) {
-        accountViewModel.account.encryptionKeyCache.add(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
+    val cipher = data.cipher
+    if (cipher != null) {
+        accountViewModel.account.encryptionKeyCache.add(data.result.url, cipher, data.result.mimeTypeBeforeEncryption)
     }
 
     val content by remember(data) {
         mutableStateOf<BaseMediaContent>(
-            if (data.cipher != null) {
+            if (cipher != null) {
                 if (isImage) {
                     EncryptedMediaUrlImage(
                         url = data.result.url,
@@ -640,9 +644,9 @@ fun ShowImageUploadGallery(
                         dim = data.result.fileHeader.dim,
                         uri = null,
                         mimeType = data.result.mimeTypeBeforeEncryption,
-                        encryptionAlgo = data.cipher.name(),
-                        encryptionKey = data.cipher.keyBytes,
-                        encryptionNonce = data.cipher.nonce,
+                        encryptionAlgo = cipher.name(),
+                        encryptionKey = cipher.keyBytes,
+                        encryptionNonce = cipher.nonce,
                         thumbhash =
                             data.result.fileHeader.thumbHash
                                 ?.thumbhash,
@@ -658,9 +662,9 @@ fun ShowImageUploadGallery(
                         dim = data.result.fileHeader.dim,
                         uri = null,
                         mimeType = data.result.mimeTypeBeforeEncryption,
-                        encryptionAlgo = data.cipher.name(),
-                        encryptionKey = data.cipher.keyBytes,
-                        encryptionNonce = data.cipher.nonce,
+                        encryptionAlgo = cipher.name(),
+                        encryptionKey = cipher.keyBytes,
+                        encryptionNonce = cipher.nonce,
                         thumbhash =
                             data.result.fileHeader.thumbHash
                                 ?.thumbhash,

@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geohash_explainer
 import com.vitorpamplona.amethyst.commons.resources.geohash_title
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
+import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
