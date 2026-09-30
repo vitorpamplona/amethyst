@@ -95,6 +95,10 @@ import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename_save
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
 import com.vitorpamplona.amethyst.commons.resources.concord_channels_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_action
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_confirm
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_message
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_action
@@ -193,6 +197,7 @@ fun ConcordChannelListScreen(
     // Read once here (it is @Composable) so the post-leave navigation can use it from a callback.
     val canPop = nav.canPop()
     var showLeave by remember { mutableStateOf(false) }
+    var showDissolve by remember { mutableStateOf(false) }
     var showDirectInvite by remember { mutableStateOf(false) }
 
     if (showDirectInvite) {
@@ -213,6 +218,18 @@ fun ConcordChannelListScreen(
                 // right when we were pushed here; when this community is a bottom-nav root there is
                 // nothing to pop, so restart the stack on the Concord hub.
                 if (canPop) nav.popBack() else nav.newStack(Route.Concords)
+            },
+        )
+    }
+
+    if (showDissolve) {
+        ConcordDissolveDialog(
+            communityName = communityName,
+            onDismiss = { showDissolve = false },
+            onConfirm = {
+                showDissolve = false
+                // Stay here: the dissolved community stays readable, and this screen shows it read-only.
+                accountViewModel.dissolveConcordCommunity(communityId)
             },
         )
     }
@@ -416,6 +433,21 @@ fun ConcordChannelListScreen(
                                 showLeave = true
                             },
                         )
+                        // Owner only, like the verifiers: anyone else's tombstone is ignored (CORD-02 §9).
+                        if (isOwner && state?.dissolved != true) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringRes(Res.string.concord_dissolve_community),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                onClick = {
+                                    menuOpen = false
+                                    showDissolve = true
+                                },
+                            )
+                        }
                     }
                 },
             )
@@ -718,6 +750,30 @@ fun ConcordLeaveDialog(
                     stringRes(Res.string.leave),
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(Res.string.cancel))
+            }
+        },
+    )
+}
+
+/** Confirms dissolving a community (CORD-02 §9): irreversible, so the confirm button is the error color. */
+@Composable
+fun ConcordDissolveDialog(
+    communityName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.concord_dissolve_title, communityName)) },
+        text = { Text(stringRes(Res.string.concord_dissolve_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(Res.string.concord_dissolve_confirm), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {

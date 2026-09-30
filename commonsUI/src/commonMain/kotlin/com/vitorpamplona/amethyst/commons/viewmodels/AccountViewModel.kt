@@ -78,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_done
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
@@ -651,6 +653,14 @@ class AccountViewModel(
             }
         toastManager.toast(Res.string.concord_pin_failed_title, message)
     }
+
+    /** Dissolve [communityId] for good (CORD-02 §9, owner only); a refusal surfaces as a toast. */
+    fun dissolveConcordCommunity(communityId: String) =
+        launchSigner {
+            if (!account.concord.dissolveConcordCommunity(communityId)) {
+                toastManager.toast(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+            }
+        }
 
     /**
      * Rotate Private Channel [channelIdHex]'s key (CORD-06). The rotation publishes a chunk per
