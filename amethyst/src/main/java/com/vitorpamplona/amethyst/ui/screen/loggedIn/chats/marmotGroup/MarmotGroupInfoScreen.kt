@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -62,7 +61,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -127,6 +125,8 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_unknown_error
 import com.vitorpamplona.amethyst.commons.resources.marmot_user_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.members
 import com.vitorpamplona.amethyst.commons.resources.remove
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -188,7 +188,8 @@ fun MarmotGroupInfoScreen(
     var isAdding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
 
     val userSuggestions =
         remember {
@@ -348,12 +349,7 @@ fun MarmotGroupInfoScreen(
                             Button(
                                 onClick = {
                                     if (!accountViewModel.hasBlossomServers()) {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                marmotEnableEncryptedMediaNeedsServerStr,
-                                                Toast.LENGTH_LONG,
-                                            ).show()
+                                        longNotice.show(marmotEnableEncryptedMediaNeedsServerStr)
                                         return@Button
                                     }
                                     isEnablingMedia = true
@@ -361,24 +357,16 @@ fun MarmotGroupInfoScreen(
                                         try {
                                             accountViewModel.enableMarmotEncryptedMediaV2(nostrGroupId)
                                             launch(Dispatchers.Main) {
-                                                Toast
-                                                    .makeText(
-                                                        context,
-                                                        loadStringRes(Res.string.marmot_encrypted_media_enabled_toast),
-                                                        Toast.LENGTH_SHORT,
-                                                    ).show()
+                                                shortNotice.show(loadStringRes(Res.string.marmot_encrypted_media_enabled_toast))
                                             }
                                         } catch (e: Exception) {
                                             launch(Dispatchers.Main) {
-                                                Toast
-                                                    .makeText(
-                                                        context,
-                                                        loadStringRes(
-                                                            Res.string.marmot_failed_to_enable_encrypted_media,
-                                                            e.message,
-                                                        ),
-                                                        Toast.LENGTH_LONG,
-                                                    ).show()
+                                                longNotice.show(
+                                                    loadStringRes(
+                                                        Res.string.marmot_failed_to_enable_encrypted_media,
+                                                        e.message,
+                                                    ),
+                                                )
                                             }
                                         } finally {
                                             isEnablingMedia = false
@@ -514,12 +502,7 @@ fun MarmotGroupInfoScreen(
                     } catch (e: Exception) {
                         isLeaving = false
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(Res.string.marmot_failed_to_leave_group, e.message),
-                                    Toast.LENGTH_LONG,
-                                ).show()
+                            longNotice.show(loadStringRes(Res.string.marmot_failed_to_leave_group, e.message))
                         }
                     }
                 }
@@ -544,18 +527,15 @@ fun MarmotGroupInfoScreen(
                         // outbound work, so leaving the screen is right.
                         val ended = accountViewModel.disbandMarmotGroup(nostrGroupId)
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(
-                                        if (ended) {
-                                            Res.string.marmot_group_disbanded_toast
-                                        } else {
-                                            Res.string.marmot_group_disbanding_toast
-                                        },
-                                    ),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                            shortNotice.show(
+                                loadStringRes(
+                                    if (ended) {
+                                        Res.string.marmot_group_disbanded_toast
+                                    } else {
+                                        Res.string.marmot_group_disbanding_toast
+                                    },
+                                ),
+                            )
                         }
                         nav.nav(Route.Message)
                     } catch (e: Exception) {
@@ -564,12 +544,7 @@ fun MarmotGroupInfoScreen(
                         // navigate away on a change that did not happen.
                         isDisbanding = false
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(Res.string.marmot_failed_to_disband, e.message),
-                                    Toast.LENGTH_LONG,
-                                ).show()
+                            longNotice.show(loadStringRes(Res.string.marmot_failed_to_disband, e.message))
                         }
                     }
                 }
@@ -588,18 +563,11 @@ fun MarmotGroupInfoScreen(
                     try {
                         accountViewModel.removeMarmotGroupMember(nostrGroupId, member.leafIndex)
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(context, loadStringRes(Res.string.marmot_member_removed), Toast.LENGTH_SHORT)
-                                .show()
+                            shortNotice.show(loadStringRes(Res.string.marmot_member_removed))
                         }
                     } catch (e: Exception) {
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(Res.string.marmot_failed_to_remove_member, e.message),
-                                    Toast.LENGTH_LONG,
-                                ).show()
+                            longNotice.show(loadStringRes(Res.string.marmot_failed_to_remove_member, e.message))
                         }
                     }
                 }
@@ -618,18 +586,11 @@ fun MarmotGroupInfoScreen(
                     try {
                         accountViewModel.grantMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(context, loadStringRes(Res.string.marmot_admin_granted), Toast.LENGTH_SHORT)
-                                .show()
+                            shortNotice.show(loadStringRes(Res.string.marmot_admin_granted))
                         }
                     } catch (e: Exception) {
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(Res.string.marmot_failed_to_grant_admin, e.message),
-                                    Toast.LENGTH_LONG,
-                                ).show()
+                            longNotice.show(loadStringRes(Res.string.marmot_failed_to_grant_admin, e.message))
                         }
                     }
                 }
@@ -648,18 +609,11 @@ fun MarmotGroupInfoScreen(
                     try {
                         accountViewModel.revokeMarmotGroupAdmin(nostrGroupId, member.pubkey)
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(context, loadStringRes(Res.string.marmot_admin_revoked), Toast.LENGTH_SHORT)
-                                .show()
+                            shortNotice.show(loadStringRes(Res.string.marmot_admin_revoked))
                         }
                     } catch (e: Exception) {
                         launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    loadStringRes(Res.string.marmot_failed_to_revoke_admin, e.message),
-                                    Toast.LENGTH_LONG,
-                                ).show()
+                            longNotice.show(loadStringRes(Res.string.marmot_failed_to_revoke_admin, e.message))
                         }
                     }
                 }
@@ -1115,7 +1069,6 @@ private fun RelayHealthRow(
     isActive: Boolean,
     nav: INav,
 ) {
-    val context = LocalContext.current
     val dotColor =
         if (isActive) {
             MaterialTheme.colorScheme.allGoodColor

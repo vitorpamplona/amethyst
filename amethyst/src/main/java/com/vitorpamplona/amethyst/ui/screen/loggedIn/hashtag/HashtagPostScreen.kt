@@ -23,11 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
@@ -35,8 +33,6 @@ import com.vitorpamplona.amethyst.ui.note.nip22Comments.GenericCommentPostScreen
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun HashtagPostScreen(
@@ -52,7 +48,7 @@ fun HashtagPostScreen(
     val postViewModel: CommentPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
-    val context = LocalContext.current
+    val mediaResolver = rememberSharedMediaResolver()
 
     LaunchedEffect(postViewModel, accountViewModel) {
         hashtag?.let {
@@ -71,11 +67,8 @@ fun HashtagPostScreen(
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)
             postViewModel.onMessageChanged()
         }
-        attachment?.ifBlank { null }?.toUri()?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
-            }
+        mediaResolver.resolve(attachment)?.let {
+            postViewModel.selectImage(persistentListOf(it))
         }
         if (draftId == null) {
             postViewModel.applySignature()

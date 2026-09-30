@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
@@ -480,7 +480,7 @@ private fun ConcordMessageComposer(
 ) {
     val scope = rememberCoroutineScope()
     val canPost by remember { derivedStateOf { newMessageModel.canPost() } }
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
 
     // Throttle typing heartbeats to at most one every few seconds while the field is non-empty.
     val lastTypingSecs = remember(newMessageModel.channelId) { longArrayOf(0L) }
@@ -589,7 +589,7 @@ private fun ConcordMessageComposer(
                             onMessageSent()
                         } catch (e: Exception) {
                             launch(Dispatchers.Main) {
-                                Toast.makeText(context, "Failed to send message: ${e.message}", Toast.LENGTH_SHORT).show()
+                                shortNotice.show("Failed to send message: ${e.message}")
                             }
                         }
                     }
@@ -619,7 +619,7 @@ private fun ConcordFileUploadDialog(
     onUpload: suspend () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val context = LocalContext.current
+    val longNotice = rememberLongNotice()
     val scope = rememberCoroutineScope()
 
     ChatFileUploadDialog(
@@ -634,10 +634,10 @@ private fun ConcordFileUploadDialog(
                 ChatFileUploader(accountViewModel.account).justUploadNIP17(
                     viewState = state,
                     onError = { title, message ->
-                        scope.launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                        scope.launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                     },
                     onEncryptedUploadError = { title, message ->
-                        scope.launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                        scope.launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                     },
                     uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->

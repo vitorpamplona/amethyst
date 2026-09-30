@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
@@ -57,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -90,9 +90,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -108,6 +106,7 @@ fun NewProductScreen(
     postViewModel.init(accountViewModel)
 
     val context = LocalContext.current
+    val mediaResolver = rememberSharedMediaResolver()
 
     LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.reloadRelaySet()
@@ -121,11 +120,8 @@ fun NewProductScreen(
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)
             postViewModel.onMessageChanged()
         }
-        attachment?.ifBlank { null }?.toUri()?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
-            }
+        mediaResolver.resolve(attachment)?.let {
+            postViewModel.selectImage(persistentListOf(it))
         }
     }
 

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.minichat
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -70,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
@@ -152,6 +153,8 @@ fun MinichatScreen(
     val composer = remember { TextFieldState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
     val canPost by remember { derivedStateOf { composer.text.isNotBlank() } }
     val uploadState =
         remember {
@@ -235,10 +238,10 @@ fun MinichatScreen(
                             ChatFileUploader(accountViewModel.account).justUploadNIP17(
                                 viewState = uploadState,
                                 onError = { title, message ->
-                                    launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                                    launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                                 },
                                 onEncryptedUploadError = { title, message ->
-                                    launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                                    launch(Dispatchers.Main) { longNotice.show("$title: $message") }
                                 },
                                 uploader = accountViewModel.host.mediaUploader,
                                 onceUploaded = { uploads ->
@@ -301,7 +304,7 @@ fun MinichatScreen(
                                         accountViewModel.account.sendMinichatReply(rootNote, text)
                                     } catch (e: Exception) {
                                         launch(Dispatchers.Main) {
-                                            Toast.makeText(context, "Failed to send message: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            shortNotice.show("Failed to send message: ${e.message}")
                                         }
                                     }
                                 }

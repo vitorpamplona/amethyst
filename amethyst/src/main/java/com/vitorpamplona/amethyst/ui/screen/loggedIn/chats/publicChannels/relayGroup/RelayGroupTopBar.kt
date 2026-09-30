@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_role_moderator
 import com.vitorpamplona.amethyst.commons.resources.relay_group_threads_title
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.search.SearchSeed
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBarAction
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -334,14 +332,14 @@ fun RelayGroupTopBar(
                         )
                     }
                     if (naddr != null) {
-                        val context = LocalContext.current
+                        val textSharer = rememberTextSharer()
                         val shareLinkTitle = stringRes(Res.string.quick_action_share_browser_link)
                         val shareChooserTitle = stringRes(Res.string.quick_action_share)
                         DropdownMenuItem(
                             text = { Text(stringRes(Res.string.quick_action_share)) },
                             onClick = {
                                 menuOpen = false
-                                shareRelayGroup(context, naddr, shareLinkTitle, shareChooserTitle)
+                                textSharer.share(njumpLink(naddr), shareLinkTitle, shareChooserTitle)
                             },
                         )
                     }
@@ -502,23 +500,6 @@ private fun DmParticipantTitle(
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,
     )
-}
-
-/** Fire the system share sheet with a njump web link to the group's naddr. */
-private fun shareRelayGroup(
-    context: Context,
-    naddr: String,
-    linkTitle: String,
-    chooserTitle: String,
-) {
-    val sendIntent =
-        Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, njumpLink(naddr))
-            putExtra(Intent.EXTRA_TITLE, linkTitle)
-        }
-    context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
 }
 
 /** A small colored pill naming the user's role/status in the group. */

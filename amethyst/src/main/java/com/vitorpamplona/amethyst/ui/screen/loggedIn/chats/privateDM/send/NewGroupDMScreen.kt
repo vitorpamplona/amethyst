@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
-import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -58,11 +57,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -87,12 +84,14 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -138,11 +137,9 @@ import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -152,32 +149,18 @@ fun NewGroupDMScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NewGroupDMScreen(message, attachment?.ifBlank { null }?.toUri(), accountViewModel, nav)
-}
-
-@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
-@Composable
-fun NewGroupDMScreen(
-    message: String? = null,
-    attachment: Uri? = null,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
     val postViewModel: ChatNewMessageViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
-    val context = LocalContext.current
+    val mediaResolver = rememberSharedMediaResolver()
 
     LaunchedEffect(postViewModel, accountViewModel) {
         message?.ifBlank { null }?.let {
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)
             postViewModel.onMessageChanged()
         }
-        attachment?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.pickedMedia(persistentListOf(SelectedMedia(it, mediaType)))
-            }
+        mediaResolver.resolve(attachment)?.let {
+            postViewModel.pickedMedia(persistentListOf(it))
         }
     }
 
@@ -364,7 +347,7 @@ fun MessageFieldRow(
     postViewModel: IMessageField,
     accountViewModel: AccountViewModel,
     requestFocus: Boolean = false,
-    onContentReceived: ((Uri, String?) -> Unit)? = null,
+    onContentReceived: ((MediaUri, String?) -> Unit)? = null,
 ) {
     Row {
         BaseUserPicture(

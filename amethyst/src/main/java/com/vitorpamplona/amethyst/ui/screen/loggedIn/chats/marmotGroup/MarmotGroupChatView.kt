@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +70,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -232,6 +233,7 @@ fun MarmotGroupMessageComposer(
     val scope = rememberCoroutineScope()
     val canPost by remember { derivedStateOf { newMessageModel.canPost() } }
     val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
 
     var isUploading by remember { mutableStateOf(false) }
 
@@ -306,12 +308,7 @@ fun MarmotGroupMessageComposer(
                             onMessageSent()
                         } catch (e: Exception) {
                             launch(Dispatchers.Main) {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        "Failed to send message: ${e.message}",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                shortNotice.show("Failed to send message: ${e.message}")
                             }
                         }
                     }
@@ -354,6 +351,8 @@ private fun MarmotGroupFileUploadDialog(
     onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
     val scope = rememberCoroutineScope()
 
     ChatFileUploadDialog(
@@ -370,12 +369,7 @@ private fun MarmotGroupFileUploadDialog(
                 val exporterSecret = accountViewModel.marmotMediaExporterSecret(nostrGroupId)
                 if (exporterSecret == null) {
                     launch(Dispatchers.Main) {
-                        Toast
-                            .makeText(
-                                context,
-                                loadStringRes(Res.string.marmot_not_a_member),
-                                Toast.LENGTH_SHORT,
-                            ).show()
+                        shortNotice.show(loadStringRes(Res.string.marmot_not_a_member))
                     }
                     return@launch
                 }
@@ -385,7 +379,7 @@ private fun MarmotGroupFileUploadDialog(
                     exporterSecret = exporterSecret,
                     onError = { title, message ->
                         scope.launch(Dispatchers.Main) {
-                            Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show()
+                            longNotice.show("$title: $message")
                         }
                     },
                     context = context,

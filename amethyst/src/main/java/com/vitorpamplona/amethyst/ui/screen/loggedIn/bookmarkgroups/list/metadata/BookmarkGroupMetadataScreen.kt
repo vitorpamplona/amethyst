@@ -230,7 +230,7 @@ private fun Picture(
                 tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(start = 2.dp),
             ) {
-                bookmarkGroupInfoViewModel.uploadForPicture(it, context, onError = accountViewModel.toastManager::toast)
+                bookmarkGroupInfoViewModel.uploadForPicture(it, onError = accountViewModel.toastManager::toast)
             }
         },
     )
