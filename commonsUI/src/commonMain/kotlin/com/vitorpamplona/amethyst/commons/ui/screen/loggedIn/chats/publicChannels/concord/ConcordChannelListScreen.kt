@@ -462,6 +462,26 @@ fun ConcordChannelListScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
             ) {
+                // The community's description (CORD-02 §6). Only the Edit screen showed it, so a member
+                // never saw what the community is about.
+                state
+                    ?.metadata
+                    ?.description
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { description ->
+                        item(key = "concord-community-description") {
+                            Text(
+                                description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                            )
+                            HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
                     val name = def.name.ifBlank { entry.key }
