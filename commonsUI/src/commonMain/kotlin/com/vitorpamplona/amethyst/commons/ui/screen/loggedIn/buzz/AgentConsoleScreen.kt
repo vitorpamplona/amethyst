@@ -231,8 +231,10 @@ private fun TokenBreakdown(totals: TokenTotals) {
     MetaRow("Input tokens", formatCount(totals.inputTokens))
     MetaRow("Output tokens", formatCount(totals.outputTokens))
     MetaRow("Total tokens", formatCount(totals.totalTokens))
-    if (totals.cacheReadTokens > 0) MetaRow("Cache read", formatCount(totals.cacheReadTokens))
-    if (totals.cacheWriteTokens > 0) MetaRow("Cache write", formatCount(totals.cacheWriteTokens))
+    // Null = no turn reported the component. NIP-AM forbids reading that as zero, so show a dash
+    // rather than hide the row (which would look the same as a reported 0).
+    MetaRow("Cache read", totals.cacheReadTokens?.let(::formatCount) ?: "—")
+    MetaRow("Cache write", totals.cacheWriteTokens?.let(::formatCount) ?: "—")
 }
 
 @Composable

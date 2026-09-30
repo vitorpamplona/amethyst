@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -43,21 +42,22 @@ object AuthTag {
 
     /**
      * Parses a well-formed `auth` tag into an [OwnerAttestation]. Returns null on any
-     * structural problem: wrong name/arity, an owner pubkey that is not 64-char hex, a
-     * signature that is not 128-char hex, or non-canonical conditions. This is a
+     * structural problem: wrong name or not exactly 4 elements, an owner pubkey that is not
+     * 64-char lowercase hex, a signature that is not 128-char lowercase hex, or non-canonical
+     * conditions (mirrors `parse_auth_tag_fields` in Buzz's `buzz-sdk/src/nip_oa.rs`). This is a
      * *shape* check only — it does not verify the signature (call
      * [OwnerAttestation.verify]).
      */
     fun parse(tag: Array<String>): OwnerAttestation? {
-        ensure(tag.has(3)) { return null }
+        ensure(tag.size == 4) { return null }
         ensure(tag[0] == TAG_NAME) { return null }
 
         val owner = tag[1]
         val conditions = tag[2]
         val sig = tag[3]
 
-        ensure(Hex.isHex64(owner)) { return null }
-        ensure(sig.length == 128 && Hex.isHex(sig)) { return null }
+        ensure(OwnerAttestation.isLowercaseHex(owner, 64)) { return null }
+        ensure(OwnerAttestation.isLowercaseHex(sig, 128)) { return null }
         ensure(AttestationConditions.isValid(conditions)) { return null }
 
         return OwnerAttestation(owner, conditions, sig)

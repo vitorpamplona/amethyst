@@ -60,6 +60,23 @@ const val BUZZ_VISIBILITY_OPEN = "open"
 const val BUZZ_VISIBILITY_PRIVATE = "private"
 
 /**
+ * The canonical form Buzz stores a channel name in: leading `#`s and whitespace (in any mix) and
+ * trailing whitespace removed, since clients render the `#` themselves. A `#` after the first real
+ * character is kept (`"channel#topic"`).
+ *
+ * Mirrors `canonical_channel_name` in `crates/buzz-core/src/channel.rs`, which the relay applies to
+ * the `name` of a create (9007) and a rename (9002), and which its SDK applies before sending.
+ */
+fun canonicalBuzzChannelName(name: String): String = name.trimStart { it == '#' || it.isWhitespace() }.trimEnd()
+
+/**
+ * True when [name] survives [canonicalBuzzChannelName] with something left. The relay refuses a
+ * create or rename whose canonical name is empty (`invalid: channel name is required`), so a name
+ * made only of `#`s and whitespace must be refused before sending.
+ */
+fun isValidBuzzChannelName(name: String): Boolean = canonicalBuzzChannelName(name).isNotBlank()
+
+/**
  * A new Buzz channel id: a RFC-4122 v4 UUID string.
  *
  * Buzz keys channels by UUID and parses the create event's `h` tag with `val.parse::<Uuid>()`
@@ -87,3 +104,6 @@ const val BUZZ_ROLE_ADMIN = "admin"
 const val BUZZ_ROLE_MEMBER = "member"
 const val BUZZ_ROLE_GUEST = "guest"
 const val BUZZ_ROLE_BOT = "bot"
+
+/** Every role string Buzz's put-user handler parses. */
+val BUZZ_ROLES = setOf(BUZZ_ROLE_OWNER, BUZZ_ROLE_ADMIN, BUZZ_ROLE_MEMBER, BUZZ_ROLE_GUEST, BUZZ_ROLE_BOT)

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.nip01Core
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
@@ -37,7 +39,17 @@ class UserInfo(
     val tags: ImmutableListOfLists<String>,
     val identities: List<IdentityClaimTag>,
     val createdAt: Long,
-)
+    val pubKey: HexKey? = null,
+) {
+    /**
+     * The owner this profile declares through a valid NIP-OA `auth` tag, making the user an agent
+     * of that owner (who may then edit the agent's Buzz messages), or null. Verified once per
+     * profile version.
+     */
+    val nipOaOwner: HexKey? by lazy {
+        pubKey?.let { OwnerAttestation.verifiedOwnerOf(it, MetadataEvent.KIND, createdAt, tags.lists) }
+    }
+}
 
 @Stable
 class UserMetadataCache {
@@ -53,6 +65,7 @@ class UserMetadataCache {
                 tags = metaEvent.tags.toImmutableListOfLists(),
                 identities = metaEvent.identityClaims(),
                 createdAt = metaEvent.createdAt,
+                pubKey = metaEvent.pubKey,
             )
         }
     }

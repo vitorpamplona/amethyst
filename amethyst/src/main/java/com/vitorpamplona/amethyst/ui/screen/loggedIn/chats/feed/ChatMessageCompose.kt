@@ -126,7 +126,7 @@ fun ChatroomMessageCompose(
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
-    // Edit my own chat message on surfaces that support it (Buzz kind-40002 → 40003,
+    // Edit my own chat message on surfaces that support it (Buzz kind-9 or legacy 40002 → 40003,
     // Concord kind-9 → 1010). Null for chat surfaces without message editing, which hides
     // the action.
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,

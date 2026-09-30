@@ -100,6 +100,22 @@ class PoolRequestsRefusalTest {
         }
 
     @Test
+    fun aQueryTimeoutIsNotARefusal() =
+        kotlinx.coroutines.test.runTest {
+            // Buzz ends a REQ that hits its query deadline with `error: query timed out` instead of
+            // EOSE. That is a slow moment, not "this relay won't serve this filter", so the pool must
+            // keep replaying it however many times it happens.
+            val pool = PoolRequests(maxRefusalsBeforeSuppress = 2)
+            pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
+
+            repeat(4) { attempt ->
+                val sent = reconnectAndSync(pool)
+                assertEquals(1, sent.filterIsInstance<ReqCmd>().size, "reconnect #$attempt should replay the REQ")
+                close(pool, "sub", "error: query timed out")
+            }
+        }
+
+    @Test
     fun aMeaningfulFilterChangeReEnablesTheReq() =
         kotlinx.coroutines.test.runTest {
             val pool = PoolRequests(maxRefusalsBeforeSuppress = 2)

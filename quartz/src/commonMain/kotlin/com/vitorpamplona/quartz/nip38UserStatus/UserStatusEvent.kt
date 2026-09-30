@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip38UserStatus.tags.StatusEmojiTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -52,6 +53,18 @@ class UserStatusEvent(
     }
 
     fun firstTaggedUrl() = tags.firstTagValue("r")
+
+    /**
+     * The plain status emoji from a 2-element `["emoji", "🎉"]` tag (Buzz's status shape), or null.
+     * NIP-30 custom emoji tags (3+ elements) are not status emoji and are read by `taggedEmojis()`.
+     */
+    fun statusEmoji(): String? = tags.firstNotNullOfOrNull(StatusEmojiTag::parse)
+
+    /**
+     * True when this status carries nothing to show: blank text and no [statusEmoji]. Buzz clears a
+     * status that way, and an emoji with blank text is still a status ("🌴" alone reads as away).
+     */
+    fun isCleared(): Boolean = content.isBlank() && statusEmoji() == null
 
     companion object {
         const val KIND = 30315

@@ -44,18 +44,20 @@ import kotlin.coroutines.cancellation.CancellationException
  * owner and addressed by `(owner, 30175, slug)`.
  *
  * On edit, the existing [PersonaEvent] is loaded from [LocalCache] so fields the form does
- * not expose (avatar, name pool, respond-to allowlist, parallelism) are preserved rather
- * than dropped on the next publish. The slug (the `d` tag) is immutable once chosen — a
- * different slug is a different persona.
+ * not expose (ACP command, name pool, respond-to allowlist, parallelism) are preserved rather
+ * than dropped on the next publish, and the new head is stamped after the one it replaces. The
+ * slug (the `d` tag) is immutable once chosen — a different slug is a different persona.
  *
  * Published to the workspace's Buzz-dialect relays (falling back to the owner's outbox when
- * none are known), so the workspace and other members see it.
+ * none are known). The relay serves it to other members only when [FormState.shared] is on
+ * (the `["shared","true"]` tag); otherwise only the owner's own devices can read it.
  */
 class AgentPersonaEditViewModel : ViewModel() {
     @Volatile private var account: Account? = null
 
     /** Set on edit; preserves fields the form doesn't surface. Null for a new persona. */
     private var existing: PersonaContent? = null
+    private var existingCreatedAt: Long? = null
     private var editingSlug: String? = null
 
     private val _state = MutableStateFlow(FormState())
@@ -74,6 +76,7 @@ class AgentPersonaEditViewModel : ViewModel() {
         val event = note?.event as? PersonaEvent ?: return
         val content = event.personaOrNull() ?: return
         existing = content
+        existingCreatedAt = event.createdAt
         editingSlug = slug
         _state.value =
             FormState(
@@ -85,6 +88,9 @@ class AgentPersonaEditViewModel : ViewModel() {
                 runtime = content.runtime.orEmpty(),
                 provider = content.provider.orEmpty(),
                 avatarUrl = content.avatarUrl.orEmpty(),
+                description = content.description.orEmpty(),
+                shared = event.isShared(),
+                threadSessions = content.isThreadSessionPolicy(),
             )
     }
 
@@ -101,6 +107,12 @@ class AgentPersonaEditViewModel : ViewModel() {
     fun onProviderChange(v: String) = _state.update { it.copy(provider = v.trim(), error = null) }
 
     fun onAvatarUrlChange(v: String) = _state.update { it.copy(avatarUrl = v.trim(), error = null) }
+
+    fun onDescriptionChange(v: String) = _state.update { it.copy(description = v.take(PersonaContent.DESCRIPTION_MAX_CHARS), error = null) }
+
+    fun onSharedChange(v: Boolean) = _state.update { it.copy(shared = v, error = null) }
+
+    fun onThreadSessionsChange(v: Boolean) = _state.update { it.copy(threadSessions = v, error = null) }
 
     /**
      * Validates, builds a [PersonaEvent] (preserving unexposed fields on edit), signs and
@@ -127,14 +139,19 @@ class AgentPersonaEditViewModel : ViewModel() {
                 val content =
                     base.copy(
                         displayName = current.displayName.trim(),
-                        systemPrompt = current.systemPrompt.blankToNull(),
+                        // Buzz writes an empty prompt as "" (not absent) to keep the content hash
+                        // stable, so a blank field keeps whichever form the persona already had.
+                        systemPrompt = current.systemPrompt.blankToNull() ?: base.systemPrompt?.takeIf { it.isBlank() },
                         model = current.model.blankToNull(),
                         runtime = current.runtime.blankToNull(),
                         provider = current.provider.blankToNull(),
                         avatarUrl = current.avatarUrl.blankToNull(),
+                        description = current.description.blankToNull(),
+                        // Absent is the default `channel` policy; only `thread` is written.
+                        sessionPolicy = if (current.threadSessions) PersonaContent.SESSION_POLICY_THREAD else null,
                     )
 
-                val template = PersonaEvent.build(content, slug)
+                val template = PersonaEvent.build(content, slug, shared = current.shared, priorHeadCreatedAt = existingCreatedAt)
                 account.signAndSendPrivatelyOrBroadcast(template) {
                     BuzzRelayDialect.flow.value
                         .toList()
@@ -161,6 +178,12 @@ class AgentPersonaEditViewModel : ViewModel() {
         val runtime: String = "",
         val provider: String = "",
         val avatarUrl: String = "",
+        /** Short public description, at most [PersonaContent.DESCRIPTION_MAX_CHARS] characters. */
+        val description: String = "",
+        /** Publish to the community catalog (`["shared","true"]`) instead of owner-only. */
+        val shared: Boolean = false,
+        /** A separate ACP conversation per channel thread (`session_policy: "thread"`). */
+        val threadSessions: Boolean = false,
         val isSaving: Boolean = false,
         val error: String? = null,
     ) {

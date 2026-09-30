@@ -23,16 +23,22 @@ package com.vitorpamplona.amethyst.model
 import android.os.Looper
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
+import com.vitorpamplona.amethyst.commons.model.buzzEffectiveAuthor
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.isBuzzEditableBy
 import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.buzz.stream.BuzzChatMessage
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -212,6 +218,84 @@ class BuzzWorkspaceChannelTest {
             val real = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "the fix", createdAt = original.createdAt + 200))
             LocalCache.checkDeletionAndConsume(real, buzzRelay, false)
             assertEquals("the fix", target.latestBuzzEdit()?.event?.content)
+        }
+
+    @Test
+    fun anEditOfAKind9MessageOverlaysIt() =
+        runBlocking {
+            val channelId = newChannelId()
+            // Buzz channel messages are kind 9 now; a 40003 targets them the same way.
+            LocalCache.checkDeletionAndConsume(streamMessage(channelId, "mark the dialect"), buzzRelay, false)
+            val original = signer.sign(BuzzChatMessage.build(channelId, "teh fix"))
+            LocalCache.checkDeletionAndConsume(original, buzzRelay, false)
+            val edit = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "the fix", createdAt = original.createdAt + 1))
+            LocalCache.checkDeletionAndConsume(edit, buzzRelay, false)
+
+            assertEquals(
+                "the fix",
+                LocalCache
+                    .getNoteIfExists(original.id)!!
+                    .latestBuzzEdit()
+                    ?.event
+                    ?.content,
+            )
+        }
+
+    @Test
+    fun theVerifiedOwnerOfAnAgentMayEditItsMessages() =
+        runBlocking {
+            val channelId = newChannelId()
+            val agentKeys = KeyPair()
+            val ownerKeys = KeyPair()
+            val agent = NostrSignerInternal(agentKeys)
+            val owner = NostrSignerInternal(ownerKeys)
+
+            val original = agent.sign(StreamMessageV2Event.build(channelId, "agent output"))
+            LocalCache.checkDeletionAndConsume(original, buzzRelay, false)
+            val ownerEdit = owner.sign(StreamMessageEditEvent.build(channelId, original.id, "corrected by owner", createdAt = original.createdAt + 10))
+            LocalCache.checkDeletionAndConsume(ownerEdit, buzzRelay, false)
+            val target = LocalCache.getNoteIfExists(original.id)!!
+
+            // Until the agent's profile names the owner, the owner is just another pubkey.
+            assertNull(target.latestBuzzEdit())
+            assertFalse(target.isBuzzEditableBy(owner.pubKey))
+
+            // The agent's kind 0 carries the owner's NIP-OA attestation for the agent key.
+            val attestation = OwnerAttestation.sign(agent.pubKey, "", ownerKeys.privKey!!)
+            val profile = agent.sign(MetadataEvent.newUser("agent", createdAt = original.createdAt) { add(attestation.toTag()) })
+            LocalCache.checkDeletionAndConsume(profile, buzzRelay, false)
+
+            assertTrue(target.isBuzzEditableBy(owner.pubKey))
+            assertEquals("corrected by owner", target.latestBuzzEdit()?.event?.content)
+        }
+
+    @Test
+    fun aRelaySignedMessageIsEditableByTheMemberItNames() =
+        runBlocking {
+            val channelId = newChannelId()
+            val relayKey = NostrSignerInternal(KeyPair())
+            val member = NostrSignerInternal(KeyPair())
+            val stranger = NostrSignerInternal(KeyPair())
+
+            // The relay-signed 39000 is what tells us the relay's key.
+            LocalCache.checkDeletionAndConsume(relayKey.sign(GroupMetadataEvent.build(channelId, name = "ops")), buzzRelay, false)
+            LocalCache.checkDeletionAndConsume(streamMessage(channelId, "mark the dialect"), buzzRelay, false)
+
+            // A workflow posted on the member's behalf: relay-signed, attributed through `actor`.
+            val posted = relayKey.sign(BuzzChatMessage.build(channelId, "deploy done") { add(arrayOf("actor", member.pubKey)) })
+            LocalCache.checkDeletionAndConsume(posted, buzzRelay, false)
+            val target = LocalCache.getNoteIfExists(posted.id)!!
+            assertEquals(member.pubKey, target.buzzEffectiveAuthor())
+
+            LocalCache.checkDeletionAndConsume(stranger.sign(StreamMessageEditEvent.build(channelId, posted.id, "nope", createdAt = posted.createdAt + 1)), buzzRelay, false)
+            assertNull(target.latestBuzzEdit())
+            LocalCache.checkDeletionAndConsume(member.sign(StreamMessageEditEvent.build(channelId, posted.id, "deploy done (v2)", createdAt = posted.createdAt + 2)), buzzRelay, false)
+            assertEquals("deploy done (v2)", target.latestBuzzEdit()?.event?.content)
+
+            // A user-signed message can't hand its edits to someone else with an `actor` tag.
+            val claimed = stranger.sign(BuzzChatMessage.build(channelId, "mine") { add(arrayOf("actor", member.pubKey)) })
+            LocalCache.checkDeletionAndConsume(claimed, buzzRelay, false)
+            assertEquals(stranger.pubKey, LocalCache.getNoteIfExists(claimed.id)!!.buzzEffectiveAuthor())
         }
 
     @Test

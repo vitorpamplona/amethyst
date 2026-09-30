@@ -41,5 +41,14 @@ fun <T : Event> TagArrayBuilder<T>.workflowDTag(value: String) = addUnique(DTag.
 /** The optional human-readable workflow `name` tag on a definition. */
 fun <T : Event> TagArrayBuilder<T>.workflowName(name: String) = addUnique(arrayOf("name", name))
 
+/**
+ * The compare-and-swap precondition on a definition update: the id of the `kind:30620` head the
+ * edit was made against. The relay applies the update only while that event is still the head,
+ * and otherwise refuses with a `conflict:` reason. It must be a 64-hex event id; anything else
+ * is refused as `invalid: bad expected workflow revision`. Ground truth:
+ * `parse_expected_workflow_revision` in Buzz's `buzz-relay/src/handlers/command_executor.rs`.
+ */
+fun <T : Event> TagArrayBuilder<T>.workflowExpectedRevision(headEventId: HexKey) = addUnique(arrayOf(WORKFLOW_EXPECTED_REVISION_TAG, headEventId))
+
 /** The `p` tag naming the approver a `kind:46010` approval-requested event is addressed to. */
 fun <T : Event> TagArrayBuilder<T>.workflowApprover(approverPubKey: HexKey) = addUnique(PTag.assemble(approverPubKey, null))

@@ -67,13 +67,15 @@ open class BuzzMembershipPolicy(
     /**
      * Runs after the NIP-42 proof checks out (see [FullAuthPolicy.authorize]). If the auth event
      * carries an owner-signed attestation authorizing this agent, and the owner is a member,
-     * remember the agent as a member for this connection. We never throw here — a missing or
-     * invalid attestation just means the key is authenticated but not (yet) authorized, which the
-     * membership gate below handles.
+     * remember the agent as a member for this connection. Like Buzz, the credential's
+     * `created_at<` / `created_at>` clauses are checked against the AUTH event's own `created_at`,
+     * so an expired or not-yet-valid attestation grants nothing. We never throw here — a missing
+     * or invalid attestation just means the key is authenticated but not (yet) authorized, which
+     * the membership gate below handles.
      */
     override suspend fun authorize(event: RelayAuthEvent) {
         val attestation = event.tags.firstNotNullOfOrNull(AuthTag::parse) ?: return
-        if (attestation.ownerPubKey in members && attestation.verify(event.pubKey)) {
+        if (attestation.ownerPubKey in members && attestation.verifyForAuthAt(event.pubKey, event.createdAt)) {
             authorizedAgents.add(event.pubKey)
         }
     }

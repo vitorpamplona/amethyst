@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
+import com.vitorpamplona.quartz.buzz.workspace.canonicalBuzzChannelName
+import com.vitorpamplona.quartz.buzz.workspace.isValidBuzzChannelName
 import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -127,7 +129,13 @@ class RelayGroupMetadataViewModel : ViewModel() {
     var touched by mutableStateOf(false)
         private set
 
-    val canPost by derivedStateOf { !isWorking && name.value.text.isNotBlank() }
+    /**
+     * A Buzz relay strips leading `#`s and whitespace from a channel name and refuses one that ends
+     * up empty, so on Buzz a name like `"# #"` can't be submitted at all.
+     */
+    val canPost by derivedStateOf {
+        !isWorking && name.value.text.isNotBlank() && (!isBuzzRelay || isValidBuzzChannelName(name.value.text))
+    }
 
     fun hasImage(): Boolean = pickedMedia != null || picture.value.text.isNotBlank()
 
@@ -239,7 +247,9 @@ class RelayGroupMetadataViewModel : ViewModel() {
     }
 
     private suspend fun publish() {
-        val name = name.value.text.trim()
+        // Send Buzz the name it would store anyway (no leading `#`s), so our optimistic copy and
+        // the relay's 39000 agree.
+        val name = if (isBuzzRelay) canonicalBuzzChannelName(name.value.text) else name.value.text.trim()
         val about =
             about.value.text
                 .trim()

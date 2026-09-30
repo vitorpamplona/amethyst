@@ -242,8 +242,22 @@ fun DisplayStatus(
             }
         }
 
+    // Buzz sets a plain emoji with a 2-element `["emoji", "🎉"]` tag instead of inlining it in the
+    // text; lead with it the way Buzz's own client does. NIP-30 custom emoji are handled above.
+    val text =
+        remember(event) {
+            val emoji = event.statusEmoji()
+            if (emoji == null) {
+                event.content
+            } else if (event.content.isBlank()) {
+                emoji
+            } else {
+                "$emoji ${event.content}"
+            }
+        }
+
     DisplayStatusInner(
-        event.content,
+        text,
         event.dTag(),
         event.firstTaggedUrl()?.ifBlank { null },
         event.firstTaggedAddress(),

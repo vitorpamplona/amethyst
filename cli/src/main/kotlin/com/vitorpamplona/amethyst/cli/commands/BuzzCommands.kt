@@ -30,10 +30,12 @@ import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.invite.BuzzInviteClaim
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.buzz.stream.BuzzChatMessage
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -63,7 +65,7 @@ import okhttp3.coroutines.executeAsync
  * `amy buzz …` — first-class access to the `block/buzz` workspace protocol, driving the
  * same `quartz` models + `commons` aggregator the app uses. Buzz workspaces are NIP-29
  * groups, so join/leave/create still go through `amy relaygroup`; this verb group covers
- * the Buzz-native pieces: stream messages (40002), the owner-attestation primitive (OA),
+ * the Buzz-native pieces: channel messages (kind 9 in Buzz's shape), the owner-attestation primitive (OA),
  * and the agent console (turn-metric aggregation + personas).
  */
 object BuzzCommands {
@@ -345,12 +347,24 @@ object BuzzCommands {
                 }.toString()
             val authEvent = ctx.signer.sign(HTTPAuthorizationEvent.build(claimUrl, "POST", claimReq.encodeToByteArray()))
             val (claimCode, claimBody) = httpPost(http, claimUrl, claimReq, authEvent.toAuthToken())
-            if (claimCode != 200) return Output.error("claim_failed", "invite claim failed ($claimCode): $claimBody")
+            if (claimCode != 200) {
+                return when (BuzzInviteClaim.errorOf(claimBody)) {
+                    BuzzInviteClaim.ERROR_EXHAUSTED -> Output.error("exhausted", "this invite has no uses left; ask for a new one")
+                    BuzzInviteClaim.ERROR_EXPIRED -> Output.error("expired", "this invite has expired")
+                    BuzzInviteClaim.ERROR_INVALID -> Output.error("invalid", "this invite is not valid for this workspace (revoked, mistyped, or never minted here)")
+                    BuzzInviteClaim.ERROR_JOIN_POLICY_REQUIRED ->
+                        Output.error("policy_required", "this workspace requires accepting its terms + age attestation; re-run with --accept-policy to consent")
+                    else -> Output.error("claim_failed", "invite claim failed ($claimCode): $claimBody")
+                }
+            }
 
             val result = jsonParser.parseToJsonElement(claimBody).jsonObject
+            val status = result["status"]?.jsonPrimitive?.content
             Output.emit(
                 mapOf(
-                    "status" to result["status"]?.jsonPrimitive?.content,
+                    "status" to status,
+                    // Distinguish a no-op claim (already a member; no invite use consumed) from a join.
+                    "already_member" to (status == BuzzInviteClaim.STATUS_ALREADY_MEMBER),
                     "community_id" to (result["community_id"]?.jsonPrimitive?.content ?: invite.communityId),
                     "role" to (result["role"]?.jsonPrimitive?.content ?: invite.role),
                     "host" to invite.host,
@@ -389,7 +403,7 @@ object BuzzCommands {
             http.newCall(builder.build()).executeAsync().use { it.code to it.body.string() }
         }
 
-    /** `buzz post RELAY GID <text>` → publishes a kind-40002 stream message with an `h` tag. */
+    /** `buzz post RELAY GID <text>` → publishes a kind-9 channel message in Buzz's shape (`build_message`). */
     private suspend fun post(
         dataDir: DataDir,
         rest: Array<String>,
@@ -398,7 +412,7 @@ object BuzzCommands {
         val text = Args(rest).positionalOrNull(2) ?: return Output.error("bad_args", usage)
         if (text.isBlank()) return Output.error("bad_args", "message text must not be blank")
         return publishScoped(dataDir, rest, usage) { _, groupId, _ ->
-            StreamMessageV2Event.build(groupId, text)
+            BuzzChatMessage.build(groupId, text)
         }
     }
 
@@ -524,6 +538,9 @@ object BuzzCommands {
                     "total_tokens" to metrics.totals.totalTokens,
                     "input_tokens" to metrics.totals.inputTokens,
                     "output_tokens" to metrics.totals.outputTokens,
+                    // null = never reported (NIP-AM: an omitted cache component is unknown, not zero)
+                    "cache_read_tokens" to metrics.totals.cacheReadTokens,
+                    "cache_write_tokens" to metrics.totals.cacheWriteTokens,
                     "turns" to metrics.totalTurns,
                     "sessions" to metrics.totalSessions,
                     "agents" to metrics.agents.size,

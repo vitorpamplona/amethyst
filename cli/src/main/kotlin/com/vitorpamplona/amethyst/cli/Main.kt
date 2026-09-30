@@ -830,7 +830,7 @@ private fun printUsage() {
         |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
         |
         |Buzz (block/buzz agent workspaces — NIP-29 dialect):
-        |  buzz post RELAY GID <text>                 post a kind-40002 stream message
+        |  buzz post RELAY GID <text>                 post a channel message (kind 9)
         |  buzz read RELAY GID [--limit N]            read recent workspace messages
         |  buzz attest AGENT [--kind K]               issue a NIP-OA attestation (offline)
         |  buzz console [--relays R,R]                aggregate my kind-44200 agent turn metrics

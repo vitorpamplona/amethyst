@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.buzz.amTurnMetrics.TokenCounts
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AgentFleetAggregatorTest {
@@ -195,5 +196,68 @@ class AgentFleetAggregatorTest {
             )
         assertEquals(50L, metrics.totals.totalTokens)
         assertFalse(metrics.hasUnreliableEstimates)
+    }
+
+    private fun cache(
+        read: Long? = null,
+        write: Long? = null,
+    ) = TokenCounts(inputTokens = 100, cacheReadTokens = read, cacheWriteTokens = write)
+
+    /** NIP-AM: an omitted cache component is unknown — the total must not become a fabricated 0. */
+    @Test
+    fun unreportedCacheStaysUnknown() {
+        val metrics =
+            AgentFleetAggregator.aggregate(
+                listOf(
+                    turn(agentA, "s1", 1, turn = counts(input = 100)),
+                    turn(agentA, "s1", 2, turn = counts(input = 100)),
+                ),
+            )
+        assertNull(metrics.totals.cacheReadTokens)
+        assertNull(metrics.totals.cacheWriteTokens)
+        assertEquals(200L, metrics.totals.inputTokens)
+    }
+
+    @Test
+    fun explicitZeroCacheIsKnownZero() {
+        val metrics = AgentFleetAggregator.aggregate(listOf(turn(agentA, "s1", 1, turn = cache(read = 0, write = 0))))
+        assertEquals(0L, metrics.totals.cacheReadTokens)
+        assertEquals(0L, metrics.totals.cacheWriteTokens)
+    }
+
+    @Test
+    fun cacheUsesMaxCumulativeThenReportedDeltas() {
+        val metrics =
+            AgentFleetAggregator.aggregate(
+                listOf(
+                    // Session s1 reports cumulatively; s2 only per turn, and only for reads.
+                    turn(agentA, "s1", 1, cumulative = cache(read = 40, write = 5)),
+                    turn(agentA, "s1", 2, cumulative = cache(read = 90, write = 5)),
+                    turn(agentA, "s2", 3, turn = cache(read = 7)),
+                    turn(agentA, "s2", 4, turn = cache(read = 3)),
+                    // Another agent that never reports cache at all.
+                    turn(agentB, "s3", 5, turn = counts(input = 1)),
+                ),
+            )
+        val a = metrics.agents.single { it.agentPubKey == agentA }
+        assertEquals(100L, a.totals.cacheReadTokens)
+        assertEquals(5L, a.totals.cacheWriteTokens)
+
+        val b = metrics.agents.single { it.agentPubKey == agentB }
+        assertNull(b.totals.cacheReadTokens)
+
+        // Unknown sessions add nothing to the fleet total, but don't erase the known ones.
+        assertEquals(100L, metrics.totals.cacheReadTokens)
+        assertEquals(5L, metrics.totals.cacheWriteTokens)
+    }
+
+    @Test
+    fun tokenTotalsAddUnknownAsIdentity() {
+        val known = TokenTotals(cacheReadTokens = 3)
+        val unknown = TokenTotals()
+        assertEquals(3L, (known + unknown).cacheReadTokens)
+        assertEquals(3L, (unknown + known).cacheReadTokens)
+        assertNull((unknown + unknown).cacheReadTokens)
+        assertEquals(6L, (known + known).cacheReadTokens)
     }
 }

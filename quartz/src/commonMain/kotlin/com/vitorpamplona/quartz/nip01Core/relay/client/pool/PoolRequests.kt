@@ -549,6 +549,9 @@ class PoolRequests(
      *  - `rate-limited` — the adaptive limiter spaces the REQ out; it's not doomed.
      *  - no recognized prefix — lifecycle noise (`Subscription closed`, `not found`, …);
      *    don't risk silencing a live sub on an unstructured message.
+     *  - an `error:` that reports a timeout (Buzz closes a REQ that hits its query deadline
+     *    with `error: query timed out` instead of EOSE) — a slow moment, not a refusal of the
+     *    filter; counting it would stop re-sending a REQ the relay serves when less loaded.
      *
      * MUST be called while holding [state]'s lock.
      */
@@ -567,10 +570,10 @@ class PoolRequests(
                 MachineReadablePrefix.DUPLICATE,
                 MachineReadablePrefix.POW,
                 -> false
+                MachineReadablePrefix.ERROR -> !isTimeout(reason)
                 MachineReadablePrefix.BLOCKED,
                 MachineReadablePrefix.INVALID,
                 MachineReadablePrefix.RESTRICTED,
-                MachineReadablePrefix.ERROR,
                 MachineReadablePrefix.UNSUPPORTED,
                 -> true
             }
@@ -578,6 +581,8 @@ class PoolRequests(
         val sameAsLast = state.refusedFilters(relay)?.let { !FiltersChanged.needsToResendRequest(it, forFilters) } ?: false
         state.recordRefusal(relay, forFilters, sameAsLast)
     }
+
+    private fun isTimeout(reason: String): Boolean = reason.contains("timed out", ignoreCase = true) || reason.contains("timeout", ignoreCase = true)
 
     fun destroy() {
         relayState.clear()

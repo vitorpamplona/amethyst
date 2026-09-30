@@ -61,4 +61,17 @@ class WorkflowDefEventTest {
         assertNull(ev.name())
         assertEquals(channel, ev.channel())
     }
+
+    @Test
+    fun expectedRevisionIsOmittedOnCreateAndCarriedOnUpdate() {
+        val create = WorkflowDefEvent.build(workflowId, channel, yaml)
+        assertNull(WorkflowDefEvent("00", "f".repeat(64), create.createdAt, create.tags, create.content, "sig").expectedRevision())
+
+        val head = "a".repeat(64)
+        val update = WorkflowDefEvent.build(workflowId, channel, yaml, expectedRevision = head)
+        val ev = WorkflowDefEvent("00", "f".repeat(64), update.createdAt, update.tags, update.content, "sig")
+        assertEquals(head, ev.expectedRevision())
+        // Same wire shape as Buzz's build_workflow_update: ["expected-revision", <head id>].
+        assertEquals(listOf("expected-revision", head), update.tags.single { it[0] == "expected-revision" }.toList())
+    }
 }

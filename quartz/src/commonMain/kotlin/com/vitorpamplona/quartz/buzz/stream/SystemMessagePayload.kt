@@ -35,8 +35,10 @@ import kotlinx.serialization.json.Json
  * present; [actor] is present on every variant the relay emits today, and the rest are
  * variant-specific. Unknown keys are ignored for forward compatibility, so a relay that
  * grows a new field or a new [type] degrades to a plain line instead of failing to parse.
+ * Two relay-internal variants carry no [actor] at all: [ADMIN_KICK] and [CHANNEL_AUTO_ARCHIVED].
  *
- * The complete vocabulary, read off `side_effects.rs` / `command_executor.rs`:
+ * The complete vocabulary, read off `side_effects.rs` / `command_executor.rs` /
+ * `admin_outbox_worker.rs` / `main.rs`:
  *
  * | [type] | carries | emitted when |
  * |--|--|--|
@@ -51,6 +53,8 @@ import kotlinx.serialization.json.Json
  * | [CHANNEL_CREATED] / [CHANNEL_DELETED] | [actor] | channel lifecycle |
  * | [MESSAGE_DELETED] | [actor], [targetEventId], optional [actionId] / [reasonCode] / [publicReason] | a message was deleted (moderation tombstone) |
  * | [DM_CREATED] | [actor], [participants] | a DM channel was opened |
+ * | [ADMIN_KICK] | [target], [actionId] — **no** [actor] | a relay/workspace administrator removed [target] (delivered by the admin outbox worker) |
+ * | [CHANNEL_AUTO_ARCHIVED] | nothing | the ephemeral-channel reaper archived an idle channel |
  */
 @Serializable
 data class SystemMessagePayload(
@@ -80,7 +84,7 @@ data class SystemMessagePayload(
      */
     fun subject(): String? =
         when (type) {
-            MEMBER_JOINED, MEMBER_LEFT, MEMBER_REMOVED -> target ?: actor
+            MEMBER_JOINED, MEMBER_LEFT, MEMBER_REMOVED, ADMIN_KICK -> target ?: actor
             else -> actor
         }
 
@@ -107,6 +111,12 @@ data class SystemMessagePayload(
         const val CHANNEL_DELETED = "channel_deleted"
         const val MESSAGE_DELETED = "message_deleted"
         const val DM_CREATED = "dm_created"
+
+        /** An administrator removed [target]; relay-authored with no [actor] (`admin_outbox_worker.rs`). */
+        const val ADMIN_KICK = "admin_kick"
+
+        /** The relay's ephemeral-channel reaper archived the channel; carries no [actor] (`main.rs`). */
+        const val CHANNEL_AUTO_ARCHIVED = "channel_auto_archived"
 
         /** Searchable, anyone can join. */
         const val VISIBILITY_OPEN = "open"
