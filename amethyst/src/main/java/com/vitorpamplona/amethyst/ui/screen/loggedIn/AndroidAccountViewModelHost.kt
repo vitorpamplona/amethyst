@@ -25,7 +25,11 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.AppModules
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
+import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
@@ -33,8 +37,10 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizer
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -49,6 +55,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import okio.Path
 
 /** [AccountViewModelHost] over the app's [AppModules]. Lazy services are read on first use. */
 class AndroidAccountViewModelHost(
@@ -76,6 +83,16 @@ class AndroidAccountViewModelHost(
     override val mediaUploader: MediaUploader by lazy { AndroidMediaUploader(modules.appContext) }
 
     override val deviceLocation: DeviceLocation get() = modules.locationManager
+
+    override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
+
+    override suspend fun anonymizeVoice(
+        input: Path,
+        presetName: String,
+    ): Result<AnonymizedResult> = VoiceAnonymizer().anonymize(input.toFile(), VoicePreset.valueOf(presetName))
+
+    // Built on the application context: the assistant outlives any one Activity inside the ViewModel.
+    override fun createWritingAssistant(): WritingAssistant = WritingAssistantFactory.create(modules.appContext)
 
     override val savedAccounts: Flow<Set<HexKey>> =
         LocalPreferences

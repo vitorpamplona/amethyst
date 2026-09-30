@@ -18,27 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.service.uploads
+package com.vitorpamplona.amethyst.commons.audio
 
 import okio.Path
 
-actual abstract class MediaUri {
-    actual abstract override fun toString(): String
-}
+/** A finished voice-message recording: the audio file, its type, and its waveform. */
+class RecordingResult(
+    val file: Path,
+    val mimeType: String,
+    val amplitudes: List<Float>,
+    val duration: Int,
+)
 
-/** A picked file addressed by a path or URL string. */
-class StringMediaUri(
-    val value: String,
-) : MediaUri() {
-    override fun toString(): String = value
-
-    // Value equality, like android.net.Uri: the upload pipeline tells a temp file from the
-    // user's own by comparing addresses, and deletes the temp one.
-    override fun equals(other: Any?): Boolean = other is StringMediaUri && other.value == value
-
-    override fun hashCode(): Int = value.hashCode()
-}
-
-actual fun MediaUri.lastPathSegmentOrNull(): String? = lastPathSegmentOf(toString())
-
-actual fun mediaUriOfFile(path: Path): MediaUri = StringMediaUri(path.toString())
+/**
+ * A recording re-voiced for privacy.
+ *
+ * @property file The output audio file (AAC in MP4 container)
+ * @property waveform Amplitude data for waveform visualization (one value per second)
+ * @property duration Audio duration in seconds
+ */
+data class AnonymizedResult(
+    val file: Path,
+    val waveform: List<Float>,
+    val duration: Int,
+)

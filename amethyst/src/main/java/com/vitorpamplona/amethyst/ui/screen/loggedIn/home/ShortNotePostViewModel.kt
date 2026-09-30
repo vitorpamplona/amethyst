@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
-import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -33,8 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
+import com.vitorpamplona.amethyst.commons.audio.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
+import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.BooleanType
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.IAudience
@@ -89,11 +91,8 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
-import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -188,7 +187,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.UUID
+import okio.Path
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -287,7 +288,7 @@ open class ShortNotePostViewModel :
 
     // Voice Messages
     var voiceRecording by mutableStateOf<RecordingResult?>(null)
-    var voiceLocalFile by mutableStateOf<java.io.File?>(null)
+    var voiceLocalFile by mutableStateOf<Path?>(null)
     var isUploadingVoice by mutableStateOf(false)
     var voiceMetadata by mutableStateOf<AudioMeta?>(null)
     var voiceSelectedServer by mutableStateOf<ServerName?>(null)
@@ -305,9 +306,10 @@ open class ShortNotePostViewModel :
                     error,
                 )
             },
+            anonymize = { file, preset -> accountViewModel.host.anonymizeVoice(file, preset.name) },
         )
 
-    val activeFile: java.io.File?
+    val activeFile: Path?
         get() = voiceAnonymization.activeFile(voiceLocalFile)
 
     val activeWaveform: List<Float>?
@@ -478,9 +480,9 @@ open class ShortNotePostViewModel :
         accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
             BooleanType.ALWAYS
 
-    fun initWritingAssistant(context: Context) {
+    fun initWritingAssistant() {
         if (writingAssistant != null) return
-        writingAssistant = WritingAssistantFactory.create(context)
+        writingAssistant = accountViewModel.host.createWritingAssistant() ?: return
         refreshAiStatus()
     }
 
@@ -1260,21 +1262,23 @@ open class ShortNotePostViewModel :
      * Runs on the mining queue's scope when PoW is on, so it must not touch
      * viewModelScope.
      */
+    @OptIn(ExperimentalUuidApi::class)
     private suspend fun storeScheduledPost(
         template: EventTemplate<out Event>,
         extraNotesToBroadcast: List<Event>,
         publishAtSec: Long,
     ) {
         val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
-        Amethyst.instance.scheduledPostStore.add(
+        val store = accountViewModel.host.scheduledPostStore ?: return
+        store.add(
             ScheduledPost(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 accountPubkey = event.pubKey,
                 signedEventJson = event.toJson(),
                 relayUrls = relays.map { it.url },
                 extraEventsJson = extras.map { it.toJson() },
                 publishAtSec = publishAtSec,
-                createdAtSec = System.currentTimeMillis() / 1000,
+                createdAtSec = TimeUtils.now(),
             ),
         )
     }
@@ -1570,7 +1574,7 @@ open class ShortNotePostViewModel :
         val replyingToEvent = originalNote?.event ?: return false
         return replyingToEvent is TextNoteEvent &&
             replyingToEvent.isNewThread() &&
-            replyingToEvent.isClient(AccountCacheState.CLIENT_TAG_NAME)
+            replyingToEvent.isClient(AMETHYST_CLIENT_TAG_NAME)
     }
 
     fun upload(
@@ -1916,14 +1920,13 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
     }
 
-    private fun deleteVoiceLocalFile(toDelete: java.io.File? = voiceLocalFile) {
+    private fun deleteVoiceLocalFile(toDelete: Path? = voiceLocalFile) {
         toDelete?.let { file ->
             try {
-                if (file.delete()) {
-                    Log.d("ShortNotePostViewModel") { "Deleted voice file: ${file.absolutePath}" }
-                }
+                platformFileSystem.delete(file, mustExist = false)
+                Log.d("ShortNotePostViewModel") { "Deleted voice file: $file" }
             } catch (e: Exception) {
-                Log.w("ShortNotePostViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
+                Log.w("ShortNotePostViewModel", "Failed to delete voice file: $file", e)
             }
         }
     }
@@ -1942,7 +1945,7 @@ open class ShortNotePostViewModel :
         isUploadingVoice = true
 
         try {
-            val uri = android.net.Uri.fromFile(fileToUpload)
+            val uri = mediaUriOfFile(fileToUpload)
             val orchestrator = UploadOrchestrator()
             voiceOrchestrator = orchestrator
 

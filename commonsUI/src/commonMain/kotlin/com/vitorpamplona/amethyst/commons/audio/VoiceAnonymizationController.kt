@@ -18,22 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.commons.audio
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.commons.audio.VoicePreset
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.io.File
+import okio.Path
 
 class VoiceAnonymizationController(
     private val scope: CoroutineScope,
     private val logTag: String,
     private val onError: (Throwable) -> Unit,
+    /** Re-voices a recording with a preset; the platform's audio pipeline, reached through the host. */
+    private val anonymize: suspend (Path, VoicePreset) -> Result<AnonymizedResult>,
 ) {
     var selectedPreset: VoicePreset by mutableStateOf(VoicePreset.NONE)
         private set
@@ -44,7 +46,7 @@ class VoiceAnonymizationController(
 
     private var processingJob: Job? = null
 
-    fun activeFile(originalFile: File?): File? =
+    fun activeFile(originalFile: Path?): Path? =
         if (selectedPreset == VoicePreset.NONE) {
             originalFile
         } else {
@@ -60,7 +62,7 @@ class VoiceAnonymizationController(
 
     fun selectPreset(
         preset: VoicePreset,
-        originalFile: File?,
+        originalFile: Path?,
     ) {
         Log.d(logTag) { "selectPreset called with: ${preset.name}, pitchFactor: ${preset.pitchFactor}" }
         if (processingPreset != null || preset == selectedPreset) return
@@ -82,8 +84,7 @@ class VoiceAnonymizationController(
         processingJob =
             scope.launch {
                 try {
-                    val anonymizer = VoiceAnonymizer()
-                    val result = anonymizer.anonymize(file, preset)
+                    val result = anonymize(file, preset)
 
                     result
                         .onSuccess { anonymizedResult ->
@@ -109,15 +110,10 @@ class VoiceAnonymizationController(
     fun deleteDistortedFiles() {
         distortedFiles.values.forEach { result ->
             try {
-                if (result.file.exists()) {
-                    if (result.file.delete()) {
-                        Log.d(logTag) { "Deleted distorted file: ${result.file.absolutePath}" }
-                    } else {
-                        Log.w(logTag) { "Failed to delete distorted file: ${result.file.absolutePath}" }
-                    }
-                }
+                platformFileSystem.delete(result.file, mustExist = false)
+                Log.d(logTag) { "Deleted distorted file: ${result.file}" }
             } catch (e: Exception) {
-                Log.w(logTag, "Failed to delete distorted file: ${result.file.absolutePath}", e)
+                Log.w(logTag, "Failed to delete distorted file: ${result.file}", e)
             }
         }
         distortedFiles = emptyMap()

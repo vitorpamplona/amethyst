@@ -25,6 +25,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.audio.PitchShifter
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.quartz.utils.Log
@@ -33,23 +34,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
-
-/**
- * Result of voice anonymization processing.
- *
- * @property file The output audio file (AAC in MP4 container)
- * @property waveform Amplitude data for waveform visualization (one value per second)
- * @property duration Audio duration in seconds
- */
-data class AnonymizedResult(
-    val file: File,
-    val waveform: List<Float>,
-    val duration: Int,
-)
 
 /**
  * Processes audio files to alter voice characteristics for privacy.
@@ -109,7 +98,7 @@ class VoiceAnonymizer {
                 }
 
                 onProgress(1f)
-                Result.success(AnonymizedResult(outputFile, waveform, duration))
+                Result.success(AnonymizedResult(outputFile.toOkioPath(), waveform, duration))
             } catch (e: CancellationException) {
                 // Let cancellation propagate so structured concurrency works (e.g. the
                 // upload screen being dismissed cancels this job).

@@ -87,8 +87,9 @@ kotlin {
                 // the ForwardingFileSystem the apps wrap Coil's disk cache in. It
                 // used to arrive transitively through Coil; with Coil in
                 // :commonsUI the Apple targets lost it (JVM still saw it via
-                // OkHttp), so declare the dependency the file actually has.
-                implementation(libs.okio)
+                // OkHttp), so declare the dependency the file actually has. `api`
+                // because voice recordings cross module boundaries as okio Paths.
+                api(libs.okio)
 
                 // DataStore (KMP, Apache-2.0) — the preference storage layer.
                 // Publishes android/jvm/ios/linux/macos variants plus common

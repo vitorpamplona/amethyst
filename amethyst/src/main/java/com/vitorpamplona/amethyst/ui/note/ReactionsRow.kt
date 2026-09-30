@@ -756,7 +756,7 @@ fun ReplyViaVoiceReaction(
             nav.nav {
                 Route.VoiceReply(
                     replyToNoteId = baseNote.idHex,
-                    recordingFilePath = audio.file.absolutePath,
+                    recordingFilePath = audio.file.toString(),
                     mimeType = audio.mimeType,
                     duration = audio.duration,
                     amplitudes = Json.encodeToString(audio.amplitudes),

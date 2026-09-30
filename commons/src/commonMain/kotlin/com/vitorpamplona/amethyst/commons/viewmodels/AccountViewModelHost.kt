@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -34,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import okio.Path
 
 /**
  * What the account's ViewModel needs from the process it runs in: app-wide services that outlive
@@ -73,6 +77,21 @@ interface AccountViewModelHost {
 
     /** The device's position as geohashes. */
     val deviceLocation: DeviceLocation get() = DeviceLocation.None
+
+    /** Posts signed now and published later by a background worker; null where scheduling is unsupported. */
+    val scheduledPostStore: ScheduledPostStore? get() = null
+
+    /**
+     * Re-voices the recording at [input] with the voice preset named [presetName], into a new file
+     * beside it.
+     */
+    suspend fun anonymizeVoice(
+        input: Path,
+        presetName: String,
+    ): Result<AnonymizedResult> = Result.failure(UnsupportedOperationException("Voice anonymization is not available on this platform"))
+
+    /** A new on-device writing assistant, or null where the platform has none. */
+    fun createWritingAssistant(): WritingAssistant? = null
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

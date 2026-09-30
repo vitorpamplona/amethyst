@@ -27,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
+import com.vitorpamplona.amethyst.commons.audio.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -41,11 +43,10 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
@@ -61,7 +62,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.File
+import okio.Path
+import okio.Path.Companion.toPath
 
 @Stable
 class VoiceReplyViewModel : ViewModel() {
@@ -70,7 +72,7 @@ class VoiceReplyViewModel : ViewModel() {
     var replyToNote: Note? by mutableStateOf(null)
 
     var voiceRecording: RecordingResult? by mutableStateOf(null)
-    var voiceLocalFile: File? by mutableStateOf(null)
+    var voiceLocalFile: Path? by mutableStateOf(null)
     var voiceMetadata: AudioMeta? by mutableStateOf(null)
     var voiceSelectedServer: ServerName? by mutableStateOf(null)
     var voiceOrchestrator: UploadOrchestrator? by mutableStateOf(null)
@@ -89,9 +91,10 @@ class VoiceReplyViewModel : ViewModel() {
                     )
                 }
             },
+            anonymize = { file, preset -> accountViewModel.host.anonymizeVoice(file, preset.name) },
         )
 
-    val activeFile: File?
+    val activeFile: Path?
         get() = voiceAnonymization.activeFile(voiceLocalFile)
 
     val activeWaveform: List<Float>?
@@ -126,7 +129,7 @@ class VoiceReplyViewModel : ViewModel() {
                 emptyList()
             }
 
-        val file = File(recordingFilePath)
+        val file = recordingFilePath.toPath()
         voiceLocalFile = file
         voiceRecording =
             RecordingResult(
@@ -164,11 +167,10 @@ class VoiceReplyViewModel : ViewModel() {
     private fun deleteVoiceLocalFile() {
         voiceLocalFile?.let { file ->
             try {
-                if (file.deleteOrWarn("VoiceReplyViewModel", "voice file")) {
-                    Log.d("VoiceReplyViewModel") { "Voice file removed or already gone: ${file.absolutePath}" }
-                }
+                platformFileSystem.delete(file, mustExist = false)
+                Log.d("VoiceReplyViewModel") { "Voice file removed or already gone: $file" }
             } catch (e: Exception) {
-                Log.w("VoiceReplyViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
+                Log.w("VoiceReplyViewModel", "Failed to delete voice file: $file", e)
             }
         }
     }
@@ -195,7 +197,7 @@ class VoiceReplyViewModel : ViewModel() {
                 try {
                     val result =
                         withContext(Dispatchers.IO) {
-                            val uri = android.net.Uri.fromFile(fileToUpload)
+                            val uri = mediaUriOfFile(fileToUpload)
                             orchestrator.upload(
                                 uri = uri,
                                 mimeType = recording.mimeType,

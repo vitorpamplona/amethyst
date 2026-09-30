@@ -63,7 +63,6 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -192,7 +191,6 @@ fun ShortNotePostScreen(
     postViewModel.init(accountViewModel)
     postViewModel.setGroupThread(groupThreadId, groupThreadRelayUrl)
 
-    val context = LocalContext.current
     val mediaResolver = rememberSharedMediaResolver()
 
     val proposeAiImprovements by
@@ -201,8 +199,7 @@ fun ShortNotePostScreen(
 
     LaunchedEffect(proposeAiImprovements) {
         if (proposeAiImprovements == BooleanType.ALWAYS) {
-            // The assistant outlives this Activity inside the ViewModel, so it must not hold it.
-            postViewModel.initWritingAssistant(context.applicationContext)
+            postViewModel.initWritingAssistant()
         }
     }
 
