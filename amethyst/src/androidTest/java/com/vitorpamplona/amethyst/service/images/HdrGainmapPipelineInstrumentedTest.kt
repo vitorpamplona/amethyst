@@ -74,7 +74,12 @@ class HdrGainmapPipelineInstrumentedTest {
     fun setUp() {
         assumeTrue("Gain maps need API 34+", Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
         hdrJpeg = File(appContext.cacheDir.also { it.mkdirs() }, "${UUID.randomUUID()}.jpg")
-        hdrJpeg.outputStream().use { ultraHdrBitmap().compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        val fixture = ultraHdrBitmap()
+        try {
+            hdrJpeg.outputStream().use { fixture.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        } finally {
+            fixture.recycleWithGainmap()
+        }
     }
 
     @After
@@ -122,18 +127,24 @@ class HdrGainmapPipelineInstrumentedTest {
     @Test
     fun coilDecodeKeepsTheGainmap() =
         runBlocking<Unit> {
+            // Coil owns the bitmaps it returns (its memory cache may hand them out again), so
+            // release them by shutting the loader down rather than recycling them here.
             val loader = ImageLoader.Builder(appContext).build()
-            for (hardware in listOf(true, false)) {
-                val request =
-                    ImageRequest
-                        .Builder(appContext)
-                        .data(hdrJpeg)
-                        .size(400, 300)
-                        .allowHardware(hardware)
-                        .build()
-                val result = loader.execute(request) as SuccessResult
-                val bitmap = (result.image as BitmapImage).bitmap
-                assertTrue("Coil dropped the gain map (allowHardware=$hardware)", bitmap.hasGainmap())
+            try {
+                for (hardware in listOf(true, false)) {
+                    val request =
+                        ImageRequest
+                            .Builder(appContext)
+                            .data(hdrJpeg)
+                            .size(400, 300)
+                            .allowHardware(hardware)
+                            .build()
+                    val result = loader.execute(request) as SuccessResult
+                    val bitmap = (result.image as BitmapImage).bitmap
+                    assertTrue("Coil dropped the gain map (allowHardware=$hardware)", bitmap.hasGainmap())
+                }
+            } finally {
+                loader.shutdown()
             }
         }
 
@@ -177,10 +188,14 @@ class HdrGainmapPipelineInstrumentedTest {
                     assertTrue("gain map lost on a $expected load", (result.image as BitmapImage).bitmap.hasGainmap())
                 }
 
-                load(DataSource.NETWORK)
-                load(DataSource.MEMORY_CACHE)
-                memoryCache.clear()
-                load(DataSource.DISK)
+                try {
+                    load(DataSource.NETWORK)
+                    load(DataSource.MEMORY_CACHE)
+                    memoryCache.clear()
+                    load(DataSource.DISK)
+                } finally {
+                    loader.shutdown()
+                }
             }
             cacheDir.deleteRecursively()
         }
@@ -195,7 +210,21 @@ class HdrGainmapPipelineInstrumentedTest {
 
     private fun bounds(file: File) = BitmapFactory.Options().apply { inJustDecodeBounds = true }.also { BitmapFactory.decodeFile(file.absolutePath, it) }
 
-    private fun decodesWithGainmap(file: File): Boolean = BitmapFactory.decodeFile(file.absolutePath)?.hasGainmap() == true
+    // Full-size decodes of a 4000x3000 photo: recycle them rather than wait on the GC between tests.
+    private fun decodesWithGainmap(file: File): Boolean {
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return false
+        return try {
+            bitmap.hasGainmap()
+        } finally {
+            bitmap.recycleWithGainmap()
+        }
+    }
+
+    // The gain map is a separate bitmap; recycling the base does not free it.
+    private fun Bitmap.recycleWithGainmap() {
+        gainmap?.gainmapContents?.recycle()
+        recycle()
+    }
 
     private fun serveForever(
         server: ServerSocket,
