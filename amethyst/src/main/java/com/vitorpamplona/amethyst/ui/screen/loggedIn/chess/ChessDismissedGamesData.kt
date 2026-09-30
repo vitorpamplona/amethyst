@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 
 /**
  * Where Android keeps the dismissed-chess-games store.
@@ -32,5 +32,4 @@ import com.vitorpamplona.amethyst.Amethyst
  * data over is not worth the code. Anyone who had dismissed a game sees it once
  * more and dismisses it again.
  */
-internal val chessDismissedGamesData: DataStore<Preferences>
-    get() = Amethyst.instance.appStores.getDataStore("chess_dismissed_games_v2")
+internal fun chessDismissedGamesData(stores: AppPreferenceStores): DataStore<Preferences> = stores.getDataStore("chess_dismissed_games_v2")

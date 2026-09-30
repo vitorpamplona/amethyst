@@ -488,7 +488,7 @@ private fun SendPaymentLoaded(
         amount: Long?,
         followMoved: Boolean,
     ) {
-        val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, useOffer, amountSats = amount)
+        val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, accountViewModel.host.moneyOpRelays, useOffer, amountSats = amount)
 
         val bolt11 = response?.bolt11
         val movedTo =

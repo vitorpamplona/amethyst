@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
@@ -33,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * [AppServices] over the main process's app modules. Every member is a getter, so installing
@@ -51,6 +54,12 @@ object AndroidAppServices : AppServices {
     override val signerPermissionStore: NostrSignerPermissionStore get() = Amethyst.instance.signerPermissionStore
 
     override val torSettings: TorSettingsFlow get() = Amethyst.instance.torPrefs.value
+
+    override val torBootstrapped: Flow<Boolean> get() =
+        Amethyst.instance.torManager.status
+            .map { it.isFullyBootstrapped }
+
+    override val appStores: AppPreferenceStores get() = Amethyst.instance.appStores
 
     override val namecoinResolver: NamecoinNameResolver get() = Amethyst.instance.namecoinResolver
 

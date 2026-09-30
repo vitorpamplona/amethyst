@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -58,7 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -66,7 +65,7 @@ import kotlinx.coroutines.launch
  * generated accounts that haven't saved their secret key yet. It never blocks
  * navigation: the user either backs up (navigates to [Route.AccountBackup]) or
  * confirms they already saved the key. Both actions flip the per-account
- * [LocalPreferences.setHasBackedUpKeys] flag so the nudge stops appearing.
+ * backed-up flag so the nudge stops appearing.
  */
 @Composable
 fun BackupKeysNudge(
@@ -81,19 +80,20 @@ fun BackupKeysNudge(
 
     // Seed the reactive flag off a background read. Rendering only proceeds once the
     // flow resolves, so the observing composable never conditionally calls hooks.
-    val flow by produceState<MutableStateFlow<Boolean>?>(initialValue = null, key1 = npub) {
-        value = LocalPreferences.hasBackedUpKeys(npub)
+    val flow by produceState<StateFlow<Boolean>?>(initialValue = null, key1 = npub) {
+        value = accountViewModel.host.hasBackedUpKeys(npub)
     }
 
     flow?.let { stateFlow ->
-        WatchBackupKeysNudge(stateFlow, npub, nav, modifier)
+        WatchBackupKeysNudge(stateFlow, npub, accountViewModel, nav, modifier)
     }
 }
 
 @Composable
 private fun WatchBackupKeysNudge(
-    stateFlow: MutableStateFlow<Boolean>,
+    stateFlow: StateFlow<Boolean>,
     npub: String,
+    accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier,
 ) {
@@ -106,11 +106,11 @@ private fun WatchBackupKeysNudge(
         onBackupNow = {
             // Best-effort: opening the backup screen counts as backing up so the
             // nudge doesn't linger after the user follows through.
-            scope.launch { LocalPreferences.setHasBackedUpKeys(true, npub) }
+            scope.launch { accountViewModel.host.setHasBackedUpKeys(npub, true) }
             nav.nav(Route.AccountBackup)
         },
         onAlreadySaved = {
-            scope.launch { LocalPreferences.setHasBackedUpKeys(true, npub) }
+            scope.launch { accountViewModel.host.setHasBackedUpKeys(npub, true) }
         },
     )
 }

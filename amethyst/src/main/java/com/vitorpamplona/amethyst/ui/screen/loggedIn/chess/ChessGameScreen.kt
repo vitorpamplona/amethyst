@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
 import com.vitorpamplona.amethyst.commons.resources.go_back
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -104,7 +105,7 @@ fun ChessGameScreen(
         viewModel(
             viewModelStoreOwner = activity,
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )
 
     val activeGames by chessViewModel.activeGames.collectAsState()

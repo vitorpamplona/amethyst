@@ -24,6 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStore
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
@@ -34,6 +35,7 @@ import kotlin.reflect.KClass
  */
 class ChessViewModelFactory(
     private val account: Account,
+    private val appStores: AppPreferenceStores,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(
@@ -47,7 +49,7 @@ class ChessViewModelFactory(
                 fetcher = AndroidRelayFetcher(account),
                 metadataProvider = AndroidMetadataProvider(),
                 pollingConfig = ChessPollingDefaults.android,
-                dismissedStorage = ChessDismissedGamesStore(chessDismissedGamesData),
+                dismissedStorage = ChessDismissedGamesStore(chessDismissedGamesData(appStores)),
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

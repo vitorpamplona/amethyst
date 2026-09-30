@@ -25,10 +25,12 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import kotlinx.coroutines.flow.Flow
 
 /**
  * App-wide stores that outlive any one account and that screens read directly: the favorites
@@ -52,6 +54,12 @@ interface AppServices {
     val signerPermissionStore: NostrSignerPermissionStore
 
     val torSettings: TorSettingsFlow
+
+    /** Whether the embedded Tor service has fully bootstrapped, so Tor-routed relays can answer. */
+    val torBootstrapped: Flow<Boolean>
+
+    /** The app's preference files, one DataStore per name. */
+    val appStores: AppPreferenceStores
 
     /** Resolves `.bit` names and `d/`/`id/` identifiers over the configured ElectrumX servers. */
     val namecoinResolver: NamecoinNameResolver

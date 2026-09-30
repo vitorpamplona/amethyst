@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
@@ -102,7 +103,7 @@ fun ChessLobbyScreen(
         viewModel(
             viewModelStoreOwner = activity,
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )
 
     // Subscribe to chess events when screen is visible

@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
@@ -127,7 +128,7 @@ fun RenderLiveChessChallenge(
     val chessViewModel: ChessViewModel =
         viewModel(
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )
 
     val isOpenChallenge = event.opponentPubkey() == null

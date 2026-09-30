@@ -79,7 +79,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -130,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
@@ -168,7 +168,8 @@ fun SearchScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val historyStorage = remember { DataStoreSearchHistoryStorage(Amethyst.instance.appStores.getDataStore(DataStoreSearchHistoryStorage.FILE_NAME)) }
+    val appStores = LocalAppServices.current.appStores
+    val historyStorage = remember { DataStoreSearchHistoryStorage(appStores.getDataStore(DataStoreSearchHistoryStorage.FILE_NAME)) }
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
             // Keyed on the seed: navigating from one screen's search button to another's has to

@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import okio.Path
 
@@ -92,6 +93,18 @@ interface AccountViewModelHost {
 
     /** A new on-device writing assistant, or null where the platform has none. */
     fun createWritingAssistant(): WritingAssistant? = null
+
+    /**
+     * Whether the account [npub] has saved its secret key, as a live flag. Absent reads as true,
+     * so a platform that does not track it never shows the backup nudge.
+     */
+    suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = MutableStateFlow(true)
+
+    /** Records whether the account [npub] has saved its secret key. */
+    suspend fun setHasBackedUpKeys(
+        npub: String,
+        value: Boolean,
+    ) = Unit
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

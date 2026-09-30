@@ -62,7 +62,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.buzz.ui.PresenceDot
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.newestTimelineNote
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -107,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmListViewModel
@@ -366,7 +366,7 @@ fun RelayGroupChannelListScreen(
     // was never consulted, and neither was whether this relay is Tor-routed at all (Tor being *on*
     // doesn't mean this relay goes through it; the per-role presets decide).
     val torEvaluation =
-        Amethyst.instance.torEvaluatorFlow.flow
+        accountViewModel.host.torRelayEvaluation
             .collectAsStateWithLifecycle()
     // The same predicate the relay pool itself dials with, so the banner can't claim Tor for a relay
     // the app is reaching over clearnet (onion / localhost / trusted-off-Tor are all folded in here).
@@ -374,9 +374,8 @@ fun RelayGroupChannelListScreen(
 
     // While Tor is bootstrapping every Tor-routed relay is silent — that's Tor's own failure (and its
     // own dialog), so don't let it read as "this relay blocks Tor exits".
-    val torStatus by Amethyst.instance.torManager.status
-        .collectAsStateWithLifecycle()
-    val torIsUp = torStatus.isFullyBootstrapped
+    val torIsUp by LocalAppServices.current.torBootstrapped
+        .collectAsStateWithLifecycle(false)
 
     // The offer adds the relay to the kind-10089 Trusted list, which only moves it to clearnet while
     // trusted relays are *off* Tor. Under the Small-Payloads / Full-Privacy presets they are on Tor,

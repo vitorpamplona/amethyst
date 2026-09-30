@@ -86,6 +86,13 @@ class AndroidAccountViewModelHost(
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 
+    override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = LocalPreferences.hasBackedUpKeys(npub)
+
+    override suspend fun setHasBackedUpKeys(
+        npub: String,
+        value: Boolean,
+    ) = LocalPreferences.setHasBackedUpKeys(value, npub)
+
     override suspend fun anonymizeVoice(
         input: Path,
         presetName: String,
