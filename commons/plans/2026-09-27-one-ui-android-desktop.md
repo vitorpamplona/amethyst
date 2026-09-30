@@ -446,12 +446,26 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        pooled media3 `MediaController` on Android. Do it when Desktop gets a player, and pick
        that engine through the license gate. VLCJ's README says "GPL, version 3 or later",
        with no linking exception (a commercial license is sold separately), so it is a stop.
-   - **Next:** the remaining screens exit mostly through navigation (`RememberNavs`, `Nav`,
-     step 7). After that: `Amethyst.instance` reads, the relay exporters, `TakePicture`,
-     `ReactionsRow`, `ZoomableContentView`, `UrlCachedPreviewer`, `MLKitImageLabelService`
-     and `ShortNotePostViewModel`. Smaller exits remain too: the Android-only
-     `AccountViewModel` actions, `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`,
-     `UpdateZapAmountDialog` (biometrics), the `java.time` pickers and the language list.
+   - **Wave 8 (2026-09-30):** the composers.
+     - Ports: `FileSharer` (the relay ZIP export), `TakePicture`/`TakeVideo`,
+       `rememberCoarseLocationPermission`, `SharedMediaResolver` + `OnIncomingShare` (SEND
+       intents), `DeviceLocation` (on `AccountViewModelHost` and `AppServices`),
+       `AltTextSuggester`, `BlossomServerFinder`, `mediaUriOfFile`, `availableProcessors`,
+       the language names, `LocalClock.utcOffsetSeconds` and `rememberIs24HourClock`.
+     - `MediaUploader` gained `remoteFileHeader` (imeta for pasted links) and `displayName`.
+       The host gained `scheduledPostStore`, `anonymizeVoice` and `createWritingAssistant`.
+     - Voice recordings are okio `Path`s. `commons` exposes okio as `api`.
+     - `WalletAppLauncher` opens any payment URI; BOLT-11 and BOLT-12 are extensions.
+     - Toasts go through `rememberShortNotice`/`rememberLongNotice`.
+     - Moved: every note composer and `ShortNotePostViewModel`; the public, ephemeral,
+       geohash, DM, Marmot, Concord, Minichat and relay-group chats; the media feeds; the
+       relay settings; the metadata editors; podcasts; Bolt12 offers; the vanish and
+       language settings. 180 of 252 screens shared.
+   - **Next:** 72 screens remain. `Amethyst.instance` reads block 16 of them, and
+     `LocalPreferences` another 5. Smaller exits: `UpdateZapAmountDialog` (biometrics),
+     `NestActivity` (PiP), `CalendarTimeFormat`, `GalleryThumb` (media3),
+     `AccountSessionManager`, the Blossom health probe, `ReactionsRow`, `NappletLauncher`
+     and the call permissions.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
