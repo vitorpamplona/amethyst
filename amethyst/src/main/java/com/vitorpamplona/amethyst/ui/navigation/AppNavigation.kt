@@ -212,10 +212,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.HiddenWord
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MessagesSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MutedThreadsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ReactionsSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SpammingUsersScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnCoordinatorsScreen
@@ -327,13 +329,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NotificationSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen

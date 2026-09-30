@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -72,7 +72,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -97,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_section_explainer
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -116,7 +117,7 @@ import kotlinx.collections.immutable.toImmutableList
 @Preview(device = "spec:width=1900px,height=2340px,dpi=440")
 fun UpdateZapAmountContentPreview() {
     val accountViewModel = mockAccountViewModel()
-    val vm: UpdateZapAmountViewModel = viewModel()
+    val vm: UpdateZapAmountViewModel = rememberViewModel { UpdateZapAmountViewModel() }
     vm.init(accountViewModel)
 
     ThemeComparisonRow {
@@ -413,7 +414,7 @@ private fun ZapAmountPresetChip(
                 ZapRailIcon(rails.first(), colored = true)
                 Spacer(Modifier.width(5.dp))
                 Text(
-                    text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                    text = showAmount(BigDecimal(amountInSats)),
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontWeight = FontWeight.SemiBold,
                 )

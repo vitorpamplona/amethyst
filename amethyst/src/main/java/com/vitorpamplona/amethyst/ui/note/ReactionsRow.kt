@@ -164,6 +164,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBas
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.commons.ui.note.CASHU_PREFERRED_BELOW_SATS
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandLessIcon
@@ -171,6 +172,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.ONCHAIN_PREFERRED_ABOVE_SATS
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.commons.ui.note.OutlinedZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RenderBoostGallery
@@ -183,6 +185,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ShareIcon
 import com.vitorpamplona.amethyst.commons.ui.note.VoiceReplyIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ZapRail
+import com.vitorpamplona.amethyst.commons.ui.note.ZapRailIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
