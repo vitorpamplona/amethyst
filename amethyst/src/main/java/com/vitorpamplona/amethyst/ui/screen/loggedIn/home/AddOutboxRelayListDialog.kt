@@ -43,12 +43,12 @@ import com.vitorpamplona.amethyst.commons.resources.outbox_relays_title
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip65.Nip65OutboxRelayList
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip65.Nip65RelayListViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.Nip65OutboxRelayList
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.Nip65RelayListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

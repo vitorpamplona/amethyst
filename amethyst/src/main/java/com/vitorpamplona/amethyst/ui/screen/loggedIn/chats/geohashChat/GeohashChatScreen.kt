@@ -75,12 +75,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBarActi
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatActingIdentities
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatDisplayNameResolver
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatReactOverride
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatShowSelfAuthorName
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatSuppressGeohash
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatActingIdentities
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatDisplayNameResolver
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatReactOverride
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatShowSelfAuthorName
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatSuppressGeohash
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription

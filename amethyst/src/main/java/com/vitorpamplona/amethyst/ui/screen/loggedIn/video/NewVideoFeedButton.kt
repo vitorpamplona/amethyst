@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.resources.take_a_picture
 import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePicture
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -62,8 +64,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
-import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
-import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

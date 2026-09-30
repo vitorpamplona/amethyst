@@ -85,10 +85,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpaceClosedFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpacePrivateFlag
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
