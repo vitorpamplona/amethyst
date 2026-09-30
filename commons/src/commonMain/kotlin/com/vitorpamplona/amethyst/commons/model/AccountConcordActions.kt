@@ -129,6 +129,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -932,11 +933,25 @@ class AccountConcordActions(
         )
 
     /**
+     * Wrap ids of Direct Invites whose Accept is running. A join can take many seconds (it waits on
+     * the Community List), and a card left on screen meanwhile had both buttons disabled and nothing
+     * to say why, so an invite being accepted is hidden. A failed accept puts it back.
+     */
+    private val acceptingConcordDirectInvites = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /**
      * The parked Direct Invites a UI should show, followed senders first, then newest: invites for
      * communities we don't hold (nor left after they were sent), plus catch-ups for ones we do
      * ([ConcordDirectInviteInbox.visible]).
      */
     val pendingConcordDirectInvites: StateFlow<List<ConcordDirectInviteView>> =
+        combine(
+            visibleConcordDirectInvites(),
+            acceptingConcordDirectInvites,
+        ) { visible, accepting -> if (accepting.isEmpty()) visible else visible.filterNot { it.wrapId in accepting } }
+            .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
+
+    private fun visibleConcordDirectInvites() =
         combine(
             directInviteInbox.pending,
             account.concordChannelList.liveCommunities,
@@ -959,7 +974,7 @@ class AccountConcordActions(
                 },
                 me = account.signer.pubKey,
             )
-        }.stateIn(account.scope, SharingStarted.Eagerly, emptyList())
+        }
 
     /**
      * [pendingConcordDirectInvites] as feed rows: New Requests on Messages and cards on Notifications.
@@ -1126,6 +1141,15 @@ class AccountConcordActions(
      */
     suspend fun acceptConcordDirectInvite(wrapId: HexKey): ConcordInviteResult {
         if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
+        acceptingConcordDirectInvites.update { it + wrapId }
+        try {
+            return acceptConcordDirectInviteNow(wrapId)
+        } finally {
+            acceptingConcordDirectInvites.update { it - wrapId }
+        }
+    }
+
+    private suspend fun acceptConcordDirectInviteNow(wrapId: HexKey): ConcordInviteResult {
         val opened = directInviteInbox.get(wrapId) ?: return ConcordInviteResult.InvalidLink
         val bundle = opened.invite
         val held =

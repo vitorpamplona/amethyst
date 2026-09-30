@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
@@ -274,7 +275,6 @@ fun ConcordDirectInviteCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
     var working by remember(invite.wrapId) { mutableStateOf(false) }
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     // The sender's own profile (kind 0), loaded like any author's: the card used to show only a cached
@@ -328,7 +328,9 @@ fun ConcordDirectInviteCard(
                 enabled = !working && !invite.expired,
                 onClick = {
                     working = true
-                    scope.launch {
+                    // The account hides an invite while it is being accepted, which removes this card
+                    // from composition: the join runs on the view model's scope so that can't cancel it.
+                    accountViewModel.viewModelScope.launch {
                         try {
                             when (val result = accountViewModel.account.concord.acceptConcordDirectInvite(invite.wrapId)) {
                                 is ConcordInviteResult.Joined -> nav.nav(Route.ConcordServer(result.communityId))
