@@ -137,7 +137,7 @@ fun OriginBadge(
 
 /** The card frame every page-initiated prompt shares. */
 @Composable
-private fun PageCard(content: @Composable () -> Unit) {
+internal fun PageCard(content: @Composable () -> Unit) {
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,

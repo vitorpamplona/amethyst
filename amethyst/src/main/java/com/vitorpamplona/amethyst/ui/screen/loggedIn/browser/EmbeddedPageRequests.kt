@@ -40,3 +40,16 @@ data class EmbeddedPermissionRequest(
     val origin: String,
     val permissions: Set<BrowserSitePermission>,
 )
+
+/**
+ * An inline download (`browser.download`) from an embedded page, waiting for consent before its bytes
+ * are written into the shared Downloads collection. [fileName]/[sizeBytes] are the sanitized name and
+ * exact decoded size the sandbox reports; [origin] is the WebView-reported origin, not a page field.
+ */
+data class EmbeddedDownloadRequest(
+    val id: Long,
+    val origin: String,
+    val fileName: String,
+    val sizeBytes: Long,
+    val risky: Boolean,
+)

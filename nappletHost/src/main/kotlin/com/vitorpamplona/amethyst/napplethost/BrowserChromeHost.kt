@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleSheet
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.DownloadPromptCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.FindInPagePill
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
@@ -130,6 +131,20 @@ class BrowserChromeHost(
         val answer: (allow: Boolean, remember: Boolean) -> Unit,
     )
 
+    /**
+     * An inline download (`browser.download` bridge message) waiting for consent before its bytes are
+     * written into the shared Downloads collection. [fileName]/[sizeBytes] describe exactly what the
+     * native sink would write; nothing is saved until [answer] runs with true.
+     */
+    class PendingDownload(
+        val host: String?,
+        val security: BrowserChrome.Security,
+        val fileName: String,
+        val sizeBytes: Long,
+        val risky: Boolean,
+        val answer: (allow: Boolean) -> Unit,
+    )
+
     var ui by mutableStateOf(initial)
     var expanded by mutableStateOf(false)
         private set
@@ -146,6 +161,7 @@ class BrowserChromeHost(
 
     var dialog by mutableStateOf<PendingDialog?>(null)
     var permissionPrompt by mutableStateOf<PendingPermission?>(null)
+    var downloadPrompt by mutableStateOf<PendingDownload?>(null)
     private var pageInfoOpen by mutableStateOf(false)
     private var accessInfo by mutableStateOf<AccessInfo?>(null)
     private var certificate by mutableStateOf<CertificateInfo?>(null)
@@ -341,6 +357,28 @@ class BrowserChromeHost(
                     onDeny = {
                         permissionPrompt = null
                         pending.answer(false, true)
+                    },
+                )
+            }
+        }
+        downloadPrompt?.let { pending ->
+            Dialog(onDismissRequest = {
+                downloadPrompt = null
+                pending.answer(false)
+            }) {
+                DownloadPromptCard(
+                    host = pending.host,
+                    security = pending.security,
+                    fileName = pending.fileName,
+                    sizeBytes = pending.sizeBytes,
+                    risky = pending.risky,
+                    onAllow = {
+                        downloadPrompt = null
+                        pending.answer(true)
+                    },
+                    onDeny = {
+                        downloadPrompt = null
+                        pending.answer(false)
                     },
                 )
             }
