@@ -851,6 +851,8 @@ private fun ConcordChannelEditDialog(
                     onValueChange = { name = it },
                     singleLine = true,
                     label = { Text(stringRes(Res.string.concord_channel_name_label)) },
+                    isError = !concordNameFits(name),
+                    supportingText = { ConcordNameBudget(name) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 // A new channel may be Private (CORD-03): its own key, and an access Role — the
@@ -872,6 +874,8 @@ private fun ConcordChannelEditDialog(
                             singleLine = true,
                             placeholder = { Text(name.trim()) },
                             label = { Text(stringRes(Res.string.concord_channel_access_role_label)) },
+                            isError = !concordNameFits(roleName),
+                            supportingText = { if (roleName.isNotBlank()) ConcordNameBudget(roleName) },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -880,8 +884,9 @@ private fun ConcordChannelEditDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank(),
-                onClick = { if (name.isNotBlank()) onConfirm(name.trim(), makePrivate, roleName.trim().ifBlank { null }) },
+                // Past the 64-byte cap every reader drops the edition, so the action would silently no-op.
+                enabled = name.isNotBlank() && concordNameFits(name) && concordNameFits(roleName),
+                onClick = { if (name.isNotBlank() && concordNameFits(name) && concordNameFits(roleName)) onConfirm(name.trim(), makePrivate, roleName.trim().ifBlank { null }) },
             ) {
                 Text(
                     stringRes(

@@ -147,7 +147,7 @@ fun ConcordCreateScreen(
                         }
                     }
                 },
-                enabled = name.value.isNotBlank() && !working,
+                enabled = name.value.isNotBlank() && concordNameFits(name.value) && !working,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Text(stringRes(Res.string.concord_create_action))

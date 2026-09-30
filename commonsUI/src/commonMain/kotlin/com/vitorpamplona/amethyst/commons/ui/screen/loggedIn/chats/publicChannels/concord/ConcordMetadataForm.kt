@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_create_icon_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_create_name
 import com.vitorpamplona.amethyst.commons.resources.concord_create_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_banner_hint
+import com.vitorpamplona.amethyst.commons.resources.concord_name_budget
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
@@ -85,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.Log
@@ -130,6 +132,8 @@ fun ConcordMetadataFields(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text(stringRes(Res.string.concord_create_name)) },
+            isError = !concordNameFits(name.value),
+            supportingText = { ConcordNameBudget(name.value) },
         )
         OutlinedTextField(
             value = about.value,
@@ -140,6 +144,21 @@ fun ConcordMetadataFields(
             label = { Text(stringRes(Res.string.concord_create_about)) },
         )
     }
+}
+
+/**
+ * Whether [name] fits the protocol-wide name cap (CORD-02 §6: 64 UTF-8 bytes, for the Community,
+ * Channels and Roles). Every reader drops an edition past it, so a form must not submit one.
+ */
+fun concordNameFits(name: String): Boolean = ConcordLimits.nameFits(name.trim())
+
+/** A text field's `used / 64` byte counter for a Concord name, in the error color once over the cap. */
+@Composable
+fun ConcordNameBudget(name: String) {
+    Text(
+        stringRes(Res.string.concord_name_budget, ConcordLimits.utf8Size(name.trim()), ConcordLimits.NAME_MAX_BYTES),
+        color = if (concordNameFits(name)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+    )
 }
 
 /**
