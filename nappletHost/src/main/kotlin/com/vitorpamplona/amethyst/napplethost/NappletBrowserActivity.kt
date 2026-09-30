@@ -365,12 +365,13 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.webChromeClient = BrowserChromeClient()
         wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            // The page's origin; a fresh popup still on about:blank has none, so name the file's own.
             val origin =
                 chrome
                     ?.ui
                     ?.chrome
                     ?.url
-                    ?.let(BrowserChrome::originOf) ?: return@setDownloadListener
+                    ?.let(BrowserChrome::originOf) ?: BrowserChrome.originOf(url) ?: return@setDownloadListener
             if (!canOfferDownload(origin)) return@setDownloadListener
             // Read on the main thread: the cookie jar is the tab's own per-account WebView profile.
             val cookie = BrowserWebTools.cookieManager(wv).getCookie(url)
@@ -971,11 +972,14 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     /**
-     * Whether [origin] may put a download card up now: never over a card already showing (so a page can't
-     * swap the name under the user's finger) or one still being prepared (so a page can't queue decodes),
-     * and not within the cooldown after its last card was answered.
+     * Whether [origin] may put a download card up now: never over another page prompt (so a page can't swap
+     * the name under the user's finger, or pop the card where a dialog's button just was), never while an
+     * offer is still being prepared (so a page can't queue decodes), and not within its cooldown.
      */
-    private fun canOfferDownload(origin: String) = chrome?.downloadPrompt == null && !preparingDownload && downloadCooldown.allows(origin)
+    private fun canOfferDownload(origin: String): Boolean {
+        val host = chrome ?: return false
+        return host.downloadPrompt == null && host.dialog == null && host.permissionPrompt == null && !preparingDownload && downloadCooldown.allows(origin)
+    }
 
     /** Runs [prepare] (which answers exactly once, on the main thread) and shows the offer it produces. */
     private fun prepareDownloadOffer(
@@ -1002,9 +1006,10 @@ class NappletBrowserActivity : ComponentActivity() {
                 security = BrowserChrome.security(host.ui.chrome),
                 fileName = offer.fileName,
                 sizeBytes = offer.sizeBytes,
+                sourceHost = offer.sourceHost,
                 risky = offer.risky,
             ) { allowed ->
-                downloadCooldown.answered(origin)
+                downloadCooldown.answered(origin, allowed)
                 if (allowed) offer.save(this)
             }
     }

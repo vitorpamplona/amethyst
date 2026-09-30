@@ -30,6 +30,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import android.webkit.URLUtil
 import android.widget.Toast
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.browser.BrowserDownloadRules
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Request
@@ -37,6 +38,7 @@ import java.io.File
 import java.io.OutputStream
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -67,22 +69,27 @@ object BrowserDownloads {
     private val decoder = Executors.newSingleThreadExecutor { Thread(it, "napplet-download-decode").apply { isDaemon = true } }
     private val main = Handler(Looper.getMainLooper())
 
-    private val unsafeNameChars = Regex("[\\u0000-\\u001f:*?\"<>|]")
-
     /**
-     * A page-initiated download, resolved to exactly what its consent card shows: [save] writes a file
-     * named [fileName] and nothing else, and until it runs no byte has been fetched or written.
+     * A page-initiated download, resolved to what its consent card shows: [save] stores one file named
+     * [fileName], typed by that name's extension (so the system can't append a different one), and until
+     * it runs no byte has been fetched or written. [save] runs at most once, however often it is called.
      */
     class DownloadOffer internal constructor(
         val fileName: String,
-        /** The exact size in bytes, or -1 when the server didn't say. */
+        /** The size in bytes: exact for inline data, the server's advertised length otherwise; -1 when unknown. */
         val sizeBytes: Long,
+        /** The host a network download is fetched from (it can differ from the page's), or null for inline data. */
+        val sourceHost: String?,
         private val start: (Context) -> Unit,
     ) {
+        private val started = AtomicBoolean(false)
+
         /** Whether [fileName] is something that can be installed or run, which the card warns about. */
         val risky: Boolean get() = BrowserDownloadRules.isRisky(fileName)
 
-        fun save(context: Context) = start(context.applicationContext)
+        fun save(context: Context) {
+            if (started.compareAndSet(false, true)) start(context.applicationContext)
+        }
     }
 
     /**
@@ -105,7 +112,7 @@ object BrowserDownloads {
             return
         }
         if (!isHttp(url)) return
-        startNetworkDownload(app, url, networkName(url, contentDisposition, mimeType), userAgent, mimeType, cookie, proxyPort)
+        startNetworkDownload(app, url, networkName(url, contentDisposition, mimeType), userAgent, cookie, proxyPort)
     }
 
     /**
@@ -134,8 +141,8 @@ object BrowserDownloads {
         }
         val name = networkName(url, contentDisposition, mimeType)
         onReady(
-            DownloadOffer(name, contentLength.takeIf { it > 0 } ?: -1L) { app ->
-                startNetworkDownload(app, url, name, userAgent, mimeType, cookie, proxyPort)
+            DownloadOffer(name, contentLength.takeIf { it > 0 } ?: -1L, url.toUri().host) { app ->
+                startNetworkDownload(app, url, name, userAgent, cookie, proxyPort)
             },
         )
     }
@@ -151,10 +158,17 @@ object BrowserDownloads {
         onReady: (DownloadOffer?) -> Unit,
     ) {
         decoder.execute {
+            // Throwable, not Exception: an OutOfMemoryError here must refuse the download, not kill the
+            // process (and every tab in it) or leave the caller waiting on a callback that never comes.
             val offer =
-                BrowserDownloadRules.decodeDataUrl(dataUrl)?.let { data ->
-                    val name = safeName(suggestedName, data.mimeType)
-                    DownloadOffer(name, data.bytes.size.toLong()) { app -> writeInBackground(app, name, data.mimeType, data.bytes) }
+                try {
+                    BrowserDownloadRules.decodeDataUrl(dataUrl)?.let { data ->
+                        val name = safeName(suggestedName, data.mimeType)
+                        DownloadOffer(name, data.bytes.size.toLong(), null) { app -> writeInBackground(app, name, data.bytes) }
+                    }
+                } catch (e: Throwable) {
+                    Log.w(TAG, "Inline download refused", e)
+                    null
                 }
             main.post { onReady(offer) }
         }
@@ -173,7 +187,6 @@ object BrowserDownloads {
         url: String,
         name: String,
         userAgent: String?,
-        mimeType: String?,
         cookie: String?,
         proxyPort: Int,
     ) {
@@ -200,8 +213,7 @@ object BrowserDownloads {
                             .build()
                     client.newCall(request).execute().use { response ->
                         if (!response.isSuccessful) error("HTTP ${response.code}")
-                        val type = mimeType?.takeIf { it.isNotBlank() && it != "application/octet-stream" } ?: response.body.contentType()?.let { "${it.type}/${it.subtype}" }
-                        write(app, name, type) { out -> response.body.byteStream().use { it.copyTo(out) } }
+                        write(app, name) { out -> response.body.byteStream().use { it.copyTo(out) } }
                     }
                 }.onFailure { Log.w(TAG, "Download failed for $url", it) }
                     .getOrDefault(false)
@@ -209,26 +221,26 @@ object BrowserDownloads {
         }
     }
 
-    /** Saves a `data:` URL (`data:[mime][;base64],payload`) the user asked for directly. */
-    fun saveDataUrl(
-        context: Context,
+    /** Saves a `data:` URL (`data:[mime][;base64],payload`) the user asked for directly, decoded off the main thread. */
+    private fun saveDataUrl(
+        app: Context,
         dataUrl: String,
         suggestedName: String?,
     ) {
-        val data = BrowserDownloadRules.decodeDataUrl(dataUrl) ?: return
-        val mime = data.mimeType ?: "application/octet-stream"
-        writeInBackground(context.applicationContext, safeName(suggestedName, mime), mime, data.bytes)
+        decoder.execute {
+            val data = runCatching { BrowserDownloadRules.decodeDataUrl(dataUrl) }.getOrNull() ?: return@execute
+            writeInBackground(app, safeName(suggestedName, data.mimeType), data.bytes)
+        }
     }
 
     private fun writeInBackground(
         app: Context,
         name: String,
-        mimeType: String?,
         bytes: ByteArray,
     ) {
         if (bytes.size > MAX_INLINE_BYTES) return
         io.execute {
-            val ok = runCatching { write(app, name, mimeType) { it.write(bytes) } }.getOrDefault(false)
+            val ok = runCatching { write(app, name) { it.write(bytes) } }.getOrDefault(false)
             toast(app, app.getString(if (ok) CommonsR.string.browser_download_saved else CommonsR.string.browser_download_failed, name))
         }
     }
@@ -241,7 +253,6 @@ object BrowserDownloads {
     private fun write(
         context: Context,
         name: String,
-        mimeType: String?,
         body: (OutputStream) -> Unit,
     ): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -249,7 +260,9 @@ object BrowserDownloads {
             val values =
                 ContentValues().apply {
                     put(MediaStore.Downloads.DISPLAY_NAME, name)
-                    mimeType?.let { put(MediaStore.Downloads.MIME_TYPE, it) }
+                    // Typed by the approved name alone: a page- or server-supplied type that disagrees with
+                    // the extension would make MediaStore append its own ("invoice.pdf" -> "invoice.pdf.apk").
+                    put(MediaStore.Downloads.MIME_TYPE, mimeTypeOf(name))
                     put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                     put(MediaStore.Downloads.IS_PENDING, 1)
                 }
@@ -269,22 +282,27 @@ object BrowserDownloads {
         return true
     }
 
-    /** A plain filename: the page's suggestion without path parts, else "download" + the MIME's extension. */
+    /**
+     * The file name to save under: the page's suggestion made safe ([BrowserDownloadRules.safeFileName]),
+     * else "download" + the MIME's extension.
+     */
     private fun safeName(
         suggested: String?,
         mimeType: String?,
     ): String {
-        val base =
-            suggested
-                ?.substringAfterLast('/')
-                ?.substringAfterLast('\\')
-                ?.replace(unsafeNameChars, "_")
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() && it != "." && it != ".." }
-        if (base != null) return base.take(120)
+        BrowserDownloadRules.safeFileName(suggested)?.let { return it }
         val ext = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
         return if (ext != null) "download.$ext" else "download"
     }
+
+    /** The MIME type [name]'s extension implies, or octet-stream, which MediaStore stores under the name as given. */
+    private fun mimeTypeOf(name: String): String =
+        name
+            .substringAfterLast('.', "")
+            .lowercase()
+            .takeIf { it.isNotEmpty() }
+            ?.let { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
+            ?: "application/octet-stream"
 
     private fun toast(
         context: Context,

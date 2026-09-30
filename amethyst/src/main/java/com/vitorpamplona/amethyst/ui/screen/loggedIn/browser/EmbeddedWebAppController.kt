@@ -129,7 +129,7 @@ class EmbeddedWebAppController(
     /** The camera / microphone / location request the page is waiting on, if any. */
     val pendingPermission = mutableStateOf<EmbeddedPermissionRequest?>(null)
 
-    /** The inline download awaiting the user's consent, if any. */
+    /** The download the page started that awaits the user's consent, if any. */
     val pendingDownload = mutableStateOf<EmbeddedDownloadRequest?>(null)
 
     /** The certificate of the page on screen, once page info asked for it (null for none, or not yet). */
@@ -377,7 +377,7 @@ class EmbeddedWebAppController(
                 val origin = data.getString(NappletBrowserContract.KEY_BROWSER_ORIGIN)
                 val name = data.getString(NappletBrowserContract.KEY_DOWNLOAD_NAME).orEmpty()
                 // An unnamed/absent origin means the sandbox couldn't even state who is asking: refuse.
-                if (origin == null || name.isEmpty() || pendingDownload.value != null) {
+                if (origin == null || name.isEmpty() || pendingDownload.value != null || pendingDialog.value != null || pendingPermission.value != null) {
                     answerDownload(id, allowed = false)
                     return true
                 }
@@ -387,8 +387,13 @@ class EmbeddedWebAppController(
                         origin = origin,
                         fileName = name,
                         sizeBytes = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, -1L),
+                        sourceHost = data.getString(NappletBrowserContract.KEY_DOWNLOAD_SOURCE),
                         risky = data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, false),
                     )
+            }
+            NappletBrowserContract.MSG_DOWNLOAD_CANCEL -> {
+                val id = msg.data?.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)
+                if (pendingDownload.value?.id == id) pendingDownload.value = null
             }
             NappletBrowserContract.MSG_FULLSCREEN -> isFullscreen.value = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
             NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
@@ -509,7 +514,7 @@ class EmbeddedWebAppController(
         }
     }
 
-    /** Answers the download-consent card for [id]: true saves the bytes the sandbox already holds. */
+    /** Answers the download-consent card for [id]: true lets the sandbox fetch or write the file it described. */
     fun answerDownload(
         id: Long,
         allowed: Boolean,

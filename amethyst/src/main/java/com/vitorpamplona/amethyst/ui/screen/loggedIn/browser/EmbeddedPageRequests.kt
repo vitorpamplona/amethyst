@@ -51,5 +51,6 @@ data class EmbeddedDownloadRequest(
     val origin: String,
     val fileName: String,
     val sizeBytes: Long,
+    val sourceHost: String?,
     val risky: Boolean,
 )

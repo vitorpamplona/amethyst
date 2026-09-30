@@ -188,7 +188,7 @@ object NappletBrowserContract {
      * Provider → client: a download the page started (an attachment, `<a download>`, or an inline
      * `browser.download`) needs the user's consent before anything is fetched or written into the shared
      * Downloads collection. Carries [KEY_DOWNLOAD_ID], the WebView-reported [KEY_BROWSER_ORIGIN] (never a
-     * page-supplied field), the sanitized [KEY_DOWNLOAD_NAME], [KEY_DOWNLOAD_SIZE], and
+     * page-supplied field), the sanitized [KEY_DOWNLOAD_NAME], [KEY_DOWNLOAD_SIZE], [KEY_DOWNLOAD_SOURCE], and
      * [KEY_DOWNLOAD_RISKY] (an install-or-script-like extension). Answered with
      * [MSG_DOWNLOAD_CONSENT_RESULT] on every outcome; the bytes themselves never leave the `:napplet` process.
      */
@@ -196,6 +196,9 @@ object NappletBrowserContract {
 
     /** Client → provider: the user's answer to [MSG_DOWNLOAD_CONSENT]: [KEY_DOWNLOAD_ID] + [KEY_DOWNLOAD_ALLOWED]. */
     const val MSG_DOWNLOAD_CONSENT_RESULT = 35
+
+    /** Provider → client: withdraw the [MSG_DOWNLOAD_CONSENT] card [KEY_DOWNLOAD_ID] (its tab closed). */
+    const val MSG_DOWNLOAD_CANCEL = 36
 
     const val KEY_CAN_GO_FORWARD = "canGoForward"
     const val KEY_FIND_QUERY = "findQuery"
@@ -227,6 +230,9 @@ object NappletBrowserContract {
 
     /** The size in bytes the consented download will write, or -1 when the server didn't say. */
     const val KEY_DOWNLOAD_SIZE = "downloadSize"
+
+    /** The host a network download is fetched from (absent for inline data), shown when it isn't the page's. */
+    const val KEY_DOWNLOAD_SOURCE = "downloadSource"
 
     /** Whether [KEY_DOWNLOAD_NAME]'s extension is one the user should double-check (installer/script-like). */
     const val KEY_DOWNLOAD_RISKY = "downloadRisky"

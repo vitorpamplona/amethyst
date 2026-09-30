@@ -141,6 +141,7 @@ class BrowserChromeHost(
         val security: BrowserChrome.Security,
         val fileName: String,
         val sizeBytes: Long,
+        val sourceHost: String?,
         val risky: Boolean,
         val answer: (allow: Boolean) -> Unit,
     )
@@ -371,6 +372,7 @@ class BrowserChromeHost(
                     security = pending.security,
                     fileName = pending.fileName,
                     sizeBytes = pending.sizeBytes,
+                    sourceHost = pending.sourceHost,
                     risky = pending.risky,
                     onAllow = {
                         downloadPrompt = null

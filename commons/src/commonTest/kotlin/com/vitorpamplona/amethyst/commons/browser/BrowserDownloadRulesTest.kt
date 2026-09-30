@@ -28,6 +28,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TestTimeSource
 
@@ -82,12 +83,47 @@ class BrowserDownloadRulesTest {
     }
 
     @Test
+    fun base64MarkerMustBeTheLastParameter() {
+        assertEquals("aGk", BrowserDownloadRules.decodeDataUrl("data:text/plain;base64;x=y,aGk")!!.bytes.decodeToString())
+    }
+
+    @Test
+    fun percentDecodingCountsBytesBeforeAllocating() {
+        assertEquals(3, BrowserDownloadRules.decodeDataUrl("data:,%E4%B8%AD", maxBytes = 3)!!.bytes.size)
+        assertEquals("中", BrowserDownloadRules.decodeDataUrl("data:,中", maxBytes = 3)!!.bytes.decodeToString())
+        assertNull(BrowserDownloadRules.decodeDataUrl("data:,中中", maxBytes = 5))
+        assertEquals(4, BrowserDownloadRules.decodeDataUrl("data:,\uD83D\uDE00", maxBytes = 4)!!.bytes.size)
+        // A lone surrogate must not overflow the pre-counted buffer.
+        assertTrue(BrowserDownloadRules.decodeDataUrl("data:,a\uDE00b%41")!!.bytes.isNotEmpty())
+    }
+
+    @Test
+    fun safeFileNameStripsPathsAndInvisibleCharacters() {
+        assertEquals("evil.apk", BrowserDownloadRules.safeFileName("../../evil.apk"))
+        assertEquals("evil.apk", BrowserDownloadRules.safeFileName("C:\\x\\evil.apk"))
+        assertEquals("a_b_.pdf", BrowserDownloadRules.safeFileName("a:b?.pdf"))
+        assertEquals("invoicegpj.apk", BrowserDownloadRules.safeFileName("invoice\u202Egpj.apk"))
+        assertEquals("ab.txt", BrowserDownloadRules.safeFileName("a\u200Bb\u0085.txt"))
+        assertNull(BrowserDownloadRules.safeFileName(".."))
+        assertNull(BrowserDownloadRules.safeFileName("  \u200F "))
+        assertNull(BrowserDownloadRules.safeFileName(null))
+    }
+
+    @Test
+    fun safeFileNameKeepsTheExtensionWhenShortening() {
+        val name = BrowserDownloadRules.safeFileName("photo.jpg" + "x".repeat(300) + ".apk")!!
+        assertEquals(BrowserDownloadRules.MAX_NAME_LENGTH, name.length)
+        assertTrue(name.endsWith(".apk"))
+        assertTrue(BrowserDownloadRules.isRisky(name))
+    }
+
+    @Test
     fun cooldownHoldsOffOnlyTheAnsweredOrigin() {
         val clock = TestTimeSource()
-        val cooldown = DownloadCooldown(1.seconds, clock)
+        val cooldown = DownloadCooldown(1.seconds, 1.minutes, clock)
         assertTrue(cooldown.allows("https://a.example"))
 
-        cooldown.answered("https://a.example")
+        cooldown.answered("https://a.example", allowed = true)
         assertFalse(cooldown.allows("https://a.example"))
         assertTrue(cooldown.allows("https://b.example"))
 
@@ -95,5 +131,31 @@ class BrowserDownloadRulesTest {
         assertFalse(cooldown.allows("https://a.example"))
         clock += 1.milliseconds
         assertTrue(cooldown.allows("https://a.example"))
+    }
+
+    @Test
+    fun cooldownDoublesOnEachRefusalAndResetsOnSave() {
+        val clock = TestTimeSource()
+        val cooldown = DownloadCooldown(1.seconds, 4.seconds, clock)
+        val site = "https://a.example"
+
+        cooldown.answered(site, allowed = false) // 1s
+        clock += 1.seconds
+        assertTrue(cooldown.allows(site))
+        cooldown.answered(site, allowed = false) // 2s
+        clock += 1.seconds
+        assertFalse(cooldown.allows(site))
+        clock += 1.seconds
+        assertTrue(cooldown.allows(site))
+        cooldown.answered(site, allowed = false) // 4s
+        cooldown.answered(site, allowed = false) // capped at 4s
+        clock += 3.seconds
+        assertFalse(cooldown.allows(site))
+        clock += 1.seconds
+        assertTrue(cooldown.allows(site))
+
+        cooldown.answered(site, allowed = true) // back to 1s
+        clock += 1.seconds
+        assertTrue(cooldown.allows(site))
     }
 }

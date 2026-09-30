@@ -316,8 +316,9 @@ class NappletBrowserService : Service() {
                 val data = msg.data ?: return true
                 val pending = pendingDownloads.remove(data.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)) ?: return true
                 val tab = tabs[pending.sessionId] ?: return true
-                tab.downloadCooldown.answered(pending.origin)
-                if (data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_ALLOWED, false)) pending.offer.save(this)
+                val allowed = data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_ALLOWED, false)
+                tab.downloadCooldown.answered(pending.origin, allowed)
+                if (allowed) pending.offer.save(this)
             }
             NappletBrowserContract.MSG_EXIT_FULLSCREEN -> tabFor(msg)?.let { exitFullscreen(it) }
             NappletBrowserContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
@@ -470,8 +471,12 @@ class NappletBrowserService : Service() {
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
         cancelPending(tab)
-        // An unanswered download card dies with its tab: nothing is saved, and its bytes are freed.
-        pendingDownloads.values.removeAll { it.sessionId == sessionId }
+        // An unanswered download card dies with its tab: nothing is saved, its bytes are freed, and the
+        // client is told so its card doesn't linger with a Save that does nothing.
+        pendingDownloads.entries.filter { it.value.sessionId == sessionId }.forEach { (id, _) ->
+            pendingDownloads.remove(id)
+            sendToClient(tab, NappletBrowserContract.MSG_DOWNLOAD_CANCEL) { putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id) }
+        }
         tab.customViewCallback?.onCustomViewHidden()
         tab.customViewCallback = null
         tab.customView = null
@@ -489,7 +494,8 @@ class NappletBrowserService : Service() {
         wv.webChromeClient = BrowserChromeClient(tab)
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             if (tab == null) return@setDownloadListener
-            val origin = wv.url?.let(BrowserChrome::originOf) ?: return@setDownloadListener
+            // The page's origin; a fresh popup still on about:blank has none, so name the file's own.
+            val origin = wv.url?.let(BrowserChrome::originOf) ?: BrowserChrome.originOf(url) ?: return@setDownloadListener
             if (!canOfferDownload(tab, origin)) return@setDownloadListener
             // Read on the main thread: the cookie jar is the tab's own per-account WebView profile.
             val cookie = BrowserWebTools.cookieManager(wv).getCookie(url)
@@ -1056,14 +1062,19 @@ class NappletBrowserService : Service() {
     }
 
     /**
-     * Whether [origin] may put a download card up in [tab] now: never over the tab's card already showing
-     * (so a page can't swap the name under the user's finger) or one still being prepared (so a page
-     * can't queue decodes), and not within the cooldown after its last card was answered.
+     * Whether [origin] may put a download card up in [tab] now: never over another of the tab's page prompts
+     * (so a page can't swap the name under the user's finger, or pop the card where a dialog's button just
+     * was), never while an offer is still being prepared (so a page can't queue decodes), and not within
+     * its cooldown.
      */
     private fun canOfferDownload(
         tab: BrowserTab,
         origin: String,
-    ) = !tab.preparingDownload && pendingDownloads.values.none { it.sessionId == tab.sessionId } && tab.downloadCooldown.allows(origin)
+    ) = !tab.preparingDownload &&
+        tab.jsDialogs.isEmpty() &&
+        tab.permissionRequests.isEmpty() &&
+        pendingDownloads.values.none { it.sessionId == tab.sessionId } &&
+        tab.downloadCooldown.allows(origin)
 
     /** Runs [prepare] (which answers exactly once, on the main thread) and relays the offer it produces. */
     private fun prepareDownloadOffer(
@@ -1095,6 +1106,7 @@ class NappletBrowserService : Service() {
                 putString(NappletBrowserContract.KEY_BROWSER_ORIGIN, origin)
                 putString(NappletBrowserContract.KEY_DOWNLOAD_NAME, offer.fileName)
                 putLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, offer.sizeBytes)
+                putString(NappletBrowserContract.KEY_DOWNLOAD_SOURCE, offer.sourceHost)
                 putBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, offer.risky)
             }
         if (sent) pendingDownloads[id] = PendingDownload(tab.sessionId, origin, offer)

@@ -410,10 +410,9 @@ private fun EmbeddedPageUi(
         }
     }
 
-    // A download the page started: nothing is fetched or saved until this is answered.
-    // The card shows the sanitized file name and exact byte count the sandbox will write, headed by the
-    // WebView-reported origin (never a page-supplied field), with a warning for installer/script-like
-    // extensions — the social-engineering payload names the disclosure calls out ("invoice.apk").
+    // A download the page started: nothing is fetched or saved until this is answered. The card shows the
+    // file name that would be saved, its size and source host, headed by the WebView-reported origin (never
+    // a page-supplied field), with a warning for names that can be installed or run ("invoice.apk").
     val downloadRequest by controller.pendingDownload
     downloadRequest?.let { request ->
         Dialog(onDismissRequest = { controller.answerDownload(request.id, allowed = false) }) {
@@ -422,6 +421,7 @@ private fun EmbeddedPageUi(
                 security = ui.security,
                 fileName = request.fileName,
                 sizeBytes = request.sizeBytes,
+                sourceHost = request.sourceHost,
                 risky = request.risky,
                 onAllow = { controller.answerDownload(request.id, allowed = true) },
                 onDeny = { controller.answerDownload(request.id, allowed = false) },
