@@ -48,6 +48,9 @@ import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signe
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
@@ -57,9 +60,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers

@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.Refreshi
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -93,7 +94,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotNewMessageViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.EditingMessageBanner
 import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
