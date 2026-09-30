@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
@@ -44,6 +45,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -182,20 +184,29 @@ fun ZoomableImageDialog(
         val activityWindow = getActivityWindow()
         val dialogWindow = getDialogWindow()
 
-        if (activityWindow != null && dialogWindow != null) {
-            // Preserve any brightness override already applied to the dialog window (e.g. by the
-            // fullscreen swipe controls). This block re-runs on recomposition (orientation change
-            // re-reads `orientation` above), and copying the activity attributes would otherwise
-            // reset screenBrightness and snap the user's brightness back mid-session.
-            val currentBrightness = dialogWindow.attributes.screenBrightness
-            val attributes = WindowManager.LayoutParams()
-            attributes.copyFrom(activityWindow.attributes)
-            attributes.type = dialogWindow.attributes.type
-            // Disable the system dim so the thumbnail stays visible behind the growing dialog.
-            attributes.dimAmount = 0f
-            attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
-            attributes.screenBrightness = currentBrightness
-            dialogWindow.attributes = attributes
+        // Keyed, not inline: this content recomposes on every frame of a pager swipe (the image
+        // bounds it reads move), and each assignment below is a window-manager round trip.
+        DisposableEffect(orientation, activityWindow, dialogWindow) {
+            if (activityWindow != null && dialogWindow != null) {
+                // Preserve what the dialog window owns: the brightness override applied by the
+                // fullscreen swipe controls, and the HDR mode [RequestHdrFor] manages for the
+                // image on screen. Copying the activity's instead would snap brightness back
+                // mid-session and cap or force HDR by whatever the feed behind happens to show.
+                val current = dialogWindow.attributes
+                val attributes = WindowManager.LayoutParams()
+                attributes.copyFrom(activityWindow.attributes)
+                attributes.type = current.type
+                // Disable the system dim so the thumbnail stays visible behind the growing dialog.
+                attributes.dimAmount = 0f
+                attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
+                attributes.screenBrightness = current.screenBrightness
+                attributes.colorMode = current.colorMode
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                    attributes.desiredHdrHeadroom = current.desiredHdrHeadroom
+                }
+                dialogWindow.attributes = attributes
+            }
+            onDispose {}
         }
 
         // Go fully immersive while the full-screen media viewer is open. Applies to full-screen
