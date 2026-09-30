@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -42,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionChoice
@@ -60,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_keypackage_relays_not
 import com.vitorpamplona.amethyst.commons.resources.marmot_skip_for_now
 import com.vitorpamplona.amethyst.commons.resources.marmot_use_outbox_relays
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -93,7 +92,7 @@ fun CreateGroupScreen(
     var isCreating by remember { mutableStateOf(false) }
     var showKeyPackageRelayDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val longNotice = rememberLongNotice()
 
     /**
      * Create the group, optionally after [prepare].
@@ -154,12 +153,7 @@ fun CreateGroupScreen(
             } catch (e: Exception) {
                 isCreating = false
                 launch(Dispatchers.Main) {
-                    Toast
-                        .makeText(
-                            context,
-                            loadStringRes(Res.string.marmot_failed_to_create_group, e.message),
-                            Toast.LENGTH_LONG,
-                        ).show()
+                    longNotice.show(loadStringRes(Res.string.marmot_failed_to_create_group, e.message))
                 }
             }
         }

@@ -220,7 +220,7 @@ class VoiceReplyViewModel : ViewModel() {
                         loadStringRes(Res.string.upload_error_title),
                         loadStringRes(
                             Res.string.upload_error_voice_message_exception,
-                            e.message ?: e.javaClass.simpleName,
+                            e.message ?: e::class.simpleName.orEmpty(),
                         ),
                     )
                 } finally {

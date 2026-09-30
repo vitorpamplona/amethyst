@@ -55,7 +55,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -85,11 +84,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpaceClosedFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpaceOpenFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpacePlannedFlag
 import com.vitorpamplona.amethyst.commons.ui.note.types.MeetingSpacePrivateFlag
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -292,7 +291,7 @@ private fun OpenNestRoomAction(
     val roomId = event.address().dTag
     if (serviceBase.isNullOrBlank() || endpoint.isNullOrBlank() || roomId.isBlank()) return
 
-    val context = LocalContext.current
+    val appPlatform = LocalAppPlatform.current
     // Filled button so the primary CTA is unmistakable; the actions
     // Row in the AppBar already centers its children vertically, but
     // we trim the default end padding so the button sits flush with
@@ -300,10 +299,7 @@ private fun OpenNestRoomAction(
     Button(
         onClick = {
             NestBridge.set(accountViewModel)
-            NestActivity.launch(
-                context = context,
-                addressValue = event.address().toValue(),
-            )
+            appPlatform.openNestRoom(event.address().toValue())
         },
         contentPadding = ButtonDefaults.ContentPadding,
         modifier = Modifier.padding(end = 8.dp),

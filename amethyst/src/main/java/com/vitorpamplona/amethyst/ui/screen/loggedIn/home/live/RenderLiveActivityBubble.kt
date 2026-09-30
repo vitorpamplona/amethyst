@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -39,9 +38,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.Gallery
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 
 @Composable
@@ -65,7 +64,7 @@ fun RenderLiveActivityBubble(
                 null
             }
         }
-    val context = LocalContext.current
+    val appPlatform = LocalAppPlatform.current
     FilledTonalButton(
         contentPadding = PaddingValues(start = 8.dp, end = 10.dp, bottom = 0.dp, top = 0.dp),
         onClick = {
@@ -75,10 +74,7 @@ fun RenderLiveActivityBubble(
                 val dTag = meetingEvent.address().dTag
                 if (!service.isNullOrBlank() && !endpoint.isNullOrBlank() && dTag.isNotBlank()) {
                     NestBridge.set(accountViewModel)
-                    NestActivity.launch(
-                        context = context,
-                        addressValue = meetingEvent.address().toValue(),
-                    )
+                    appPlatform.openNestRoom(meetingEvent.address().toValue())
                 } else {
                     // Fall back to the channel route so the user
                     // still lands somewhere — same as a malformed

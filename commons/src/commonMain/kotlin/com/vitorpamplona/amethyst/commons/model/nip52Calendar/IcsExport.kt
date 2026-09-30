@@ -20,14 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 /**
  * Serialises NIP-52 calendar events to RFC 5545 iCalendar (`.ics`) text. The output is the
@@ -47,8 +44,6 @@ import java.time.format.DateTimeFormatter
 object IcsExport {
     private const val PRODID = "-//Amethyst//NIP-52//EN"
     private const val CRLF = "\r\n"
-    private val UtcStamp: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
-    private val IsoBasicDate: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
 
     fun appointmentToIcs(
         event: Any,
@@ -189,14 +184,21 @@ object IcsExport {
         sb.append("CATEGORIES:").append(hashtags.joinToString(",") { escapeText(it) }).append(CRLF)
     }
 
-    private fun formatUtcInstant(unixSeconds: Long): String = UtcStamp.format(Instant.ofEpochSecond(unixSeconds).atOffset(ZoneOffset.UTC))
+    /** `yyyyMMdd'T'HHmmss'Z'` in UTC. */
+    private fun formatUtcInstant(unixSeconds: Long): String {
+        val date = SearchDate.civilFromDays(unixSeconds.floorDiv(SECONDS_PER_DAY))
+        val secondOfDay = unixSeconds.mod(SECONDS_PER_DAY)
+        return basicDate(date) + "T" + pad2(secondOfDay / 3600) + pad2(secondOfDay / 60 % 60) + pad2(secondOfDay % 60) + "Z"
+    }
 
-    private fun tryFormatBasicDate(iso: String): String? =
-        try {
-            IsoBasicDate.format(LocalDate.parse(iso))
-        } catch (_: Throwable) {
-            null
-        }
+    /** `yyyy-MM-dd` as `yyyyMMdd`, or null when [iso] is not a valid date. */
+    private fun tryFormatBasicDate(iso: String): String? = SearchDate.parse(iso)?.let(::basicDate)
+
+    private fun basicDate(date: SearchDate): String = date.year.toString().padStart(4, '0') + pad2(date.month.toLong()) + pad2(date.day.toLong())
+
+    private fun pad2(value: Long): String = value.toString().padStart(2, '0')
+
+    private const val SECONDS_PER_DAY = 86_400L
 
     /**
      * Escapes text per RFC 5545 §3.3.11: backslash, semicolon, comma, newline. Carriage

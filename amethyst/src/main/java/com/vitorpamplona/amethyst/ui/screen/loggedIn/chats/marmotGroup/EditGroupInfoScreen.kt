@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -40,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
@@ -58,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholde
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -92,7 +92,8 @@ fun EditGroupInfoScreen(
     var removeIcon by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
+    val longNotice = rememberLongNotice()
 
     val iconChanged = pickedIcon != null || removeIcon
     val avatarUrlChanged = avatarUrl.trim() != currentAvatarUrl?.url.orEmpty()
@@ -136,20 +137,13 @@ fun EditGroupInfoScreen(
                                 accountViewModel.setMarmotGroupAvatarUrl(nostrGroupId, avatarUrl.trim())
                             }
                             launch(Dispatchers.Main) {
-                                Toast
-                                    .makeText(context, loadStringRes(Res.string.marmot_group_info_updated), Toast.LENGTH_SHORT)
-                                    .show()
+                                shortNotice.show(loadStringRes(Res.string.marmot_group_info_updated))
                             }
                             nav.popBack()
                         } catch (e: Exception) {
                             isSaving = false
                             launch(Dispatchers.Main) {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        loadStringRes(Res.string.marmot_failed_to_update, e.message),
-                                        Toast.LENGTH_LONG,
-                                    ).show()
+                                longNotice.show(loadStringRes(Res.string.marmot_failed_to_update, e.message))
                             }
                         }
                     }
