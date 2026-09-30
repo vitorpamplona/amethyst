@@ -509,7 +509,7 @@ fun ConcordChannelListScreen(
                         onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
                         onTogglePrivate = { channelToConvert = ConcordChannelConversion(entry.key, name, toPrivate = !def.private) },
                         isPrivate = def.private,
-                        onRotateKey = if (holdsKey) ({ scope.launch { account.concord.rekeyConcordChannel(communityId, entry.key) } }) else null,
+                        onRotateKey = if (holdsKey) ({ accountViewModel.rotateConcordChannelKey(communityId, entry.key) }) else null,
                     )
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }

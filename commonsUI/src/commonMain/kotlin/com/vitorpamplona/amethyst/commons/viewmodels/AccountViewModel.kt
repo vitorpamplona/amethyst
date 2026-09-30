@@ -75,6 +75,9 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_done
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
 import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
@@ -647,6 +650,22 @@ class AccountViewModel(
                 else -> Res.string.concord_pin_failed_generic
             }
         toastManager.toast(Res.string.concord_pin_failed_title, message)
+    }
+
+    /**
+     * Rotate Private Channel [channelIdHex]'s key (CORD-06). The rotation publishes a chunk per
+     * member and can take a while, so both outcomes are toasted: a silent menu item left the
+     * user unsure whether anything happened, and a refused rotation keeps the old key live.
+     */
+    fun rotateConcordChannelKey(
+        communityId: String,
+        channelIdHex: HexKey,
+    ) = launchSigner {
+        if (account.concord.rekeyConcordChannel(communityId, channelIdHex)) {
+            toastManager.toast(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)
+        } else {
+            toastManager.toast(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
+        }
     }
 
     /** Promote/demote [member] as an Admin of [communityId] (from the Members roster; owner only takes effect). */

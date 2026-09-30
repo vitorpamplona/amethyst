@@ -3661,6 +3661,8 @@
     <string name="concord_channel_rename">Rename channel</string>
     <string name="concord_channel_rename_save">Rename</string>
     <string name="concord_channel_rotate_key">Rotate key</string>
+    <string name="concord_channel_rotate_key_done">Key rotated. Members who still have access receive the new key; everyone else is cut off from new messages.</string>
+    <string name="concord_channel_rotate_key_failed">The key was not rotated: a relay did not accept it, or you can no longer rotate this channel. The old key is still in use.</string>
     <string name="concord_channels_empty">No channels yet.</string>
     <string name="concord_create_action">Create</string>
     <string name="concord_create_failed">The community could not be created: no relay accepted it, or your community list could not be updated. Check the relays and try again.</string>
