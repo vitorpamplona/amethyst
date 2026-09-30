@@ -20,22 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
-import android.net.Uri
 import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.utils.Log
-import java.io.File
 
 /**
  * Encrypts a picked image with the MIP-01 v2 scheme (see [MarmotGroupImageEncryption])
@@ -50,7 +49,7 @@ class MarmotGroupIconUploader(
     val account: Account,
 ) {
     suspend fun upload(
-        uri: Uri,
+        uri: MediaUri,
         mimeType: String?,
         server: ServerName,
         uploader: MediaUploader,
@@ -105,13 +104,7 @@ class MarmotGroupIconUploader(
         } finally {
             // Delete the intermediate compressed temp file (compress returns the original
             // URI unchanged when it skips compression, so only delete a distinct temp).
-            if (compressed.uri != uri) {
-                try {
-                    compressed.uri.path?.let { path -> File(path).takeIf { it.exists() }?.delete() }
-                } catch (e: Exception) {
-                    Log.w("MarmotGroupIconUploader", "Failed to delete temp icon file", e)
-                }
-            }
+            if (compressed.uri != uri) uploader.discardTempFile(compressed.uri)
         }
     }
 
@@ -119,3 +112,15 @@ class MarmotGroupIconUploader(
         private const val DEFAULT_MIME = "image/jpeg"
     }
 }
+
+/**
+ * Encrypts and uploads a picked image as a group avatar (canonical `marmot-group-image-v1`
+ * scheme). The returned handle is later committed through
+ * [AccountViewModel.updateMarmotGroupMetadata] as `MarmotGroupIconChange.Set`; uploading is
+ * separate from that commit so the slow Blossom upload can show its own progress first.
+ */
+suspend fun AccountViewModel.uploadMarmotGroupIcon(
+    uri: MediaUri,
+    mimeType: String?,
+    uploader: MediaUploader,
+): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, uploader)

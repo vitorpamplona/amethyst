@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.record_a_message
 import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.components.AudioWaveformReadOnly
+import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatSecondsToTime
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.polls
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -57,13 +55,14 @@ import com.vitorpamplona.amethyst.commons.resources.confirm
 import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.commons.resources.poll_closing_date_time
 import com.vitorpamplona.amethyst.commons.resources.poll_closing_in
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
+import com.vitorpamplona.quartz.utils.currentTimeMillis
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,26 +71,28 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
     var showTimePicker by remember { mutableStateOf(false) }
 
     // Get current time details
-    val currentTime = Instant.ofEpochMilli(model.closedAt * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime()
+    // The deadline as a local wall-clock time: seconds since the epoch shifted by this zone's offset.
+    val localSeconds = model.closedAt + LocalClock.utcOffsetSeconds(model.closedAt)
+    val localSecondOfDay = localSeconds.mod(TimeUtils.ONE_DAY)
+    val currentYear = SearchDate.civilFromDays(localSeconds.floorDiv(TimeUtils.ONE_DAY)).year
 
     val datePickerState =
         rememberDatePickerState(
             initialSelectedDateMillis = model.closedAt * 1000,
-            yearRange = currentTime.year..2050,
+            yearRange = currentYear..2050,
             selectableDates =
                 object : SelectableDates {
                     override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                         // Only allow today and future dates
-                        return utcTimeMillis >= System.currentTimeMillis() - 86400000 // minus 24h buffer
+                        return utcTimeMillis >= currentTimeMillis() - 86400000 // minus 24h buffer
                     }
                 },
         )
-    val context = LocalContext.current
     val timePickerState =
         rememberTimePickerState(
-            initialHour = currentTime.hour,
-            initialMinute = currentTime.minute,
-            is24Hour = DateFormat.is24HourFormat(context),
+            initialHour = localSecondOfDay / TimeUtils.ONE_HOUR,
+            initialMinute = (localSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE,
+            is24Hour = rememberIs24HourClock(),
         )
 
     OutlinedCard(
@@ -148,10 +149,8 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
                                     (timePickerState.minute * TimeUtils.ONE_MINUTE)
                             } ?: TimeUtils.oneDayAhead()
 
-                        // Get the offset from UTC for the current instant in the local time zone
-                        val offset: ZoneOffset = ZoneId.systemDefault().rules.getOffset(Instant.now())
-
-                        model.closedAt = datetimeLocalTimeZone - offset.totalSeconds
+                        // Subtract this zone's current offset from UTC
+                        model.closedAt = datetimeLocalTimeZone - LocalClock.utcOffsetSeconds(TimeUtils.now())
 
                         showTimePicker = false
                     },

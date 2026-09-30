@@ -89,6 +89,9 @@ interface MediaUploader {
 
     /** The file name the picker reported for [uri] (Android's `DISPLAY_NAME`), if any. */
     fun displayName(uri: MediaUri): String? = uri.lastPathSegmentOrNull()
+
+    /** Deletes a temporary copy [compressIfNeeded] wrote, once the caller is done with it. */
+    fun discardTempFile(uri: MediaUri) = Unit
 }
 
 /** No media pipeline on this front end yet: every upload fails with a clear message. */

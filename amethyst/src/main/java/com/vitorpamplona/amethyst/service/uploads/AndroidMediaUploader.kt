@@ -612,4 +612,12 @@ class AndroidMediaUploader(
             val idx = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (idx >= 0 && it.moveToFirst()) it.getString(idx) else null
         }
+
+    override fun discardTempFile(uri: MediaUri) {
+        try {
+            uri.path?.let { path -> File(path).takeIf { it.exists() }?.delete() }
+        } catch (e: Exception) {
+            Log.w("AndroidMediaUploader", "Failed to delete temp file", e)
+        }
+    }
 }

@@ -140,6 +140,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraise
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapToButton
+import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordVoiceButton
+import com.vitorpamplona.amethyst.commons.ui.note.platform.VoiceMessagePreview
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
@@ -159,11 +162,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
-import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
 import com.vitorpamplona.amethyst.ui.note.creators.scheduling.ScheduleAtPicker
 import com.vitorpamplona.amethyst.ui.note.creators.scheduling.roundUpToNextQuarterHour
@@ -536,10 +536,9 @@ private fun NewPostScreenBody(
 
                 val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
                     .collectAsStateWithLifecycle()
-                val savedAccounts by com.vitorpamplona.amethyst.LocalPreferences
-                    .accountsFlow()
-                    .collectAsStateWithLifecycle()
-                val hasMultipleAccounts = (savedAccounts?.size ?: 0) > 1
+                val savedAccounts by accountViewModel.host.savedAccounts
+                    .collectAsStateWithLifecycle(emptySet())
+                val hasMultipleAccounts = savedAccounts.size > 1
                 postViewModel.scheduledForSec?.let { current ->
                     Row(
                         verticalAlignment = CenterVertically,

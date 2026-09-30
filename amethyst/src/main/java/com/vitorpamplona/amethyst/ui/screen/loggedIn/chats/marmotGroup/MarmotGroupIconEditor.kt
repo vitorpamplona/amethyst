@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,10 +30,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_change_photo
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_icon
 import com.vitorpamplona.amethyst.commons.resources.marmot_remove_photo
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
@@ -73,11 +74,13 @@ fun MarmotGroupIconEditor(
     onPick: (SelectedMedia) -> Unit,
     onRemove: () -> Unit,
 ) {
-    val resolver = LocalContext.current.contentResolver
-    val launcher =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) onPick(SelectedMedia(uri, resolver.getType(uri)))
+    var showPicker by remember { mutableStateOf(false) }
+    if (showPicker) {
+        GallerySelectSingle(imagesOnly = true) { media ->
+            showPicker = false
+            media?.let(onPick)
         }
+    }
 
     val model =
         when {
@@ -100,7 +103,7 @@ fun MarmotGroupIconEditor(
                 Modifier
                     .size(96.dp)
                     .clip(CircleShape)
-                    .let { if (enabled) it.clickable { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } else it },
+                    .let { if (enabled) it.clickable { showPicker = true } else it },
             loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
             loadRobohash = LocalDisplaySettings.current.loadRobohash,
         )
@@ -111,7 +114,7 @@ fun MarmotGroupIconEditor(
         ) {
             TextButton(
                 enabled = enabled,
-                onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onClick = { showPicker = true },
             ) {
                 Text(stringRes(if (hasIcon) Res.string.marmot_change_photo else Res.string.marmot_add_photo))
             }

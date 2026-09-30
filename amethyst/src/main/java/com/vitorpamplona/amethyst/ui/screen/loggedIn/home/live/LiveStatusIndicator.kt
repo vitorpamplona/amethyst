@@ -32,9 +32,8 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.service.OnlineChecker
+import com.vitorpamplona.amethyst.commons.service.isVideoOnline
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.checkVideoIsOnline
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -97,12 +96,12 @@ private suspend fun checkChannelIsOnline(
                         // Check if streaming URL is online, fall back to relay check
                         val streamingUrl = channel.info?.streaming()
                         if (!streamingUrl.isNullOrBlank()) {
-                            accountViewModel.checkVideoIsOnline(streamingUrl)
+                            accountViewModel.httpClientBuilder.isVideoOnline(streamingUrl)
                         } else {
                             // Check relay connection
                             val relayUrl = channel.relayHintUrl()
                             if (relayUrl != null) {
-                                OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
+                                accountViewModel.httpClientBuilder.isVideoOnline(relayUrl.url)
                             } else {
                                 false
                             }
@@ -113,7 +112,7 @@ private suspend fun checkChannelIsOnline(
                 is EphemeralChatChannel -> {
                     // Check relay connection for ephemeral chat
                     val relayUrl = channel.roomId.relayUrl
-                    OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
+                    accountViewModel.httpClientBuilder.isVideoOnline(relayUrl.url)
                 }
 
                 else -> {

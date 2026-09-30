@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -44,8 +45,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
+import okio.Path
 
 /**
  * The platform halves of the shared note renderer: what a note card needs that only the front end
@@ -437,6 +440,30 @@ interface NotePlatform {
         onOnchainRequest: (Long?) -> Unit,
         accountViewModel: AccountViewModel,
         nav: INav,
+    ) {}
+
+    /**
+     * The microphone button: records a voice message (up to [maxDurationSeconds]) and hands the
+     * finished recording to [onVoiceTaken].
+     */
+    @Composable
+    fun RecordVoiceButton(
+        onVoiceTaken: (RecordingResult) -> Unit,
+        maxDurationSeconds: Int?,
+    ) {}
+
+    /**
+     * Plays back a voice message before it is sent: [localFile] while it is only on the device,
+     * else [voiceMetadata]'s URL. [onReRecord] replaces it with a new recording.
+     */
+    @Composable
+    fun VoiceMessagePreview(
+        voiceMetadata: AudioMeta,
+        localFile: Path?,
+        onRemove: () -> Unit,
+        onReRecord: ((RecordingResult) -> Unit)?,
+        isUploading: Boolean,
+        modifier: Modifier,
     ) {}
 
     /** The editor for a new version of [edit], shown while [versionLookingAt] is on screen. */

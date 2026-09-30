@@ -189,6 +189,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapRail
 import com.vitorpamplona.amethyst.commons.ui.note.ZapRailIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
@@ -229,7 +230,6 @@ import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
-import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.paymentTargetStyleFor

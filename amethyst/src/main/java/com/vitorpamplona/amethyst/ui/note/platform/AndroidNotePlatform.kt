@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -45,13 +46,17 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.urlPreview
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
+import okio.Path
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent as AppRenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence as AppRenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.ui.actions.EditPostView as AppEditPostView
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppVoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview as AppLoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ReusableZapButton as AppReusableZapButton
@@ -621,6 +626,22 @@ object AndroidNotePlatform : NotePlatform {
         isFullscreen = true,
         accountViewModel = accountViewModel,
     )
+
+    @Composable
+    override fun RecordVoiceButton(
+        onVoiceTaken: (RecordingResult) -> Unit,
+        maxDurationSeconds: Int?,
+    ) = AppRecordVoiceButton(onVoiceTaken, maxDurationSeconds)
+
+    @Composable
+    override fun VoiceMessagePreview(
+        voiceMetadata: AudioMeta,
+        localFile: Path?,
+        onRemove: () -> Unit,
+        onReRecord: ((RecordingResult) -> Unit)?,
+        isUploading: Boolean,
+        modifier: Modifier,
+    ) = AppVoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
 
     @Composable
     override fun QuickZapAmountRow(

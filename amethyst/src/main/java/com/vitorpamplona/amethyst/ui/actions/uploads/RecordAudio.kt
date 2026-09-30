@@ -44,8 +44,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-const val MAX_VOICE_RECORD_SECONDS = 600
-
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RecordAudioBox(
