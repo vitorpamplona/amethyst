@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord06Rekey.SteppedChannelKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -121,7 +123,7 @@ class ConcordChannelKeyringTest {
     }
 
     @Test
-    fun olderKeysAreReadFromSeedAndPriorsButNeverWritten() {
+    fun olderKeysAreReadFromSeedAndPriors() {
         val wire =
             """{"entries":[{"community_id":"${"c0".repeat(32)}","added_at":1,
                "seed":{"community_id":"${"c0".repeat(32)}","owner":"${"0f".repeat(32)}","owner_salt":"${"5a".repeat(32)}","community_root":"${"22".repeat(32)}",
@@ -135,10 +137,41 @@ class ConcordChannelKeyringTest {
         assertEquals(10, ConcordChannelKeyring.nextChannelEpoch(held, chan, observedFloor = 9))
         assertEquals(1, ConcordChannelKeyring.nextChannelEpoch(held, other))
 
-        // A rotation we launch adds no prior of its own (CORD-02 §8 keeps intermediate keys out of the List).
-        val rotated = assertNotNull(ConcordChannelKeyring.withRotatedKey(held, chan, "13".repeat(32), 3))
+        // A rotation keeps the key it replaces as a prior; the new current key is never one.
+        val rotated = assertNotNull(ConcordChannelKeyring.withRotatedKey(held, chan, "13".repeat(32), 3, retiredAt = 7))
         val priors = rotated.privateChannels.single().extras[ConcordChannelKeyring.PRIORS] as JsonArray
-        assertEquals(1, priors.size)
+        assertEquals(2, priors.size)
+        assertEquals(JsonPrimitive(7L), priors.last().jsonObject["retired_at"])
         assertFalse(ConcordChannelKeyring.historicalKeys(rotated, chan).any { it.key == "13".repeat(32) })
+    }
+
+    @Test
+    fun priorsKeepOnlyTheNewestEpochs() {
+        var e = entry(listOf(PrivateChannelKey(chan, 1.toString(16).padStart(64, '0'), 1, "mods")))
+        for (epoch in 2L..(ConcordChannelKeyring.MAX_PRIORS + 10)) {
+            e = assertNotNull(ConcordChannelKeyring.withRotatedKey(e, chan, epoch.toString(16).padStart(64, '0'), epoch, retiredAt = epoch))
+        }
+        val epochs = ConcordChannelKeyring.historicalKeys(e, chan).map { it.epoch }
+        assertEquals(ConcordChannelKeyring.MAX_PRIORS, epochs.size)
+        assertEquals(ConcordChannelKeyring.MAX_PRIORS + 9L, epochs.first())
+    }
+
+    @Test
+    fun aRotationKeepsEveryEarlierKeyReadableAfterARoundTrip() {
+        // A channel created after the join has no `seed` anchor: the List is the only place its
+        // older keys can live, so a rotation that dropped them lost that history on the next restart.
+        val held = entry(listOf(PrivateChannelKey(chan, k0, 0, "mods")))
+        val one = roundTrip(assertNotNull(ConcordChannelKeyring.withRotatedKey(held, chan, k1, 1, retiredAt = 10)))
+        // An adoption that walked over epoch 2 keeps the skipped key too.
+        val three =
+            roundTrip(
+                assertNotNull(
+                    ConcordChannelKeyring.withRotatedKey(one, chan, "13".repeat(32), 3, retiredAt = 30, steppedOver = listOf(SteppedChannelKey(k2.hexToByteArray(), 2, 20))),
+                ),
+            )
+        assertEquals(listOf(2L to k2, 1L to k1, 0L to k0), ConcordChannelKeyring.historicalKeys(three, chan).map { it.epoch to it.key })
+        // Re-adding a prior already recorded does not duplicate it.
+        val again = assertNotNull(ConcordChannelKeyring.withRotatedKey(three, chan, "14".repeat(32), 4, retiredAt = 40, steppedOver = listOf(SteppedChannelKey(k2.hexToByteArray(), 2, 20))))
+        assertEquals(4, (again.privateChannels.single().extras[ConcordChannelKeyring.PRIORS] as JsonArray).size)
     }
 }

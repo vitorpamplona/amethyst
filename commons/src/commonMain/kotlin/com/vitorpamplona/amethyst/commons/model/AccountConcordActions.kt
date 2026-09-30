@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
@@ -125,8 +126,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -163,6 +167,9 @@ private const val MAX_REFOUNDING_RECIPIENTS = 5_000
 // How many channel epochs a privatisation probes for earlier rotations (Armada MAX_PROBED_CHANNEL_EPOCH).
 private const val MAX_PROBED_CHANNEL_EPOCH = 32L
 
+/** How long leaving waits for a relay to take the Guestbook LEAVE before dropping the community anyway. */
+private const val LEAVE_CONFIRM_SECS = 10L
+
 /** A lowercase 32-byte hex key (the Guestbook `invite` tag's creator). */
 private val HEX64 = Regex("^[0-9a-f]{64}$")
 
@@ -188,11 +195,19 @@ class AccountConcordActions(
         inviteCreator: HexKey? = null,
         inviteLabel: String? = null,
         fetchedWraps: List<Event> = emptyList(),
+        readmit: Boolean = false,
     ): Boolean {
         // False when the List could not take the membership (not loaded, or every held fragment is
         // full while others are missing, CORD-02 §8). Callers must say so: the community would
         // otherwise look joined now and be gone after a restart.
-        if (!persistConcordEntry(entry)) return false
+        // A readmission merges into the entry the List holds at write time, keeping what it knew.
+        val persisted =
+            if (readmit) {
+                updateConcordEntry(entry.id) { cur -> ConcordDirectInviteInbox.readmittedEntry(cur, entry) } || persistConcordEntry(entry)
+            } else {
+                persistConcordEntry(entry)
+            }
+        if (!persisted) return false
         // The session is built asynchronously from the Community List flow. Every wrap that reaches
         // the cache before it exists is kept as an unclaimed note, and the live subscription's copy
         // of the same wrap is then deduplicated away, so the community showed "No channels yet"
@@ -700,8 +715,40 @@ class AccountConcordActions(
         return if (privatizeConcordCommunity(communityId)) ConcordRevokeResult.PRIVATIZED else ConcordRevokeResult.PRIVATIZED_REFOUND_PENDING
     }
 
-    /** Leave a joined Concord community: drop it from the Community List and tombstone it (CORD-02 §8). */
-    suspend fun leaveConcordCommunity(communityId: String): Boolean = writeConcordList { it.unfollow(communityId) }
+    /**
+     * Leave a joined Concord community: tell it with a self-signed Guestbook LEAVE (CORD-02 §5), then
+     * drop it from the Community List and tombstone it (CORD-02 §8). Without the LEAVE we stayed on
+     * everyone's roster, and every later Refounding kept re-keying us.
+     *
+     * The LEAVE goes first, confirmed: gated relays only take a plane wrap after AUTH as the plane
+     * key, and those secrets come from the live session, which the List write tears down. The wait
+     * is bounded so a community whose relays are dead still gets left; callers run this off the UI.
+     */
+    suspend fun leaveConcordCommunity(communityId: String): Boolean {
+        val entry = account.concordSessions.sessionFor(communityId)?.entry
+        if (entry != null && account.isWriteable()) {
+            val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+            if (relays.isNotEmpty()) {
+                // Best-effort from signing on: a remote signer that refuses or times out must not
+                // keep the user in a community they asked to leave.
+                val announced =
+                    try {
+                        val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
+                        val leave = ConcordActions.buildGuestbookLeave(account.signer, guestbook, TimeUtils.now())
+                        account.client.publishAndConfirm(leave, relays, LEAVE_CONFIRM_SECS)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("Concord", "Leaving $communityId: could not sign or publish the Guestbook LEAVE", e)
+                        false
+                    }
+                if (!announced) {
+                    Log.w("Concord") { "Leaving $communityId: no relay accepted the Guestbook LEAVE; members keep listing us" }
+                }
+            }
+        }
+        return writeConcordList { it.unfollow(communityId) }
+    }
 
     /**
      * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
@@ -786,6 +833,7 @@ class AccountConcordActions(
         inviteRef: String?,
         inviteCreator: HexKey?,
         inviteLabel: String?,
+        readmitting: ConcordCommunityListEntry? = null,
     ): ConcordInviteResult {
         val relays = servedBy
 
@@ -802,7 +850,7 @@ class AccountConcordActions(
             account.concordChannelList.liveCommunities.value
                 .firstOrNull { it.id == bundle.communityId }
         var rejoined: ConcordCommunityListEntry? = null
-        if (held != null) {
+        if (held != null && readmitting == null) {
             val heldState =
                 account.concordSessions
                     .sessionFor(held.id)
@@ -881,7 +929,8 @@ class AccountConcordActions(
                 // Anchor for stranded recovery (null for a Direct Invite, which has no link).
                 inviteRef = inviteRef,
             )
-        if (!joinConcordCommunity(entry, creator, label, planeWraps)) return ConcordInviteResult.NotSaved
+        // A readmission keeps the held entry's roots, cuts and keys (ConcordDirectInviteInbox.readmittedEntry).
+        if (!joinConcordCommunity(entry, creator, label, planeWraps, readmit = readmitting != null)) return ConcordInviteResult.NotSaved
         return ConcordInviteResult.Joined(bundle.communityId)
     }
 
@@ -900,11 +949,37 @@ class AccountConcordActions(
         )
 
     /**
+     * Wrap ids of Direct Invites whose Accept is running. A join can take many seconds (it waits on
+     * the Community List), and a card left on screen meanwhile had both buttons disabled and nothing
+     * to say why, so an invite being accepted is hidden. A failed accept puts it back.
+     */
+    private val acceptingConcordDirectInvites = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /**
      * The parked Direct Invites a UI should show, followed senders first, then newest: invites for
      * communities we don't hold (nor left after they were sent), plus catch-ups for ones we do
      * ([ConcordDirectInviteInbox.visible]).
      */
     val pendingConcordDirectInvites: StateFlow<List<ConcordDirectInviteView>> =
+        combine(
+            visibleConcordDirectInvites(),
+            acceptingConcordDirectInvites,
+        ) { visible, accepting -> if (accepting.isEmpty()) visible else visible.filterNot { it.wrapId in accepting } }
+            // `visible()` re-runs on every session revision and mints new (identity-equal only) views,
+            // and each emission clears and rebuilds every Notifications feed. Emit only when something
+            // a row shows or ranks by actually moved.
+            .distinctUntilChangedBy { list -> list.map { InviteRowKey(it.wrapId, it.catchUp, it.expired, it.followedSender, it.newChannelIds) } }
+            .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
+
+    private data class InviteRowKey(
+        val wrapId: HexKey,
+        val catchUp: Boolean,
+        val expired: Boolean,
+        val followedSender: Boolean,
+        val newChannelIds: List<HexKey>,
+    )
+
+    private fun visibleConcordDirectInvites() =
         combine(
             directInviteInbox.pending,
             account.concordChannelList.liveCommunities,
@@ -925,18 +1000,53 @@ class AccountConcordActions(
                         ?.state
                         ?.value
                 },
+                me = account.signer.pubKey,
             )
-        }.stateIn(account.scope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }
+
+    /**
+     * [pendingConcordDirectInvites] as feed rows: New Requests on Messages and cards on Notifications.
+     * Eager because the feed filters read `.value` directly, with no subscriber of their own.
+     */
+    val pendingConcordDirectInviteNotes: StateFlow<List<ConcordDirectInviteNote>> =
+        pendingConcordDirectInvites
+            .map { list -> list.filterNot { it.catchUp }.map { ConcordDirectInviteNote(it) } }
+            .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
 
     /**
      * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM
      * inbox relays (kind 10050, plus the NIP-65 read and private/local relays the DM feed already
-     * reads), else the stock Concord set.
+     * reads), plus the stock Concord set.
      */
     private fun concordDirectInviteScanRelays(): Set<NormalizedRelayUrl> =
-        account.dmRelays.flow.value.ifEmpty {
-            ConcordActions.directInviteDeliveryRelays(null)
+        // Our inbox relays AND the stock set, always: a sender that could not find our relay lists
+        // (none published, or none reachable) delivers to the stock set (CORD-05 §6), and we can't
+        // know which case a sender hit. Sweeping only our DM relays missed every invite from such a
+        // sender; Armada's to an account with no published kind 10050 never arrived.
+        account.dmRelays.flow.value + ConcordActions.directInviteDeliveryRelays(null)
+
+    private val directInviteSweep = Mutex()
+
+    /**
+     * Runs a Direct Invite sweep ([refreshConcordDirectInvites]) in the account's scope, unless one
+     * is already running. It used to run in the invite list's composition, which the hub replaces
+     * the moment its communities load, so every sweep was cancelled before a relay answered and no
+     * invite delivered to the stock set ever arrived.
+     */
+    fun requestConcordDirectInviteSweep() {
+        account.scope.launch {
+            if (!directInviteSweep.tryLock()) return@launch
+            try {
+                refreshConcordDirectInvites()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("Concord", "Direct Invite sweep failed", e)
+            } finally {
+                directInviteSweep.unlock()
+            }
         }
+    }
 
     /**
      * Sweeps our inbox relays for Direct Invite wraps
@@ -1059,6 +1169,22 @@ class AccountConcordActions(
      */
     suspend fun acceptConcordDirectInvite(wrapId: HexKey): ConcordInviteResult {
         if (!account.isWriteable()) return ConcordInviteResult.InvalidLink
+        // Check-and-set in one step: two accepts of one invite would run two joins and announce two
+        // Guestbook JOINs.
+        var claimed = false
+        acceptingConcordDirectInvites.update { current ->
+            claimed = wrapId !in current
+            if (claimed) current + wrapId else current
+        }
+        if (!claimed) return ConcordInviteResult.InProgress
+        try {
+            return acceptConcordDirectInviteNow(wrapId)
+        } finally {
+            acceptingConcordDirectInvites.update { it - wrapId }
+        }
+    }
+
+    private suspend fun acceptConcordDirectInviteNow(wrapId: HexKey): ConcordInviteResult {
         val opened = directInviteInbox.get(wrapId) ?: return ConcordInviteResult.InvalidLink
         val bundle = opened.invite
         val held =
@@ -1084,7 +1210,7 @@ class AccountConcordActions(
                     val ok = writeConcordList { list -> list.update(plan.entry.id) { cur -> ConcordInviteVend.adoptCatchUp(cur, bundle, plan.channelIds) } }
                     if (ok) ConcordInviteResult.Joined(bundle.communityId) else ConcordInviteResult.NotReachable
                 }
-                DirectInviteAcceptPlan.Join ->
+                DirectInviteAcceptPlan.Join, DirectInviteAcceptPlan.Readmit ->
                     joinValidatedConcordInvite(
                         bundle = bundle,
                         servedBy = emptySet(),
@@ -1092,6 +1218,7 @@ class AccountConcordActions(
                         // Attributed to the seal-verified sender (Armada), never the bundle's claim.
                         inviteCreator = opened.sender,
                         inviteLabel = bundle.label,
+                        readmitting = held?.takeIf { plan == DirectInviteAcceptPlan.Readmit },
                     )
             }
         if (result is ConcordInviteResult.Joined) directInviteInbox.resolve(opened.wrapId)
@@ -1582,7 +1709,11 @@ class AccountConcordActions(
         return Triple(communityId, author, isAdmin)
     }
 
-    /** Promote [member] to the community Admin role, defining that role first if it doesn't exist yet. */
+    /**
+     * Promote [member] to the community Admin role, defining that role first if it doesn't exist
+     * yet. A Grant replaces the member's whole role set, so Admin is added to the roles they already
+     * hold — granting it alone would silently strip, say, a private channel's access role.
+     */
     suspend fun makeConcordAdmin(
         communityId: String,
         member: HexKey,
@@ -1590,6 +1721,7 @@ class AccountConcordActions(
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
+        val before = session.state.value?.authority
 
         val existing =
             session.state.value
@@ -1620,7 +1752,7 @@ class AccountConcordActions(
                 controlPlane = cp,
                 communityId = communityId.hexToByteArray(),
                 member = member,
-                roleIds = listOf(roleIdHex),
+                roleIds = (before?.rolesOf(member).orEmpty() + roleIdHex).toList(),
                 current = session.controlEditions(),
                 createdAt = TimeUtils.now(),
                 owner = session.entry.owner,
@@ -1628,10 +1760,11 @@ class AccountConcordActions(
                 epoch = session.entry.rootEpoch,
             )
         publishConcordWrap(session.entry, grantWrap)
+        reconcileConcordChannelAccess(communityId, before)
         return true
     }
 
-    /** Revoke all roles from [member] (demote an admin back to a plain member). */
+    /** Take the Admin role away from [member], keeping every other role they hold (e.g. a channel's access role). */
     suspend fun removeConcordAdmin(
         communityId: String,
         member: HexKey,
@@ -1639,8 +1772,14 @@ class AccountConcordActions(
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
         val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
-        val before = session.state.value?.authority
-        val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val state = session.state.value ?: return false
+        val before = state.authority
+        val adminRoleIds =
+            state.roles.entries
+                .filter { it.value.name == CONCORD_ADMIN_ROLE && it.value.position == 1L }
+                .mapTo(HashSet()) { it.key }
+        val kept = before.rolesOf(member) - adminRoleIds
+        val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, kept.toList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, grantWrap)
         reconcileConcordChannelAccess(communityId, before)
         return true

@@ -377,7 +377,7 @@ object ConcordPrivateChannels {
             if (held.epoch != fromEpochs[id]) continue
             next =
                 when (outcome) {
-                    is ChannelRekeyOutcome.Adopted -> ConcordChannelKeyring.withRotatedKey(next, id, outcome.key.toHexKey(), outcome.epoch) ?: next
+                    is ChannelRekeyOutcome.Adopted -> ConcordChannelKeyring.withRotatedKey(next, id, outcome.key.toHexKey(), outcome.epoch, steppedOver = outcome.steppedOver) ?: next
                     is ChannelRekeyOutcome.Removed -> ConcordChannelKeyring.withoutChannel(next, id, outcome.epoch)
                     ChannelRekeyOutcome.None -> next
                 }

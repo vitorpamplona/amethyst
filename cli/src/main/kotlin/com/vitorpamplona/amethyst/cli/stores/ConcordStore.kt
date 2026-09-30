@@ -67,6 +67,10 @@ data class StoredCommunity(
     // Keys reserved for a Refounding this account started but has not yet adopted (CORD-06 §3): a
     // retried `refound` must re-deliver the SAME root, never mint a sibling that splits the members.
     val pendingRefounding: StoredPendingRefounding? = null,
+    // When this membership began (ms, the Community List's `added_at`). A Kick older than this
+    // judged an earlier membership that a re-join put behind us (CORD-04 §6). 0 = unknown, stored
+    // before amy tracked it: then any honored Kick that is still our latest Guestbook motion counts.
+    val addedAt: Long = 0,
 )
 
 /** A held Private Channel key at its channel epoch, mirroring quartz `PrivateChannelKey`. */
@@ -121,6 +125,9 @@ class ConcordStore(
         val next = load().filterNot { it.communityId == community.communityId } + community
         save(next)
     }
+
+    /** Drop [communityId] from the list, as a Leave or a complied-with Kick does locally. */
+    fun remove(communityId: String) = save(load().filterNot { it.communityId == communityId })
 
     /** Resolve a user-supplied handle: exact name, exact id, or a unique id/name prefix. */
     fun find(handle: String): StoredCommunity? {

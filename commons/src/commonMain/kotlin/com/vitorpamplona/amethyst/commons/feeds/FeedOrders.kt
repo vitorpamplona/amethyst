@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.feeds
 import com.vitorpamplona.amethyst.commons.feeds.Card
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.notifications.ChannelInviteCard
+import com.vitorpamplona.amethyst.commons.notifications.ConcordDirectInviteNotificationCard
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 val DefaultFeedOrderEvent: Comparator<Event> =
@@ -41,7 +42,7 @@ val DefaultFeedOrderCard: Comparator<Card> =
  * projection, so it never lingers at the top.
  */
 val NotificationFeedOrderCard: Comparator<Card> =
-    compareBy<Card> { if (it is ChannelInviteCard) 0 else 1 }
+    compareBy<Card> { if (it is ChannelInviteCard || it is ConcordDirectInviteNotificationCard) 0 else 1 }
         .thenByDescending { it.createdAt() }
         .thenBy { it.id() }
 

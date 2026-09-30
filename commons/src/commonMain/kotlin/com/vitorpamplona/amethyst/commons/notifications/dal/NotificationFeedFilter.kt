@@ -422,7 +422,13 @@ class NotificationFeedFilter(
                 chatroom.messages.filter { it.author?.pubkeyHex != loggedInUserHex }
             }
 
-        return sort(notifications + marmotMessages)
+        // Concord Direct Invites waiting on an answer. Like a "you were added to a channel" (44100) they
+        // are a standing question, not a chat message, so they ignore the Messages toggle. They are not
+        // events in the cache (see ConcordDirectInviteNote), so they are appended here and rebuilt by
+        // AccountFeedContentStates when the pending set moves.
+        val concordDirectInvites = account.concord.pendingConcordDirectInviteNotes.value
+
+        return sort(notifications + marmotMessages + concordDirectInvites)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)

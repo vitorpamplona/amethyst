@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
@@ -89,6 +91,12 @@ sealed interface DirectInviteAcceptPlan {
 
     /** A community we don't hold: run the shared join path. */
     data object Join : DirectInviteAcceptPlan
+
+    /**
+     * A held community whose fold still bans us, re-invited at a newer epoch (see [ConcordDirectInviteInbox.isReadmission]):
+     * run the shared join path over the held entry, which re-checks the ban at the new epoch.
+     */
+    data object Readmit : DirectInviteAcceptPlan
 
     /**
      * A held community: store [entry] — the held one plus the newly granted Private Channel keys
@@ -343,6 +351,7 @@ class ConcordDirectInviteInbox(
         ): DirectInviteAcceptPlan {
             if (opened.isExpired(nowMs)) return DirectInviteAcceptPlan.Expired
             if (held == null) return DirectInviteAcceptPlan.Join
+            if (isReadmission(held, heldState, opened, me)) return DirectInviteAcceptPlan.Readmit
             if (ConcordInviteVend.catchUpChannelIds(held, opened.invite).isEmpty()) return DirectInviteAcceptPlan.NothingNew
             if (heldState == null) return DirectInviteAcceptPlan.RosterNotLoaded
             // Death wins every race (CORD-02 §9): a dissolved community takes no new keys.
@@ -352,6 +361,71 @@ class ConcordDirectInviteInbox(
             if (ids.isEmpty()) return DirectInviteAcceptPlan.NothingNew
             val adopted = ConcordInviteVend.adoptCatchUp(held, opened.invite, ids) ?: return DirectInviteAcceptPlan.NothingNew
             return DirectInviteAcceptPlan.CatchUp(adopted, ids)
+        }
+
+        /**
+         * True when [invite] readmits a member [heldState] still bans: a ban in a Private community
+         * Refounds, so an owner who later unbans and re-invites us can only do it at a newer epoch.
+         * Armada drops a banned community from the list, so there its re-invite is a plain one; we
+         * keep the banned community (read-only), and without this the re-invite was hidden and
+         * could never be accepted. A banned member has no live membership a bundle could hijack
+         * (the reason a bundle may never move a held base, CORD-06 §2), and the join re-checks the
+         * ban against the NEW epoch's roster, failing closed.
+         *
+         * A bundle's `community_root` is not bound to its id, so anyone could mint a "newer epoch"
+         * under a root of their own and, on one tap, replace the held base (and, with a huge epoch,
+         * block every genuine readmission after it). So, as for a catch-up, only a sender who is
+         * staff in the held fold (seal-verified) may readmit us, into the same owner's community.
+         */
+        fun isReadmission(
+            held: ConcordCommunityListEntry,
+            heldState: ConcordCommunityState?,
+            opened: OpenedDirectInvite,
+            me: HexKey,
+        ): Boolean =
+            heldState != null &&
+                !heldState.dissolved &&
+                heldState.authority.isBanned(me) &&
+                opened.invite.communityId.equals(held.id, ignoreCase = true) &&
+                opened.invite.owner.equals(held.owner, ignoreCase = true) &&
+                opened.invite.rootEpoch > held.rootEpoch &&
+                heldState.authority.isStaff(opened.sender) &&
+                !heldState.authority.isBanned(opened.sender)
+
+        /**
+         * The List entry a readmission writes: [fresh]'s base (the new root, epoch, Control Plane key,
+         * relays, name and join time) on top of everything [held] knew. Kept from [held]: every root
+         * it held plus the one it is leaving (pre-ban history), its `seed` and entry extras such as
+         * `channel_cuts` (so a cut key never comes back), and its private channel keys, each moved to
+         * the key [fresh] delivers through [ConcordChannelKeyring.withChannelKey], which keeps the one
+         * it replaces in `priors`. Built fresh, a readmission lost all of that.
+         *
+         * Apply it to the entry the List holds inside the write, never to a snapshot from before
+         * the join's suspensions.
+         */
+        fun readmittedEntry(
+            held: ConcordCommunityListEntry,
+            fresh: ConcordCommunityListEntry,
+        ): ConcordCommunityListEntry {
+            val base =
+                ConcordCommunityListEntry(
+                    id = held.id,
+                    owner = held.owner,
+                    ownerSalt = held.ownerSalt,
+                    root = fresh.root,
+                    rootEpoch = fresh.rootEpoch,
+                    controlPk = fresh.controlPk,
+                    // A staff write key belongs to its epoch; the new one arrives with a Grant.
+                    controlRoot = null,
+                    heldRoots = (held.heldRoots + HeldRoot(held.rootEpoch, held.root, held.controlPk, held.controlRoot)).distinctBy { it.epoch to it.key.lowercase() },
+                    privateChannels = held.privateChannels,
+                    relays = fresh.relays.ifEmpty { held.relays },
+                    name = fresh.name.ifBlank { held.name },
+                    addedAt = fresh.addedAt,
+                    inviteRef = fresh.inviteRef ?: held.inviteRef,
+                    residue = held.residue,
+                )
+            return fresh.privateChannels.fold(base) { entry, key -> ConcordChannelKeyring.withChannelKey(entry, key) ?: entry }
         }
 
         /**
@@ -379,6 +453,7 @@ class ConcordDirectInviteInbox(
             isFollowed: (HexKey) -> Boolean = { false },
             isHidden: (HexKey) -> Boolean = { false },
             heldStateOf: (communityId: HexKey) -> ConcordCommunityState? = { null },
+            me: HexKey? = null,
         ): List<ConcordDirectInviteView> {
             val nowSecs = nowMs / 1000
             val heldById = joined.associateBy { it.id.lowercase() }
@@ -395,15 +470,16 @@ class ConcordDirectInviteInbox(
                 // a catch-up from a non-staff sender, for channels the fold doesn't know as Private,
                 // or into a dissolved community is refused by [acceptPlan], so it is not offered.
                 val heldState = held?.let { heldStateOf(it.id) }
+                val readmit = held != null && me != null && isReadmission(held, heldState, opened, me)
                 val newChannels =
                     when {
-                        held == null -> emptyList()
+                        held == null || readmit -> emptyList()
                         heldState == null -> ConcordInviteVend.catchUpChannelIds(held, opened.invite)
                         heldState.dissolved -> emptyList()
                         else -> ConcordInviteVend.admissibleCatchUpIds(held, opened.invite, heldState.authority, heldState.privateChannelIds, opened.sender)
                     }
-                if (held != null && newChannels.isEmpty()) continue
-                val catchUp = held != null
+                if (held != null && !readmit && newChannels.isEmpty()) continue
+                val catchUp = held != null && !readmit
                 val base = communityId + "|" + opened.sender.lowercase()
                 val key = if (catchUp) base + "|" + newChannels.sorted().joinToString(",") else base
                 val view = ConcordDirectInviteView(opened, catchUp, opened.isExpired(nowMs), newChannels.toList(), sentAt, isFollowed(opened.sender))

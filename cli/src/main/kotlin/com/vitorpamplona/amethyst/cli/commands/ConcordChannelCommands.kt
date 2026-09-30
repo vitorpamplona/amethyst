@@ -47,6 +47,7 @@ object ConcordChannelCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val state = foldState(ctx, sc)
+            ConcordCommands.kickedGuard(ctx, dataDir, sc, state.authority)?.let { return it }
             Output.emit(
                 mapOf(
                     "name" to state.metadata?.name,
@@ -87,8 +88,13 @@ object ConcordChannelCommands {
             // CORD-02 §9: a dissolved community is sealed read-only — held keys still open history, but
             // nothing new is honored, so refuse to post before we ever build/publish a wrap.
             val state = foldState(ctx, sc)
+            ConcordCommands.kickedGuard(ctx, dataDir, sc, state.authority)?.let { return it }
             if (state.dissolved) {
                 return Output.error("dissolved", "community '$handle' has been dissolved and is read-only (CORD-02 §9)")
+            }
+            // CORD-04 §4: every reader drops a banned author's messages, so a post would vanish unseen.
+            if (state.authority.isBanned(ctx.signer.pubKey)) {
+                return Output.error("banned", "this account is banned from '$handle' (CORD-04 §4); its messages are hidden from everyone")
             }
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
             // The channel's own plane (CORD-03 §1): root-derived when Public, its held key when
@@ -141,6 +147,7 @@ object ConcordChannelCommands {
             ctx.prepare()
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
             val state = foldState(ctx, sc)
+            ConcordCommands.kickedGuard(ctx, dataDir, sc, state.authority)?.let { return it }
             // A Private Channel is read only on its own key's plane (CORD-03 §1); --root/--epoch pick a
             // root-derived plane and so apply to Public Channels only.
             val privatePlane =

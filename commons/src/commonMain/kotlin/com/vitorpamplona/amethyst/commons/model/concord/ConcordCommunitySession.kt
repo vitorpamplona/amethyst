@@ -455,12 +455,7 @@ class ConcordCommunitySession(
      * A Kick older than the entry's `added_at` judged an earlier membership — a re-join (a later
      * Join, or a re-invite that re-added the entry) leaves it behind. Never for the owner.
      */
-    fun kickedMe(): GuestbookEntry? {
-        val me = myPubKey.lowercase()
-        if (me == entry.owner.lowercase()) return null
-        val mine = _guestbook.value[me] ?: return null
-        return mine.takeIf { it.action == GuestbookAction.KICK && it.ms > entry.addedAt }
-    }
+    fun kickedMe(): GuestbookEntry? = ConcordActions.honoredKickAgainst(_guestbook.value, myPubKey, entry.owner, entry.addedAt)
 
     /** The size of [allMembers] — the community's true (best-effort) member count. */
     fun memberCount(): Int = allMembers().size

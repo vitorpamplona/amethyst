@@ -25,12 +25,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,18 +56,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteSendResult
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordDirectInviteView
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_accept
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_accept_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_catch_up
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_decline
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_done
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_expired
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_explainer
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_failed
@@ -72,7 +81,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_from
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_send
-import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_sent
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_sending
+import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_sent_to
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_title
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invites_title
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
@@ -82,14 +92,16 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_invali
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_failed_not_saved
 import com.vitorpamplona.amethyst.commons.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * "Invite by npub" (CORD-05 §6): pick a person with the app's ordinary user typeahead (cache, relay
@@ -106,6 +118,12 @@ fun ConcordDirectInviteDialog(
     var query by remember { mutableStateOf("") }
     var picked by remember { mutableStateOf<User?>(null) }
     var sending by remember { mutableStateOf(false) }
+
+    // The outcome stays inside this dialog: the people invited so far (so several can be invited
+    // in a row) and the last failure, shown under the field. A second modal to say "sent" was one
+    // tap too many for a confirmation.
+    val invited = remember { mutableStateListOf<String>() }
+    var failure by remember { mutableStateOf<StringResource?>(null) }
     val userSuggestions =
         remember(accountViewModel) {
             UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
@@ -124,6 +142,7 @@ fun ConcordDirectInviteDialog(
                     onValueChange = {
                         query = it
                         picked = null
+                        failure = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -144,6 +163,15 @@ fun ConcordDirectInviteDialog(
                         contentPadding = PaddingValues(0.dp),
                     )
                 }
+                failure?.let {
+                    Text(stringRes(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                invited.forEach { name ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SymbolIcon(symbol = MaterialSymbols.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                        Text(stringRes(Res.string.concord_direct_invite_sent_to, name), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -153,29 +181,45 @@ fun ConcordDirectInviteDialog(
                 onClick = {
                     if (target == null) return@TextButton
                     sending = true
+                    failure = null
                     scope.launch {
                         try {
                             val result = accountViewModel.account.concord.sendConcordDirectInvite(communityId, target.pubkeyHex)
-                            accountViewModel.toastManager.toast(Res.string.concord_direct_invite_title, sendResultMessage(result))
-                            if (result == ConcordDirectInviteSendResult.SENT) onDismiss()
+                            if (result == ConcordDirectInviteSendResult.SENT) {
+                                // Ready for the next person; the check mark below is the confirmation.
+                                invited += target.toBestDisplayName()
+                                picked = null
+                                query = ""
+                            } else {
+                                // Keep the person picked so Send retries.
+                                failure = sendFailureMessage(result)
+                            }
                         } finally {
                             sending = false
                         }
                     }
                 },
             ) {
-                Text(stringRes(Res.string.concord_direct_invite_send, picked?.toBestDisplayName() ?: "…"))
+                if (sending) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringRes(Res.string.concord_direct_invite_sending))
+                } else {
+                    Text(stringRes(Res.string.concord_direct_invite_send, picked?.toBestDisplayName() ?: "…"))
+                }
             }
         },
         dismissButton = {
-            TextButton(enabled = !sending, onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
+            TextButton(enabled = !sending, onClick = onDismiss) {
+                Text(stringRes(if (invited.isEmpty()) Res.string.cancel else Res.string.concord_direct_invite_done))
+            }
         },
     )
 }
 
-private fun sendResultMessage(result: ConcordDirectInviteSendResult) =
+private fun sendFailureMessage(result: ConcordDirectInviteSendResult) =
     when (result) {
-        ConcordDirectInviteSendResult.SENT -> Res.string.concord_direct_invite_sent
+        ConcordDirectInviteSendResult.SENT -> null
         ConcordDirectInviteSendResult.ROSTER_NOT_LOADED -> Res.string.concord_direct_invite_failed_loading
         ConcordDirectInviteSendResult.RECIPIENT_BANNED -> Res.string.concord_direct_invite_failed_banned
         ConcordDirectInviteSendResult.NOT_MEMBER, ConcordDirectInviteSendResult.NOT_WRITEABLE -> Res.string.concord_direct_invite_failed_member
@@ -190,15 +234,9 @@ private fun sendResultMessage(result: ConcordDirectInviteSendResult) =
 @Composable
 fun RefreshConcordDirectInvites(accountViewModel: AccountViewModel) {
     val concord = accountViewModel.account.concord
-    LaunchedEffect(concord) {
-        try {
-            concord.refreshConcordDirectInvites()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("ConcordDirectInvites", "Direct Invite sweep failed", e)
-        }
-    }
+    // Sweeps in the account's scope: the hub leaves composition whenever it swaps layouts, which
+    // cancelled a sweep launched here before any relay answered.
+    LaunchedEffect(concord) { concord.requestConcordDirectInviteSweep() }
 }
 
 /**
@@ -230,16 +268,20 @@ fun LazyListScope.concordPendingDirectInvites(
     }
 }
 
+/** One Direct Invite with Decline / Accept: on the Concord hub and as a card on Notifications. */
 @Composable
-private fun ConcordDirectInviteCard(
+fun ConcordDirectInviteCard(
     invite: ConcordDirectInviteView,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
     var working by remember(invite.wrapId) { mutableStateOf(false) }
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
-    val senderName = remember(invite.sender) { LocalCache.checkGetOrCreateUser(invite.sender)?.toBestDisplayName() ?: invite.sender.take(12) }
+    // The sender's own profile (kind 0), loaded like any author's: the card used to show only a cached
+    // name, so an inviter the app had never seen read as a bare npub. Loading a public profile
+    // connects to none of the community's relays, which is what stays gated until Accept.
+    val sender = remember(invite.sender) { LocalCache.checkGetOrCreateUser(invite.sender) }
+    val senderName = sender?.let { observeUserName(it).value } ?: invite.sender.take(12)
 
     val subtitle =
         when {
@@ -268,6 +310,9 @@ private fun ConcordDirectInviteCard(
             subtitle = subtitle,
             accountViewModel = accountViewModel,
             autoPlayGif = autoPlayGif,
+            trailing = {
+                if (!invite.catchUp) UserPicture(invite.sender, Size35dp, accountViewModel = accountViewModel, nav = nav)
+            },
         )
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
@@ -283,10 +328,14 @@ private fun ConcordDirectInviteCard(
                 enabled = !working && !invite.expired,
                 onClick = {
                     working = true
-                    scope.launch {
+                    // The account hides an invite while it is being accepted, which removes this card
+                    // from composition: the join runs on the view model's scope so that can't cancel it.
+                    accountViewModel.viewModelScope.launch {
                         try {
                             when (val result = accountViewModel.account.concord.acceptConcordDirectInvite(invite.wrapId)) {
                                 is ConcordInviteResult.Joined -> nav.nav(Route.ConcordServer(result.communityId))
+                                // The accept already running reports; this tap did nothing.
+                                is ConcordInviteResult.InProgress -> Unit
                                 is ConcordInviteResult.Expired -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_expired)
                                 is ConcordInviteResult.Banned -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_banned)
                                 is ConcordInviteResult.InvalidLink -> accountViewModel.toastManager.toast(Res.string.concord_direct_invites_title, Res.string.concord_invite_failed_invalid)

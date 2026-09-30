@@ -92,8 +92,9 @@ open class ConcordNewMessageViewModel : ViewModel() {
             UserSuggestionState(
                 accountVM.account,
                 accountVM.nip05ClientBuilder(),
-                // Rank people who have posted in this channel first.
-                priorityPubkeys = { channelAuthors() },
+                // Rank the community's members first, then anyone who posted in this channel: a
+                // member who never posted here otherwise sank below strangers with a matching NIP-05.
+                priorityPubkeys = { mentionPriority() },
             )
 
         this.emojiSuggestions?.reset()
@@ -106,15 +107,22 @@ open class ConcordNewMessageViewModel : ViewModel() {
         uploadState?.load(media)
     }
 
-    private fun channelAuthors(): Set<HexKey> {
+    private fun mentionPriority(): Set<HexKey> {
         val community = communityId ?: return emptySet()
-        val channel = channelId ?: return emptySet()
-        return LocalCache
-            .getConcordChannelIfExists(ConcordChannelId(community, channel))
-            ?.notes
-            ?.mapNotNull { _, note -> note.author?.pubkeyHex }
-            ?.toSet()
-            ?: emptySet()
+        val members =
+            account.concordSessions
+                .sessionFor(community)
+                ?.allMembers()
+                .orEmpty()
+        val channel = channelId ?: return members
+        val authors =
+            LocalCache
+                .getConcordChannelIfExists(ConcordChannelId(community, channel))
+                ?.notes
+                ?.mapNotNull { _, note -> note.author?.pubkeyHex }
+                ?.toSet()
+                .orEmpty()
+        return members + authors
     }
 
     open fun load(

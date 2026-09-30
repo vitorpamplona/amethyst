@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_members_ban
 import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_message
+import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_message_refound
 import com.vitorpamplona.amethyst.commons.resources.concord_members_ban_title
 import com.vitorpamplona.amethyst.commons.resources.concord_members_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_members_kick
@@ -238,6 +239,9 @@ fun ConcordMembersScreen(
                                 state?.authority?.canActOn(myPubKey, entry.pubkey, ConcordPermissions.BAN) == true,
                         // A Kick needs KICK and a strict outrank of the target (CORD-04 §6), the same rank rule.
                         canKickTarget = iCanKick && state?.authority?.canActOn(myPubKey, entry.pubkey, ConcordPermissions.KICK) == true,
+                        // In a Private community a ban also Refounds (CORD-05 §5), so the dialog must not
+                        // promise they keep reading.
+                        banRotatesKeys = state?.banRequiresRefounding(listOf(entry.pubkey)) == true,
                         viewerCanManageRoles = iCanManageRoles,
                         // canActOn folds the whole rank rule for us: we hold MANAGE_ROLES, we're not
                         // banned, the target isn't the owner (unremovable), and we strictly outrank
@@ -263,6 +267,7 @@ private fun ConcordMemberRow(
     viewerCanBan: Boolean,
     canBanTarget: Boolean,
     canKickTarget: Boolean,
+    banRotatesKeys: Boolean,
     viewerCanManageRoles: Boolean,
     canManageRolesOnTarget: Boolean,
     assignableRoles: List<AssignableRole>,
@@ -326,7 +331,7 @@ private fun ConcordMemberRow(
     if (confirmBan) {
         ConcordConfirmMemberActionDialog(
             title = Res.string.concord_members_ban_title,
-            message = Res.string.concord_members_ban_message,
+            message = if (banRotatesKeys) Res.string.concord_members_ban_message_refound else Res.string.concord_members_ban_message,
             confirm = Res.string.concord_members_ban,
             onConfirm = {
                 accountViewModel.setConcordBan(communityId, entry.pubkey, ban = true)
