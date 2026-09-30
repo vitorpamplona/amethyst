@@ -32,6 +32,12 @@ object NappletHostContract {
      * disconnect 30 s after the UI stops (RelayProxyClientConnector's `WhileSubscribed(30000)`), so a quick
      * trip to another app (a 2FA code, a password manager) doesn't interrupt a page, while one left behind
      * stops running. Requests that act for the user are held from the first moment regardless.
+     *
+     * An upper bound, not a promise: on Android 14+ the cached-app freezer suspends `:napplet` (and its
+     * renderers) about 10 s after the app leaves the screen, since nothing keeps that process in the
+     * foreground. Measured on an API 36 emulator: frozen 12 s after Home, media stopped with it. So on those
+     * devices a page stops within seconds, and this pause lands (on the next unfreeze) on a page that
+     * already stopped.
      */
     const val BACKGROUND_PAUSE_MS = 30_000L
 
