@@ -63,11 +63,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordMembership
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.concord_banned_notice
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_cut
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_no_key
@@ -305,6 +307,10 @@ fun ConcordChannelScreen(
                 // CORD-02 §9: an owner-signed tombstone seals the community read-only — the composer is
                 // gone (canPost() is false) and this replaces it so the seal is explained, not silent.
                 ConcordDissolvedNotice()
+            } else if (channel.membership == ConcordMembership.BANNED) {
+                // CORD-04 §4: every reader drops a banned author's messages, so the composer is gone;
+                // say why instead of leaving the bottom of the screen silently empty.
+                ConcordReadOnlyNotice(Res.string.concord_banned_notice)
             } else if (!channel.keyHeld) {
                 // CORD-03 §1: a Private Channel is keyed independently; without its key there is no
                 // plane only its members can read, so nothing may be posted (never to the root plane).
