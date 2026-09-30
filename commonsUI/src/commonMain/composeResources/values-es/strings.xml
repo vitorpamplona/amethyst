@@ -2997,4 +2997,7 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">No se pudo crear una factura de Lightning. Mensaje de %1$s: %2$s.</string>
     <string name="browser_address_hint">Buscar o introducir dirección</string>
     <string name="napplet_untitled">NApplet sin título</string>
+    <string name="browser_pill_download_title">¿Descargar este archivo?</string>
+    <string name="browser_pill_download_risky">Este tipo de archivo puede ejecutar código. Comprueba que el nombre coincide con lo que querías obtener.</string>
+    <string name="browser_pill_download_save">Guardar</string>
 </resources>

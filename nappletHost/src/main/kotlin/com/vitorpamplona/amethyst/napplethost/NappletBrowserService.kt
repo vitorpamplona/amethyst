@@ -154,6 +154,13 @@ class NappletBrowserService : Service() {
     // WebView's PermissionRequest → our relay id, so a page's cancellation can withdraw the prompt.
     private val pendingWebPermissions = mutableMapOf<PermissionRequest, Long>()
 
+    // Inline-download consent cards the main process is showing: relay id → the save to run if the
+    // user allows. [consentTabs] scopes each id to its tab's session so a closing tab clears only its
+    // own; entries are removed when the client answers.
+    private val pendingDownloadConsents = mutableMapOf<Long, (Boolean) -> Unit>()
+    private val consentTabs = mutableMapOf<Long, String>()
+    private var downloadSeq = 0L
+
     // The shim never changes; read+decode it once instead of per tab on the main thread.
     private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
 
@@ -294,6 +301,13 @@ class NappletBrowserService : Service() {
                         .mapNotNull(BrowserSitePermission::fromKey)
                         .toSet(),
                 )
+            }
+            NappletBrowserContract.MSG_DOWNLOAD_CONSENT_RESULT -> {
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)
+                val answer = pendingDownloadConsents.remove(id) ?: return true
+                consentTabs.remove(id)
+                answer(data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_ALLOWED, false))
             }
             NappletBrowserContract.MSG_EXIT_FULLSCREEN -> tabFor(msg)?.let { exitFullscreen(it) }
             NappletBrowserContract.MSG_RELOAD -> tabFor(msg)?.webView?.reload()
@@ -446,6 +460,12 @@ class NappletBrowserService : Service() {
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
         cancelPending(tab)
+        // A consent card parked behind this tab dies with it: an unanswered prompt saves nothing, and
+        // its decoded bytes are freed. Only this tab's entries are dropped (a sibling tab's is not).
+        pendingDownloadConsents.keys.filter { consentTabs[it] == sessionId }.forEach { id ->
+            pendingDownloadConsents.remove(id)
+            consentTabs.remove(id)
+        }
         tab.customViewCallback?.onCustomViewHidden()
         tab.customViewCallback = null
         tab.customView = null
@@ -462,8 +482,18 @@ class NappletBrowserService : Service() {
         wv.webViewClient = BrowserClient(tab)
         wv.webChromeClient = BrowserChromeClient(tab)
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            val route = if (tab != null && tab.useTor) tab.proxyPort else -1
-            BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), route)
+            if (tab == null) return@setDownloadListener
+            BrowserDownloads.downloadWithConsent(
+                context = this,
+                url = url,
+                contentDisposition = contentDisposition,
+                mimeType = mimeType,
+                cookieHolder = { BrowserWebTools.cookieManager(wv).getCookie(url) },
+                userAgent = userAgent,
+                proxyPort = if (tab.useTor) tab.proxyPort else -1,
+            ) { fileName, sizeBytes, risky, consent ->
+                offerListenerDownloadConsent(tab, fileName, sizeBytes, risky, consent)
+            }
         }
     }
 
@@ -953,21 +983,25 @@ class NappletBrowserService : Service() {
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
-        // Browser conveniences (share, blob downloads) are handled here, never brokered. The theme colour
-        // only matters to a window with system bars, which an embedded tab doesn't own.
+        // The origin the WebView REPORTS — the page cannot forge this — keys every consent decision,
+        // including browser.* ones. Page-supplied fields are never trusted for that.
+        val origin = trustedOrigin(sourceOrigin) ?: return
+
+        // Browser conveniences (share, blob downloads) are handled here, never forwarded to the broker's
+        // capability router; the theme colour only matters to a window with system bars, which an embedded
+        // tab doesn't own. That is NOT a consent exemption: browser.download writes into the shared
+        // Downloads collection, so it is gated below by [offerDownloadConsent] on this WebView-reported
+        // origin.
         when (envelope.stringOrNull("type")) {
             "browser.share" -> {
                 BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
                 return
             }
+            "browser.themeColor" -> return
             "browser.download" -> {
-                val data = envelope.stringOrNull("data") ?: return
-                if (data.startsWith("data:") && data.length <= BrowserDownloads.MAX_INLINE_BYTES / 3 * 4 + 256) {
-                    BrowserDownloads.saveDataUrl(this, data, envelope.stringOrNull("name"))
-                }
+                offerDownloadConsent(tab, origin, envelope)
                 return
             }
-            "browser.themeColor" -> return
         }
 
         // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
@@ -979,10 +1013,6 @@ class NappletBrowserService : Service() {
             runCatching { tab.clientMessenger?.send(reply) }
             return
         }
-
-        val scheme = sourceOrigin.scheme ?: return
-        val host = sourceOrigin.host ?: return
-        val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
 
         val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
         val msg =
@@ -1002,6 +1032,82 @@ class NappletBrowserService : Service() {
         } else {
             tab.pendingByOrigin.getOrPut(origin) { mutableListOf() }.add(msg)
             requestBrowserToken(tab, origin)
+        }
+    }
+
+    /** `scheme://host[:port]` of the WebView-reported origin, or null when it has no usable one. */
+    private fun trustedOrigin(sourceOrigin: Uri): String? {
+        val scheme = sourceOrigin.scheme ?: return null
+        val host = sourceOrigin.host ?: return null
+        return "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+    }
+
+    /**
+     * The one-shot native consent card for a `browser.download` envelope, relayed to the main process
+     * (this provider has no window to show one on), then the save. Keyed on the WebView-reported
+     * [origin] only; nothing about the envelope can trigger the save alone. The byte payload is fully
+     * decoded here — before the prompt — so the dialog names the true size and malformed or oversized
+     * payloads are refused without ever reaching MediaStore. Exactly one card is live per tab at a time
+     * (a second request drops), so a page can't swap the name under the user's finger.
+     */
+    private fun offerDownloadConsent(
+        tab: BrowserTab,
+        origin: String,
+        envelope: JsonObject,
+    ) {
+        val data = envelope.stringOrNull("data")?.takeIf { it.startsWith("data:", ignoreCase = true) } ?: return
+        val save = BrowserDownloadGate.preludeInlineSave(data, envelope.stringOrNull("name")) ?: return
+        if (!BrowserDownloadGate.shouldPrompt(tab.sessionId, origin)) return
+        if (hasLiveDownloadConsent(tab)) return
+        val id = ++downloadSeq
+        val sent =
+            sendToClient(tab, NappletBrowserContract.MSG_DOWNLOAD_CONSENT) {
+                putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id)
+                putString(NappletBrowserContract.KEY_BROWSER_ORIGIN, origin)
+                putString(NappletBrowserContract.KEY_DOWNLOAD_NAME, save.fileName)
+                putLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, save.bytes.size.toLong())
+                putBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, BrowserDownloadGate.isRisky(save.fileName))
+            }
+        if (sent) {
+            consentTabs[id] = tab.sessionId
+            pendingDownloadConsents[id] = { allowed ->
+                if (allowed) BrowserDownloads.saveInlineBytes(this, save.fileName, save.mimeType, save.bytes)
+            }
+        }
+    }
+
+    /** Whether this tab's consent card is still on screen (a second request for it is dropped — the anti-swap rule). */
+    private fun hasLiveDownloadConsent(tab: BrowserTab): Boolean = pendingDownloadConsents.keys.any { consentTabs[it] == tab.sessionId }
+
+    /**
+     * The consent card for a WebView `DownloadListener` hit in this tab (a page-initiated `<a download>`
+     * or `Content-Disposition: attachment`), offered by [BrowserDownloads.downloadWithConsent] after it
+     * probed the size. Shares the exact same one-live-card-per-tab anti-swap rule as the bridge envelope.
+     */
+    private fun offerListenerDownloadConsent(
+        tab: BrowserTab,
+        fileName: String,
+        sizeBytes: Long,
+        risky: Boolean,
+        consent: BrowserDownloads.Consent,
+    ) {
+        val origin = tab.webView?.url?.let(BrowserChrome::originOf) ?: return
+        if (!BrowserDownloadGate.shouldPrompt(tab.sessionId, origin)) return
+        if (hasLiveDownloadConsent(tab)) return
+        val id = ++downloadSeq
+        val sent =
+            sendToClient(tab, NappletBrowserContract.MSG_DOWNLOAD_CONSENT) {
+                putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id)
+                putString(NappletBrowserContract.KEY_BROWSER_ORIGIN, origin)
+                putString(NappletBrowserContract.KEY_DOWNLOAD_NAME, fileName)
+                putLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, sizeBytes)
+                putBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, risky)
+            }
+        if (sent) {
+            consentTabs[id] = tab.sessionId
+            pendingDownloadConsents[id] = { allowed ->
+                if (allowed) consent.run()
+            }
         }
     }
 

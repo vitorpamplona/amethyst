@@ -362,7 +362,17 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.webChromeClient = BrowserChromeClient()
         wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            BrowserDownloads.download(this, url, userAgent, contentDisposition, mimeType, BrowserWebTools.cookieManager(wv).getCookie(url), if (useTor) proxyPort else -1)
+            BrowserDownloads.downloadWithConsent(
+                context = this,
+                url = url,
+                contentDisposition = contentDisposition,
+                mimeType = mimeType,
+                cookieHolder = { BrowserWebTools.cookieManager(wv).getCookie(url) },
+                userAgent = userAgent,
+                proxyPort = if (useTor) proxyPort else -1,
+            ) { fileName, sizeBytes, risky, consent ->
+                offerListenerDownloadConsent(fileName, sizeBytes, risky, consent)
+            }
         }
         wv.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         wv.dropSystemBarInsets()
@@ -423,6 +433,7 @@ class NappletBrowserActivity : ComponentActivity() {
         // A dialog still up would leak its window and leave the page's JS blocked on an unanswered result.
         chrome?.dialog?.answer?.invoke(false, null, false)
         chrome?.permissionPrompt?.answer?.invoke(false, false)
+        chrome?.downloadPrompt?.answer?.invoke(false)
         customViewCallback?.onCustomViewHidden()
         destroyWebView()
         super.onDestroy()
@@ -892,15 +903,30 @@ class NappletBrowserActivity : ComponentActivity() {
         val raw = message.data ?: return
         val envelope = parseJsonObjectOrNull(raw) ?: return
 
-        // Browser conveniences (share, theme colour, blob downloads) are handled here, never brokered.
-        if (envelope.stringOrNull("type").orEmpty().startsWith("browser.")) {
-            onBrowserMessage(envelope)
-            return
-        }
+        // The origin the WebView REPORTS — the page cannot forge this — keys every consent decision,
+        // including browser.* ones. Page-supplied fields are never trusted for that.
+        val origin = trustedOrigin(sourceOrigin) ?: return
 
-        val scheme = sourceOrigin.scheme ?: return
-        val host = sourceOrigin.host ?: return
-        val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+        // Browser conveniences (share, theme colour, blob downloads) are handled here, never forwarded
+        // to the broker's capability router. That is NOT a consent exemption: browser.download writes
+        // into the shared Downloads collection, so it is gated below by [offerDownloadConsent] on
+        // this WebView-reported origin.
+        when (envelope.stringOrNull("type")) {
+            "browser.share" -> {
+                if (resumed) BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
+                return
+            }
+            "browser.themeColor" -> {
+                themeColor = BrowserChrome.parseCssRgb(envelope.stringOrNull("color"))
+                applyThemeColor(themeColor)
+                updateTaskDescription()
+                return
+            }
+            "browser.download" -> {
+                offerDownloadConsent(origin, envelope)
+                return
+            }
+        }
 
         val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${fireSeq++}" }
         val msg =
@@ -923,25 +949,75 @@ class NappletBrowserActivity : ComponentActivity() {
         }
     }
 
-    /** A `browser.*` message from [BrowserExtrasScript]. */
-    private fun onBrowserMessage(envelope: JsonObject) {
-        when (envelope.stringOrNull("type")) {
-            "browser.share" ->
-                if (resumed) {
-                    BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
-                }
-            "browser.themeColor" -> {
-                themeColor = BrowserChrome.parseCssRgb(envelope.stringOrNull("color"))
-                applyThemeColor(themeColor)
-                updateTaskDescription()
+    /** `scheme://host[:port]` of the WebView-reported origin, or null when it has no usable one. */
+    private fun trustedOrigin(sourceOrigin: Uri): String? {
+        val scheme = sourceOrigin.scheme ?: return null
+        val host = sourceOrigin.host ?: return null
+        return "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
+    }
+
+    /**
+     * The one-shot native consent card for a `browser.download` envelope, then the save. Shown keyed on
+     * the WebView-reported [origin] only; nothing about the envelope can trigger the save alone. The
+     * byte payload is fully decoded here — before the prompt — so the dialog names the true size and
+     * malformed or oversized payloads are refused without ever reaching MediaStore. Exactly one card is
+     * live per origin on this window at a time (a second request drops), so a page can't swap the name
+     * under the user's finger.
+     */
+    private fun offerDownloadConsent(
+        origin: String,
+        envelope: JsonObject,
+    ) {
+        val data = envelope.stringOrNull("data")?.takeIf { it.startsWith("data:", ignoreCase = true) } ?: return
+        val save = BrowserDownloadGate.preludeInlineSave(data, envelope.stringOrNull("name")) ?: return
+        val host = chrome ?: return
+        if (!BrowserDownloadGate.shouldPrompt(SURFACE_KEY, origin)) return
+        // One live prompt per window: a second request while a card is up is dropped, and a live card is
+        // never replaced — the anti-swap rule the fingerprint under the user's finger relies on.
+        if (host.downloadPrompt != null) return
+        host.downloadPrompt =
+            BrowserChromeHost.PendingDownload(
+                host = BrowserChrome.displayHost(origin),
+                security = BrowserChrome.security(host.ui.chrome),
+                fileName = save.fileName,
+                sizeBytes = save.bytes.size.toLong(),
+                risky = BrowserDownloadGate.isRisky(save.fileName),
+            ) { allowed ->
+                if (allowed) BrowserDownloads.saveInlineBytes(this, save.fileName, save.mimeType, save.bytes)
             }
-            "browser.download" -> {
-                val data = envelope.stringOrNull("data") ?: return
-                if (data.startsWith("data:") && data.length <= BrowserDownloads.MAX_INLINE_BYTES / 3 * 4 + 256) {
-                    BrowserDownloads.saveDataUrl(this, data, envelope.stringOrNull("name"))
-                }
+    }
+
+    /**
+     * The consent card for a WebView `DownloadListener` hit (a page-initiated `<a download>` navigation
+     * or `Content-Disposition: attachment`), offered by [BrowserDownloads.downloadWithConsent] after it
+     * probed the size. Shares the exact same gate and anti-swap rule as the `browser.download` bridge
+     * envelope: one live card per window, a live card is never replaced.
+     */
+    private fun offerListenerDownloadConsent(
+        fileName: String,
+        sizeBytes: Long,
+        risky: Boolean,
+        consent: BrowserDownloads.Consent,
+    ) {
+        val origin =
+            chrome
+                ?.ui
+                ?.chrome
+                ?.url
+                ?.let(BrowserChrome::originOf) ?: return
+        if (!BrowserDownloadGate.shouldPrompt(SURFACE_KEY, origin)) return
+        val host = chrome ?: return
+        if (host.downloadPrompt != null) return
+        host.downloadPrompt =
+            BrowserChromeHost.PendingDownload(
+                host = BrowserChrome.displayHost(origin),
+                security = BrowserChrome.security(host.ui.chrome),
+                fileName = fileName,
+                sizeBytes = sizeBytes,
+                risky = risky,
+            ) { allowed ->
+                if (allowed) consent.run()
             }
-        }
     }
 
     private fun requestBrowserToken(origin: String) {
@@ -1652,6 +1728,12 @@ class NappletBrowserActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletBrowserActivity"
+
+        /**
+         * The one consent-gate surface key for this single-window Activity: unlike the embedded Service,
+         * one Activity hosts exactly one WebView, so there is only ever one surface to book.
+         */
+        private const val SURFACE_KEY = "full-screen"
         private const val ACTIVITY_CLASS = "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
 
         /** How often a resumed browser renews its foreground lease (well under the broker's 90s TTL). */
