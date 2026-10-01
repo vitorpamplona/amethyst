@@ -5455,7 +5455,6 @@
     <string name="new_conversation_cordn_pro_1">आरम्भ से अन्त तक रहस्यीकृत एमएलएस॰ के साथ। समायोजक सन्देश कभी पढ नहीं सकता।</string>
     <string name="new_conversation_cordn_pro_2">एक स्वीकृत अनुक्रमण सभी के लिए। जिससे इतिहास को अस्तव्यस्त नहीं किया जा सकता एक भ्रष्ट घडी से।</string>
     <string name="new_conversation_cordn_con_1">समायोजक जान लेता है समूह में कौन हैं तथा आप कब बात करते है। यद्यपि वह पढ नहीं सकता कि आप ने क्या कहा।</string>
-    <string name="cordn_invitations_entry">क्या आप एक कोर्डन समूह में आमन्त्रित हैं।</string>
     <string name="cordn_invitations_entry_action">आमन्त्रण पुनरीक्षण</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say

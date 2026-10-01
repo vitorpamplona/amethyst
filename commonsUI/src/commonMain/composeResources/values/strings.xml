@@ -5543,15 +5543,14 @@
     <string name="cordn_preview_photo">Photo</string>
     <string name="cordn_preview_video">Video</string>
     <string name="cordn_preview_file">File</string>
-    <string name="new_conversation_cordn_title">Cordn group</string>
-    <string name="new_conversation_cordn_tagline">Encrypted group chat ordered by a coordinator you pick.</string>
+    <string name="new_conversation_cordn_title">Cordn Group</string>
+    <string name="new_conversation_cordn_tagline">Encrypted groups on a coordinator you pick</string>
     <string name="new_conversation_cordn_chip">Coordinated</string>
-    <string name="new_conversation_cordn_best">Best for teams that want one reliable ordering of the conversation.</string>
+    <string name="new_conversation_cordn_best">Teams that want one reliable ordering of the conversation.</string>
     <string name="new_conversation_cordn_cta">Create Cordn group</string>
-    <string name="new_conversation_cordn_pro_1">End-to-end encrypted with MLS — the coordinator can never read a message.</string>
-    <string name="new_conversation_cordn_pro_2">One agreed order for everyone, so history cannot be reshuffled by a bad clock.</string>
-    <string name="new_conversation_cordn_con_1">The coordinator learns who is in the group and when you talk, even though it cannot read what you say.</string>
-    <string name="cordn_invitations_entry">Invited to a cordn group?</string>
+    <string name="new_conversation_cordn_pro_1">Coordinator can't read messages</string>
+    <string name="new_conversation_cordn_pro_2">One agreed message order</string>
+    <string name="new_conversation_cordn_con_1">Coordinator sees who talks, and when</string>
     <string name="cordn_invitations_entry_action">Review invitations</string>
 
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
