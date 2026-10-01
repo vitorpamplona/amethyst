@@ -176,4 +176,38 @@ class TitleAndIconFallbackTest {
 
         assertEquals("", info.icon)
     }
+
+    @Test
+    fun aBodyTitleIsIgnoredWhenTheHeadIsNeverClosed() {
+        // `</head>` is optional: `<body>` closes the head implicitly. An inline SVG's <title>
+        // ("Close", "Menu") is the classic thing to then mistake for the page title.
+        val info = extract("""<head><meta name="description" content="D"><body><svg><title>Close</title></svg></body>""")
+
+        assertEquals("", info.title)
+        assertEquals("D", info.description)
+    }
+
+    @Test
+    fun aBodyIconLinkIsIgnoredWhenTheHeadIsNeverClosed() {
+        val info = extract("""<head><title>T</title><body><link rel="icon" href="/late.png"></body>""")
+
+        assertEquals("T", info.title)
+        assertEquals("", info.icon)
+    }
+
+    @Test
+    fun aTitleWithAttributesIsRead() {
+        val info = extract("""<head><title data-rh="true">Helmet</title></head>""")
+
+        assertEquals("Helmet", info.title)
+    }
+
+    @Test
+    fun aLongTitleIsNotCutInsideASurrogatePair() {
+        // 299 ASCII chars then an emoji: a plain take(300) keeps only its high surrogate.
+        val info = extract("<head><title>" + "a".repeat(299) + "\uD83D\uDE00 tail</title></head>")
+
+        assertTrue(info.title.isNotEmpty())
+        assertTrue(!info.title.last().isHighSurrogate(), "title ends in a dangling high surrogate")
+    }
 }

@@ -71,10 +71,20 @@ class UrlInfoItem(
     /**
      * The page's icon, absolute: the one it declared, else `/favicon.ico` at its origin -- the
      * same guess every browser makes, since most sites that declare nothing still serve one.
+     *
+     * A `data:` icon is used as-is when it is an image (the image loader decodes those inline),
+     * and taken at its word when it is not: `href="data:,"` is how a site tells browsers it has no
+     * favicon, so guessing `/favicon.ico` there is a request that is known to miss.
+     *
      * Null for a non-HTML URL (an image or a video is its own preview) or an unresolvable one.
      */
     val iconUrlFullPath: String? =
-        if (mimeType.startsWith("text/html")) resolve(icon) ?: resolve(DEFAULT_FAVICON) else null
+        when {
+            !mimeType.startsWith("text/html", ignoreCase = true) -> null
+            icon.startsWith("data:image/", ignoreCase = true) -> if (icon.length <= MAX_INLINE_ICON_LENGTH) icon else resolve(DEFAULT_FAVICON)
+            icon.startsWith("data:", ignoreCase = true) -> null
+            else -> resolve(icon) ?: resolve(DEFAULT_FAVICON)
+        }
 
     /**
      * The declared `og:video`, absolute, but only when the declaration holds up: a [videoType] the
@@ -149,5 +159,9 @@ class UrlInfoItem(
 
     companion object {
         private const val DEFAULT_FAVICON = "/favicon.ico"
+
+        // Previews are cached, so an inline icon is held for as long as its card is. Real inline
+        // favicons are a few KB; anything far past that is not worth keeping in memory.
+        private const val MAX_INLINE_ICON_LENGTH = 64 * 1024
     }
 }

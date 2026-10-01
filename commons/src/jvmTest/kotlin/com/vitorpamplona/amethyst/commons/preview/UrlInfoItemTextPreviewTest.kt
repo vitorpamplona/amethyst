@@ -84,4 +84,26 @@ class UrlInfoItemTextPreviewTest {
     fun nonHtmlUrlsHaveNoIcon() {
         assertNull(page(url = "https://example.com/a.png", image = "https://example.com/a.png", mimeType = "image/png").iconUrlFullPath)
     }
+
+    @Test
+    fun anUppercaseHtmlMimeStillGetsAnIcon() {
+        // UrlPreview stores MediaType.toString(), which keeps the server's spelling.
+        assertEquals(
+            "https://example.nsite.lol/favicon.ico",
+            page(mimeType = "Text/HTML; charset=UTF-8").iconUrlFullPath,
+        )
+    }
+
+    @Test
+    fun anEmptyDataIconMeansTheSiteHasNoIcon() {
+        // `<link rel="icon" href="data:,">` is the common way to tell browsers not to request
+        // /favicon.ico. Requesting it anyway is a guaranteed miss.
+        assertNull(page(icon = "data:,").iconUrlFullPath)
+    }
+
+    @Test
+    fun anInlineImageIconIsUsedAsIs() {
+        val inline = "data:image/png;base64,iVBORw0KGgo="
+        assertEquals(inline, page(icon = inline).iconUrlFullPath)
+    }
 }

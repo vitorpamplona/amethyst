@@ -58,6 +58,7 @@ object MetaTagsParser {
     private const val META = "meta"
     private const val LINK = "link"
     private const val HEAD = "head"
+    private const val BODY = "body"
     private const val ICON = "icon"
     private const val REL = "rel"
     private const val CONTENT = "content"
@@ -88,6 +89,12 @@ object MetaTagsParser {
         /** The `</head>` that ends the interesting part of the document. */
         HEAD_END,
 
+        /**
+         * A `<body>` start tag. `</head>` is optional, so on a page that omits it this is the only
+         * sign the head is over.
+         */
+        BODY_START,
+
         /** A closed `<title>`: its text is [TagScanner.textStart]..<[TagScanner.textEnd]. */
         TITLE,
 
@@ -111,10 +118,18 @@ object MetaTagsParser {
     ): Sequence<MetaTag> =
         sequence {
             val s = TagScanner(input)
+            // Meta tags past an implicit end of head are still read, as they always were. The
+            // title and icons are not: past `<body>`, a `<title>` is an inline SVG's tooltip
+            // ("Close", "Menu"), not the page's name.
+            var inBody = false
             while (!s.exhausted()) {
                 when (s.nextTag()) {
                     TagKind.HEAD_END -> {
                         break
+                    }
+
+                    TagKind.BODY_START -> {
+                        inBody = true
                     }
 
                     TagKind.META -> {
@@ -123,14 +138,14 @@ object MetaTagsParser {
                     }
 
                     TagKind.TITLE -> {
-                        if (includeTitleAndIcons) {
+                        if (includeTitleAndIcons && !inBody) {
                             val text = titleText(input, s.textStart, s.textEnd)
                             if (text.isNotEmpty()) yield(MetaTag(mapOf(CONTENT to text), HeadElement.TITLE))
                         }
                     }
 
                     TagKind.LINK -> {
-                        if (includeTitleAndIcons) {
+                        if (includeTitleAndIcons && !inBody) {
                             val attrs = parseAttrs(input, s.attrsStart, s.attrsEnd) ?: continue
                             if (isIconRel(attrs[REL])) yield(MetaTag(attrs, HeadElement.LINK))
                         }
@@ -160,7 +175,11 @@ object MetaTagsParser {
     ): String {
         val raw = input.substring(from, to)
         val decoded = if (raw.indexOf('&') < 0) raw else raw.replace(Attrs.RE_CHAR_REF, Attrs.Companion::replaceCharRefs)
-        return decoded.replace(WHITESPACE_RUN, " ").trim().take(MAX_TITLE_LENGTH)
+        val title = decoded.replace(WHITESPACE_RUN, " ").trim()
+        if (title.length <= MAX_TITLE_LENGTH) return title
+        // Never end on half of a surrogate pair: a lone high surrogate renders as tofu.
+        val cut = if (title[MAX_TITLE_LENGTH - 1].isHighSurrogate()) MAX_TITLE_LENGTH - 1 else MAX_TITLE_LENGTH
+        return title.substring(0, cut)
     }
 
     private class TagScanner(
@@ -314,6 +333,7 @@ object MetaTagsParser {
             when (nameEnd - nameStart) {
                 META.length -> {
                     if (nameIs(nameStart, nameEnd, META)) return TagKind.META
+                    if (nameIs(nameStart, nameEnd, BODY)) return TagKind.BODY_START
                     // Most `<link>`s are stylesheets and preloads; checking the raw span for `icon`
                     // keeps their attributes from ever being parsed into a map.
                     if (nameIs(nameStart, nameEnd, LINK) && spanContains(attrsStart, attrsEnd, ICON)) return TagKind.LINK

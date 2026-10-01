@@ -160,6 +160,19 @@ class MetaTagsParserBenchmark {
         }
         bench("no </head>, whole doc", open, 2_000) { MetaTagsParser.parse(it).count() }
 
+        // What production runs (HtmlParser asks for the <title> and icon <link>s too). Should sit
+        // on top of the rows above: the 60 preload links never reach the attribute parser.
+        bench("spa head, +title/icons", spa, 50_000) { MetaTagsParser.parse(it, includeTitleAndIcons = true).count() }
+        bench("spa head, og: + fallbacks", spa, 50_000) {
+            OpenGraphParser().extractUrlInfo(MetaTagsParser.parse(it, includeTitleAndIcons = true)).title.length
+        }
+        bench("heavy head, +title/icons", heavy, 2_000) { MetaTagsParser.parse(it, includeTitleAndIcons = true).count() }
+        bench("no </head>, +title/icons", open, 2_000) { MetaTagsParser.parse(it, includeTitleAndIcons = true).count() }
+
+        val spaFallbacks = OpenGraphParser().extractUrlInfo(MetaTagsParser.parse(spa, includeTitleAndIcons = true))
+        assertEquals("Example — Your Network. Your Rules.", spaFallbacks.title)
+        assertEquals("/favicon.svg", spaFallbacks.icon)
+
         assertTrue(MetaTagsParser.parse(open).count() >= 64)
     }
 }

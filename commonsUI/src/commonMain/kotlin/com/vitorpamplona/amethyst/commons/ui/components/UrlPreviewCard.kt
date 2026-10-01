@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import androidx.collection.LruCache
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.network.HttpException
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
@@ -130,7 +132,15 @@ fun UrlPreviewCard(
 
     // Only meaningful when the card's own tap does something else (e.g. opening the comment
     // thread); otherwise it would duplicate the card's open-in-browser tap.
-    val onOpenInBrowser: (() -> Unit)? = onCardClick?.let { { runCatching { uri.openUri(url) } } }
+    val hasCardClick = onCardClick != null
+    val onOpenInBrowser: (() -> Unit)? =
+        remember(hasCardClick, url, uri) {
+            if (hasCardClick) {
+                { runCatching { uri.openUri(url) } }
+            } else {
+                null
+            }
+        }
 
     // A page with no picture to lead with -- most often one with no OpenGraph at all, previewed
     // from its `<title>`, meta description and favicon -- gets the short, wide card. Painting the
@@ -252,6 +262,13 @@ private fun CompactUrlPreviewCard(
 }
 
 /**
+ * Icon URLs the server refused (404 and the like) in this process. The image loader caches
+ * successes but not failures, so without this a site with no `/favicon.ico` would be asked for it
+ * again -- and 404 again -- every time its card scrolled back into view.
+ */
+private val failedIconUrls = LruCache<String, Unit>(200)
+
+/**
  * The site's icon in a fixed square. A generic globe sits there until the icon actually loads,
  * so a site whose favicon is missing (the `/favicon.ico` guess is only a guess) or undecodable
  * still gets a tidy card instead of an empty hole.
@@ -278,13 +295,16 @@ private fun UrlPreviewIcon(
             )
         }
 
-        if (iconUrl != null) {
+        if (iconUrl != null && failedIconUrls[iconUrl] == null) {
             AsyncImage(
                 model = iconUrl,
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Fit,
                 modifier = UrlPreviewIconImageModifier,
                 onSuccess = { loaded = true },
+                // Only a server's answer is remembered. A network error (offline, a timeout) says
+                // nothing about the icon and must be retried once the connection is back.
+                onError = { if (it.result.throwable is HttpException) failedIconUrls.put(iconUrl, Unit) },
             )
         }
     }
