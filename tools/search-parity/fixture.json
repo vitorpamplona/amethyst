@@ -21,28 +21,6 @@
      ]
     },
     {
-     "content": "Very interesting! Around 32 minutes he makes a comment about basically hand encrypting. Which makes me think about an interesting case for maybe an air gapped messaging device that only shares encrypted marmot messages over QR to an Internet connected device. \n\n",
-     "created_at": 1771074608,
-     "id": "40921da81160cfef0710b57100f7d5fb4053e3395b3f28274a1aa3a1a8396c5e",
-     "kind": 1,
-     "pubkey": "bbb5dda0e15567979f0543407bdc2033d6f0bbb30f72512a981cfdb2f09e2747",
-     "sig": "9cfadea6054d22678904c1c7767ad2125af450bfbec1cf3de8c973408b7e20626f2e905f1735b7874b27beb05598aba226ec4497c5378eadcb2e9020f0b514f8",
-     "tags": [
-      [
-       "p",
-       "b7ed68b062de6b4a12e51fd5285c1e1e0ed0e5128cda93ab11b4150b55ed32fc",
-       "wss://relay.primal.net"
-      ],
-      [
-       "e",
-       "d3da9e89cb7c45bf26b5b3df4b3d33375ccb406227deb4484f7869ae9040142b",
-       "wss://relay.primal.net",
-       "root",
-       "b7ed68b062de6b4a12e51fd5285c1e1e0ed0e5128cda93ab11b4150b55ed32fc"
-      ]
-     ]
-    },
-    {
      "content": "Was Bitcoin hijacked?\n\nInteresting critiques of #Bitcoin from one of the co-authors of *Hijacking Bitcoin*. Has anyone read it? I'm adding it to my 2025 reading list... #bookstr\nnostr:nevent1qqsy7580q8rwtr8ujd723vefk552ka6adflp9dncxdew8qpudn4n45qpr4mhxue69uhkummnw3ezucnfw33k76twv4ezuum0vd5kzmp0qgsz2vdh9xuuqxrxpn5t8vs2h5p78ywg2zgxv43p6qh5g7usdc05mpcrqsqqqqqpj0pnhd",
      "created_at": 1735176083,
      "id": "8f768164a6282e7792d323030e62a3fd23129074581ad3c10d24fe431e8925fa",
@@ -69,28 +47,6 @@
       [
        "t",
        "bookstr"
-      ]
-     ]
-    },
-    {
-     "content": "Trump's self-serving moves could be the demise of Bitcoin.\n\nhttps://www.theverge.com/2024/9/16/24246805/trump-world-liberty-financial-crypto-platform-announcement",
-     "created_at": 1726552577,
-     "id": "62423119247288c27ebd49d40b125c7c8bf1ff1991530b75274107d9d8b4cd26",
-     "kind": 1,
-     "pubkey": "3d2673d46bc1757c0a266610b0e71abd726e4b66555a7d457265116ef68337ae",
-     "sig": "9b4c38dd5108221763db28cffa7de4e2f6bedcb2a9ad52946de80b5ece983e3ec8a13108b60a0952e35d6ffa4f2a54049627774131401273c709a42b568150eb",
-     "tags": [
-      [
-       "subject",
-       "Trump will be the end of #Bitcoin"
-      ],
-      [
-       "t",
-       "bitcoin"
-      ],
-      [
-       "client",
-       "voyage"
       ]
      ]
     },
@@ -169,6 +125,32 @@
      ]
     },
     {
+     "content": "8 hours left, how high will it go?\nhttps://scarce.city/auctions/buy-bitcoin\n https://image.nostr.build/27076e466ee4da429f8d36759a8bb3535d334970f2aadfd4f4f62c4a319a08cb.png\n\n#bitcoin #plebchain",
+     "created_at": 1713970324,
+     "id": "b1c98f0c793453776c0d9e6846161599a6c92e8170b6668200907c60a4b2bb99",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "ce9359cc91b271ab0baeccb62a7736c69996da491538cb82b285edf9c091209197e163e0a82a5fdacda818d78ad5100376da98149bc4321a8b558ee6afd655f3",
+     "tags": [
+      [
+       "t",
+       "bitcoin"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "Buy bitcoin sign auction"
+      ]
+     ]
+    },
+    {
      "content": "If you are looking for a personal reserve currency, #Bitcoin is simply unbeatable. All of the arguments against it don't matter, if you hardly ever interact with it and it merely sits in cold storage to prove your solvency.\n\nIf you just want to buy a cup of coffee, pay your taxes, or order a flight online, you can use a second-rail of Bitcoin to do that, like Lightning.\n\nOr use dollars or poker chips or frequent flyer miles or a pack of cigarettes or a silver coin or wash the dishes... or whatever they'll accept in exchange.\nNone of these things negate the importance of Bitcoin, nor are they generally more-efficient or effective than something like Lightning.",
      "created_at": 1704962711,
      "id": "4835d6ac395676c21223eb5635ac5db1b45875ece0e78369d2b4a9daff9c917a",
@@ -187,6 +169,56 @@
       [
        "subject",
        "Bitcoin is digital gold"
+      ]
+     ]
+    },
+    {
+     "content": "BTC \u2022 Liquidation Levels Heatmap 03/ENE/2024 06:10\nhttps://image.nostr.build/eb619c86c281a455c0627b88a153bfa9a341579e4446b8bcfed0cbfc2dcc54e7.jpg\nhttps://image.nostr.build/35a8ef90f3ce9db9a435c9720a1d472e8220c27a77604f1df584e0ffb321a85b.jpg\nhttps://image.nostr.build/e857466246849ac273d91c99feb50b27d94db95540c50d64994e7657701207ac.jpg\nhttps://image.nostr.build/18738e3619ffff3b3546aa18690c526648cffabb4caeb2eaece6b8f9619c7157.jpg",
+     "created_at": 1704268836,
+     "id": "9c8ff40fbcf6be612ebcd5e831a08cde2b7f9e2fff9be8805ce46ca4dfd42252",
+     "kind": 1,
+     "pubkey": "c40cb64de1a1f6ec0d6c6d98ea665a42a09d37868f2919ae5703b324baa7a1e9",
+     "sig": "fa9f37fd6b20a8c19ec488e855a3a772f75b7adf31ce3b5903940a3a5a4e0a6fb490ae6f4c9c02d2de0c125914125b8a85565c671826ebbe4251620557d7e50f",
+     "tags": [
+      [
+       "imeta",
+       "url https://image.nostr.build/eb619c86c281a455c0627b88a153bfa9a341579e4446b8bcfed0cbfc2dcc54e7.jpg",
+       "ox eb619c86c281a455c0627b88a153bfa9a341579e4446b8bcfed0cbfc2dcc54e7 https://nostr.build",
+       "x c9f05304a8006a4395ebe8b6585042c9356b4689a35ad7bf17b91ccff2022d63",
+       "m image/jpeg",
+       "dim 1386x840",
+       "bh LoHoa.sW?aozxak9ofkA~poeV[oL",
+       "blurhash LoHoa.sW?aozxak9ofkA~poeV[oL"
+      ],
+      [
+       "imeta",
+       "url https://image.nostr.build/35a8ef90f3ce9db9a435c9720a1d472e8220c27a77604f1df584e0ffb321a85b.jpg",
+       "ox 35a8ef90f3ce9db9a435c9720a1d472e8220c27a77604f1df584e0ffb321a85b https://nostr.build",
+       "x ed4f7b7ad0a35f367606c076c6d52919e75e59cbd0740999d5271bcec59e8d8c",
+       "m image/jpeg",
+       "dim 1386x840",
+       "bh LoH.Z]nl?aozxakAoej@~poLWBn+",
+       "blurhash LoH.Z]nl?aozxakAoej@~poLWBn+"
+      ],
+      [
+       "imeta",
+       "url https://image.nostr.build/e857466246849ac273d91c99feb50b27d94db95540c50d64994e7657701207ac.jpg",
+       "ox e857466246849ac273d91c99feb50b27d94db95540c50d64994e7657701207ac https://nostr.build",
+       "x 28db9107cdb7d148617034fbff4a73db1393f6c4cfe578f33e4ae22fd5bcf199",
+       "m image/jpeg",
+       "dim 1386x840",
+       "bh LJRo]W%N_MxF-?o|x@Vt.k%1Q.Ny",
+       "blurhash LJRo]W%N_MxF-?o|x@Vt.k%1Q.Ny"
+      ],
+      [
+       "imeta",
+       "url https://image.nostr.build/18738e3619ffff3b3546aa18690c526648cffabb4caeb2eaece6b8f9619c7157.jpg",
+       "ox 18738e3619ffff3b3546aa18690c526648cffabb4caeb2eaece6b8f9619c7157 https://nostr.build",
+       "x c87414fbd60abc358799c98dc754cc31ab07d506f858a872cbf4134f0fb24fa4",
+       "m image/jpeg",
+       "dim 1386x798",
+       "bh LkPQmAE0%3-;%LaykBWB~E%MInNF",
+       "blurhash LkPQmAE0%3-;%LaykBWB~E%MInNF"
       ]
      ]
     }
@@ -253,6 +285,41 @@
        "client",
        "Ditto",
        "31990:781a1527055f74c1f70230f10384609b34548f8ab6a0a6caa74025827f9fdae5:ditto"
+      ]
+     ]
+    },
+    {
+     "content": "nostr:naddr1qqnhgmpdwp5kutfjv4nxzcfhxy6j6vn9veskzde3x5kky6t5vdhkjm3dwejkuer0wgq3samnwvaz7tmnwpshg6tp94shycmpdesjucm0d5hsygpwl2n3twa5dh2mu6ma4rthqqnx6yt8fwgnhqtc4hd4ctnrmxrnxypsgqqqw5cqqp2llq",
+     "created_at": 1780004572,
+     "id": "0f07af38491d37cdfb55eea1896abd83388519ec8fde7f652c8da2dc2cce1e0e",
+     "kind": 1,
+     "pubkey": "2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331",
+     "sig": "2eb289b08ca3c3f79c7f221dc13e8c3395179d538467783eec72b5dee50a634f2fe033b3d26a55400e6d2a8c8f591f7cd8219079ffb6d144691fba1709dc71d0",
+     "tags": [
+      [
+       "alt",
+       "A short note: nostr:naddr1qqnhgmpdwp5kutfjv4nxzcfhxy6j6vn9veskzd..."
+      ],
+      [
+       "e",
+       "a4ac96cd4bd4f9abe16f13c26816da93af7f53fcc919636c8627cfc03c516624",
+       "wss://relay.primal.net/",
+       "root",
+       "174ed916a8520e623293cad8419a176edbcc8c1a1e5f5271e36c922730f9470f"
+      ],
+      [
+       "p",
+       "174ed916a8520e623293cad8419a176edbcc8c1a1e5f5271e36c922730f9470f",
+       "wss://profiles.nostr1.com/"
+      ],
+      [
+       "p",
+       "2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331",
+       "wss://spatia-arcana.com/"
+      ],
+      [
+       "client",
+       "Amethyst"
       ]
      ]
     },
@@ -435,129 +502,45 @@
      ]
     },
     {
-     "content": "nostr:nprofile1qyd8wumn8ghj7ctjw35kxmr9wvhxcctev4erxtnwv4mhxqpqmvlm9xukx5pek66dzt2muwkefhx3mzc4thlzt756n9h8dplrtk3qmxle2g\nBITCOIN LIGHTNING PAYMENT ZAPS ACROSS SATELLITE IN HISTORIC FIRST\n\nhttps://s.w.org/images/core/emoji/16.0.1/72x72/26a1.png\n--\n\u270d\ufe0f  A Bitcoin Lightning payment request was relayed through a geostationary satellite and then paid, marking the first public demonstration of a Lightning invoice transmitted through actual space.\n--\n\ud83d\udc49 First public demonstration of a Lightning invoice transmitted through actual space\n\ud83d\udc49 Lightning payment request relayed through a geostationary satellite\n\ud83d\udc49 Decoupling Bitcoin from single points of terrestrial failure\n\ud83d\udc49 Potential for satellite infrastructure to harden Bitcoin's communications layer\n\n--\n#Printer #Europe #Africa #MiddleEast #Asia #technology\n--\nnostr:nevent1qvzqqqqqqypzpkelk2devdgrnd456yk4hcadjnwdrk932h07yhaf4xtww6r7xhdzqyd8wumn8ghj7ctjw35kxmr9wvhxcctev4erxtnwv4mhxqpqyd70x9wr4mt7vp2ukvklwa2tr4pugaww4s83g4dzda24urverpzs3am40v  \n  ",
-     "created_at": 1757588519,
-     "id": "94bdc9e1d70588ac5516a29bc35647db7e721e63b6be731ae07d4ebd7f5284e8",
+     "content": "\nnostr:nprofile1qy3hwumn8ghj7un9d3shjtt5v4ehgmn9wshxkwrn9ekxz7t9wgejumn9waesqgrjxj24tzky80sws3pf636u0rwueruy07ttwhd3jng95xdm03masuq2e9z6\n\u270d\ufe0f  Block Inc. announces the launch of its Bitcoin Business Stack, a comprehensive platform for merchants to accept and manage Bitcoin payments, and makes a historic push for Lightning payments at the Bitcoin 2025 Conference.\n\ud83d\udc49 Block Inc. launches the Bitcoin Business Stack, a comprehensive platform for merchants to accept and manage Bitcoin payments\n\ud83d\udc49 Merchants can now accept Bitcoin directly in-store using Square POS\n\ud83d\udc49 Block Inc. is rolling out Bitcoin payment capability for merchants using Square POS\n\ud83d\udc49 Block Inc. is committed to making Bitcoin an everyday currency for everyone\n\ud83d\udc49 Block Inc. is focused on making Bitcoin more accessible, secure, and usable\n\n#MilesSuter #Bitcoin2025Conference #technology\nnostr:nevent1qvzqqqqqqypzqu35j42c43pmur5yg2w5whrcmhxglprlj6m4mvv56pdpnwmuwlv8qy3hwumn8ghj7un9d3shjtt5v4ehgmn9wshxkwrn9ekxz7t9wgejumn9waesqgxcr3vrdp2kws3gqywadc8xx0deudaezl9kpl9qgm7fchuum8gfyucdrx7r  \n",
+     "created_at": 1748460431,
+     "id": "664a7133a599f3494362f2f7df474645878e0a213f199ed7a67125038f67b069",
      "kind": 1,
-     "pubkey": "de1abdd3127788ab39fb6f558233067d7cf07e8165598738c9a46a9cff3979a0",
-     "sig": "08d5eb18ea7ff848f41d3f09688ffb1914761b38a33eb663a97452c9e50fd9984add5b93129789be5bee8f6de30010fc20c22288c9afe625053c1f28b92302fb",
+     "pubkey": "2902af7ca5cf9039dd5846469404be1010a5460af4e52b3a857a6db84dad3caa",
+     "sig": "4823794334a7d9c9198932a6e7498dac7a3ee96c82dc537f985e09c36917498d2d3059a20294be1216cd4dd2bb116a52284e55558804a49ff89bd13fe7050fc8",
      "tags": [
       [
        "r",
-       "https://bitcoinist.com/bitcoin-lightning-payment-satellite-historic-first/"
+       "https://bitcoinmagazine.com/news/block-announces-bitcoin-business-stack-makes-historic-lightning-payments-push-at-bitcoin-2025"
       ],
       [
        "subject",
-       "Bitcoin Lightning Payment Zaps Across Satellite In Historic First"
+       "Block Announces Bitcoin Business Stack, Makes Historic Lightning Payments Push at Bitcoin 2025"
       ],
       [
        "published_at",
-       "1757588406"
+       "1748460178"
       ],
       [
        "image",
-       "https://s.w.org/images/core/emoji/16.0.1/72x72/26a1.png"
+       "https://bitcoinmagazine.com/wp-content/uploads/2025/05/Miles-Suter-BTC.jpg"
       ],
       [
        "p",
-       "de1abdd3127788ab39fb6f558233067d7cf07e8165598738c9a46a9cff3979a0",
-       "wss://articles.layer3.news"
-      ],
-      [
-       "p",
-       "db3fb29b9635039b6b4d12d5be3ad94dcd1d8b155dfe25fa9a996e7687e35da2",
-       "wss://articles.layer3.news"
+       "2902af7ca5cf9039dd5846469404be1010a5460af4e52b3a857a6db84dad3caa",
+       "wss://relay-testnet.k8s.layer3.news"
       ],
       [
        "imeta",
-       "url https://s.w.org/images/core/emoji/16.0.1/72x72/26a1.png"
+       "url https://bitcoinmagazine.com/wp-content/uploads/2025/05/Miles-Suter-BTC.jpg"
       ],
       [
        "t",
-       "Printer"
+       "Miles Suter"
       ],
       [
        "t",
-       "Europe"
-      ],
-      [
-       "t",
-       "Africa"
-      ],
-      [
-       "t",
-       "Middle East"
-      ],
-      [
-       "t",
-       "Asia"
-      ],
-      [
-       "t",
-       "technology"
-      ],
-      [
-       "t",
-       "Technology:perspective"
-      ],
-      [
-       "summary",
-       "The experiment, conducted by user 'Printer', uplinked a Lightning invoice as an image to the QO-100 amateur radio transponder and downlinked it back to Earth, where it was decoded and settled over the Lightning Network. This demonstration showcases the potential for satellite infrastructure to harden Bitcoin's communications layer against last-mile failures, censorship, and disaster scenarios."
-      ]
-     ]
-    },
-    {
-     "content": "\nnostr:nprofile1qyd8wumn8ghj7ctjw35kxmr9wvhxcctev4erxtnwv4mhxqpqmvlm9xukx5pek66dzt2muwkefhx3mzc4thlzt756n9h8dplrtk3qmxle2g\n\u270d\ufe0f  A Bitcoin Lightning payment request was relayed through a geostationary satellite and then paid, marking the first public demonstration of a Lightning invoice transmitted through actual space.\n\ud83d\udc49 First public demonstration of a Lightning invoice transmitted through actual space\n\ud83d\udc49 Lightning payment request relayed through a geostationary satellite\n\ud83d\udc49 Decoupling Bitcoin from single points of terrestrial failure\n\ud83d\udc49 Potential for satellite infrastructure to harden Bitcoin's communications layer\n\n#Printer #Europe #Africa #MiddleEast #Asia #technology\nnostr:nevent1qvzqqqqqqypzpkelk2devdgrnd456yk4hcadjnwdrk932h07yhaf4xtww6r7xhdzqyd8wumn8ghj7ctjw35kxmr9wvhxcctev4erxtnwv4mhxqpqyd70x9wr4mt7vp2ukvklwa2tr4pugaww4s83g4dzda24urverpzs3am40v  \n",
-     "created_at": 1757588519,
-     "id": "f54988f41ad840926c56362ff6a7a3194b6fdcd7cf82c11544c808b9bf1d9bdb",
-     "kind": 1,
-     "pubkey": "7455e74032c0aa128d6d3458612647578d3823526dd019e7f1a33f0f4b0fdb6c",
-     "sig": "0c08c3fcd70e2e4ab389bb30c235f815cabd9c8fe790211beac35e4563231a8f2639c2e12a00749fcfdee076f7123b00e889529761fdd8f35f4ba076a00905ad",
-     "tags": [
-      [
-       "r",
-       "https://bitcoinist.com/bitcoin-lightning-payment-satellite-historic-first/"
-      ],
-      [
-       "subject",
-       "Bitcoin Lightning Payment Zaps Across Satellite In Historic First"
-      ],
-      [
-       "published_at",
-       "1757588406"
-      ],
-      [
-       "image",
-       "https://s.w.org/images/core/emoji/16.0.1/72x72/26a1.png"
-      ],
-      [
-       "p",
-       "7455e74032c0aa128d6d3458612647578d3823526dd019e7f1a33f0f4b0fdb6c",
-       "wss://articles.layer3.news"
-      ],
-      [
-       "imeta",
-       "url https://s.w.org/images/core/emoji/16.0.1/72x72/26a1.png"
-      ],
-      [
-       "t",
-       "Printer"
-      ],
-      [
-       "t",
-       "Europe"
-      ],
-      [
-       "t",
-       "Africa"
-      ],
-      [
-       "t",
-       "Middle East"
-      ],
-      [
-       "t",
-       "Asia"
+       "Bitcoin 2025 Conference"
       ],
       [
        "t",
@@ -565,19 +548,19 @@
       ],
       [
        "p",
-       "db3fb29b9635039b6b4d12d5be3ad94dcd1d8b155dfe25fa9a996e7687e35da2",
-       "wss://articles.layer3.news"
+       "723495558ac43be0e84429d475c78ddcc8f847f96b75db194d05a19bb7c77d87",
+       "wss://relay-testnet.k8s.layer3.news"
       ],
       [
        "e",
-       "237cf315c3aed7e6055cb32df7754b1d43c475ceac0f1455a26f555e0d991845",
-       "wss://articles.layer3.news",
+       "d81c5836855674228011dd6e0e633db9e37b917cb60fca046fc9c5f9cd9d0927",
+       "wss://relay-testnet.k8s.layer3.news",
        "root"
       ],
       [
        "q",
-       "237cf315c3aed7e6055cb32df7754b1d43c475ceac0f1455a26f555e0d991845",
-       "wss://articles.layer3.news"
+       "d81c5836855674228011dd6e0e633db9e37b917cb60fca046fc9c5f9cd9d0927",
+       "wss://relay-testnet.k8s.layer3.news"
       ]
      ]
     }
@@ -593,41 +576,62 @@
   {
    "events": [
     {
-     "content": "**Nostr Nedir?**\n\nNostr, d\u00fc\u015f\u00fcn\u00fclenin aksine bir uygulama de\u011fil, bir sosyal a\u011f protokol\u00fcd\u00fcr. Pop\u00fcler bir araca benzetmek gerekirse Twitter diyebiliriz ancak Nostr'\u0131n belli bir patronu ya da merkezi bir sahibi yoktur. Sizin payla\u015ft\u0131\u011f\u0131n\u0131z g\u00f6nderileri silmek ya da belli bir kategoriye koymakla g\u00f6revlendirilmi\u015f tek bir kurum ya da ki\u015fi bulunmaz. Nostr, herkesin \u00f6zg\u00fcrce fikirlerini beyan edebildi\u011fi merkeziyetsiz bir sosyal a\u011fd\u0131r.\n\n\n**Nostr hesab\u0131m\u0131 nas\u0131l kurabilirim?**\n\nNostr anahtarlar\u0131 iki b\u00f6l\u00fcme ayr\u0131l\u0131r: nsec ve npub. nsec sizin gizli parolan\u0131z olmakla beraber Nostr hesab\u0131n\u0131z\u0131n kalbidir. Bu parolay\u0131 kaybetti\u011finiz anda hesab\u0131n\u0131za eri\u015fiminiz tamamen kapan\u0131r. nsec anahtar\u0131n\u0131z\u0131 kimseyle payla\u015fmad\u0131\u011f\u0131n\u0131z s\u00fcrece hesab\u0131n\u0131z ba\u015fkalar\u0131 taraf\u0131ndan ele ge\u00e7irilemez. npub ise sizin kullan\u0131c\u0131 ad\u0131n\u0131z (herkese a\u00e7\u0131k adresiniz) gibi d\u00fc\u015f\u00fcn\u00fclebilir. Nostr hesab\u0131 olu\u015fturmak i\u00e7in do\u011frudan Primal veya Amethyst gibi bir Nostr uygulamas\u0131n\u0131 indirip saniyeler i\u00e7inde anahtarlar\u0131n\u0131z\u0131 \u00fcretebilirsiniz.\n\n\n**Nostr ad\u0131 alt\u0131nda bir uygulama bulam\u0131yorum?**\n\nEvet, bu \u00e7ok normal; \u00e7\u00fcnk\u00fc yaz\u0131n\u0131n ba\u015f\u0131nda da belirtti\u011fim gibi Nostr bir uygulama de\u011fil, bir internet protokol\u00fcd\u00fcr. A\u015fa\u011f\u0131da bulabilece\u011finiz uygulamalar\u0131 kullanarak al\u0131\u015f\u0131lagelen kullan\u0131m\u0131n\u0131za devam edebilirsiniz:\nPrimal: Ak\u0131\u015f\u0131 takip etmek i\u00e7in (Twitter benzeri aray\u00fcz)\nAmethyst: Android i\u00e7in pop\u00fcler bir Nostr istemcisi\nYakihonne: Uzun makale ve blog yazmak isteyenler i\u00e7in\n\n\n**Ak\u0131\u015f\u0131m nas\u0131l takip ediliyor?**\n\nInstagram ve Twitter benzeri uygulamalar\u0131n aksine Nostr size ba\u011f\u0131ml\u0131l\u0131k yapacak yapay zek\u00e2 algoritmalar\u0131yla bir ak\u0131\u015f olu\u015fturmaz. Sadece takip etti\u011finiz ki\u015filerin ve kanallar\u0131n payla\u015ft\u0131klar\u0131n\u0131 g\u00f6r\u00fcrs\u00fcn\u00fcz. Bu da saatlerce i\u00e7erik kayd\u0131rmak gibi vakit kay\u0131plar\u0131n\u0131 minimuma d\u00fc\u015f\u00fcr\u00fcr.\n\n\n**Zap / Bitcoin**\n\nNostr, \"Zap\" destekli (mikro bah\u015fi\u015fler) bir platformdur. \u0130nsanlar payla\u015ft\u0131\u011f\u0131n\u0131z g\u00f6nderilerin alt\u0131na Zap g\u00f6ndererek size Bitcoin \u00fczerinden do\u011frudan ba\u011f\u0131\u015fta bulunabilirler.\n\n\n**Zap hesab\u0131 ve kurulumu**\n\n\u00d6ncelikle Nostr hesab\u0131n\u0131za eri\u015fim sa\u011flay\u0131n. Daha sonras\u0131nda Wallet of Satoshi veya benzeri bir Bitcoin Lightning c\u00fczdan\u0131 \u00fczerinden bir Lightning adresi olu\u015fturun. Kulland\u0131\u011f\u0131n\u0131z uygulama (Primal, Amethyst vb.) profil ayarlar\u0131ndan Lightning adresinizi ba\u011flay\u0131n ve bitti. Art\u0131k di\u011fer insanlardan Zap alabilirsiniz.\n\n\n**Genel \u00d6zet**\n\nNostr; beynimizi \u00e7\u00fcr\u00fctmeyen, zaman\u0131m\u0131z\u0131 bo\u015fa harcatmayan bir platform olarak g\u00fcny\u00fcz\u00fcne \u00e7\u0131kmaya ba\u015flad\u0131. Belli bir ki\u015finin kurdu\u011fu uygulamalarda saatlerce vakit ge\u00e7irip hesab\u0131n\u0131z\u0131n nedensizce kapat\u0131lmas\u0131 ya da sans\u00fcrlenmesi riskine gerek yok. Daha \u00f6zg\u00fcrl\u00fck\u00e7\u00fc olan bu a\u011f hepimize iyi gelecek. Sa\u011fl\u0131cakla kal\u0131n.\n\ntopluluk@nostr.org.tr",
-     "created_at": 1788483939,
-     "id": "a699579a051fa603b4ea0d7cd4a4e354c345e7b8959df02e87aa57242cdc8ec8",
+     "content": "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via relays. it grew out of a small community of bitcoin/lightning devs, specifically [fiatjaf](nostr:npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6). it was a reaction to the counter-party risks in using centralized social networks (twitter, facebook, etc) and the failings of other, semi-decentralized approaches (mastodon).\n\nbitcoin familiarity helps when groking nostr. the identity portion of nostr is private/public key pair. similar to a bitcoin wallet where one uses one\u2019s private key to sign a transaction and publish it into the network, one uses a nostr private key to sign an event and publish it to relays. there are various defined [kinds](https://github.com/nostr-protocol/nips#event-kinds) of events, from profile information (name, about, url, avatar url, etc), to contact lists (follows), to notes (a short plain text message). the bitcoin network is peer to peer (distributed), where nodes will gossip transactions around to all the other nodes, but this is not the case with nostr. events stay where you publish them, relays only talk to clients, not other relays. this makes nostr decentralized, but not distributed. since it\u2019s not peer-to-peer, one client doesn\u2019t need to see the entire traffic of the network, or to query some distributed hash table a la IPFS, to find content across the network. this middle ground between centralized and distributed allows snappy response times yet prevents the domination of network lock-in.",
+     "created_at": 1782172014,
+     "id": "4c3ffd171a535f9bac1afc47526b565833c726f82e59b3bf287db3e39cafc48e",
      "kind": 30023,
-     "pubkey": "628b2c9aedcf9da47f42128402f3fd82787dac75c3595db1bccf3b7baab0452f",
-     "sig": "cf0cdbf17d750c38a0fc0e168d68338761e84f9eb174e09806e656002de23d4503f5c07a3872228058bfe5154db5d5eaf01a734d063f8e361aef4c42941961ff",
+     "pubkey": "27c66d241898300a254f0853dfbfcf735a627dc2790c45a03de04704dd54a3b4",
+     "sig": "cc646b6cd05fe3e1fbcc365e9a042ca0ecd0b04523d3c228ce1504dc77703cea150ebdab0e4704fe3fb9bc5d6a08acf3ca32367386cdbab4a778e18213f85ab2",
      "tags": [
       [
-       "client",
-       "YakiHonne",
-       "31990:20986fb83e775d96d188ca5c9df10ce6d613e0eb7e5768a0f0b12b37cdac21b3:1700732875747"
-      ],
-      [
-       "d",
-       "579d7bcc2e06132c"
-      ],
-      [
-       "image",
-       ""
-      ],
-      [
        "title",
-       "Nostr Nedir?"
+       "nostr"
       ],
       [
        "summary",
-       ""
+       "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via"
       ],
       [
        "published_at",
-       "1788483851"
+       "1676764800"
       ],
       [
-       "t",
-       "#nostr"
+       "d",
+       "d4b8f38a8c6e1e9a9ecbffecb23fd7dfe7b68b18d08584cb7b09d7e858f5ebf6"
+      ],
+      [
+       "r",
+       "https://plantimals.org/nostr/"
+      ]
+     ]
+    },
+    {
+     "content": "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via relays. it grew out of a small community of bitcoin/lightning devs, specifically [fiatjaf](nostr:npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6). it was a reaction to the counter-party risks in using centralized social networks (twitter, facebook, etc) and the failings of other, semi-decentralized approaches (mastodon).\n\nbitcoin familiarity helps when groking nostr. the identity portion of nostr is private/public key pair. similar to a bitcoin wallet where one uses one\u2019s private key to sign a transaction and publish it into the network, one uses a nostr private key to sign an event and publish it to relays. there are various defined [kinds](https://github.com/nostr-protocol/nips#event-kinds) of events, from profile information (name, about, url, avatar url, etc), to contact lists (follows), to notes (a short plain text message). the bitcoin network is peer to peer (distributed), where nodes will gossip transactions around to all the other nodes, but this is not the case with nostr. events stay where you publish them, relays only talk to clients, not other relays. this makes nostr decentralized, but not distributed. since it\u2019s not peer-to-peer, one client doesn\u2019t need to see the entire traffic of the network, or to query some distributed hash table a la IPFS, to find content across the network. this middle ground between centralized and distributed allows snappy response times yet prevents the domination of network lock-in.",
+     "created_at": 1782142849,
+     "id": "d957e3daa1b7c6275cb2335edbe67bef9e21218aaa32731f7362f2b17367e297",
+     "kind": 30023,
+     "pubkey": "8d5b9142b2021c38ecbd9fe6bead324836dad84379643507eb8a4ce58dd31feb",
+     "sig": "f93128dc50737a678b41d8d57c051281839325e7de6692605902d3bb718ec5a450bde6e28a4715dac852797c161ba54f96d69183a4826506ca1b7232817b07cf",
+     "tags": [
+      [
+       "title",
+       "nostr"
+      ],
+      [
+       "summary",
+       "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via"
+      ],
+      [
+       "published_at",
+       "1676764800"
+      ],
+      [
+       "d",
+       "d4b8f38a8c6e1e9a9ecbffecb23fd7dfe7b68b18d08584cb7b09d7e858f5ebf6"
+      ],
+      [
+       "r",
+       "https://plantimals.org/nostr/"
       ]
      ]
     },
@@ -697,74 +701,6 @@
       [
        "t",
        "nostr"
-      ]
-     ]
-    },
-    {
-     "content": "nostr.wine nostr relay.",
-     "created_at": 1771436582,
-     "id": "85fe5aa85429bb367ce0cf8f03f71f74ba83dd02f1b42f666bfb921bb07c7c86",
-     "kind": 30023,
-     "pubkey": "e938eb5077f30bd8fd0f9a0681514e52706fb231f0ac7516e3194530618addfa",
-     "sig": "40c7e26e24663feb4a22906d22bb424740ddf826d6c71a2a4839e8adf533f11692ad1b19c9566414849e2519b508398b7d848e63b2b9ef6631567b3242bd0460",
-     "tags": [
-      [
-       "d",
-       "nostr_wine"
-      ],
-      [
-       "title",
-       "nostr.wine Nostr Relay"
-      ],
-      [
-       "image",
-       ""
-      ],
-      [
-       "published_at",
-       "2026-02-18 17:43:02 +0000 UTC"
-      ],
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "t",
-       "relay"
-      ]
-     ]
-    },
-    {
-     "content": "nostr.mom nostr relay.",
-     "created_at": 1771436581,
-     "id": "d6f0e0db71f5b276e008d7285b896e069b78f0eb5da3b34fdd87c97eac66d01a",
-     "kind": 30023,
-     "pubkey": "e938eb5077f30bd8fd0f9a0681514e52706fb231f0ac7516e3194530618addfa",
-     "sig": "6936e469dd04081e2fd9eb79800793258d7cbae1a0f178a05d9a2480037f48ec78b9e9e3d3486ccdaa3922f29eae73a7b7734222f7a76070d3cdbc9260fe487a",
-     "tags": [
-      [
-       "d",
-       "nostr_mom"
-      ],
-      [
-       "title",
-       "nostr.mom Nostr Relay"
-      ],
-      [
-       "image",
-       ""
-      ],
-      [
-       "published_at",
-       "2026-02-18 17:43:01 +0000 UTC"
-      ],
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "t",
-       "relay"
       ]
      ]
     },
@@ -874,6 +810,60 @@
        "This is a long form article, you can read it in https://habla.news/franzap/respect-the-a-context"
       ]
      ]
+    },
+    {
+     "content": "\n# Blogging Nostr!\n\n\n![avatar](https://paynym.is/PM8TJXVwNbJb8MGphGbijWucP3fw9mkDZ9BQT3pGkCsdFK21cR6v5xKrart2oBsqDMkxtqMGgkoTgn1NAczLznUeTwa4BG2rs1zZDfEtKin7WuBcdvcK/avatar)\n\n------------\n\n\n\n\nHabla is a new nostr native blogging platform. It is the second one I have found. I'm, writing this as a test, but so fair I have noticed my markdown syntax is not being rendered yet. On the other hand, I also seem to be able to see my blogstack post on Habla as well.  This is why it's a test. I'm still trying to wrap my head around how this all works.\n\n\n\nI've been writing a blog about how I use bitcoin since April on a platform namedtw Ghost under a pseudonym. I wrote on that platform for the following reasons:\n\n* I want to be a writer\n\n* I spend most of my waking hours thinking about bitcoin.\n\n* Marty Bent uses Ghost and had this paywall I thought was really cool at the time.\n\nMarty's paywall is actually kind a neat, Instead of asking his readers to pay an annual subscription fee like the New York Times, You could just pay 50 cents per article. This is much better than the New York Times Paywall.  When I first heard of it, I thought writers could only get paid on the Internet with a paywall or ads. The mechanics of the system did not leave many options. Lightning addresses worked, but most people never heard of them and even most Bitcoiners didn't use them. Yalls had a paywall, but the UX wasn't great. I first thought of starting a blog because of yalls. I thought I could do magic tricks over video for tips, like buskers in Vegas, but on the Internet.  Then I thought, I'm not that good at magic and I don't feel comfortable throwing my face out there like a whore on the Internet (No disrespect to sex workers, but **I doubt anyone would pay for my sex services** and **my wife would not approve**.)  I also have a degree in creative writing, but I'm a bit rusty. The lightning network got me interested in writing again.\n\nIt's what prompted me to run my own lightning node in the first place. I think this was back in 2018 or 2019. At the time, I tried running [Pierre Rochard's lightning node](https://github.com/lightning-power-users/node-launcher), but didn't have the technical chops to pull it off on my old Windows laptop.  It might have worked if I knew that I needed to plug the damn thing into an Ethernet cable to download the bitcoin blockchain.(We didn't use the term time chain in those days).\n\n----\n\nHis paywall was an order of magnitude better than running my own node to accept tips on yalls.org, so I started my blog on ghost with the intention of using his paywall software.\n\nI spun up a virtual private server on Bitlaunch.\n\nI installed Yunohost because it was easy to set up Ghost. \n\nNow Marty finally launched his service. If you like this model, you can use it for charges 10 bucks a month.\n\nFor the record, **I really like Marty**. I listen to Rabbit Hole Recap every week. I'm not trying to ruffle any feathers, or shit on his side project, but  [@dergigi](https://dergigi.com/2021/12/30/the-freedom-of-value/) convinced that the paywall model will soon go the way of the doorstep delivered newspaper.  If you don't have time to read or listen to that entire article, please listen to this 30 second clip of the Bitcoin.Review podcast created by [Oscar Merry](https://fountain.fm/clip/VF7nRhSOGejzI4KbfsWG).\n\n----\n\n## Blogs Can Be Nostr Native\n\nThere's no reason to spin up a server on a VPS to start a blog anymore. No reason to host it on a Raspberry Pi. You don't need to buy a shared hosting account. You don't need to install ruby, gem  or jekyll to host it on Github. You don't even need to buy a domain, although you might want to buy one for a [DIY Nip 05 verification](https://nvk.org/n00b-nip5).  Hopefully, in the not too distant future, you won't even need Github.  Habla.news is a Medium alternative, but there's no reason why we couldn't have a Github alternative. We're just waiting on someone to build it. \n\nThe reason I find this value 4 value model built on Nostr so exciting now is because *it is now trivial for those who produce value to receive value* and *trivial for those who cherish valuable content to send value to those who produce it*. \n\n**Why spend the time setting up ghost or pay a fee to accept lightning payments or a ghost account?** --*Especially if you are writing a blog about bitcoin.\n\nI like the idea of charging for services, but paywalls just don't jive with the old walled garden model anymore. \n\nNostr is censorship resistant. Anyone can create a nostr key.\n \n[Some freaks say it's not normie ready](https://iris.to/post/note1mn98w4szpnkdfc53sqmgwme0akrt7wz5vzvvwwm840qv0020zu4s2fe62f), but it is much easier to create a private key than create a blog using the aforementioned options. I look forward to the day when we see more no-coiners witnessing how trivial it is to send value over the Internet.  [@TheGuySwann](https://iris.to/post/note1c39e8k2c0uj7l77q0p7md5a9rahumv8dr57crd3r4xq7tegecn9sx7tckq) wrote a great post about how Facebook spent years developing their shitcoin, only to get shut down by congress.\n\n----\n### Paywalls Not Required\n\n**You couldn't accept native bitcoin on any other platforms until now**. Now **plebs are zapping each other left and right**.\n\nIn the value 4 value model, the zapper sets the value on the article. The paywall sets a price on reading the full article.\n\n\n\n* We **don't need paywalls anymore.**\n\n* **I don't need to send you spam** .\n\n* If you want to read my blog, just **follow me on Nostr.**\n\n* We **don't need to rely on digital overlords** to create content. \n\n* We **don't need ads **to monetize content. \n\n**Ads suck.**\n\nThis is **pure vida.**\n\n----\n\n**Nostr is the first amendment translated into code** like Satoshi translated this math:\n\n![bitcoin supply math](https://blog.lopp.net/content/images/2022/01/subsidy_equation.jpg)\n\n\n----\n\n\nInto this code:\n\n----\n\n![bitcoin monetary supply ](https://blog.lopp.net/content/images/2022/01/Screenshot-from-2022-01-10-18-07-46.png)\n\n----\nWe can write without **undue influence** from ads, corporations, or even governments.\n\n\n\n**We can create a better Internet.**\n\n\n\n**Code is speech.\nCypherpunks write code.**\n\n\n**Nostr makes speech  unstoppable**.\n\nThat's a big fucking deal.\n\n\n\n**Blogging Bitcoin**\n\n![block](https://nostr.build/i/nostr.build_62b2b95fdf1b8df642842d7a7d27c3dee975e32ed60db4ab9abf3e9f19885526.png)\n\n------------\n\n\n[![Value 4 Value](https://nostr.build/i/nostr.build_571397a69b34a41f499ad9b057a49c65531e104785428e5a00a56a500017e60f.png)](https://bloggingbitcoin.store/apps/cd4EUVkfhWbTg5UZsbCJPi5ghxZ/pos)\n",
+     "created_at": 1677183856,
+     "id": "d1d627b2e4120e4362c206a49c39d2cd7abc4bf49b83e282cb9b58cb71b2af2f",
+     "kind": 30023,
+     "pubkey": "75bf23531ae9f98c62995ba07191e488ead475975371d63d7dfd46bde1bfa895",
+     "sig": "a76f74be0cf073d1d197d20675092dc4e6d03a850db7ce50622e180f1a7d12ad2c1a689e8d85a35aea308293f73a1acc6d375c77df404bb3bd7b08037dbba95e",
+     "tags": [
+      [
+       "client",
+       "blogstack.io"
+      ],
+      [
+       "title",
+       "Nostr"
+      ],
+      [
+       "image",
+       "https://nostr.build/i/karnage/nostr.build_ac9b396c77ef9ef096ff7c24c8403b6653df51b56c76d65e6db17540ff7d6e3c.png"
+      ],
+      [
+       "summary",
+       "Blogging on Nostr instead of Ghost using the value 4 value model instead of paywalls."
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "blog"
+      ],
+      [
+       "t",
+       "value4value"
+      ],
+      [
+       "t",
+       "bitcoin"
+      ],
+      [
+       "t",
+       "freespeech"
+      ],
+      [
+       "d",
+       "3f9775d8"
+      ],
+      [
+       "published_at",
+       "1677183856"
+      ]
+     ]
     }
    ],
    "flags": [
@@ -931,28 +921,6 @@
       [
        "t",
        "bookstr"
-      ]
-     ]
-    },
-    {
-     "content": "Trump's self-serving moves could be the demise of Bitcoin.\n\nhttps://www.theverge.com/2024/9/16/24246805/trump-world-liberty-financial-crypto-platform-announcement",
-     "created_at": 1726552577,
-     "id": "62423119247288c27ebd49d40b125c7c8bf1ff1991530b75274107d9d8b4cd26",
-     "kind": 1,
-     "pubkey": "3d2673d46bc1757c0a266610b0e71abd726e4b66555a7d457265116ef68337ae",
-     "sig": "9b4c38dd5108221763db28cffa7de4e2f6bedcb2a9ad52946de80b5ece983e3ec8a13108b60a0952e35d6ffa4f2a54049627774131401273c709a42b568150eb",
-     "tags": [
-      [
-       "subject",
-       "Trump will be the end of #Bitcoin"
-      ],
-      [
-       "t",
-       "bitcoin"
-      ],
-      [
-       "client",
-       "voyage"
       ]
      ]
     },
@@ -1031,6 +999,32 @@
      ]
     },
     {
+     "content": "8 hours left, how high will it go?\nhttps://scarce.city/auctions/buy-bitcoin\n https://image.nostr.build/27076e466ee4da429f8d36759a8bb3535d334970f2aadfd4f4f62c4a319a08cb.png\n\n#bitcoin #plebchain",
+     "created_at": 1713970324,
+     "id": "b1c98f0c793453776c0d9e6846161599a6c92e8170b6668200907c60a4b2bb99",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "ce9359cc91b271ab0baeccb62a7736c69996da491538cb82b285edf9c091209197e163e0a82a5fdacda818d78ad5100376da98149bc4321a8b558ee6afd655f3",
+     "tags": [
+      [
+       "t",
+       "bitcoin"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "Buy bitcoin sign auction"
+      ]
+     ]
+    },
+    {
      "content": "If you are looking for a personal reserve currency, #Bitcoin is simply unbeatable. All of the arguments against it don't matter, if you hardly ever interact with it and it merely sits in cold storage to prove your solvency.\n\nIf you just want to buy a cup of coffee, pay your taxes, or order a flight online, you can use a second-rail of Bitcoin to do that, like Lightning.\n\nOr use dollars or poker chips or frequent flyer miles or a pack of cigarettes or a silver coin or wash the dishes... or whatever they'll accept in exchange.\nNone of these things negate the importance of Bitcoin, nor are they generally more-efficient or effective than something like Lightning.",
      "created_at": 1704962711,
      "id": "4835d6ac395676c21223eb5635ac5db1b45875ece0e78369d2b4a9daff9c917a",
@@ -1053,24 +1047,24 @@
      ]
     },
     {
-     "content": "CyberHornet of Bitcoin\n\nhttps://cdn.satellite.earth/4da669a843213de2f1c4a28ae28e10edcbe646134a19c7eaf183c22a21889b7b.jpg\n\nIt is imperative of the pleb to combat attacks on #Bitcoin, verbal or otherwise.",
-     "created_at": 1698786952,
-     "id": "030f7946eb8b5a6d8327fdbad510fcb45bab9730133660a17f9faaf189604a37",
+     "content": "Today's Bitcoin News!  (10 min. video)  \"Bitcoin ETF Race is ON, $1.2 Million per Bitcoin?, #Bitcoin vs Gold, OpenSats onboards Tobin Harding #Nostr #BTC\"\n\nhttps://youtu.be/8OvAm_xPM1I\n\nYouTube \u2014> https://youtu.be/8OvAm_xPM1I\n\nToday we discuss the the race for the first Bitcoin spot ETF in the US, significant leadership changes at Grayscale Investments, Cathie Wood's bold Bitcoin prediction, the ongoing debate between Bitcoin and Gold, and the latest developments from OpenSats. Join us as we explore these pivotal moments in the cryptocurrency world and what they mean for investors and enthusiasts alike. Here are all the topics and link: \n\nBitcoin Archive account on Nostr \u2014 https://nostr.com/npub15h5n4muwsgxtc74hkcs9lp2ts7hdfdyvta4np7a7hfwfneqdeuls5qtl4k\n\nThe Bitcoin spot ETF race: \n\t\u201cSEC tells spot Bitcoin ETF applicants to update submissions by December 29 if they want to be approved in the first wave\u201d - Reuters. \n\tFIDELITY BITCOIN ETF \u2014 A spot Bitcoin ETF will give 124m Americans immediate and direct access to Bitcoin through their brokerage accounts. Fidelity has 43 million brokerage accounts for customers. Fidelity also has a Bitcoin ETF application. \n\tCNN says \"The spot Bitcoin ETF could quickly reach your 401(k) retirement plan...It\u2019s a big step toward mainstream adoption of bitcoin.\" \ud83d\ude80\n\nBarry Silbert has resigned as the chairman of Grayscale Investments. He will be replaced by Mark Shifke, the current Chief Financial Officer of Digital Currency Group (DCG), effective January 1. This change was reported in a recent SEC filing by Grayscale. The company is currently awaiting a decision from the Securities and Exchange Commission regarding the transformation of its Bitcoin Trust into a U.S. spot exchange-traded fund (ETF). Additionally, Mark Murphy, DCG's president, also resigned from the board. This move comes amid ongoing legal challenges faced by DCG, including a lawsuit from the New York Attorney General for alleged investor fraud. For more details, you can read the full article on CoinDesk's website \u2014 https://www.coindesk.com/business/2023/12/26/barry-silbert-resigns-as-grayscale-chairman-to-be-replaced-by-mark-shifke/\n\nCathie Wood Bitcoin Prediction: \"People Have NO IDEA What's Coming\u2026\" \u2014 $700 Billion Bitcoin market cap right now. Prediction: $20 trillion by 2030, which is about 30x from today. That would make 1 BTC = around $1.2 Million dollars. VIDEO \u2014 https://youtu.be/f7IB6V4UiA4\n\nAn amazing visual comparison between the evolution of the price of Gold and Bitcoin since 2014. #Bitcoin or Gold? --- https://twitter.com/TheBTCTherapist/status/1739668557389070654\n\nFrustrating facts \u2014 Lopsided inflation where regular people always lose (Opt out with #Bitcoin) --- https://twitter.com/_sriramk_/status/1739692573998875114\n\nThe Nostr Report: By plebs, for plebs. A synopsis of the best content of the day. Don\u2019t miss a beat. \u2014 https://Nostr.Report\n\nOpenSats onboards Tobin Harding --- https://primal.net/e/note1c2fnn5mvmtwngxz23auq8hmemwhlsms9ae6k4stel9utn4qjxgjqtd9h4h \u2014 OpenSats is a non-profit organization dedicated to supporting open-source Bitcoin development and other related projects. Its primary mission is to provide financial assistance and resources to developers and teams working on open-source projects that contribute to the Bitcoin ecosystem. The organization operates on a transparent funding model, allowing donors to see exactly where their contributions are going. OpenSats focuses on funding initiatives that enhance the security, scalability, and usability of Bitcoin, with an emphasis on projects that remain open and accessible to the public. By supporting these endeavors, OpenSats aims to strengthen the Bitcoin network and ensure its continuous improvement, while fostering a community of developers committed to the principles of open-source software.",
+     "created_at": 1703627501,
+     "id": "35ff530dc21630e85b61ee817bb9d48de07638c36d961d628974d0508d7f83ed",
      "kind": 1,
-     "pubkey": "50c5c98ccc31ca9f1ef56a547afc4cb48195fe5603d4f7874a221db965867c8e",
-     "sig": "8c2450128c786b30beb83b1bfaa288e8de5a553e325541a9271741e8b01b9bd122b3ebf4bc56237ebd1d6aaa44ededb043c6db19dde18ed40af2453b0edeca4b",
+     "pubkey": "90aaac10e033b4d1e607d426fc0eaabb9caa86720421dad8ae30182dd3efdb01",
+     "sig": "f874fd91c0ce8ee8ef19d06573fb2ac2b873ff36924e52c1b302297ff606c3d85dc167a4bc76f25012a214bdc4e8f02f247db9fe9ff5de022b60ce826ff14e57",
      "tags": [
       [
        "a",
-       "34550:f4db5270bd991b17bea1e6d035f45dee392919c29474bbac10342d223c74e0d0:Art"
+       "34550:5c50661b092cc786b55cb5d69149b129bdcc8e05d7238cc653de9f465ed69f91:fractalbitcoin"
       ],
       [
        "r",
-       "https://cdn.satellite.earth/4da669a843213de2f1c4a28ae28e10edcbe646134a19c7eaf183c22a21889b7b.jpg"
+       "https://youtu.be/8OvAm_xPM1I"
       ],
       [
        "subject",
-       "CyberHornet of Bitcoin"
+       "Today's Bitcoin News!  (10 min. video)  \"Bitcoin ETF Race is ON, $1.2 Million per Bitcoin?, #Bitcoin vs Gold, OpenSats onboards Tobin Harding #Nostr #BTC\""
       ],
       [
        "t",
@@ -1079,6 +1073,22 @@
       [
        "t",
        "bitcoin"
+      ],
+      [
+       "t",
+       "Nostr"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "BTC"
+      ],
+      [
+       "t",
+       "btc"
       ]
      ]
     }
@@ -1096,406 +1106,70 @@
   {
    "events": [
     {
-     "content": "i did the opposite. made my display name refer to my npub's last characters lol",
-     "created_at": 1780026498,
-     "id": "00005c760c62babe02476b1823cb8b313dc05fdb76216a80ab0bcbc3a869aa95",
+     "content": "Nostr Wiki\n\nEstive sumido do #Nostr por um tempo, mas durante este tempo tamb\u00e9m estivo o mais pr\u00f3ximo do protocolo que algu\u00e9m pode estar... at\u00e9 domingo publico que o projeto que estou finalizando para o Nostr, e sem sombra de d\u00favidas est\u00e1 espetacular, estou muito animado.\n\nBom dia meus caros!!",
+     "created_at": 1758286903,
+     "id": "ae298ef12b30dcf70f57655eb27f3e44dae390f75756aa63302e675a0d113c15",
      "kind": 1,
-     "pubkey": "2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331",
-     "sig": "2d5021debe899883103afc527b79917f10ce7051dca9f3a99794417aaa5a2846f347afc52e1bad5d7a0ab1950bdf2fd74a01894a1c97d7eebd51a4f0441e6f0e",
+     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
+     "sig": "c76edad7378dc377c95378e2b73d38478ce1ed78605ae9f8945578da43b2bab45349f5d9a947aea8050c6b030d3438d18e7ab65e6e3c5464457399dd4de94c32",
      "tags": [
       [
-       "e",
-       "e8dd3873f90a5dfc6a1e7ce06bb404040ab2e415b32994d9b80028d523b08ba7",
-       "wss://relay.nostr.band",
-       "root"
+       "a",
+       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
       ],
       [
-       "p",
-       "c3c7122c63af5281fee3b9338d10ae65b166ffe6f73f1c272c5c1120607731d7"
+       "subject",
+       "Nostr Wiki"
       ],
       [
-       "client",
-       "Wisp"
+       "t",
+       "Nostr"
       ],
       [
-       "nonce",
-       "47903",
-       "16"
+       "t",
+       "nostr"
       ]
      ]
     },
     {
-     "content": "Added also the nostr:nprofile1qqs9wj8mumkqgslplpdkvdgla8xzw9cpfnun3txfdrnmyrysnxqzg5cpzdmhxue69uhhyetvv9ujuerp0yhxzee03paeqn header to the latest banners. #grownostr #nostr \n\nhttps://www.bitpopart.com/banners\nhttps://blossom.primal.net/5058d980419c8fc4554360ae1c4f6df63868be8458f32dd7e5a8548909c122f6.png\nnostr:nevent1qqs2pv36kdpnmx5whwc86z0mavenycc935ufaekrdzxq9a500rntnss24qc9d",
-     "created_at": 1779970864,
-     "id": "2e7e2865e5ccfc9a4b38296ae59d2aba97bc634ea457b1258506b3f6d981f296",
+     "content": "To add to what nostr:nprofile1qqs06gywary09qmcp2249ztwfq3ue8wxhl2yyp3c39thzp55plvj0sgprdmhxue69uhhg6r9vehhyetnwshxummnw3erztnrdakj7qguwaehxw309a6xsetrd96xzer9dshxummnw3erztnrdakj7qgmwaehxw309amksetpwshxsctswpuhgctkv4exutnrduhsw0qlr4 said, Aedile is intended to be a fast, efficient, and stable set of code that other developers can use to bootstrap Nostr apps.\n\nThere are a few things every Nostr clients needs to do, like connect to relays, handle user login, sign events, publish them, and search.  We aim to make Aedile the best at all of those so it can be a firm foundation for future Nostr apps.",
+     "created_at": 1735859178,
+     "id": "45da80e4cdd89c184f76b3f54452a98bc605adbabf48915a8a8b2eb9888f0546",
      "kind": 1,
-     "pubkey": "43baaf0c28e6cfb195b17ee083e19eb3a4afdfac54d9b6baf170270ed193e34c",
-     "sig": "e301be97f1a8d7e0ab27b25b1190cb012a71f5ad8c364adff5c0c0b492d4343a41ef4c26fb7973543aeceaf607ec6955e4d05967b79850f321eac347c50f7788",
+     "pubkey": "70122128273bdc07af9be7725fa5c4bc0fc146866bec38d44360dc4bc6cc18b9",
+     "sig": "f9a86c7dee312817f1d39e3b166e792585e6b736f1712ad00fa1da6eb4798a54131358b4483f5893130081bb7f15e4e7dfa06c5f15c800e246492da453cdc7f1",
      "tags": [
       [
        "e",
-       "a0b23ab3433d9a8ebbb07d09fbeb333263058d389ee6c3688c02f68f78e6b9c2",
+       "dff2cb2931ea98da9dac8ac5441c84294ba667dd106fa48e65321cfaad9f0c52",
+       "",
+       "root"
+      ],
+      [
+       "e",
+       "ff776994c5d217ea538c6752e64cd71d1721c459b5c5a2bc86036861511cad8b"
+      ],
+      [
+       "e",
+       "f785909a94e788b03d74801c96b319849124cda6929c77f5149466b74c38b5cb",
+       "",
+       "reply"
+      ],
+      [
+       "p",
+       "fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1",
        "",
        "mention"
       ],
       [
        "p",
-       "5748fbe6ec0443e1f85b66351fe9cc2717014cf938acc968e7b20c9099802453",
-       "wss://relay.day.ag/",
-       "mention"
-      ],
-      [
-       "t",
-       "grownostr"
-      ],
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "imeta",
-       "url https://blossom.primal.net/5058d980419c8fc4554360ae1c4f6df63868be8458f32dd7e5a8548909c122f6.png",
-       "m png",
-       "dim 1758.0x1560.0"
-      ]
-     ]
-    },
-    {
-     "content": "GM\nnostr:nevent1qqs2tn7tyvfap8xh8g2m05n4x36rqxfk6905gdxyf9y3dn6yxphld3spzamhxue69uhhyetvv9ujuurjd9kkzmpwdejhgtczyq3azthcw509acn8ld35r47yrw2rfgdenp57qgfwkdx4d2akkyhg5qcyqqqqqqggk8acz",
-     "created_at": 1778568024,
-     "id": "605afbb176da20c96970b3802a4675850374ed7c399a9da76918ee81f786c99d",
-     "kind": 1,
-     "pubkey": "bbb5dda0e15567979f0543407bdc2033d6f0bbb30f72512a981cfdb2f09e2747",
-     "sig": "de85b213cbf6835fedb30ed2652609a8adc77d0de22cb72e1829ef2ed278902272f7850c8591271d662f6f809075f7f3c4cc58c03ac9f24225f9eab9bc6f6c74",
-     "tags": [
-      [
-       "alt",
-       "A short note: GM\nnostr:nevent1qqs2tn7tyvfap8xh8g2m05n4x36rqxfk69..."
+       "5ffb8e1b6b629c0e34a013f9298ebb0759b98a3d24029916321d5eb4255b6735"
       ],
       [
        "p",
-       "23d12ef8751e5ee267fb6341d7c41b9434a1b99869e0212eb34d56abb6b12e8a",
-       "wss://relay.damus.io/"
-      ],
-      [
-       "zap",
-       "23d12ef8751e5ee267fb6341d7c41b9434a1b99869e0212eb34d56abb6b12e8a",
-       "wss://relay.damus.io/",
-       "0.9"
-      ],
-      [
-       "zap",
-       "bbb5dda0e15567979f0543407bdc2033d6f0bbb30f72512a981cfdb2f09e2747",
-       "wss://nos.lol/",
-       "0.1"
-      ],
-      [
-       "client",
-       "Amethyst"
+       "75d12141a391994c4062501f155c2e34e41a8c3cf9bef9e4d7d298253458d1e2"
       ]
      ]
-    },
-    {
-     "content": "I just hosted a website over bluetooth...\n\nUsing nostr:nprofile1qy88wumn8ghj7mn0wvhxcmmv9uq3gamnwvaz7tmjv4kxz7fwv3sk6atn9e5k7qpqy0gja7r4re0wyelmvdqa03qmjs62rwvcd8szzt4nf4t2hd43969qw7vhfa at #soveng\n\nCC: nostr:nprofile1qyt8wumn8ghj7etyv4hzumn0wd68ytnvv9hxgtcpzemhxue69uhks6tnwshxummnw3ezumrpdejz7qpq2rv5lskctqxxs2c8rf2zlzc7xx3qpvzs3w4etgemauy9thegr43sugh36r wen bitchat over fips...?\n https://blossom.primal.net/45d7ca76a456c8dbe32b13223340f91c65c391d08dde40ed930127acf5aa0e2d.png \n\n",
-     "created_at": 1775842974,
-     "id": "53f61389e137c717f84fc7fc8e98ed5c2d9b2ef89a9a74310cdb09d902974baa",
-     "kind": 1,
-     "pubkey": "bbb5dda0e15567979f0543407bdc2033d6f0bbb30f72512a981cfdb2f09e2747",
-     "sig": "b501f64195814b04d132bfbbf48f3a963b0a3aa747e6f2940a8ad36671eb5b9e58221769976245f383e73d96a1c8ccb4a43510268d2651c3b22bf53213f4de50",
-     "tags": [
-      [
-       "t",
-       "soveng"
-      ],
-      [
-       "p",
-       "23d12ef8751e5ee267fb6341d7c41b9434a1b99869e0212eb34d56abb6b12e8a",
-       "wss://nos.lol/",
-       "mention"
-      ],
-      [
-       "p",
-       "50d94fc2d8580c682b071a542f8b1e31a200b0508bab95a33bef0855df281d63",
-       "wss://eden.nostr.land/",
-       "mention"
-      ],
-      [
-       "r",
-       "wss://nos.lol/"
-      ],
-      [
-       "r",
-       "wss://relay.primal.net/"
-      ],
-      [
-       "r",
-       "wss://relay.damus.io/",
-       "write"
-      ],
-      [
-       "r",
-       "wss://nostr.wine/",
-       "write"
-      ],
-      [
-       "r",
-       "wss://npub1spxdug4m3y24hpx5crm0el4zhkk0wafs8kp6m0xu0wecygqej2xqq8gyhx.fips.network/"
-      ],
-      [
-       "imeta",
-       "url https://blossom.primal.net/45d7ca76a456c8dbe32b13223340f91c65c391d08dde40ed930127acf5aa0e2d.png",
-       "m image/png",
-       "dim 1634x1098",
-       "service nip96"
-      ],
-      [
-       "client",
-       "Primal Web"
-      ]
-     ]
-    },
-    {
-     "content": "Nostr Wiki\n\nEstive sumido do #Nostr por um tempo, mas durante este tempo tamb\u00e9m estivo o mais pr\u00f3ximo do protocolo que algu\u00e9m pode estar... at\u00e9 domingo publico que o projeto que estou finalizando para o Nostr, e sem sombra de d\u00favidas est\u00e1 espetacular, estou muito animado.\n\nBom dia meus caros!!",
-     "created_at": 1758286903,
-     "id": "ae298ef12b30dcf70f57655eb27f3e44dae390f75756aa63302e675a0d113c15",
-     "kind": 1,
-     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
-     "sig": "c76edad7378dc377c95378e2b73d38478ce1ed78605ae9f8945578da43b2bab45349f5d9a947aea8050c6b030d3438d18e7ab65e6e3c5464457399dd4de94c32",
-     "tags": [
-      [
-       "a",
-       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
-      ],
-      [
-       "subject",
-       "Nostr Wiki"
-      ],
-      [
-       "t",
-       "Nostr"
-      ],
-      [
-       "t",
-       "nostr"
-      ]
-     ]
-    },
-    {
-     "content": "Acabei de finalizar a publica\u00e7\u00e3o da api para a search engine de buscas no #nostr. Voc\u00ea pode buscar relays, usu\u00e1rios, pegar um usu\u00e1rio espec\u00edfico, pesqusiar no ecopo de amigos de um usu\u00e1rio(follows) e por ai vai, teste os endpoints.\n\nSe voc\u00ea tem um cliente nostr ou est\u00e1 desenvolvendo um, teste e user como desejar, est\u00e1 100% aberta: \n\nhttps://find.nosbook.org/\n\nLembrando que pubkey sempre \u00e9 tratada no formato hexadecimal, que \u00e9 como os clientes de fato utilizam por baixo dos panos, ent\u00e3o onde recebe o par\u00e2metro pubkey, \u00e9 o hexadecimal da chave p\u00fablica, acessando o link voc\u00ea pode testar direto na p\u00e1gina web da documenta\u00e7\u00e3o! \n\nDivirta-se!!!",
-     "created_at": 1728191395,
-     "id": "7cd323a4f0e21d215b6448e2d0700219fdb1466e2239d87618daf381885d4d93",
-     "kind": 1,
-     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
-     "sig": "0a909b420af53e20c700384cc62294199006ca30e5a3e556d5f6359e2e789aa5ac3a1e2c6b6f0649f4e9164161ee5b9cd54b5187557077ad097de51f0384577a",
-     "tags": [
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "a",
-       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
-      ],
-      [
-       "subject",
-       "API Search Engine Nostr"
-      ],
-      [
-       "client",
-       "noStrudel",
-       "31990:266815e0c9210dfa324c6cba3573b14bee49da4209a9456f9484e5106cd408a5:1686066542546"
-      ]
-     ]
-    },
-    {
-     "content": "Still want to see a good pinterest, instagram and tiktok competitor on nostr. There's so much value in visual content and we haven't even bothered scratching that surface. \n\nImagine the interoperability of a curation platform with a shopping platform, both contributing to the creator's sovereign identity vs fighting against one another. \n\nMassive potential. ",
-     "created_at": 1724727720,
-     "id": "a42cc0bb299bbce89e5ea77b797a2126a2f149f8a22ab665d14dc9187c1e3cfc",
-     "kind": 1,
-     "pubkey": "1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411",
-     "sig": "051be0cfd325158e5fbae60d7a1f4deadc409677f507166774130fea51acd952e115a8a889b2b7ed13b9ef9d6587428b0b8fc76b6aa09db3085f133e1e84acc1",
-     "tags": []
-    },
-    {
-     "content": "MORE CLIENTS SHOULD SUPPORT DISPOSABLE NPUBS. AMETHYST IS LEADING THE WAY HERE. WOULD BE THE SINGLE BIGGEST PRIVACY WIN FOR ONLINE SPEECH ACROSS THE BOARD.\n\nNORMALIZE SINGLE USE DISPOSABLE IDENTITIES. AS THE REST OF THE INTERNET MOVES TOWARD LINKING EVERY ACTION TO LEGAL IDENTITIES, NOSTR REPRESENTS A BRIGHTER PATH. ",
-     "created_at": 1723216387,
-     "id": "529a990178f65ec0669132589d6cf1f586db6c4e133ea94d664a6a719f215e68",
-     "kind": 1,
-     "pubkey": "04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9",
-     "sig": "a0cd66e5873e57ae11889d097a64e1b3e24bc8af7858bffd48b26e5a128d4707ae8c2247358c0af4daaa42a655851b82198855d2fdef6ce1cd1b8e72e85d9124",
-     "tags": []
-    }
-   ],
-   "flags": [
-    "--kind",
-    "1",
-    "--since",
-    "1700000000"
-   ],
-   "name": "window_since",
-   "search": "nostr include:spam",
-   "terms": "nostr"
-  },
-  {
-   "events": [
-    {
-     "content": "i did the opposite. made my display name refer to my npub's last characters lol",
-     "created_at": 1780026498,
-     "id": "00005c760c62babe02476b1823cb8b313dc05fdb76216a80ab0bcbc3a869aa95",
-     "kind": 1,
-     "pubkey": "2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331",
-     "sig": "2d5021debe899883103afc527b79917f10ce7051dca9f3a99794417aaa5a2846f347afc52e1bad5d7a0ab1950bdf2fd74a01894a1c97d7eebd51a4f0441e6f0e",
-     "tags": [
-      [
-       "e",
-       "e8dd3873f90a5dfc6a1e7ce06bb404040ab2e415b32994d9b80028d523b08ba7",
-       "wss://relay.nostr.band",
-       "root"
-      ],
-      [
-       "p",
-       "c3c7122c63af5281fee3b9338d10ae65b166ffe6f73f1c272c5c1120607731d7"
-      ],
-      [
-       "client",
-       "Wisp"
-      ],
-      [
-       "nonce",
-       "47903",
-       "16"
-      ]
-     ]
-    },
-    {
-     "content": "I just hosted a website over bluetooth...\n\nUsing nostr:nprofile1qy88wumn8ghj7mn0wvhxcmmv9uq3gamnwvaz7tmjv4kxz7fwv3sk6atn9e5k7qpqy0gja7r4re0wyelmvdqa03qmjs62rwvcd8szzt4nf4t2hd43969qw7vhfa at #soveng\n\nCC: nostr:nprofile1qyt8wumn8ghj7etyv4hzumn0wd68ytnvv9hxgtcpzemhxue69uhks6tnwshxummnw3ezumrpdejz7qpq2rv5lskctqxxs2c8rf2zlzc7xx3qpvzs3w4etgemauy9thegr43sugh36r wen bitchat over fips...?\n https://blossom.primal.net/45d7ca76a456c8dbe32b13223340f91c65c391d08dde40ed930127acf5aa0e2d.png \n\n",
-     "created_at": 1775842974,
-     "id": "53f61389e137c717f84fc7fc8e98ed5c2d9b2ef89a9a74310cdb09d902974baa",
-     "kind": 1,
-     "pubkey": "bbb5dda0e15567979f0543407bdc2033d6f0bbb30f72512a981cfdb2f09e2747",
-     "sig": "b501f64195814b04d132bfbbf48f3a963b0a3aa747e6f2940a8ad36671eb5b9e58221769976245f383e73d96a1c8ccb4a43510268d2651c3b22bf53213f4de50",
-     "tags": [
-      [
-       "t",
-       "soveng"
-      ],
-      [
-       "p",
-       "23d12ef8751e5ee267fb6341d7c41b9434a1b99869e0212eb34d56abb6b12e8a",
-       "wss://nos.lol/",
-       "mention"
-      ],
-      [
-       "p",
-       "50d94fc2d8580c682b071a542f8b1e31a200b0508bab95a33bef0855df281d63",
-       "wss://eden.nostr.land/",
-       "mention"
-      ],
-      [
-       "r",
-       "wss://nos.lol/"
-      ],
-      [
-       "r",
-       "wss://relay.primal.net/"
-      ],
-      [
-       "r",
-       "wss://relay.damus.io/",
-       "write"
-      ],
-      [
-       "r",
-       "wss://nostr.wine/",
-       "write"
-      ],
-      [
-       "r",
-       "wss://npub1spxdug4m3y24hpx5crm0el4zhkk0wafs8kp6m0xu0wecygqej2xqq8gyhx.fips.network/"
-      ],
-      [
-       "imeta",
-       "url https://blossom.primal.net/45d7ca76a456c8dbe32b13223340f91c65c391d08dde40ed930127acf5aa0e2d.png",
-       "m image/png",
-       "dim 1634x1098",
-       "service nip96"
-      ],
-      [
-       "client",
-       "Primal Web"
-      ]
-     ]
-    },
-    {
-     "content": "Nostr Wiki\n\nEstive sumido do #Nostr por um tempo, mas durante este tempo tamb\u00e9m estivo o mais pr\u00f3ximo do protocolo que algu\u00e9m pode estar... at\u00e9 domingo publico que o projeto que estou finalizando para o Nostr, e sem sombra de d\u00favidas est\u00e1 espetacular, estou muito animado.\n\nBom dia meus caros!!",
-     "created_at": 1758286903,
-     "id": "ae298ef12b30dcf70f57655eb27f3e44dae390f75756aa63302e675a0d113c15",
-     "kind": 1,
-     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
-     "sig": "c76edad7378dc377c95378e2b73d38478ce1ed78605ae9f8945578da43b2bab45349f5d9a947aea8050c6b030d3438d18e7ab65e6e3c5464457399dd4de94c32",
-     "tags": [
-      [
-       "a",
-       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
-      ],
-      [
-       "subject",
-       "Nostr Wiki"
-      ],
-      [
-       "t",
-       "Nostr"
-      ],
-      [
-       "t",
-       "nostr"
-      ]
-     ]
-    },
-    {
-     "content": "Acabei de finalizar a publica\u00e7\u00e3o da api para a search engine de buscas no #nostr. Voc\u00ea pode buscar relays, usu\u00e1rios, pegar um usu\u00e1rio espec\u00edfico, pesqusiar no ecopo de amigos de um usu\u00e1rio(follows) e por ai vai, teste os endpoints.\n\nSe voc\u00ea tem um cliente nostr ou est\u00e1 desenvolvendo um, teste e user como desejar, est\u00e1 100% aberta: \n\nhttps://find.nosbook.org/\n\nLembrando que pubkey sempre \u00e9 tratada no formato hexadecimal, que \u00e9 como os clientes de fato utilizam por baixo dos panos, ent\u00e3o onde recebe o par\u00e2metro pubkey, \u00e9 o hexadecimal da chave p\u00fablica, acessando o link voc\u00ea pode testar direto na p\u00e1gina web da documenta\u00e7\u00e3o! \n\nDivirta-se!!!",
-     "created_at": 1728191395,
-     "id": "7cd323a4f0e21d215b6448e2d0700219fdb1466e2239d87618daf381885d4d93",
-     "kind": 1,
-     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
-     "sig": "0a909b420af53e20c700384cc62294199006ca30e5a3e556d5f6359e2e789aa5ac3a1e2c6b6f0649f4e9164161ee5b9cd54b5187557077ad097de51f0384577a",
-     "tags": [
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "a",
-       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
-      ],
-      [
-       "subject",
-       "API Search Engine Nostr"
-      ],
-      [
-       "client",
-       "noStrudel",
-       "31990:266815e0c9210dfa324c6cba3573b14bee49da4209a9456f9484e5106cd408a5:1686066542546"
-      ]
-     ]
-    },
-    {
-     "content": "Still want to see a good pinterest, instagram and tiktok competitor on nostr. There's so much value in visual content and we haven't even bothered scratching that surface. \n\nImagine the interoperability of a curation platform with a shopping platform, both contributing to the creator's sovereign identity vs fighting against one another. \n\nMassive potential. ",
-     "created_at": 1724727720,
-     "id": "a42cc0bb299bbce89e5ea77b797a2126a2f149f8a22ab665d14dc9187c1e3cfc",
-     "kind": 1,
-     "pubkey": "1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411",
-     "sig": "051be0cfd325158e5fbae60d7a1f4deadc409677f507166774130fea51acd952e115a8a889b2b7ed13b9ef9d6587428b0b8fc76b6aa09db3085f133e1e84acc1",
-     "tags": []
-    },
-    {
-     "content": "MORE CLIENTS SHOULD SUPPORT DISPOSABLE NPUBS. AMETHYST IS LEADING THE WAY HERE. WOULD BE THE SINGLE BIGGEST PRIVACY WIN FOR ONLINE SPEECH ACROSS THE BOARD.\n\nNORMALIZE SINGLE USE DISPOSABLE IDENTITIES. AS THE REST OF THE INTERNET MOVES TOWARD LINKING EVERY ACTION TO LEGAL IDENTITIES, NOSTR REPRESENTS A BRIGHTER PATH. ",
-     "created_at": 1723216387,
-     "id": "529a990178f65ec0669132589d6cf1f586db6c4e133ea94d664a6a719f215e68",
-     "kind": 1,
-     "pubkey": "04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9",
-     "sig": "a0cd66e5873e57ae11889d097a64e1b3e24bc8af7858bffd48b26e5a128d4707ae8c2247358c0af4daaa42a655851b82198855d2fdef6ce1cd1b8e72e85d9124",
-     "tags": []
     },
     {
      "content": "May 6, 2023 I started on Nostr. I kinda figured it might just be something and took a moment to blog it with a timestamp: https://hive.blog/bitcoin/@crrdlx/running-nostr\n\nSo, a couple of ways to look at today: \n1. Today is my first Nostr birthday or \"hatchday\" - I knew nothing of Nostr then, but have learned a ton since.\n2. Today starts year number two - Still learning every day and looking forward to what might come next.\n\n https://image.nostr.build/38697a68d75aebf0429085e3b771934e7250b4f976ac5112a22bb592375458d8.gif\n#nostr #plebchain",
@@ -1552,6 +1226,397 @@
        "nostr"
       ]
      ]
+    },
+    {
+     "content": "The Nostr Wishlist is growing. What else?\nhttp://nostrwiki.crrdlx.infinityfreeapp.com/doku.php?id=wiki:nostr-wishlist\n https://image.nostr.build/db84fca117575ae9b4062450cd69b05c1a80348de61e317d2256f000d2998305.png\n#nostr #grownostr",
+     "created_at": 1714651719,
+     "id": "f969e3f189cc5c6b1b64fbdbbb2cb65a07137d147601caf7bfa915961ae13e40",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "db81b8fa7d8a10d8e0ff7cec82ebbc31a0e9523ee7afa4dccc466359c35a5ced748f8fcac529105db0829540536cbdc09e2296a5f588d3559e52f29a15b12f72",
+     "tags": [
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "grownostr"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "Nostr Wishlist"
+      ]
+     ]
+    },
+    {
+     "content": "Putting this out again...don't know why, but somehow I think it's important. Who can figure this out?\n----\nI don't know if it's possible, but it certainly _feels_ possible. Can there be NFTs on Nostr?\n\nhttps://files.peakd.com/file/peakd-hive/crrdlx/23wXQUJXU4KEFX3rg8VusMYEhYF8NYKcY991K1zzqDyq6oTgBDPrs83m48DNn9rzp57c3.png\n\nI've written and pondered on NFTs a few times and come up with a definition that I think works in laying out exactly what an NFT actually is. I defined NFTs as Verified Unique Ownership (VUO for short). (See NFTs defined in three words | PeakD and ponderings at PeakD)\n\nThe upshot of VUO is this:\n\nV = verified = The NFT (which is nothing more than metadata such as a custom JSON) is openly visible to all to verify and cannot be altered.\nU = unique = The NFT/metadata is unique. Although a monkey jpeg may be the same for all 1,000 mints, the owner of mint #1 will definitely not trade with the owner of mint #859.\nO = ownership = The NFT can be transferred to another person and that transfer can also be verified.\n\nWith regards to Nostr, the V, the verified, seems to be the challenge. It seems that the hang-up would be persistence (or lack of persistence) in data. That is, having the metadata persistently stored on Nostr may be a high hurdle. It may be impossible. For instance, if I minted an NFT and the metadata got stored on several Nostr relays, it seems that would work. The data can be verified by others. It's persistently verifiable until...those relays go down or close up shop or purge that metadata note. Then, that NFT is gone. This, of course, differs from a blockchain.\n\nRegarding the O of ownership, I'm really not sure how that would transpire on Nostr. But, I think clever people could figure that out. If the persistent V of verifiability were solved, then a persistent alteration should also be possible to track on the \"Nostr blockchain\", the \"nostrchain.\"\n\nIf this were possible...what would be the use cases? I really don't know. I do think they would emerge though. Being around Nostr suggests to me that the fun-factor would be off-the-charts though. There are some clever and comical people in this space. Fun, is an important use-case in my view, by the way!\n\nWen NFTs on #Nostr?\n#plebchain",
+     "created_at": 1714425742,
+     "id": "dab6aebcf29ed7c6dbcfd539e53d6eb7ce6b93a83542ebfb629804f1f834f136",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "c0727a79b33c64111e5525ae72843077154c0d20d0057b58ee0feeef7c9b55b7c8a09591eee11866c3ced4ce0334ae621c56567b59d7a891a53756c2f8d0b5a5",
+     "tags": [
+      [
+       "t",
+       "1"
+      ],
+      [
+       "t",
+       "859"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "NFTs on Nostr"
+      ]
+     ]
+    },
+    {
+     "content": "First Meme of NOSTR\n\nhttps://image.nostr.build/f7366c61d378ec12040f52f4382f48a2aa3d1dd2bf59c1b803c20b1a8d3eddbf.jpg\n\n#btc #plebchain #cryptoterrestrial #nostr #grownostr",
+     "created_at": 1712797491,
+     "id": "a8b24e884774cda42c0f01d0a3b52012aa00bd3d58479f4c6983bcca76b71f93",
+     "kind": 1,
+     "pubkey": "2cd0d8fd7003efdb16aa1a82ce25881b20de1f99b99a688cf03db34c85567da7",
+     "sig": "73ad64f13bd9aca844a0b93e37cfa477cf39042d1c75e345587a9c6b422c7ed65f514c1ebc8c13a002f48a2c815236d0cfc8c76a26878fae720f266ea633103e",
+     "tags": [
+      [
+       "a",
+       "34550:2cd0d8fd7003efdb16aa1a82ce25881b20de1f99b99a688cf03db34c85567da7:digitalarts"
+      ],
+      [
+       "r",
+       "https://image.nostr.build/f7366c61d378ec12040f52f4382f48a2aa3d1dd2bf59c1b803c20b1a8d3eddbf.jpg"
+      ],
+      [
+       "subject",
+       "First Meme of NOSTR"
+      ],
+      [
+       "t",
+       "btc"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "t",
+       "cryptoterrestrial"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "grownostr"
+      ]
+     ]
+    },
+    {
+     "content": "Discovering #nostr feels amazing. From the surface it seems easy but with what you can build upon and using this protocol..well seems a bit overwhelming. Understanding how it works and learning about it is fascinating to say the least.\nDecentralized access to information that is censorship resistant..feed curation, lists of people you want to interact with. This is next level and with integration of #bitcoin Lightning payments..future is bright. Glad to be here in such an early stage. \n\nthanks nostr:npub1f6ugxyxkknket3kkdgu4k0fu74vmshawermkj8d06sz6jts9t4kslazcka for guidance and patience.\ud83e\udd0c",
+     "created_at": 1711409590,
+     "id": "9442ca1e321f583c3ed1eace48de854c1b55828257d2e2e1a08ffea95dd5159a",
+     "kind": 1,
+     "pubkey": "18f54af1e10c5bb7a35468b0f62b295d12347903c9f95738d065c84bef1402ef",
+     "sig": "21bdd10997cf217004e1532a77e6471e207246fc18d192d36253627c6935cdd618404a89714144f4edd2f52a1ef752b9d935033a481c72bda46deb33f0338a0d",
+     "tags": [
+      [
+       "subject",
+       "Discovering #NOSTR"
+      ],
+      [
+       "p",
+       "4eb88310d6b4ed95c6d66a395b3d3cf559b85faec8f7691dafd405a92e055d6d"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "bitcoin"
+      ]
+     ]
+    }
+   ],
+   "flags": [
+    "--kind",
+    "1",
+    "--since",
+    "1700000000"
+   ],
+   "name": "window_since",
+   "search": "nostr include:spam",
+   "terms": "nostr"
+  },
+  {
+   "events": [
+    {
+     "content": "Nostr Wiki\n\nEstive sumido do #Nostr por um tempo, mas durante este tempo tamb\u00e9m estivo o mais pr\u00f3ximo do protocolo que algu\u00e9m pode estar... at\u00e9 domingo publico que o projeto que estou finalizando para o Nostr, e sem sombra de d\u00favidas est\u00e1 espetacular, estou muito animado.\n\nBom dia meus caros!!",
+     "created_at": 1758286903,
+     "id": "ae298ef12b30dcf70f57655eb27f3e44dae390f75756aa63302e675a0d113c15",
+     "kind": 1,
+     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
+     "sig": "c76edad7378dc377c95378e2b73d38478ce1ed78605ae9f8945578da43b2bab45349f5d9a947aea8050c6b030d3438d18e7ab65e6e3c5464457399dd4de94c32",
+     "tags": [
+      [
+       "a",
+       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
+      ],
+      [
+       "subject",
+       "Nostr Wiki"
+      ],
+      [
+       "t",
+       "Nostr"
+      ],
+      [
+       "t",
+       "nostr"
+      ]
+     ]
+    },
+    {
+     "content": "To add to what nostr:nprofile1qqs06gywary09qmcp2249ztwfq3ue8wxhl2yyp3c39thzp55plvj0sgprdmhxue69uhhg6r9vehhyetnwshxummnw3erztnrdakj7qguwaehxw309a6xsetrd96xzer9dshxummnw3erztnrdakj7qgmwaehxw309amksetpwshxsctswpuhgctkv4exutnrduhsw0qlr4 said, Aedile is intended to be a fast, efficient, and stable set of code that other developers can use to bootstrap Nostr apps.\n\nThere are a few things every Nostr clients needs to do, like connect to relays, handle user login, sign events, publish them, and search.  We aim to make Aedile the best at all of those so it can be a firm foundation for future Nostr apps.",
+     "created_at": 1735859178,
+     "id": "45da80e4cdd89c184f76b3f54452a98bc605adbabf48915a8a8b2eb9888f0546",
+     "kind": 1,
+     "pubkey": "70122128273bdc07af9be7725fa5c4bc0fc146866bec38d44360dc4bc6cc18b9",
+     "sig": "f9a86c7dee312817f1d39e3b166e792585e6b736f1712ad00fa1da6eb4798a54131358b4483f5893130081bb7f15e4e7dfa06c5f15c800e246492da453cdc7f1",
+     "tags": [
+      [
+       "e",
+       "dff2cb2931ea98da9dac8ac5441c84294ba667dd106fa48e65321cfaad9f0c52",
+       "",
+       "root"
+      ],
+      [
+       "e",
+       "ff776994c5d217ea538c6752e64cd71d1721c459b5c5a2bc86036861511cad8b"
+      ],
+      [
+       "e",
+       "f785909a94e788b03d74801c96b319849124cda6929c77f5149466b74c38b5cb",
+       "",
+       "reply"
+      ],
+      [
+       "p",
+       "fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1",
+       "",
+       "mention"
+      ],
+      [
+       "p",
+       "5ffb8e1b6b629c0e34a013f9298ebb0759b98a3d24029916321d5eb4255b6735"
+      ],
+      [
+       "p",
+       "75d12141a391994c4062501f155c2e34e41a8c3cf9bef9e4d7d298253458d1e2"
+      ]
+     ]
+    },
+    {
+     "content": "May 6, 2023 I started on Nostr. I kinda figured it might just be something and took a moment to blog it with a timestamp: https://hive.blog/bitcoin/@crrdlx/running-nostr\n\nSo, a couple of ways to look at today: \n1. Today is my first Nostr birthday or \"hatchday\" - I knew nothing of Nostr then, but have learned a ton since.\n2. Today starts year number two - Still learning every day and looking forward to what might come next.\n\n https://image.nostr.build/38697a68d75aebf0429085e3b771934e7250b4f976ac5112a22bb592375458d8.gif\n#nostr #plebchain",
+     "created_at": 1714996203,
+     "id": "d31162a39b411614b9093e060d7cb4f4366cd38b2c9ca1727cdc02151446c814",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "893d797f5d52f1b92f4a4413c130cd36d976ee5c6a4eed1f90853fc4367f0590053070c1bfed703ac387f7c8c758ef40d643aa89b8fa0ce656d51da1194fc8d9",
+     "tags": [
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "A year on Nostr"
+      ]
+     ]
+    },
+    {
+     "content": "#Nostr Fan Art\n\nhttps://blogclif.wordpress.com/2024/05/02/nostr-as-a-better-place-to-grow/\n\nNostr is a better place to grow",
+     "created_at": 1714721223,
+     "id": "13ead8b7c5f4aca351783cb85ec4d65670d8455d9c576ee8ca57b3cf9d7a7a01",
+     "kind": 1,
+     "pubkey": "f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0",
+     "sig": "a8b93de6c931c97265b3cb452a6bc2463e576bed4310a4fbf19185e4845732941d654c187a48d497d014f981092c3e80a9a4ea2ce0069649fde1be33bcbee727",
+     "tags": [
+      [
+       "a",
+       "34550:f8f6b6f741bd422346579304550de64a6445fd332c50389e9a1f4d8294a101e0:fanart"
+      ],
+      [
+       "r",
+       "https://blogclif.wordpress.com/2024/05/02/nostr-as-a-better-place-to-grow/"
+      ],
+      [
+       "subject",
+       "#Nostr Fan Art"
+      ],
+      [
+       "t",
+       "Nostr"
+      ],
+      [
+       "t",
+       "nostr"
+      ]
+     ]
+    },
+    {
+     "content": "The Nostr Wishlist is growing. What else?\nhttp://nostrwiki.crrdlx.infinityfreeapp.com/doku.php?id=wiki:nostr-wishlist\n https://image.nostr.build/db84fca117575ae9b4062450cd69b05c1a80348de61e317d2256f000d2998305.png\n#nostr #grownostr",
+     "created_at": 1714651719,
+     "id": "f969e3f189cc5c6b1b64fbdbbb2cb65a07137d147601caf7bfa915961ae13e40",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "db81b8fa7d8a10d8e0ff7cec82ebbc31a0e9523ee7afa4dccc466359c35a5ced748f8fcac529105db0829540536cbdc09e2296a5f588d3559e52f29a15b12f72",
+     "tags": [
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "grownostr"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "Nostr Wishlist"
+      ]
+     ]
+    },
+    {
+     "content": "Putting this out again...don't know why, but somehow I think it's important. Who can figure this out?\n----\nI don't know if it's possible, but it certainly _feels_ possible. Can there be NFTs on Nostr?\n\nhttps://files.peakd.com/file/peakd-hive/crrdlx/23wXQUJXU4KEFX3rg8VusMYEhYF8NYKcY991K1zzqDyq6oTgBDPrs83m48DNn9rzp57c3.png\n\nI've written and pondered on NFTs a few times and come up with a definition that I think works in laying out exactly what an NFT actually is. I defined NFTs as Verified Unique Ownership (VUO for short). (See NFTs defined in three words | PeakD and ponderings at PeakD)\n\nThe upshot of VUO is this:\n\nV = verified = The NFT (which is nothing more than metadata such as a custom JSON) is openly visible to all to verify and cannot be altered.\nU = unique = The NFT/metadata is unique. Although a monkey jpeg may be the same for all 1,000 mints, the owner of mint #1 will definitely not trade with the owner of mint #859.\nO = ownership = The NFT can be transferred to another person and that transfer can also be verified.\n\nWith regards to Nostr, the V, the verified, seems to be the challenge. It seems that the hang-up would be persistence (or lack of persistence) in data. That is, having the metadata persistently stored on Nostr may be a high hurdle. It may be impossible. For instance, if I minted an NFT and the metadata got stored on several Nostr relays, it seems that would work. The data can be verified by others. It's persistently verifiable until...those relays go down or close up shop or purge that metadata note. Then, that NFT is gone. This, of course, differs from a blockchain.\n\nRegarding the O of ownership, I'm really not sure how that would transpire on Nostr. But, I think clever people could figure that out. If the persistent V of verifiability were solved, then a persistent alteration should also be possible to track on the \"Nostr blockchain\", the \"nostrchain.\"\n\nIf this were possible...what would be the use cases? I really don't know. I do think they would emerge though. Being around Nostr suggests to me that the fun-factor would be off-the-charts though. There are some clever and comical people in this space. Fun, is an important use-case in my view, by the way!\n\nWen NFTs on #Nostr?\n#plebchain",
+     "created_at": 1714425742,
+     "id": "dab6aebcf29ed7c6dbcfd539e53d6eb7ce6b93a83542ebfb629804f1f834f136",
+     "kind": 1,
+     "pubkey": "005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2",
+     "sig": "c0727a79b33c64111e5525ae72843077154c0d20d0057b58ee0feeef7c9b55b7c8a09591eee11866c3ced4ce0334ae621c56567b59d7a891a53756c2f8d0b5a5",
+     "tags": [
+      [
+       "t",
+       "1"
+      ],
+      [
+       "t",
+       "859"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "a",
+       "34550:005bc4de41cfcb580f71cad6ae8909a976568633a4f6a93c6b7fd5bfef11e1a2:General"
+      ],
+      [
+       "subject",
+       "NFTs on Nostr"
+      ]
+     ]
+    },
+    {
+     "content": "First Meme of NOSTR\n\nhttps://image.nostr.build/f7366c61d378ec12040f52f4382f48a2aa3d1dd2bf59c1b803c20b1a8d3eddbf.jpg\n\n#btc #plebchain #cryptoterrestrial #nostr #grownostr",
+     "created_at": 1712797491,
+     "id": "a8b24e884774cda42c0f01d0a3b52012aa00bd3d58479f4c6983bcca76b71f93",
+     "kind": 1,
+     "pubkey": "2cd0d8fd7003efdb16aa1a82ce25881b20de1f99b99a688cf03db34c85567da7",
+     "sig": "73ad64f13bd9aca844a0b93e37cfa477cf39042d1c75e345587a9c6b422c7ed65f514c1ebc8c13a002f48a2c815236d0cfc8c76a26878fae720f266ea633103e",
+     "tags": [
+      [
+       "a",
+       "34550:2cd0d8fd7003efdb16aa1a82ce25881b20de1f99b99a688cf03db34c85567da7:digitalarts"
+      ],
+      [
+       "r",
+       "https://image.nostr.build/f7366c61d378ec12040f52f4382f48a2aa3d1dd2bf59c1b803c20b1a8d3eddbf.jpg"
+      ],
+      [
+       "subject",
+       "First Meme of NOSTR"
+      ],
+      [
+       "t",
+       "btc"
+      ],
+      [
+       "t",
+       "plebchain"
+      ],
+      [
+       "t",
+       "cryptoterrestrial"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "grownostr"
+      ]
+     ]
+    },
+    {
+     "content": "Discovering #nostr feels amazing. From the surface it seems easy but with what you can build upon and using this protocol..well seems a bit overwhelming. Understanding how it works and learning about it is fascinating to say the least.\nDecentralized access to information that is censorship resistant..feed curation, lists of people you want to interact with. This is next level and with integration of #bitcoin Lightning payments..future is bright. Glad to be here in such an early stage. \n\nthanks nostr:npub1f6ugxyxkknket3kkdgu4k0fu74vmshawermkj8d06sz6jts9t4kslazcka for guidance and patience.\ud83e\udd0c",
+     "created_at": 1711409590,
+     "id": "9442ca1e321f583c3ed1eace48de854c1b55828257d2e2e1a08ffea95dd5159a",
+     "kind": 1,
+     "pubkey": "18f54af1e10c5bb7a35468b0f62b295d12347903c9f95738d065c84bef1402ef",
+     "sig": "21bdd10997cf217004e1532a77e6471e207246fc18d192d36253627c6935cdd618404a89714144f4edd2f52a1ef752b9d935033a481c72bda46deb33f0338a0d",
+     "tags": [
+      [
+       "subject",
+       "Discovering #NOSTR"
+      ],
+      [
+       "p",
+       "4eb88310d6b4ed95c6d66a395b3d3cf559b85faec8f7691dafd405a92e055d6d"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "t",
+       "bitcoin"
+      ]
+     ]
     }
    ],
    "flags": [
@@ -1567,61 +1632,101 @@
   {
    "events": [
     {
-     "content": "I just hosted a website over bluetooth...\n\nUsing nostr:nprofile1qy88wumn8ghj7mn0wvhxcmmv9uq3gamnwvaz7tmjv4kxz7fwv3sk6atn9e5k7qpqy0gja7r4re0wyelmvdqa03qmjs62rwvcd8szzt4nf4t2hd43969qw7vhfa at #soveng\n\nCC: nostr:nprofile1qyt8wumn8ghj7etyv4hzumn0wd68ytnvv9hxgtcpzemhxue69uhks6tnwshxummnw3ezumrpdejz7qpq2rv5lskctqxxs2c8rf2zlzc7xx3qpvzs3w4etgemauy9thegr43sugh36r wen bitchat over fips...?\n https://blossom.primal.net/45d7ca76a456c8dbe32b13223340f91c65c391d08dde40ed930127acf5aa0e2d.png \n\n",
-     "created_at": 1775842974,
-     "id": "53f61389e137c717f84fc7fc8e98ed5c2d9b2ef89a9a74310cdb09d902974baa",
-     "kind": 1,
-     "pubkey": "bbb5dda0e15567979f0543407bdc2033d6f0bbb30f72512a981cfdb2f09e2747",
-     "sig": "b501f64195814b04d132bfbbf48f3a963b0a3aa747e6f2940a8ad36671eb5b9e58221769976245f383e73d96a1c8ccb4a43510268d2651c3b22bf53213f4de50",
+     "content": "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via relays. it grew out of a small community of bitcoin/lightning devs, specifically [fiatjaf](nostr:npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6). it was a reaction to the counter-party risks in using centralized social networks (twitter, facebook, etc) and the failings of other, semi-decentralized approaches (mastodon).\n\nbitcoin familiarity helps when groking nostr. the identity portion of nostr is private/public key pair. similar to a bitcoin wallet where one uses one\u2019s private key to sign a transaction and publish it into the network, one uses a nostr private key to sign an event and publish it to relays. there are various defined [kinds](https://github.com/nostr-protocol/nips#event-kinds) of events, from profile information (name, about, url, avatar url, etc), to contact lists (follows), to notes (a short plain text message). the bitcoin network is peer to peer (distributed), where nodes will gossip transactions around to all the other nodes, but this is not the case with nostr. events stay where you publish them, relays only talk to clients, not other relays. this makes nostr decentralized, but not distributed. since it\u2019s not peer-to-peer, one client doesn\u2019t need to see the entire traffic of the network, or to query some distributed hash table a la IPFS, to find content across the network. this middle ground between centralized and distributed allows snappy response times yet prevents the domination of network lock-in.",
+     "created_at": 1782172014,
+     "id": "4c3ffd171a535f9bac1afc47526b565833c726f82e59b3bf287db3e39cafc48e",
+     "kind": 30023,
+     "pubkey": "27c66d241898300a254f0853dfbfcf735a627dc2790c45a03de04704dd54a3b4",
+     "sig": "cc646b6cd05fe3e1fbcc365e9a042ca0ecd0b04523d3c228ce1504dc77703cea150ebdab0e4704fe3fb9bc5d6a08acf3ca32367386cdbab4a778e18213f85ab2",
      "tags": [
       [
-       "t",
-       "soveng"
+       "title",
+       "nostr"
       ],
       [
-       "p",
-       "23d12ef8751e5ee267fb6341d7c41b9434a1b99869e0212eb34d56abb6b12e8a",
-       "wss://nos.lol/",
-       "mention"
+       "summary",
+       "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via"
       ],
       [
-       "p",
-       "50d94fc2d8580c682b071a542f8b1e31a200b0508bab95a33bef0855df281d63",
-       "wss://eden.nostr.land/",
-       "mention"
+       "published_at",
+       "1676764800"
       ],
       [
-       "r",
-       "wss://nos.lol/"
+       "d",
+       "d4b8f38a8c6e1e9a9ecbffecb23fd7dfe7b68b18d08584cb7b09d7e858f5ebf6"
       ],
       [
        "r",
-       "wss://relay.primal.net/"
+       "https://plantimals.org/nostr/"
+      ]
+     ]
+    },
+    {
+     "content": "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via relays. it grew out of a small community of bitcoin/lightning devs, specifically [fiatjaf](nostr:npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6). it was a reaction to the counter-party risks in using centralized social networks (twitter, facebook, etc) and the failings of other, semi-decentralized approaches (mastodon).\n\nbitcoin familiarity helps when groking nostr. the identity portion of nostr is private/public key pair. similar to a bitcoin wallet where one uses one\u2019s private key to sign a transaction and publish it into the network, one uses a nostr private key to sign an event and publish it to relays. there are various defined [kinds](https://github.com/nostr-protocol/nips#event-kinds) of events, from profile information (name, about, url, avatar url, etc), to contact lists (follows), to notes (a short plain text message). the bitcoin network is peer to peer (distributed), where nodes will gossip transactions around to all the other nodes, but this is not the case with nostr. events stay where you publish them, relays only talk to clients, not other relays. this makes nostr decentralized, but not distributed. since it\u2019s not peer-to-peer, one client doesn\u2019t need to see the entire traffic of the network, or to query some distributed hash table a la IPFS, to find content across the network. this middle ground between centralized and distributed allows snappy response times yet prevents the domination of network lock-in.",
+     "created_at": 1782142849,
+     "id": "d957e3daa1b7c6275cb2335edbe67bef9e21218aaa32731f7362f2b17367e297",
+     "kind": 30023,
+     "pubkey": "8d5b9142b2021c38ecbd9fe6bead324836dad84379643507eb8a4ce58dd31feb",
+     "sig": "f93128dc50737a678b41d8d57c051281839325e7de6692605902d3bb718ec5a450bde6e28a4715dac852797c161ba54f96d69183a4826506ca1b7232817b07cf",
+     "tags": [
+      [
+       "title",
+       "nostr"
+      ],
+      [
+       "summary",
+       "## the protocol\n\n[nostr](https://github.com/nostr-protocol/nostr) is a protocol for establishing pseudonymous identities and using them to cryptographically sign messages and pass them around via"
+      ],
+      [
+       "published_at",
+       "1676764800"
+      ],
+      [
+       "d",
+       "d4b8f38a8c6e1e9a9ecbffecb23fd7dfe7b68b18d08584cb7b09d7e858f5ebf6"
       ],
       [
        "r",
-       "wss://relay.damus.io/",
-       "write"
+       "https://plantimals.org/nostr/"
+      ]
+     ]
+    },
+    {
+     "content": "Join me today for Episode 758 of Bitcoin And . . . Topics for today: - nostr nostr nostr - Dito to Bring Mastodon to nostr - RFK Jr. and Sound Money - Peeps Madz at Gensler - Block Sues Visa/MC - Altszn is starting. Just Don't - Miners Selling BTC #Bitcoin #BitcoinAnd #BTC Circle P: npub: npub1ugnq57hn8va6xqr5zywy2eunem6c624583vkt0dmv40ep7tnnxkqrr898l (faster) email: shishi21m@protonmail.com (slower) Product: Comfrey One full root for 20$ Or root cutting for 1$ each Buyer pays shipping Articles: https://cointelegraph.com/news/bitcoin-miners-selling-btc-as-hedge-bitfinex https://www.coindesk.com/policy/2023/07/19/us-presidential-candidate-rfk-jr-vows-to-exempt-crypto-from-capital-gains-tax-if-elected/ https://bitcoinmagazine.com/business/blackrock-etf-would-supercharge-bitcoin-mining https://cointelegraph.com/news/lawmakers-propose-sec-chair-consider-legislation-not-enforcement-approach-crypto https://www.finextra.com/newsarticle/42653/block-sues-visa-and-mastercard-over-interchange-fees https://www.nobsbitcoin.com/simple-bitcoin-wallet-to-drop-lightning/ - https://www.cnbc.com/futures-and-commodities/ - https://bitinfocharts.com/ - https://bitcoin.clarkmoody.com/dashboard/ - https://mempool.space/ - https://fountain.fm/charts https://decrypt.co/149120/genesis-trading-saw-uptick-in-altcoin-activity-after-ripple-sec-decision https://cointelegraph.com/news/bitcoin-mining-becoming-more-environmentally-friendly https://primal.net/e/note1dnps5ceywjsx3c4dgyef660ylymudkrxc29vlxpacx5m9zghncusfjhpu3 https://www.nobsbitcoin.com/dito-bringing-best-parts-of-mastodon-to-nostr/ https://primal.net/e/note1sml79x4y6hpuqy8xr2squdztjzxa59lkmv2560vv9aqne6z3hkwq3pn7vl https://www.nobsbitcoin.com/dito-bringing-best-parts-of-mastodon-to-nostr/ https://decrypt.co/149106/openai-donates-5-million-to-the-american-journalism-project https://primal.net/p/npub19mduaf5569jx9xz555jcx3v06mvktvtpu0zgk47n4lcpjsz43zzqhj6vzk Find me on nostr npub1vwymuey3u7mf860ndrkw3r7dz30s0srg6tqmhtjzg7umtm6rn5eq2qzugd (npub) 6389be6491e7b693e9f368ece88fcd145f07c068d2c1bbae4247b9b5ef439d32 (Hex) StackerNews: stacker.news/NunyaBidness Podcasting 2.0: fountain.fm/show/eK5XaSb3UaLRavU3lYrI Apple Podcasts: tinyurl.com/unm35bjh Instagram: instagram.com/bitcoin\\_and Mastodon: noagendasocial.com/@NunyaBidness Support Bitcoin And . . . on Patreon: patreon.com/BitcoinAndPodcast Find Lightning Network Channel partners here: https://t.me/+bj-7w\\_ePsANlOGEx (Nodestrich) https://t.me/plebnet (Plebnet) Music by: Flutey Funk Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 3.0 License creativecommons.org/licenses/by/3.0/",
+     "created_at": 1781766026,
+     "id": "aef3fd33ea4d2f7bd07e796c173a42a293ad95df140439e074af7a7f672ba030",
+     "kind": 30023,
+     "pubkey": "1ee4d19877f0f101d65c53a302126edd7cbf051eca4ef9adc47010a84931ce0c",
+     "sig": "a357c61d5ccefb2e8fe222abb95d27ae6a4f1265ab303cb5e58136a1fad3a52a615ab7239100a260b05baec6fe78c97cd51b24c5e72386a6c9fd47b29f0e26dd",
+     "tags": [
+      [
+       "title",
+       "nostr nostr nostr Ep758"
+      ],
+      [
+       "summary",
+       "Join me today for Episode 758 of Bitcoin And . . . Topics for today: - nostr nostr nostr - Dito to Bring Mastodon to nostr - RFK Jr. and Sound Money - Peeps Madz at Gensler - Block Sues Visa/MC -"
+      ],
+      [
+       "published_at",
+       "1689793696"
+      ],
+      [
+       "d",
+       "nostr-nostr-nostr-ep758"
       ],
       [
        "r",
-       "wss://nostr.wine/",
-       "write"
+       "https://soundcloud.com/bitcoin-and/nostr-nostr-nostr-ep758"
       ],
       [
-       "r",
-       "wss://npub1spxdug4m3y24hpx5crm0el4zhkk0wafs8kp6m0xu0wecygqej2xqq8gyhx.fips.network/"
+       "image",
+       "https://assets.podhome.fm/98d1b634-3ead-490c-ade3-08dc4d9e1446/6384706134504864440x3000.jpg"
       ],
       [
        "imeta",
-       "url https://blossom.primal.net/45d7ca76a456c8dbe32b13223340f91c65c391d08dde40ed930127acf5aa0e2d.png",
-       "m image/png",
-       "dim 1634x1098",
-       "service nip96"
-      ],
-      [
-       "client",
-       "Primal Web"
+       "m audio/mpeg",
+       "url https://op3.dev/e/dts.podtrac.com/redirect.mp3/pdcn.co/e/pscrb.fm/rss/p/serve.podhome.fm/episode/98d1b634-3ead-490c-ade3-08dc4d9e1446/638470613459883050f568cac8-cc4f-4c3c-a83f-764b84cce760.mp3"
       ]
      ]
     },
@@ -1652,74 +1757,6 @@
       [
        "t",
        "nostr"
-      ]
-     ]
-    },
-    {
-     "content": "nostr.wine nostr relay.",
-     "created_at": 1771436582,
-     "id": "85fe5aa85429bb367ce0cf8f03f71f74ba83dd02f1b42f666bfb921bb07c7c86",
-     "kind": 30023,
-     "pubkey": "e938eb5077f30bd8fd0f9a0681514e52706fb231f0ac7516e3194530618addfa",
-     "sig": "40c7e26e24663feb4a22906d22bb424740ddf826d6c71a2a4839e8adf533f11692ad1b19c9566414849e2519b508398b7d848e63b2b9ef6631567b3242bd0460",
-     "tags": [
-      [
-       "d",
-       "nostr_wine"
-      ],
-      [
-       "title",
-       "nostr.wine Nostr Relay"
-      ],
-      [
-       "image",
-       ""
-      ],
-      [
-       "published_at",
-       "2026-02-18 17:43:02 +0000 UTC"
-      ],
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "t",
-       "relay"
-      ]
-     ]
-    },
-    {
-     "content": "nostr.mom nostr relay.",
-     "created_at": 1771436581,
-     "id": "d6f0e0db71f5b276e008d7285b896e069b78f0eb5da3b34fdd87c97eac66d01a",
-     "kind": 30023,
-     "pubkey": "e938eb5077f30bd8fd0f9a0681514e52706fb231f0ac7516e3194530618addfa",
-     "sig": "6936e469dd04081e2fd9eb79800793258d7cbae1a0f178a05d9a2480037f48ec78b9e9e3d3486ccdaa3922f29eae73a7b7734222f7a76070d3cdbc9260fe487a",
-     "tags": [
-      [
-       "d",
-       "nostr_mom"
-      ],
-      [
-       "title",
-       "nostr.mom Nostr Relay"
-      ],
-      [
-       "image",
-       ""
-      ],
-      [
-       "published_at",
-       "2026-02-18 17:43:01 +0000 UTC"
-      ],
-      [
-       "t",
-       "nostr"
-      ],
-      [
-       "t",
-       "relay"
       ]
      ]
     },
@@ -1793,39 +1830,82 @@
      ]
     },
     {
-     "content": "Nostr Wiki\n\nEstive sumido do #Nostr por um tempo, mas durante este tempo tamb\u00e9m estivo o mais pr\u00f3ximo do protocolo que algu\u00e9m pode estar... at\u00e9 domingo publico que o projeto que estou finalizando para o Nostr, e sem sombra de d\u00favidas est\u00e1 espetacular, estou muito animado.\n\nBom dia meus caros!!",
-     "created_at": 1758286903,
-     "id": "ae298ef12b30dcf70f57655eb27f3e44dae390f75756aa63302e675a0d113c15",
+     "content": "To add to what nostr:nprofile1qqs06gywary09qmcp2249ztwfq3ue8wxhl2yyp3c39thzp55plvj0sgprdmhxue69uhhg6r9vehhyetnwshxummnw3erztnrdakj7qguwaehxw309a6xsetrd96xzer9dshxummnw3erztnrdakj7qgmwaehxw309amksetpwshxsctswpuhgctkv4exutnrduhsw0qlr4 said, Aedile is intended to be a fast, efficient, and stable set of code that other developers can use to bootstrap Nostr apps.\n\nThere are a few things every Nostr clients needs to do, like connect to relays, handle user login, sign events, publish them, and search.  We aim to make Aedile the best at all of those so it can be a firm foundation for future Nostr apps.",
+     "created_at": 1735859178,
+     "id": "45da80e4cdd89c184f76b3f54452a98bc605adbabf48915a8a8b2eb9888f0546",
      "kind": 1,
-     "pubkey": "55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27",
-     "sig": "c76edad7378dc377c95378e2b73d38478ce1ed78605ae9f8945578da43b2bab45349f5d9a947aea8050c6b030d3438d18e7ab65e6e3c5464457399dd4de94c32",
+     "pubkey": "70122128273bdc07af9be7725fa5c4bc0fc146866bec38d44360dc4bc6cc18b9",
+     "sig": "f9a86c7dee312817f1d39e3b166e792585e6b736f1712ad00fa1da6eb4798a54131358b4483f5893130081bb7f15e4e7dfa06c5f15c800e246492da453cdc7f1",
      "tags": [
       [
-       "a",
-       "34550:55472e9c01f37a35f6032b9b78dade386e6e4c57d80fd1d0646abb39280e5e27:ndevs-br"
+       "e",
+       "dff2cb2931ea98da9dac8ac5441c84294ba667dd106fa48e65321cfaad9f0c52",
+       "",
+       "root"
       ],
       [
-       "subject",
-       "Nostr Wiki"
+       "e",
+       "ff776994c5d217ea538c6752e64cd71d1721c459b5c5a2bc86036861511cad8b"
       ],
       [
-       "t",
-       "Nostr"
+       "e",
+       "f785909a94e788b03d74801c96b319849124cda6929c77f5149466b74c38b5cb",
+       "",
+       "reply"
       ],
       [
-       "t",
-       "nostr"
+       "p",
+       "fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1",
+       "",
+       "mention"
+      ],
+      [
+       "p",
+       "5ffb8e1b6b629c0e34a013f9298ebb0759b98a3d24029916321d5eb4255b6735"
+      ],
+      [
+       "p",
+       "75d12141a391994c4062501f155c2e34e41a8c3cf9bef9e4d7d298253458d1e2"
       ]
      ]
     },
     {
-     "content": "Still want to see a good pinterest, instagram and tiktok competitor on nostr. There's so much value in visual content and we haven't even bothered scratching that surface. \n\nImagine the interoperability of a curation platform with a shopping platform, both contributing to the creator's sovereign identity vs fighting against one another. \n\nMassive potential. ",
-     "created_at": 1724727720,
-     "id": "a42cc0bb299bbce89e5ea77b797a2126a2f149f8a22ab665d14dc9187c1e3cfc",
-     "kind": 1,
-     "pubkey": "1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411",
-     "sig": "051be0cfd325158e5fbae60d7a1f4deadc409677f507166774130fea51acd952e115a8a889b2b7ed13b9ef9d6587428b0b8fc76b6aa09db3085f133e1e84acc1",
-     "tags": []
+     "content": "",
+     "created_at": 1720461688,
+     "id": "cb5892408f969b7002118b108c95ebccfa094087fc4946b7f630a4da61c6848e",
+     "kind": 30023,
+     "pubkey": "726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11",
+     "sig": "dfb9200e48bd1b808cf61415a24b7e90ead2ea8b20f676cc131976d71125e8b2c54246a83436bfd3914153b6867d0a6ef54cbc920a340fa5fd7341b3a707cfc4",
+     "tags": [
+      [
+       "d",
+       "respect-the-a-context"
+      ],
+      [
+       "title",
+       "Nostr"
+      ],
+      [
+       "summary",
+       "Nostr"
+      ],
+      [
+       "published_at",
+       "1696882326"
+      ],
+      [
+       "t",
+       "nostr"
+      ],
+      [
+       "published_at",
+       "1696882326"
+      ],
+      [
+       "alt",
+       "This is a long form article, you can read it in https://habla.news/franzap/respect-the-a-context"
+      ]
+     ]
     }
    ],
    "flags": [
@@ -1863,39 +1943,6 @@
       [
        "p",
        "983dd797fe72ad62fc8e3ece7eed1f126550972885c8f835d9af5528dad655a3",
-       ""
-      ]
-     ]
-    },
-    {
-     "content": "Grok Build is Now Open Source\nExplore the harness behind our coding agent and TUI.\n\n\nnostr:naddr1qvzqqqr4gupzqfrzd2rja8n2v66f6g6g46gzske3l0fhhnpxa50h2vw6lt4xjp4gqqjxzv3sxasnjv3394jxxde3956rvvr994sn2vnr956nvdejvs6nqdmrvs6kgw83x37 ",
-     "created_at": 1784198593,
-     "id": "40d9f5c7ee4a67c5dd64d7542d8be05fcf7ddb56a1114646a7eee9f516d48fb4",
-     "kind": 1,
-     "pubkey": "24626a872e9e6a66b49d2348ae90285b31fbd37bcc26ed1f7531dafaea6906a8",
-     "sig": "f51de79bcfc00cab5fd98640a1fc3a9877dcb8b47c0a129ed43b91b7962e384a974842ee5031156cc7d082576c24dee6c8db6598e308f75b254d1463e99c7581",
-     "tags": [
-      [
-       "subject",
-       "Grok Build is Now Open Source"
-      ],
-      [
-       "image",
-       "https://x.ai/images/news/open-source-cover.png"
-      ],
-      [
-       "a",
-       "30023:24626a872e9e6a66b49d2348ae90285b31fbd37bcc26ed1f7531dafaea6906a8:a207a921-dc71-460e-a52c-5672d507cd5d",
-       "",
-       "mention"
-      ],
-      [
-       "client",
-       ""
-      ],
-      [
-       "p",
-       "24626a872e9e6a66b49d2348ae90285b31fbd37bcc26ed1f7531dafaea6906a8",
        ""
       ]
      ]
@@ -2074,6 +2121,41 @@
        "Amethyst"
       ]
      ]
+    },
+    {
+     "content": "He's going so hardcore cloning the repo and building from source lol",
+     "created_at": 1779978067,
+     "id": "0000dc5ab01b9a8831edd854e85de91b13fae0bde77fc64706655de3e2b38f13",
+     "kind": 1,
+     "pubkey": "e2ccf7cf20403f3f2a4a55b328f0de3be38558a7d5f33632fdaaefc726c1c8eb",
+     "sig": "eee7678cd75cc28b468777683d0800bdd29f4d9ace6a9b18aeed0614dc34a743edb79c1ac4fe60369becc47a3dd8585e35f2abba7384d9a5f07c689fd70cf851",
+     "tags": [
+      [
+       "e",
+       "00004d1e487177d4f2e18a71d8db28b8009402438c0d52789eb2132ef1e035c4",
+       "wss://nos.lol",
+       "root"
+      ],
+      [
+       "e",
+       "00002db9957e51979b7d2450e194de9f9d515a8cefa3dd0574d1b39e311fc6e5",
+       "wss://relay.primal.net",
+       "reply"
+      ],
+      [
+       "p",
+       "1e067bfb58820576df3daf7cb051d4411b80a0b8fa12fc253cd0ab41cf1a2069"
+      ],
+      [
+       "client",
+       "Wisp"
+      ],
+      [
+       "nonce",
+       "78063",
+       "16"
+      ]
+     ]
     }
    ],
    "flags": [
@@ -2086,5 +2168,5 @@
   }
  ],
  "lens": "include:spam",
- "relay": "wss://search-staging.brainstorm.world"
+ "relay": "wss://search.brainstorm.world"
 }

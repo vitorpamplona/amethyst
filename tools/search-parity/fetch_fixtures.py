@@ -6,7 +6,7 @@ Run by hand when the fixture needs refreshing; the test that consumes its output
 touches the network, so `./gradlew test` stays hermetic and offline.
 
     ./gradlew :cli:installDist
-    tools/search-parity/fetch_fixtures.py > commons/src/jvmTest/resources/search-parity-fixture.json
+    tools/search-parity/fetch_fixtures.py > tools/search-parity/fixture.json
 
 Each case pins the filter FIELDS (kinds/tags/window) as flags rather than folding them into
 the search string, so the test can rebuild the identical NIP-01 Filter and assert our matcher
@@ -18,7 +18,7 @@ import shlex
 import subprocess
 import sys
 
-RELAY = os.environ.get("RELAY", "wss://search-staging.brainstorm.world")
+RELAY = os.environ.get("RELAY", "wss://search.brainstorm.world")
 AMY = os.environ.get("AMY", os.path.join(os.getcwd(), "cli/build/install/amy/bin/amy"))
 # The relay gates and ranks results through the searcher's web of trust, and answers an
 # anonymous query with nothing at all. `include:spam` waives that gate, which is what makes
@@ -26,9 +26,9 @@ AMY = os.environ.get("AMY", os.path.join(os.getcwd(), "cli/build/install/amy/bin
 # to one account's trust graph and re-records differently as that graph moves.
 #
 # It does NOT make the relay lexical. Measured on this corpus, results still include events
-# carrying no literal occurrence of the term — asked for `nostr` it returns "made my display
-# name refer to my npub's last characters". Retrieval is semantic; see the parity test for why
-# that means text results are not compared.
+# carrying no literal occurrence of the term — asked for `"open source"` it returns "FOSS you say
+# will save you". Retrieval is semantic; see the parity test for why that means text results are
+# not compared.
 LENS = os.environ.get("LENS", "include:spam")
 LIMIT = os.environ.get("LIMIT", "8")
 TIMEOUT = os.environ.get("TIMEOUT", "30")

@@ -31,7 +31,7 @@ import kotlin.test.assertTrue
  *
  * ## What this can and cannot prove
  *
- * The oracle is `search-staging.brainstorm.world`, a vespa-relay — the same software Amethyst's
+ * The oracle is `search.brainstorm.world`, a vespa-relay — the same software Amethyst's
  * token language was ported from. It is a **valid oracle for NIP-01 filtering** and **not one for
  * NIP-50 text matching**, and the difference is the whole design of this file.
  *
@@ -42,8 +42,8 @@ import kotlin.test.assertTrue
  * pins it.
  *
  * NIP-50 is not closed. This relay retrieves topically, not lexically: asked for `bitcoin` it
- * returns a block-height summary that never says "bitcoin", and asked for `nostr` it returns "made
- * my display name refer to my npub's last characters". Eight of the 64 recorded events — 12% —
+ * returns a liquidation-levels heatmap that only ever says "BTC", and asked for `"open source"` it
+ * returns "FOSS you say will save you". Eight of the 64 recorded events — 12% —
  * contain no literal occurrence of the term that fetched them.
  *
  * The fixture is recorded with the `include:spam` lens, which waives the web-of-trust gate. That
