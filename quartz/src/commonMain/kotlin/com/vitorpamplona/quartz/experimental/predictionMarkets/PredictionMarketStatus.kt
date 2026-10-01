@@ -18,13 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.quartz.experimental.predictionMarkets
 
-/** [value] with the locale's digit grouping: `1,234,567` in English, `1.234.567` in German. */
-expect fun formatGrouped(value: Long): String
+/** Where a prediction market is in its life, collapsed from the many words publishers use for it. */
+enum class PredictionMarketStatus {
+    /** Taking bets (or, before that, being funded). */
+    OPEN,
 
-/** [value] with the locale's decimal mark and at most [maxFractionDigits] digits after it: `4.21` in English, `4,21` in German. */
-expect fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-): String
+    /** No longer taking bets, not resolved yet. */
+    CLOSED,
+
+    /** The oracle has named a winning outcome. */
+    RESOLVED,
+
+    /** Voided: bets are refunded and no outcome wins. */
+    CANCELLED,
+    ;
+
+    companion object {
+        /** Maps a published `status`/`state` word to a [PredictionMarketStatus], or null when it is not one we know. */
+        fun parse(value: String): PredictionMarketStatus? =
+            when (value.trim().lowercase()) {
+                "active", "open", "funding" -> OPEN
+                "resolving", "ended", "closed" -> CLOSED
+                "resolved", "settled" -> RESOLVED
+                "voided", "void", "cancelled", "canceled" -> CANCELLED
+                else -> null
+            }
+    }
+}

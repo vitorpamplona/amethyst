@@ -599,13 +599,12 @@ open class FsEventStore(
         }
 
     /**
-     * True when [kind] currently parses to a [SearchableEvent]. Kind
-     * alone selects the event class in [EventFactory], so a single probe
-     * per kind is authoritative. The id is non-blank so kinds that lazily
-     * hash a missing id (NIP-17 chat) skip that work — only the runtime
-     * type matters here.
+     * True when [kind] currently parses to a [SearchableEvent], decided by
+     * one [EventFactory.probe] per kind (a kind whose class is picked by
+     * tags answers as its primary class; [FsIndexer.linkFts] still checks
+     * each event itself).
      */
-    private fun isSearchableKind(kind: Int): Boolean = EventFactory.create<Event>("0", "0", 0L, kind, emptyArray(), "", "") is SearchableEvent
+    private fun isSearchableKind(kind: Int): Boolean = EventFactory.probe(kind) is SearchableEvent
 
     private fun deleteRecursively(p: java.nio.file.Path) {
         if (!Files.exists(p)) return

@@ -124,6 +124,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
@@ -160,6 +161,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
@@ -370,6 +372,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.UnrecognizedKind38000Event
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -755,7 +758,21 @@ class EventFactory {
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingSpaceEvent.KIND -> MeetingSpaceEvent(id, pubKey, createdAt, tags, content, sig)
                 AdminCommandEvent.KIND -> AdminCommandEvent(id, pubKey, createdAt, tags, content, sig)
-                MintRecommendationEvent.KIND -> MintRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+                // kind:38000 is NIP-87's mint recommendation, but unrelated apps reuse the number:
+                // BAO Markets publishes prediction markets on it, an auditable-voting app publishes
+                // ballots, and most of what a big relay holds for it is spam (`d`-only "sybil test
+                // votes"). Parsing all of it as a recommendation rendered markets, ballots and spam
+                // as ecash mint cards. Disambiguate by tags, recommendation first — its `k` (the
+                // recommended mint's kind) or, on old events without one, its `u` (mint URL) or the
+                // mint's `a` — and fall back to UnrecognizedKind38000Event: still addressable, so
+                // stores replace and delete it by `d`, but never indexed and drawn as no card.
+                MintRecommendationEvent.KIND ->
+                    when {
+                        MintRecommendationEvent.isMintRecommendation(tags) -> MintRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+                        BallotEvent.isBallot(tags) -> BallotEvent(id, pubKey, createdAt, tags, content, sig)
+                        PredictionMarketEvent.isPredictionMarket(tags) -> PredictionMarketEvent(id, pubKey, createdAt, tags, content, sig)
+                        else -> UnrecognizedKind38000Event(id, pubKey, createdAt, tags, content, sig)
+                    }
                 MediaFollowListEvent.KIND -> MediaFollowListEvent(id, pubKey, createdAt, tags, content, sig)
                 MediaStarterPackEvent.KIND -> MediaStarterPackEvent(id, pubKey, createdAt, tags, content, sig)
                 MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
@@ -940,6 +957,29 @@ class EventFactory {
          * Used to decide whether a repost's inner (boosted) kind is something
          * Amethyst can parse and render at all.
          */
-        fun isKnownKind(kind: Int): Boolean = create<Event>("", "", 0L, kind, emptyArray(), "", "")::class != Event::class
+        fun isKnownKind(kind: Int): Boolean = probe(kind)::class != Event::class
+
+        /**
+         * A tagless, contentless instance of [kind], for questions asked of a kind rather than of
+         * an event: does it have a typed class ([isKnownKind]), is it searchable (the stores'
+         * reindex pre-filters, `SearchableKinds`)?
+         *
+         * For most kinds that is just [create] with no tags. It is not for kinds whose class is
+         * chosen by tags, where a tagless event can land on a different class than the kind's
+         * real events. Kind 38000 is the case that matters: with no tags it is an
+         * [UnrecognizedKind38000Event] (junk, unsearchable), yet every typed shape of it — mint recommendation, ballot, prediction market —
+         * is a searchable, renderable class, so it answers as its primary class. (The other
+         * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
+         *
+         * The id is non-blank so kinds that lazily hash a missing id (NIP-17 chat) skip that work
+         * — only the runtime type matters here.
+         */
+        fun probe(kind: Int): Event =
+            when (kind) {
+                MintRecommendationEvent.KIND -> MintRecommendationEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                else -> create(PROBE_ID, PROBE_ID, 0L, kind, emptyArray(), "", "")
+            }
+
+        private const val PROBE_ID = "0"
     }
 }

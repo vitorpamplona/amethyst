@@ -18,13 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.quartz.experimental.ballots
 
-/** [value] with the locale's digit grouping: `1,234,567` in English, `1.234.567` in German. */
-expect fun formatGrouped(value: Long): String
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 
-/** [value] with the locale's decimal mark and at most [maxFractionDigits] digits after it: `4.21` in English, `4,21` in German. */
-expect fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-): String
+private fun TagArray.firstNonBlankValue(name: String): String? = fastFirstNotNullOfOrNull { if (it.size > 1 && it[0] == name && it[1].isNotBlank()) it[1] else null }
+
+/** The election this ballot is cast in. */
+fun TagArray.election() = firstNonBlankValue("election")
+
+/** The ballot's proof hash, from either spelling of the tag (`proof-hash` or `proof_hash`). */
+fun TagArray.proofHash() = firstNonBlankValue("proof-hash") ?: firstNonBlankValue("proof_hash")

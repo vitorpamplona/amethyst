@@ -18,13 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.quartz.experimental.ballots
 
-/** [value] with the locale's digit grouping: `1,234,567` in English, `1.234.567` in German. */
-expect fun formatGrouped(value: Long): String
+import androidx.compose.runtime.Immutable
 
-/** [value] with the locale's decimal mark and at most [maxFractionDigits] digits after it: `4.21` in English, `4,21` in German. */
-expect fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-): String
+/** One answer on a ballot: the [question] (as the ballot names it, often an id) and the [answer] chosen. */
+@Immutable
+data class BallotAnswer(
+    val question: String,
+    val answer: String,
+)

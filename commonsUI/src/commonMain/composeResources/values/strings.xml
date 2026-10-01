@@ -6361,4 +6361,30 @@
     <string name="browser_pill_download_risky">This file type can run code. Check that the name matches what you meant to get.</string>
     <string name="browser_pill_download_save">Save</string>
     <string name="browser_pill_download_from">From %1$s</string>
+    <string name="prediction_market">Prediction market</string>
+    <string name="prediction_market_status_open">Open</string>
+    <string name="prediction_market_status_closed">Closed</string>
+    <string name="prediction_market_status_resolved">Resolved</string>
+    <string name="prediction_market_status_cancelled">Cancelled</string>
+    <string name="prediction_market_demo">Demo · play money</string>
+    <string name="prediction_market_closes_in">Closes in %1$s</string>
+    <string name="prediction_market_closed_on">Closed %1$s</string>
+    <string name="prediction_market_bet_range">Bets %1$s–%2$s sats</string>
+    <string name="prediction_market_min_bet">Min bet %1$s sats</string>
+    <string name="prediction_market_max_bet">Max bet %1$s sats</string>
+    <string name="prediction_market_fee">Fee %1$s</string>
+    <string name="prediction_market_cancel_reason">Cancelled: %1$s</string>
+    <string name="prediction_market_winning_outcome">Winning outcome</string>
+    <plurals name="prediction_market_more_outcomes">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="ballot">Ballot</string>
+    <string name="ballot_election">Election %1$s</string>
+    <string name="ballot_vote">Vote</string>
+    <string name="ballot_proof_hash">Proof %1$s</string>
+    <plurals name="ballot_more_answers">
+        <item quantity="one">+%1$d more answer</item>
+        <item quantity="other">+%1$d more answers</item>
+    </plurals>
 </resources>
