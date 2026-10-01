@@ -1385,6 +1385,13 @@ open class EventCache :
                 listOfNotNull(event.parentPullRequestId()?.let { checkGetOrCreateNote(it) })
             }
 
+            is ForumCommentEvent -> {
+                // A Buzz forum comment counts as a reply of its thread's root post (and of the comment
+                // it answers, when nested), so the forum list's reply count sees it. A direct reply
+                // carries only the `reply` marker, which then IS the root.
+                listOfNotNull(event.threadRoot(), event.replyTo()).distinct().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
             is GitStatusEvent -> {
                 // A status event roots itself at a patch/PR/issue via a
                 // marked-`root` `e` tag; link only that so the transition

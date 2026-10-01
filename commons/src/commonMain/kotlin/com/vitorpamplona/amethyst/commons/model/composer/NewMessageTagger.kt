@@ -39,11 +39,17 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.CancellationException
 
+/**
+ * @param userMentionsAsNames write a user mention as plain `@Name` text instead of a `nostr:`
+ * reference — the form Buzz clients send and render (the cited user still lands in [pTags], which is
+ * what notifies them). Buzz shows a `nostr:nprofile…` body verbatim.
+ */
 class NewMessageTagger(
     var message: String,
     var pTags: List<User>? = null,
     var eTags: List<Note>? = null,
     var dao: Dao,
+    val userMentionsAsNames: Boolean = false,
 ) {
     val directMentions = mutableSetOf<HexKey>()
     val directMentionsNotes = mutableSetOf<Note>()
@@ -115,11 +121,11 @@ class NewMessageTagger(
                             val results = parseDirtyWordForKey(word)
                             when (val entity = results?.key?.entity) {
                                 is NPub -> {
-                                    getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
+                                    userMention(dao.getOrCreateUser(entity.hex), results.restOfWord)
                                 }
 
                                 is NProfile -> {
-                                    getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
+                                    userMention(dao.getOrCreateUser(entity.hex), results.restOfWord)
                                 }
 
                                 is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
@@ -157,6 +163,19 @@ class NewMessageTagger(
                             }
                         }.joinToString(" ")
                 }.joinToString("\n")
+    }
+
+    private fun userMention(
+        user: User,
+        restOfTheWord: String?,
+    ): String {
+        if (!userMentionsAsNames) return getNostrAddress(user.toNProfile(), restOfTheWord)
+        val name = "@" + user.toBestDisplayName()
+        return when {
+            restOfTheWord.isNullOrEmpty() -> name
+            restOfTheWord[0].isLetterOrDigit() -> "$name $restOfTheWord"
+            else -> name + restOfTheWord
+        }
     }
 
     fun getNostrAddress(

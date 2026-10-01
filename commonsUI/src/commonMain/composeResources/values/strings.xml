@@ -5469,6 +5469,7 @@
     <string name="marmot_invite_device_rejected">No relay accepted the KeyPackage. Check your relay settings and try again.</string>
     <string name="chat_delivery_sending">Sending\u2026</string>
     <string name="chat_delivery_failed">Could not be sent. Tap to try again.</string>
+    <string name="chat_delivery_rejected">The relay refused this message</string>
     <plurals name="marmot_unread_messages">
         <item quantity="one">%1$d new message</item>
         <item quantity="other">%1$d new messages</item>

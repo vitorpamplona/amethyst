@@ -764,10 +764,13 @@ class AccountViewModel(
         account.concord.sendConcordTyping(communityId, channelIdHex)
     }
 
-    fun sendBuzzTyping(channel: RelayGroupChannel) =
-        viewModelScope.launch(Dispatchers.IO) {
-            account.relayGroups.sendBuzzTyping(channel)
-        }
+    fun sendBuzzTyping(
+        channel: RelayGroupChannel,
+        threadRootId: HexKey? = null,
+        replyToId: HexKey? = null,
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        account.relayGroups.sendBuzzTyping(channel, threadRootId, replyToId)
+    }
 
     @Immutable
     data class NoteComposeReportState(

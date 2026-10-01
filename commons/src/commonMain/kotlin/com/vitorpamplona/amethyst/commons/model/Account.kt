@@ -185,6 +185,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
@@ -2201,7 +2202,9 @@ class Account(
         // quick reply is notified (`p`) and their reference resolves. The reply-parent author is
         // already tagged by each builder below, so drop it from the body mentions to avoid a
         // duplicate `p`.
-        val tagger = NewMessageTagger(text, dao = LocalCache)
+        // Buzz shows a `nostr:` reference verbatim, so a Buzz thread names people as plain `@Name`.
+        val buzzGroup = gatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }?.takeIf { BuzzRelayDialect.isBuzz(it.groupId.relayUrl) }
+        val tagger = NewMessageTagger(text, dao = LocalCache, userMentionsAsNames = buzzGroup != null)
         tagger.run()
         val mentions = tagger.pTags?.mapNotNull { it.pubkeyHex.takeIf { pk -> pk != rootEvent.pubKey } }.orEmpty()
         val finalText = appendMediaUrls(tagger.message, imetas)
@@ -2237,15 +2240,18 @@ class Account(
                     // their clients no longer thread on. Reading 40002 stays supported (see
                     // [com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply]).
                     //
-                    // Attached media rides as URLs appended to the content.
+                    // Attached media rides as URLs appended to the content, plus Buzz-shaped `imeta`.
                     val root = rootEvent.tags.buzzThreadRootForReplyTo(rootEvent.id)
                     signer.sign(
-                        ChatEvent.build(finalText) {
+                        // Buzz draws an attachment only where the body links it as `![image](url)`.
+                        ChatEvent.build(BuzzImeta.markdownMediaBody(finalText, imetas)) {
                             hTag(group.groupId.id)
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
                             pTags(mentions.map { PTag(it) })
                             previous(group.previousEventRefs(pubKey))
+                            // Buzz refuses the whole event over any imeta key it doesn't allow.
+                            imetas(BuzzImeta.sanitize(imetas))
                         },
                     )
                 } else {

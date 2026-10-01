@@ -49,9 +49,6 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
-import com.vitorpamplona.amethyst.commons.model.latestConcordEdit
-import com.vitorpamplona.amethyst.commons.model.latestMarmotEdit
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -59,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
+import com.vitorpamplona.amethyst.commons.ui.note.types.observeChatMessageEdit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderConcordTimerNotice
@@ -66,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.service.notifications.NotificationContent
 import com.vitorpamplona.amethyst.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
@@ -669,17 +668,22 @@ fun NoteRow(
 }
 
 /**
- * The newest edit overlaying a chat message [note] (Concord kind-3302 or Buzz kind-40003), or null
- * when unedited. A message is only ever one kind, so both resolve off the same [Note.edits] and one
- * collector on the note's edits flow serves both — recomposing whenever an edit is added or removed.
+ * The text a one-line chat preview (room list, workspace rows) shows for [note]: the latest edit's
+ * text when there is one — the room shows the edit, so the list must too — with `nostr:` user
+ * references rewritten to `@Name`, as the bubble renders them.
  */
 @Composable
-fun observeChatEdit(note: Note): Note? {
-    val latest by
-        produceState<Note?>(initialValue = null, note.idHex) {
-            note.flow().edits.stateFlow.collect {
-                value = note.latestConcordEdit() ?: note.latestBuzzEdit() ?: note.latestMarmotEdit()
-            }
-        }
-    return latest
+fun observeChatPreviewText(
+    note: Note,
+    max: Int = 200,
+): String {
+    val content = observeChatEdit(note)?.event?.content ?: note.event?.content ?: ""
+    return remember(content, max) { NotificationContent.resolveMentions(content, max).text }
 }
+
+/**
+ * The newest edit overlaying a chat message [note] (Concord, Buzz or Marmot), or null when unedited,
+ * recomposing whenever an edit is added or removed.
+ */
+@Composable
+fun observeChatEdit(note: Note): Note? = observeChatMessageEdit(note)

@@ -76,7 +76,19 @@ data class ChatDelivery(
     val acceptedRelays: Set<NormalizedRelayUrl> = emptySet(),
     val recipients: List<RecipientDelivery>? = null,
     val sendState: ChatSendState = ChatSendState.SENT,
+    // Relays that answered `OK false`, with their reason. A later acceptance clears the entry.
+    val rejectedRelays: Map<NormalizedRelayUrl, String> = emptyMap(),
 ) {
+    /**
+     * No relay took the message and every targeted relay refused it: it will never arrive, so the
+     * UI must say so (with the relay's reason) instead of showing it as still pending.
+     */
+    val isRejected: Boolean
+        get() =
+            acceptedRelays.isEmpty() &&
+                rejectedRelays.isNotEmpty() &&
+                rejectedRelays.keys.containsAll(targetRelays)
+
     /** The other participants' wraps (self-copy excluded); null for rooms. */
     val otherRecipients: List<RecipientDelivery>?
         get() = recipients?.filterNot { it.isSelf }
@@ -137,7 +149,10 @@ class ChatDeliveryTracker(
     private val retries = mutableMapOf<HexKey, suspend () -> Unit>()
 
     private val okCollector =
-        RelayInsertConfirmationCollector(client) { eventId, relay ->
+        RelayInsertConfirmationCollector(
+            client,
+            onRelayRejected = { eventId, relay, reason -> onRejected(eventId, relay.url, reason) },
+        ) { eventId, relay ->
             onAccepted(eventId, relay.url)
         }
 
@@ -297,7 +312,7 @@ class ChatDeliveryTracker(
         }
     }
 
-    private fun onAccepted(
+    internal fun onAccepted(
         eventId: HexKey,
         relay: NormalizedRelayUrl,
     ) {
@@ -318,6 +333,7 @@ class ChatDeliveryTracker(
                         // send path recorded.
                         sendState = ChatSendState.SENT,
                         acceptedRelays = delivery.acceptedRelays + relay,
+                        rejectedRelays = delivery.rejectedRelays - relay,
                         recipients =
                             delivery.recipients?.map {
                                 if (it.recipient == recipient) {
@@ -330,8 +346,25 @@ class ChatDeliveryTracker(
             } else {
                 val flow = deliveries[eventId] ?: return
                 val delivery = flow.value ?: return
-                flow.value = delivery.copy(sendState = ChatSendState.SENT, acceptedRelays = delivery.acceptedRelays + relay)
+                flow.value = delivery.copy(sendState = ChatSendState.SENT, acceptedRelays = delivery.acceptedRelays + relay, rejectedRelays = delivery.rejectedRelays - relay)
             }
+        }
+    }
+
+    internal fun onRejected(
+        eventId: HexKey,
+        relay: NormalizedRelayUrl,
+        reason: String,
+    ) {
+        if (eventId !in wrapIndex && eventId !in knownIds) return
+
+        lock.withLock {
+            val noteId = wrapIndex[eventId]?.first ?: eventId
+            val flow = deliveries[noteId] ?: return
+            val delivery = flow.value ?: return
+            // A relay that already accepted the event (e.g. a resend after AUTH) keeps its tick.
+            if (relay in delivery.acceptedRelays) return
+            flow.value = delivery.copy(sendState = ChatSendState.SENT, rejectedRelays = delivery.rejectedRelays + (relay to reason))
         }
     }
 

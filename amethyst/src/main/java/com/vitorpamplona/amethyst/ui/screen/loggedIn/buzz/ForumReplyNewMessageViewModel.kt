@@ -56,16 +56,16 @@ class ForumReplyNewMessageViewModel : ChannelNewMessageViewModel() {
             return null
         }
 
-        // Resolve `@`-mentions the same way the chat composer does: the tagger rewrites each name
-        // into a `nostr:` reference in the body AND collects the cited users (seeded with the reply
-        // target) so they land as `p` mention tags — without this, a named member was neither
-        // notified nor linked.
+        // Resolve `@`-mentions the same way the chat composer does: the tagger collects the cited
+        // users (seeded with the reply target) so they land as `p` mention tags — without this, a
+        // named member was neither notified nor linked. The body keeps Buzz's plain `@Name` form.
         val tagger =
             NewMessageTagger(
                 message = message.text.toString(),
                 pTags = listOfNotNull(replyTo.value?.author),
                 eTags = listOfNotNull(replyTo.value),
                 dao = accountViewModel,
+                userMentionsAsNames = true,
             )
         tagger.run()
 

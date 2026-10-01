@@ -192,6 +192,9 @@ class BlossomUploader {
 
         requestBuilder
             .addHeader("Content-Length", length.toString())
+            // The blob's hash (BUD-06). Servers that bind the body to the token's `x` tag before
+            // reading it — Buzz answers 401 without it — need it up front.
+            .addHeader(SHA256_HEADER, hash)
             .url(apiUrl)
             .put(requestBody)
 
@@ -282,3 +285,5 @@ class BlossomUploader {
 
     private fun parseResults(body: String): BlossomUploadResult = JsonMapper.fromJson<BlossomUploadResult>(body)
 }
+
+private const val SHA256_HEADER = "X-SHA-256"

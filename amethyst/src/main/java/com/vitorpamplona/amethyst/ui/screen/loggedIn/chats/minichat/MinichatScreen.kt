@@ -57,9 +57,13 @@ import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasourc
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.mediaServers.buzzWorkspaceServer
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -87,6 +91,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadD
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toPlainImetas
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -153,13 +159,22 @@ fun MinichatScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val canPost by remember { derivedStateOf { composer.text.isNotBlank() } }
+    // A thread in a Buzz workspace channel: its media must live on the workspace's own server
+    // (the relay refuses any other image host) and its typing signal is scoped to the thread.
+    // Reactive on the dialect: a relay is marked Buzz only once its first verified Buzz event lands,
+    // which a cold start can reach after this screen opens.
+    val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
+    val relayGroup = remember(rootNote) { rootNote.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } }
+    val buzzGroup = relayGroup?.takeIf { it.groupId.relayUrl in buzzRelays }
     val uploadState =
-        remember {
+        remember(buzzGroup) {
             ChatFileUploadState(
                 accountViewModel.account.settings.defaultFileServer,
                 accountViewModel.account.settings.stripLocationOnUpload,
-            )
+            ).apply { lockServer(buzzGroup?.let { buzzWorkspaceServer(it.groupId.relayUrl.url) }) }
         }
+    // Client-side throttle for the Buzz kind-20002 typing heartbeat.
+    val lastTypingSecs = remember { longArrayOf(0L) }
 
     Scaffold(
         topBar = {
@@ -249,7 +264,9 @@ fun MinichatScreen(
                                     }
                                 },
                             )
-                            accountViewModel.account.settings.changeDefaultFileServer(uploadState.selectedServer)
+                            if (uploadState.lockedServer == null) {
+                                accountViewModel.account.settings.changeDefaultFileServer(uploadState.selectedServer)
+                            }
                             accountViewModel.account.settings.changeStripLocationOnUpload(uploadState.stripMetadata)
                         }
                     },
@@ -262,6 +279,19 @@ fun MinichatScreen(
             Column(modifier = EditFieldModifier) {
                 ThinPaddingTextField(
                     state = composer,
+                    onTextChanged = {
+                        val group = buzzGroup
+                        val now = TimeUtils.now()
+                        if (group != null && composer.text.isNotEmpty() && now - lastTypingSecs[0] >= BuzzTypingState.TYPING_HEARTBEAT_SECS) {
+                            lastTypingSecs[0] = now
+                            val rootEvent = rootNote.event
+                            accountViewModel.sendBuzzTyping(
+                                group,
+                                threadRootId = rootEvent?.tags?.buzzThreadRootForReplyTo(rootEvent.id) ?: rootNote.idHex,
+                                replyToId = rootNote.idHex,
+                            )
+                        }
+                    },
                     onContentReceived = { uri, mimeType ->
                         uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
                         // Same encryption choice the gallery button makes below.

@@ -58,14 +58,17 @@ fun RenderChat(
     isBoostedNote: Boolean = false,
 ) {
     val noteEvent = note.event ?: return
-    val eventContent = remember(noteEvent) { noteEvent.content }
+    // The newest in-place edit (Buzz, Concord, Marmot) wins — the chat room shows it, so a
+    // notification card or quote of the same message must too.
+    val content = observeChatMessageEdit(note)?.event?.content ?: noteEvent.content
+    val eventContent = content
     // Content actually handed to the media renderer. The shared renderer only shows media whose URL
     // appears in the text, but some NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada) attach an
     // image purely as a NIP-92 `imeta` tag and leave the content empty. Append any imeta URL missing
     // from the content so those attachments render — symmetric to ChannelChat.imageMessage, which
     // appends the URL on send. Encrypted-blob key/nonce are already registered by URL, so the shared
     // pipeline fetches and decrypts them transparently.
-    val displayContent = remember(noteEvent) { appendMissingImetaUrls(noteEvent.content, noteEvent) }
+    val displayContent = remember(noteEvent, content) { appendMissingImetaUrls(content, noteEvent) }
 
     // A boosted note inside a zap/nutzap/onchain activity card is always shown as a
     // compact 2-line preview, even when the logged-in user is only a zap-split

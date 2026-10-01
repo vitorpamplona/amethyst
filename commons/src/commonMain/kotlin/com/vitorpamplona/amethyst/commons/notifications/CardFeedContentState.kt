@@ -429,8 +429,16 @@ class CardFeedContentState(
         }
     }
 
+    /**
+     * Drops cards built from [deletedNotes] — e.g. a reaction its author took back, which used to
+     * linger on the notification card after it vanished from the message. A card can bundle many
+     * notes (all reactions to one post), so this rebuilds from the filter rather than editing cards.
+     */
     fun deleteFromFeed(deletedNotes: Set<Note>) {
-        // TODO: Implement deletion of notes from the notification feed
+        val shown = lastNotes ?: return
+        if (deletedNotes.none { it in shown }) return
+        clear()
+        invalidateData()
     }
 
     fun trimToSize(maxItems: Int) {
