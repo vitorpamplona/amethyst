@@ -96,6 +96,10 @@ class BlossomAuthorizationEvent(
             createdAt: Long = TimeUtils.now(),
         ) = createAuth("delete", hash, null, alt, signer, servers, createdAt)
 
+        /**
+         * [expiration] defaults to an hour ahead. Servers that bound the token's lifetime (Buzz
+         * rejects `expiration > created_at + 60` in its strict mode) need a shorter one.
+         */
         suspend fun createUploadAuth(
             hash: HexKey,
             size: Long,
@@ -103,7 +107,8 @@ class BlossomAuthorizationEvent(
             signer: NostrSigner,
             servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ) = createAuth("upload", hash, size, alt, signer, servers, createdAt)
+            expiration: Long = TimeUtils.oneHourAhead(),
+        ) = createAuth("upload", hash, size, alt, signer, servers, createdAt, expiration)
 
         /**
          * BUD-05 media-optimization auth (`t=media`). The [hash] is the sha256 of
@@ -127,6 +132,7 @@ class BlossomAuthorizationEvent(
             signer: NostrSigner,
             servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
+            expiration: Long = TimeUtils.oneHourAhead(),
         ): BlossomAuthorizationEvent {
             // BUD-11 `server` tags scope the token to specific domains so an upload
             // or delete token can't be replayed against another server. The value
@@ -141,7 +147,7 @@ class BlossomAuthorizationEvent(
             val tags =
                 listOfNotNull(
                     arrayOf("t", type),
-                    arrayOf("expiration", TimeUtils.oneHourAhead().toString()),
+                    arrayOf("expiration", expiration.toString()),
                     fileSize?.let { arrayOf("size", it.toString()) },
                     hash?.let { arrayOf("x", it) },
                 ) + serverTags

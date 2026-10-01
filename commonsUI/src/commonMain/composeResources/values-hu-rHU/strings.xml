@@ -577,6 +577,8 @@
     <string name="concord_invite_revoke_title">Biztosan visszavonja ezt a hivatkozást?</string>
     <string name="concord_invite_revoke_explainer">Aki még mindig rendelkezik ezzel a hivatkozással, az már nem tud csatlakozni. Azok, akik már csatlakoztak vele, továbbra is a közösség tagjai maradnak. Ez a művelet nem vonható vissza.</string>
     <string name="concord_invite_revoke_confirm">Visszavonás</string>
+    <string name="concord_invite_revoking">Visszavonás…</string>
+    <string name="concord_name_budget">%1$d / %2$d bájt</string>
     <string name="concord_invite_revoke_privatize_warning">Ez a közösség utolsó élő meghívási hivatkozása. A visszavonása priváttá teszi a közösséget, és lecseréli a kulcsait, így csak a jelenlegi tagok tartják meg a hozzáférést.</string>
     <string name="concord_invite_revoked_privatized">A hivatkozás visszavonva. A közösség most privát, és a kulcsai le lettek cserélve.</string>
     <string name="concord_invite_revoked_privatize_pending">A hivatkozás visszavonva. A közösség most privát, de a kulcsai nem lettek lecserélve: egy olyan adminisztrátornak kell lecserélnie őket, aki kitilthat tagokat.</string>
@@ -600,7 +602,14 @@
     <string name="concord_timer_notice_off">%1$s kikapcsolta az eltűnő üzeneteket</string>
     <string name="concord_timer_active">Az üzenetek %1$s után eltűnnek</string>
     <string name="concord_dissolved_read_only">Ezt a közösséget feloszlatták, és most már csak olvasható. Az előzményeket továbbra is olvashatja, de új üzeneteket már nem lehet közzétenni.</string>
+    <string name="concord_dissolve_community">Közösség feloszlatása</string>
+    <string name="concord_dissolve_title">Biztosan feloszlatja a(z) %1$s közösséget?</string>
+    <string name="concord_dissolve_message">Ezzel mindenki számára megszűnik a közösség. Csak-olvashatóvá válik: a tagok megtartják a közösség előzményeit, de senki sem tehet közzé bejegyzést, nem módosíthatja a tartalmat, és nem hívhat meg többé senkit. Ez a művelet nem vonható vissza.</string>
+    <string name="concord_dissolve_confirm">Feloszlatás</string>
+    <string name="concord_dissolve_failed">A közösséget nem lett feloszlatva: azt csak a tulajdonos teheti meg egy aláírásra jogosult fiókból.</string>
     <string name="concord_private_channel_no_key">Ez egy privát csatorna, és Ön nem rendelkezik a kulcsával, így nem tudja elolvasni vagy megjegyzést írni.</string>
+    <string name="concord_private_channel_cut">Már nincs hozzáférése ehhez a zárt csatornához: a kulcsát a tudta nélkül cserélték le, így nem olvashatja el az új üzeneteket, és nem is küldhet bejegyzést ide.</string>
+    <string name="concord_banned_notice">Önt kizárták ebből a közösségből, ezért nem tud bejegyzést küldeni, és a korábbi üzeneteit mindenki elől elrejtették.</string>
     <string name="concord_pinned_title">Rögzített üzenetek</string>
     <string name="concord_pinned_empty">Ebben a csatornában még nincsenek rögzített üzenetek.</string>
     <string name="concord_pinned_unavailable">Ennek a csatornának a kitűzött üzenetei olyan kulcs alá vannak zárva, amellyel Ön nem rendelkezik, így itt nem jeleníthetők meg, és a kitűzés szünetel, amíg el nem olvassa azokat.</string>
@@ -625,7 +634,7 @@
     <string name="concord_members_empty">Még nincsenek megjeleníthető tulajdonosok, adminisztrátorok vagy kitiltott tagok.</string>
     <string name="concord_members_remove">Eltávolítás a közösségből</string>
     <string name="concord_members_remove_title">Eltávolítja a tagot?</string>
-    <string name="concord_members_remove_message">Ez megváltoztatja a közösség titkosítási kulcsát, így ez a tag már nem tudja elolvasni az ezt követően küldött üzeneteket. Mindenki más kulcsa automatikusan frissül. Ez a művelet nem vonható vissza.</string>
+    <string name="concord_members_remove_message">Ez lecseréli a közösség titkosítási kulcsát, így ez a tag már nem tudja elolvasni az ezt követően küldött üzeneteket. Mindenki más kulcsa automatikusan frissül. Ez a művelet nem vonható vissza.</string>
     <string name="concord_members_remove_confirm">Eltávolítás</string>
     <string name="concord_members_roles">Szerepkörök…</string>
     <string name="concord_members_roles_message">Válassza ki az összes szerepkört, amelyet ennek a tagnak be kell töltenie. A jelölés megszüntetése eltávolítja azt.</string>
@@ -1007,9 +1016,9 @@
     <string name="nip46_signer_relays_some_down">%2$d/%1$d átjátszóhoz kapcsolódva</string>
     <string name="nip46_signer_copy">Másolás</string>
     <string name="nip46_signer_regenerate">Új cím</string>
-    <string name="nip46_signer_rotate_confirm_title">Új címet generál?</string>
+    <string name="nip46_signer_rotate_confirm_title">Új címet állít elő?</string>
     <string name="nip46_signer_rotate_confirm_message">Ez egy új bunker címet hoz létre, és minden jelenleg kapcsolódó alkalmazást leválaszt. Bárki, aki rendelkezik a régi címmel — beleértve a spammereket is — többé nem érheti el Önt. Kapcsolja össze újra a saját alkalmazásait az új kód beolvasásával.</string>
-    <string name="nip46_signer_rotate_confirm_button">Generálás</string>
+    <string name="nip46_signer_rotate_confirm_button">Előállítás</string>
     <string name="nip46_signer_cancel">Mégsem</string>
     <string name="nip46_signer_connect_label">Alkalmazás kapcsolása</string>
     <string name="nip46_signer_connect_hint">Illesszen be egy nostrconnect:// hivatkozást</string>
@@ -3634,6 +3643,8 @@
     <string name="concord_channel_rename">Csatorna átnevezése</string>
     <string name="concord_channel_rename_save">Átnevezés</string>
     <string name="concord_channel_rotate_key">Kulcs cseréje</string>
+    <string name="concord_channel_rotate_key_done">A kulcs le lett cserélve. Azok a tagok, akik továbbra is rendelkeznek hozzáféréssel, megkapják az új kulcsot; mindenki más számára megszűnik az új üzenetekhez való hozzáférés.</string>
+    <string name="concord_channel_rotate_key_failed">A kulcs nem lett lecserélve: lehet, hogy egy átjátszó nem fogadta el, vagy ez a csatorna már nem cserélhető le. Továbbra is a régi kulcs van használatban.</string>
     <string name="concord_channels_empty">Még nincsenek csatornák.</string>
     <string name="concord_create_action">Létrehozás</string>
     <string name="concord_create_failed">Nem sikerült létrehozni a közösséget: egyetlen átjátszó sem fogadta el, vagy a közösséglistáját nem sikerült frissíteni. Ellenőrizze az átjátszókat, és próbálja újra.</string>
@@ -3652,8 +3663,12 @@
     <string name="concord_direct_invite_failed_loading">Ez a közösség még töltődik. Próbálja újra egy pillanat múlva.</string>
     <string name="concord_direct_invite_failed_member">Nem hívhat meg embereket ebbe a közösségbe.</string>
     <string name="concord_direct_invite_from">Meghívta: %1$s</string>
+    <string name="concord_direct_invite_label">Meghívás</string>
     <string name="concord_direct_invite_hint">Név, npub vagy NIP-05</string>
     <string name="concord_direct_invite_send">Meghívó küldése %1$s részére</string>
+    <string name="concord_direct_invite_sent_to">Meghívta őt: %1$s</string>
+    <string name="concord_direct_invite_sending">Küldés…</string>
+    <string name="concord_direct_invite_done">Kész</string>
     <string name="concord_direct_invite_title">Valaki közvetlen meghívása</string>
     <string name="concord_direct_invites_title">Közösségi meghívók</string>
     <string name="concord_edit_title">Közösség szerkesztése</string>
@@ -3673,7 +3688,7 @@
     <string name="concord_invite_revoked_ok">Meghívási hivatkozás visszavonva.</string>
     <string name="concord_invite_title">Meghívóhivatkozás</string>
     <string name="concord_leave_community">Közösség elhagyása</string>
-    <string name="concord_leave_message">Elhagyja a következőt: %1$s? Eltávolításra kerül ezen fiók listájáról, és leáll a szinkronizálása az Ön eszközein. A közösség nem kap értesítést, és Ön nem kerül le a tagok listájáról. Azok az üzenetek, amelyeket már nem tud visszafejteni, helyrehozhatatlanná válhatnak, és csak új meghívóval térhet vissza.</string>
+    <string name="concord_leave_message">Elhagyja a(z) %1$s csoportot? El lesz távolítva a jelenlegi fiók listájáról, és nem lesz többé szinkronizálva az Ön eszközein. A közösség nem kap értesítést erről, és Ön nem kerül le a tagok listájáról. Azok az üzenetek, amelyeket már nem tud visszafejteni, helyrehozhatatlanná válhatnak, és csak egy új meghívóval térhet vissza.</string>
     <string name="concord_leave_owner_warning">Ön hozta létre ezt a közösséget. A kilépés nem törli, és nem is adja át másnak, de eldobja a listáján tárolt tulajdonosi kulcsot — a jövőben nem fogja tudni kezelni.</string>
     <string name="concord_leave_title">Elhagyja a közösséget?</string>
     <string name="concord_make_admin">Kinevezés adminisztrátornak</string>
@@ -3684,6 +3699,7 @@
     <string name="concord_members_ban">Kitiltás</string>
     <string name="concord_members_ban_title">Kitiltja a tagot?</string>
     <string name="concord_members_ban_message">Többé nem tehet közzé bejegyzéseket, és az üzenetei mindenki elől elrejtésre kerülnek. Más alkalmazások eltávolíthatják a közösséget a listájukról. Továbbra is olvashatják az új üzeneteket, amíg Ön el nem távolítja őket a közösségből. Később feloldhatja a kitiltásukat.</string>
+    <string name="concord_members_ban_message_refound">Többé nem tudnak hozzászólni, és üzeneteiket mindenki elől el lesznek rejtve. Mivel ez a közösség zárt, a kizárás a hozzáférési kulcsok cseréjével is jár: így nem férhetnek hozzá az új üzenetekhez. Később feloldhatja a kizárásukat, de ahhoz, hogy újra elolvashassák az üzeneteket, új meghívóra lesz szükségük.</string>
     <string name="concord_members_make_admin">Kinevezés adminisztrátornak</string>
     <string name="concord_members_remove_admin">Adminisztrátori jog megvonása</string>
     <string name="concord_members_roles_failed">Nem sikerült frissíteni a tag szerepköreit.</string>
@@ -4562,7 +4578,7 @@
     <string name="nip46_signer_notif_tap">Koppintson az áttekintéshez</string>
     <string name="nip46_signer_readonly">Ez egy csak olvasható fiók, és nem tud aláírni.</string>
     <string name="nip46_signer_reconnecting">Újrakapcsolódás az átjátszókhoz…</string>
-    <string name="nip46_signer_regenerated">Új bunker cím generálva</string>
+    <string name="nip46_signer_regenerated">Új bunkercím előállítva</string>
     <plurals name="nip46_signer_relays_all_live">
         <item quantity="one">Figyelés %1$d átjátszón</item>
         <item quantity="other">Figyelés %1$d átjátszón, mindegyikhez kapcsolódva</item>
@@ -5455,7 +5471,6 @@
     <string name="new_conversation_cordn_pro_1">Végponttól végpontig titkosított MLS-sel – a koordinátor soha nem olvashat el egyetlen üzenetet sem.</string>
     <string name="new_conversation_cordn_pro_2">Egy mindenki által elfogadott sorrend, így az előzményeket egy hibás óra sem keverheti össze.</string>
     <string name="new_conversation_cordn_con_1">A koordinátor tudja, ki van a csoportban és mikor beszélnek, még ha nem is tudja elolvasni, mit mondanak.</string>
-    <string name="cordn_invitations_entry">Meghívták egy cordn csoportba?</string>
     <string name="cordn_invitations_entry_action">Meghívók áttekintése</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
@@ -5586,6 +5601,7 @@
     <string name="browser_pill_tor_title">Onion-útválasztás</string>
     <string name="browser_pill_tor_on">Az oldal nem látja az Ön IP-címét</string>
     <string name="browser_pill_tor_off">Az oldal látja az Ön IP-címét</string>
+    <string name="browser_pill_tor_forced">Ehhez az oldalhoz nincs bekapcsolva, de egy másik megnyitott oldal használja a TOR-hálózatot, így ez is a TOR-on keresztül megy</string>
     <string name="browser_pill_site_settings">Oldalbeállítások</string>
     <string name="browser_pill_site_settings_none">Még semmi sincs engedélyezve</string>
     <string name="browser_pill_access">Mihez férhet hozzá</string>
@@ -6256,4 +6272,8 @@
     <string name="browser_permission_allowed">Engedélyezve</string>
     <string name="browser_permission_blocked">Letiltva</string>
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <string name="browser_pill_download_title">Letölti ezt a fájlt?</string>
+    <string name="browser_pill_download_risky">Ez a fájltípus képes kódot futtatni. Ellenőrizze hogy a név megegyezik-e azzal, amit le akart tölteni.</string>
+    <string name="browser_pill_download_save">Mentés</string>
+    <string name="browser_pill_download_from">Innen: %1$s</string>
 </resources>

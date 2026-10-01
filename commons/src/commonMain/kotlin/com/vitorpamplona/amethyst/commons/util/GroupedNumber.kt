@@ -22,3 +22,9 @@ package com.vitorpamplona.amethyst.commons.util
 
 /** [value] with the locale's digit grouping: `1,234,567` in English, `1.234.567` in German. */
 expect fun formatGrouped(value: Long): String
+
+/** [value] with the locale's decimal mark and at most [maxFractionDigits] digits after it: `4.21` in English, `4,21` in German. */
+expect fun formatDecimal(
+    value: Double,
+    maxFractionDigits: Int,
+): String

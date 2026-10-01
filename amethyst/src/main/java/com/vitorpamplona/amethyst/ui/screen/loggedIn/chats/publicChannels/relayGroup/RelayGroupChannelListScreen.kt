@@ -111,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.HiddenDmHeader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
@@ -913,10 +914,10 @@ private fun BuzzDmPreviewLine(
             summary != null -> summary
             author != null -> {
                 val authorName by observeUserName(author, accountViewModel)
-                val body = event.content.take(80)
+                val body = (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
                 if (body.isBlank()) authorName else "$authorName: $body"
             }
-            else -> event.content.take(80)
+            else -> (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
         }
     Text(
         preview,

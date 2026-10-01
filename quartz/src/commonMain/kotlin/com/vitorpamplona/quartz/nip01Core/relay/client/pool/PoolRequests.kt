@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -308,6 +309,29 @@ class PoolRequests(
                 // send a newer version when done
                 if (cmd != null) {
                     relay.sendOrConnectAndSync(cmd)
+                }
+            }
+
+            is NoticeMessage -> {
+                // A relay that refuses an over-cap REQ by NOTICE (Buzz: "REQ contains 12 filters,
+                // maximum is 10") never says WHICH sub it dropped, and that sub would wait for an
+                // EOSE forever. Once the cap is known, every sub whose last REQ on this relay went
+                // over it is treated as closed and re-decided, which now narrows it under the cap.
+                val cap = relayRefusals.onNotice(relay.url, msg.message) ?: return
+                relayState.forEach { subId, state ->
+                    val cmd =
+                        state.withLock(relay.url) {
+                            val sent = state.currentFilters(relay.url)
+                            if (sent != null && sent.size > cap) {
+                                state.onClosed(relay.url)
+                                decideCommandLocked(state, subId, relay.url)
+                            } else {
+                                null
+                            }
+                        }
+                    if (cmd != null && cmd !is CloseCmd) {
+                        relay.sendOrConnectAndSync(cmd)
+                    }
                 }
             }
 

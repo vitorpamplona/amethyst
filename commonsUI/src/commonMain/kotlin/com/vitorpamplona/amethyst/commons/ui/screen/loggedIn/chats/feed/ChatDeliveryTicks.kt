@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.chat_delivery_details_title
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_failed
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_no_relay_info
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_pending
+import com.vitorpamplona.amethyst.commons.resources.chat_delivery_rejected
 import com.vitorpamplona.amethyst.commons.resources.chat_delivery_sending
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
@@ -228,6 +229,7 @@ private fun ChatDeliveryDetailDialog(
                             RelayDeliveryRow(
                                 relay = relay,
                                 accepted = relay in delivery.acceptedRelays || relay in seenOnRelays,
+                                rejection = delivery.rejectedRelays[relay],
                             )
                         }
 
@@ -309,19 +311,34 @@ private fun RecipientDeliveryRow(
 private fun RelayDeliveryRow(
     relay: NormalizedRelayUrl,
     accepted: Boolean,
+    rejection: String? = null,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = relay.displayUrl(),
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-        )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = relay.displayUrl(),
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+            )
 
-        DeliveryStatusTick(accepted)
+            if (!accepted && rejection != null) {
+                TickIcon(MaterialSymbols.Block, Res.string.chat_delivery_rejected, MaterialTheme.colorScheme.error)
+            } else {
+                DeliveryStatusTick(accepted)
+            }
+        }
+        // The relay's own words: the only clue to WHY a message will never arrive.
+        if (!accepted && rejection != null) {
+            Text(
+                text = rejection.ifBlank { stringRes(Res.string.chat_delivery_rejected) },
+                color = MaterialTheme.colorScheme.error,
+                fontSize = Font12SP,
+            )
+        }
     }
 }
 
@@ -358,6 +375,13 @@ private fun RenderDeliveryTicks(
         }
 
         else -> Unit
+    }
+
+    // Every targeted relay refused it: it will never arrive. Not "pending" — the detail dialog
+    // behind this tick shows each relay's reason.
+    if (delivery?.isRejected == true) {
+        TickIcon(MaterialSymbols.Block, Res.string.chat_delivery_rejected, MaterialTheme.colorScheme.error)
+        return
     }
 
     if (delivery == null) {

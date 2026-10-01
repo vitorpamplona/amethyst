@@ -135,7 +135,9 @@ fun ChannelFileUploadDialog(
                 onceUploaded = onUpload,
             )
 
-            accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
+            if (state.lockedServer == null) {
+                accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
+            }
             accountViewModel.account.settings.changeStripLocationOnUpload(state.stripMetadata)
         },
         onCancel,

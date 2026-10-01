@@ -461,6 +461,8 @@ class AccountFeedContentStates(
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
+        notifications.deleteFromFeed(newNotes)
+        notificationsFollowing.deleteFromFeed(newNotes)
         homeLive.deleteFromFeed(newNotes)
         homeNewThreads.deleteFromFeed(newNotes)
         homeReplies.deleteFromFeed(newNotes)

@@ -33,6 +33,22 @@ enum class ServerType {
     Blossom,
     NIP95,
     NIP96,
+
+    /**
+     * A Buzz workspace's own Blossom endpoint (`https://<workspace>/upload`). Blobs there are
+     * private to the workspace and the relay only accepts `imeta` URLs under its `/media/`, so an
+     * upload to it never falls back to, or mirrors onto, a public server.
+     */
+    BuzzWorkspace,
+}
+
+/** The media server of the Buzz workspace served at [relayUrl] (`wss://host` → `https://host`). */
+fun buzzWorkspaceServer(relayUrl: String): ServerName {
+    val host =
+        relayUrl
+            .substringAfter("://")
+            .substringBefore("/")
+    return ServerName(host, "https://$host", ServerType.BuzzWorkspace)
 }
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =

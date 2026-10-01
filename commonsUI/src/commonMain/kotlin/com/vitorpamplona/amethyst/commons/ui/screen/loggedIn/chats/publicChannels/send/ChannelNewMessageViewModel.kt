@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
+import com.vitorpamplona.amethyst.commons.model.mediaServers.buzzWorkspaceServer
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
@@ -76,11 +77,13 @@ import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.stream.BuzzChatMessage
 import com.vitorpamplona.quartz.buzz.stream.BuzzEditTagOverlay
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.mentions
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -111,6 +114,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
@@ -129,6 +133,7 @@ import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -421,6 +426,7 @@ open class ChannelNewMessageViewModel :
         // out so the relay accepts the mention. No-op unless this is a Buzz relay group the user
         // moderates; guarded so a failed add never blocks the message.
         channel?.let { autoInviteMentionedBuzzMembers(it, pendingBuzzInviteMentions) }
+        channel?.let { joinBuzzChannelBeforePosting(it) }
 
         // A geohash cell with no resolvable relays has nowhere to publish. Bail before cancel() clears
         // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
@@ -507,6 +513,16 @@ open class ChannelNewMessageViewModel :
     }
 
     fun pickedMedia(list: ImmutableList<SelectedMedia>) {
+        // A Buzz relay only accepts imeta URLs under its own /media/, so a Buzz channel's
+        // attachments go to the workspace's media server and nowhere else.
+        val channel = channel
+        uploadState?.lockServer(
+            if (channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+                buzzWorkspaceServer(channel.groupId.relayUrl.url)
+            } else {
+                null
+            },
+        )
         uploadState?.load(list)
     }
 
@@ -617,18 +633,44 @@ open class ChannelNewMessageViewModel :
         }
     }
 
+    // Buzz channels this composer has already tried to join (see [joinBuzzChannelBeforePosting]).
+    private val buzzJoinAttempted = ConcurrentSet<GroupId>()
+
+    /**
+     * Posting to a Buzz open channel joins it first. The relay takes a non-member's message there,
+     * but channel membership is what Buzz lists, counts and offers in its mention picker, and its
+     * own client requires joining before it lets anyone post — so a poster who never joined was
+     * invisible on the Buzz side. Best-effort: a failed join must never block the message.
+     */
+    private suspend fun joinBuzzChannelBeforePosting(channel: Channel) {
+        if (channel !is RelayGroupChannel || !BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) return
+        if (channel.event?.isBuzzDm() == true) return
+        if (channel.membershipOf(accountViewModel.account.userProfile().pubkeyHex).isMember()) return
+        // Once per channel: the relay's roster (39002) lags the join, and every post before it
+        // lands would otherwise re-send the kind-9021 and re-publish the kind-10009 list.
+        if (!buzzJoinAttempted.add(channel.groupId)) return
+        try {
+            accountViewModel.account.relayGroups.joinRelayGroup(channel)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("BuzzAutoJoin", "Failed to join ${channel.groupId.id} before posting", e)
+        }
+    }
+
     // `protected open` so a specialized composer (e.g. the Buzz forum reply) can reuse this whole
     // rich EditFieldRow but swap only the event it builds for the composed text.
     protected open suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
 
         val messageText = message.text.toString()
+        val isBuzzChannel = channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)
         val tagger =
             NewMessageTagger(
                 message = messageText,
                 pTags = listOfNotNull(replyTo.value?.author),
                 eTags = listOfNotNull(replyTo.value),
                 dao = accountViewModel,
+                userMentionsAsNames = isBuzzChannel,
             )
         tagger.run()
 
@@ -640,7 +682,11 @@ open class ChannelNewMessageViewModel :
         pendingBuzzInviteMentions = tagger.pTags?.filter { it != replyTo.value?.author }.orEmpty()
 
         val urls = findURLs(messageText)
-        val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
+        val usedAttachments =
+            iMetaAttachments.filterIsIn(urls.toSet()).let {
+                // Buzz refuses the whole message over any imeta key it doesn't know (e.g. `ox`).
+                if (isBuzzChannel) BuzzImeta.sanitize(it) else it
+            }
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
 
         val channelRelays = channel.relays()
@@ -864,7 +910,8 @@ open class ChannelNewMessageViewModel :
                 val threadRoot = parent?.let { it.event?.tags?.buzzThreadRootForReplyTo(it.idHex) ?: it.idHex }
                 BuzzChatMessage.build(
                     channelId = channel.groupId.id,
-                    content = tagger.message,
+                    // Buzz draws an attachment only where the body links it as `![image](url)`.
+                    content = BuzzImeta.markdownMediaBody(tagger.message, usedAttachments),
                     threadRoot = threadRoot,
                     replyTo = parent?.idHex,
                     // `p` mentions for everyone cited in the body (plus the reply target, which the
