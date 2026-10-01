@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /** Reads what the OS says another app is playing right now. */
 interface OsNowPlayingReader {
@@ -63,13 +64,22 @@ internal suspend fun runCommand(
                     .start()
             process = started
             started.outputStream.close()
-            // Wait before reading so a hung command cannot block the read forever. The outputs
-            // here are a few KB, well under the pipe buffer, so the command never blocks on it.
-            if (!started.waitFor(timeoutSeconds, TimeUnit.SECONDS) || started.exitValue() != 0) {
-                null
-            } else {
-                started.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            }
+            // Read while the command runs: `ps -A -o comm=` prints ~100 KB on a busy Mac, past the
+            // pipe buffer, so waiting for the exit before reading deadlocked until the timeout and
+            // the reader never saw a player. The watchdog still kills a command that hangs, which
+            // also ends the read.
+            val watchdog =
+                thread(isDaemon = true, name = "now-playing-command-timeout") {
+                    try {
+                        if (!started.waitFor(timeoutSeconds, TimeUnit.SECONDS)) started.destroyForcibly()
+                    } catch (_: InterruptedException) {
+                        // The command finished first.
+                    }
+                }
+            val output = started.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val exited = started.waitFor(timeoutSeconds, TimeUnit.SECONDS)
+            watchdog.interrupt()
+            if (!exited || started.exitValue() != 0) null else output
         } catch (e: InterruptedException) {
             throw e
         } catch (e: Exception) {

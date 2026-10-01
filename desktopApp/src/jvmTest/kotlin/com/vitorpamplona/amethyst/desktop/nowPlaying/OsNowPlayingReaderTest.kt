@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.desktop.nowPlaying
 
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSource
 import kotlinx.coroutines.test.runTest
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class OsNowPlayingReaderTest {
     private val listNames =
@@ -215,4 +217,24 @@ class OsNowPlayingReaderTest {
         assertEquals("ZuneMusic", WindowsNowPlayingReader.appLabel("Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic"))
         assertEquals("308046B0AF4A39CB", WindowsNowPlayingReader.appLabel("308046B0AF4A39CB"))
     }
+
+    private val hasShell = File("/bin/sh").canExecute()
+
+    /** `ps -A -o comm=` prints ~100 KB on a busy Mac; reading only after the exit deadlocked on the pipe. */
+    @Test
+    fun runCommandReturnsOutputLargerThanThePipeBuffer() =
+        runTest {
+            if (!hasShell) return@runTest
+            val output = runCommand(listOf("/bin/sh", "-c", "i=0; while [ \$i -lt 4000 ]; do echo 0123456789012345678901234567890123456789012345678; i=\$((i+1)); done"))
+            assertEquals(4000 * 50, output?.length)
+        }
+
+    @Test
+    fun runCommandGivesUpOnAHungCommand() =
+        runTest {
+            if (!hasShell) return@runTest
+            val started = System.currentTimeMillis()
+            assertNull(runCommand(listOf("/bin/sh", "-c", "sleep 30"), timeoutSeconds = 1))
+            assertTrue(System.currentTimeMillis() - started < 10_000, "the timeout must end the call")
+        }
 }
