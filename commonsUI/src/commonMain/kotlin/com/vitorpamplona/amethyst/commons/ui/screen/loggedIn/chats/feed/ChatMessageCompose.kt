@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatSubjectChange
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatZap
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderConcordTimerNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -178,6 +180,9 @@ fun ChatroomMessageCompose(
             } else if (event is ConcordTimerNoticeEvent) {
                 // Concord kind-1740: "Alice set disappearing messages to 30 days" (CORD-08 §4).
                 RenderConcordTimerNotice(baseNote, accountViewModel, nav)
+            } else if (isSubjectOnlyChatMessage(event)) {
+                // NIP-17 rename with no text: a system line under the subject divider, not an empty bubble.
+                RenderChatSubjectChange(baseNote, innerQuote, accountViewModel, nav)
             } else if (isBuzzActivityRow(event)) {
                 // Buzz agent-job (43xxx) and huddle (48xxx) lifecycle narration. Huddles
                 // especially must be caught here — their content is JSON, not chat text.
