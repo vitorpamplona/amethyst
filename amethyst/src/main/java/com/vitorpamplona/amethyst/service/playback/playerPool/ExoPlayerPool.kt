@@ -25,6 +25,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.vitorpamplona.amethyst.service.nowPlaying.InAppPlaybackRegistry
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -132,6 +133,7 @@ class ExoPlayerPool(
                 if (error != null) {
                     Log.d("PlaybackService") { "ExoPlayerPool discarding errored warm player: $preferredMediaId (${error.errorCodeName})" }
                     PcmTapRegistry.unregisterPlayer(warm)
+                    InAppPlaybackRegistry.forget(warm)
                     warm.release()
                     releaseDecoder()
                 } else {
@@ -239,6 +241,7 @@ class ExoPlayerPool(
             if (error != null) {
                 Log.d("PlaybackService") { "ExoPlayerPool dropping errored player: ${player.currentMediaItem?.mediaId} (${error.errorCodeName})" }
                 PcmTapRegistry.unregisterPlayer(player)
+                InAppPlaybackRegistry.forget(player)
                 player.release()
                 releaseDecoder()
                 return@withLock
@@ -309,6 +312,7 @@ class ExoPlayerPool(
             }
         } else {
             PcmTapRegistry.unregisterPlayer(player)
+            InAppPlaybackRegistry.forget(player)
             player.release() // Release if pool is full.
         }
     }
@@ -345,11 +349,13 @@ class ExoPlayerPool(
                         }
                     warmSnapshot.forEach {
                         PcmTapRegistry.unregisterPlayer(it.player)
+                        InAppPlaybackRegistry.forget(it.player)
                         it.player.release()
                         releaseDecoder()
                     }
                     coldPool.forEach {
                         PcmTapRegistry.unregisterPlayer(it)
+                        InAppPlaybackRegistry.forget(it)
                         it.release()
                     }
                     coldPool.clear()

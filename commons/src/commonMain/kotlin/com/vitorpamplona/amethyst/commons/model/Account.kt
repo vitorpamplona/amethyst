@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListS
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlaying
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSettingsState
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
@@ -531,6 +533,11 @@ class Account(
     // of the community view, so a shared set let one account reorder and badge every other one's
     // channel list. Restored/persisted per account by BuzzChannelStarStore.
     val buzzChannelStars = BuzzChannelStars()
+
+    // Whether THIS account shares what the user listens to as its NIP-38 music status, and from
+    // which apps. Per account because the status is signed and published by this key. Restored/
+    // persisted per account by NowPlayingSettingsStore on Android.
+    val nowPlayingSettings = NowPlayingSettingsState()
 
     // The NIP-OA attestation an owner issued to THIS account's key, attached to its Buzz-relay
     // AUTH so the relay grants virtual membership. Restored/persisted per account by
@@ -3344,6 +3351,13 @@ class Account(
     ) = sendMyPublicAndPrivateOutbox(UserStatusAction.update(oldStatus, newStatus, signer))
 
     suspend fun deleteStatus(oldStatus: AddressableNote) = sendMyPublicAndPrivateOutbox(UserStatusAction.delete(oldStatus, signer))
+
+    suspend fun publishNowPlaying(
+        track: NowPlaying,
+        expiration: Long,
+    ) = sendMyPublicAndPrivateOutbox(UserStatusAction.createMusic(track, expiration, signer))
+
+    suspend fun clearNowPlaying() = sendMyPublicAndPrivateOutbox(UserStatusAction.clearMusic(signer))
 
     suspend fun removeEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.removeEmojiPack(emojiPack))
 

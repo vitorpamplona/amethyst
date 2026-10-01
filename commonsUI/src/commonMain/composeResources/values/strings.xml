@@ -6362,4 +6362,17 @@
     <string name="browser_pill_download_risky">This file type can run code. Check that the name matches what you meant to get.</string>
     <string name="browser_pill_download_save">Save</string>
     <string name="browser_pill_download_from">From %1$s</string>
+    <string name="now_playing_settings">Now Playing</string>
+    <string name="now_playing_search_keywords">music listening status song podcast spotify nip38 share playing</string>
+    <string name="now_playing_description">Share the song or podcast you are listening to as your status. It shows under your name for anyone who sees your profile, and disappears when the track ends or you stop playing.</string>
+    <string name="now_playing_share_in_app">Share what I play in Amethyst</string>
+    <string name="now_playing_share_in_app_description">Music tracks and podcast episodes played in the app.</string>
+    <string name="now_playing_share_other_apps">Share what I play in other apps</string>
+    <string name="now_playing_share_other_apps_description">Spotify, YouTube Music, podcast players and any other app that shows media controls.</string>
+    <string name="now_playing_access_needed">To see what other apps are playing, Amethyst needs notification access. It only reads media controls, never the content of your notifications.</string>
+    <string name="now_playing_grant_access">Grant access</string>
+    <string name="now_playing_manage_access">Manage access</string>
+    <string name="now_playing_access_granted">Notification access is on.</string>
+    <string name="now_playing_apps">Apps</string>
+    <string name="now_playing_apps_empty">Apps show up here after they play something. Turn one off to stop sharing it.</string>
 </resources>

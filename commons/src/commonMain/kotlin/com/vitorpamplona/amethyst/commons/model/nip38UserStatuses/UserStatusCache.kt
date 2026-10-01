@@ -42,11 +42,16 @@ class UserStatusCache : UserDependencies {
         )
 
     fun addStatus(note: AddressableNote) {
-        // if it's already there, quick exit
-        if (statuses.value.contains(note) || note.isEmptyStatus()) return
+        // A newer version of a listed status can be blank (NIP-38 clears a status that way, and
+        // a music status is cleared every time playback stops) or already expired: the note is
+        // the same object, so it has to leave the list rather than be skipped as already there.
+        if (note.isEmptyStatus() || note.event?.isExpired() == true) {
+            removeStatus(note)
+            return
+        }
 
-        // don't add expired statuses
-        if (note.event?.isExpired() == true) return
+        // if it's already there, quick exit
+        if (statuses.value.contains(note)) return
 
         statuses.update {
             (it + note).sortedWith(sortModel).toImmutableList()
