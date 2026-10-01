@@ -5359,7 +5359,6 @@
     <string name="new_conversation_cordn_pro_1">Criptografia de ponta a ponta com MLS — o coordenador nunca consegue ler uma mensagem.</string>
     <string name="new_conversation_cordn_pro_2">Uma única ordem acordada para todos, então o histórico não pode ser embaralhado por um relógio errado.</string>
     <string name="new_conversation_cordn_con_1">O coordenador fica sabendo quem está no grupo e quando vocês conversam, mesmo sem conseguir ler o que é dito.</string>
-    <string name="cordn_invitations_entry">Convidado para um grupo cordn?</string>
     <string name="cordn_invitations_entry_action">Ver convites</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say

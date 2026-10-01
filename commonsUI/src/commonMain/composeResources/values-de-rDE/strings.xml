@@ -5361,7 +5361,6 @@
     <string name="new_conversation_cordn_pro_1">Ende-zu-Ende-verschlüsselt mit MLS — der Koordinator kann nie eine Nachricht lesen.</string>
     <string name="new_conversation_cordn_pro_2">Eine gemeinsame Reihenfolge für alle, sodass der Verlauf nicht durch eine falsch gehende Uhr durcheinandergeraten kann.</string>
     <string name="new_conversation_cordn_con_1">Der Koordinator erfährt, wer in der Gruppe ist und wann ihr schreibt, auch wenn er nicht lesen kann, was ihr sagt.</string>
-    <string name="cordn_invitations_entry">In eine cordn-Gruppe eingeladen?</string>
     <string name="cordn_invitations_entry_action">Einladungen ansehen</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say

@@ -5455,7 +5455,6 @@
     <string name="new_conversation_cordn_pro_1">Végponttól végpontig titkosított MLS-sel – a koordinátor soha nem olvashat el egyetlen üzenetet sem.</string>
     <string name="new_conversation_cordn_pro_2">Egy mindenki által elfogadott sorrend, így az előzményeket egy hibás óra sem keverheti össze.</string>
     <string name="new_conversation_cordn_con_1">A koordinátor tudja, ki van a csoportban és mikor beszélnek, még ha nem is tudja elolvasni, mit mondanak.</string>
-    <string name="cordn_invitations_entry">Meghívták egy cordn csoportba?</string>
     <string name="cordn_invitations_entry_action">Meghívók áttekintése</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
