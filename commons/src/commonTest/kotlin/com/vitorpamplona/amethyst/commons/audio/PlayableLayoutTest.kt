@@ -82,4 +82,16 @@ class PlayableLayoutTest {
         // An MPEG video mislabelled `audio/mpeg` moves to the video player once its tracks are known.
         assertEquals(PlayableLayout.VIDEO, playableLayout("audio/mpeg", "https://x.com/a.mpg", hasArtwork = false, probedAudioOnly = false))
     }
+
+    @Test
+    fun formatLabels() {
+        assertEquals("MP3", mediaFormatLabel("audio/mpeg", blossomMp3))
+        assertEquals("FLAC", mediaFormatLabel(null, "https://x.com/a.flac?dl=1"))
+        assertEquals("M4A", mediaFormatLabel("audio/mp4", "https://x.com/abc"))
+        assertEquals("HLS", mediaFormatLabel("audio/mpegurl", "https://x.com/live"))
+        assertEquals("HLS", mediaFormatLabel(null, "https://x.com/live.m3u8"))
+        assertEquals(null, mediaFormatLabel(null, "https://blossom.example/b21c6e2a4d38f2ab"))
+        // A dot in the host is not an extension.
+        assertEquals(null, mediaFormatLabel(null, "https://e.nostr.build/a_x_mp3"))
+    }
 }

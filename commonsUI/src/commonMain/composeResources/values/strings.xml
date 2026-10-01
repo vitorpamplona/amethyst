@@ -6361,4 +6361,7 @@
     <string name="browser_pill_download_risky">This file type can run code. Check that the name matches what you meant to get.</string>
     <string name="browser_pill_download_save">Save</string>
     <string name="browser_pill_download_from">From %1$s</string>
+    <string name="audio_card_untitled">%1$s audio</string>
+    <string name="audio_card_untitled_no_format">Audio</string>
+    <string name="playable_media_untitled">Media</string>
 </resources>

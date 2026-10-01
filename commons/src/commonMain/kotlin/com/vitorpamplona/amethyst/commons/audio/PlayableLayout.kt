@@ -86,3 +86,47 @@ fun declaredAsAudio(
 }
 
 private val HLS_EXTENSIONS = listOf("m3u8")
+
+/**
+ * A short container label for a card — "MP3", "FLAC", "HLS" — from the declared MIME type, else the URL's
+ * extension. Null when neither names one.
+ */
+fun mediaFormatLabel(
+    mimeType: String?,
+    url: String,
+): String? {
+    val mime = normalizeMimeType(mimeType)
+    if (RichTextParser.isHlsMimeType(mime) || RichTextParser.hasExtensionIn(url, HLS_EXTENSIONS)) return "HLS"
+    if (mime != null) {
+        MIME_LABELS[mime.substringBefore(';').trim().lowercase()]?.let { return it }
+    }
+    return urlExtension(url)?.takeIf { RichTextParser.isAudioUrl(url) || RichTextParser.isVideoUrl(url) }?.uppercase()
+}
+
+private val MIME_LABELS =
+    mapOf(
+        "audio/mpeg" to "MP3",
+        "audio/mp3" to "MP3",
+        "audio/mp4" to "M4A",
+        "audio/x-m4a" to "M4A",
+        "audio/aac" to "AAC",
+        "audio/ogg" to "OGG",
+        "audio/opus" to "OPUS",
+        "audio/flac" to "FLAC",
+        "audio/x-flac" to "FLAC",
+        "audio/wav" to "WAV",
+        "audio/x-wav" to "WAV",
+        "audio/wave" to "WAV",
+        "audio/webm" to "WEBM",
+        "video/mp4" to "MP4",
+        "video/webm" to "WEBM",
+        "video/quicktime" to "MOV",
+    )
+
+/** The last path segment's extension, ignoring the query and fragment. */
+private fun urlExtension(url: String): String? {
+    val path = url.substringBefore('#').substringBefore('?')
+    val segment = path.substringAfterLast('/')
+    val dot = segment.lastIndexOf('.')
+    return if (dot in 0 until segment.length - 1) segment.substring(dot + 1) else null
+}

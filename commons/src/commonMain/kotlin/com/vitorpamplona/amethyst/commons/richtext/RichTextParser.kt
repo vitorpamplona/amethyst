@@ -38,7 +38,9 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -95,6 +97,8 @@ class RichTextParser {
                 mimeType = contentType,
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
+                sizeBytes = (frags[SizeTag.TAG_NAME] ?: tags[SizeTag.TAG_NAME]?.firstOrNull())?.toLongOrNull(),
+                waveform = (frags[WaveformTag.TAG_NAME] ?: tags[WaveformTag.TAG_NAME]?.firstOrNull())?.let { WaveformTag.parseWave(it) },
             )
         } else if (kind == MediaContentKind.PDF) {
             MediaUrlPdf(

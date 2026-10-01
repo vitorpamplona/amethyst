@@ -29,12 +29,12 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Renders every audio-player prototype offscreen (no device, no display) through `ImageComposeScene`, in the
+ * Renders every playable-media card offscreen (no device, no display) through `ImageComposeScene`, in the
  * dark and light Amethyst themes side by side, and writes each to `commonsUI/build/audio-player/<name>.png`,
  * so the candidate designs for audio inside a post can be compared as screenshots. Fails if a screen throws
  * or draws nothing.
  */
-class AudioPlayerPrototypesRenderTest {
+class PlayableMediaCardsRenderTest {
     private val outDir = File("build/audio-player").apply { mkdirs() }
 
     private fun render(
@@ -66,15 +66,11 @@ class AudioPlayerPrototypesRenderTest {
         }
     }
 
-    @Test fun today() = render("00-today", 820, 700) { AudioTodayPreview() }
-
-    @Test fun knownAudio() = render("01-known-audio-waveform", 820, 560) { AudioKnownAudioPreview() }
+    @Test fun knownAudio() = render("01-known-audio-waveform", 820, 760) { AudioKnownAudioPreview() }
 
     @Test fun withArtwork() = render("02-known-audio-cover", 820, 620) { AudioWithArtworkPreview() }
 
     @Test fun undecided() = render("03-undecided-track-card", 820, 360) { AudioUndecidedPreview() }
-
-    @Test fun miniPlayer() = render("04-mini-player", 820, 520) { AudioMiniPlayerPreview() }
 
     private companion object {
         const val SETTLE_FRAMES = 12

@@ -118,6 +118,10 @@ open class MediaUrlVideo(
     authorPubKey: String? = null,
     // NIP-71 `text-track` captions resolved for this video, for the player to side-load.
     val captions: ImmutableList<CaptionTrack> = persistentListOf(),
+    // The imeta `size`, in bytes: an audio card shows it before the player has loaded anything.
+    val sizeBytes: Long? = null,
+    // The imeta `waveform` (NIP-A0 amplitudes, not normalised): an audio card draws it as its seek bar.
+    val waveform: List<Float>? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType, thumbhash, authorPubKey)
 
 @Immutable
