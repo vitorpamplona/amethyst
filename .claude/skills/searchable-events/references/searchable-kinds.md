@@ -95,7 +95,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30175 | PersonaEvent | buzz/apPersonas | `personaOrNull()?.let { listOfNotNull(it.displayName, it.systemPrompt).joinToString("\n") } ?: ""` |
 | 30176 | TeamEvent | buzz/teams | `teamOrNull()?.let { listOfNotNull(it.name, it.description, it.instructions).joinToString("\n") } ?: ""` |
 | 30177 | ManagedAgentEvent | buzz/managedAgents | `agentOrNull()?.let { listOfNotNull(it.name, it.systemPrompt).joinToString("\n") } ?: ""` |
-| 30267 | AppCurationSetEvent | nip51Lists/appCurationSet | `listOfNotNull(title(), description())` NL |
+| 30267 | AppCurationSetEvent | nip51Lists/appCurationSet | `listOfNotNull(titleOrName(), description())` NL |
 | 30296 | InteractiveStoryPrologueEvent | experimental/interactiveStories | inherited base: `listOfNotNull(title(), summary(), content)` NL |
 | 30297 | InteractiveStorySceneEvent | experimental/interactiveStories | inherited base: `listOfNotNull(title(), summary(), content)` NL |
 | 30311 | LiveActivitiesEvent | nip53LiveActivities/streaming | `listOfNotNull(title(), summary(), content)` NL |

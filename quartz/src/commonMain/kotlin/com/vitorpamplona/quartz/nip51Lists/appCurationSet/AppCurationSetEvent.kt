@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip51Lists.appCurationSet
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.PlatformTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -52,12 +54,12 @@ class AppCurationSetEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    override fun indexableContent() = listOfNotNull(titleOrName(), description()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        if (!visitor.visit(title())) return
+        if (!visitor.visit(titleOrName())) return
         visitor.visit(description())
     }
 
@@ -67,11 +69,19 @@ class AppCurationSetEvent(
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
+    /** Zapstore names its sets with a `name` tag rather than NIP-51's `title`. */
+    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
+
+    fun titleOrName() = title() ?: name()
+
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun apps() = tags.mapNotNull(AddressBookmark::parse)
+
+    /** NIP-82 `f` tags: the platforms the curated apps were picked for (e.g. `android-arm64-v8a`). */
+    fun platforms() = tags.mapNotNull(PlatformTag::parse)
 
     companion object {
         const val KIND = 30267
