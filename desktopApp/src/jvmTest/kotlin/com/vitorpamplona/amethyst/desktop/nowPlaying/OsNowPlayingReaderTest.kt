@@ -234,7 +234,10 @@ class OsNowPlayingReaderTest {
         runTest {
             if (!hasShell) return@runTest
             val started = System.currentTimeMillis()
-            assertNull(runCommand(listOf("/bin/sh", "-c", "sleep 30"), timeoutSeconds = 1))
+            // `; true` makes every shell fork `sleep` rather than exec it, as dash always does, so the
+            // child that outlives a killed shell is exercised whichever shell /bin/sh is. Only Linux
+            // JDKs then block on the pipe (macOS closes it on destroy): the check bites on Linux CI.
+            assertNull(runCommand(listOf("/bin/sh", "-c", "sleep 30; true"), timeoutSeconds = 1))
             assertTrue(System.currentTimeMillis() - started < 10_000, "the timeout must end the call")
         }
 }
