@@ -22,8 +22,21 @@ package com.vitorpamplona.amethyst.commons.preview
 
 import com.vitorpamplona.amethyst.commons.util.codePointToChars
 
+/** The `<head>` element a [MetaTag] was read from. */
+enum class HeadElement {
+    /** A `<meta>` tag, the only kind [MetaTagsParser.parse] yields unless asked for more. */
+    META,
+
+    /** The document's `<title>`, its text carried as the `content` attribute. */
+    TITLE,
+
+    /** A `<link>` whose `rel` names an icon (`icon`, `shortcut icon`, `apple-touch-icon`, …). */
+    LINK,
+}
+
 data class MetaTag(
     private val attrs: Map<String, String>,
+    val element: HeadElement = HeadElement.META,
 ) {
     /**
      * Returns a value of an attribute specified by its name (case insensitive), or empty string if it doesn't exist.
@@ -43,7 +56,16 @@ object MetaTagsParser {
     private const val NO_QUOTE = ' '
 
     private const val META = "meta"
+    private const val LINK = "link"
     private const val HEAD = "head"
+    private const val ICON = "icon"
+    private const val REL = "rel"
+    private const val CONTENT = "content"
+
+    // A `<title>` is only a fallback label, so one that runs on (an unclosed tag swallowing the
+    // page, a spam keyword dump) is cut rather than carried into the preview cache whole.
+    private const val MAX_TITLE_LENGTH = 300
+    private val WHITESPACE_RUN = Regex("\\s+")
 
     // Elements whose content is text rather than markup: script and style hold raw text, title and
     // textarea hold character data. A `<` inside any of them is not a tag.
@@ -66,25 +88,80 @@ object MetaTagsParser {
         /** The `</head>` that ends the interesting part of the document. */
         HEAD_END,
 
+        /** A closed `<title>`: its text is [TagScanner.textStart]..<[TagScanner.textEnd]. */
+        TITLE,
+
+        /** A `<link …>` whose attribute span mentions `icon`; same span fields as [META]. */
+        LINK,
+
         /** Anything else: other elements, comments, declarations, unparseable markup. */
         OTHER,
     }
 
     /**
      * Lazily parse a partial HTML document and extract meta tags.
+     *
+     * With [includeTitleAndIcons], the document's `<title>` and its icon `<link>`s are yielded
+     * too, tagged by [MetaTag.element]. They are what a page without OpenGraph still offers for a
+     * preview: browsers show exactly these two in a tab.
      */
-    fun parse(input: String): Sequence<MetaTag> =
+    fun parse(
+        input: String,
+        includeTitleAndIcons: Boolean = false,
+    ): Sequence<MetaTag> =
         sequence {
             val s = TagScanner(input)
             while (!s.exhausted()) {
-                val kind = s.nextTag()
-                if (kind == TagKind.HEAD_END) break
-                if (kind == TagKind.META) {
-                    val attrs = parseAttrs(input, s.attrsStart, s.attrsEnd) ?: continue
-                    yield(MetaTag(attrs))
+                when (s.nextTag()) {
+                    TagKind.HEAD_END -> {
+                        break
+                    }
+
+                    TagKind.META -> {
+                        val attrs = parseAttrs(input, s.attrsStart, s.attrsEnd) ?: continue
+                        yield(MetaTag(attrs))
+                    }
+
+                    TagKind.TITLE -> {
+                        if (includeTitleAndIcons) {
+                            val text = titleText(input, s.textStart, s.textEnd)
+                            if (text.isNotEmpty()) yield(MetaTag(mapOf(CONTENT to text), HeadElement.TITLE))
+                        }
+                    }
+
+                    TagKind.LINK -> {
+                        if (includeTitleAndIcons) {
+                            val attrs = parseAttrs(input, s.attrsStart, s.attrsEnd) ?: continue
+                            if (isIconRel(attrs[REL])) yield(MetaTag(attrs, HeadElement.LINK))
+                        }
+                    }
+
+                    TagKind.OTHER -> {}
                 }
             }
         }
+
+    /**
+     * Whether a `rel` names an icon: one of its space-separated tokens is `icon` or an
+     * `apple-touch-icon` variant. `mask-icon` is deliberately not one -- it is Safari's monochrome
+     * pinned-tab silhouette, which renders as a black blob anywhere else.
+     */
+    private fun isIconRel(rel: String?): Boolean =
+        rel != null &&
+            rel.split(' ', '\t', '\n', '\r', '\u000C').any {
+                it.equals(ICON, ignoreCase = true) || it.startsWith("apple-touch-icon", ignoreCase = true)
+            }
+
+    /** The `<title>`'s character data, with references resolved and whitespace collapsed. */
+    private fun titleText(
+        input: String,
+        from: Int,
+        to: Int,
+    ): String {
+        val raw = input.substring(from, to)
+        val decoded = if (raw.indexOf('&') < 0) raw else raw.replace(Attrs.RE_CHAR_REF, Attrs.Companion::replaceCharRefs)
+        return decoded.replace(WHITESPACE_RUN, " ").trim().take(MAX_TITLE_LENGTH)
+    }
 
     private class TagScanner(
         private val input: String,
@@ -96,6 +173,12 @@ object MetaTagsParser {
         var attrsStart = 0
             private set
         var attrsEnd = 0
+            private set
+
+        /** Character-data span of the `<title>` [nextTag] last reported as [TagKind.TITLE]. */
+        var textStart = 0
+            private set
+        var textEnd = 0
             private set
 
         fun exhausted(): Boolean = p >= length
@@ -126,6 +209,20 @@ object MetaTagsParser {
         private fun skipToTagEnd() {
             val end = input.indexOf('>', p)
             p = if (end < 0) length else end + 1
+        }
+
+        /** True when `input[from..<to]` contains [lower], ASCII-case-insensitively. */
+        private fun spanContains(
+            from: Int,
+            to: Int,
+            lower: String,
+        ): Boolean {
+            var i = from
+            while (i + lower.length <= to) {
+                if (input.regionMatches(i, lower, 0, lower.length, ignoreCase = true)) return true
+                i++
+            }
+            return false
         }
 
         /** Leaves [p] on the `</name` that closes a raw-text element, or at the end of the input. */
@@ -215,14 +312,24 @@ object MetaTagsParser {
             // the same way an unbalanced quote inside a comment does. Switching on the name length
             // first keeps the common tag (a `<div>`, a `<link>`) down to one comparison.
             when (nameEnd - nameStart) {
-                META.length -> if (nameIs(nameStart, nameEnd, META)) return TagKind.META
+                META.length -> {
+                    if (nameIs(nameStart, nameEnd, META)) return TagKind.META
+                    // Most `<link>`s are stylesheets and preloads; checking the raw span for `icon`
+                    // keeps their attributes from ever being parsed into a map.
+                    if (nameIs(nameStart, nameEnd, LINK) && spanContains(attrsStart, attrsEnd, ICON)) return TagKind.LINK
+                }
 
-                STYLE.length ->
+                STYLE.length -> {
                     if (nameIs(nameStart, nameEnd, STYLE)) {
                         skipRawText(STYLE_END)
                     } else if (nameIs(nameStart, nameEnd, TITLE)) {
+                        textStart = p
                         skipRawText(TITLE_END)
+                        textEnd = p
+                        // An unclosed title runs to the end of the input: that is not a title.
+                        if (p < length) return TagKind.TITLE
                     }
+                }
 
                 SCRIPT.length -> if (nameIs(nameStart, nameEnd, SCRIPT)) skipRawText(SCRIPT_END)
 

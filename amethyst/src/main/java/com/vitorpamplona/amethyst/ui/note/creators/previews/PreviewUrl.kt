@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -239,11 +241,13 @@ private fun MyLoadUrlPreviewDirect(
                     )
                 } else {
                     Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.aspectRatio(1f)) {
+                        // A page with no OpenGraph image still has its icon: shown whole, not cropped.
+                        val hasImage = state.previewInfo.imageUrlFullPath.isNotBlank()
                         AsyncImage(
-                            model = state.previewInfo.imageUrlFullPath,
+                            model = if (hasImage) state.previewInfo.imageUrlFullPath else state.previewInfo.iconUrlFullPath,
                             contentDescription = state.previewInfo.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
+                            contentScale = if (hasImage) ContentScale.Crop else ContentScale.Fit,
+                            modifier = if (hasImage) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(20.dp),
                         )
 
                         Text(
