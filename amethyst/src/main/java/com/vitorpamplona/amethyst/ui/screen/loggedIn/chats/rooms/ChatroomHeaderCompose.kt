@@ -161,6 +161,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberM
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzForum
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -812,7 +813,14 @@ fun RelayGroupRow(
                 accountViewModel.settings.autoPlayVideosFlow
                     .collectAsStateWithLifecycle()
                     .value,
-            onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
+            onClick = {
+                // A Buzz forum's posts are its threads; open it there, as the workspace list does.
+                if (channel.event?.isBuzzForum() == true) {
+                    nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+                } else {
+                    nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url))
+                }
+            },
             onLongClick = { menuOpen = true },
         )
 

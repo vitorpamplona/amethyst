@@ -901,7 +901,8 @@ open class ChannelNewMessageViewModel :
                 val threadRoot = parent?.let { it.event?.tags?.buzzThreadRootForReplyTo(it.idHex) ?: it.idHex }
                 BuzzChatMessage.build(
                     channelId = channel.groupId.id,
-                    content = tagger.message,
+                    // Buzz draws an attachment only where the body links it as `![image](url)`.
+                    content = BuzzImeta.markdownMediaBody(tagger.message, usedAttachments),
                     threadRoot = threadRoot,
                     replyTo = parent?.idHex,
                     // `p` mentions for everyone cited in the body (plus the reply target, which the

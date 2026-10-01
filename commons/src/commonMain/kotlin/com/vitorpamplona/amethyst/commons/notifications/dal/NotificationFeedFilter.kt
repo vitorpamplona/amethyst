@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -406,6 +407,7 @@ class NotificationFeedFilter(
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
+        com.vitorpamplona.quartz.utils.Log
 
         val notifications =
             LocalCache.notes.filterIntoSet { _, note ->
@@ -435,6 +437,7 @@ class NotificationFeedFilter(
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
+        com.vitorpamplona.quartz.utils.Log
 
         return collection.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
     }
@@ -475,6 +478,25 @@ class NotificationFeedFilter(
     }
 
     /**
+     * A Buzz workspace message that `p`-tags me — Buzz only `p`-tags @mentions. A workspace is a
+     * closed, membership-gated space, so a coworker's @mention is relevant whether or not I follow
+     * them (like Concord), and it should not depend on the per-kind reply heuristics either: Buzz
+     * mentions name no event of mine.
+     */
+    private fun isBuzzMentionOfMe(
+        note: Note,
+        me: HexKey,
+    ): Boolean {
+        val event = note.event
+        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
+        if (!event.isTaggedUser(me)) return false
+        val group = LocalCache.getRelayGroupChannelForContent(note)
+        com.vitorpamplona.quartz.utils.Log
+        if (group == null) return false
+        return BuzzRelayDialect.isBuzz(group.groupId.relayUrl)
+    }
+
+    /**
      * A Buzz chat **thread reply** into one of my messages, when the reply carries no `p` tag.
      *
      * Buzz's clients thread with `["e", <id>, "", "reply"]` (nested: `root` + `reply`) and only ever
@@ -509,6 +531,9 @@ class NotificationFeedFilter(
         filterParams: FilterByListParams,
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
+        if (it.event?.content?.startsWith("BZ-6") == true) {
+            com.vitorpamplona.quartz.utils.Log
+        }
 
         // When the user opts out of seeing Messages on the Notification tab, drop
         // direct/group message events (DMs and Marmot group chats) entirely.
@@ -666,7 +691,7 @@ class NotificationFeedFilter(
         val isReactionToMe = isReactionToMyEvent(it, loggedInUserHex)
 
         // Same no-`p`-tag rescue for Buzz thread replies into my messages.
-        val isThreadReplyToMe = isBuzzThreadReplyToMyEvent(it, loggedInUserHex)
+        val isThreadReplyToMe = isBuzzThreadReplyToMyEvent(it, loggedInUserHex) || isBuzzMentionOfMe(it, loggedInUserHex)
 
         // Concord CHAT (a message/reply) honors the "Messages in notifications" toggle that silences DMs
         // and Marmot groups above. A reaction isn't a message — regular reactions ignore that toggle, so

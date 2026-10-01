@@ -64,4 +64,23 @@ class BuzzImetaTest {
         assertEquals(listOf("one"), clean.properties["alt"])
         assertEquals(listOf("https://a/1", "https://b/1"), clean.properties["fallback"])
     }
+
+    @Test
+    fun bareAttachmentUrlsBecomeBuzzMarkdown() {
+        val img = IMetaTag("https://ws.example/media/a.jpg", mapOf("m" to listOf("image/jpeg")))
+        val vid = IMetaTag("https://ws.example/media/b.mp4", mapOf("m" to listOf("video/mp4")))
+
+        assertEquals(
+            "look ![image](https://ws.example/media/a.jpg) and ![video](https://ws.example/media/b.mp4)",
+            BuzzImeta.markdownMediaBody("look https://ws.example/media/a.jpg and https://ws.example/media/b.mp4", listOf(img, vid)),
+        )
+    }
+
+    @Test
+    fun urlsAlreadyInMarkdownStayAsTheyAre() {
+        val img = IMetaTag("https://ws.example/media/a.jpg", mapOf("m" to listOf("image/jpeg")))
+        val body = "![image](https://ws.example/media/a.jpg)"
+
+        assertEquals(body, BuzzImeta.markdownMediaBody(body, listOf(img)))
+    }
 }

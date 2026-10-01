@@ -161,11 +161,19 @@ fun RelayGroupTopBar(
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
+    // Reactive: a relay is only marked Buzz once its first verified Buzz event lands, which can be
+    // after this screen opens (e.g. straight from Messages on a cold start). A remembered snapshot
+    // stayed false for the screen's life, hiding Join and never sharing the profile.
+    val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
+    val isBuzzRelay = channel.groupId.relayUrl in buzzRelays
     val huddleLive by observeBuzzHuddleLive(channel, enabled = isBuzzRelay && membership.isMember(), accountViewModel)
-    // Buzz names members only from profiles on its own relay; make sure mine is there.
+    // Buzz names members only from profiles on its own relay; make sure mine is there. Follows the
+    // profile note so a profile that loads after the screen opens (or is edited later) still goes out.
     LaunchedEffect(channel.groupId.relayUrl, isBuzzRelay) {
-        if (isBuzzRelay) accountViewModel.account.relayGroups.shareProfileWithBuzzWorkspace(channel.groupId.relayUrl)
+        if (!isBuzzRelay) return@LaunchedEffect
+        accountViewModel.account.userMetadata
+            .getUserMetadataFlow()
+            .collect { accountViewModel.account.relayGroups.shareProfileWithBuzzWorkspace(channel.groupId.relayUrl) }
     }
 
     TopBarExtensibleWithBackButton(

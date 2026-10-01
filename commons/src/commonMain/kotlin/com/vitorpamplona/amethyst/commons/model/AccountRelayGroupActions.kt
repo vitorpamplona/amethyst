@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -112,26 +113,37 @@ class AccountRelayGroupActions(
         account.follow(channel)
     }
 
-    // "relay|metadata event id" pairs already pushed this session, so each profile version goes to
-    // each workspace once.
+    // "relay|profile content" pairs already pushed this session, so each profile version goes to each
+    // workspace once. Keyed on content, not event id: the copy we sign comes back from the relay as a
+    // newer kind-0 with the same content, and must not trigger another signature.
     private val profileSharedWith = MutableStateFlow<Set<String>>(emptySet())
 
     /**
      * Push my current kind-0 profile to the Buzz workspace at [relay]. Buzz reads member names and
      * pictures only from its own relay, and its people search (mentions, Add people, new DM) is by
-     * name — without this, Buzz showed me as a bare npub and nobody could find or add me. Sends the
-     * already-signed event as-is (no new signature), once per profile version per workspace.
+     * name — without this, Buzz showed me as a bare npub and nobody could find or add me.
+     *
+     * Buzz refuses an event whose timestamp is far from its clock ("event timestamp too far from
+     * server time"), so the already-signed profile — usually days old — can't be relayed as-is. Like
+     * Buzz's own client, this signs a fresh copy with the same content and tags, and sends it ONLY to
+     * that workspace, once per profile version.
      */
-    fun shareProfileWithBuzzWorkspace(relay: NormalizedRelayUrl) {
+    suspend fun shareProfileWithBuzzWorkspace(relay: NormalizedRelayUrl) {
         if (!account.isWriteable()) return
         val profile = account.userMetadata.getUserMetadataEvent() ?: return
-        val key = "${relay.url}|${profile.id}"
+        val key = "${relay.url}|${profile.content.hashCode()}|${profile.tags.contentDeepHashCode()}"
         while (true) {
             val current = profileSharedWith.value
             if (key in current) return
             if (profileSharedWith.compareAndSet(current, current + key)) break
         }
-        account.client.publish(profile, setOf(relay))
+        val fresh =
+            if (TimeUtils.now() - profile.createdAt < BUZZ_FRESH_PROFILE_SECS) {
+                profile
+            } else {
+                account.signer.sign<MetadataEvent>(TimeUtils.now(), MetadataEvent.KIND, profile.tags, profile.content)
+            }
+        account.client.publish(fresh, setOf(relay))
     }
 
     /**
@@ -692,3 +704,6 @@ internal fun buzzRoleFor(roles: List<String>): String {
         else -> BUZZ_ROLE_MEMBER
     }
 }
+
+/** A profile signed this recently is within Buzz's timestamp window and can be relayed as-is. */
+private const val BUZZ_FRESH_PROFILE_SECS = 60L

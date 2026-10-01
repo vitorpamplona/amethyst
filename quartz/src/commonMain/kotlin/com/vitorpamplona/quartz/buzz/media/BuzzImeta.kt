@@ -45,4 +45,24 @@ object BuzzImeta {
         )
 
     fun sanitize(tags: List<IMetaTag>): List<IMetaTag> = tags.map(::sanitize)
+
+    /**
+     * Buzz's clients draw an attachment only where the body links it in markdown — `![image](url)`
+     * or `![video](url)`, the form their composer writes — and show a bare URL as a plain link. So
+     * each attachment URL that stands alone in [content] becomes that markdown; one already inside
+     * markdown is left alone.
+     */
+    fun markdownMediaBody(
+        content: String,
+        attachments: List<IMetaTag>,
+    ): String {
+        var out = content
+        attachments.forEach { tag ->
+            val url = tag.url
+            if (url.isBlank() || out.contains("]($url)")) return@forEach
+            val label = if (tag.properties["m"]?.firstOrNull()?.startsWith("video/") == true) "video" else "image"
+            out = out.replace(url, "![$label]($url)")
+        }
+        return out
+    }
 }

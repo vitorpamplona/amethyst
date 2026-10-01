@@ -2243,7 +2243,8 @@ class Account(
                     // Attached media rides as URLs appended to the content, plus Buzz-shaped `imeta`.
                     val root = rootEvent.tags.buzzThreadRootForReplyTo(rootEvent.id)
                     signer.sign(
-                        ChatEvent.build(finalText) {
+                        // Buzz draws an attachment only where the body links it as `![image](url)`.
+                        ChatEvent.build(BuzzImeta.markdownMediaBody(finalText, imetas)) {
                             hTag(group.groupId.id)
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
