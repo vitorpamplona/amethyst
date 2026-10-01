@@ -82,6 +82,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
@@ -111,14 +112,42 @@ class AccountRelayGroupActions(
         account.follow(channel)
     }
 
+    // "relay|metadata event id" pairs already pushed this session, so each profile version goes to
+    // each workspace once.
+    private val profileSharedWith = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Push my current kind-0 profile to the Buzz workspace at [relay]. Buzz reads member names and
+     * pictures only from its own relay, and its people search (mentions, Add people, new DM) is by
+     * name — without this, Buzz showed me as a bare npub and nobody could find or add me. Sends the
+     * already-signed event as-is (no new signature), once per profile version per workspace.
+     */
+    fun shareProfileWithBuzzWorkspace(relay: NormalizedRelayUrl) {
+        if (!account.isWriteable()) return
+        val profile = account.userMetadata.getUserMetadataEvent() ?: return
+        val key = "${relay.url}|${profile.id}"
+        while (true) {
+            val current = profileSharedWith.value
+            if (key in current) return
+            if (profileSharedWith.compareAndSet(current, current + key)) break
+        }
+        account.client.publish(profile, setOf(relay))
+    }
+
     /**
      * Fire a Buzz kind-20002 typing heartbeat for [channel] to its host relay. Ephemeral
      * (never stored) and fire-and-forget — no delivery tracking, no local echo (we filter
      * our own typing in the UI). Throttled by the composer to [BuzzTypingState.TYPING_HEARTBEAT_SECS].
+     * [threadRootId]/[replyToId] scope it to a thread, as Buzz's thread composer does.
      */
-    suspend fun sendBuzzTyping(channel: RelayGroupChannel) {
+    suspend fun sendBuzzTyping(
+        channel: RelayGroupChannel,
+        threadRootId: HexKey? = null,
+        replyToId: HexKey? = null,
+    ) {
         if (!account.isWriteable()) return
-        val signed = account.signer.sign(TypingIndicatorEvent.build(channel.groupId.id))
+        // In a thread, the `e` markers scope the signal to it: Buzz shows it in that thread's pane.
+        val signed = account.signer.sign(TypingIndicatorEvent.build(channel.groupId.id, threadRootId, replyToId))
         account.client.publish(signed, setOf(channel.groupId.relayUrl))
     }
 

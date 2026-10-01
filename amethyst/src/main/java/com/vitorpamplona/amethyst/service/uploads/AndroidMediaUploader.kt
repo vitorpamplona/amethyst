@@ -40,12 +40,14 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.quartz.buzz.media.BuzzMediaSanitizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -243,6 +245,31 @@ class AndroidMediaUploader(
             return firstError!!.also { updateState(0.0, it) }
         }
 
+        private class SanitizedBlob(
+            val file: File,
+            val uri: Uri,
+            val size: Long,
+        )
+
+        /**
+         * A copy of [uri] without the metadata a Buzz workspace refuses (HTTP 422: EXIF/XMP/ICC
+         * segments, PNG text chunks, trailing bytes), or null when there was nothing to remove or
+         * the format isn't one [BuzzMediaSanitizer] rewrites. The caller deletes the file.
+         */
+        private fun sanitizeForBuzzWorkspace(
+            uri: Uri,
+            contentType: String?,
+            context: Context,
+        ): SanitizedBlob? {
+            if (!BuzzMediaSanitizer.handles(contentType)) return null
+            val original = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
+            val clean = BuzzMediaSanitizer.sanitize(original, contentType)
+            if (clean.contentEquals(original)) return null
+            val file = File.createTempFile("buzz-upload-", ".bin", context.cacheDir)
+            file.writeBytes(clean)
+            return SanitizedBlob(file, Uri.fromFile(file), clean.size.toLong())
+        }
+
         /**
          * The upload token for one blob, signed at most once and reused by every server tried.
          * A signer that returned no token is asked again on the next server; only a token or a
@@ -279,11 +306,13 @@ class AndroidMediaUploader(
             forcedSigner: NostrSigner?,
             context: Context,
             sharedAuth: SharedUploadAuth,
+            buzzWorkspace: Boolean = false,
         ): UploadingFinalState {
             updateState(0.2, UploadingState.Uploading)
             // BUD-05: route through /media (optimize) when the user opted in. The forced-signer
-            // path (e.g. NIP-46 draft signing) always uses the bit-exact /upload.
-            val useMedia = forcedSigner == null && account.settings.optimizeMediaOnUpload.value
+            // path (e.g. NIP-46 draft signing) always uses the bit-exact /upload, and so does a
+            // Buzz workspace, whose relay checks the imeta `x` against the blob it stored.
+            val useMedia = !buzzWorkspace && forcedSigner == null && account.settings.optimizeMediaOnUpload.value
             return try {
                 val result =
                     BlossomUploader()
@@ -303,6 +332,20 @@ class AndroidMediaUploader(
                             httpAuth = { hash, size, alt ->
                                 sharedAuth.get {
                                     when {
+                                        // Buzz's strict mode demands exactly one `server` tag naming the
+                                        // workspace and a token that expires within 60s of signing.
+                                        buzzWorkspace -> {
+                                            val now = TimeUtils.now()
+                                            BlossomAuthorizationEvent.createUploadAuth(
+                                                hash = hash,
+                                                size = size,
+                                                alt = alt,
+                                                signer = forcedSigner ?: account.signer,
+                                                servers = listOf(serverBaseUrl),
+                                                createdAt = now,
+                                                expiration = now + BUZZ_UPLOAD_TOKEN_SECS,
+                                            )
+                                        }
                                         forcedSigner != null -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner)
                                         useMedia -> account.createBlossomMediaAuth(hash, size, alt)
                                         else -> account.createBlossomUploadAuth(hash, size, alt)
@@ -314,19 +357,26 @@ class AndroidMediaUploader(
                         )
 
                 val finalState =
-                    verifyHeader(
-                        uploadResult = result,
-                        localContentType = contentType,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        originalHash = originalHash,
-                        originalContentType = contentTypeForResult,
-                    )
+                    if (buzzWorkspace) {
+                        // The workspace already bound the stored blob to our X-SHA-256 and the token's
+                        // `x`, and its /media reads need a signed GET this client doesn't send — so take
+                        // its descriptor rather than downloading the blob back to hash it again.
+                        trustWorkspaceDescriptor(result, contentType, size, contentTypeForResult, originalHash)
+                    } else {
+                        verifyHeader(
+                            uploadResult = result,
+                            localContentType = contentType,
+                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                            originalHash = originalHash,
+                            originalContentType = contentTypeForResult,
+                        )
+                    }
 
                 // BUD-04: replicate the blob to the user's other Blossom servers for redundancy.
                 // Fire-and-forget on the account scope AFTER the upload is finished: mirroring is
                 // pure background redundancy, so it must never delay, alter, or fail the upload the
                 // user already completed, and must not touch the on-screen progress state.
-                if (finalState is UploadingState.Finished && forcedSigner == null && account.settings.mirrorUploadsToAllServers.value) {
+                if (finalState is UploadingState.Finished && !buzzWorkspace && forcedSigner == null && account.settings.mirrorUploadsToAllServers.value) {
                     account.scope.launch(Dispatchers.IO) {
                         try {
                             mirrorToOtherServers(result, serverBaseUrl, account)
@@ -387,6 +437,27 @@ class AndroidMediaUploader(
                     Log.w("UploadOrchestrator", "Failed to mirror $hash to $target", e)
                 }
             }
+        }
+
+        private fun trustWorkspaceDescriptor(
+            uploadResult: MediaUploadResult,
+            localContentType: String?,
+            localSize: Long?,
+            originalContentType: String?,
+            originalHash: String?,
+        ): UploadingFinalState {
+            val url = uploadResult.url
+            val hash = uploadResult.sha256
+            if (url.isNullOrBlank() || hash.isNullOrBlank()) return error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
+            val fileHeader =
+                FileHeader(
+                    mimeType = uploadResult.type ?: localContentType,
+                    hash = hash,
+                    size = (uploadResult.size ?: localSize)?.toInt() ?: 0,
+                    dim = uploadResult.dimension,
+                    blurHash = uploadResult.blurHash,
+                )
+            return finish(UploadOrchestrator.OrchestratorResult.ServerResult(fileHeader, url, uploadResult.magnet, hash, originalContentType, originalHash))
         }
 
         private suspend fun verifyHeader(
@@ -536,6 +607,16 @@ class AndroidMediaUploader(
                         uploadBlossomWithFallback(server, account) { baseUrl, auth ->
                             uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, baseUrl, null, null, account, forcedSigner, context, auth)
                         }
+                    // Private to the workspace: never retried on, or mirrored to, a public server.
+                    ServerType.BuzzWorkspace -> {
+                        val clean = sanitizeForBuzzWorkspace(finalUri, compressed.contentType, context)
+                        try {
+                            uploadBlossom(clean?.uri ?: finalUri, compressed.contentType, clean?.size ?: compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context, SharedUploadAuth(), buzzWorkspace = true)
+                                .also { if (it is UploadingState.Error) updateState(0.0, it) }
+                        } finally {
+                            clean?.file?.delete()
+                        }
+                    }
                 }
             } finally {
                 deleteTempUri(finalUri, uri)
@@ -586,6 +667,10 @@ class AndroidMediaUploader(
                         uploadBlossomWithFallback(server, account) { baseUrl, auth ->
                             uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, auth)
                         }
+
+                    ServerType.BuzzWorkspace ->
+                        uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, SharedUploadAuth(), buzzWorkspace = true)
+                            .also { if (it is UploadingState.Error) updateState(0.0, it) }
                 }
             } finally {
                 deleteTempUri(encrypted.uri, uri)
@@ -593,3 +678,6 @@ class AndroidMediaUploader(
         }
     }
 }
+
+/** Lifetime of a Buzz workspace upload token; Buzz rejects one that outlives 60s from signing. */
+private const val BUZZ_UPLOAD_TOKEN_SECS = 55L

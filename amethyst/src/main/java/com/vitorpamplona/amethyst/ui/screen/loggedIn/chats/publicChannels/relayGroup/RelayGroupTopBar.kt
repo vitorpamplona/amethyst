@@ -163,6 +163,10 @@ fun RelayGroupTopBar(
     var confirmDelete by remember { mutableStateOf(false) }
     val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
     val huddleLive by observeBuzzHuddleLive(channel, enabled = isBuzzRelay && membership.isMember(), accountViewModel)
+    // Buzz names members only from profiles on its own relay; make sure mine is there.
+    LaunchedEffect(channel.groupId.relayUrl, isBuzzRelay) {
+        if (isBuzzRelay) accountViewModel.account.relayGroups.shareProfileWithBuzzWorkspace(channel.groupId.relayUrl)
+    }
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -269,7 +273,10 @@ fun RelayGroupTopBar(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else if (!displayMembership.isMember() && channel.requiresMembershipToPost()) {
+            } else if (!displayMembership.isMember() && (channel.requiresMembershipToPost() || (isBuzzRelay && !isDm))) {
+                // A Buzz open channel takes posts from any workspace member, but channel membership
+                // is still what Buzz lists, counts and offers in its mention picker — its own client
+                // shows Join here too, so a reader can become a member.
                 FilledTonalButton(onClick = {
                     // Closed groups need an invite code; open groups join directly.
                     if (channel.isClosed()) {
@@ -418,14 +425,18 @@ fun RelayGroupTopBar(
                                 }
                             },
                         )
-                        DropdownMenuItem(
-                            text = { Text(stringRes(Res.string.leave), color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                menuOpen = false
-                                accountViewModel.leaveRelayGroup(channel)
-                                if (canPop) nav.popBack()
-                            },
-                        )
+                        // A Buzz open channel lets a non-member read and post, but there is nothing to
+                        // leave until they join (the Join button above stands in for it).
+                        if (displayMembership.isMember() || !isBuzzRelay) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(Res.string.leave), color = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    menuOpen = false
+                                    accountViewModel.leaveRelayGroup(channel)
+                                    if (canPop) nav.popBack()
+                                },
+                            )
+                        }
                         // Archive/Unarchive (kind-9002 `archived` tag) — a reversible hide-from-the-sidebar,
                         // Buzz-only and admin-gated like Delete but NOT destructive, so no confirm dialog.
                         // A DM is never archived (it has its own hide), so this is channels/forums only.

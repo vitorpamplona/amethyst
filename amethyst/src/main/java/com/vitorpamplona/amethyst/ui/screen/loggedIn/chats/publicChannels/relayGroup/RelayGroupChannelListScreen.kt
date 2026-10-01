@@ -120,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.observeChatPreviewText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_DM
@@ -914,10 +915,10 @@ private fun BuzzDmPreviewLine(
             summary != null -> summary
             author != null -> {
                 val authorName by observeUserName(author, accountViewModel)
-                val body = event.content.take(80)
+                val body = (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
                 if (body.isBlank()) authorName else "$authorName: $body"
             }
-            else -> event.content.take(80)
+            else -> (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
         }
     Text(
         preview,

@@ -20,9 +20,30 @@
  */
 package com.vitorpamplona.quartz.nip10Notes.content
 
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-/** The NIP-19 references [content] cites — not ones inside a link, like a Blossom `npub1…` subdomain. */
-fun findNostrUris(content: String) = Nip19Parser.parseAllStandalone(content)
+/** An npub that is part of a link (a Blossom subdomain) is not a citation and must not be tagged. */
+class FindNostrUrisTest {
+    private val npub = "npub1rfahrcqpwh0rp7f2jcq8gsh4y04wawpthvw3fhmarvt8hsf80mvsr0tlnr"
 
-fun findNostrEventUris(content: String) = Nip19Parser.parseAllEvents(content)
+    @Test
+    fun npubInsideABlossomHostnameIsNotCited() {
+        assertTrue(findNostrUris("https://$npub.blossom.band/e069d411.jpg").isEmpty())
+    }
+
+    @Test
+    fun npubInAPathIsNotCited() {
+        assertTrue(findNostrUris("see https://example.com/p/$npub").isEmpty())
+    }
+
+    @Test
+    fun standaloneReferencesAreStillCited() {
+        assertEquals(1, findNostrUris("hi nostr:$npub").filterIsInstance<NPub>().size)
+        assertEquals(1, findNostrUris("hi @$npub, there").filterIsInstance<NPub>().size)
+        assertEquals(1, findNostrUris("$npub at the start").filterIsInstance<NPub>().size)
+        assertEquals(1, findNostrUris("($npub)").filterIsInstance<NPub>().size)
+    }
+}

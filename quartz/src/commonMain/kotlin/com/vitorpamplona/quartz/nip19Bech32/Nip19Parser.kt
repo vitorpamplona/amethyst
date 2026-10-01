@@ -242,6 +242,7 @@ object Nip19Parser {
         content: String,
         fixed58Prefixes: Array<String>,
         variablePrefixes: Array<String>,
+        standaloneOnly: Boolean = false,
         action: (type: String, key: String, additionalChars: String) -> Unit,
     ) {
         var i = 0
@@ -265,7 +266,7 @@ object Nip19Parser {
                     else -> if (nextLower < nextUpper) nextLower else nextUpper
                 }
             if (i >= len) return
-            if (isCandidateAt(content, i)) {
+            if (isCandidateAt(content, i) && !(standaloneOnly && isEmbeddedAt(content, i))) {
                 var end = -1
 
                 for (prefix in fixed58Prefixes) {
@@ -312,6 +313,23 @@ object Nip19Parser {
         }
     }
 
+    /**
+     * True when the entity starting at [at] is glued to the token before it — an `npub1…` that is a
+     * URL's subdomain (`https://npub1….blossom.band/…`) or part of a path or word — rather than a
+     * reference on its own. `nostr:` and `@` prefixes are part of a reference, so they are skipped.
+     */
+    private fun isEmbeddedAt(
+        content: String,
+        at: Int,
+    ): Boolean {
+        var j = at
+        if (j > 0 && content[j - 1] == '@') j--
+        if (j >= 6 && content.regionMatches(j - 6, "nostr:", 0, 6, ignoreCase = true)) j -= 6
+        if (j == 0) return false
+        val c = content[j - 1]
+        return c.isLetterOrDigit() || c == '/' || c == '.' || c == '-' || c == '_' || c == '=' || c == '?' || c == '&' || c == '#'
+    }
+
     private fun allBech32(
         content: String,
         from: Int,
@@ -340,6 +358,19 @@ object Nip19Parser {
     fun parseAll(content: String): List<Entity> {
         val returningList = mutableListOf<Entity>()
         forEachNip19Match(content, FIXED_58_PREFIXES, VARIABLE_PREFIXES) { type, key, additionalChars ->
+            parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
+        }
+        return returningList
+    }
+
+    /**
+     * Like [parseAll], but only references that stand on their own: an entity glued to the text
+     * before it (an `npub1…` subdomain of a Blossom URL, say) is not something the author cited, so
+     * tagging it would `p`-tag (and notify) whoever's key happens to be in a link.
+     */
+    fun parseAllStandalone(content: String): List<Entity> {
+        val returningList = mutableListOf<Entity>()
+        forEachNip19Match(content, FIXED_58_PREFIXES, VARIABLE_PREFIXES, standaloneOnly = true) { type, key, additionalChars ->
             parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
         }
         return returningList

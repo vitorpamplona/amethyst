@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -81,7 +82,43 @@ class PoolRequestsFilterCapTest {
     fun learnsTheCapFromTheRefusal() {
         assertEquals(3, RelayReqRefusals.parseMaxFilters("ERROR: bad req: filter validation failed: invalid number of filters: 4"))
         assertEquals(null, RelayReqRefusals.parseMaxFilters("ERROR: bad req: filter validation failed: kind not allowed: 21059"))
+        assertEquals(10, RelayReqRefusals.parseMaxFilters("invalid message: Invalid message format: REQ contains 12 filters, maximum is 10"))
     }
+
+    /**
+     * Buzz refuses an over-cap REQ with a NOTICE, which names no subscription — the sub would wait
+     * for an EOSE forever. The cap it names must be learned and the over-cap sub sent again under it.
+     */
+    @Test
+    fun aBuzzNoticeResendsTheOverCapSubUnderTheCap() =
+        kotlinx.coroutines.test.runTest {
+            val buzz = NormalizedRelayUrl("wss://ws.communities.buzz.xyz/")
+            val pool = PoolRequests()
+            pool.addOrUpdate("big", mapOf(buzz to groupFilters(12)), null)
+            pool.addOrUpdate("small", mapOf(buzz to groupFilters(2)), null)
+            pool.onConnecting(buzz)
+            pool.syncState(buzz) { }
+
+            val client = RecordingRelayClient(buzz)
+            pool.onIncomingMessage(client, NoticeMessage("invalid message: Invalid message format: REQ contains 12 filters, maximum is 10"))
+
+            val resent = client.sent.filterIsInstance<ReqCmd>()
+            assertEquals(listOf("big"), resent.map { it.subId }, "only the sub that went over the cap is re-sent")
+            assertTrue(resent.single().filters.size <= 10)
+        }
+
+    @Test
+    fun anUnrelatedNoticeChangesNothing() =
+        kotlinx.coroutines.test.runTest {
+            val pool = PoolRequests()
+            pool.addOrUpdate("big", mapOf(relay to groupFilters(12)), null)
+            sync(pool, relay)
+
+            val client = RecordingRelayClient(relay)
+            pool.onIncomingMessage(client, NoticeMessage("rate limited, slow down"))
+
+            assertTrue(client.sent.isEmpty())
+        }
 
     @Test
     fun perGroupFiltersAreMergedUnderTheCapAndSentAgainAtOnce() =

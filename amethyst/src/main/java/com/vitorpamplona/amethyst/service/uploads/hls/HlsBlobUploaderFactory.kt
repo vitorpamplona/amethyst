@@ -74,6 +74,10 @@ object HlsBlobUploaderFactory {
                     "NIP-95 storage stores each blob as an event and is not suitable for HLS renditions",
                 )
             }
+
+            ServerType.BuzzWorkspace -> {
+                throw IllegalArgumentException("HLS publishing does not target a Buzz workspace's media server")
+            }
         }
 
     private fun blossomAdapter(

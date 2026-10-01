@@ -29,6 +29,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
+import com.vitorpamplona.amethyst.commons.model.latestConcordEdit
+import com.vitorpamplona.amethyst.commons.model.latestMarmotEdit
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -55,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -62,6 +67,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 enum class ReplyRenderType {
     FULL,
@@ -158,6 +164,10 @@ fun RenderTextEvent(
         return
     }
 
+    // A chat message edited in place (Buzz kind-40003, Concord, Marmot) shows its newest edit here
+    // too — notification cards and quotes render it through this path, not the chat bubble.
+    val chatEdit = if (noteEvent is ChatEvent || noteEvent is StreamMessageV2Event) observeChatMessageEdit(note) else null
+
     LoadDecryptedContent(
         note,
         accountViewModel,
@@ -171,7 +181,7 @@ fun RenderTextEvent(
                     ?.event
                     ?.content ?: body
             } else {
-                body
+                chatEdit?.event?.content ?: body
             }
 
         val eventContent = remember(newBody) { displayedNoteText(note, newBody) }
@@ -223,3 +233,18 @@ fun RenderTextEvent(
         }
     }
 }
+
+/** The newest in-place edit of a chat message (Concord, Buzz or Marmot), recomposing as edits land. */
+@Composable
+fun observeChatMessageEdit(note: Note): Note? {
+    val latest by
+        produceState(initialValue = note.latestChatEdit(), note.idHex) {
+            note
+                .flow()
+                .edits.stateFlow
+                .collect { value = note.latestChatEdit() }
+        }
+    return latest
+}
+
+private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()
