@@ -30,7 +30,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 /**
- * Real answers from a live vespa-relay (`search-staging.brainstorm.world`), recorded once by
+ * Real answers from a live vespa-relay (`search.brainstorm.world`), recorded once by
  * `tools/search-parity/fetch_fixtures.py` and read from disk here.
  *
  * Recorded rather than fetched so `./gradlew test` stays offline and deterministic — a suite that
