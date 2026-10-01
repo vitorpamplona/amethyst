@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.commons.resources.nests_servers_search_keyword
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_title
 import com.vitorpamplona.amethyst.commons.resources.notification_settings
 import com.vitorpamplona.amethyst.commons.resources.notification_settings_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.now_playing_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.now_playing_settings
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_settings
 import com.vitorpamplona.amethyst.commons.resources.payment_targets
@@ -160,6 +162,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.drawer_settings, MaterialSymbols.AutoMirrored.ViewList, Res.string.drawer_search_keywords, Route.DrawerSettings),
                     symEntry(Res.string.video_player_settings, MaterialSymbols.VideoSettings, Res.string.video_player_search_keywords, Route.VideoPlayerSettings),
                     symEntry(Res.string.audio_visualizer_settings, MaterialSymbols.MusicNote, Res.string.audio_visualizer_search_keywords, Route.AudioVisualizerSettings),
+                    symEntry(Res.string.now_playing_settings, MaterialSymbols.MusicNote, Res.string.now_playing_search_keywords, Route.NowPlayingSettings),
                     symEntry(Res.string.favorite_dvms_title, MaterialSymbols.AutoAwesome, Res.string.favorite_dvms_search_keywords, Route.EditFavoriteAlgoFeeds),
                     symEntry(Res.string.profile_badges_title, MaterialSymbols.MilitaryTech, Res.string.profile_badges_search_keywords, Route.ProfileBadges),
                     symEntry(Res.string.payment_targets, MaterialSymbols.Payment, Res.string.payment_targets_search_keywords, Route.EditPaymentTargets),

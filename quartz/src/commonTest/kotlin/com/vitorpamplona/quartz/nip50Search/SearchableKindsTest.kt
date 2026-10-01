@@ -37,7 +37,9 @@ import kotlin.test.assertEquals
  * being left out of everything downstream that reads this list.
  */
 class SearchableKindsTest {
-    private fun build(kind: Int): Event = EventFactory.create("9".repeat(64), "a".repeat(64), 1L, kind, emptyArray(), "", "")
+    // Through the factory's kind probe, like the stores' reindex pre-filters: a kind whose class
+    // is picked by tags (38000) answers as its primary class rather than as a tagless plain Event.
+    private fun build(kind: Int): Event = EventFactory.probe(kind)
 
     @Test
     fun theRecordedSetIsExactlyWhatTheFactoryBuilds() {

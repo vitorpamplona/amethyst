@@ -29,6 +29,7 @@ import com.google.mlkit.genai.imagedescription.ImageDescriber
 import com.google.mlkit.genai.imagedescription.ImageDescriberOptions
 import com.google.mlkit.genai.imagedescription.ImageDescription
 import com.google.mlkit.genai.imagedescription.ImageDescriptionRequest
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,7 +42,7 @@ import kotlinx.coroutines.withContext
  */
 class MLKitImageLabelService(
     private val context: Context,
-) {
+) : AltTextSuggester {
     private var describer: ImageDescriber? = null
 
     // FeatureStatus is an Int enum. Cached per-instance — describer availability does not flip
@@ -58,7 +59,7 @@ class MLKitImageLabelService(
                 null
             }
 
-    suspend fun suggestAltText(uri: Uri): String? = describeWithGenAi(uri)
+    override suspend fun suggestAltText(uri: Uri): String? = describeWithGenAi(uri)
 
     private suspend fun describeWithGenAi(uri: Uri): String? =
         withContext(Dispatchers.IO) {
@@ -116,7 +117,7 @@ class MLKitImageLabelService(
         return sample
     }
 
-    fun close() {
+    override fun close() {
         describer?.close()
         describer = null
         cachedGenAiStatus = null

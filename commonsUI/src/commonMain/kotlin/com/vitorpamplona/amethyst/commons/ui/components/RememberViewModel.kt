@@ -67,6 +67,7 @@ inline fun <reified VM : ViewModel> rememberViewModel(
  * when the store has no view model yet.
  */
 @Composable
+@PublishedApi
 internal fun <VM : ViewModel> rememberLambdaFactory(factory: () -> VM): ViewModelProvider.Factory {
     val currentFactory by rememberUpdatedState(factory)
     return remember {

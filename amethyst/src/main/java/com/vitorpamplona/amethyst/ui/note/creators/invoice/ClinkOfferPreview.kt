@@ -182,7 +182,7 @@ fun ClinkOfferPreview(
         ) {
             val amount = if (amountRequired) amountInput.toLongOrNull() else useOffer.price
 
-            val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, useOffer, amountSats = amount)
+            val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, accountViewModel.host.moneyOpRelays, useOffer, amountSats = amount)
 
             val bolt11 = response?.bolt11
             val movedTo =

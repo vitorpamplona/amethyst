@@ -31,9 +31,9 @@ import kotlin.coroutines.cancellation.CancellationException
 actual fun rememberWalletAppLauncher(): WalletAppLauncher {
     val context = LocalContext.current
     return remember(context) {
-        WalletAppLauncher { invoice, noWalletFound, onPaid, onError ->
+        WalletAppLauncher { uri, noWalletFound, onPaid, onError ->
             try {
-                val intent = Intent(Intent.ACTION_VIEW, "lightning:$invoice".toUri())
+                val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
                 context.startActivity(intent)

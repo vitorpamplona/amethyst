@@ -99,6 +99,14 @@ import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ActionTile
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.MoreActionsToggle
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChip
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChipView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.SectionDivider
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.TileRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.authorNameColorFor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -109,14 +117,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ActionTile
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.MoreActionsToggle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChip
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ReactionChipView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.SectionDivider
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.TileRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.authorNameColorFor
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
@@ -143,7 +143,7 @@ import kotlin.math.abs
  * opened a menu and nothing could be swiped.
  *
  * What cordn cannot share is the *content* of those slots. The shared fillings
- * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatReactionChips],
+ * ([com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatReactionChips],
  * `ChatMessageActionSheet`, `ChatMessageFooter`, `DrawAuthorInfo`) all take a `Note`,
  * and a `Note` comes from `LocalCache` — which nothing in a cordn room may enter, see
  * the screen's KDoc. So the slots are filled from the envelope and the annotation fold

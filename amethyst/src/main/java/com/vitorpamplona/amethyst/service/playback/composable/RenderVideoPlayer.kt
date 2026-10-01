@@ -46,6 +46,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.applyView
 import com.vitorpamplona.amethyst.service.playback.composable.controls.clampViewportShortSide
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.rememberIsAudioTrack
 

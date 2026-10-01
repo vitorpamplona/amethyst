@@ -24,8 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.rememberNavController
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.ObservableNav
 
 @Composable
 fun rememberNav(): Nav {
@@ -35,16 +33,5 @@ fun rememberNav(): Nav {
 
     return remember(navController, scope, ime) {
         Nav(navController, scope, ime)
-    }
-}
-
-@Composable
-fun rememberExtendedNav(
-    nav: INav,
-    onBeforeNavigate: () -> Unit,
-): INav {
-    val scope = rememberCoroutineScope()
-    return remember(nav, scope) {
-        ObservableNav(nav, scope, onBeforeNavigate)
     }
 }

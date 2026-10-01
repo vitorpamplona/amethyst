@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.pictures.PictureCardCaption
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.pictures.PictureCardCompose
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event

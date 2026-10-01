@@ -36,14 +36,13 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.record_a_message_description
 import com.vitorpamplona.amethyst.commons.ui.components.ToggleableBox
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-
-const val MAX_VOICE_RECORD_SECONDS = 600
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable

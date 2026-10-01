@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -38,7 +38,7 @@ fun resolveNappletMeta(
     untitled: String,
 ): Pair<String, String?> {
     val events =
-        Amethyst.instance.cache
+        LocalCache
             .filter(
                 Filter(
                     kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND, RootSiteEvent.KIND, NamedSiteEvent.KIND),

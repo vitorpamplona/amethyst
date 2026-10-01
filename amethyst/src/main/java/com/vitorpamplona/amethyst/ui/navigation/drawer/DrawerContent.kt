@@ -165,6 +165,7 @@ import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import org.jetbrains.compose.resources.StringResource
@@ -355,7 +356,11 @@ private fun EditStatusBoxes(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val statuses by observeUserStatuses(baseAccountUser, accountViewModel)
+    val allStatuses by observeUserStatuses(baseAccountUser, accountViewModel)
+
+    // The music status is written by the now-playing publisher, not typed here: editing it would
+    // overwrite the track and keep its expiration, so only the other statuses are editable.
+    val statuses = remember(allStatuses) { allStatuses.filter { it.address.dTag != UserStatusEvent.MUSIC } }
 
     if (statuses.isEmpty()) {
         PreviewStatusEditBar(accountViewModel = accountViewModel, nav = nav)

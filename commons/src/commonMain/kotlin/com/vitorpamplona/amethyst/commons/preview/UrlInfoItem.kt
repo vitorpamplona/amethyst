@@ -43,6 +43,8 @@ class UrlInfoItem(
     val videoType: String = "",
     /** `og:type` — what the page says it is, e.g. `music.song`, `video.other`, `article`. */
     val type: String = "",
+    /** The page's best declared icon `<link>` (favicon / apple-touch-icon). Empty when none. */
+    val icon: String = "",
 ) {
     /** The page's host, or null when [url] is not an absolute URL. */
     val verifiedHost = absoluteUrlHost(url)
@@ -65,6 +67,24 @@ class UrlInfoItem(
     // Falls back to the raw value so an unresolvable image degrades to "the loader shows nothing",
     // which is what it did before. Only the playable gate below treats unresolvable as refusal.
     val imageUrlFullPath = resolve(image) ?: image
+
+    /**
+     * The page's icon, absolute: the one it declared, else `/favicon.ico` at its origin -- the
+     * same guess every browser makes, since most sites that declare nothing still serve one.
+     *
+     * A `data:` icon is used as-is when it is an image (the image loader decodes those inline),
+     * and taken at its word when it is not: `href="data:,"` is how a site tells browsers it has no
+     * favicon, so guessing `/favicon.ico` there is a request that is known to miss.
+     *
+     * Null for a non-HTML URL (an image or a video is its own preview) or an unresolvable one.
+     */
+    val iconUrlFullPath: String? =
+        when {
+            !mimeType.startsWith("text/html", ignoreCase = true) -> null
+            icon.startsWith("data:image/", ignoreCase = true) -> if (icon.length <= MAX_INLINE_ICON_LENGTH) icon else resolve(DEFAULT_FAVICON)
+            icon.startsWith("data:", ignoreCase = true) -> null
+            else -> resolve(icon) ?: resolve(DEFAULT_FAVICON)
+        }
 
     /**
      * The declared `og:video`, absolute, but only when the declaration holds up: a [videoType] the
@@ -120,12 +140,28 @@ class UrlInfoItem(
         }
 
     /**
+     * Whether the page has text to show without an image: a title (OpenGraph's or the document's
+     * own `<title>`) or a description. Such a page gets the compact icon + text card rather than
+     * a bare link.
+     */
+    val hasTextPreview: Boolean = title.isNotBlank() || description.isNotBlank()
+
+    /**
      * Whether the fetch produced something worth rendering. An image is the usual evidence, but a
      * page that declared playable media counts too — a track page that ships no cover art would
      * otherwise be thrown away as Empty and fall back to a bare link, which is exactly the player
-     * we went to the trouble of finding.
+     * we went to the trouble of finding. So does a page with no OpenGraph at all that still has a
+     * title or description: it renders as the compact card instead of a bare link.
      */
-    fun fetchComplete(): Boolean = url.isNotEmpty() && (image.isNotEmpty() || playableMediaUrl != null)
+    fun fetchComplete(): Boolean = url.isNotEmpty() && (image.isNotEmpty() || playableMediaUrl != null || hasTextPreview)
 
     fun allFetchComplete(): Boolean = title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()
+
+    companion object {
+        private const val DEFAULT_FAVICON = "/favicon.ico"
+
+        // Previews are cached, so an inline icon is held for as long as its card is. Real inline
+        // favicons are a few KB; anything far past that is not worth keeping in memory.
+        private const val MAX_INLINE_ICON_LENGTH = 64 * 1024
+    }
 }

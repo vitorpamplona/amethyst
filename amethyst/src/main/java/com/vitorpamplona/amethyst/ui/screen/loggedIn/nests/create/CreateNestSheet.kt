@@ -250,7 +250,7 @@ fun CreateNestSheet(
 /**
  * Schedule-start picker. Shows the currently-selected start time
  * as a button; tapping it opens a Material3 DatePicker → TimePicker
- * chain (same shape as [com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker]
+ * chain (same shape as [com.vitorpamplona.amethyst.commons.ui.note.creators.expiration.ExpirationDatePicker]
  * — hour + minute resolved in the local zone, then converted to
  * UTC unix seconds via the system zone offset).
  */

@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListS
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlaying
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSettingsState
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
@@ -185,6 +187,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
@@ -531,6 +534,11 @@ class Account(
     // of the community view, so a shared set let one account reorder and badge every other one's
     // channel list. Restored/persisted per account by BuzzChannelStarStore.
     val buzzChannelStars = BuzzChannelStars()
+
+    // Whether THIS account shares what the user listens to as its NIP-38 music status, and from
+    // which apps. Per account because the status is signed and published by this key. Restored/
+    // persisted per account by NowPlayingSettingsStore on Android.
+    val nowPlayingSettings = NowPlayingSettingsState()
 
     // The NIP-OA attestation an owner issued to THIS account's key, attached to its Buzz-relay
     // AUTH so the relay grants virtual membership. Restored/persisted per account by
@@ -2201,7 +2209,9 @@ class Account(
         // quick reply is notified (`p`) and their reference resolves. The reply-parent author is
         // already tagged by each builder below, so drop it from the body mentions to avoid a
         // duplicate `p`.
-        val tagger = NewMessageTagger(text, dao = LocalCache)
+        // Buzz shows a `nostr:` reference verbatim, so a Buzz thread names people as plain `@Name`.
+        val buzzGroup = gatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }?.takeIf { BuzzRelayDialect.isBuzz(it.groupId.relayUrl) }
+        val tagger = NewMessageTagger(text, dao = LocalCache, userMentionsAsNames = buzzGroup != null)
         tagger.run()
         val mentions = tagger.pTags?.mapNotNull { it.pubkeyHex.takeIf { pk -> pk != rootEvent.pubKey } }.orEmpty()
         val finalText = appendMediaUrls(tagger.message, imetas)
@@ -2237,15 +2247,18 @@ class Account(
                     // their clients no longer thread on. Reading 40002 stays supported (see
                     // [com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply]).
                     //
-                    // Attached media rides as URLs appended to the content.
+                    // Attached media rides as URLs appended to the content, plus Buzz-shaped `imeta`.
                     val root = rootEvent.tags.buzzThreadRootForReplyTo(rootEvent.id)
                     signer.sign(
-                        ChatEvent.build(finalText) {
+                        // Buzz draws an attachment only where the body links it as `![image](url)`.
+                        ChatEvent.build(BuzzImeta.markdownMediaBody(finalText, imetas)) {
                             hTag(group.groupId.id)
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
                             pTags(mentions.map { PTag(it) })
                             previous(group.previousEventRefs(pubKey))
+                            // Buzz refuses the whole event over any imeta key it doesn't allow.
+                            imetas(BuzzImeta.sanitize(imetas))
                         },
                     )
                 } else {
@@ -3344,6 +3357,13 @@ class Account(
     ) = sendMyPublicAndPrivateOutbox(UserStatusAction.update(oldStatus, newStatus, signer))
 
     suspend fun deleteStatus(oldStatus: AddressableNote) = sendMyPublicAndPrivateOutbox(UserStatusAction.delete(oldStatus, signer))
+
+    suspend fun publishNowPlaying(
+        track: NowPlaying,
+        expiration: Long,
+    ) = sendMyPublicAndPrivateOutbox(UserStatusAction.createMusic(track, expiration, signer))
+
+    suspend fun clearNowPlaying() = sendMyPublicAndPrivateOutbox(UserStatusAction.clearMusic(signer))
 
     suspend fun removeEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.removeEmojiPack(emojiPack))
 

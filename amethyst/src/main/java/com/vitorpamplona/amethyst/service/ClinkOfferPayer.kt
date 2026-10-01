@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.quartz.experimental.clink.client.OfferClient
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
@@ -57,6 +57,7 @@ object ClinkOfferPayer {
      */
     suspend fun requestInvoice(
         account: Account,
+        moneyOpRelays: MoneyOpRelayRouting,
         offer: NOffer,
         amountSats: Long? = null,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
@@ -103,7 +104,7 @@ object ClinkOfferPayer {
             // pushing the payment through Tor (and failing on services that block Tor exits) even when
             // the user disabled Tor for money operations. The subscribe() below triggers a reconnect, and
             // BasicRelayClient rebuilds any socket left on the now-wrong (Tor) transport onto clearnet.
-            val torState = Amethyst.instance.torEvaluatorFlow
+            val torState = moneyOpRelays
             torState.registerMoneyOpRelays(relays)
             account.client.subscribe(subId, filters, listener)
             try {

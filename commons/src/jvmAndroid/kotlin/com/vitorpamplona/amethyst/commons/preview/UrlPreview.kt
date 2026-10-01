@@ -77,6 +77,7 @@ class UrlPreview {
                                     data.video,
                                     data.videoType,
                                     data.type,
+                                    data.icon,
                                 )
                             }
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.preview
 
 class OpenGraphParser {
     class Result(
+        /** The OpenGraph/Twitter/meta title, or the document's `<title>` when it declares none. */
         val title: String,
         val description: String,
         val image: String,
@@ -35,6 +36,8 @@ class OpenGraphParser {
         val videoType: String = "",
         /** `og:type` — what the page says it *is*, e.g. `music.song`, `video.other`, `article`. */
         val type: String = "",
+        /** The best icon `<link>` the page declares, verbatim (may be relative). Empty when none. */
+        val icon: String = "",
     )
 
     companion object {
@@ -112,6 +115,17 @@ class OpenGraphParser {
             )
 
         private val CONTENT = "content"
+        private val HREF = "href"
+        private val REL = "rel"
+        private val SIZES = "sizes"
+        private val TYPE = "type"
+
+        // How an icon with no `sizes` is ranked. An `apple-touch-icon` is 180px by Apple's
+        // convention; a plain `icon` without sizes is usually the 16/32px tab favicon. A scalable
+        // one (SVG, or `sizes="any"`) beats every bitmap: it is sharp at any card size.
+        private const val APPLE_TOUCH_ICON_DEFAULT_SIZE = 180
+        private const val ICON_DEFAULT_SIZE = 32
+        private const val SCALABLE_ICON_SIZE = Int.MAX_VALUE
     }
 
     /** Which field of [Result] a meta tag's key fills, or null when the key is not one we read. */
@@ -156,8 +170,33 @@ class OpenGraphParser {
         var video = ""
         var videoType = ""
         var type = ""
+        var documentTitle = ""
+        var icon = ""
+        var iconSize = -1
 
         metaTags.forEach {
+            when (it.element) {
+                HeadElement.META -> {}
+
+                HeadElement.TITLE -> {
+                    if (documentTitle.isEmpty()) documentTitle = it.attr(CONTENT)
+                    return@forEach
+                }
+
+                HeadElement.LINK -> {
+                    val href = it.attr(HREF)
+                    if (href.isNotBlank()) {
+                        val size = iconSize(it)
+                        // Strictly greater, so among equals the first declared wins.
+                        if (size > iconSize) {
+                            icon = href
+                            iconSize = size
+                        }
+                    }
+                    return@forEach
+                }
+            }
+
             // A meta tag names its key in exactly one of these three attributes, but which one
             // varies by site, so each is tried in turn until one is a key we read.
             val field =
@@ -179,6 +218,32 @@ class OpenGraphParser {
                 null -> Unit
             }
         }
-        return Result(title, description, image, audio, audioType, video, videoType, type)
+        return Result(title.ifEmpty { documentTitle }, description, image, audio, audioType, video, videoType, type, icon)
+    }
+
+    /** The pixel size an icon `<link>` is ranked by: its largest declared size, or a default. */
+    private fun iconSize(link: MetaTag): Int {
+        val sizes = link.attr(SIZES)
+        if (sizes.contains("any", ignoreCase = true)) return SCALABLE_ICON_SIZE
+        if (link.attr(TYPE).equals("image/svg+xml", ignoreCase = true)) return SCALABLE_ICON_SIZE
+        if (link
+                .attr(HREF)
+                .substringBefore('?')
+                .substringBefore('#')
+                .endsWith(".svg", ignoreCase = true)
+        ) {
+            return SCALABLE_ICON_SIZE
+        }
+
+        // `sizes="16x16 32x32"`: rank by the largest, which is the one a decoder will pick.
+        val declared =
+            sizes
+                .split(' ')
+                .mapNotNull { it.lowercase().substringBefore('x', "").toIntOrNull() }
+                .maxOrNull()
+        if (declared != null) return declared
+
+        val isAppleTouch = link.attr(REL).contains("apple-touch-icon", ignoreCase = true)
+        return if (isAppleTouch) APPLE_TOUCH_ICON_DEFAULT_SIZE else ICON_DEFAULT_SIZE
     }
 }

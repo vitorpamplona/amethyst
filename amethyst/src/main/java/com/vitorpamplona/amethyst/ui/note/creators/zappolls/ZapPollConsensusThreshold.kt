@@ -42,9 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.poll_consensus_threshold
 import com.vitorpamplona.amethyst.commons.resources.poll_consensus_threshold_percent
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import kotlinx.coroutines.CancellationException
 
 @Composable

@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.map
  * owns the one `#p=me` REQ per workspace relay — so this reads them back out of [LocalCache], fetches
  * each discovered channel's 39000-39003 directory (so its `t`=dm marker + participants land), and
  * records the ones that turn out to be DMs into [BuzzDmChannels]. The companion
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload]
+ * [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload]
  * then keeps those channels' messages warm app-wide — which is what lets a Buzz DM show on the
  * Notifications tab and in push without the viewer opening the conversation first.
  *

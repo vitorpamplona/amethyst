@@ -67,6 +67,8 @@ actual object LocalClock {
 
     actual fun today(): SearchDate = ZoneMath.dayAt(currentTimeSeconds(), localZone)
 
+    actual fun utcOffsetSeconds(unixSeconds: Long): Long = localZone.at(unixSeconds)
+
     actual fun epochDayCounter(): EpochDayCounter = EpochDayCounter { ZoneMath.epochDayAt(it, localZone) }
 
     /**

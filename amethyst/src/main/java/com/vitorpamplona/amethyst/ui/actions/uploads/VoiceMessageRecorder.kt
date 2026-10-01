@@ -24,6 +24,7 @@ import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
 import androidx.media3.common.MimeTypes
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -35,14 +36,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okio.Path.Companion.toOkioPath
 import java.io.File
-
-class RecordingResult(
-    val file: File,
-    val mimeType: String,
-    val amplitudes: List<Float>,
-    val duration: Int,
-)
 
 @Suppress("DEPRECATION")
 class VoiceMessageRecorder {
@@ -145,7 +140,7 @@ class VoiceMessageRecorder {
 
         return if (duration >= 1 && file != null) {
             RecordingResult(
-                file,
+                file.toOkioPath(),
                 MimeTypes.AUDIO_AAC,
                 amplitudesCopy,
                 duration,

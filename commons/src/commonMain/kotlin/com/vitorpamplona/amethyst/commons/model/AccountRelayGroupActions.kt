@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -82,6 +83,8 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
@@ -111,14 +114,59 @@ class AccountRelayGroupActions(
         account.follow(channel)
     }
 
+    // "relay|profile content" pairs already pushed this session, so each profile version goes to each
+    // workspace once. Keyed on content, not event id: the copy we sign comes back from the relay as a
+    // newer kind-0 with the same content, and must not trigger another signature.
+    private val profileSharedWith = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Push my current kind-0 profile to the Buzz workspace at [relay]. Buzz reads member names and
+     * pictures only from its own relay, and its people search (mentions, Add people, new DM) is by
+     * name — without this, Buzz showed me as a bare npub and nobody could find or add me.
+     *
+     * Buzz refuses an event whose timestamp is far from its clock ("event timestamp too far from
+     * server time"), so the already-signed profile — usually days old — can't be relayed as-is. Like
+     * Buzz's own client, this signs a fresh copy with the same content and tags, and sends it ONLY to
+     * that workspace, once per profile version.
+     */
+    suspend fun shareProfileWithBuzzWorkspace(relay: NormalizedRelayUrl) {
+        if (!account.isWriteable()) return
+        val profile = account.userMetadata.getUserMetadataEvent() ?: return
+        val key = "${relay.url}|${profile.content.hashCode()}|${profile.tags.contentDeepHashCode()}"
+        while (true) {
+            val current = profileSharedWith.value
+            if (key in current) return
+            if (profileSharedWith.compareAndSet(current, current + key)) break
+        }
+        try {
+            val fresh =
+                if (TimeUtils.now() - profile.createdAt < BUZZ_FRESH_PROFILE_SECS) {
+                    profile
+                } else {
+                    account.signer.sign<MetadataEvent>(TimeUtils.now(), MetadataEvent.KIND, profile.tags, profile.content)
+                }
+            account.client.publish(fresh, setOf(relay))
+        } catch (e: Throwable) {
+            // Not shared (signer refused, timed out, …): forget the attempt so a later visit retries.
+            profileSharedWith.update { it - key }
+            throw e
+        }
+    }
+
     /**
      * Fire a Buzz kind-20002 typing heartbeat for [channel] to its host relay. Ephemeral
      * (never stored) and fire-and-forget — no delivery tracking, no local echo (we filter
      * our own typing in the UI). Throttled by the composer to [BuzzTypingState.TYPING_HEARTBEAT_SECS].
+     * [threadRootId]/[replyToId] scope it to a thread, as Buzz's thread composer does.
      */
-    suspend fun sendBuzzTyping(channel: RelayGroupChannel) {
+    suspend fun sendBuzzTyping(
+        channel: RelayGroupChannel,
+        threadRootId: HexKey? = null,
+        replyToId: HexKey? = null,
+    ) {
         if (!account.isWriteable()) return
-        val signed = account.signer.sign(TypingIndicatorEvent.build(channel.groupId.id))
+        // In a thread, the `e` markers scope the signal to it: Buzz shows it in that thread's pane.
+        val signed = account.signer.sign(TypingIndicatorEvent.build(channel.groupId.id, threadRootId, replyToId))
         account.client.publish(signed, setOf(channel.groupId.relayUrl))
     }
 
@@ -663,3 +711,6 @@ internal fun buzzRoleFor(roles: List<String>): String {
         else -> BUZZ_ROLE_MEMBER
     }
 }
+
+/** A profile signed this recently is within Buzz's timestamp window and can be relayed as-is. */
+private const val BUZZ_FRESH_PROFILE_SECS = 60L

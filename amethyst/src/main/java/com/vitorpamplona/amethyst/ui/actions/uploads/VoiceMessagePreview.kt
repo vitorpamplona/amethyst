@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -58,18 +59,19 @@ import com.vitorpamplona.amethyst.commons.resources.record_a_message
 import com.vitorpamplona.amethyst.commons.resources.recording_indicator_description
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.components.AudioWaveformReadOnly
+import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatSecondsToTime
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import java.io.File
+import okio.Path
 
 @Composable
 fun VoiceMessagePreview(
     voiceMetadata: AudioMeta,
-    localFile: File? = null,
+    localFile: Path? = null,
     onRemove: () -> Unit,
     onReRecord: ((RecordingResult) -> Unit)? = null,
     isUploading: Boolean = false,
@@ -263,7 +265,7 @@ private fun ReRecordButton(
 @Composable
 private fun ManageMediaPlayer(
     voiceMetadata: AudioMeta,
-    localFile: File?,
+    localFile: Path?,
     onCompletion: () -> Unit,
     onPlayerChanged: (MediaPlayer?) -> Unit,
     onRelease: () -> Unit,
@@ -371,12 +373,12 @@ private fun handleWaveformScrub(
 
 private fun createMediaPlayer(
     url: String,
-    localFile: File?,
+    localFile: Path?,
 ): MediaPlayer? =
     try {
         MediaPlayer().apply {
-            if (localFile != null && localFile.exists()) {
-                setDataSource(localFile.absolutePath)
+            if (localFile != null && localFile.toFile().exists()) {
+                setDataSource(localFile.toString())
             } else {
                 setDataSource(url)
             }

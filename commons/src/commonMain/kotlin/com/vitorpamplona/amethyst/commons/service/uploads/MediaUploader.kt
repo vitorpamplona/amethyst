@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
@@ -74,6 +76,22 @@ interface MediaUploader {
         useH265: Boolean,
         convertGifToMp4: Boolean,
     ): MediaCompressorResult
+
+    /**
+     * Downloads the already-hosted file at [url] and computes its [FileHeader] (hash, size,
+     * dimensions, preview hashes) for an `imeta` tag, guessing the MIME type from the URL's
+     * extension. Null when it cannot be downloaded or decoded.
+     */
+    suspend fun remoteFileHeader(
+        url: String,
+        httpClients: IRoleBasedHttpClientBuilder,
+    ): FileHeader?
+
+    /** The file name the picker reported for [uri] (Android's `DISPLAY_NAME`), if any. */
+    fun displayName(uri: MediaUri): String? = uri.lastPathSegmentOrNull()
+
+    /** Deletes a temporary copy [compressIfNeeded] wrote, once the caller is done with it. */
+    fun discardTempFile(uri: MediaUri) = Unit
 }
 
 /** No media pipeline on this front end yet: every upload fails with a clear message. */
@@ -121,4 +139,9 @@ object UnavailableMediaUploader : MediaUploader {
         useH265: Boolean,
         convertGifToMp4: Boolean,
     ): MediaCompressorResult = MediaCompressorResult(uri, mimeType, null)
+
+    override suspend fun remoteFileHeader(
+        url: String,
+        httpClients: IRoleBasedHttpClientBuilder,
+    ): FileHeader? = null
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.location
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
@@ -75,7 +76,7 @@ class LocationState(
         LocationFlow(context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
             .get(minTimeMs, minDistanceM, onListening)
     },
-) {
+) : DeviceLocation {
     companion object {
         /** A 5 km cell takes 2.5 minutes to cross at 120 km/h; 60s/500m is ample. */
         const val COARSE_MIN_TIME: Long = 60_000L
@@ -111,7 +112,7 @@ class LocationState(
 
     private val latestPreciseLocation = MutableStateFlow<LocationResult>(LocationResult.Loading)
 
-    fun setLocationPermission(newValue: Boolean) {
+    override fun setLocationPermission(newValue: Boolean) {
         if (newValue != hasLocationPermission.value) {
             hasLocationPermission.tryEmit(newValue)
         }
@@ -195,7 +196,7 @@ class LocationState(
                 }
             }.stateIn(scope, SharingStarted.WhileSubscribed(SUBSCRIPTION_STOP_TIMEOUT_MS), cache.value)
 
-    val geohashStateFlow: StateFlow<LocationResult> by lazy {
+    override val geohashStateFlow: StateFlow<LocationResult> by lazy {
         buildGeohashStateFlow(
             tag = "GeohashStateFlow",
             charsCount = GeohashPrecision.KM_5_X_5.digits,
@@ -217,7 +218,7 @@ class LocationState(
      * building-level today. The profile is kept so the intent survives if the
      * app ever requests `ACCESS_FINE_LOCATION`.
      */
-    val preciseGeohashStateFlow: StateFlow<LocationResult> by lazy {
+    override val preciseGeohashStateFlow: StateFlow<LocationResult> by lazy {
         buildGeohashStateFlow(
             tag = "PreciseGeohashStateFlow",
             charsCount = GeohashChannelLevel.BUILDING.chars,

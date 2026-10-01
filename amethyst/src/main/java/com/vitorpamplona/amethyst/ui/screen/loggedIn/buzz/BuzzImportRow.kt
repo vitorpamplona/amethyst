@@ -60,10 +60,11 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_no_messages_yet
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /** A first screen's worth of recent messages to prefetch per visible card, so previews fill in. */
@@ -259,10 +260,10 @@ private fun BuzzChannelPreviewLine(
                 summary != null -> summary
                 author != null -> {
                     val authorName by observeUserName(author, accountViewModel)
-                    val body = event.content.take(80)
+                    val body = (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
                     if (body.isBlank()) authorName else "$authorName: $body"
                 }
-                else -> event.content.take(80)
+                else -> (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
             }
         }
     Text(

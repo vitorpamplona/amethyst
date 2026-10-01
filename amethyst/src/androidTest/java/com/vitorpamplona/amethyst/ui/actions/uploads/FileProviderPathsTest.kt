@@ -24,6 +24,8 @@ import android.os.Environment
 import androidx.core.content.FileProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.getPhotoUri
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.getVideoUri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail

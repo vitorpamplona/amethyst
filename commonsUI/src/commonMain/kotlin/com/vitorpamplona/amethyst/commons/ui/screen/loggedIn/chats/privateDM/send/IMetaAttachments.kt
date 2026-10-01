@@ -1,0 +1,118 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
+import com.vitorpamplona.quartz.nip92IMeta.imetaTagBuilder
+import com.vitorpamplona.quartz.nip94FileMetadata.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
+import com.vitorpamplona.quartz.nip94FileMetadata.dims
+import com.vitorpamplona.quartz.nip94FileMetadata.hash
+import com.vitorpamplona.quartz.nip94FileMetadata.magnet
+import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
+import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
+import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
+import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
+
+class IMetaAttachments {
+    var iMetaAttachments by mutableStateOf<List<IMetaTag>>(emptyList())
+
+    suspend fun downloadAndPrepare(
+        url: String,
+        uploader: MediaUploader,
+        httpClients: IRoleBasedHttpClientBuilder,
+    ) {
+        val imeta =
+            uploader.remoteFileHeader(url, httpClients)?.let {
+                IMetaTagBuilder(url)
+                    .apply {
+                        hash(it.hash)
+                        size(it.size)
+                        it.mimeType?.let { mimeType(it) }
+                        it.dim?.let { dims(it) }
+                        it.blurHash?.let { blurhash(it.blurhash) }
+                        it.thumbHash?.let { thumbhash(it.thumbhash) }
+                    }.build()
+            }
+
+        if (imeta != null) {
+            iMetaAttachments += imeta
+        }
+    }
+
+    fun add(imeta: IMetaTag) {
+        replace(imeta.url, imeta)
+    }
+
+    fun addAll(imetas: List<IMetaTag>) {
+        imetas.forEach {
+            replace(it.url, it)
+        }
+    }
+
+    fun remove(url: String) {
+        iMetaAttachments = iMetaAttachments.filter { it.url != url }
+    }
+
+    fun replace(
+        url: String,
+        iMeta: IMetaTag,
+    ) {
+        iMetaAttachments = iMetaAttachments.filter { it.url != url } + iMeta
+    }
+
+    fun add(
+        result: UploadOrchestrator.OrchestratorResult.ServerResult,
+        alt: String?,
+        contentWarningReason: String?,
+    ) {
+        val iMeta =
+            imetaTagBuilder(result.url) {
+                hash(result.fileHeader.hash)
+                size(result.fileHeader.size)
+                result.fileHeader.mimeType?.let { mimeType(it) }
+                result.fileHeader.dim?.let { dims(it) }
+                result.fileHeader.blurHash?.let { blurhash(it.blurhash) }
+                result.fileHeader.thumbHash?.let { thumbhash(it.thumbhash) }
+                result.magnet?.let { magnet(it) }
+                result.uploadedHash?.let { originalHash(it) }
+
+                alt?.let { alt(it) }
+                contentWarningReason?.let { sensitiveContent(contentWarningReason) }
+            }
+
+        replace(iMeta.url, iMeta)
+    }
+
+    fun filterIsIn(urls: Set<String>) = iMetaAttachments.filter { it.url in urls }
+
+    fun reset() {
+        iMetaAttachments = emptyList()
+    }
+}

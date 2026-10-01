@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.chats.ui.AutoScrollToNewest
 import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
@@ -112,20 +113,19 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaCipher
@@ -219,7 +219,7 @@ private fun CordnGroupChat(
             // it after sending. A note recorded and then abandoned — the screen closed,
             // the room switched — never reached that, so it stayed on disk: an
             // unencrypted copy of a message that was never even sent.
-            pendingVoice?.file?.delete()
+            pendingVoice?.file?.toFile()?.delete()
         }
     }
     var attachError by remember { mutableStateOf<String?>(null) }
@@ -595,11 +595,11 @@ private fun CordnGroupChat(
                 onVoiceNote = { recording ->
                     // Re-recording replaces what was there; the old file is a temp
                     // file this screen owns, so it goes now rather than being leaked.
-                    pendingVoice?.file?.delete()
+                    pendingVoice?.file?.toFile()?.delete()
                     pendingVoice = recording
                 },
                 onRemoveVoice = {
-                    pendingVoice?.file?.delete()
+                    pendingVoice?.file?.toFile()?.delete()
                     pendingVoice = null
                 },
                 attaching = attaching,
@@ -1311,7 +1311,7 @@ private suspend fun sendVoiceNote(
             ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_send_no_session))
 
     try {
-        val bytes = withContext(Dispatchers.IO) { recording.file.readBytes() }
+        val bytes = withContext(Dispatchers.IO) { recording.file.toFile().readBytes() }
         val tag =
             CordnMediaService(accountViewModel.account)
                 .upload(
@@ -1331,7 +1331,7 @@ private suspend fun sendVoiceNote(
         // invisible to the person who sent it.
         room.add(session.manager.send(room.gid, content = caption.trim(), tags = arrayOf(tag)))
     } finally {
-        withContext(Dispatchers.IO) { recording.file.delete() }
+        withContext(Dispatchers.IO) { recording.file.toFile().delete() }
     }
 }
 

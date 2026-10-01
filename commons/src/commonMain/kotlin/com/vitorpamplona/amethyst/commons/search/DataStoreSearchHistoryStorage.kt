@@ -24,6 +24,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import kotlinx.coroutines.flow.first
 
 /**
@@ -54,3 +55,6 @@ class DataStoreSearchHistoryStorage(
         const val FILE_NAME = "search_history"
     }
 }
+
+/** The search history kept in this app's own preference file. */
+fun AppPreferenceStores.searchHistoryStorage(): DataStoreSearchHistoryStorage = DataStoreSearchHistoryStorage(getDataStore(DataStoreSearchHistoryStorage.FILE_NAME))

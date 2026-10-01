@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,8 +52,11 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarAppointmen
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import java.time.Instant
 import java.time.ZoneId
@@ -80,8 +82,8 @@ fun CalendarEventListCard(
     footer: (@Composable () -> Unit)? = null,
 ) {
     val view = note.appointmentView() ?: return
-    val context = LocalContext.current
-    val range = remember(note.idHex) { formatCalendarRange(note, context) }
+    val timeFormatter = rememberTimeOfDayFormatter()
+    val range = remember(note.idHex) { formatCalendarRange(note, timeFormatter) }
     val relative = rememberRelativeTimeLabel(view, note.idHex)
     val event = note.event ?: return
     val detailRoute = remember(event.id) { detailRouteFor(note) }

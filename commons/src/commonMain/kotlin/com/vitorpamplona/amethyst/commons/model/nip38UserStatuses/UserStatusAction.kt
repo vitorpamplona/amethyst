@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip38UserStatuses
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlaying
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
@@ -33,6 +34,25 @@ class UserStatusAction {
             signer: NostrSigner,
             type: String = UserStatusEvent.GENERAL,
         ): UserStatusEvent = UserStatusEvent.create(newStatus, type, signer = signer)
+
+        /** A `music` status for [track] that expires at [expiration], when the track ends. */
+        suspend fun createMusic(
+            track: NowPlaying,
+            expiration: Long,
+            signer: NostrSigner,
+        ): UserStatusEvent =
+            UserStatusEvent.create(
+                msg = track.statusText(),
+                type = UserStatusEvent.MUSIC,
+                expiration = expiration,
+                url = track.url,
+                eventId = track.eventId,
+                addressableId = track.addressId,
+                signer = signer,
+            )
+
+        /** Clears the `music` status: NIP-38 clears a status by replacing it with blank content. */
+        suspend fun clearMusic(signer: NostrSigner): UserStatusEvent = UserStatusEvent.create("", UserStatusEvent.MUSIC, signer = signer)
 
         suspend fun update(
             oldStatus: AddressableNote,
