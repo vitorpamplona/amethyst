@@ -29,7 +29,7 @@ actual fun resolveHttpUrl(
     reference: String,
 ): String? =
     runCatching {
-        val baseUri = base?.let { runCatching { URI(it).toURL().toURI() }.getOrNull() }
+        val baseUri = base?.let { runCatching { URI(it).toURL().toURI().withRootPath() }.getOrNull() }
         val resolved = if (baseUri != null) baseUri.resolve(reference) else URI(reference)
         if (!resolved.scheme.equals("http", ignoreCase = true) &&
             !resolved.scheme.equals("https", ignoreCase = true)
@@ -39,3 +39,23 @@ actual fun resolveHttpUrl(
             resolved.toURL().toString()
         }
     }.getOrNull()
+
+/**
+ * `https://host` as `https://host/`. RFC 3986 resolves a relative reference against an empty base path
+ * as if the path were `/`, and the JDK does, but Android's `java.net.URI` does not: it glued
+ * `y18.svg` onto `https://news.ycombinator.com` as `https://news.ycombinator.comy18.svg`, so the
+ * page's icon (or a relative og:image) pointed at a host that does not exist.
+ */
+private fun URI.withRootPath(): URI =
+    if (isOpaque || !rawPath.isNullOrEmpty() || rawAuthority == null) {
+        this
+    } else {
+        // From the raw (still-encoded) parts: the multi-argument constructor would encode them again.
+        URI(
+            buildString {
+                append(scheme).append("://").append(rawAuthority).append('/')
+                rawQuery?.let { append('?').append(it) }
+                rawFragment?.let { append('#').append(it) }
+            },
+        )
+    }

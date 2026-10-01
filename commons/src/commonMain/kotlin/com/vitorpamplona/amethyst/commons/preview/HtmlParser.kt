@@ -49,7 +49,7 @@ class HtmlParser {
                     ?: bodyBytes.bomCharsetName()
                     ?: HtmlCharsetParser.detectCharset(bodyBytes)
             val content = decodeBytes(bodyBytes, name)
-            MetaTagsParser.parse(content)
+            MetaTagsParser.parse(content, includeTitleAndIcons = true)
         }
 
     private fun ByteArray.bomCharsetName(): String? {
