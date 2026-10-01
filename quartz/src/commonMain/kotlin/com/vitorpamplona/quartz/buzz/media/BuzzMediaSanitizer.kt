@@ -45,6 +45,12 @@ object BuzzMediaSanitizer {
 
     private fun ByteArray.u8(i: Int) = this[i].toInt() and 0xff
 
+    /**
+     * Walks the JPEG marker by marker, entropy-coded scans included, so a metadata segment after a
+     * scan (progressive files interleave tables and scans) is dropped like one before it, and the
+     * file ends at the end-of-image marker that closes the last scan — not at whatever `FFD9` some
+     * appended payload (a motion-photo video, an extra JPEG) happens to contain.
+     */
     fun stripJpeg(b: ByteArray): ByteArray? {
         if (b.size < 4 || b.u8(0) != 0xff || b.u8(1) != 0xd8) return null
         val out = ByteBuilder(b.size)
@@ -58,17 +64,7 @@ object BuzzMediaSanitizer {
             val marker = b.u8(j)
             when {
                 marker == 0xd9 -> {
-                    out.write(byteArrayOf(0xff.toByte(), 0xd9.toByte()), 0, 2)
-                    return out.toByteArray()
-                }
-
-                marker == 0xda -> {
-                    // Start of scan: entropy-coded data (and any later tables/scans) runs to the
-                    // last end-of-image marker; whatever trails it is dropped.
-                    val eoi = lastEoi(b)
-                    if (eoi < j) return null
-                    out.write(byteArrayOf(0xff.toByte()), 0, 1)
-                    out.write(b, j, eoi + 2 - j)
+                    out.write(EOI, 0, 2)
                     return out.toByteArray()
                 }
 
@@ -77,6 +73,8 @@ object BuzzMediaSanitizer {
                     i = j + 1
                 }
 
+                marker == 0xd8 -> return null
+
                 else -> {
                     if (j + 3 > b.size) return null
                     val len = (b.u8(j + 1) shl 8) or b.u8(j + 2)
@@ -84,12 +82,34 @@ object BuzzMediaSanitizer {
                     val end = j + 1 + len
                     if (end > b.size) return null
                     if (keepJpegSegment(marker, b, j + 3, end)) {
-                        out.write(byteArrayOf(0xff.toByte()), 0, 1)
+                        out.write(FF, 0, 1)
                         out.write(b, j, end - j)
                     }
                     i = end
+                    if (marker == 0xda) {
+                        // Entropy-coded data runs to the next marker that isn't a stuffed byte
+                        // (FF 00) or a restart (FF D0-D7).
+                        val scanEnd = endOfScan(b, end) ?: return null
+                        out.write(b, end, scanEnd - end)
+                        i = scanEnd
+                    }
                 }
             }
+        }
+        return null
+    }
+
+    private fun endOfScan(
+        b: ByteArray,
+        from: Int,
+    ): Int? {
+        var k = from
+        while (k + 1 < b.size) {
+            if (b.u8(k) == 0xff) {
+                val next = b.u8(k + 1)
+                if (next != 0x00 && next != 0xff && next !in 0xd0..0xd7) return k
+            }
+            k++
         }
         return null
     }
@@ -121,14 +141,9 @@ object BuzzMediaSanitizer {
         }
     }
 
-    private fun lastEoi(b: ByteArray): Int {
-        var k = b.size - 2
-        while (k >= 0) {
-            if (b.u8(k) == 0xff && b.u8(k + 1) == 0xd9) return k
-            k--
-        }
-        return -1
-    }
+    private val FF = byteArrayOf(0xff.toByte())
+
+    private val EOI = byteArrayOf(0xff.toByte(), 0xd9.toByte())
 
     private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte(), 0x0d, 0x0a, 0x1a, 0x0a)
 

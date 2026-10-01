@@ -407,7 +407,6 @@ class NotificationFeedFilter(
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
-        com.vitorpamplona.quartz.utils.Log
 
         val notifications =
             LocalCache.notes.filterIntoSet { _, note ->
@@ -437,7 +436,6 @@ class NotificationFeedFilter(
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
-        com.vitorpamplona.quartz.utils.Log
 
         return collection.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
     }
@@ -490,9 +488,7 @@ class NotificationFeedFilter(
         val event = note.event
         if (event !is ChatEvent && event !is StreamMessageV2Event) return false
         if (!event.isTaggedUser(me)) return false
-        val group = LocalCache.getRelayGroupChannelForContent(note)
-        com.vitorpamplona.quartz.utils.Log
-        if (group == null) return false
+        val group = LocalCache.getRelayGroupChannelForContent(note) ?: return false
         return BuzzRelayDialect.isBuzz(group.groupId.relayUrl)
     }
 
@@ -531,9 +527,6 @@ class NotificationFeedFilter(
         filterParams: FilterByListParams,
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
-        if (it.event?.content?.startsWith("BZ-6") == true) {
-            com.vitorpamplona.quartz.utils.Log
-        }
 
         // When the user opts out of seeing Messages on the Notification tab, drop
         // direct/group message events (DMs and Marmot group chats) entirely.

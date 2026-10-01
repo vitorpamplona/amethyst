@@ -35,8 +35,15 @@ class FindNostrUrisTest {
     }
 
     @Test
-    fun npubInAPathIsNotCited() {
-        assertTrue(findNostrUris("see https://example.com/p/$npub").isEmpty())
+    fun npubGluedToAWordIsNotCited() {
+        assertTrue(findNostrUris("x$npub").isEmpty())
+    }
+
+    @Test
+    fun aPathLinkToAProfileIsStillCited() {
+        // njump-style links have always been cited; only domain labels are excluded.
+        assertEquals(1, findNostrUris("see https://njump.me/$npub").filterIsInstance<NPub>().size)
+        assertEquals(1, findNostrUris("end of sentence nostr:$npub.").filterIsInstance<NPub>().size)
     }
 
     @Test

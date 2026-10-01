@@ -115,6 +115,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
@@ -139,6 +140,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
@@ -630,6 +632,9 @@ open class ChannelNewMessageViewModel :
         }
     }
 
+    // Buzz channels this composer has already tried to join (see [joinBuzzChannelBeforePosting]).
+    private val buzzJoinAttempted: MutableSet<GroupId> = ConcurrentHashMap.newKeySet()
+
     /**
      * Posting to a Buzz open channel joins it first. The relay takes a non-member's message there,
      * but channel membership is what Buzz lists, counts and offers in its mention picker, and its
@@ -640,6 +645,9 @@ open class ChannelNewMessageViewModel :
         if (channel !is RelayGroupChannel || !BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) return
         if (channel.event?.isBuzzDm() == true) return
         if (channel.membershipOf(accountViewModel.account.userProfile().pubkeyHex).isMember()) return
+        // Once per channel: the relay's roster (39002) lags the join, and every post before it
+        // lands would otherwise re-send the kind-9021 and re-publish the kind-10009 list.
+        if (!buzzJoinAttempted.add(channel.groupId)) return
         try {
             accountViewModel.account.relayGroups.joinRelayGroup(channel)
         } catch (e: Exception) {

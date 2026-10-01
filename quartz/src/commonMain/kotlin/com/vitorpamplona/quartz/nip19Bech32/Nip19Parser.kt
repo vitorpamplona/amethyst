@@ -314,9 +314,9 @@ object Nip19Parser {
     }
 
     /**
-     * True when the entity starting at [at] is glued to the token before it — an `npub1…` that is a
-     * URL's subdomain (`https://npub1….blossom.band/…`) or part of a path or word — rather than a
-     * reference on its own. `nostr:` and `@` prefixes are part of a reference, so they are skipped.
+     * True when the entity starting at [at] is glued to the word before it (`xnpub1…`, `a.npub1…`)
+     * rather than standing on its own. `nostr:` and `@` prefixes are part of a reference, so they are
+     * skipped; a `/` is not glue, so a path link like `njump.me/npub1…` still counts as cited.
      */
     private fun isEmbeddedAt(
         content: String,
@@ -327,8 +327,11 @@ object Nip19Parser {
         if (j >= 6 && content.regionMatches(j - 6, "nostr:", 0, 6, ignoreCase = true)) j -= 6
         if (j == 0) return false
         val c = content[j - 1]
-        return c.isLetterOrDigit() || c == '/' || c == '.' || c == '-' || c == '_' || c == '=' || c == '?' || c == '&' || c == '#'
+        return c.isLetterOrDigit() || c == '.' || c == '-' || c == '_'
     }
+
+    /** The entity is a domain label — `npub1….blossom.band` — so it names a host, not a person. */
+    private fun isDomainLabel(additionalChars: String): Boolean = additionalChars.length > 1 && additionalChars[0] == '.' && additionalChars[1].isLetterOrDigit()
 
     private fun allBech32(
         content: String,
@@ -371,7 +374,9 @@ object Nip19Parser {
     fun parseAllStandalone(content: String): List<Entity> {
         val returningList = mutableListOf<Entity>()
         forEachNip19Match(content, FIXED_58_PREFIXES, VARIABLE_PREFIXES, standaloneOnly = true) { type, key, additionalChars ->
-            parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
+            if (!isDomainLabel(additionalChars)) {
+                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
+            }
         }
         return returningList
     }

@@ -91,4 +91,23 @@ class BuzzMediaSanitizerTest {
         assertContentEquals(notJpeg, BuzzMediaSanitizer.sanitize(notJpeg, "image/jpeg"))
         assertEquals(true, BuzzMediaSanitizer.handles("IMAGE/JPEG"))
     }
+
+    @Test
+    fun metadataAfterAScanIsDroppedToo() {
+        val secondScan = seg(0xda, bytes(1, 1, 0, 0, 63, 0)) + bytes(0x77, 0x01)
+        val input = bytes(0xff, 0xd8) + jfif + dqt + sosAndData + exif + seg(0xc4, ByteArray(5) { 2 }) + secondScan + eoi
+
+        val clean = BuzzMediaSanitizer.sanitize(input, "image/jpeg")
+
+        assertContentEquals(bytes(0xff, 0xd8) + jfif + dqt + sosAndData + seg(0xc4, ByteArray(5) { 2 }) + secondScan + eoi, clean)
+    }
+
+    @Test
+    fun appendedPayloadEndsAtTheRealEndOfImage() {
+        // A motion photo appends a video (or another JPEG) that can itself contain FF D9.
+        val appended = bytes(0x00, 0x11, 0xff, 0xd9, 0x22)
+        val input = bytes(0xff, 0xd8) + jfif + dqt + sosAndData + eoi + appended
+
+        assertContentEquals(bytes(0xff, 0xd8) + jfif + dqt + sosAndData + eoi, BuzzMediaSanitizer.sanitize(input, "image/jpeg"))
+    }
 }

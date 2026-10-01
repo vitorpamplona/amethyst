@@ -1386,7 +1386,7 @@ open class EventCache :
                 // A Buzz forum comment counts as a reply of its thread's root post (and of the comment
                 // it answers, when nested), so the forum list's reply count sees it. A direct reply
                 // carries only the `reply` marker, which then IS the root.
-                listOfNotNull(event.threadRoot(), event.replyTo()).distinct().map { getOrCreateNote(it) }
+                listOfNotNull(event.threadRoot(), event.replyTo()).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             is GitStatusEvent -> {

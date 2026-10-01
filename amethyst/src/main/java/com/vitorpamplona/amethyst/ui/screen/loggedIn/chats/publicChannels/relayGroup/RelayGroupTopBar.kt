@@ -173,7 +173,15 @@ fun RelayGroupTopBar(
         if (!isBuzzRelay) return@LaunchedEffect
         accountViewModel.account.userMetadata
             .getUserMetadataFlow()
-            .collect { accountViewModel.account.relayGroups.shareProfileWithBuzzWorkspace(channel.groupId.relayUrl) }
+            .collect {
+                try {
+                    accountViewModel.account.relayGroups.shareProfileWithBuzzWorkspace(channel.groupId.relayUrl)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    // A refused/failed signature must not take down the screen; it retries next time.
+                    Log.w("RelayGroupTopBar", "Could not share the profile with ${channel.groupId.relayUrl.url}", e)
+                }
+            }
     }
 
     TopBarExtensibleWithBackButton(
@@ -286,8 +294,10 @@ fun RelayGroupTopBar(
                 // is still what Buzz lists, counts and offers in its mention picker — its own client
                 // shows Join here too, so a reader can become a member.
                 FilledTonalButton(onClick = {
-                    // Closed groups need an invite code; open groups join directly.
-                    if (channel.isClosed()) {
+                    // Closed groups need an invite code; open groups join directly. Every Buzz channel
+                    // carries the `closed` tag, so a Buzz OPEN channel (one that doesn't require
+                    // membership to post) joins directly too.
+                    if (channel.isClosed() && channel.requiresMembershipToPost()) {
                         showJoinCode = true
                     } else {
                         requested = true

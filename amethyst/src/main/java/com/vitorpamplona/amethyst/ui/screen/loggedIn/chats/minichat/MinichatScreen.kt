@@ -161,12 +161,11 @@ fun MinichatScreen(
     val canPost by remember { derivedStateOf { composer.text.isNotBlank() } }
     // A thread in a Buzz workspace channel: its media must live on the workspace's own server
     // (the relay refuses any other image host) and its typing signal is scoped to the thread.
-    val buzzGroup =
-        remember(rootNote) {
-            rootNote.inGatherers
-                ?.firstNotNullOfOrNull { it as? RelayGroupChannel }
-                ?.takeIf { BuzzRelayDialect.isBuzz(it.groupId.relayUrl) }
-        }
+    // Reactive on the dialect: a relay is marked Buzz only once its first verified Buzz event lands,
+    // which a cold start can reach after this screen opens.
+    val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
+    val relayGroup = remember(rootNote) { rootNote.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } }
+    val buzzGroup = relayGroup?.takeIf { it.groupId.relayUrl in buzzRelays }
     val uploadState =
         remember(buzzGroup) {
             ChatFileUploadState(

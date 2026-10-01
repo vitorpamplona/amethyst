@@ -84,6 +84,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
@@ -137,13 +138,19 @@ class AccountRelayGroupActions(
             if (key in current) return
             if (profileSharedWith.compareAndSet(current, current + key)) break
         }
-        val fresh =
-            if (TimeUtils.now() - profile.createdAt < BUZZ_FRESH_PROFILE_SECS) {
-                profile
-            } else {
-                account.signer.sign<MetadataEvent>(TimeUtils.now(), MetadataEvent.KIND, profile.tags, profile.content)
-            }
-        account.client.publish(fresh, setOf(relay))
+        try {
+            val fresh =
+                if (TimeUtils.now() - profile.createdAt < BUZZ_FRESH_PROFILE_SECS) {
+                    profile
+                } else {
+                    account.signer.sign<MetadataEvent>(TimeUtils.now(), MetadataEvent.KIND, profile.tags, profile.content)
+                }
+            account.client.publish(fresh, setOf(relay))
+        } catch (e: Throwable) {
+            // Not shared (signer refused, timed out, …): forget the attempt so a later visit retries.
+            profileSharedWith.update { it - key }
+            throw e
+        }
     }
 
     /**

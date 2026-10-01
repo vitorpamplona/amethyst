@@ -31,7 +31,8 @@ import com.vitorpamplona.quartz.utils.Log
 /**
  * Listens to INostrClient's relay messages and reports `OK`s for published events: [onRelayReceived] for an acceptance and, when given,
  * [onRelayRejected] for a definitive refusal with the relay's reason. An `auth-required:` refusal
- * is NOT reported — the client authenticates and resends, so it is not the relay's final answer.
+ * is NOT reported — the client authenticates and resends, so it is not the relay's final answer —
+ * and a `duplicate:` refusal counts as an acceptance.
  */
 class RelayInsertConfirmationCollector(
     val client: INostrClient,
@@ -46,7 +47,9 @@ class RelayInsertConfirmationCollector(
                 msg: Message,
             ) {
                 if (msg !is OkMessage) return
-                if (msg.success) {
+                // NIP-01: "duplicate:" means the relay already has the event. Most relays send it
+                // with `true`, some with `false`; either way the event is there.
+                if (msg.success || msg.message.startsWith(DUPLICATE_PREFIX)) {
                     onRelayReceived(msg.eventId, relay)
                 } else if (!msg.message.startsWith(AUTH_REQUIRED_PREFIX)) {
                     onRelayRejected?.invoke(msg.eventId, relay, msg.message)
@@ -67,3 +70,5 @@ class RelayInsertConfirmationCollector(
 }
 
 private const val AUTH_REQUIRED_PREFIX = "auth-required:"
+
+private const val DUPLICATE_PREFIX = "duplicate:"

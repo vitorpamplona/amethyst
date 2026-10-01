@@ -237,8 +237,11 @@ fun RenderTextEvent(
 /** The newest in-place edit of a chat message (Concord, Buzz or Marmot), recomposing as edits land. */
 @Composable
 fun observeChatMessageEdit(note: Note): Note? {
+    // Resolved once per note, not on every recomposition: produceState's initialValue argument is
+    // re-evaluated each time this runs, and these feeds recompose a lot.
+    val initial = remember(note) { note.latestChatEdit() }
     val latest by
-        produceState(initialValue = note.latestChatEdit(), note.idHex) {
+        produceState(initialValue = initial, note.idHex) {
             note
                 .flow()
                 .edits.stateFlow
