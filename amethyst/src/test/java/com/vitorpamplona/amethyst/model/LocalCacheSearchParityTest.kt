@@ -82,7 +82,18 @@ class LocalCacheSearchParityTest {
 
             // LocalCache.consume refuses the main thread; a plain JVM test has no Looper, so the
             // check passes and the events land synchronously.
-            corpus.forEach { LocalCache.justConsumeMyOwnEvent(it) }
+            //
+            // The corpus is live relay data and carries the same long-form article posted by two
+            // authors, which the anti-spam filter keeps out of the cache as a copy. This class tests
+            // the filter path, not spam policy, so the whole corpus goes in; the flag is restored
+            // because LocalCache is shared with every other test class in the JVM.
+            val antiSpamWasActive = LocalCache.antiSpam.active
+            LocalCache.antiSpam.active = false
+            try {
+                corpus.forEach { LocalCache.justConsumeMyOwnEvent(it) }
+            } finally {
+                LocalCache.antiSpam.active = antiSpamWasActive
+            }
         }
     }
 

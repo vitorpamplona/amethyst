@@ -63,6 +63,8 @@ import coil3.request.ImageRequest
 import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.audio.PlayableLayout
+import com.vitorpamplona.amethyst.commons.audio.playableLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -231,52 +233,85 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
-            // The fallback classifies the URL string, so compute it once per content — for audio
-            // the cache miss is permanent and this branch re-runs on every recomposition.
-            val fallbackRatio =
-                remember(content.url, content.mimeType) {
-                    unknownMediaAspectRatio(content.mimeType, content.url)
+            // Audio, or media that may be audio, gets an audio card: B (waveform) or C (cover) when the
+            // declaration says audio, A while it can't tell. The player's probe, once in, overrides the
+            // declaration — undecided files find their real card, mislabelled videos come back here.
+            var probedAudioOnly by remember(content.url) { mutableStateOf(PlayableMediaProbeCache.get(content.url)) }
+            val layout =
+                remember(content.url, content.mimeType, content.artworkUri, content.isLiveStream, probedAudioOnly) {
+                    // A live stream is the one stream we know is video-first; it keeps the video player.
+                    if (content.isLiveStream) {
+                        PlayableLayout.VIDEO
+                    } else {
+                        playableLayout(content.mimeType, content.url, hasArtwork = content.artworkUri != null, probedAudioOnly = probedAudioOnly)
+                    }
                 }
-            val ratio =
-                content.dim?.aspectRatioOrNull()
-                    ?: MediaAspectRatioCache.get(content.url)
-                    ?: fallbackRatio
-            ContentWarningGate(
-                isSensitive = content.contentWarning != null,
-                reasons = setOfNotNull(content.contentWarning),
-                preloadUrls = emptyList(),
-                accountViewModel = accountViewModel,
-                modifier = mediaSizingModifier(ratio, contentScale),
-                backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
-            ) {
-                Box(
-                    // The sizing modifier is repeated here because ContentWarningGate only applies
-                    // the one it is handed when the content is actually sensitive — the common
-                    // non-sensitive path emits content() bare. Without a height constraint of its
-                    // own this box stretches to whatever ceiling encloses it and the player
-                    // letterboxes the frame inside, which is what put black bars above and below
-                    // live streams (their enclosure is StreamingHeaderModifier's 300.dp cap).
-                    modifier = mediaSizingModifier(ratio, contentScale).then(boundsTrackingModifier),
-                    contentAlignment = Alignment.Center,
+
+            if (layout != PlayableLayout.VIDEO) {
+                ContentWarningGate(
+                    isSensitive = content.contentWarning != null,
+                    reasons = setOfNotNull(content.contentWarning),
+                    preloadUrls = emptyList(),
+                    accountViewModel = accountViewModel,
                 ) {
-                    VideoView(
-                        videoUri = content.url,
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        authorName = content.authorName,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        nostrUriCallback = content.uri,
-                        onDialog = { dialogOpen = true },
+                    PlayableAudioView(
+                        content = content,
+                        layout = layout,
+                        onProbed = { audioOnly ->
+                            PlayableMediaProbeCache.put(content.url, audioOnly)
+                            probedAudioOnly = audioOnly
+                        },
                         accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                        isLiveStream = content.isLiveStream,
-                        hash = content.hash,
-                        captions = content.captions,
                     )
+                }
+            } else {
+                // The fallback classifies the URL string, so compute it once per content — for audio
+                // the cache miss is permanent and this branch re-runs on every recomposition.
+                val fallbackRatio =
+                    remember(content.url, content.mimeType) {
+                        unknownMediaAspectRatio(content.mimeType, content.url)
+                    }
+                val ratio =
+                    content.dim?.aspectRatioOrNull()
+                        ?: MediaAspectRatioCache.get(content.url)
+                        ?: fallbackRatio
+                ContentWarningGate(
+                    isSensitive = content.contentWarning != null,
+                    reasons = setOfNotNull(content.contentWarning),
+                    preloadUrls = emptyList(),
+                    accountViewModel = accountViewModel,
+                    modifier = mediaSizingModifier(ratio, contentScale),
+                    backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
+                ) {
+                    Box(
+                        // The sizing modifier is repeated here because ContentWarningGate only applies
+                        // the one it is handed when the content is actually sensitive — the common
+                        // non-sensitive path emits content() bare. Without a height constraint of its
+                        // own this box stretches to whatever ceiling encloses it and the player
+                        // letterboxes the frame inside, which is what put black bars above and below
+                        // live streams (their enclosure is StreamingHeaderModifier's 300.dp cap).
+                        modifier = mediaSizingModifier(ratio, contentScale).then(boundsTrackingModifier),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        VideoView(
+                            videoUri = content.url,
+                            mimeType = content.mimeType,
+                            title = content.description,
+                            artworkUri = content.artworkUri,
+                            authorName = content.authorName,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            nostrUriCallback = content.uri,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                            isLiveStream = content.isLiveStream,
+                            hash = content.hash,
+                            captions = content.captions,
+                        )
+                    }
                 }
             }
         }

@@ -6362,6 +6362,9 @@
     <string name="browser_pill_download_risky">This file type can run code. Check that the name matches what you meant to get.</string>
     <string name="browser_pill_download_save">Save</string>
     <string name="browser_pill_download_from">From %1$s</string>
+    <string name="audio_card_untitled">%1$s audio</string>
+    <string name="audio_card_untitled_no_format">Audio</string>
+    <string name="playable_media_untitled">Media</string>
     <string name="now_playing_settings">Now Playing</string>
     <string name="now_playing_search_keywords">music listening status song podcast spotify nip38 share playing</string>
     <string name="now_playing_description">Your status is public. It appears under your name and disappears when the track ends or you stop playing.</string>
