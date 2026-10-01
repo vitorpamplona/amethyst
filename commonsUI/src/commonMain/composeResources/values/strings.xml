@@ -2327,6 +2327,7 @@
     <string name="chat_system_renamed_conversation_you">You renamed the conversation</string>
     <string name="chat_system_renamed_conversation_to">%1$s renamed the conversation to %2$s</string>
     <string name="chat_system_renamed_conversation_to_you">You renamed the conversation to %1$s</string>
+    <string name="chat_notification_renamed_conversation_to">Renamed the conversation to %1$s</string>
     <string name="buzz_message_edited">(edited)</string>
     <string name="buzz_diff_truncated">(diff truncated)</string>
     <string name="buzz_system_member_joined">%1$s joined</string>

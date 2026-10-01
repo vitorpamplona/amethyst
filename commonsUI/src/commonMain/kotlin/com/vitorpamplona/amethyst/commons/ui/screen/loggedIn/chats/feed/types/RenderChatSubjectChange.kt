@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatSystemMessage
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_system_renamed_conversation
 import com.vitorpamplona.amethyst.commons.resources.chat_system_renamed_conversation_to
@@ -36,20 +37,13 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatTime
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 
 /**
- * A NIP-17 message that only renames the conversation: it carries a `subject` tag and no text.
- * The room's subject divider already announces the new name above it, so drawing it as a bubble
- * left an empty balloon under the divider whose only content was the time.
- */
-fun isSubjectOnlyChatMessage(event: Event?): Boolean = event is ChatMessageEvent && event.content.isBlank() && event.subject() != null
-
-/**
  * A rename ([isSubjectOnlyChatMessage]) as a centered system line — "Alice renamed the
- * conversation" with Alice's avatar — under the subject divider that carries the new name.
+ * conversation" with Alice's avatar — under the subject divider that carries the new name. The
+ * divider alone left an empty bubble below it whose only content was the time.
  *
  * Unlike the other system lines this one is a real message with a sender and a delivery, so the
  * pill keeps the bubble's tappable time and, on our own renames, its relay-acceptance ticks.

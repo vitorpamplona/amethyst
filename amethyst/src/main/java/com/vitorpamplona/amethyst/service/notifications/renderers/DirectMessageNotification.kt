@@ -24,7 +24,11 @@ import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_notification_renamed_conversation_to
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
@@ -33,6 +37,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyA
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -94,7 +99,13 @@ object DirectMessageNotification {
             if (decrypt) {
                 NotificationContent.decryptContent(chatNote, account.signer) ?: return
             } else {
-                chatNote.event?.content ?: return
+                val event = chatNote.event ?: return
+                // A rename with no text would post an empty notification; say what it did instead.
+                if (event.isSubjectOnlyChatMessage()) {
+                    loadStringRes(Res.string.chat_notification_renamed_conversation_to, event.subject() ?: "")
+                } else {
+                    event.content
+                }
             }
 
         val accountNpub = NotificationRoutes.accountNpub(account)
