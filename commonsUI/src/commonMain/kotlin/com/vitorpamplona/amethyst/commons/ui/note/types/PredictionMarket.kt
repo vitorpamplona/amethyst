@@ -131,24 +131,34 @@ private class PredictionMarketCardState(
 ) {
     fun isWinner(outcome: String) = resolution != null && outcome.equals(resolution, ignoreCase = true)
 
+    /** Two outcomes, one a yes and one a no — "YES"/"NO", "Yes (stays online)"/"No (goes offline)". */
+    val isBinary = outcomes.size == 2 && outcomes.any(::isYes) && outcomes.any(::isNo)
+
     companion object {
         fun from(
             event: PredictionMarketEvent,
             now: Long,
         ) = PredictionMarketCardState(
             title = event.title() ?: socialPostHeadline(event.content),
-            description = event.description(),
+            description = event.description()?.let(::collapseBlankLines),
             outcomes = event.outcomes().toImmutableList(),
             status = event.status(now),
             resolution = event.resolution(),
             endsAt = event.endsAt(),
-            category = event.category()?.let(::humanizeCategory),
+            category = event.category(),
             isDemo = event.isDemo(),
             minBetSats = event.minBetSats()?.let(::formatGrouped),
             maxBetSats = event.maxBetSats()?.let(::formatGrouped),
             feePercent = event.feePercent()?.let(::formatPercent),
             cancelReason = event.cancelReason(),
         )
+
+        fun isYes(outcome: String) = YES.containsMatchIn(outcome)
+
+        fun isNo(outcome: String) = NO.containsMatchIn(outcome)
+
+        private val YES = Regex("""^\s*yes\b""", RegexOption.IGNORE_CASE)
+        private val NO = Regex("""^\s*no\b""", RegexOption.IGNORE_CASE)
 
         /** The first line of a social-post `content`, for a market with no title anywhere else. */
         private fun socialPostHeadline(content: String): String? {
@@ -162,11 +172,13 @@ private class PredictionMarketCardState(
             return if (value == asLong.toDouble()) "$asLong%" else "$value%"
         }
 
-        private fun humanizeCategory(category: String): String =
-            category
-                .replace('-', ' ')
-                .replace('_', ' ')
-                .replaceFirstChar { if (it.isLowerCase()) it.titlecaseChar() else it }
+        /**
+         * BAO's descriptions carry paragraph breaks ("…UTC.\n\nSource of Truth: …"); clipped to a
+         * few lines, a blank line reads as a hole in the card. One line break each, never a gap.
+         */
+        private fun collapseBlankLines(text: String): String = text.trim().replace(BLANK_LINES, "\n")
+
+        private val BLANK_LINES = Regex("""\s*\n\s*\n\s*""")
     }
 }
 
@@ -274,12 +286,13 @@ private fun MarketStatusPill(status: PredictionMarketStatus) {
             )
         }
 
+        // Called off is not an error: quiet, like Closed.
         PredictionMarketStatus.CANCELLED -> {
             StatusPill(
                 label = stringRes(Res.string.prediction_market_status_cancelled),
                 symbol = MaterialSymbols.Block,
-                container = Color(0xFFCF222E),
-                content = Color.White,
+                container = MaterialTheme.colorScheme.surfaceVariant,
+                content = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -318,6 +331,11 @@ private fun MarketOutcomes(state: PredictionMarketCardState) {
     // A cancelled market has no winner and takes no bets: its outcomes are shown, but muted.
     val muted = state.status == PredictionMarketStatus.CANCELLED
 
+    if (state.isBinary) {
+        BinaryOutcomes(state, muted)
+        return
+    }
+
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -335,6 +353,63 @@ private fun MarketOutcomes(state: PredictionMarketCardState) {
         }
     }
 }
+
+/**
+ * A yes/no market as its two sides, side by side and full width — the way betting apps lay out
+ * Yes and No: green and red while it is undecided; once it resolves the winner keeps its colour
+ * and a check, and the loser goes quiet.
+ */
+@Composable
+private fun BinaryOutcomes(
+    state: PredictionMarketCardState,
+    muted: Boolean,
+) {
+    val decided = state.resolution != null
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        state.outcomes.forEach { outcome ->
+            val isWinner = state.isWinner(outcome)
+            val quiet = muted || (decided && !isWinner)
+            val side =
+                if (PredictionMarketCardState.isYes(outcome)) {
+                    MaterialTheme.colorScheme.allGoodColor
+                } else {
+                    MaterialTheme.colorScheme.redColorOnSecondSurface
+                }
+            val color = if (quiet) MaterialTheme.colorScheme.placeholderText else side
+            Row(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(SideShape)
+                        .background(if (quiet) Color.Transparent else side.copy(alpha = if (isWinner) 0.20f else 0.12f))
+                        .border(1.dp, if (quiet) MaterialTheme.colorScheme.subtleBorder else side.copy(alpha = 0.45f), SideShape)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (isWinner) {
+                    Icon(
+                        symbol = MaterialSymbols.CheckCircle,
+                        contentDescription = stringRes(Res.string.prediction_market_winning_outcome),
+                        tint = color,
+                        filled = true,
+                        modifier = Modifier.padding(end = 4.dp).size(16.dp),
+                    )
+                }
+                Text(
+                    text = outcome,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = color,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private val SideShape = RoundedCornerShape(10.dp)
 
 @Composable
 private fun OutcomeChip(
@@ -407,7 +482,7 @@ private fun CancelReason(reason: String) {
     MarketFootnote(
         symbol = MaterialSymbols.Block,
         text = stringRes(Res.string.prediction_market_cancel_reason, reason),
-        color = MaterialTheme.colorScheme.redColorOnSecondSurface,
+        color = MaterialTheme.colorScheme.placeholderText,
     )
 }
 

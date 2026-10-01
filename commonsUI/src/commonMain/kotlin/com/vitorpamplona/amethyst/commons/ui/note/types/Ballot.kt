@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,8 +38,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ballots.BallotAnswer
 import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
@@ -140,7 +146,17 @@ fun BallotCard(event: BallotEvent) {
 
             if (state.answers.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    state.answers.forEach { AnswerRow(it) }
+                    // The answers as a small table: one bordered block, a hairline between rows.
+                    Column(
+                        Modifier
+                            .clip(AnswersShape)
+                            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, AnswersShape),
+                    ) {
+                        state.answers.forEachIndexed { i, answer ->
+                            if (i > 0) HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.subtleBorder)
+                            AnswerRow(answer)
+                        }
+                    }
 
                     if (state.hiddenAnswers > 0) {
                         Text(
@@ -167,31 +183,33 @@ private fun AnswerRow(answer: BallotAnswer) {
             answer.question
         }
 
-    Row(verticalAlignment = Alignment.Top) {
+    Row(
+        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(
             text = question,
             style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(0.4f),
         )
-        Icon(
-            symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.padding(horizontal = 4.dp).size(16.dp),
-        )
         Text(
             text = answer.answer,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.End,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(0.6f),
         )
     }
 }
+
+private val AnswersShape = RoundedCornerShape(10.dp)
 
 @Composable
 private fun ProofHash(hash: String) {
