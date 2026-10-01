@@ -33,14 +33,21 @@ class MprisNowPlayingReader(
     private val run: suspend (List<String>) -> String? = { runCommand(it) },
     private val nowSeconds: () -> Long = TimeUtils::now,
 ) : OsNowPlayingReader {
+    // A player's name never changes while its bus name lives; asking once saves a process per poll.
+    private val identities = mutableMapOf<String, String?>()
+
     override suspend fun read(): NowPlaying? {
         val names = run(LIST_NAMES)?.let(MprisParser::playerNames).orEmpty()
+        identities.keys.retainAll(names.toSet())
 
         for (busName in names) {
             val properties = run(getAll(busName))?.let(MprisParser::properties) ?: continue
             if (properties["PlaybackStatus"]?.firstOrNull() != "Playing") continue
 
-            val identity = run(getIdentity(busName))?.let(MprisParser::properties)?.get("Identity")?.firstOrNull()
+            val identity =
+                identities.getOrPut(busName) {
+                    run(getIdentity(busName))?.let(MprisParser::properties)?.get("Identity")?.firstOrNull()
+                }
             return MprisParser.toNowPlaying(busName, identity, properties, nowSeconds())
         }
 
@@ -170,9 +177,17 @@ object MprisParser {
             artist = artist,
             source = NowPlayingSource.OtherApp(id, label),
             endsAt = NowPlaying.endsAt(nowSeconds, durationMs, positionMs, rate),
-            url = properties["xesam:url"]?.firstOrNull()?.takeIf { it.startsWith("https://") },
+            url = properties["xesam:url"]?.firstOrNull()?.let(::shareableUrl),
         )
     }
+
+    /**
+     * Only links that name a track are shared. Browsers fill `xesam:url` with the page of whatever
+     * tab is playing, and a local player with a file path: neither belongs in a public status.
+     */
+    fun shareableUrl(url: String): String? = url.takeIf { SHAREABLE_URL.matches(it) }
+
+    private val SHAREABLE_URL = Regex("""^https://open\.spotify\.com/(intl-[a-z-]+/)?(track|episode)/[A-Za-z0-9]+(\?.*)?$""")
 
     /** `string "x"`, `object path "/x"`, `int64 5`, `double 1`, `boolean true` -> the value. */
     private fun scalar(value: String): String? =

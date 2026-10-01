@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.math.abs
 
 /** What one of the app's players is audibly playing: its item's `nostr:` URI and where it ends. */
 @Immutable
@@ -37,7 +38,15 @@ data class InAppPlayback(
     val title: String?,
     val artist: String?,
     val endsAt: Long?,
-)
+) {
+    /** Same item, ending within a few seconds: a position tick rather than a change. */
+    fun isSameMoment(other: InAppPlayback?): Boolean {
+        if (other == null || callbackUri != other.callbackUri || title != other.title || artist != other.artist) return false
+        val a = endsAt
+        val b = other.endsAt
+        return if (a == null || b == null) a == b else abs(a - b) <= NowPlaying.MOMENT_TOLERANCE_SECONDS
+    }
+}
 
 /**
  * The players in this process that are audibly playing something with a Nostr event behind it,
@@ -49,19 +58,21 @@ object InAppPlaybackRegistry {
 
     val flow: StateFlow<Map<Int, InAppPlayback>> = playing
 
-    /** The most recently started playback, if any. */
-    fun current(all: Map<Int, InAppPlayback>): InAppPlayback? = all.values.lastOrNull()
-
     fun update(
         player: Player,
         playback: InAppPlayback?,
     ) {
         val key = System.identityHashCode(player)
         playing.update { current ->
+            val previous = current[key]
             when {
-                playback == null -> if (key in current) current - key else current
-                current[key] == playback -> current
-                // Remove first so a new track moves to the end and becomes the current one.
+                playback == null -> if (previous != null) current - key else current
+                // Live streams and some players report timeline/position changes every few
+                // seconds; keeping the same map avoids re-running everything downstream.
+                playback.isSameMoment(previous) -> current
+                // The same item with a corrected end keeps its place; a new item moves to the
+                // end, so iterating backwards visits the most recently started first.
+                previous?.callbackUri == playback.callbackUri -> current + (key to playback)
                 else -> (current - key) + (key to playback)
             }
         }

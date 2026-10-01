@@ -162,6 +162,23 @@ class OsNowPlayingReaderTest {
         }
 
     @Test
+    fun mprisSharesTrackLinksButNeverPagesOrFiles() {
+        assertEquals(
+            "https://open.spotify.com/track/0DiWol3AO6WpXZgp0goxAV",
+            MprisParser.shareableUrl("https://open.spotify.com/track/0DiWol3AO6WpXZgp0goxAV"),
+        )
+        assertEquals(
+            "https://open.spotify.com/intl-pt/episode/4rOoJ6Egrf8K2IrywzwOMk?si=abc",
+            MprisParser.shareableUrl("https://open.spotify.com/intl-pt/episode/4rOoJ6Egrf8K2IrywzwOMk?si=abc"),
+        )
+        // Chromium reports the playing tab's page; VLC the file it opened.
+        assertNull(MprisParser.shareableUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
+        assertNull(MprisParser.shareableUrl("https://mail.example.com/inbox/secret-thread"))
+        assertNull(MprisParser.shareableUrl("file:///home/me/Music/song.mp3"))
+        assertNull(MprisParser.shareableUrl("https://open.spotify.com.evil.example/track/abc"))
+    }
+
+    @Test
     fun mprisPlayerIdDropsTheInstanceSuffix() {
         assertEquals("vlc", MprisParser.playerId("org.mpris.MediaPlayer2.vlc.instance4242"))
         assertEquals("chromium", MprisParser.playerId("org.mpris.MediaPlayer2.chromium.instance_1_23"))

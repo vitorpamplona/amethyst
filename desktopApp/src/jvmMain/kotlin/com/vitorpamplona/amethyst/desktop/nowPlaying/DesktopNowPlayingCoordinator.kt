@@ -37,7 +37,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Desktop: shares what another app on this computer is playing as the account's NIP-38 music
- * status. The OS is polled every [pollMs] only while the account has
+ * status. The OS is polled every [pollMs] while something plays ([idlePollMs] while nothing
+ * does), and only while the account has
  * [com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSettings.shareOtherApps]
  * on, so nothing is spawned (and macOS never asks for Automation access) until the user opts in.
  *
@@ -49,6 +50,7 @@ class DesktopNowPlayingCoordinator(
     private val publishEvent: (Event) -> Unit,
     private val reader: OsNowPlayingReader? = OsNowPlayingReader.forThisOs(),
     private val pollMs: Long = 15_000,
+    private val idlePollMs: Long = 30_000,
 ) {
     /** Runs until the calling coroutine (the logged-in account's composition) is cancelled. */
     suspend fun run() {
@@ -67,8 +69,12 @@ class DesktopNowPlayingCoordinator(
                             return@collectLatest
                         }
                         while (true) {
-                            otherApps.value = reader.read()
-                            delay(pollMs)
+                            val track = reader.read()
+                            // Keep the last value when only the position moved, so nothing downstream re-runs.
+                            if (track == null || !track.isSameMoment(otherApps.value)) otherApps.value = track
+                            // Each poll spawns processes (PowerShell on Windows is the heavy one), so
+                            // look less often while nothing plays; a new song shows up within 30s.
+                            delay(if (track == null) idlePollMs else pollMs)
                         }
                     }
             }

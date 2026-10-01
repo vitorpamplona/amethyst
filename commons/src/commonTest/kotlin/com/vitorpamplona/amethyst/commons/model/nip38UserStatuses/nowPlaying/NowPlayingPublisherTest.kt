@@ -29,7 +29,9 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NowPlayingPublisherTest {
@@ -203,6 +205,18 @@ class NowPlayingPublisherTest {
     fun statusTextFollowsTheNipExample() {
         assertEquals("Intergalactic - Beastie Boys", NowPlaying("Intergalactic", "Beastie Boys", NowPlayingSource.InApp).statusText())
         assertEquals("Intergalactic", NowPlaying("Intergalactic", null, NowPlayingSource.InApp).statusText())
+    }
+
+    @Test
+    fun aPositionTickIsTheSameMomentButASeekIsNot() {
+        val song = NowPlaying("Song", "Band", NowPlayingSource.InApp, endsAt = 1_000)
+
+        assertTrue(song.isSameMoment(song.copy(endsAt = 1_004)))
+        assertFalse(song.isSameMoment(song.copy(endsAt = 1_060)))
+        assertFalse(song.isSameMoment(song.copy(title = "Other")))
+        assertFalse(song.isSameMoment(song.copy(source = NowPlayingSource.OtherApp("x", "X"))))
+        assertFalse(song.isSameMoment(null))
+        assertTrue(song.copy(endsAt = null).isSameMoment(song.copy(endsAt = null)))
     }
 
     @Test

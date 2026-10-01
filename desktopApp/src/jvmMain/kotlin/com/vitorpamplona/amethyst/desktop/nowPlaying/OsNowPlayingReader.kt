@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.nowPlaying
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlaying
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import java.util.concurrent.TimeUnit
 
 /** Reads what the OS says another app is playing right now. */
@@ -45,31 +45,38 @@ interface OsNowPlayingReader {
     }
 }
 
-/** Runs a short-lived command and returns its stdout, or null if it failed or took too long. */
+/**
+ * Runs a short-lived command and returns its stdout, or null if it failed or took too long.
+ * Interruptible, so turning sharing off or closing the app does not wait out a slow command, and
+ * the process never outlives the call.
+ */
 internal suspend fun runCommand(
     command: List<String>,
     timeoutSeconds: Long = 5,
 ): String? =
-    withContext(Dispatchers.IO) {
+    runInterruptible(Dispatchers.IO) {
+        var process: Process? = null
         try {
-            val process =
+            val started =
                 ProcessBuilder(command)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start()
-            process.outputStream.close()
+            process = started
+            started.outputStream.close()
             // Wait before reading so a hung command cannot block the read forever. The outputs
             // here are a few KB, well under the pipe buffer, so the command never blocks on it.
-            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
-                null
-            } else if (process.exitValue() != 0) {
+            if (!started.waitFor(timeoutSeconds, TimeUnit.SECONDS) || started.exitValue() != 0) {
                 null
             } else {
-                process.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                started.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
             }
+        } catch (e: InterruptedException) {
+            throw e
         } catch (e: Exception) {
             // Missing binary (no dbus-send, no osascript) or a denied permission: nothing to report.
             Log.d("OsNowPlayingReader") { "${command.first()} failed: ${e.message}" }
             null
+        } finally {
+            process?.takeIf { it.isAlive }?.destroyForcibly()
         }
     }

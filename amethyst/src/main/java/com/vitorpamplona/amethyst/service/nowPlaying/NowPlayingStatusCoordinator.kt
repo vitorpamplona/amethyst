@@ -68,22 +68,25 @@ class NowPlayingStatusCoordinator(
     }
 
     private suspend fun run(account: Account) {
+        // Every player that is audibly playing, most recently started first: the first one that
+        // is a music track or podcast episode wins, so an unmuted feed video started after a song
+        // does not hide the song.
         val inAppTracks =
             inApp
-                .map { InAppPlaybackRegistry.current(it) }
-                .distinctUntilChanged()
-                .map { playback -> playback?.let(::resolve) }
+                .map { playing -> playing.values.reversed().firstNotNullOfOrNull(::resolve) }
                 .flowOn(Dispatchers.IO)
 
         val publisher =
             NowPlayingPublisher(
+                // Relays are woken first: in the background the pool is paused, and the event
+                // waits in the outbox until a relay connects.
                 publish = { track, expiration ->
-                    account.publishNowPlaying(track, expiration)
                     holdRelays()
+                    account.publishNowPlaying(track, expiration)
                 },
                 clear = {
-                    account.clearNowPlaying()
                     holdRelays()
+                    account.clearNowPlaying()
                 },
             )
 
@@ -95,14 +98,36 @@ class NowPlayingStatusCoordinator(
         ).run()
     }
 
-    private fun resolve(playback: InAppPlayback): NowPlaying? =
-        NowPlayingResolver.fromNostrUri(
-            uri = playback.callbackUri,
-            findEvent = { key -> LocalCache.getNoteIfExists(key)?.event },
-            fallbackTitle = playback.title,
-            fallbackArtist = playback.artist,
-            endsAt = playback.endsAt,
-        )
+    /**
+     * What a player's item is as a status, without its end time. Keyed by the item's `nostr:` URI
+     * so the NIP-19 parse and the cache lookup run once per item, not once per position update.
+     * Only touched from the single flow collecting [inApp].
+     */
+    private val resolved = HashMap<String, Resolution>()
+
+    private class Resolution(
+        val track: NowPlaying?,
+    )
+
+    private fun resolve(playback: InAppPlayback): NowPlaying? {
+        val cached =
+            resolved[playback.callbackUri] ?: run {
+                val key = NowPlayingResolver.noteKey(playback.callbackUri)
+                val event =
+                    if (key != null) {
+                        // Not loaded yet: resolve again on the next update instead of caching a miss.
+                        LocalCache.getNoteIfExists(key)?.event ?: return null
+                    } else {
+                        null
+                    }
+                val track = event?.let { NowPlayingResolver.fromEvent(it, playback.title, playback.artist) }
+
+                if (resolved.size >= MAX_RESOLVED) resolved.clear()
+                Resolution(track).also { resolved[playback.callbackUri] = it }
+            }
+
+        return cached.track?.copy(endsAt = playback.endsAt)
+    }
 
     private fun holdRelays() {
         relayHold?.cancel()
@@ -114,5 +139,6 @@ class NowPlayingStatusCoordinator(
 
     companion object {
         private const val RELAY_HOLD_MS = 30_000L
+        private const val MAX_RESOLVED = 64
     }
 }

@@ -573,6 +573,11 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+            <!-- Media sessions do not depend on which notifications are delivered, so ask for the
+                 narrowest type: fewer wakeups, and the access screen shows what is actually read. -->
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="ongoing" />
         </service>
 
         <service

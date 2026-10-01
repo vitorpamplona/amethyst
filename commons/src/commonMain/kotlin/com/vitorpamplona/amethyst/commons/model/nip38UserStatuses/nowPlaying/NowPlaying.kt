@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlin.math.abs
 
 /** Where a track is being played. */
 @Immutable
@@ -72,7 +73,24 @@ data class NowPlaying(
             addressId == other.addressId &&
             eventId == other.eventId
 
+    /**
+     * Same track from the same source, ending within [toleranceSeconds] of [other]. Sources call
+     * this to drop the position ticks some players report every second, which would otherwise
+     * re-emit a "new" value (and re-run everything downstream) for a status that has not changed.
+     */
+    fun isSameMoment(
+        other: NowPlaying?,
+        toleranceSeconds: Long = MOMENT_TOLERANCE_SECONDS,
+    ): Boolean {
+        if (other == null || source != other.source || !isSameTrack(other)) return false
+        val a = endsAt
+        val b = other.endsAt
+        return if (a == null || b == null) a == b else abs(a - b) <= toleranceSeconds
+    }
+
     companion object {
+        const val MOMENT_TOLERANCE_SECONDS = 5L
+
         /**
          * When a track [durationMs] long, now at [positionMs] and playing at [speed], ends,
          * measured from [nowSeconds]. Null when the duration is unknown or the track already ended.

@@ -163,6 +163,8 @@ fun NowPlayingSettingsContent(
 ) {
     val settings by state.flow.collectAsState()
     val isOn = (showInApp && settings.shareInApp) || settings.shareOtherApps
+    // One check per resume for both the confirmation row and the alert card.
+    val accessGranted = access == null || rememberAccessGranted(access)
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -197,12 +199,12 @@ fun NowPlayingSettingsContent(
                 checked = settings.shareOtherApps,
                 onCheckedChange = state::setShareOtherApps,
             )
-            if (settings.shareOtherApps && access != null) {
+            if (settings.shareOtherApps && access != null && accessGranted) {
                 AccessGrantedRow(access)
             }
         }
 
-        if (settings.shareOtherApps && access != null) {
+        if (settings.shareOtherApps && access != null && !accessGranted) {
             AccessNeededCard(access)
         }
 
@@ -375,9 +377,6 @@ private fun StatusChip(chip: PreviewChip) {
 /** Sub-row under the "Other apps" tile once access is granted: a quiet confirmation + Manage. */
 @Composable
 private fun AccessGrantedRow(access: NowPlayingAccess) {
-    val granted = rememberAccessGranted(access)
-    if (!granted) return
-
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 68.dp, end = 8.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -403,9 +402,6 @@ private fun AccessGrantedRow(access: NowPlayingAccess) {
 /** The one thing blocking other-app sharing, as a tonal card with a single clear action. */
 @Composable
 private fun AccessNeededCard(access: NowPlayingAccess) {
-    val granted = rememberAccessGranted(access)
-    if (granted) return
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),

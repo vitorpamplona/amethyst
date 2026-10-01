@@ -53,17 +53,19 @@ object NowPlayingResolver {
         fallbackArtist: String? = null,
         endsAt: Long? = null,
     ): NowPlaying? {
-        val key =
-            when (val entity = Nip19Parser.uriToRoute(uri)?.entity) {
-                is NEvent -> entity.hex
-                is NNote -> entity.hex
-                is NAddress -> entity.aTag()
-                else -> null
-            } ?: return null
-
+        val key = noteKey(uri) ?: return null
         val event = findEvent(key) ?: return null
         return fromEvent(event, fallbackTitle, fallbackArtist, endsAt)
     }
+
+    /** The cache key (event id, or `kind:pubkey:d` address) a `nostr:` note URI points at. */
+    fun noteKey(uri: String): String? =
+        when (val entity = Nip19Parser.uriToRoute(uri)?.entity) {
+            is NEvent -> entity.hex
+            is NNote -> entity.hex
+            is NAddress -> entity.aTag()
+            else -> null
+        }
 
     fun fromEvent(
         event: Event,

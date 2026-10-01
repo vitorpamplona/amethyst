@@ -27,6 +27,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
+import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Build
@@ -36,7 +37,6 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import androidx.core.app.NotificationManagerCompat
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlaying
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSource
 import com.vitorpamplona.quartz.utils.Log
@@ -51,6 +51,8 @@ object OtherAppsPlaybackRegistry {
     val flow: StateFlow<NowPlaying?> = playing
 
     fun update(track: NowPlaying?) {
+        // Many players report their position every second; only a real change goes downstream.
+        if (track != null && track.isSameMoment(playing.value)) return
         playing.value = track
     }
 }
@@ -64,12 +66,17 @@ object OtherAppsPlaybackRegistry {
  * "Notification access" screen ([openAccessSettings]); until then the system never binds it.
  * Whether anything is published is still up to the account's now-playing settings.
  *
- * Runs in the main process (it is not declared in `:napplet`), where the account lives.
+ * Runs in the main process (it is not declared in `:napplet`), where the account lives. The
+ * system may start that process just to bind this listener; AppModules then logs the saved
+ * account in on its own, as it does on every start, so the publisher has it.
  */
 class OtherAppsNowPlayingService : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
     private var sessionManager: MediaSessionManager? = null
-    private val watched = mutableMapOf<String, Pair<MediaController, MediaController.Callback>>()
+    private val watched = mutableMapOf<MediaSession.Token, Pair<MediaController, MediaController.Callback>>()
+
+    // App labels come from PackageManager, an IPC; players report state up to once a second.
+    private val labels = mutableMapOf<String, String>()
 
     private val sessionsListener =
         MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
@@ -89,9 +96,6 @@ class OtherAppsNowPlayingService : NotificationListenerService() {
             // Access was revoked between the bind and this call.
             Log.w("OtherAppsNowPlaying", "Notification access is not granted", e)
         }
-
-        // The system can start the process just to bind this listener; the publisher needs the account.
-        Amethyst.instance.sessionManager.loginWithDefaultAccountIfLoggedOff()
     }
 
     override fun onListenerDisconnected() {
@@ -111,14 +115,14 @@ class OtherAppsNowPlayingService : NotificationListenerService() {
 
     private fun watch(controllers: List<MediaController>) {
         val others = controllers.filter { it.packageName != packageName }
-        val keys = others.map { it.sessionToken.toString() }.toSet()
+        val keys = others.mapTo(mutableSetOf()) { it.sessionToken }
 
         watched.keys.filter { it !in keys }.forEach { key ->
             watched.remove(key)?.let { (controller, callback) -> controller.unregisterCallback(callback) }
         }
 
         others.forEach { controller ->
-            val key = controller.sessionToken.toString()
+            val key = controller.sessionToken
             if (key !in watched) {
                 val callback =
                     object : MediaController.Callback() {
@@ -182,10 +186,12 @@ class OtherAppsNowPlayingService : NotificationListenerService() {
     }
 
     private fun appLabel(packageName: String): String =
-        try {
-            packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
-        } catch (_: PackageManager.NameNotFoundException) {
-            packageName
+        labels.getOrPut(packageName) {
+            try {
+                packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+            } catch (_: PackageManager.NameNotFoundException) {
+                packageName
+            }
         }
 
     companion object {
