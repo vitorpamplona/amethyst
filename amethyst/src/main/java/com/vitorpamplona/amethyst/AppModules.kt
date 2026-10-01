@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
@@ -111,6 +112,7 @@ import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServ
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
+import com.vitorpamplona.amethyst.service.nowPlaying.NowPlayingStatusCoordinator
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -1073,6 +1075,8 @@ class AppModules(
                 BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
                 // Concord Direct Invites the user declined (CORD-05 §6) stay declined across restarts.
                 ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
+                // Whether this account shares what it listens to as its music status, and from which apps.
+                NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
             },
         )
 
@@ -1094,6 +1098,15 @@ class AppModules(
             context = appContext,
             scope = applicationIOScope,
             accountFlow = sessionManager.accountContent.map { (it as? AccountState.LoggedIn)?.account },
+        ).also { it.start() }
+
+    // Shares what the user listens to (in the app, or in other apps once notification access is
+    // granted) as the logged-in account's NIP-38 music status. Off until the account opts in.
+    val nowPlayingStatusCoordinator =
+        NowPlayingStatusCoordinator(
+            scope = applicationIOScope,
+            accountFlow = sessionManager.accountContent.map { (it as? AccountState.LoggedIn)?.account },
+            relayServices = relayProxyClientConnector.relayServices,
         ).also { it.start() }
 
     fun subscribedFlow(

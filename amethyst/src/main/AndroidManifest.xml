@@ -90,6 +90,11 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="tron" />
         </intent>
+        <!-- Media apps (they expose a MediaBrowserService), so the now-playing settings can show
+             the name of the app playing instead of its package name. -->
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
     </queries>
 
 
@@ -554,6 +559,25 @@
                 <action android:name="androidx.media3.session.MediaSessionService"/>
                 <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
+        </service>
+
+        <!-- Reads other apps' media sessions to share what the user listens to as a NIP-38 music
+             status. Android only exposes other apps' sessions to an enabled notification listener;
+             this one never reads notifications. The system binds it only after the user grants
+             "Notification access", and it stays in the main process with the account. -->
+        <service
+            android:name=".service.nowPlaying.OtherAppsNowPlayingService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <!-- Media sessions do not depend on which notifications are delivered, so ask for the
+                 narrowest type: fewer wakeups, and the access screen shows what is actually read. -->
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="ongoing" />
         </service>
 
         <service
