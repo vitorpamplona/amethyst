@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.toLongValue
 
 private val Gold = Color(0xFFFFC300)
 private val Silver = Color(0xFFB0B7C0)
@@ -88,7 +89,7 @@ fun PodcastTopSupporters(
                 note.zaps.mapNotNull { (_, receiptNote) ->
                     val receipt = receiptNote?.event as? ZapReceiptEvent ?: return@mapNotNull null
                     val request = receipt.zapRequest ?: return@mapNotNull null
-                    val sats = receipt.amount()?.toLong() ?: return@mapNotNull null
+                    val sats = receipt.amount()?.toLongValue() ?: return@mapNotNull null
                     // Anon/private zaps carry an `anon` tag; collapse them into the shared bucket.
                     val isAnon = request.tags.any { it.isNotEmpty() && it[0] == "anon" }
                     ZapContribution(receiptNote.idHex, request.pubKey, isAnon, sats)

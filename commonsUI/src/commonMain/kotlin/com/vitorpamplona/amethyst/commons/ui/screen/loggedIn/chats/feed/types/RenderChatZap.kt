@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.utils.toLongValue
 
 private const val BIG_ZAP_THRESHOLD_SATS = 50_000L
 
@@ -76,7 +77,7 @@ fun RenderChatZap(
 
     val isBigZap =
         remember(zapEvent) {
-            (zapEvent.amount?.toLong() ?: 0L) >= BIG_ZAP_THRESHOLD_SATS
+            (zapEvent.amount?.toLongValue() ?: 0L) >= BIG_ZAP_THRESHOLD_SATS
         }
 
     val accentAlpha = if (isBigZap) 0.18f else 0.08f

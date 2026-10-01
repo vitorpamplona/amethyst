@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.startsWithAny
+import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -467,7 +468,7 @@ class SearchBarViewModel(
                 query = parsed,
                 order = order,
                 event = { it.event },
-                zapTotal = { it.zapsAmount.toDouble() },
+                zapTotal = { it.zapsAmount.toDoubleValue() },
             )
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
