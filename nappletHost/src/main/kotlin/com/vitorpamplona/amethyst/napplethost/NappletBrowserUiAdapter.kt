@@ -111,8 +111,13 @@ private class BrowserSession(
     }
 
     override fun close() {
-        // The library may call close() off the main thread; WebView.destroy() (and the tabs mutation)
-        // must run on the main thread.
-        Handler(Looper.getMainLooper()).post { service.onSessionClosed(sessionId) }
+        // WebView.destroy() (and the tabs mutation) must run on the main thread. The library usually calls
+        // this there already; post only when it doesn't. The container identifies THIS session, so a close
+        // that lands after the tab was re-opened can't tear down its successor.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            service.onSessionClosed(sessionId, container)
+        } else {
+            Handler(Looper.getMainLooper()).post { service.onSessionClosed(sessionId, container) }
+        }
     }
 }

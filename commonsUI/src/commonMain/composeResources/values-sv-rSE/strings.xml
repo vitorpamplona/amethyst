@@ -5359,7 +5359,6 @@
     <string name="new_conversation_cordn_pro_1">End-to-end-krypterad med MLS — koordinatorn kan aldrig läsa ett meddelande.</string>
     <string name="new_conversation_cordn_pro_2">En gemensam ordning för alla, så att historiken inte kan kastas om av en felaktig klocka.</string>
     <string name="new_conversation_cordn_con_1">Koordinatorn får veta vilka som är med i gruppen och när ni pratar, även om den inte kan läsa vad ni säger.</string>
-    <string name="cordn_invitations_entry">Inbjuden till en cordn-grupp?</string>
     <string name="cordn_invitations_entry_action">Granska inbjudningar</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
@@ -6150,4 +6149,5 @@
     <string name="cordn_voice_play">Spela upp röstmeddelande</string>
     <string name="cordn_voice_record">Spela in ett röstmeddelande</string>
     <string name="cordn_voice_stop">Stoppa och skicka</string>
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
 </resources>

@@ -25,7 +25,9 @@ import android.content.MutableContextWrapper
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
@@ -122,6 +124,20 @@ object BrowserPopups {
         }
         WebViewCompat.addDocumentStartJavaScript(webView, BrowserWebTools.browserStartScript(shimJs, imeProxy = false), setOf("*"))
         val token = UUID.randomUUID().toString()
+        // Until an Activity adopts it (and installs its own client), a parked popup still shares the one
+        // `:napplet` renderer. With no client its renderer death falls to the default — returning false, which
+        // kills the whole process and every embedded tab in it. Drop just the popup instead.
+        webView.webViewClient =
+            object : WebViewClient() {
+                override fun onRenderProcessGone(
+                    view: WebView,
+                    detail: RenderProcessGoneDetail,
+                ): Boolean {
+                    pending.remove(token)
+                    view.destroy()
+                    return true
+                }
+            }
         pending[token] = entry
         main.postDelayed({
             pending.remove(token)?.let { orphan ->

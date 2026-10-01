@@ -56,13 +56,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -81,17 +84,24 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.EmbeddedLoadOverlay
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPill
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.FindInPagePill
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.napplethost.BrowserWebTools
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.math.roundToInt
@@ -146,6 +156,22 @@ private fun EmbeddedImeBridge.sendFieldOp(
 fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
     val activeId = EmbeddedTabHost.activeId
 
+    // Tell the warm tabs when the app leaves the screen and when it comes back. The host stops them acting for
+    // the user right away and pauses their pages on the same schedule the relays wind down on.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> EmbeddedTabHost.onAppStopped()
+                    Lifecycle.Event.ON_START -> EmbeddedTabHost.onAppStarted()
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Keep only bottom-row apps warm (plus the active tab, even mid-removal). A favorite removed from
     // the bar drops its warm session here.
     LaunchedEffect(barFavoriteIds, activeId) {
@@ -157,13 +183,10 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
     var layerSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
 
-    // While the soft keyboard is up (hosted by [RemoteImeView] in this window), shrink the active
-    // surface so its bottom clears the keyboard — the embedded WebView then reflows and scrolls the
-    // focused field into view. Only the portion of the keyboard that overlaps the surface counts.
-    // Use the *snapped* animation target rather than the animated `ime` inset: the cross-process surface
-    // resize is expensive (a SurfaceControlViewHost reconfigure each frame), so we resize once to the
-    // final height instead of on every frame of the keyboard slide-in/out.
-    val imeBottomPx = WindowInsets.imeAnimationTarget.getBottom(density)
+    // The keyboard's *snapped* target inset (not the animated one). Only the insets object is taken here;
+    // its value is read inside the effect below, so a keyboard showing or hiding doesn't recompose this whole
+    // layer (every surface, the pill, the selection overlay).
+    val imeTarget = WindowInsets.imeAnimationTarget
 
     Box(
         Modifier
@@ -195,8 +218,6 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                             // SurfaceControlViewHost surface, and the first frame presented after that reconfigure
                             // stalls ~1s (the per-focus "freeze"). Keep the surface full-size and let the page bring
                             // the focused field above the keyboard via the shim's scrollIntoView on focus.
-                            @Suppress("UNUSED_EXPRESSION")
-                            imeBottomPx
                             Modifier
                                 .absoluteOffset(left, (bounds.top - layerOrigin.y).toDp())
                                 .size(bounds.width.toDp(), bounds.height.toDp())
@@ -219,6 +240,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         }
                     },
                     modifier = placement,
+                    onRelease = { holder ->
+                        (holder.getChildAt(0) as? SandboxedSdkView)?.let { session.controller.detachView(it) }
+                    },
                 )
             }
         }
@@ -244,11 +268,13 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 activeController?.onLoadStatusChanged = { loadStatus = it }
                 onDispose { activeController?.onLoadStatusChanged = null }
             }
-            // Safety net: nothing painted and nothing actively loading after a grace period → offer a retry.
+            // Safety net: nothing painted after a grace period → offer a retry. A load still in flight (a slow
+            // site, one over Tor) gets a longer budget before it's called stuck, instead of flipping to an error
+            // while it's still progressing.
             LaunchedEffect(activeId, loadStatus) {
                 timedOut = false
                 if (!loadStatus.hasLoadedReal && !loadStatus.failed) {
-                    delay(12_000)
+                    delay(if (loadStatus.isLoading) 45_000 else 12_000)
                     timedOut = true
                 }
             }
@@ -296,6 +322,12 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 findQuery = ""
             }
 
+            // Switching tabs drops the find bar (its state is per tab), but the page it searched keeps its
+            // highlights until told otherwise — clear them on the tab being left.
+            DisposableEffect(findBridge) {
+                onDispose { if (findShowing) findBridge?.find("") }
+            }
+
             val tabModifier =
                 with(density) {
                     Modifier
@@ -318,46 +350,48 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
             }
 
             val consoleLogs = consoleBridge?.consoleLogs
-            val ui =
+            val baseUi =
                 chrome.ui.copy(
                     chrome = chrome.ui.chrome.copy(hasFind = chrome.ui.chrome.hasFind && findBridge != null),
                     consoleShowing = consoleShowing,
-                    consoleErrors = consoleLogs?.count { it.level == ConsoleLine.Level.ERROR } ?: 0,
                 )
 
             Box(tabModifier) {
-                BrowserPill(
-                    ui = ui,
-                    expanded = pillExpanded,
-                    onExpandedChange = { pillExpanded = it },
-                    onEvent = { event ->
-                        val action = (event as? BrowserPillEvent.Action)?.action
-                        when {
-                            action == BrowserChrome.Action.FIND_IN_PAGE && findBridge != null -> {
-                                // One bottom panel at a time: find replaces the console.
-                                consoleShowing = false
-                                findShowing = true
+                WithConsoleErrors(baseUi, consoleBridge?.consoleErrorCount) { ui ->
+                    BrowserPill(
+                        ui = ui,
+                        expanded = pillExpanded,
+                        onExpandedChange = { pillExpanded = it },
+                        onEvent = { event ->
+                            val action = (event as? BrowserPillEvent.Action)?.action
+                            when {
+                                action == BrowserChrome.Action.FIND_IN_PAGE && findBridge != null -> {
+                                    // One bottom panel at a time: find replaces the console.
+                                    consoleShowing = false
+                                    findShowing = true
+                                }
+                                action == BrowserChrome.Action.CONSOLE && consoleBridge != null -> {
+                                    if (!consoleShowing) closeFind()
+                                    consoleShowing = !consoleShowing
+                                }
+                                else -> chrome.onEvent(event)
                             }
-                            action == BrowserChrome.Action.CONSOLE && consoleBridge != null -> {
-                                if (!consoleShowing) closeFind()
-                                consoleShowing = !consoleShowing
-                            }
-                            else -> chrome.onEvent(event)
-                        }
-                    },
-                    showClose = false,
-                    suggestionsFor = chrome.suggestionsFor,
-                    onPasteAndGo =
-                        if (BrowserWebTools.clipboardHasText(context)) {
-                            {
-                                pillExpanded = false
-                                BrowserWebTools.clipboardText(context)?.let { chrome.onEvent(BrowserPillEvent.Navigate(it)) }
-                            }
-                        } else {
-                            null
                         },
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
+                        showClose = false,
+                        suggestionsFor = chrome.suggestionsFor,
+                        // A clipboard query is a binder call: only make it while the pill is open to use it.
+                        onPasteAndGo =
+                            if (pillExpanded && BrowserWebTools.clipboardHasText(context)) {
+                                {
+                                    pillExpanded = false
+                                    BrowserWebTools.clipboardText(context)?.let { chrome.onEvent(BrowserPillEvent.Navigate(it)) }
+                                }
+                            } else {
+                                null
+                            },
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                }
 
                 // Find in page: opened from the pill's Find tile.
                 if (findShowing && findBridge != null) {
@@ -407,8 +441,10 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // doesn't pop the keyboard back over the page. A tab switch also collapses the insets but does NOT
         // look like this: measured on device, the switch takes focus off the view in the same frame, so
         // isMirroringPageField() is already false there and the mark this tab was owed survives.
-        LaunchedEffect(activeId, imeBottomPx) {
-            if (imeBottomPx == 0 && imeView.isMirroringPageField()) imeView.noteKeyboardDismissed()
+        LaunchedEffect(activeId) {
+            snapshotFlow { imeTarget.getBottom(density) }.collect { imeBottomPx ->
+                if (imeBottomPx == 0 && imeView.isMirroringPageField()) imeView.noteKeyboardDismissed()
+            }
         }
         DisposableEffect(imeBridge) {
             val boundId = activeId
@@ -489,7 +525,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 // mid-typing — which is exactly the case this restore exists for. [wantsKeyboardForPageField]
                 // also answers the other half: only a keyboard THIS mirror holds counts, so typing in the
                 // browser's own address bar never arms a restore for a page field.
-                if (boundId != null) {
+                // Only for the session that is still warm under this id: after a rebuild (theme, account) or an
+                // eviction this disposal runs late, and a mark recorded now would be restored onto a fresh page.
+                if (boundId != null && EmbeddedTabHost.isWarm(boundId, imeBridge)) {
                     EmbeddedTabHost.noteKeyboardOnLeave(boundId, imeView.wantsKeyboardForPageField())
                 }
                 imeView.onPageBlur()
@@ -532,11 +570,19 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // Source rect (surface px) = bubble px / zoom, so the provider-scaled frame lands ≈ bubble-sized.
         val magSrcW = with(density) { (magBubble.width.toPx() / magZoom).roundToInt() }
         val magSrcH = with(density) { (magBubble.height.toPx() / magZoom).roundToInt() }
+        val magScope = rememberCoroutineScope()
         DisposableEffect(magProbe) {
             magProbe?.onMagnifierFrame = { frame ->
                 if (magnifier.visible) {
                     magnifier.awaitingFrame = false
-                    BitmapFactory.decodeByteArray(frame.bytes, 0, frame.bytes.size)?.let { magnifier.image = it.asImageBitmap() }
+                    // Decode off the main thread: this runs for every frame of a handle drag.
+                    magScope.launch {
+                        val image = withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(frame.bytes, 0, frame.bytes.size)?.asImageBitmap() }
+                        if (image != null && magnifier.visible && frame.requestStampNanos > magnifier.shownFrameStamp) {
+                            magnifier.shownFrameStamp = frame.requestStampNanos
+                            magnifier.image = image
+                        }
+                    }
                 }
             }
             onDispose {
@@ -783,8 +829,17 @@ private fun SelectionHandle(
     val color = MaterialTheme.colorScheme.primary
     val currentTip by rememberUpdatedState(tipPx)
     val currentMagnify by rememberUpdatedState(onMagnify)
+    // The drag gesture is installed once (pointerInput(Unit)) and outlives recompositions, so everything it
+    // reads that can change mid-life (a rotation or resize moves the origin, the page's zoom changes the
+    // scale, the drag target captures the current bridge) is read through updated state.
+    val currentOriginX by rememberUpdatedState(surfaceOriginX)
+    val currentOriginY by rememberUpdatedState(surfaceOriginY)
+    val currentScale by rememberUpdatedState(scale)
+    val currentLineHalf by rememberUpdatedState(lineHalfPx)
+    val currentDragTo by rememberUpdatedState(onDragTo)
     var dragTip by remember { mutableStateOf<Offset?>(null) }
     val tip = dragTip ?: tipPx
+    EndDragOnDispose(isDragging = { dragTip != null }, onMagnify = { currentMagnify })
 
     // Loupe capture: X follows the finger, Y is locked to the authoritative endpoint's line ([currentTip] is
     // the foot, so lift by half the line height) — so the bubble shows the line being edited, not wherever the
@@ -792,7 +847,7 @@ private fun SelectionHandle(
     fun magnify(
         fingerPx: Offset,
         active: Boolean = true,
-    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - surfaceOriginX, currentTip.y - surfaceOriginY - lineHalfPx)
+    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - currentOriginX, currentTip.y - currentOriginY - currentLineHalf)
     // Place the box so its pointed corner lands on the tip: start = top-right corner, end = top-left corner.
     val boxLeft = if (isStart) tip.x - sizePx else tip.x
     Box(
@@ -809,7 +864,7 @@ private fun SelectionHandle(
                         change.consume()
                         val np = (dragTip ?: currentTip) + delta
                         dragTip = np
-                        onDragTo((np.x - surfaceOriginX) / scale, (np.y - surfaceOriginY) / scale)
+                        currentDragTo((np.x - currentOriginX) / currentScale, (np.y - currentOriginY) / currentScale)
                         magnify(np)
                     },
                     onDragEnd = {
@@ -870,6 +925,12 @@ private fun InsertionHandle(
     val currentTip by rememberUpdatedState(tipPx)
     val currentMagnify by rememberUpdatedState(onMagnify)
     val currentTap by rememberUpdatedState(onTap)
+    // Read through updated state for the same reason as SelectionHandle: the gesture outlives recompositions.
+    val currentOriginX by rememberUpdatedState(surfaceOriginX)
+    val currentOriginY by rememberUpdatedState(surfaceOriginY)
+    val currentScale by rememberUpdatedState(scale)
+    val currentLineHalf by rememberUpdatedState(lineHalfPx)
+    val currentDragTo by rememberUpdatedState(onDragTo)
 
     // Loupe capture: X follows the finger, Y is locked to the authoritative caret's line ([currentTip] is the
     // caret foot, so lift by half the line height) — so the bubble shows the edited line, not wherever the
@@ -877,11 +938,12 @@ private fun InsertionHandle(
     fun magnify(
         fingerPx: Offset,
         active: Boolean = true,
-    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - surfaceOriginX, currentTip.y - surfaceOriginY - lineHalfPx)
+    ) = currentMagnify?.invoke(active, fingerPx, fingerPx.x - currentOriginX, currentTip.y - currentOriginY - currentLineHalf)
     // Track the finger separately from what we draw: the handle renders at the AUTHORITATIVE caret (tipPx,
     // which snaps to a character position as the move round-trips through the shim), while the finger drives
     // the move. So the handle stays glued to the line/text and clamps to the field instead of trailing off.
     var fingerPx by remember { mutableStateOf<Offset?>(null) }
+    EndDragOnDispose(isDragging = { fingerPx != null }, onMagnify = { currentMagnify })
     Box(
         Modifier
             .absoluteOffset { IntOffset((tipPx.x - wPx / 2f).roundToInt(), tipPx.y.roundToInt()) }
@@ -909,6 +971,7 @@ private fun InsertionHandle(
                         if (!dragging && (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
                             dragging = true
                             fp = currentTip
+                            fingerPx = fp
                             magnify(currentTip)
                         }
                         if (dragging) {
@@ -919,7 +982,7 @@ private fun InsertionHandle(
                             fp += change.positionChangeIgnoreConsumed()
                             change.consume()
                             fingerPx = fp
-                            onDragTo((fp.x - surfaceOriginX) / scale, (fp.y - surfaceOriginY) / scale)
+                            currentDragTo((fp.x - currentOriginX) / currentScale, (fp.y - currentOriginY) / currentScale)
                             magnify(fp)
                         }
                     }
@@ -999,6 +1062,9 @@ private fun SelectionToolbarItem(
     label: String,
     onClick: () -> Unit,
 ) {
+    // The gesture is keyed on the label only, so read the action through updated state: "Copy" captures the
+    // selected text, and a stale first lambda copied the previous selection.
+    val currentOnClick by rememberUpdatedState(onClick)
     Text(
         text = label,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1012,11 +1078,29 @@ private fun SelectionToolbarItem(
                         val up = waitForUpOrCancellation()
                         if (up != null) {
                             up.consume()
-                            onClick()
+                            currentOnClick()
                         }
                     }
                 }.padding(horizontal = 12.dp, vertical = 10.dp),
     )
+}
+
+/**
+ * Ends a handle drag that is still in progress when the handle leaves composition — the selection collapsed
+ * or the page blurred under the finger. The gesture's own end/cancel callbacks never run then (its coroutine
+ * is just cancelled), which left the loupe on screen, the toolbar hidden and the drawer's edge swipe disabled
+ * app-wide ([EmbeddedSelectionDrag]).
+ */
+@Composable
+private fun EndDragOnDispose(
+    isDragging: () -> Boolean,
+    onMagnify: () -> OnMagnify?,
+) {
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isDragging()) onMagnify()?.invoke(false, Offset.Zero, 0f, 0f)
+        }
+    }
 }
 
 /** One console line as plain text, for copying. */
@@ -1031,3 +1115,16 @@ private fun formatConsoleLine(line: ConsoleLine): String =
                 .append(')')
         }
     }
+
+/**
+ * Reads the page's console error count in a scope of its own: a page that keeps logging errors then
+ * recomposes just the pill, not the whole tab layer around it.
+ */
+@Composable
+private fun WithConsoleErrors(
+    ui: BrowserPillUi,
+    errors: IntState?,
+    content: @Composable (BrowserPillUi) -> Unit,
+) {
+    content(ui.copy(consoleErrors = errors?.intValue ?: 0))
+}

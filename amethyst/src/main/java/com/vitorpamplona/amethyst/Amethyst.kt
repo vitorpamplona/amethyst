@@ -240,9 +240,15 @@ class Amethyst : Application() {
         // BACKGROUND means the process is on the system LRU list (real reclaim pressure), while UI_HIDDEN
         // fires on every app switch — so evict only at BACKGROUND and above, letting a pinned tab survive
         // a plain backgrounding. R+ only.
+        //
+        // rebuildAll, not a plain eviction: the tab screen the user left stays composed, holding its
+        // controller, and it only re-acquires when the rebuild epoch moves. Tearing the sessions down without
+        // bumping it left that screen with a dead controller and no active tab — blank on return. The epoch
+        // bump is picked up by the next recomposition, which doesn't run while the app is backgrounded, so the
+        // memory stays freed until the user comes back.
         val pressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
         if (pressure && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            EmbeddedTabHost.evictAll()
+            EmbeddedTabHost.rebuildAll(keepPages = true)
         }
     }
 }

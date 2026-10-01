@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_start
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -110,6 +111,16 @@ fun CordnGroupListScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(Res.string.cordn_groups_title), nav) {
+                // Invitations are fetched only when someone opens that screen
+                // (every call to a coordinator is metadata, spec/00.md §8), so
+                // this is a plain way in, never a badge.
+                IconButton(onClick = { nav.nav(Route.CordnInvitations) }) {
+                    Icon(
+                        symbol = MaterialSymbols.MoveToInbox,
+                        contentDescription = stringRes(Res.string.cordn_invitations_title),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 IconButton(onClick = { nav.nav(Route.CordnCoordinators) }) {
                     Icon(
                         symbol = MaterialSymbols.Dns,

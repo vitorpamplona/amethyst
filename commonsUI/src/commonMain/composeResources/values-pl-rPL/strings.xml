@@ -597,6 +597,12 @@
     <string name="concord_invite_revoked_privatized">Link został unieważniony. Społeczność ma teraz status prywatny, a jej klucze zostały odnowione.</string>
     <string name="concord_invite_revoked_privatize_pending">Link został unieważniony. Społeczność ma teraz status prywatny, ale jej klucze nie zostały odświeżone: administrator posiadający uprawnienia do blokowania członków musi je odświeżyć.</string>
     <string name="concord_mode_private">Prywatne</string>
+    <plurals name="concord_mode_public">
+        <item quantity="one">Tryb publiczny · %1$d – aktywny link zaproszeniowy</item>
+        <item quantity="few">Tryb publiczny · %1$d – aktywnych linków zaproszeniowych</item>
+        <item quantity="many">Tryb publiczny · %1$d – aktywnych linków zaproszeniowych</item>
+        <item quantity="other">Tryb publiczny · %1$d – aktywne linki zaproszeniowe</item>
+    </plurals>
     <string name="concord_invite_preview_unknown_name">Nazwa społeczności zostanie ujawniona dopiero po dołączeniu</string>
     <string name="concord_invite_preview_explainer">Dołączenie do transmiterów tego zaproszenia, publikuje komunikaty o dołączeniu podpisane przez twoje konto i dodaje społeczność do listy. Nic nie zostanie wysłane, dopóki nie klikniesz Dołącz.</string>
     <string name="concord_invite_preview_relays">Transmiter tego zaproszenia skontaktuje się: %1$s</string>
@@ -616,8 +622,17 @@
     <string name="concord_pinned_title">Przypięte wiadomości</string>
     <string name="concord_pinned_empty">Brak przypiętych wiadomości na tym kanale.</string>
     <string name="concord_pinned_unavailable">Piny tego kanału są zabezpieczone kluczem, którego nie posiadasz, więc nie można ich tutaj wyświetlić, a przypinanie jest wstrzymane do czasu, aż będzie można je odczytać.</string>
+    <string name="concord_pinned_budget">%1$d z %2$d pinów · wykorzystano %3$d% dostępnego budżetu</string>
+    <string name="concord_pinned_open_hint">Kliknij pin, aby przejść do niego</string>
+    <string name="concord_pin_expiring_title">Przypiąć znikającą wiadomość?</string>
+    <string name="concord_pin_expiring_body">Ta wiadomość zostanie usunięta po upływie określonego czasu. Przypięcie jej sprawia, że jej treść pozostaje na liście przypiętych wiadomości w kanale nawet po tym, jak licznik czasu spowoduje usunięcie samej wiadomości.</string>
+    <string name="concord_pin_expiring_confirm">Przypnij mimo wszystko</string>
     <string name="concord_pin_failed_title">Pineski</string>
     <string name="concord_pin_failed_unavailable">Przypięta lista jest zabezpieczona kluczem, którego nie posiadasz. Jej zmiana w tej chwili spowodowałaby usunięcie przypiętych elementów, których nie widzisz.</string>
+    <string name="concord_pin_failed_too_many">Ten kanał ma już 25 pinów. Najpierw usuń jeden z nich.</string>
+    <string name="concord_pin_failed_too_large">Na liście przypiętych nie ma już miejsca. Najpierw usuń przypinkę wiadomości.</string>
+    <string name="concord_pin_failed_message">Oryginalny podpis tej wiadomości nie jest tutaj przechowywany, więc nie można go zweryfikować ani przypiąć.</string>
+    <string name="concord_pin_failed_generic">W tej chwili nie można zmienić pinów tego kanału.</string>
     <string name="concord_create_name">Nazwa</string>
     <string name="concord_create_about">Informacje (opcjonalne)</string>
     <string name="concord_ban_user">Banuj</string>
@@ -638,6 +653,15 @@
     <string name="concord_role_owner">Właściciel</string>
     <string name="concord_role_admin">Admin</string>
     <string name="concord_role_banned">Zbanowany</string>
+    <string name="concord_role_kicked">Wyrzucony</string>
+    <string name="concord_role_left">Zostawiony</string>
+    <string name="concord_members_kick">Wyrzuć</string>
+    <string name="concord_members_kick_title">Wyrzucić tego użytkownika?</string>
+    <string name="concord_members_kick_message">Ich role zostają usunięte, a ich aplikacja otrzymuje prośbę o opuszczenie społeczności. Wykluczenie ma charakter kooperacyjny: nie powoduje zmiany żadnych kluczy, a użytkownik może ponownie dołączyć po otrzymaniu zaproszenia. Aby całkowicie zablokować mu dostęp, należy zamiast tego nałożyć na niego ban lub usunąć go.</string>
+    <string name="concord_members_kick_failed">Nie udało się wykluczyć tego użytkownika.</string>
+    <string name="concord_kicked_title">Usunięto ze społeczności</string>
+    <string name="concord_kicked_message">Moderator usunął Cię z %1$s. Możesz dołączyć ponownie z nowym zaproszeniem.</string>
+    <string name="concord_kicked_message_unnamed">Moderator usunął Cię ze społeczności. Możesz dołączyć ponownie z nowym zaproszeniem.</string>
     <string name="concord_invite_card_join">Dołącz do społeczności</string>
     <string name="concord_invite_card_subtitle">Zaproszenie dla społeczności Concord</string>
     <string name="concord_invite_naddr_label">Zaproszenie do Concord (kliknij link, aby wyświetlić pełną treść zaproszenia i dołączyć)</string>
@@ -2337,6 +2361,11 @@
     <string name="buzz_canvas_edit">Edytuj płótno</string>
     <string name="buzz_canvas_save">Zapisz płótno</string>
     <string name="buzz_canvas_body_label">Płótno (Markdown)</string>
+    <string name="buzz_canvas_conflict">Ktoś inny wprowadził zmiany w tym obszarze roboczym od momentu, gdy zacząłeś go edytować. Skopiuj swoje zmiany, otwórz ponownie obszar roboczy i zastosuj je ponownie.</string>
+    <string name="buzz_canvas_head_in_future">Obecny obszar roboczy ma znacznik czasu wskazujący datę zbyt odległą w przyszłości, by można go było bezpiecznie edytować.</string>
+    <string name="buzz_canvas_save_failed">Nie udało się zapisać obszaru roboczego: %1$s</string>
+    <string name="buzz_system_admin_kick">%1$s został usunięty przez administratora</string>
+    <string name="buzz_system_channel_auto_archived">Ten kanał został zarchiwizowany automatycznie</string>
     <string name="buzz_editing_banner">Edytuj wiadomość</string>
     <string name="message_edited">(edytowana)</string>
     <string name="buzz_typing_one">%1$s pisze…</string>
@@ -5631,7 +5660,6 @@
     <string name="new_conversation_cordn_pro_1">Szyfrowanie typu „end-to-end” z wykorzystaniem MLS — koordynator nigdy nie ma możliwości odczytania wiadomości.</string>
     <string name="new_conversation_cordn_pro_2">Jedno uzgodnione postanowienie dla wszystkich, aby historia nie mogła zostać zmieniona przez błędny zegar.</string>
     <string name="new_conversation_cordn_con_1">Koordynator wie, kto należy do grupy i kiedy ktoś zabiera głos, mimo że nie potrafi odczytać treści wypowiedzi.</string>
-    <string name="cordn_invitations_entry">Zostałeś zaproszony do grupy „cordn”?</string>
     <string name="cordn_invitations_entry_action">Przejrzyj zaproszenia</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
@@ -6526,4 +6554,5 @@
     <string name="cordn_voice_play">Odtwórz wiadomość głosową</string>
     <string name="cordn_voice_record">Nagraj wiadomość głosową</string>
     <string name="cordn_voice_stop">Zatrzymaj i wyślij</string>
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
 </resources>

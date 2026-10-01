@@ -5591,7 +5591,6 @@
     <string name="new_conversation_cordn_pro_1">End-to-end šifrování pomocí MLS — koordinátor nikdy nepřečte žádnou zprávu.</string>
     <string name="new_conversation_cordn_pro_2">Jedno dohodnuté pořadí pro všechny, takže historii nemohou přeházet špatně nastavené hodiny.</string>
     <string name="new_conversation_cordn_con_1">Koordinátor zjistí, kdo je ve skupině a kdy spolu mluvíte, i když nemůže číst, co píšete.</string>
-    <string name="cordn_invitations_entry">Máte pozvánku do skupiny cordn?</string>
     <string name="cordn_invitations_entry_action">Zobrazit pozvánky</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
@@ -6488,4 +6487,5 @@
     <string name="cordn_voice_stop">Zastavit a odeslat</string>
     <string name="browser_address_hint">Hledat nebo zadat adresu</string>
     <string name="napplet_untitled">Nepojmenovaný nApplet</string>
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
 </resources>

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.chats.ui
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +42,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,7 +65,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_entry
 import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_entry_action
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_best_for
 import com.vitorpamplona.amethyst.commons.resources.new_conversation_concord_best
@@ -164,7 +164,9 @@ private val ColorLocation = Color(0xFF0891B2)
  * One selectable conversation type. Collapsed, a row shows only the icon, name, a short tagline, and
  * a one-word [chip] naming its deciding axis (scale / device-bound / moderation / live). Tapping the
  * row expands it to reveal [bestFor] and the [pros]/[cons] before the [cta] button routes to that
- * type's existing creation (or browse) flow.
+ * type's existing creation (or browse) flow. A type whose joining is its own flow (rather than
+ * something that just shows up in the inbox) adds it as [secondary], an outlined button under
+ * the main one, so "join" sits on the same card as "create" instead of floating elsewhere.
  */
 @Immutable
 private class ConversationType(
@@ -177,6 +179,13 @@ private class ConversationType(
     val cta: StringResource,
     val pros: List<StringResource>,
     val cons: List<StringResource>,
+    val route: Route,
+    val secondary: SecondaryAction? = null,
+)
+
+@Immutable
+private class SecondaryAction(
+    val label: StringResource,
     val route: Route,
 )
 
@@ -253,6 +262,13 @@ private val conversationSections =
                         // to it, and this is the first place it can be said.
                         cons = listOf(Res.string.new_conversation_cordn_con_1),
                         route = Route.CordnCreateGroup,
+                        // Being invited is the other half of "start a
+                        // conversation", so it sits on the same card as
+                        // creating one. It is a button you press, never a
+                        // count: a count would take a call to every
+                        // coordinator, and every call to a coordinator is
+                        // metadata (spec/00.md §8).
+                        secondary = SecondaryAction(Res.string.cordn_invitations_entry_action, Route.CordnInvitations),
                     ),
                 ),
         ),
@@ -351,50 +367,11 @@ fun NewConversationScreen(nav: INav) {
                             expanded = expandedId == type.title.key,
                             onToggle = { expandedId = if (expandedId == type.title.key) "" else type.title.key },
                             onCreate = { nav.nav(type.route) },
+                            onSecondary = { type.secondary?.let { nav.nav(it.route) } },
                         )
                     }
                 }
             }
-
-            // Being invited is the other half of "start a conversation", so it
-            // belongs on the screen people reach for when they want one --
-            // not buried in settings. The count is deliberately absent: it
-            // would take a call to every coordinator, and every call to a
-            // coordinator is metadata (spec/00.md §8).
-            item(key = "cordn-invitations") {
-                CordnInvitationsEntry(onClick = { nav.nav(Route.CordnInvitations) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun CordnInvitationsEntry(onClick: () -> Unit) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 6.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Dns,
-            contentDescription = null,
-            tint = ColorCordn,
-            modifier = Modifier.size(20.dp),
-        )
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = stringRes(Res.string.cordn_invitations_entry),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = stringRes(Res.string.cordn_invitations_entry_action),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.grayText,
-            )
         }
     }
 }
@@ -405,6 +382,7 @@ private fun ConversationRow(
     expanded: Boolean,
     onToggle: () -> Unit,
     onCreate: () -> Unit,
+    onSecondary: () -> Unit,
 ) {
     // Lighten the accent in dark mode so chip/label/checkmark text stays legible on the dark ground;
     // the solid icon tile keeps the saturated base color in both themes.
@@ -492,6 +470,20 @@ private fun ConversationRow(
                     colors = ButtonDefaults.buttonColors(containerColor = type.color, contentColor = Color.White),
                 ) {
                     Text(stringRes(type.cta), fontWeight = FontWeight.Bold)
+                }
+
+                // Stacked rather than side by side: at phone width each half
+                // would be ~150dp and the bold primary label would wrap.
+                type.secondary?.let { secondary ->
+                    OutlinedButton(
+                        onClick = onSecondary,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, accent),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
+                    ) {
+                        Text(stringRes(secondary.label), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

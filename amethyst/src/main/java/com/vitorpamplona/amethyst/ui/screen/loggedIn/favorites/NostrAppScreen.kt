@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites
 
 import android.os.Build
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,8 +50,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
@@ -69,11 +65,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_unavailable
 import com.vitorpamplona.amethyst.commons.resources.favorite_apps
-import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
-import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
-import com.vitorpamplona.amethyst.commons.resources.favorite_notice_uploaded
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -81,13 +74,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
-import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 
 /**
  * A **Nostr app** — an nSite or nApplet, reached by [coordinate] (favorited or not) — rendered as an
@@ -149,13 +139,12 @@ private fun EmbeddedNostrAppTab(
     val capLabels = params.getStringArrayList(NappletHostContract.EXTRA_CAP_LABELS).orEmpty()
     val profile = HostProfile.fromName(params.getString(NappletHostContract.EXTRA_HOST_PROFILE))
     val useTor = params.getBoolean(NappletHostContract.EXTRA_USE_TOR, true)
-    // Only nSites have a route of their own to choose, and only when Tor is running.
-    val torOn = if (profile.exposesNetwork && params.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1) > 0) useTor else null
+    // Only nSites have a route of their own to choose, and only when Tor is on.
+    val torType by Amethyst.instance.torPrefs.torType
+        .collectAsStateWithLifecycle()
+    val torOn = if (profile.exposesNetwork && torType != TorType.OFF) useTor else null
 
-    val scope = rememberCoroutineScope()
-    var canGoBack by remember { mutableStateOf(false) }
     var showAccess by remember { mutableStateOf(false) }
-    var textZoom by remember(coordinate) { mutableIntStateOf(BrowserChrome.DEFAULT_TEXT_ZOOM) }
 
     val apps by Amethyst.instance.favoriteApps.favorites
         .collectAsStateWithLifecycle()
@@ -165,24 +154,26 @@ private fun EmbeddedNostrAppTab(
         remember(id, EmbeddedTabHost.rebuildEpoch, networkEpoch) {
             EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
+    // Seeded from the controller, which outlives this screen (it leaves composition on every bottom-bar
+    // switch), so coming back keeps Back working inside the app and the pill showing the zoom in effect.
+    var canGoBack by remember(controller) { mutableStateOf(controller.lastCanGoBack) }
+    var textZoom by remember(controller) { mutableIntStateOf(controller.currentTextZoom) }
 
     // Keep the controller callbacks fresh (cheap, need the latest closures).
     SideEffect {
         controller.onStateChanged = { canGoBack = it }
-        controller.onNotice = { notice ->
-            noticeResId(notice)?.let { res ->
-                scope.launch { Toast.makeText(context, loadStringRes(res), Toast.LENGTH_SHORT).show() }
-            }
-        }
     }
 
     // The permission-ledger key is the addressable coordinate without its kind prefix (`pubkey:dtag`),
     // matching how the Connected Apps screen keys napplet/nsite grants (see NappletIdentity.coordinate).
     val permissionCoordinate = remember(coordinate) { coordinate.substringAfter(':') }
 
+    // Off for this site, yet on Tor because another open page needs it (Tor always wins in `:napplet`).
+    val torForced = controller.isTorForced
+
     // Stable per app (title/coordinate/isFavorite don't change often), so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(title, coordinate, isFavorite, torOn, textZoom, controller) {
+        remember(title, coordinate, isFavorite, torOn, torForced, textZoom, controller) {
             EmbeddedTabChrome(
                 ui =
                     BrowserPillUi(
@@ -194,6 +185,7 @@ private fun EmbeddedNostrAppTab(
                                 url = "",
                                 startUrl = "",
                                 torOn = torOn,
+                                torForced = torForced,
                                 hasAccessInfo = true,
                             ),
                         isFavorite = isFavorite,
@@ -212,7 +204,7 @@ private fun EmbeddedNostrAppTab(
                         BrowserChrome.Action.TOR -> {
                             // Persist the new route, then rebuild the session so it loads that way.
                             NappletNetworkRegistry.set(permissionCoordinate, !useTor)
-                            EmbeddedTabHost.evict(id)
+                            EmbeddedTabHost.rebuild(id)
                             networkEpoch++
                         }
                         BrowserChrome.Action.SITE_SETTINGS -> nav.nav(Route.ConnectedAppDetail(permissionCoordinate))
@@ -235,32 +227,25 @@ private fun EmbeddedNostrAppTab(
     SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
     val bottomBarFlow = accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
+    val entryLifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(id) {
         val token = EmbeddedTabHost.setActive(id)
+        EmbeddedTabHost.hold(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfOwner(token)
             EmbeddedTabHost.clearActiveChrome(id)
-            // Only bottom-row apps stay warm; anything else restarts when it leaves.
-            if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
+            // Only bottom-row apps stay warm; anything else restarts once the user actually leaves it — not
+            // when a screen is merely pushed on top, and not when a re-navigation to this same tab already
+            // composed a new screen on the same session.
+            if (EmbeddedTabHost.release(id)) {
+                EmbeddedTabHost.releaseWhenGone(id, entryLifecycle) { id in bottomBarFlow.value.favoriteIds() }
+            }
         }
     }
 
-    // Pause the applet's JS while the app is backgrounded (parity with NappletHostActivity's onPause):
-    // an "allow always" napplet can't act on the user's behalf when they aren't looking. (The tab layer
-    // separately pauses it whenever it isn't the visible tab.)
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, controller) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_STOP -> controller.pause()
-                    Lifecycle.Event.ON_START -> controller.resume()
-                    else -> Unit
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    // No lifecycle handling here: the tab layer tells every warm tab when the app leaves the screen
+    // (EmbeddedTabHost.onAppStopped), which holds the applet's acting requests at once and pauses its page on
+    // the relays' 30 s schedule.
 
     PlatformBackHandler(enabled = canGoBack) { controller.back() }
 
@@ -327,11 +312,3 @@ private fun UnavailableTab(
         }
     }
 }
-
-private fun noticeResId(notice: String): StringResource? =
-    when (notice) {
-        NappletEmbedContract.NOTICE_PUBLISHED -> Res.string.favorite_notice_published
-        NappletEmbedContract.NOTICE_UPLOADED -> Res.string.favorite_notice_uploaded
-        NappletEmbedContract.NOTICE_PAID -> Res.string.favorite_notice_paid
-        else -> null
-    }
