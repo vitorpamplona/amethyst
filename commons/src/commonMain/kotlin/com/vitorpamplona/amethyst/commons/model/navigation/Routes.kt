@@ -585,6 +585,8 @@ sealed class Route {
 
     @Serializable object CallSettings : Route()
 
+    @Serializable object NowPlayingSettings : Route()
+
     @Serializable object NotificationSettings : Route()
 
     @Serializable object CalendarReminderSettings : Route()

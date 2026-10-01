@@ -232,6 +232,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.HomeTabsSe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MessagesSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MutedThreadsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NIP47SetupScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ReactionsSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SecurityFiltersScreen
@@ -271,6 +272,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsSc
 import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
+import com.vitorpamplona.amethyst.service.nowPlaying.AndroidAppIcon
+import com.vitorpamplona.amethyst.service.nowPlaying.AndroidNowPlayingAccess
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
@@ -653,6 +656,11 @@ fun BuildNavigation(
         composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.NowPlayingSettings> {
+            val context = LocalContext.current
+            val access = remember(context) { AndroidNowPlayingAccess(context.applicationContext) }
+            NowPlayingSettingsScreen(accountViewModel, nav, access) { appId, label -> AndroidAppIcon(appId, label) }
+        }
         composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
         composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }

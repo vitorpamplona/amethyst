@@ -33,6 +33,7 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.service.nowPlaying.InAppPlaybackListener
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.aspectRatio.AspectRatioCacher
 import com.vitorpamplona.amethyst.service.playback.playerPool.positions.CurrentPlayPositionCacher
@@ -89,6 +90,7 @@ class ExoPlayerBuilder(
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
                 addListener(MediaPlayTimeTracker())
+                addListener(InAppPlaybackListener())
             }
     }
 

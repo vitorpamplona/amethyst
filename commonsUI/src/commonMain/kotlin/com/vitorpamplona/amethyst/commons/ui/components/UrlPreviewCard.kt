@@ -20,26 +20,37 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import androidx.collection.LruCache
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.network.HttpException
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
@@ -50,9 +61,12 @@ import com.vitorpamplona.amethyst.commons.resources.link_actions_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.url_preview_open_in_browser
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.previewCardImageModifier
 import kotlinx.coroutines.launch
@@ -101,22 +115,50 @@ fun UrlPreviewCard(
         }
     }
 
-    Column(
-        modifier =
-            MaterialTheme.colorScheme.innerPostModifier
-                .combinedClickable(
-                    onClick = {
-                        if (onCardClick != null) {
-                            onCardClick()
-                        } else {
-                            runCatching { uri.openUri(url) }
-                        }
-                    },
-                    onLongClick = {
-                        popupExpanded.value = true
-                    },
-                ),
-    ) {
+    val cardModifier =
+        MaterialTheme.colorScheme.innerPostModifier
+            .combinedClickable(
+                onClick = {
+                    if (onCardClick != null) {
+                        onCardClick()
+                    } else {
+                        runCatching { uri.openUri(url) }
+                    }
+                },
+                onLongClick = {
+                    popupExpanded.value = true
+                },
+            )
+
+    // Only meaningful when the card's own tap does something else (e.g. opening the comment
+    // thread); otherwise it would duplicate the card's open-in-browser tap.
+    val hasCardClick = onCardClick != null
+    val onOpenInBrowser: (() -> Unit)? =
+        remember(hasCardClick, url, uri) {
+            if (hasCardClick) {
+                { runCatching { uri.openUri(url) } }
+            } else {
+                null
+            }
+        }
+
+    // A page with no picture to lead with -- most often one with no OpenGraph at all, previewed
+    // from its `<title>`, meta description and favicon -- gets the short, wide card. Painting the
+    // big layout without its image would leave a text block that only looks broken.
+    if (previewInfo.imageUrlFullPath.isBlank() && previewInfo.hasTextPreview) {
+        CompactUrlPreviewCard(previewInfo, cardModifier, onOpenInBrowser)
+    } else {
+        LargeUrlPreviewCard(previewInfo, cardModifier, onOpenInBrowser)
+    }
+}
+
+@Composable
+private fun LargeUrlPreviewCard(
+    previewInfo: UrlInfoItem,
+    modifier: Modifier,
+    onOpenInBrowser: (() -> Unit)?,
+) {
+    Column(modifier = modifier) {
         // A Loaded preview no longer implies an image: a player page that ships no cover art is
         // kept (it has media to play), and painting its empty string left a blank 180dp box.
         if (previewInfo.imageUrlFullPath.isNotBlank()) {
@@ -141,20 +183,7 @@ fun UrlPreviewCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            // Only meaningful when the card's own tap does something else (e.g. opening the
-            // comment thread); otherwise it would duplicate the card's open-in-browser tap.
-            if (onCardClick != null) {
-                IconButton(
-                    onClick = { runCatching { uri.openUri(url) } },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                        contentDescription = stringRes(Res.string.url_preview_open_in_browser),
-                        modifier = Size14Modifier,
-                        tint = Color.Gray,
-                    )
-                }
-            }
+            onOpenInBrowser?.let { OpenInBrowserButton(it) }
         }
 
         Text(
@@ -177,3 +206,121 @@ fun UrlPreviewCard(
         Spacer(modifier = DoubleVertSpacer)
     }
 }
+
+/**
+ * The short, wide card: the site's icon on the left, its title, description and host on the
+ * right. Built from what every page has even without OpenGraph -- what a browser tab shows.
+ */
+@Composable
+private fun CompactUrlPreviewCard(
+    previewInfo: UrlInfoItem,
+    modifier: Modifier,
+    onOpenInBrowser: (() -> Unit)?,
+) {
+    val host = previewInfo.verifiedHost ?: previewInfo.url
+
+    Row(
+        modifier = modifier.padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        UrlPreviewIcon(previewInfo.iconUrlFullPath, host)
+
+        Spacer(modifier = DoubleHorzSpacer)
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = previewInfo.title.ifBlank { host },
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            if (previewInfo.description.isNotBlank()) {
+                Text(
+                    text = previewInfo.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            // When there is no title the host already stands in for it on the first line.
+            if (previewInfo.title.isNotBlank()) {
+                Text(
+                    text = host,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        onOpenInBrowser?.let { OpenInBrowserButton(it) }
+    }
+}
+
+/**
+ * Icon URLs the server refused (404 and the like) in this process. The image loader caches
+ * successes but not failures, so without this a site with no `/favicon.ico` would be asked for it
+ * again -- and 404 again -- every time its card scrolled back into view.
+ */
+private val failedIconUrls = LruCache<String, Unit>(200)
+
+/**
+ * The site's icon in a fixed square. A generic globe sits there until the icon actually loads,
+ * so a site whose favicon is missing (the `/favicon.ico` guess is only a guess) or undecodable
+ * still gets a tidy card instead of an empty hole.
+ */
+@Composable
+private fun UrlPreviewIcon(
+    iconUrl: String?,
+    contentDescription: String,
+) {
+    Box(
+        modifier =
+            UrlPreviewIconModifier
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        var loaded by remember(iconUrl) { mutableStateOf(false) }
+
+        if (!loaded) {
+            Icon(
+                symbol = MaterialSymbols.Language,
+                contentDescription = null,
+                modifier = Size24Modifier,
+                tint = Color.Gray,
+            )
+        }
+
+        if (iconUrl != null && failedIconUrls[iconUrl] == null) {
+            AsyncImage(
+                model = iconUrl,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Fit,
+                modifier = UrlPreviewIconImageModifier,
+                onSuccess = { loaded = true },
+                // Only a server's answer is remembered. A network error (offline, a timeout) says
+                // nothing about the icon and must be retried once the connection is back.
+                onError = { if (it.result.throwable is HttpException) failedIconUrls.put(iconUrl, Unit) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun OpenInBrowserButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+            contentDescription = stringRes(Res.string.url_preview_open_in_browser),
+            modifier = Size14Modifier,
+            tint = Color.Gray,
+        )
+    }
+}
+
+private val UrlPreviewIconModifier = Modifier.size(48.dp).clip(SmallBorder)
+private val UrlPreviewIconImageModifier = Modifier.fillMaxSize().padding(6.dp)

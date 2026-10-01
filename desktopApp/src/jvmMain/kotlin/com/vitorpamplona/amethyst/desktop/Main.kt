@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccoun
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsContent
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -109,6 +110,9 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
+import com.vitorpamplona.amethyst.desktop.nowPlaying.DesktopNowPlayingCoordinator
+import com.vitorpamplona.amethyst.desktop.nowPlaying.DesktopNowPlayingSettings
+import com.vitorpamplona.amethyst.desktop.nowPlaying.OsNowPlayingReader
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
@@ -1459,6 +1463,18 @@ private fun AppInner(
                                     onDispose { iAccount.wotService.close() }
                                 }
 
+                                // Shares what other apps on this computer play as the account's NIP-38
+                                // music status, once the user turns it on in Settings > Now Playing.
+                                if (!account.isReadOnly) {
+                                    LaunchedEffect(iAccount) {
+                                        DesktopNowPlayingCoordinator(
+                                            settings = DesktopNowPlayingSettings.forAccount(account.pubKeyHex),
+                                            signer = iAccount.signer,
+                                            publishEvent = { relayManager.publish(it, iAccount.outboxHomeRelays()) },
+                                        ).run()
+                                    }
+                                }
+
                                 // Lazy-load Namecoin services. The Core RPC HTTP
                                 // client is sourced from the Tor-aware DesktopHttpClient
                                 // singleton so .onion RPC URLs route through the
@@ -2723,6 +2739,35 @@ private fun settingsEntries(
                 }
             },
         )
+
+        if (OsNowPlayingReader.forThisOs() != null) {
+            add(
+                SettingsEntry(
+                    SettingsMeta(
+                        id = "nowPlaying",
+                        icon = MaterialSymbols.MusicNote,
+                        title = "Now Playing",
+                        subtitle = "Share what you listen to as your status",
+                        keywords =
+                            persistentListOf(
+                                "music",
+                                "listening",
+                                "status",
+                                "song",
+                                "podcast",
+                                "spotify",
+                                "nip-38",
+                            ),
+                    ),
+                ) {
+                    NowPlayingSettingsContent(
+                        state = DesktopNowPlayingSettings.forAccount(account.pubKeyHex),
+                        access = null,
+                        showInApp = false,
+                    )
+                },
+            )
+        }
 
         add(
             SettingsEntry(
