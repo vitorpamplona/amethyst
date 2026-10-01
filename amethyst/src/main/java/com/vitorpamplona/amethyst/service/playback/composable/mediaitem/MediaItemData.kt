@@ -54,6 +54,9 @@ data class MediaItemData(
     // NIP-71 `text-track` captions to side-load. A data class is the cache key, so this has to be
     // a value that compares by content — ImmutableList keeps that true and keeps the key @Stable.
     val captions: ImmutableList<CaptionTrack> = persistentListOf(),
+    // Set by the in-post audio cards: picture-in-picture then draws the audio view (cover, waveform,
+    // time) in a square window, unmuted, instead of a video surface with no picture.
+    val isAudio: Boolean = false,
 )
 
 @Immutable

@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.pm.PackageManager
+import android.graphics.Rect
 import androidx.annotation.OptIn
 import androidx.collection.LruCache
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,16 +37,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import com.vitorpamplona.amethyst.commons.audio.PlayableLayout
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.mediaFormatLabel
 import com.vitorpamplona.amethyst.commons.audio.player.AudioCardInfo
 import com.vitorpamplona.amethyst.commons.audio.player.AudioPlaybackUi
 import com.vitorpamplona.amethyst.commons.audio.player.PlayableMediaCard
+import com.vitorpamplona.amethyst.commons.audio.syntheticWaveformFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audio_card_untitled
 import com.vitorpamplona.amethyst.commons.resources.audio_card_untitled_no_format
@@ -53,13 +57,15 @@ import com.vitorpamplona.amethyst.commons.resources.playable_media_untitled
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.service.playback.composable.rememberAudioPlaybackUi
+import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.note.types.RenderTopButtonsForVoice
-import kotlinx.coroutines.delay
 
 /**
  * What the player found when it probed a URL: true when every track is audio, false when there is a
@@ -79,6 +85,9 @@ object PlayableMediaProbeCache {
     }
 }
 
+/** Audio at least this long gets a picture-in-picture button on its card: it will outlast the post on screen. */
+private const val LONG_AUDIO_MS = 10 * 60 * 1000L
+
 /**
  * A playable file inside a post that is (or may be) audio: the shared [PlayableMediaCard] for [layout],
  * driven by the same pooled player as every other inline media.
@@ -88,6 +97,9 @@ object PlayableMediaProbeCache {
  * fetched until play is pressed. Once the player knows the tracks, [onProbed] reports whether they are
  * all audio, which is how an undecided file finds its real card and how a mislabelled video leaves for
  * the video player.
+ *
+ * Known audio that runs [LONG_AUDIO_MS] or more (by the player, else the imeta `duration`) shows a
+ * picture-in-picture button, so a podcast can keep playing in a floating window while the feed scrolls.
  */
 @Composable
 fun PlayableAudioView(
@@ -96,6 +108,7 @@ fun PlayableAudioView(
     onProbed: (audioOnly: Boolean) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    val context = LocalContext.current
     val authorName =
         remember(content.authorName, content.authorPubKey) {
             content.authorName ?: content.authorPubKey?.let { accountViewModel.getUserIfExists(it)?.toBestDisplayName() }
@@ -111,6 +124,7 @@ fun PlayableAudioView(
                 seed = content.hash ?: content.url,
                 waveform = content.waveform,
                 artworkUrl = content.artworkUri,
+                declaredDurationMs = content.durationSeconds?.let { (it * 1000).toLong() },
             )
         }
 
@@ -122,33 +136,56 @@ fun PlayableAudioView(
             else -> stringRes(Res.string.audio_card_untitled_no_format)
         }
 
+    val mediaData =
+        remember(content, mediaTitle, authorName) {
+            MediaItemData(
+                videoUri = content.url,
+                authorName = authorName,
+                title = mediaTitle,
+                artworkUri = content.artworkUri,
+                callbackUri = content.uri,
+                mimeType = content.mimeType,
+                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(content.url),
+                keepPlaying = false,
+                isLiveStream = content.isLiveStream,
+                hash = content.hash,
+            )
+        }
+
     var load by remember(content.url) { mutableStateOf(accountViewModel.settings.startVideoPlayback()) }
     var playWhenConnected by remember(content.url) { mutableStateOf(false) }
-    var active by remember(content.url) { mutableStateOf<Pair<MediaControllerState, LoadedMediaItem>?>(null) }
+    var active by remember(content.url) { mutableStateOf<MediaControllerState?>(null) }
     val controllerVisible = remember(content.url) { mutableStateOf(false) }
+    // Where picture-in-picture animates from.
+    val bounds = remember(content.url) { arrayOf<Rect?>(null) }
+    val pipSupported = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
+
+    // Hands playback to the PiP window: it attaches to the same pooled player (same URL), so pausing
+    // here first keeps the two from playing over each other, and it resumes from this position.
+    val startPictureInPicture = {
+        active?.controller?.pause()
+        PipVideoActivity.callIn(
+            mediaData.copy(
+                // Square window, and the audio view instead of an empty video surface.
+                aspectRatio = 1f,
+                isAudio = true,
+                waveformData = WaveformData(info.waveform ?: syntheticWaveformFor(info.seed).wave),
+            ),
+            bounds[0],
+            context.getActivity(),
+        )
+    }
 
     if (load) {
-        val proxyPort = remember(content.url) { accountViewModel.httpClientBuilder.proxyPortForVideo(content.url) }
-        GetMediaItem(
-            videoUri = content.url,
-            title = mediaTitle,
-            artworkUri = content.artworkUri,
-            authorName = authorName,
-            callbackUri = content.uri,
-            mimeType = content.mimeType,
-            proxyPort = proxyPort,
-            keepPlaying = false,
-            isLiveStream = content.isLiveStream,
-            hash = content.hash,
-        ) { mediaItem ->
+        GetMediaItem(mediaData) { mediaItem ->
             GetVideoController(mediaItem = mediaItem, muted = false) { controller ->
                 PauseControllerWhenInBackground(controller)
                 ReportProbe(controller.controller, onProbed)
 
-                DisposableEffect(controller, mediaItem) {
-                    active = controller to mediaItem
+                DisposableEffect(controller) {
+                    active = controller
                     onDispose {
-                        if (active?.first === controller) active = null
+                        if (active === controller) active = null
                     }
                 }
 
@@ -163,11 +200,17 @@ fun PlayableAudioView(
         }
     }
 
+    val trackBounds =
+        Modifier.onGloballyPositioned { coordinates ->
+            val b = coordinates.boundsInWindow()
+            bounds[0] = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+        }
+
     Box {
-        val current = active
-        if (current != null) {
-            val (controller, mediaItem) = current
+        val controller = active
+        if (controller != null) {
             val playback by rememberAudioPlaybackUi(controller.controller)
+            val totalMs = playback.durationMs ?: info.declaredDurationMs
             PlayableMediaCard(
                 layout = layout,
                 info = info,
@@ -175,23 +218,25 @@ fun PlayableAudioView(
                 onPlayPause = { playOrPause(controller.controller) },
                 onSeek = { fraction -> playback.durationMs?.let { controller.controller.seekTo((it * fraction).toLong()) } },
                 onClick = { controllerVisible.value = !controllerVisible.value },
-                modifier =
-                    Modifier.onGloballyPositioned { coordinates ->
-                        // Where picture-in-picture animates from.
-                        val bounds = coordinates.boundsInWindow()
-                        controller.visibility.setBounds(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
-                    },
+                onPictureInPicture = startPictureInPicture.takeIf { pipSupported && layout != PlayableLayout.UNDECIDED && totalMs != null && totalMs >= LONG_AUDIO_MS },
+                modifier = trackBounds,
                 overlay = {
                     RenderTopButtonsForVoice(
-                        mediaData = mediaItem.src,
-                        controllerState = controller,
+                        mediaData = mediaData,
                         controllerVisible = controllerVisible,
+                        startingMuteState = controller.controller.volume < 0.001,
+                        onMuteClick = { mute ->
+                            DEFAULT_MUTED_SETTING.value = mute
+                            controller.controller.volume = if (mute) 0f else 1f
+                        },
+                        onPictureInPictureClick = startPictureInPicture,
                         modifier = Modifier.align(Alignment.TopEnd),
                         accountViewModel = accountViewModel,
                     )
                 },
             )
         } else {
+            val totalMs = info.declaredDurationMs
             PlayableMediaCard(
                 layout = layout,
                 info = info,
@@ -201,6 +246,8 @@ fun PlayableAudioView(
                     load = true
                 },
                 onSeek = {},
+                onPictureInPicture = startPictureInPicture.takeIf { pipSupported && layout != PlayableLayout.UNDECIDED && totalMs != null && totalMs >= LONG_AUDIO_MS },
+                modifier = trackBounds,
             )
         }
     }
@@ -237,44 +284,3 @@ private fun ReportProbe(
         onDispose { player.removeListener(listener) }
     }
 }
-
-/** The player's state as the card draws it: event-driven, plus a position poll while it plays. */
-@Composable
-private fun rememberAudioPlaybackUi(player: Player): State<AudioPlaybackUi> {
-    val state = remember(player) { mutableStateOf(player.toPlaybackUi()) }
-    DisposableEffect(player) {
-        val listener =
-            object : Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events: Player.Events,
-                ) {
-                    state.value = player.toPlaybackUi()
-                }
-            }
-        player.addListener(listener)
-        state.value = player.toPlaybackUi()
-        onDispose { player.removeListener(listener) }
-    }
-
-    val isPlaying = state.value.isPlaying
-    LaunchedEffect(player, isPlaying) {
-        while (isPlaying) {
-            delay(POSITION_POLL_MS)
-            state.value = player.toPlaybackUi()
-        }
-    }
-    return state
-}
-
-@OptIn(UnstableApi::class)
-private fun Player.toPlaybackUi() =
-    AudioPlaybackUi(
-        // Matches what the button should offer: pause while playing or about to (buffering with
-        // playWhenReady), play when paused, ended or idle.
-        isPlaying = !Util.shouldShowPlayButton(this),
-        positionMs = currentPosition.coerceAtLeast(0),
-        durationMs = duration.takeIf { it != C.TIME_UNSET && it > 0 },
-    )
-
-private const val POSITION_POLL_MS = 250L

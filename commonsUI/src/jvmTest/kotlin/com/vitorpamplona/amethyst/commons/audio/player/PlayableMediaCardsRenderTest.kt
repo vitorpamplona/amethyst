@@ -72,6 +72,8 @@ class PlayableMediaCardsRenderTest {
 
     @Test fun undecided() = render("03-undecided-track-card", 820, 360) { AudioUndecidedPreview() }
 
+    @Test fun pictureInPicture() = render("04-picture-in-picture", 820, 1000) { AudioPictureInPicturePreview() }
+
     private companion object {
         const val SETTLE_FRAMES = 12
         const val FRAME_MILLIS = 60L

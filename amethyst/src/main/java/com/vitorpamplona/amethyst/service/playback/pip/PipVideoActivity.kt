@@ -46,8 +46,10 @@ class PipVideoActivity : ComponentActivity() {
         setContent {
             val videoData by rememberVideoDataFromIntents()
             videoData?.let { mediaItemData ->
-                // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
-                val muted = remember(mediaItemData) { DEFAULT_MUTED_SETTING.value }
+                // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes.
+                // Audio is never started muted: the feed's mute default is about silent autoplaying
+                // video, and an audio track somebody just sent to PiP is meant to be heard.
+                val muted = remember(mediaItemData) { !mediaItemData.isAudio && DEFAULT_MUTED_SETTING.value }
 
                 GetMediaItem(mediaItemData) { mediaItem ->
                     GetVideoController(
@@ -60,7 +62,11 @@ class PipVideoActivity : ComponentActivity() {
                         RegisterBackgroundMedia(controllerState)
                         RegisterControllerReceiver(controllerState)
                         WatchControllerForActions(mediaItemData, controllerState)
-                        RenderPipVideo(controllerState, mediaItemData.waveformData)
+                        if (mediaItemData.isAudio) {
+                            RenderPipAudio(controllerState, mediaItemData)
+                        } else {
+                            RenderPipVideo(controllerState, mediaItemData.waveformData)
+                        }
                     }
                 }
             }

@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -86,7 +87,19 @@ object AudioPlayerSamples {
     /** An HLS playlist: audio only or video, nothing tells until the player probes it. */
     val stream = AudioCardInfo(title = null, artist = AUTHOR_NAME, format = "HLS", sizeBytes = null, seed = HLS_URL)
 
+    /** A 1h12 podcast episode: long enough that the card offers picture-in-picture. */
+    val podcast =
+        AudioCardInfo(
+            title = null,
+            artist = AUTHOR_NAME,
+            format = "MP3",
+            sizeBytes = 69_206_016,
+            seed = "a7d93c0e5b2f4816",
+            declaredDurationMs = 4_325_000,
+        )
+
     val playing = AudioPlaybackUi(isPlaying = true, positionMs = 72_000, durationMs = 208_000)
+    val podcastPlaying = AudioPlaybackUi(isPlaying = true, positionMs = 1_534_000, durationMs = 4_325_000)
     val pausedEarly = AudioPlaybackUi(isPlaying = false, positionMs = 9_000, durationMs = 41_000)
 }
 
@@ -139,7 +152,8 @@ private fun Card(
     layout: PlayableLayout,
     info: AudioCardInfo,
     playback: AudioPlaybackUi = AudioPlaybackUi.Idle,
-) = PlayableMediaCard(layout, info, playback, onPlayPause = {}, onSeek = {})
+    pip: Boolean = false,
+) = PlayableMediaCard(layout, info, playback, onPlayPause = {}, onSeek = {}, onPictureInPicture = if (pip) ({}) else null)
 
 @Preview(widthDp = 820, heightDp = 760)
 @Composable
@@ -173,5 +187,28 @@ fun AudioUndecidedPreview() =
         Column {
             Caption("Audio or video? (HLS playlist): neutral card until the player probes it")
             MockAudioPost(text = "Live set tonight, tune in") { Card(playableLayout(null, AudioPlayerSamples.HLS_URL, hasArtwork = false), AudioPlayerSamples.stream) }
+        }
+    }
+
+@Preview(widthDp = 820, heightDp = 1000)
+@Composable
+fun AudioPictureInPicturePreview() =
+    AudioPreviewFrame {
+        val waveform = playableLayout("audio/mpeg", AudioPlayerSamples.MP3_URL, hasArtwork = false)
+        val cover = playableLayout("audio/mpeg", AudioPlayerSamples.MP3_URL, hasArtwork = true)
+        Column {
+            Caption("Long audio offers picture-in-picture (before load: imeta duration)")
+            MockAudioPost(text = "New episode is out!") { Card(waveform, AudioPlayerSamples.podcast, pip = true) }
+            MockAudioPost(text = "New episode is out!") { Card(cover, AudioPlayerSamples.podcast, AudioPlayerSamples.podcastPlaying, pip = true) }
+            Caption("The PiP window")
+            Row(Modifier.padding(12.dp)) {
+                Box(Modifier.size(180.dp).clip(RoundedCornerShape(12.dp))) {
+                    AudioPipContent(AudioPlayerSamples.podcast, AudioPlayerSamples.podcastPlaying)
+                }
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.size(180.dp).clip(RoundedCornerShape(12.dp))) {
+                    AudioPipContent(AudioPlayerSamples.withArtwork, AudioPlayerSamples.playing)
+                }
+            }
         }
     }

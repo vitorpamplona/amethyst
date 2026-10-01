@@ -49,6 +49,14 @@ class RichTextParserAudioImetaTest {
         assertEquals("audio/mpeg", media.mimeType)
         assertEquals(4_992_768L, media.sizeBytes)
         assertNull(media.waveform)
+        assertNull(media.durationSeconds)
+    }
+
+    @Test
+    fun durationReachesTheMedia() {
+        val media = parse("m audio/mpeg", "duration 3725.4")
+        assertIs<MediaUrlVideo>(media)
+        assertEquals(3725.4, media.durationSeconds)
     }
 
     @Test

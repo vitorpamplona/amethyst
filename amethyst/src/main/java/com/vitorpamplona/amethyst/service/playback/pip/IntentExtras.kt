@@ -62,6 +62,8 @@ class IntentExtras {
                 keepPlaying = intent.getBoolean("keepPlaying", true),
                 waveformData = intent.getFloatArray("wavefrontData")?.toList()?.let { WaveformData(it) },
                 isLiveStream = intent.getBoolean("isLiveStream", false),
+                hash = intent.getString("hash"),
+                isAudio = intent.getBoolean("isAudio", false),
             )
         }
 
@@ -81,6 +83,8 @@ class IntentExtras {
                 putBoolean("keepPlaying", data.keepPlaying)
                 data.waveformData?.let { putFloatArray("wavefrontData", it.wave.toFloatArray()) }
                 putBoolean("isLiveStream", data.isLiveStream)
+                data.hash?.let { putString("hash", it) }
+                putBoolean("isAudio", data.isAudio)
 
                 bounds?.let { putInt("boundLeft", it.left) }
                 bounds?.let { putInt("boundRight", it.right) }

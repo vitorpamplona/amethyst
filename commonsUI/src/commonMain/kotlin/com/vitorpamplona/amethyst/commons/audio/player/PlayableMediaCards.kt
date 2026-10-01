@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audio_card_untitled
 import com.vitorpamplona.amethyst.commons.resources.audio_card_untitled_no_format
 import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.picture_in_picture
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.playable_media_untitled
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -111,6 +112,8 @@ class AudioCardInfo(
     val waveform: List<Float>? = null,
     /** The imeta `image`: the artwork [AudioCoverCard] shows. */
     val artworkUrl: String? = null,
+    /** The imeta `duration`: shown until the player knows the real one. */
+    val declaredDurationMs: Long? = null,
 ) {
     /** "MP3 · 4.8 MB" — known from the imeta alone. */
     val fileFacts: String
@@ -142,11 +145,12 @@ fun PlayableMediaCard(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onPictureInPicture: (() -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     when (layout) {
-        PlayableLayout.AUDIO_WAVEFORM -> AudioWaveformCard(info, playback, onPlayPause, onSeek, modifier, onClick, overlay)
-        PlayableLayout.AUDIO_COVER -> AudioCoverCard(info, playback, onPlayPause, onSeek, modifier, onClick, overlay)
+        PlayableLayout.AUDIO_WAVEFORM -> AudioWaveformCard(info, playback, onPlayPause, onSeek, modifier, onClick, onPictureInPicture, overlay)
+        PlayableLayout.AUDIO_COVER -> AudioCoverCard(info, playback, onPlayPause, onSeek, modifier, onClick, onPictureInPicture, overlay)
         PlayableLayout.UNDECIDED -> UndecidedMediaCard(info, playback, onPlayPause, modifier, onClick, overlay)
         PlayableLayout.VIDEO -> Unit
     }
@@ -164,6 +168,8 @@ fun AudioWaveformCard(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    /** Non-null shows the picture-in-picture button: meant for long audio, where the post will scroll away. */
+    onPictureInPicture: (() -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val bars = rememberBars(info)
@@ -192,7 +198,7 @@ fun AudioWaveformCard(
                 Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
-                        if (playback.durationMs != null) formatClock(playback.positionMs) else audioTitle(info),
+                        if (playback.durationMs != null || info.declaredDurationMs != null) formatClock(playback.positionMs) else audioTitle(info),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -207,6 +213,10 @@ fun AudioWaveformCard(
                         maxLines = 1,
                     )
                 }
+            }
+            if (onPictureInPicture != null) {
+                Spacer(Modifier.width(4.dp))
+                PictureInPictureButton(onPictureInPicture, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         overlay()
@@ -225,6 +235,8 @@ fun AudioCoverCard(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    /** Non-null shows the picture-in-picture button: meant for long audio, where the post will scroll away. */
+    onPictureInPicture: (() -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val bars = rememberBars(info)
@@ -299,7 +311,81 @@ fun AudioCoverCard(
                 )
             }
         }
+        if (onPictureInPicture != null) {
+            PictureInPictureButton(
+                onPictureInPicture,
+                tint = Color.White,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.4f)),
+            )
+        }
         overlay()
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Picture-in-picture: what the small floating window shows for audio. Square, display-only (a PiP
+// window takes no touches; the system draws play/pause over it), the cover behind the waveform.
+// ---------------------------------------------------------------------------------------------
+
+@Composable
+fun AudioPipContent(
+    info: AudioCardInfo,
+    playback: AudioPlaybackUi,
+    modifier: Modifier = Modifier,
+) {
+    val bars = rememberBars(info)
+    Box(modifier.fillMaxSize()) {
+        GeneratedCover(info.seed, Modifier.fillMaxSize(), icon = null, record = info.artworkUrl == null)
+        if (info.artworkUrl != null) {
+            AsyncImage(
+                model = info.artworkUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.6f)
+                .align(Alignment.BottomCenter)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
+        )
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp)) {
+            Text(
+                audioTitle(info),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            info.artist?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Spacer(Modifier.height(6.dp))
+            WaveformBars(
+                bars = bars,
+                progress = playback.progress,
+                played = Color.White,
+                unplayed = Color.White.copy(alpha = 0.35f),
+                modifier = Modifier.fillMaxWidth().height(24.dp),
+                barWidth = 2.dp,
+                gap = 2.dp,
+            )
+            Spacer(Modifier.height(2.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatClock(playback.positionMs), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f))
+                (playback.durationMs ?: info.declaredDurationMs)?.let {
+                    Text(formatClock(it), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f))
+                }
+            }
+        }
     }
 }
 
@@ -393,7 +479,7 @@ private fun audioTitle(info: AudioCardInfo): String =
 private fun trailingFacts(
     info: AudioCardInfo,
     playback: AudioPlaybackUi,
-): String = listOfNotNull(info.fileFacts.ifEmpty { null }, playback.durationMs?.let(::formatClock)).joinToString(" · ")
+): String = listOfNotNull(info.fileFacts.ifEmpty { null }, (playback.durationMs ?: info.declaredDurationMs)?.let(::formatClock)).joinToString(" · ")
 
 private fun Modifier.clickableWithoutRipple(onClick: (() -> Unit)?): Modifier =
     if (onClick == null) {
@@ -401,6 +487,20 @@ private fun Modifier.clickableWithoutRipple(onClick: (() -> Unit)?): Modifier =
     } else {
         this.then(Modifier.clickable(interactionSource = null, indication = null, onClick = onClick))
     }
+
+@Composable
+private fun PictureInPictureButton(
+    onClick: () -> Unit,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.size(36.dp).clip(CircleShape).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(MaterialSymbols.PictureInPicture, stringRes(Res.string.picture_in_picture), Modifier.size(22.dp), tint = tint)
+    }
+}
 
 @Composable
 fun PlayPauseButton(
