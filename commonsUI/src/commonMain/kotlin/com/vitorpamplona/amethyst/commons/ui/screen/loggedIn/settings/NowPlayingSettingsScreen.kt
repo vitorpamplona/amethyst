@@ -297,7 +297,9 @@ fun NowPlayingPreviewCard(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(44.dp).clip(CircleShape)) { avatar() }
+            // Sized, not clipped: the avatar rounds itself, and the follow mark and user cards it
+            // draws sit in the corners of its square box, which a circular clip would cut off.
+            Box(Modifier.size(44.dp)) { avatar() }
 
             Column(
                 modifier = Modifier.weight(1f).padding(start = 14.dp, end = 12.dp),

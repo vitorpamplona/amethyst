@@ -21,14 +21,19 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingAccess
@@ -125,7 +130,7 @@ class NowPlayingSettingsRenderTest {
         return try {
             val png = scene.render().encodeToData(EncodedImageFormat.PNG)!!.bytes
             System.getenv("NOW_PLAYING_RENDER_DIR")?.let { dir ->
-                val name = scenarios.entries.first { it.value === content }.key
+                val name = scenarios.entries.firstOrNull { it.value === content }?.key ?: return@let
                 File(dir, "now-playing-$name-${if (dark) "dark" else "light"}.png").writeBytes(png)
             }
             ImageIO.read(ByteArrayInputStream(png))
@@ -140,6 +145,35 @@ class NowPlayingSettingsRenderTest {
             for (y in 0 until height step 3) seen += getRGB(x, y)
         }
         return seen.size
+    }
+
+    @Test
+    fun theAvatarCornersAreNotClipped() {
+        // ClickableUserPicture draws the follow mark in the top-right corner of its square box,
+        // outside the round picture. A circular clip around the slot used to cut it off.
+        val marker = Color(0xFFFF00FF)
+        val image =
+            render(false) {
+                NowPlayingPreviewCard(
+                    avatar = {
+                        Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.size(12.dp).align(Alignment.TopEnd).background(marker))
+                        }
+                    },
+                    name = "Vitor",
+                    liveStatus = null,
+                    isOn = true,
+                )
+            }
+
+        var markerPixels = 0
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (image.getRGB(x, y) == marker.toArgb()) markerPixels++
+            }
+        }
+        // 12dp at density 2 is a 24x24 square: all of it must reach the screen.
+        assertTrue(markerPixels >= 24 * 24 * 95 / 100, "only $markerPixels of ${24 * 24} corner pixels were drawn")
     }
 
     @Test
