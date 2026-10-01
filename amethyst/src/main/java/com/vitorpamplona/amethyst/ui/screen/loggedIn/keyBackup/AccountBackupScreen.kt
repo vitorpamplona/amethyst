@@ -20,16 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.PersistableBundle
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -136,14 +132,13 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.privacylock.rememberDeviceAuthenticator
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.note.authenticate
-import com.vitorpamplona.amethyst.ui.note.rememberAuthPromptLabels
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
@@ -701,13 +696,6 @@ private class KeyAccessGate {
     var isUnlocked by mutableStateOf(false)
         private set
 
-    /**
-     * The action waiting on the keyguard fallback activity to return. Only a new request or
-     * that activity's result replaces it: the activity stops this screen (so ON_STOP must not
-     * clear it), and a wrong fingerprint before the lockout fallback is not a final failure.
-     */
-    var pending: (() -> Unit)? = null
-
     var prompt: ((onApproved: () -> Unit) -> Unit)? = null
 
     fun withAccess(action: () -> Unit) {
@@ -728,32 +716,15 @@ private class KeyAccessGate {
 
 @Composable
 private fun rememberKeyAccessGate(accountViewModel: AccountViewModel): KeyAccessGate {
-    val context = LocalContext.current
-    val authLabels = rememberAuthPromptLabels()
+    val authenticator = rememberDeviceAuthenticator()
     val authTitle = stringRes(Res.string.backup_keys)
     val gate = remember { KeyAccessGate() }
 
-    val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            val action = gate.pending
-            gate.pending = null
-            if (result.resultCode == Activity.RESULT_OK) {
-                action?.invoke()
-            }
-        }
-
     SideEffect {
         gate.prompt = { onApproved ->
-            gate.pending = onApproved
-            authenticate(
+            authenticator.authenticate(
                 title = authTitle,
-                context = context,
-                labels = authLabels,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = {
-                    gate.pending = null
-                    onApproved()
-                },
+                onApproved = onApproved,
                 onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
             )
         }

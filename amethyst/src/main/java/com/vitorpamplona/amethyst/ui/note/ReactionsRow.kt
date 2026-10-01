@@ -66,7 +66,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
@@ -77,7 +76,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -92,10 +90,8 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -115,16 +111,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.commons.audio.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.commons.hashtags.Cashu
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
 import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
@@ -138,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReposts
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.boost
@@ -156,15 +149,12 @@ import com.vitorpamplona.amethyst.commons.resources.no_payment_app_found_for_typ
 import com.vitorpamplona.amethyst.commons.resources.no_reaction_type_setup_long_press_to_change
 import com.vitorpamplona.amethyst.commons.resources.no_reactions_setup
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
-import com.vitorpamplona.amethyst.commons.resources.nutzap
 import com.vitorpamplona.amethyst.commons.resources.open_all_reactions_to_this_post
 import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.payto_amount_set_in_app
 import com.vitorpamplona.amethyst.commons.resources.quick_zap_amounts
 import com.vitorpamplona.amethyst.commons.resources.quote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
-import com.vitorpamplona.amethyst.commons.resources.reload_mint_title
-import com.vitorpamplona.amethyst.commons.resources.sats_to_complete
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
@@ -174,6 +164,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBas
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.commons.ui.note.CASHU_PREFERRED_BELOW_SATS
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ExpandLessIcon
@@ -181,32 +172,34 @@ import com.vitorpamplona.amethyst.commons.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.ONCHAIN_PREFERRED_ABOVE_SATS
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.commons.ui.note.OutlinedZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RenderBoostGallery
 import com.vitorpamplona.amethyst.commons.ui.note.RenderLikeGallery
 import com.vitorpamplona.amethyst.commons.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.commons.ui.note.RenderZapGallery
+import com.vitorpamplona.amethyst.commons.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.commons.ui.note.RepostIcon
 import com.vitorpamplona.amethyst.commons.ui.note.RepostedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ShareIcon
 import com.vitorpamplona.amethyst.commons.ui.note.VoiceReplyIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ZapRail
+import com.vitorpamplona.amethyst.commons.ui.note.ZapRailIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.commons.ui.theme.Height24dpFilledModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpFilledModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
-import com.vitorpamplona.amethyst.commons.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowExpandButton
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightWithPadding
@@ -223,11 +216,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.commons.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenDuration
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenFloatSpec
 import com.vitorpamplona.amethyst.commons.ui.theme.defaultTweenIntOffsetSpec
-import com.vitorpamplona.amethyst.commons.ui.theme.fundraiserProgressColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
@@ -239,8 +230,6 @@ import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.paymentTargetStyleFor
@@ -268,10 +257,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import androidx.compose.material3.Icon as Material3Icon
 
 @Composable
 fun ReactionsRow(
@@ -525,57 +512,6 @@ fun LoadAndDisplayZapraiser(
 }
 
 @Composable
-fun RenderZapRaiser(
-    baseNote: Note,
-    zapraiserAmount: Long,
-    details: Boolean,
-    accountViewModel: AccountViewModel,
-) {
-    val zapsState by observeNoteZaps(baseNote, accountViewModel)
-
-    var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
-
-    LaunchedEffect(key1 = zapsState) {
-        zapsState?.note?.let {
-            val newStatus = accountViewModel.calculateZapraiser(baseNote)
-            if (zapraiserStatus != newStatus) {
-                zapraiserStatus = newStatus
-            }
-        }
-    }
-
-    LinearProgressIndicator(
-        modifier = if (details) Height24dpFilledModifier else Height4dpFilledModifier,
-        color = MaterialTheme.colorScheme.fundraiserProgressColor,
-        progress = { zapraiserStatus.progress },
-        gapSize = 0.dp,
-        strokeCap = StrokeCap.Square,
-        drawStopIndicator = {},
-    )
-
-    if (details) {
-        Box(
-            contentAlignment = Center,
-            modifier = TinyBorders,
-        ) {
-            val totalPercentage by
-                remember(zapraiserStatus) {
-                    derivedStateOf { "${(zapraiserStatus.progress * 100).roundToInt()}%" }
-                }
-
-            Text(
-                text =
-                    stringRes(id = Res.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
-                modifier = NoSoTinyBorders,
-                // color = MaterialTheme.colorScheme.placeholderText,
-                fontSize = Font14SP,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-@Composable
 private fun WatchReactionsZapsBoostsAndDisplayIfExists(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -816,7 +752,7 @@ fun ReplyViaVoiceReaction(
             nav.nav {
                 Route.VoiceReply(
                     replyToNoteId = baseNote.idHex,
-                    recordingFilePath = audio.file.absolutePath,
+                    recordingFilePath = audio.file.toString(),
                     mimeType = audio.mimeType,
                     duration = audio.duration,
                     amplitudes = Json.encodeToString(audio.amplitudes),
@@ -1666,45 +1602,6 @@ fun ObserveZapIcon(
     }
 
     inner(wasZappedByLoggedInUser)
-}
-
-@Composable
-fun ObserveZapAmountText(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    inner: @Composable (String) -> Unit,
-) {
-    val zapsState by observeNoteZaps(baseNote, accountViewModel)
-
-    if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
-        zapsState?.note?.zapPayments?.forEach {
-            if (it.value == null) {
-                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
-            }
-        }
-
-        @Suppress("ProduceStateDoesNotAssignValue")
-        val zapAmountTxt by
-            produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
-                zapsState?.note?.let {
-                    val newZapAmount = accountViewModel.calculateZapAmount(it)
-                    if (value != newZapAmount) {
-                        value = newZapAmount
-                    }
-                }
-            }
-
-        inner(zapAmountTxt)
-    } else {
-        // Include the signed-in user's own pending onchain zaps so
-        // the counter reflects the optimistic value the gallery shows.
-        val ownPubKey = accountViewModel.account.userProfile().pubkeyHex
-        val note = zapsState?.note
-        val total =
-            (note?.zapsAmount ?: java.math.BigDecimal(0)) +
-                java.math.BigDecimal(note?.extraOwnPendingOnchainSats(ownPubKey) ?: 0L)
-        inner(showAmount(total))
-    }
 }
 
 @Composable
@@ -2680,106 +2577,6 @@ private fun UnifiedZapAmountChip(
                     }
                 }
             }
-        }
-    }
-}
-
-/** Payment rails a zap-amount chip can offer, in canonical display order. */
-internal enum class ZapRail { CASHU, RELOAD, LIGHTNING, ONCHAIN }
-
-/** Below this, the default rail is cashu (Lightning min/fees make tiny zaps awkward). */
-internal const val CASHU_PREFERRED_BELOW_SATS = 10L
-
-/** Above this, the default rail is an on-chain transaction. */
-internal const val ONCHAIN_PREFERRED_ABOVE_SATS = 10_000L
-
-/**
- * Default rail for a preset amount with no recipient context (the settings
- * preview): cashu under [CASHU_PREFERRED_BELOW_SATS], on-chain over
- * [ONCHAIN_PREFERRED_ABOVE_SATS] (and at/above the on-chain minimum), else
- * Lightning. Mirrors the live chip's tiering so the preview matches the feed.
- */
-internal fun previewPreferredRail(amountInSats: Long): ZapRail =
-    when {
-        amountInSats < CASHU_PREFERRED_BELOW_SATS -> ZapRail.CASHU
-        amountInSats > ONCHAIN_PREFERRED_ABOVE_SATS && amountInSats >= MIN_ONCHAIN_ZAP_SATS -> ZapRail.ONCHAIN
-        else -> ZapRail.LIGHTNING
-    }
-
-/** Rails a preset of [amountInSats] could use, default first then the rest. */
-internal fun previewRailsFor(amountInSats: Long): List<ZapRail> {
-    val preferred = previewPreferredRail(amountInSats)
-    val all =
-        buildList {
-            add(ZapRail.CASHU)
-            add(ZapRail.LIGHTNING)
-            if (amountInSats >= MIN_ONCHAIN_ZAP_SATS) add(ZapRail.ONCHAIN)
-        }
-    return listOf(preferred) + all.filter { it != preferred }
-}
-
-/**
- * Just the rail's logo (no click target), drawn at [size]. [colored] renders it
- * in its accent colour (the preferred rail); otherwise it's flattened to the
- * on-surface monochrome tint. The cashu mark is drawn ~0.86× the symbol size —
- * the new monochrome outline carries less weight than the old multi-tone mark,
- * so it needs less shrinking to read at a matching optical size.
- */
-@Composable
-internal fun ZapRailIcon(
-    rail: ZapRail,
-    colored: Boolean,
-    size: Dp = 18.dp,
-) {
-    val mono = MaterialTheme.colorScheme.onSurface
-    val cashuSize = size * 0.86f
-    when (rail) {
-        ZapRail.CASHU -> {
-            Material3Icon(
-                imageVector = CustomHashTagIcons.Cashu,
-                contentDescription = stringRes(Res.string.nutzap),
-                modifier = Modifier.size(cashuSize),
-                // The cashu mark is a monochrome, tintable outline — colour it the
-                // same brand orange as the other rails when selected, else mono.
-                tint = if (colored) BitcoinOrange else mono,
-            )
-        }
-
-        ZapRail.RELOAD -> {
-            // Funds exist but in the wrong mint — a dimmed cashu logo with a
-            // small "+" badge; tapping it opens the top-up screen.
-            Box(contentAlignment = Alignment.BottomEnd) {
-                Material3Icon(
-                    imageVector = CustomHashTagIcons.Cashu,
-                    contentDescription = stringRes(Res.string.reload_mint_title),
-                    modifier = Modifier.size(cashuSize).alpha(0.5f),
-                    tint = if (colored) BitcoinOrange else mono,
-                )
-                Icon(
-                    symbol = MaterialSymbols.AddCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(size * 0.5f),
-                    tint = if (colored) BitcoinOrange else mono,
-                )
-            }
-        }
-
-        ZapRail.LIGHTNING -> {
-            Icon(
-                symbol = MaterialSymbols.Bolt,
-                contentDescription = null,
-                modifier = Modifier.size(size),
-                tint = if (colored) BitcoinOrange else mono,
-            )
-        }
-
-        ZapRail.ONCHAIN -> {
-            Icon(
-                symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = null,
-                modifier = Modifier.size(size),
-                tint = if (colored) BitcoinOrange else mono,
-            )
         }
     }
 }

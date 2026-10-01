@@ -22,14 +22,15 @@ package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
 import android.net.Uri
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 
 @Suppress("UNUSED_PARAMETER")
 class MLKitImageLabelService(
     context: Context,
-) {
+) : AltTextSuggester {
     suspend fun labelImage(uri: Uri): List<Pair<String, Float>> = emptyList()
 
-    suspend fun suggestAltText(uri: Uri): String? = null
+    override suspend fun suggestAltText(uri: Uri): String? = null
 
-    fun close() {}
+    override fun close() {}
 }

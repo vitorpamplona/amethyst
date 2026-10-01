@@ -111,6 +111,12 @@ interface AppPlatform {
     @Composable
     fun rememberWebAppIconModel(url: String): String? = null
 
+    /**
+     * Opens the audio room at [addressValue] (a kind-30312 address) in its own window; callers
+     * hand the account over through `NestBridge` first. Does nothing where rooms are not wired.
+     */
+    fun openNestRoom(addressValue: String) {}
+
     /** Draws nothing: previews, and front ends still wiring their pieces. */
     object None : AppPlatform
 }

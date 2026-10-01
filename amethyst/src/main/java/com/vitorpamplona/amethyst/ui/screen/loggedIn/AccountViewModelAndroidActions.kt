@@ -21,24 +21,20 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.Context
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.isVideoOnline
-import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -55,19 +51,6 @@ fun AccountViewModel.urlPreview(
 }
 
 suspend fun AccountViewModel.checkVideoIsOnline(videoUrl: String): Boolean = httpClientBuilder.isVideoOnline(videoUrl)
-
-/**
- * Encrypt + upload a picked image as a group avatar (canonical `marmot-group-image-v1` scheme).
- * The returned handle is later passed to [AccountViewModel.updateMarmotGroupMetadata] as
- * `MarmotGroupIconChange.Set` to commit it into the group's metadata. Uploading is separated from
- * the metadata commit so the (slow) Blossom upload can show its own progress before the commit is
- * signed.
- */
-suspend fun AccountViewModel.uploadMarmotGroupIcon(
-    uri: Uri,
-    mimeType: String?,
-    uploader: MediaUploader,
-): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, uploader)
 
 fun AccountViewModel.saveMediaToGallery(
     videoUri: String?,

@@ -25,14 +25,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalUriHandler
 import kotlin.coroutines.cancellation.CancellationException
 
-/** Opens the `lightning:` link with whatever the system registered for it. */
+/** Opens the payment link with whatever the system registered for it. */
 @Composable
 actual fun rememberWalletAppLauncher(): WalletAppLauncher {
     val uriHandler = LocalUriHandler.current
     return remember(uriHandler) {
-        WalletAppLauncher { invoice, noWalletFound, onPaid, onError ->
+        WalletAppLauncher { uri, noWalletFound, onPaid, onError ->
             try {
-                uriHandler.openUri("lightning:$invoice")
+                uriHandler.openUri(uri)
                 onPaid()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

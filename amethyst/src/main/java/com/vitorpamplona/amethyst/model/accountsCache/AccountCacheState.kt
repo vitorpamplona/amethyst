@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
 import com.vitorpamplona.amethyst.commons.marmot.InMemoryMlsGroupStateStore
+import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.GeohashIdentityStore
@@ -419,7 +420,7 @@ class AccountCacheState(
     }
 
     companion object {
-        const val CLIENT_TAG_NAME = "Amethyst"
+        const val CLIENT_TAG_NAME = AMETHYST_CLIENT_TAG_NAME
     }
 }
 

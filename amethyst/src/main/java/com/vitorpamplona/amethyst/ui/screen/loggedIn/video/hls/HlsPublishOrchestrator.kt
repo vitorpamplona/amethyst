@@ -279,7 +279,7 @@ class HlsPublishOrchestrator(
             // scope; NewHlsVideoViewModel.cancel() calls reset() to put state back to Idle.
             throw e
         } catch (e: Throwable) {
-            _state.value = HlsPublishState.Failure(message = e.message ?: e::class.simpleName.orEmpty())
+            _state.value = HlsPublishState.Failure(message = e.message ?: e.javaClass.simpleName.orEmpty())
         }
     }
 

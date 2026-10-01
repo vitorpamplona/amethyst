@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.audio.syntheticWaveformFor
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
 import com.vitorpamplona.amethyst.commons.ui.note.types.PodcastChaptersView
@@ -38,7 +39,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
-import com.vitorpamplona.amethyst.service.playback.composable.wavefront.syntheticWaveformFor
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 

@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.service.uploads
 
 import android.net.Uri
+import okio.Path
 
 actual typealias MediaUri = Uri
 
 actual fun MediaUri.lastPathSegmentOrNull(): String? = lastPathSegment
+
+actual fun mediaUriOfFile(path: Path): MediaUri = Uri.fromFile(path.toFile())

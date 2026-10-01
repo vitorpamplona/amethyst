@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.note.share
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.note.share.QrPayloadMode
+import com.vitorpamplona.amethyst.commons.ui.note.share.qrPayloadFor
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal

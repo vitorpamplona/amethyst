@@ -47,8 +47,8 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
-/** Default close-up zoom for a single pinned location (street-level). */
-private const val DEFAULT_ZOOM = 16.0
+/** Default close-up zoom for a single pinned location (street-level), when the caller picks none. */
+const val DEFAULT_MAP_ZOOM = 16.0
 
 /**
  * Night-mode filter for the (always-light) MAPNIK tiles so the map follows the
@@ -145,7 +145,7 @@ fun LocationPreviewMap(
     latitude: Double,
     longitude: Double,
     modifier: Modifier = Modifier,
-    zoom: Double = DEFAULT_ZOOM,
+    zoom: Double = DEFAULT_MAP_ZOOM,
     aspectRatio: Float = 1f,
     pinColor: Color? = null,
     pinEmoji: String? = null,

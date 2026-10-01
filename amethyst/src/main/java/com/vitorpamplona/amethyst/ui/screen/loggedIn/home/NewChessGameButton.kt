@@ -37,10 +37,11 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
 
 /**
  * Floating action button for creating new chess game challenges
@@ -56,7 +57,7 @@ fun NewChessGameButton(
     val chessViewModel: ChessViewModel =
         viewModel(
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )
 
     FloatingActionButton(

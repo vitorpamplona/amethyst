@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.uploads
 
+import okio.Path
+
 actual abstract class MediaUri {
     actual abstract override fun toString(): String
 }
@@ -38,3 +40,5 @@ class StringMediaUri(
 }
 
 actual fun MediaUri.lastPathSegmentOrNull(): String? = lastPathSegmentOf(toString())
+
+actual fun mediaUriOfFile(path: Path): MediaUri = StringMediaUri(path.toString())

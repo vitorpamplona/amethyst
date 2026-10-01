@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -47,9 +48,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import okio.Path
 
 // Call-site shims for [NotePlatform]: the same names and defaults the app's own composables have,
 // so shared note code reads as it did and only its imports point here.
@@ -108,6 +111,16 @@ fun GifVideoView(
 )
 
 @Composable
+fun FullscreenVideoView(
+    videoUri: String,
+    mimeType: String?,
+    contentScale: ContentScale,
+    controllerVisible: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) = LocalNotePlatform.current.FullscreenVideoView(videoUri, mimeType, contentScale, modifier, controllerVisible, accountViewModel)
+
+@Composable
 fun VideoView(
     videoUri: String,
     mimeType: String?,
@@ -151,6 +164,8 @@ fun LoadUrlPreview(
 fun LocationPreviewMap(
     latitude: Double,
     longitude: Double,
+    modifier: Modifier = Modifier,
+    zoom: Double? = null,
     aspectRatio: Float = 1f,
     pinColor: Color? = null,
     pinEmoji: String? = null,
@@ -162,6 +177,8 @@ fun LocationPreviewMap(
     pinColor = pinColor,
     pinEmoji = pinEmoji,
     pinAlpha = pinAlpha,
+    modifier = modifier,
+    zoom = zoom,
 )
 
 @Composable
@@ -544,6 +561,34 @@ fun ReusableZapButton(
     config: ZapButtonConfig = ZapButtonConfig(),
     callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
 ) = LocalNotePlatform.current.ReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
+
+@Composable
+fun QuickZapAmountRow(
+    note: Note,
+    onDismiss: () -> Unit,
+    onOnchainRequest: (Long?) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = LocalNotePlatform.current.QuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
+
+/** The longest voice message the recorder allows, in seconds. */
+const val MAX_VOICE_RECORD_SECONDS = 600
+
+@Composable
+fun RecordVoiceButton(
+    onVoiceTaken: (RecordingResult) -> Unit,
+    maxDurationSeconds: Int? = null,
+) = LocalNotePlatform.current.RecordVoiceButton(onVoiceTaken, maxDurationSeconds)
+
+@Composable
+fun VoiceMessagePreview(
+    voiceMetadata: AudioMeta,
+    localFile: Path? = null,
+    onRemove: () -> Unit,
+    onReRecord: ((RecordingResult) -> Unit)? = null,
+    isUploading: Boolean = false,
+    modifier: Modifier = Modifier,
+) = LocalNotePlatform.current.VoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
 
 @Composable
 fun EditPostView(

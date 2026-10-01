@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import java.time.Instant
 import java.time.ZoneId
+import java.time.chrono.IsoChronology
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
 import java.util.Locale
 
@@ -79,6 +82,14 @@ private val timeOfDay: (Long) -> String = { epochMillis ->
 
 @Composable
 actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String = timeOfDay
+
+@Composable
+actual fun rememberIs24HourClock(): Boolean =
+    remember {
+        DateTimeFormatterBuilder
+            .getLocalizedDateTimePattern(null, FormatStyle.SHORT, IsoChronology.INSTANCE, Locale.getDefault())
+            .contains('H')
+    }
 
 actual fun relativeTimeSpanShortOrNull(
     epochMillis: Long,

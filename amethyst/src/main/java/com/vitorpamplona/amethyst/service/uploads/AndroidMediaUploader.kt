@@ -22,11 +22,14 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.mediaServers.blossomUploadOrder
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
@@ -54,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.File
+import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -675,6 +679,30 @@ class AndroidMediaUploader(
             } finally {
                 deleteTempUri(encrypted.uri, uri)
             }
+        }
+    }
+
+    override suspend fun remoteFileHeader(
+        url: String,
+        httpClients: IRoleBasedHttpClientBuilder,
+    ): FileHeader? =
+        withContext(Dispatchers.IO) {
+            val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(url)
+            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
+            FileHeader.prepare(url, mimeType, null) { httpClients.okHttpClientForImage(it) }.getOrNull()
+        }
+
+    override fun displayName(uri: MediaUri): String? =
+        appContext.contentResolver.query(uri, null, null, null, null)?.use {
+            val idx = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && it.moveToFirst()) it.getString(idx) else null
+        }
+
+    override fun discardTempFile(uri: MediaUri) {
+        try {
+            uri.path?.let { path -> File(path).takeIf { it.exists() }?.delete() }
+        } catch (e: Exception) {
+            Log.w("AndroidMediaUploader", "Failed to delete temp file", e)
         }
     }
 }

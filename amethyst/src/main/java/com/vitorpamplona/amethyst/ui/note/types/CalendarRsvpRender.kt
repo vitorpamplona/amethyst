@@ -34,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -47,14 +46,15 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarAppointmentLines
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarDateBadge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detailRouteFor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.rememberRelativeTimeLabel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -133,10 +133,9 @@ private fun RsvpWithAppointment(
         CalendarRsvpCard(event)
         return
     }
-
-    val context = LocalContext.current
+    val timeFormatter = rememberTimeOfDayFormatter()
     val appointmentEvent = appointment.event
-    val range = remember(appointmentEvent) { formatCalendarRange(appointment, context) }
+    val range = remember(appointmentEvent) { formatCalendarRange(appointment, timeFormatter) }
     val relative = rememberRelativeTimeLabel(view, appointmentEvent?.id)
     val route = remember(appointment) { detailRouteFor(appointment) }
     // Past a week the relative formatter falls back to a plain date ("October 31"), which the

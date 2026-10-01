@@ -41,6 +41,9 @@ expect object LocalClock {
     /** Today, in the reader's timezone. */
     fun today(): SearchDate
 
+    /** How many seconds this zone is ahead of UTC at [unixSeconds]; a clock change moves it. */
+    fun utcOffsetSeconds(unixSeconds: Long): Long
+
     /**
      * Which local day a unix second falls on, with the zone read once for the whole counter
      * rather than per timestamp: for grouping a batch of events by day in one pass.

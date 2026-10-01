@@ -1,0 +1,73 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send
+
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.buildMip04IMetaTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+
+/**
+ * Sends uploaded encrypted media as Marmot group messages. Each upload result
+ * becomes a separate kind:9 with an `imeta` tag.
+ *
+ * Every upload now carries an `encrypted-media-v2` reference, whatever policy
+ * the group holds -- see [MarmotFileUploader]. The MIP-04 branch below is kept
+ * because the result type still allows a null reference, but nothing this app
+ * writes takes it; the MIP-era shape survives only on the READ side, for
+ * messages older builds already sent.
+ */
+class MarmotFileSender(
+    val nostrGroupId: HexKey,
+    val accountViewModel: AccountViewModel,
+) {
+    suspend fun send(uploads: List<Mip04UploadResult>) {
+        for (upload in uploads) {
+            val v2 = upload.encryptedMediaV2
+            if (v2 != null) {
+                accountViewModel.sendMarmotGroupEncryptedMediaV2(
+                    nostrGroupId = nostrGroupId,
+                    reference = v2,
+                    caption = upload.caption.orEmpty(),
+                )
+                continue
+            }
+
+            val imeta =
+                buildMip04IMetaTag(
+                    url = upload.url,
+                    mimeType = upload.mimeType,
+                    filename = upload.filename,
+                    originalFileHash = upload.originalFileHash,
+                    nonce = upload.nonce,
+                    dimensions = upload.dimensions,
+                    blurhash = upload.blurhash,
+                    thumbhash = upload.thumbhash,
+                    alt = upload.caption,
+                )
+
+            accountViewModel.sendMarmotGroupMediaMessage(
+                nostrGroupId = nostrGroupId,
+                url = upload.url,
+                imeta = imeta,
+            )
+        }
+    }
+}

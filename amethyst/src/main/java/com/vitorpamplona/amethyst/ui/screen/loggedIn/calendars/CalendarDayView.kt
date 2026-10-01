@@ -43,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +63,9 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_day
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatTimeOfDay
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -161,7 +163,7 @@ private fun DayRow(
         }
 
     val startSeconds = view.startSeconds
-    val context = LocalContext.current
+    val timeFormatter = rememberTimeOfDayFormatter()
     val timeLabel =
         when {
             view.isAllDay -> stringRes(Res.string.calendar_all_day)
@@ -170,7 +172,7 @@ private fun DayRow(
                 // misleading on day 2 since the event has been ongoing overnight. Show a
                 // continuation marker so the user reads it as "still happening".
                 stringRes(Res.string.calendar_continues)
-            startSeconds != null -> formatTimeOfDay(startSeconds, context)
+            startSeconds != null -> formatTimeOfDay(startSeconds, timeFormatter)
             else -> "—"
         }
 

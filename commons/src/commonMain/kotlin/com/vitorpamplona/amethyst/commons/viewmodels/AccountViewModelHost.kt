@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.viewmodels
 
+import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -32,7 +36,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import okio.Path
 
 /**
  * What the account's ViewModel needs from the process it runs in: app-wide services that outlive
@@ -69,6 +75,39 @@ interface AccountViewModelHost {
 
     /** Compresses, strips, encrypts and uploads picked media for the composers. */
     val mediaUploader: MediaUploader
+
+    /** The device's position as geohashes. */
+    val deviceLocation: DeviceLocation get() = DeviceLocation.None
+
+    /** Posts signed now and published later by a background worker; null where scheduling is unsupported. */
+    val scheduledPostStore: ScheduledPostStore? get() = null
+
+    /**
+     * Re-voices the recording at [input] with the voice preset named [presetName], into a new file
+     * beside it.
+     */
+    suspend fun anonymizeVoice(
+        input: Path,
+        presetName: String,
+    ): Result<AnonymizedResult> = Result.failure(UnsupportedOperationException("Voice anonymization is not available on this platform"))
+
+    /** Whether this build can offer an on-device writing assistant at all (it shows the setting). */
+    val supportsWritingAssistant: Boolean get() = false
+
+    /** A new on-device writing assistant, or null where the platform has none. */
+    fun createWritingAssistant(): WritingAssistant? = null
+
+    /**
+     * Whether the account [npub] has saved its secret key, as a live flag. Absent reads as true,
+     * so a platform that does not track it never shows the backup nudge.
+     */
+    suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = MutableStateFlow(true)
+
+    /** Records whether the account [npub] has saved its secret key. */
+    suspend fun setHasBackedUpKeys(
+        npub: String,
+        value: Boolean,
+    ) = Unit
 
     /** Public keys of every account saved on this device. */
     val savedAccounts: Flow<Set<HexKey>>

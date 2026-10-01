@@ -172,7 +172,7 @@ fun RenderCardFeed(
  *
  * The padding is applied here because only the `Loaded` branch has a `LazyColumn` to carry the
  * scaffold's inset as content padding; without it the header would draw under the disappearing top bar.
- * Same shape [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.ChatroomListFeedView] uses.
+ * Same shape [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.feed.ChatroomListFeedView] uses.
  */
 @Composable
 private fun HeaderAbove(

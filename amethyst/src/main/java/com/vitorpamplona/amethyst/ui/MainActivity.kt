@@ -26,7 +26,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
@@ -61,7 +63,11 @@ class MainActivity : AppCompatActivity() {
         setContent {
             AmethystTheme {
                 NowProvider {
-                    AccountScreen(Amethyst.instance.sessionManager)
+                    // The Activity outlives every nav destination: screens that share state
+                    // across destinations (chess lobby + board, the Cordn group draft) keep it here.
+                    CompositionLocalProvider(LocalWindowViewModelStoreOwner provides this) {
+                        AccountScreen(Amethyst.instance.sessionManager)
+                    }
                 }
             }
         }

@@ -426,13 +426,70 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        image. They now call the shared `uploadToDefaultServer`.
      - Moved: the profile editor, the emoji pack screen and the emoji pack metadata screen
        (7 files).
-   - **Next:** most composer screens still exit through `ShowImageUploadItem` (the upload
-     preview, which uses Android media APIs to show a thumbnail) and `SelectFromFiles`.
-     After those comes the per-composer state: `ShortNotePostViewModel`, `PreviewState`
-     and the location pickers. The video player stack (media3) holds about 22 screens.
-     Smaller exits remain: the Android-only `AccountViewModel` actions,
-     `CalendarTimeFormat`, `NestUiState`, `NappletLauncher`, `UpdateZapAmountDialog`
-     (biometrics), the `java.time` pickers and the language list.
+   - **Wave 7 (2026-09-29):**
+     - The upload preview, the file picker and the single-document picker are shared.
+     - A shared wallet-app launcher, edge-to-edge dialog properties, `CashuWalletDiscovery`
+       in commonMain, the Namecoin resolver on `AppServices`, and `ReusableZapButton` as a
+       slot.
+     - Moved: the wallet screen, the discovery tabs, badges, communities, music playlists,
+       Concord create/edit, the Cashu wizard, podcast show/trailer, geocache log and the
+       visualizer settings. 136 of 252 screens shared.
+   - **Player seam (2026-09-30):** the media3 player stays in the app, like WebView. Shared
+     UI reaches it only through `NotePlatform` slots.
+     - Twenty-three screens used to reach it through side doors: direct calls to
+       `EditPostView`, `ZoomableContentView`, the audio/music/voice renderers and
+       `VideoViewInner`. They now call the slots, plus a new `FullscreenVideoView` slot.
+     - No screen reaches `service/playback` now.
+     - Moved: the thread screen, bookmark groups, the URL feed and relay-group metadata.
+     - **Later:** sharing the player *chrome* (voice/music/podcast rows, controls, waveform)
+       needs a `PlaybackController` port: state flows plus play/pause/seek/mute, wrapping the
+       pooled media3 `MediaController` on Android. Do it when Desktop gets a player, and pick
+       that engine through the license gate. VLCJ's README says "GPL, version 3 or later",
+       with no linking exception (a commercial license is sold separately), so it is a stop.
+   - **Wave 8 (2026-09-30):** the composers.
+     - Ports: `FileSharer` (the relay ZIP export), `TakePicture`/`TakeVideo`,
+       `rememberCoarseLocationPermission`, `SharedMediaResolver` + `OnIncomingShare` (SEND
+       intents), `DeviceLocation` (on `AccountViewModelHost` and `AppServices`),
+       `AltTextSuggester`, `BlossomServerFinder`, `mediaUriOfFile`, `availableProcessors`,
+       the language names, `LocalClock.utcOffsetSeconds` and `rememberIs24HourClock`.
+     - `MediaUploader` gained `remoteFileHeader` (imeta for pasted links) and `displayName`.
+       The host gained `scheduledPostStore`, `anonymizeVoice` and `createWritingAssistant`.
+     - Voice recordings are okio `Path`s. `commons` exposes okio as `api`.
+     - `WalletAppLauncher` opens any payment URI; BOLT-11 and BOLT-12 are extensions.
+     - Toasts go through `rememberShortNotice`/`rememberLongNotice`.
+     - Moved: every note composer and `ShortNotePostViewModel`; the public, ephemeral,
+       geohash, DM, Marmot, Concord, Minichat and relay-group chats; the media feeds; the
+       relay settings; the metadata editors; podcasts; Bolt12 offers; the vanish and
+       language settings. 180 of 252 screens shared.
+   - **Wave 9 (2026-09-30):** `AppServices` gained `appStores`, `torBootstrapped` and
+     `cachedPlaceName`; the host gained the backed-up-keys flag. `rememberDeviceAuthenticator`
+     wraps BiometricPrompt with the keyguard fallback. `CalendarTimeFormat` is shared on
+     `DateSkeletonFormatter`. Moved: search, the long-form composer, the calendar collection
+     editor, NWC setup and the zap-amount settings. 185 of 252 screens shared.
+   - **Wave 10 (2026-09-30):** Home, Discover, the nest lobby and the Marmot group editor
+     first; then the date pickers on `LocalClock` (poll and zap-poll deadlines, schedule-at
+     with its presets), `FileSharer.shareTextFile` (the .ics export), `PhoneCalendar` (the
+     system event composer), `relativeTimeSpan` (`DateUtils` / `NSRelativeDateTimeFormatter`),
+     `rememberWindowViewModel` + `LocalWindowViewModelStoreOwner` (state shared across
+     destinations: the chess lobby and board, the Cordn group draft), `isHlsMedia` in
+     `commons.video`, `ChessEventBroadcaster` in commonMain and `supportsWritingAssistant` on
+     the host. `geo:` links go through `LocalUriHandler`. Moved: the note and poll composers,
+     voice reply, the calendar collections and event detail, the geocache detail and editor,
+     the live-activity channel, chess, Cordn group creation, the QR share and the compose
+     settings. 204 of 252 screens shared.
+   - **Next:** 48 screens remain, and what blocks them is the platform itself:
+     - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
+     - The Nests activity and PiP.
+     - The call screens.
+     - The WebView browser and napplet launcher.
+     - The osmdroid geocache map.
+     - Health Connect workouts.
+     - The Cordn backup/migrate file flows.
+     - Share-as-image (bitmaps).
+     - `AccountSessionManager` (login and sign-up).
+     - The Blossom health probe.
+     - `AppSettingsScreen` (`BuildConfig`).
+     Each needs a slot or a port of its own, so step 7 can start alongside them.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.

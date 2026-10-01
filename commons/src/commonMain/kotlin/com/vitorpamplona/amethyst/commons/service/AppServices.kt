@@ -24,9 +24,13 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import kotlinx.coroutines.flow.Flow
 
 /**
  * App-wide stores that outlive any one account and that screens read directly: the favorites
@@ -51,6 +55,24 @@ interface AppServices {
 
     val torSettings: TorSettingsFlow
 
+    /** Whether the embedded Tor service has fully bootstrapped, so Tor-routed relays can answer. */
+    val torBootstrapped: Flow<Boolean>
+
+    /** The app's preference files, one DataStore per name. */
+    val appStores: AppPreferenceStores
+
     /** Resolves `.bit` names and `d/`/`id/` identifiers over the configured ElectrumX servers. */
     val namecoinResolver: NamecoinNameResolver
+
+    /** Finds the server behind a `blossom:` URI (BUD-10). */
+    val blossomServerFinder: BlossomServerFinder get() = BlossomServerFinder.None
+
+    /** The device's position as geohashes. */
+    val deviceLocation: DeviceLocation get() = DeviceLocation.None
+
+    /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
+    fun cachedPlaceName(geohash: String): String? = null
+
+    /** A new on-device alt-text suggester for image uploads, or null where the platform has none. */
+    fun createAltTextSuggester(): AltTextSuggester? = null
 }
