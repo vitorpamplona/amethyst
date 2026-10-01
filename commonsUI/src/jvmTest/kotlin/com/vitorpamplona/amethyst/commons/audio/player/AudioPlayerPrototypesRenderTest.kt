@@ -68,17 +68,13 @@ class AudioPlayerPrototypesRenderTest {
 
     @Test fun today() = render("00-today", 820, 700) { AudioTodayPreview() }
 
-    @Test fun trackCard() = render("01-track-card", 820, 560) { AudioTrackCardPreview() }
+    @Test fun knownAudio() = render("01-known-audio-waveform", 820, 560) { AudioKnownAudioPreview() }
 
-    @Test fun waveformCard() = render("02-waveform-scrubber", 820, 540) { AudioWaveformCardPreview() }
+    @Test fun withArtwork() = render("02-known-audio-cover", 820, 620) { AudioWithArtworkPreview() }
 
-    @Test fun coverCard() = render("03-cover", 820, 620) { AudioCoverCardPreview() }
+    @Test fun undecided() = render("03-undecided-track-card", 820, 360) { AudioUndecidedPreview() }
 
-    @Test fun visualizerCard() = render("04-visualizer-card", 820, 680) { AudioVisualizerCardPreview() }
-
-    @Test fun miniPlayer() = render("05-mini-player", 820, 520) { AudioMiniPlayerPreview() }
-
-    @Test fun taggedVariants() = render("06-tagged-track", 820, 560) { AudioTaggedVariantsPreview() }
+    @Test fun miniPlayer() = render("04-mini-player", 820, 520) { AudioMiniPlayerPreview() }
 
     private companion object {
         const val SETTLE_FRAMES = 12

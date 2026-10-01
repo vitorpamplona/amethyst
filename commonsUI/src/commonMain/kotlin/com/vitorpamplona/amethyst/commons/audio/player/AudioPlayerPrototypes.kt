@@ -58,32 +58,38 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.audio.PlayableLayout
+import com.vitorpamplona.amethyst.commons.audio.playableLayout
+import com.vitorpamplona.amethyst.commons.audio.syntheticWaveformFor
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.pause
 import com.vitorpamplona.amethyst.commons.resources.play
-import com.vitorpamplona.amethyst.commons.resources.skip_back
-import com.vitorpamplona.amethyst.commons.resources.skip_forward
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 /*
- * PROTOTYPES — design exploration for how an audio file inside a post should render, in place of
- * today's video player with a square box. Stateless and fed by [AudioCardUi]; nothing here is wired
- * to a player yet. Rendered offscreen by `AudioPlayerPrototypesRenderTest` into
- * `commonsUI/build/audio-player/`.
+ * PROTOTYPES — how a playable file inside a post should render, in place of today's video player
+ * with a square box. Stateless and fed by [AudioCardUi]; nothing here is wired to a player yet.
+ * Rendered offscreen by `AudioPlayerPrototypesRenderTest` into `commonsUI/build/audio-player/`.
  *
- * Every layout is decided from what the imeta declares (`m`, `size`, `x`, optional `waveform`,
- * `image`, `alt`), so the card has its final shape before ExoPlayer has loaded a byte.
+ * Which card is shown is [playableLayout]'s call, made from the imeta before the player loads a byte:
+ *  - known audio, no artwork  -> B, the waveform scrubber (the file's waveform, else a synthetic one);
+ *  - known audio with artwork -> C, the cover with the same scrubber over its foot;
+ *  - audio or video, can't tell (an HLS playlist, say) -> A, the neutral track card, until the
+ *    player's probe settles it;
+ *  - known video -> the video player.
  */
 
-/** Everything an audio card shows. [durationSeconds] is null until the player has probed the file. */
+/** Everything a card shows. [durationSeconds] is null until the player has probed the file. */
 @Immutable
 class AudioCardUi(
+    val url: String,
+    val mimeType: String?,
     val title: String,
     val artist: String,
     val format: String?,
@@ -91,10 +97,12 @@ class AudioCardUi(
     val durationSeconds: Int?,
     val positionSeconds: Int,
     val isPlaying: Boolean,
-    /** The blob's sha256 (`x`): seeds the cover colours and the placeholder bars, so both are stable per file. */
+    /** The blob's sha256 (`x`): seeds the synthetic waveform and the generated cover, so both are stable per file. */
     val seed: String,
-    /** A NIP-A0 or decoded amplitude envelope, 0..1. Null falls back to bars generated from [seed]. */
+    /** The file's own amplitude envelope (a `waveform` tag, or one decoded from the audio), 0..1. */
     val waveform: List<Float>? = null,
+    /** True when the imeta `image` or an embedded cover gives the file artwork. */
+    val hasArtwork: Boolean = false,
 ) {
     val progress: Float
         get() = durationSeconds?.takeIf { it > 0 }?.let { (positionSeconds.toFloat() / it).coerceIn(0f, 1f) } ?: 0f
@@ -105,64 +113,36 @@ class AudioCardUi(
 
     /** "1:12 / 3:28" while there is a duration; the file facts before that. */
     val timeLabel: String
-        get() =
-            durationSeconds?.let { "${formatClock(positionSeconds)} / ${formatClock(it)}" } ?: fileFacts
+        get() = durationSeconds?.let { "${formatClock(positionSeconds)} / ${formatClock(it)}" } ?: fileFacts
+
+    val layout: PlayableLayout
+        get() = playableLayout(mimeType, url, hasArtwork)
 }
 
-// ---------------------------------------------------------------------------------------------
-// A. Track card — one compact row, like a music-service embed. The recommended default.
-// ---------------------------------------------------------------------------------------------
-
+/** The one entry point a post would call: picks the card from [AudioCardUi.layout]. */
 @Composable
-fun AudioTrackCardPrototype(
-    audio: AudioCardUi,
+fun PlayablePostMediaPrototype(
+    media: AudioCardUi,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GeneratedCover(audio.seed, Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)), iconSize = 28.dp)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        audio.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        audio.artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        if (audio.durationSeconds != null) "${audio.timeLabel} · ${audio.fileFacts}" else audio.fileFacts,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                PlayPauseButton(audio.isPlaying, size = 48.dp)
-            }
-            ThinProgress(audio.progress, Modifier.fillMaxWidth().height(3.dp))
-        }
+    when (media.layout) {
+        PlayableLayout.AUDIO_WAVEFORM -> AudioWaveformCardPrototype(media, modifier)
+        PlayableLayout.AUDIO_COVER -> AudioCoverCardPrototype(media, modifier)
+        PlayableLayout.UNDECIDED -> UndecidedMediaCardPrototype(media, modifier)
+        // Not prototyped: known video keeps the existing video player.
+        PlayableLayout.VIDEO ->
+            Box(
+                modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black),
+            )
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-// B. Waveform scrubber — the voice-note look, generalised: the waveform IS the seek bar.
+// B. Waveform scrubber — known audio. The waveform IS the seek bar.
 // ---------------------------------------------------------------------------------------------
 
 @Composable
@@ -170,7 +150,7 @@ fun AudioWaveformCardPrototype(
     audio: AudioCardUi,
     modifier: Modifier = Modifier,
 ) {
-    val bars = remember(audio.seed, audio.waveform) { audio.waveform ?: placeholderBars(audio.seed, 64) }
+    val bars = rememberBars(audio)
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -209,8 +189,8 @@ fun AudioWaveformCardPrototype(
 }
 
 // ---------------------------------------------------------------------------------------------
-// C. Cover — for files that carry artwork (imeta `image` or an embedded cover). Here the cover is
-// generated from the hash; a real one would replace the gradient and the record.
+// C. Cover — known audio with artwork: the cover, with B's scrubber over its foot. The cover here is
+// generated from the hash; real artwork would replace the gradient and the record.
 // ---------------------------------------------------------------------------------------------
 
 @Composable
@@ -218,6 +198,7 @@ fun AudioCoverCardPrototype(
     audio: AudioCardUi,
     modifier: Modifier = Modifier,
 ) {
+    val bars = rememberBars(audio)
     Box(
         modifier =
             modifier
@@ -226,24 +207,19 @@ fun AudioCoverCardPrototype(
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(16.dp)),
     ) {
-        GeneratedCover(audio.seed, Modifier.fillMaxSize(), iconSize = 0.dp, record = true)
+        GeneratedCover(audio.seed, Modifier.fillMaxSize(), icon = null, record = true)
 
-        // Bottom scrim so the title and controls read on any cover.
+        // Bottom scrim so the title and the waveform read on any cover.
         Box(
             Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.45f)
+                .fillMaxHeight(0.6f)
                 .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)))),
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))),
         )
 
-        Column(
-            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         audio.title,
@@ -254,91 +230,100 @@ fun AudioCoverCardPrototype(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        "${audio.artist} · ${audio.timeLabel}",
+                        audio.artist,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f),
                         maxLines = 1,
                     )
                 }
                 Spacer(Modifier.width(12.dp))
-                PlayPauseButton(audio.isPlaying, size = 56.dp, container = Color.White, content = Color.Black)
+                PlayPauseButton(audio.isPlaying, size = 52.dp, container = Color.White, content = Color.Black)
             }
             Spacer(Modifier.height(12.dp))
-            ThinProgress(
-                audio.progress,
-                Modifier.fillMaxWidth().height(4.dp),
-                track = Color.White.copy(alpha = 0.25f),
-                fill = Color.White,
+            WaveformBars(
+                bars = bars,
+                progress = audio.progress,
+                played = Color.White,
+                unplayed = Color.White.copy(alpha = 0.35f),
+                modifier = Modifier.fillMaxWidth().height(36.dp),
             )
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    audio.durationSeconds?.let { formatClock(audio.positionSeconds) } ?: "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                )
+                Text(
+                    listOfNotNull(audio.fileFacts, audio.durationSeconds?.let(::formatClock)).joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                )
+            }
         }
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-// D. Visualizer card — keeps the spectrum visualizer, but on a coloured 2:1 card with a static
-// frame before playback, so it reads as audio from the first frame instead of a black box.
+// A. Neutral track card — only while we can't tell audio from video. It commits to neither shape
+// (no waveform, no picture box) and is replaced by B, C or the video player once the probe answers.
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun AudioVisualizerCardPrototype(
-    audio: AudioCardUi,
+fun UndecidedMediaCardPrototype(
+    media: AudioCardUi,
     modifier: Modifier = Modifier,
 ) {
-    val (top, bottom) = remember(audio.seed) { seedColors(audio.seed) }
-    // Stand-in for a live spectrum frame (the real one comes from PcmTapRegistry).
-    val spectrum = remember(audio.seed) { placeholderBars(audio.seed.reversed(), 40) }
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .aspectRatio(2f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(listOf(top, bottom))),
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(Modifier.fillMaxSize().padding(14.dp)) {
-            Text(
-                audio.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(audio.artist, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
-
-            WaveformBars(
-                bars = spectrum,
-                progress = 0f,
-                played = Color.White,
-                unplayed = Color.White.copy(alpha = if (audio.isPlaying) 0.85f else 0.4f),
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(vertical = 10.dp),
-                fromBottom = true,
-                barWidth = 5.dp,
-                gap = 3.dp,
-            )
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(MaterialSymbols.Replay10, stringRes(Res.string.skip_back, 10), Modifier.size(26.dp), tint = Color.White)
-                Spacer(Modifier.width(10.dp))
-                PlayPauseButton(audio.isPlaying, size = 40.dp, container = Color.White, content = Color.Black)
-                Spacer(Modifier.width(10.dp))
-                Icon(MaterialSymbols.Forward10, stringRes(Res.string.skip_forward, 10), Modifier.size(26.dp), tint = Color.White)
+        Column {
+            Row(
+                modifier = Modifier.padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(MaterialSymbols.Podcasts, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Spacer(Modifier.width(12.dp))
-                ThinProgress(
-                    audio.progress,
-                    Modifier.weight(1f).height(4.dp).clip(CircleShape),
-                    track = Color.White.copy(alpha = 0.3f),
-                    fill = Color.White,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(audio.timeLabel, style = MaterialTheme.typography.labelSmall, color = Color.White)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        media.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        media.artist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        if (media.durationSeconds != null) "${media.timeLabel} · ${media.fileFacts}" else media.fileFacts,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                PlayPauseButton(media.isPlaying, size = 48.dp)
             }
+            ThinProgress(media.progress, Modifier.fillMaxWidth().height(3.dp))
         }
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-// E. Mini player — where a playing track goes once its post scrolls away. Complements A–D.
+// E. Mini player — where a playing track goes once its post scrolls away. Complements B and C.
 // ---------------------------------------------------------------------------------------------
 
 @Composable
@@ -357,7 +342,7 @@ fun AudioMiniPlayerPrototype(
                 modifier = Modifier.padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GeneratedCover(audio.seed, Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)), iconSize = 20.dp)
+                GeneratedCover(audio.seed, Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)), icon = MaterialSymbols.MusicNote, iconSize = 20.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(audio.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -374,6 +359,10 @@ fun AudioMiniPlayerPrototype(
 // ---------------------------------------------------------------------------------------------
 // Building blocks
 // ---------------------------------------------------------------------------------------------
+
+/** The file's own waveform when it has one, else the synthetic one every other audio renderer already uses. */
+@Composable
+private fun rememberBars(audio: AudioCardUi): List<Float> = remember(audio.seed, audio.waveform) { audio.waveform ?: syntheticWaveformFor(audio.seed).wave }
 
 @Composable
 fun PlayPauseButton(
@@ -397,12 +386,13 @@ fun PlayPauseButton(
     }
 }
 
-/** A cover generated from the file hash: a two-tone gradient, optionally a record, optionally a note glyph. */
+/** A cover generated from the file hash: a two-tone gradient, optionally a record, optionally a glyph. */
 @Composable
 fun GeneratedCover(
     seed: String,
     modifier: Modifier = Modifier,
-    iconSize: Dp,
+    icon: MaterialSymbol?,
+    iconSize: Dp = 28.dp,
     record: Boolean = false,
 ) {
     val (top, bottom) = remember(seed) { seedColors(seed) }
@@ -411,8 +401,8 @@ fun GeneratedCover(
         contentAlignment = Alignment.Center,
     ) {
         if (record) RecordArt()
-        if (iconSize > 0.dp) {
-            Icon(MaterialSymbols.MusicNote, null, Modifier.size(iconSize), tint = Color.White.copy(alpha = 0.9f), filled = true)
+        if (icon != null) {
+            Icon(icon, null, Modifier.size(iconSize), tint = Color.White.copy(alpha = 0.9f), filled = true)
         }
     }
 }
@@ -420,8 +410,8 @@ fun GeneratedCover(
 @Composable
 private fun BoxScope.RecordArt() {
     Canvas(Modifier.matchParentSize()) {
-        val center = Offset(size.width * 0.62f, size.height * 0.38f)
-        val radius = size.minDimension * 0.42f
+        val center = Offset(size.width * 0.62f, size.height * 0.34f)
+        val radius = size.minDimension * 0.4f
         drawCircle(Color.Black.copy(alpha = 0.55f), radius, center)
         var r = radius * 0.95f
         while (r > radius * 0.4f) {
@@ -446,7 +436,7 @@ private fun ThinProgress(
     }
 }
 
-/** Bars coloured [played] up to [progress] and [unplayed] after it; centred, or grown up [fromBottom]. */
+/** Centred bars, coloured [played] up to [progress] and [unplayed] after it. */
 @Composable
 fun WaveformBars(
     bars: List<Float>,
@@ -454,7 +444,6 @@ fun WaveformBars(
     played: Color,
     unplayed: Color,
     modifier: Modifier = Modifier,
-    fromBottom: Boolean = false,
     barWidth: Dp = 3.dp,
     gap: Dp = 2.dp,
 ) {
@@ -466,10 +455,9 @@ fun WaveformBars(
             val amp = bars[(i * bars.size) / count].coerceIn(0.08f, 1f)
             val h = amp * size.height
             val x = i * step
-            val y = if (fromBottom) size.height - h else (size.height - h) / 2f
             drawRoundRect(
                 color = if (x / size.width < progress) played else unplayed,
-                topLeft = Offset(x, y),
+                topLeft = Offset(x, (size.height - h) / 2f),
                 size = Size(w, h),
                 cornerRadius = CornerRadius(w / 2f, w / 2f),
             )
@@ -482,25 +470,6 @@ fun seedColors(seed: String): Pair<Color, Color> {
     val n = seed.take(6).toIntOrNull(16) ?: seed.hashCode()
     val hue = (abs(n) % 360).toFloat()
     return Color.hsv(hue, 0.6f, 0.62f) to Color.hsv((hue + 48f) % 360f, 0.75f, 0.32f)
-}
-
-/** A music-looking envelope generated from the hash: the stand-in until a real waveform exists. */
-fun placeholderBars(
-    seed: String,
-    count: Int,
-): List<Float> {
-    val hex = seed.ifEmpty { "0" }
-    val raw =
-        List(count) { i ->
-            val nibble = hex[i % hex.length].digitToIntOrNull(16) ?: 8
-            0.3f + 0.45f * (nibble / 15f) + 0.25f * abs(sin(i * 0.45f))
-        }
-    // Light smoothing so neighbouring bars relate, as in real audio.
-    return List(count) { i ->
-        val prev = raw[(i - 1).coerceAtLeast(0)]
-        val next = raw[(i + 1).coerceAtMost(count - 1)]
-        ((prev + 2 * raw[i] + next) / 4f).coerceIn(0f, 1f)
-    }
 }
 
 fun formatClock(seconds: Int): String = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"

@@ -60,10 +60,13 @@ object AudioPlayerSamples {
         "There aren't many nerdcore hip hop artists making music but I just realized that's no longer a problem: " +
             "I can simply generate the esoteric beats I want to hear!"
     private const val HASH = "b21c6e2a4d38f2abac617ac6643aba919f271b37c1c539b5643c17753716c506"
+    private const val URL = "https://npub17u5dneh8qjp43ecfxr6u5e9sjamsmxyuekrg2nlxrrk6nj9rsyrqywt4tp.blossom.band/$HASH.mp3"
 
-    /** Straight from the imeta, before ExoPlayer has probed anything: no title, no duration. */
+    /** Straight from the imeta, before ExoPlayer has probed anything: no title, no duration, no waveform. */
     val notLoaded =
         AudioCardUi(
+            url = URL,
+            mimeType = "audio/mpeg",
             title = "MP3 audio",
             artist = AUTHOR_NAME,
             format = "MP3",
@@ -77,6 +80,8 @@ object AudioPlayerSamples {
     /** Same file, playing: the player now knows it runs 3:28. */
     val playing =
         AudioCardUi(
+            url = URL,
+            mimeType = "audio/mpeg",
             title = "MP3 audio",
             artist = AUTHOR_NAME,
             format = "MP3",
@@ -87,9 +92,11 @@ object AudioPlayerSamples {
             seed = HASH,
         )
 
-    /** A file whose ID3 tags (or imeta `alt`/title) name the track. */
-    val tagged =
+    /** A track with artwork (imeta `image` or an embedded cover) and ID3 tags naming it. */
+    val withArtwork =
         AudioCardUi(
+            url = "https://blossom.example/3fa1c27be0d94e1a6c55b8f02d7e4a9c1b6f8e03d2a7c5b941e60f8d3c2b1a07.mp3",
+            mimeType = "audio/mpeg",
             title = "Segfault in the Cipher",
             artist = "Esoteric Beats Vol. 1",
             format = "MP3",
@@ -98,6 +105,22 @@ object AudioPlayerSamples {
             positionSeconds = 72,
             isPlaying = true,
             seed = "3fa1c27be0d94e1a6c55b8f02d7e4a9c1b6f8e03d2a7c5b941e60f8d3c2b1a07",
+            hasArtwork = true,
+        )
+
+    /** An HLS playlist: it may carry audio only or video, and nothing tells until the player probes it. */
+    val undecided =
+        AudioCardUi(
+            url = "https://stream.example/live/index.m3u8",
+            mimeType = null,
+            title = "Stream",
+            artist = AUTHOR_NAME,
+            format = "HLS",
+            sizeBytes = null,
+            durationSeconds = null,
+            positionSeconds = 0,
+            isPlaying = false,
+            seed = "9c41e07d2b5a8f36e1d0c4b7a29f58e3d6c1b0a4f7e2d9c8b5a3f1e0d7c6b4a2",
         )
 }
 
@@ -182,47 +205,33 @@ fun AudioTodayPreview() =
 
 @Preview(widthDp = 820, heightDp = 560)
 @Composable
-fun AudioTrackCardPreview() =
+fun AudioKnownAudioPreview() =
     AudioPreviewFrame {
         Column {
-            Caption("A · Track card — before the player loads (imeta only)")
-            MockAudioPost { AudioTrackCardPrototype(AudioPlayerSamples.notLoaded) }
+            Caption("Known audio, no waveform tag → B with the synthetic waveform · before load")
+            MockAudioPost { PlayablePostMediaPrototype(AudioPlayerSamples.notLoaded) }
             Caption("Playing")
-            MockAudioPost { AudioTrackCardPrototype(AudioPlayerSamples.playing) }
-        }
-    }
-
-@Preview(widthDp = 820, heightDp = 540)
-@Composable
-fun AudioWaveformCardPreview() =
-    AudioPreviewFrame {
-        Column {
-            Caption("B · Waveform scrubber — before the player loads")
-            MockAudioPost { AudioWaveformCardPrototype(AudioPlayerSamples.notLoaded) }
-            Caption("Playing")
-            MockAudioPost { AudioWaveformCardPrototype(AudioPlayerSamples.playing) }
+            MockAudioPost { PlayablePostMediaPrototype(AudioPlayerSamples.playing) }
         }
     }
 
 @Preview(widthDp = 820, heightDp = 620)
 @Composable
-fun AudioCoverCardPreview() =
+fun AudioWithArtworkPreview() =
     AudioPreviewFrame {
         Column {
-            Caption("C · Cover — when the file has artwork")
-            MockAudioPost { AudioCoverCardPrototype(AudioPlayerSamples.tagged) }
+            Caption("Known audio with artwork → C, the cover with B's scrubber")
+            MockAudioPost { PlayablePostMediaPrototype(AudioPlayerSamples.withArtwork) }
         }
     }
 
-@Preview(widthDp = 820, heightDp = 680)
+@Preview(widthDp = 820, heightDp = 360)
 @Composable
-fun AudioVisualizerCardPreview() =
+fun AudioUndecidedPreview() =
     AudioPreviewFrame {
         Column {
-            Caption("D · Visualizer card — idle")
-            MockAudioPost { AudioVisualizerCardPrototype(AudioPlayerSamples.notLoaded) }
-            Caption("Playing")
-            MockAudioPost { AudioVisualizerCardPrototype(AudioPlayerSamples.playing) }
+            Caption("Audio or video? (HLS playlist) → A until the player probes it")
+            MockAudioPost(text = "Live set tonight, tune in") { PlayablePostMediaPrototype(AudioPlayerSamples.undecided) }
         }
     }
 
@@ -263,7 +272,7 @@ fun AudioMiniPlayerPreview() =
                 }
             }
             Spacer(Modifier.weight(1f))
-            AudioMiniPlayerPrototype(AudioPlayerSamples.tagged, Modifier.padding(horizontal = 8.dp))
+            AudioMiniPlayerPrototype(AudioPlayerSamples.withArtwork, Modifier.padding(horizontal = 8.dp))
             Spacer(Modifier.height(8.dp))
             // Bottom navigation bar placeholder.
             Row(
@@ -275,16 +284,5 @@ fun AudioMiniPlayerPreview() =
                     Icon(it, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-    }
-
-@Preview(widthDp = 820, heightDp = 560)
-@Composable
-fun AudioTaggedVariantsPreview() =
-    AudioPreviewFrame {
-        Column {
-            Caption("A + B with ID3 tags — a named track")
-            MockAudioPost { AudioTrackCardPrototype(AudioPlayerSamples.tagged) }
-            MockAudioPost { AudioWaveformCardPrototype(AudioPlayerSamples.tagged) }
         }
     }
