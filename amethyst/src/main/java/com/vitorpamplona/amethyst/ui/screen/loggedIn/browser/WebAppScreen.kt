@@ -55,6 +55,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.DownloadPromptCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageInfoSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PermissionPromptCard
@@ -73,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_unsupported
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -128,23 +131,10 @@ private fun EmbeddedWebAppTab(
     // Matches FavoriteApp.WebApp.id, so warm-keep membership lines up with the bottom-bar favorites.
     val id = "url:$url"
 
-    var currentUrl by remember { mutableStateOf(url) }
-    // The page's own <title>; null until the current document reports one (the sheet shows the host).
-    var pageTitle by remember { mutableStateOf<String?>(null) }
-    var canGoBack by remember { mutableStateOf(false) }
-    var canGoForward by remember { mutableStateOf(false) }
-    var desktopSite by remember { mutableStateOf(false) }
-    var textZoom by remember { mutableIntStateOf(BrowserChrome.DEFAULT_TEXT_ZOOM) }
     var showPageInfo by remember { mutableStateOf(false) }
 
-    val proxyAvailable = remember { Amethyst.instance.torManager.activePortOrNull.value != null }
-    // Start from this site's remembered Tor choice (some sites' servers reject Tor exits, so the user
-    // can opt one out and it must stick). Only meaningful when Tor is actually available.
-    var torOn by remember { mutableStateOf(proxyAvailable && WebAppNetworkRegistry.useTor(url)) }
-
-    val apps by Amethyst.instance.favoriteApps.favorites
-        .collectAsStateWithLifecycle()
-    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
+    // Tor is ON (its port may still be coming up: a Tor page then waits, it never falls back to the open web).
+    val proxyAvailable = remember { Amethyst.instance.torPrefs.torType.value != TorType.OFF }
 
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
@@ -154,6 +144,23 @@ private fun EmbeddedWebAppTab(
         remember(id, EmbeddedTabHost.rebuildEpoch) {
             EmbeddedTabFactory.acquireWebApp(context, url, backgroundColor)
         }
+
+    // Seeded from the controller, which outlives this screen: switching bottom-bar tabs disposes the screen
+    // but keeps the page, so coming back must show where the page is — not the start URL with no history.
+    var currentUrl by remember(controller) { mutableStateOf(controller.lastUrl ?: url) }
+    // The page's own <title>; null until the current document reports one (the sheet shows the host).
+    var pageTitle by remember(controller) { mutableStateOf(controller.lastTitle) }
+    var canGoBack by remember(controller) { mutableStateOf(controller.lastCanGoBack) }
+    var canGoForward by remember(controller) { mutableStateOf(controller.lastCanGoForward) }
+    var desktopSite by remember(controller) { mutableStateOf(controller.isDesktopSite) }
+    var textZoom by remember(controller) { mutableIntStateOf(controller.currentTextZoom) }
+    // The controller starts from this site's remembered Tor choice (some sites' servers reject Tor exits, so
+    // the user can opt one out and it must stick). Only meaningful when Tor is actually available.
+    var torOn by remember(controller) { mutableStateOf(proxyAvailable && controller.isTorOn) }
+
+    val apps by Amethyst.instance.favoriteApps.favorites
+        .collectAsStateWithLifecycle()
+    val isFavorite = remember(apps, currentUrl) { apps.any { it is FavoriteApp.WebApp && it.url == currentUrl } }
     val isLoading by controller.isLoading
 
     // Keep the URL/back callback fresh (cheap, needs the latest closure).
@@ -238,9 +245,12 @@ private fun EmbeddedWebAppTab(
     val siteDecisions by WebSitePermissionRegistry.decisions.collectAsStateWithLifecycle()
     val sitePermissions = remember(siteDecisions, currentUrl) { browserOrigin(currentUrl)?.let { siteDecisions[it] }.orEmpty() }
 
+    // Off for this site, yet on Tor because another open page needs it (Tor always wins in `:napplet`).
+    val torForced = controller.isTorForced
+
     // Rebuilt only when a displayed value changes, so the tab layer isn't recomposed every frame.
     val chrome =
-        remember(currentUrl, pageTitle, canGoBack, canGoForward, isLoading, torOn, proxyAvailable, isFavorite, desktopSite, textZoom, sitePermissions, candidates, controller) {
+        remember(currentUrl, pageTitle, canGoBack, canGoForward, isLoading, torOn, torForced, proxyAvailable, isFavorite, desktopSite, textZoom, sitePermissions, candidates, controller) {
             EmbeddedTabChrome(
                 ui =
                     BrowserPillUi(
@@ -255,6 +265,7 @@ private fun EmbeddedWebAppTab(
                                 canGoForward = canGoForward,
                                 isLoading = isLoading,
                                 torOn = if (proxyAvailable) torOn else null,
+                                torForced = torForced,
                                 hasSiteSettings = browserOrigin(currentUrl) != null,
                             ),
                         isFavorite = isFavorite,
@@ -288,13 +299,19 @@ private fun EmbeddedWebAppTab(
     SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
     val bottomBarFlow = accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
+    val entryLifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(id) {
         val token = EmbeddedTabHost.setActive(id)
+        EmbeddedTabHost.hold(id)
         onDispose {
             EmbeddedTabHost.clearActiveIfOwner(token)
             EmbeddedTabHost.clearActiveChrome(id)
-            // Only bottom-row apps stay warm; anything else restarts when it leaves.
-            if (id !in bottomBarFlow.value.favoriteIds()) EmbeddedTabHost.evict(id)
+            // Only bottom-row apps stay warm; anything else restarts once the user actually leaves it — not
+            // when a screen is merely pushed on top, and not when a re-navigation to this same tab already
+            // composed a new screen on the same session.
+            if (EmbeddedTabHost.release(id)) {
+                EmbeddedTabHost.releaseWhenGone(id, entryLifecycle) { id in bottomBarFlow.value.favoriteIds() }
+            }
         }
     }
 
@@ -324,8 +341,9 @@ private fun EmbeddedWebAppTab(
 /**
  * Everything an embedded page asks the user for, drawn by the main process because the provider has no
  * window: JS dialogs, camera / microphone / location prompts (remembered per origin in
- * [WebSitePermissionRegistry], then Android's own runtime permission), and page info — the shared
- * [PageDialogCard], [PermissionPromptCard] and [PageInfoSheet].
+ * [WebSitePermissionRegistry], then Android's own runtime permission), inline-download consent, and
+ * page info — the shared [PageDialogCard], [PermissionPromptCard], [DownloadPromptCard] and
+ * [PageInfoSheet].
  */
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
@@ -405,6 +423,25 @@ private fun EmbeddedPageUi(
                     onDeny = { answer(allow = false, remember = true) },
                 )
             }
+        }
+    }
+
+    // A download the page started: nothing is fetched or saved until this is answered. The card shows the
+    // file name that would be saved, its size and source host, headed by the WebView-reported origin (never
+    // a page-supplied field), with a warning for names that can be installed or run ("invoice.apk").
+    val downloadRequest by controller.pendingDownload
+    downloadRequest?.let { request ->
+        Dialog(onDismissRequest = { controller.answerDownload(request.id, allowed = false) }) {
+            DownloadPromptCard(
+                host = hostLabel(request.origin),
+                security = ui.security,
+                fileName = request.fileName,
+                sizeBytes = request.sizeBytes,
+                sourceHost = request.sourceHost,
+                risky = request.risky,
+                onAllow = { controller.answerDownload(request.id, allowed = true) },
+                onDeny = { controller.answerDownload(request.id, allowed = false) },
+            )
         }
     }
 

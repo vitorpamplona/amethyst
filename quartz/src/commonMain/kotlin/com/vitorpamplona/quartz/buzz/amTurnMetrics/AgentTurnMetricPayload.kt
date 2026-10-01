@@ -36,6 +36,11 @@ import kotlinx.serialization.json.Json
  * on purpose — `null` means "the harness did not report this", not zero. Unknown JSON
  * fields are ignored for forward compatibility, and an unrecognized [stopReason] is
  * kept verbatim (map it with [stopReasonOrUnknown]) rather than dropping the payload.
+ *
+ * [pricingIdentity] is optional but not nullable on the wire: it is present only when the
+ * publisher could prove the billing authority and the actually-requested model, and its absence
+ * means "price unknown" — never infer a price from [model], which stays the configured/session
+ * model.
  */
 @Serializable
 data class AgentTurnMetricPayload(
@@ -50,6 +55,7 @@ data class AgentTurnMetricPayload(
     val cumulative: TokenCounts? = null,
     val deltaReliable: Boolean = true,
     val stopReason: String? = null,
+    val pricingIdentity: PricingIdentity? = null,
 ) {
     /** Maps [stopReason] to a [StopReason], treating any unrecognized value as [StopReason.UNKNOWN]. */
     fun stopReasonOrUnknown(): StopReason? = stopReason?.let { StopReason.fromWire(it) }
@@ -80,8 +86,43 @@ data class AgentTurnMetricPayload(
 }
 
 /**
+ * The billing identity of a turn (NIP-AM `pricingIdentity`), mirroring `PricingIdentity` in
+ * `agent_turn_metric.rs`. When present, [authority] and [model] are required strings; [cacheClass]
+ * is omitted (never null) when not applicable.
+ *
+ * Pricing lookup is an exact string match on `(authority, model)`. The Rust parser does not
+ * restrict [authority] to the registered set, so neither does this one — check
+ * [isRegisteredAuthority] before trusting it for a price.
+ */
+@Serializable
+data class PricingIdentity(
+    /** The billing namespace: an exact lowercase hostname such as `api.anthropic.com` (not the transport provider). */
+    val authority: String,
+    /** The actually-requested billable model id, as resolved at request time. */
+    val model: String,
+    /** The cache-write class (e.g. `ephemeral`), when applicable. */
+    val cacheClass: String? = null,
+) {
+    /** True when [authority] is one of the NIP's registered billing namespaces. */
+    fun isRegisteredAuthority(): Boolean = authority in REGISTERED_AUTHORITIES
+
+    companion object {
+        const val AUTHORITY_ANTHROPIC = "api.anthropic.com"
+        const val AUTHORITY_OPENAI = "api.openai.com"
+        const val AUTHORITY_OPENROUTER = "openrouter.ai"
+
+        /** The registered `authority` values; the set only grows by amendment to NIP-AM. */
+        val REGISTERED_AUTHORITIES = setOf(AUTHORITY_ANTHROPIC, AUTHORITY_OPENAI, AUTHORITY_OPENROUTER)
+    }
+}
+
+/**
  * Token usage counts. All fields nullable — `null` distinguishes "not reported" from
  * zero. Mirrors `TokenCounts` in `agent_turn_metric.rs`.
+ *
+ * The cache components ([cacheReadTokens], [cacheWriteTokens]) are informational subsets of
+ * [inputTokens]. NIP-AM has publishers keep an explicit zero and *omit* a component they cannot
+ * see, so an absent cache field is "unknown" — never sum it as zero.
  */
 @Serializable
 data class TokenCounts(

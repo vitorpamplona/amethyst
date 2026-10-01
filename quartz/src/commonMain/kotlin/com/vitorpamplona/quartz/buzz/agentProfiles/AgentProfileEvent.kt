@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.agentProfiles
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -74,6 +75,9 @@ class AgentProfileEvent(
 
     companion object {
         const val KIND = 10100
+
+        /** The replaceable address of [pubKey]'s agent profile (`10100:<pubkey>:`). */
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
 
         fun build(
             profile: AgentProfileContent,

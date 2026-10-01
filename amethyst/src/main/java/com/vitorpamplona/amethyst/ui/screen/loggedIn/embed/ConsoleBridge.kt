@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
+import androidx.compose.runtime.IntState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 
@@ -31,7 +34,37 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 interface ConsoleBridge {
     val consoleLogs: SnapshotStateList<ConsoleLine>
 
+    /**
+     * How many of [consoleLogs] are errors — the pill's badge. Kept as its own state so the tab layer
+     * reads a single int instead of counting the list, which subscribed it to EVERY log line: a page
+     * logging each frame recomposed the whole layer each frame.
+     */
+    val consoleErrorCount: IntState
+
     fun clearConsoleLogs()
+}
+
+/**
+ * A capped JavaScript console buffer that keeps its error count as separate state (see
+ * [ConsoleBridge.consoleErrorCount]). Main-thread only.
+ */
+class ConsoleBuffer(
+    private val max: Int,
+) {
+    val lines = mutableStateListOf<ConsoleLine>()
+    private val errors = mutableIntStateOf(0)
+    val errorCount: IntState get() = errors
+
+    fun add(line: ConsoleLine) {
+        if (lines.size >= max && lines.removeAt(0).level == ConsoleLine.Level.ERROR) errors.intValue--
+        lines.add(line)
+        if (line.level == ConsoleLine.Level.ERROR) errors.intValue++
+    }
+
+    fun clear() {
+        lines.clear()
+        errors.intValue = 0
+    }
 }
 
 /** Maps a provider's console level (WebView's `ConsoleMessage.MessageLevel` name) onto the chrome's. */

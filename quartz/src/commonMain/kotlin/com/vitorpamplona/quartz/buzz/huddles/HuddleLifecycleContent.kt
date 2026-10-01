@@ -29,12 +29,19 @@ import kotlinx.serialization.json.Json
 /**
  * The `content` JSON shared by every Buzz huddle-lifecycle event (`kind:48100`–`48103`):
  * the id of the ephemeral audio channel the lifecycle transition applies to. The parent
- * (timeline) channel is carried separately in the `h` tag. Field name is snake_case on
+ * (timeline) channel is carried separately in the `h` tag. Field names are snake_case on
  * the wire. Ground truth: `buzz-relay/src/audio/handler.rs::emit_participant_event`.
+ *
+ * The relay also stamps the huddle session's [generation] (the same value the kind-48104
+ * liveness answer carries, so a client can tell a restarted session from the old one) and,
+ * when it has them, the participant roster's [rosterRevision] and the joiner's [admissionId].
  */
 @Serializable
 data class HuddleLifecycleContent(
     @SerialName("ephemeral_channel_id") val ephemeralChannelId: String,
+    @SerialName("roster_revision") val rosterRevision: Long? = null,
+    @SerialName("admission_id") val admissionId: String? = null,
+    val generation: String? = null,
 ) {
     fun encodeToJson(): String = JSON.encodeToString(this)
 

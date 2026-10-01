@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.backups.LocallySignedEvents
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzIdentityNames
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
@@ -64,7 +66,10 @@ import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
@@ -77,6 +82,7 @@ import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
@@ -98,6 +104,7 @@ import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.mpProjects.ProjectEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
@@ -119,6 +126,7 @@ import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessagePayload
 import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teamCatalog.TeamCatalogEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
@@ -1098,6 +1106,7 @@ open class EventCache :
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null && (wasVerified || justVerify(event))) {
                 user.updateUserInfo(newUserMetadata, event)
+                BuzzIdentityNames.invalidate()
                 if (relay != null) {
                     user.addRelayBeingUsed(relay, event.createdAt)
                 }
@@ -2329,7 +2338,7 @@ open class EventCache :
 
     /**
      * Marks the serving relay as Buzz, but only off a VERIFIED event: the mark changes
-     * what the composer sends (40002 vs kind 9) and how new channels on the relay are
+     * what the composer sends (Buzz's kind-9 shape vs NIP-29's) and how new channels on the relay are
      * treated, so an unverifiable frame from a buggy/hostile relay must not flip it.
      * The note-has-event check is the same verification gate the attach path uses.
      */
@@ -3757,6 +3766,11 @@ open class EventCache :
                 is AuditEntryEvent,
                 is ChannelSummaryEvent,
                 is PresenceSnapshotEvent,
+                // NIP-AR artifact revisions and relay-signed removal markers: queryable state, never
+                // chat rows - the spec keeps them out of chat, reply and unread counts. The current
+                // head per `d` is derived with ArtifactHeadResolver (by `prev`, not by time).
+                is ArtifactEvent,
+                is ArtifactRemovalEvent,
                 -> consumeBuzzRegularEvent(event, relay, wasVerified)
 
                 // Buzz ephemeral signals: transient by definition (20000-29999) — do not
@@ -3776,8 +3790,19 @@ open class EventCache :
                     BuzzPresenceState.record(event.subjectPubKey(), event.status(), event.createdAt)
                     false
                 }
+                // An agent profile makes its author an agent, which can change how names in a
+                // channel are told apart.
+                is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified).also { BuzzIdentityNames.invalidate() }
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
+                // Relay-synthesized "this huddle session is live" (48104): only produced on demand
+                // for a dedicated REQ and never stored, so record it and keep no note.
+                is HuddleLivenessEvent -> {
+                    val channel = event.channelId()
+                    val session = event.sessionId()
+                    if (channel != null && session != null) BuzzHuddleLivenessState.record(channel, session, TimeUtils.now())
+                    false
+                }
                 // Pairing (24134) is deliberately dialect-neutral: it flows during device
                 // pairing before any workspace relationship is established.
                 is PairingEvent -> false
@@ -3900,13 +3925,15 @@ open class EventCache :
                 // Buzz addressable/replaceable state.
                 is PersonaEvent,
                 is TeamEvent,
+                is TeamCatalogEvent,
+                is ProjectEvent,
                 is ManagedAgentEvent,
-                is AgentProfileEvent,
                 is EngramEvent,
                 is WorkflowDefEvent,
                 is EventReminderEvent,
                 is PushLeaseEvent,
                 is WindowBoundsEvent,
+                is ThreadWindowBoundsEvent,
                 is ArchivedIdentitiesListEvent,
                 is RelayDiscoveryEvent,
                 is RelayMonitorEvent,

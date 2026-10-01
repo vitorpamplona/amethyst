@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import android.os.Messenger
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -37,7 +39,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * The registry of live relay subscriptions an applet has open, keyed by its `subId`. Each entry
+ * The registry of live relay subscriptions applets have open, keyed by the requesting surface's reply
+ * [Messenger] plus the applet's own `subId`. One broker serves every surface, and each page numbers its
+ * subs from scratch (`s0`, `s1`, …), so the `subId` alone would let one tab's REQ replace — or its
+ * `relay.close` kill — another tab's feed. Each entry
  * holds the exact [INostrClient] that opened it, so teardown unsubscribes from the right account
  * even after an account switch, plus an EOSE latch so a multi-relay subscription emits a single
  * `relay.eose`. Encodes the `relay.event`/`relay.eose`/`relay.closed` pushes and hands them to the
@@ -51,8 +56,14 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class NappletLiveSubscriptions(
     private val scope: CoroutineScope,
+    private val attendance: NappletAttendance<Messenger>,
 ) {
-    private val liveSubs = ConcurrentHashMap<String, LiveSub>()
+    private data class Key(
+        val owner: Messenger,
+        val subId: String,
+    )
+
+    private val liveSubs = ConcurrentHashMap<Key, LiveSub>()
     private val liveSeq = AtomicInteger(0)
 
     private class LiveSub(
@@ -62,6 +73,10 @@ class NappletLiveSubscriptions(
         val eoseSent = AtomicBoolean(false)
         val deliveries = Channel<Delivery>(Channel.UNLIMITED)
         var deliveryJob: Job? = null
+
+        // Encrypted events that arrived while nobody was looking at the page, still encrypted: they are
+        // decrypted and delivered when it is attended again. Touched only by the delivery coroutine.
+        val heldEncrypted = ArrayDeque<Event>()
     }
 
     private sealed interface Delivery {
@@ -71,17 +86,21 @@ class NappletLiveSubscriptions(
 
         data object Eose : Delivery
 
+        // The page is being looked at again: deliver what was held.
+        data object Attended : Delivery
+
         data class Closed(
             val reason: String,
         ) : Delivery
     }
 
     /**
-     * Opens a live relay subscription for [nappletSubId], streaming `relay.event`/`relay.eose`/
-     * `relay.closed` envelopes to [push] as events arrive. Replaces any existing subscription for
-     * the same id. With no account/relays/filters it pushes a single empty EOSE to close it.
+     * Opens [owner]'s live relay subscription [nappletSubId], streaming `relay.event`/`relay.eose`/
+     * `relay.closed` envelopes to [push] as events arrive. Replaces any existing subscription [owner] has
+     * under the same id. With no account/relays/filters it pushes a single empty EOSE to close it.
      */
     fun open(
+        owner: Messenger,
         nappletSubId: String,
         filters: List<Filter>,
         account: Account?,
@@ -93,19 +112,34 @@ class NappletLiveSubscriptions(
             return
         }
 
-        close(nappletSubId)
+        val key = Key(owner, nappletSubId)
+        close(owner, nappletSubId)
         // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
         // can't collide with the subscription it's replacing.
         val sub = LiveSub("napplet-$nappletSubId-${liveSeq.incrementAndGet()}", account.client)
-        liveSubs[nappletSubId] = sub
+        liveSubs[key] = sub
         sub.deliveryJob =
             scope.launch {
                 for (delivery in sub.deliveries) {
-                    if (liveSubs[nappletSubId] !== sub) break
+                    if (liveSubs[key] !== sub) break
                     when (delivery) {
-                        is Delivery.RelayEvent ->
-                            NappletRelayCleartext.forDelivery(delivery.event, account.signer)?.let {
-                                push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                        is Delivery.RelayEvent -> {
+                            val event = delivery.event
+                            if (NappletRelayCleartext.isEncrypted(event) && !attendance.isAttended(owner)) {
+                                // Don't decrypt for a page nobody is watching: keep it (bounded) for later.
+                                if (sub.heldEncrypted.size >= MAX_HELD_ENCRYPTED) sub.heldEncrypted.removeFirst()
+                                sub.heldEncrypted.addLast(event)
+                            } else {
+                                NappletRelayCleartext.forDelivery(event, account.signer)?.let {
+                                    push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                                }
+                            }
+                        }
+                        Delivery.Attended ->
+                            while (sub.heldEncrypted.isNotEmpty() && attendance.isAttended(owner)) {
+                                NappletRelayCleartext.forDelivery(sub.heldEncrypted.removeFirst(), account.signer)?.let {
+                                    push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                                }
                             }
                         Delivery.Eose -> push(NappletProtocolJson.encodeRelayEose(nappletSubId))
                         is Delivery.Closed -> push(NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason))
@@ -145,21 +179,40 @@ class NappletLiveSubscriptions(
         runCatching { sub.client.subscribe(sub.clientSubId, relays.associateWith { filters }, listener) }
     }
 
-    /** Stops the live subscription for [nappletSubId], unsubscribing from the client that opened it. */
-    fun close(nappletSubId: String) {
-        val sub = liveSubs.remove(nappletSubId) ?: return
+    /** [owner] is being looked at again: its subscriptions deliver the encrypted events they held. */
+    fun onAttended(owner: Messenger) {
+        liveSubs.forEach { (key, sub) -> if (key.owner == owner) sub.deliveries.trySend(Delivery.Attended) }
+    }
+
+    /** Stops [owner]'s live subscription [nappletSubId], unsubscribing from the client that opened it. */
+    fun close(
+        owner: Messenger,
+        nappletSubId: String,
+    ) {
+        liveSubs.remove(Key(owner, nappletSubId))?.let(::stop)
+    }
+
+    /** Stops every subscription [owner] still has open (its surface went away without closing them). */
+    fun closeAllFor(owner: Messenger) {
+        liveSubs.keys
+            .filter { it.owner == owner }
+            .forEach { key -> liveSubs.remove(key)?.let(::stop) }
+    }
+
+    /** Tears down every open subscription (service teardown). */
+    fun closeAll() {
+        liveSubs.values.forEach(::stop)
+        liveSubs.clear()
+    }
+
+    private fun stop(sub: LiveSub) {
         sub.deliveries.close()
         sub.deliveryJob?.cancel()
         runCatching { sub.client.unsubscribe(sub.clientSubId) }
     }
 
-    /** Tears down every open subscription (service teardown). */
-    fun closeAll() {
-        liveSubs.values.forEach { sub ->
-            sub.deliveries.close()
-            sub.deliveryJob?.cancel()
-            runCatching { sub.client.unsubscribe(sub.clientSubId) }
-        }
-        liveSubs.clear()
+    private companion object {
+        // Per subscription: past this, the oldest held encrypted event is dropped.
+        const val MAX_HELD_ENCRYPTED = 500
     }
 }

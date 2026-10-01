@@ -61,28 +61,37 @@ object NappletLaunchRegistry {
         val accountPubKey: HexKey,
     )
 
-    // Access-ordered + capped so tokens from long-closed napplets can't accumulate without bound. The
-    // active napplet always re-touches its token, so only stale sessions are ever evicted.
-    private const val MAX_SESSIONS = 128
+    // Access-ordered + capped so tokens from long-closed napplets can't accumulate without bound. Closed
+    // surfaces give their tokens back ([unregister]), so the cap is only a backstop for ones that never
+    // could (a crashed process); an idle live surface whose token is evicted anyway is told so and re-mints.
+    private const val MAX_SESSIONS = 512
 
     // LruCache is internally synchronized and access-ordered — the same
     // touch-on-resolve + evict-eldest-beyond-cap semantics the old access-ordered
     // LinkedHashMap + @Synchronized pair provided, without JVM-only APIs.
     private val sessions = LruCache<String, Session>(MAX_SESSIONS)
 
+    // Browser tokens live apart: a page mints one per origin it touches, so a site cycling through
+    // subdomains (a.x.com, b.x.com, …) could otherwise push every open napplet's token out of the cache.
+    private val browserSessions = LruCache<String, Session>(MAX_SESSIONS)
+
     fun register(
         identity: NappletIdentity,
         declared: Set<NappletCapability>,
         accountPubKey: HexKey,
+        browserOrigin: Boolean = false,
     ): String {
         val token = RandomInstance.bytes(32).toHexKey()
-        sessions.put(token, Session(identity.copy(instanceId = token), declared, accountPubKey))
+        (if (browserOrigin) browserSessions else sessions).put(token, Session(identity.copy(instanceId = token), declared, accountPubKey))
         return token
     }
 
-    fun resolve(token: String?): Session? = token?.let { sessions[it] }
+    fun resolve(token: String?): Session? = token?.let { sessions[it] ?: browserSessions[it] }
 
     fun unregister(token: String?) {
-        token?.let { sessions.remove(it) }
+        token?.let {
+            sessions.remove(it)
+            browserSessions.remove(it)
+        }
     }
 }

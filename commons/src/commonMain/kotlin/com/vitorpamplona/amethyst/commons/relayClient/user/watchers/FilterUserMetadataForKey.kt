@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.forEachChunk
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
+import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
@@ -57,6 +58,10 @@ val UserMetadataForKeyKinds =
         // kind:17375 — that's the user's private wallet (NIP-44 encrypted
         // to them); only the kind:10019 nutzap announcement is public.
         NutzapInfoEvent.KIND,
+        // Buzz agent profile (kind:10100): marks the author as an agent and carries its metadata
+        // and channel-add policy. Co-loaded with kind:0 so an agent is recognizable the moment it
+        // renders. (Its owner comes from the NIP-OA `auth` tag on the kind:0 itself.)
+        AgentProfileEvent.KIND,
     )
 
 fun filterUserMetadataForKey(

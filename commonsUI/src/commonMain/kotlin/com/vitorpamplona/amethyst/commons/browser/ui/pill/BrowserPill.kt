@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_larger
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_reset
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_smaller
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_value
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_forced
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_off
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_on
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -487,7 +488,14 @@ private fun PrivacyCard(
                         icon = { PillActionIcon(Action.TOR, tint = if (on) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, size = 22.dp) },
                         iconContainer = if (on) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
                         title = stringRes(pillLabelFor(Action.TOR)),
-                        supporting = stringRes(if (on) Res.string.browser_pill_tor_on else Res.string.browser_pill_tor_off),
+                        supporting =
+                            stringRes(
+                                when {
+                                    on -> Res.string.browser_pill_tor_on
+                                    ui.chrome.torForced -> Res.string.browser_pill_tor_forced
+                                    else -> Res.string.browser_pill_tor_off
+                                },
+                            ),
                         onClick = { onAction(Action.TOR) },
                     ) { Switch(checked = on, onCheckedChange = { onAction(Action.TOR) }) }
                 }

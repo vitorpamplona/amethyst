@@ -38,7 +38,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -66,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_channel_archive
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_delete
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.buzz_channel_unarchive
+import com.vitorpamplona.amethyst.commons.resources.buzz_huddle_live
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.join
 import com.vitorpamplona.amethyst.commons.resources.leave
@@ -95,6 +99,10 @@ import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun RelayGroupTopBar(
@@ -152,6 +160,7 @@ fun RelayGroupTopBar(
     var showJoinCode by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
+    val huddleLive by observeBuzzHuddleLive(channel, enabled = isBuzzRelay && membership.isMember(), accountViewModel)
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -203,6 +212,20 @@ fun RelayGroupTopBar(
                             text = "$memberCount",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (huddleLive) {
+                        Icon(
+                            symbol = MaterialSymbols.Headphones,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Text(
+                            text = stringRes(Res.string.buzz_huddle_live),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
                         )
                     }
                 }
@@ -536,6 +559,38 @@ private fun RoleBadge(membership: RelayGroupMembership) {
         )
     }
 }
+
+/**
+ * Whether a Buzz huddle is live in [channel] right now. While [enabled] (a Buzz relay we are a
+ * member of - the relay answers liveness only for an authorized `#h`), re-asks the relay every
+ * [HUDDLE_LIVENESS_REFRESH_MS] as Buzz's desktop does; a session that stops being reported ages out
+ * of [BuzzHuddleLivenessState] and the indicator drops.
+ */
+@Composable
+private fun observeBuzzHuddleLive(
+    channel: RelayGroupChannel,
+    enabled: Boolean,
+    accountViewModel: AccountViewModel,
+): State<Boolean> {
+    val seen by BuzzHuddleLivenessState.flow.collectAsStateWithLifecycle()
+    var now by remember { mutableLongStateOf(TimeUtils.now()) }
+    LaunchedEffect(channel.groupId, enabled) {
+        if (!enabled) return@LaunchedEffect
+        while (true) {
+            try {
+                accountViewModel.account.relayGroups.refreshBuzzHuddleLiveness(channel)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("RelayGroupTopBar", "Huddle liveness refresh failed", e)
+            }
+            now = TimeUtils.now()
+            delay(HUDDLE_LIVENESS_REFRESH_MS)
+        }
+    }
+    return remember(channel.groupId, enabled) { derivedStateOf { enabled && BuzzHuddleLivenessState.liveSessions(channel.groupId.id, now, seen).isNotEmpty() } }
+}
+
+private const val HUDDLE_LIVENESS_REFRESH_MS = 10_000L
 
 /**
  * Whether this Buzz channel has a canvas (kind 40100) in cache, recomposing when one lands.

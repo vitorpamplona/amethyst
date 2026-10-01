@@ -96,4 +96,10 @@ class MinichatReplyTest {
     fun `root marker alone is not a reply`() {
         assertFalse(isMinichatReply(chat(arrayOf("e", rootId, "", "root"))))
     }
+
+    /** "Also send to channel": Buzz flags the reply `broadcast`, on kind 9 exactly as on 40002. */
+    @Test
+    fun `buzz broadcast reply stays in the channel timeline`() {
+        assertFalse(isMinichatReply(chat(arrayOf("e", parentId, "", "reply"), arrayOf("broadcast", "1"))))
+    }
 }

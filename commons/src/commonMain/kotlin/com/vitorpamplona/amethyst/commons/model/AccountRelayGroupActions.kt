@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHuddleLivenessState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -30,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembe
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
@@ -41,13 +43,17 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_BOT
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_GUEST
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_OWNER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -75,9 +81,11 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.EventPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
-import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * NIP-29 relay-group and Buzz-workspace orchestration for an [Account]:
@@ -158,6 +166,21 @@ class AccountRelayGroupActions(
             ?.substringBefore('"')
             ?.takeIf { it.isNotBlank() }
 
+    /**
+     * Asks [channel]'s Buzz relay which huddle sessions in it are live right now and records them
+     * in [BuzzHuddleLivenessState]. The relay synthesizes kind-48104 answers only for a REQ whose
+     * every filter is exactly `kinds:[48104]` with an authorized `#h`, so this is its own REQ, never
+     * part of the channel's timeline subscription. Buzz's desktop repeats it every 10 seconds.
+     */
+    suspend fun refreshBuzzHuddleLiveness(channel: RelayGroupChannel) {
+        val filter = HuddleLivenessEvent.filter(listOf(channel.groupId.id))
+        val now = TimeUtils.now()
+        account.client.fetchAll(channel.groupId.relayUrl, filter, idleTimeoutMs = 8_000).forEach { event ->
+            if (event !is HuddleLivenessEvent || event.channelId() != channel.groupId.id) return@forEach
+            event.sessionId()?.let { BuzzHuddleLivenessState.record(channel.groupId.id, it, now) }
+        }
+    }
+
     /** Hide a Buzz DM from my sidebar with a kind-41012 command (re-opening it un-hides). */
     suspend fun hideBuzzDm(channel: RelayGroupChannel) {
         val template = DmHideEvent.build(channel.groupId.id)
@@ -231,6 +254,7 @@ class AccountRelayGroupActions(
      * the YAML and runs it; self-hosted on geode the definition is a named catalog entry the picker
      * offers and `amy` triggers by id. Returns the new workflow id, or null when the account can't write.
      */
+    @OptIn(ExperimentalUuidApi::class)
     suspend fun publishBuzzWorkflowDef(
         relay: NormalizedRelayUrl,
         channelId: String,
@@ -238,7 +262,8 @@ class AccountRelayGroupActions(
         yaml: String,
     ): String? {
         if (!account.isWriteable()) return null
-        val workflowId = RandomInstance.randomChars(16)
+        // The relay parses the `d` tag as a UUID and refuses anything else.
+        val workflowId = Uuid.random().toString()
         val signed = account.signer.sign(WorkflowDefEvent.build(workflowId, channelId, yaml, name.ifBlank { null }))
         account.cache.justConsumeMyOwnEvent(signed)
         account.client.publish(signed, setOf(relay))
@@ -493,8 +518,28 @@ class AccountRelayGroupActions(
     }
 
     /**
-     * Add [pubkey] to the group (or change its roles) with a kind 9000 put-user
-     * event (moderator only). Pass an empty [roles] list for a plain member.
+     * Add [pubkey] to the group as a plain member with a kind 9000 put-user event, without
+     * touching the role of someone who is already in it.
+     *
+     * On Buzz this sends **no** `role` tag: the relay reads a missing role as "no role change",
+     * keeping an existing member's role and defaulting only a newcomer to `member`. Sending
+     * `role=member` instead would demote an admin who happened to be re-added, or be refused
+     * outright (`only owners/admins may change an active member's role`) when the actor is not
+     * elevated. Ground truth: `handle_put_user` in `buzz-relay/src/handlers/side_effects.rs` and
+     * `decide_put_user` in `channel_authz.rs`.
+     */
+    suspend fun addRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) {
+        val template = GroupPutUserEvent.build(channel.groupId.id, listOf(pubkey to emptyList()))
+        account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Set [pubkey]'s roles in the group with a kind 9000 put-user event (moderator only). An
+     * empty [roles] list makes them a plain member - on Buzz that is an explicit demotion to
+     * `member`. To add someone without changing a role, use [addRelayGroupUser].
      */
     suspend fun putRelayGroupUser(
         channel: RelayGroupChannel,
@@ -506,10 +551,7 @@ class AccountRelayGroupActions(
         // the whole put-user, which is why an unmapped role must become `member` rather than travel.
         val buzzRole =
             if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
-                when {
-                    roles.any { it.equals(RelayGroupMembership.ROLE_ADMIN, true) } -> BUZZ_ROLE_ADMIN
-                    else -> BUZZ_ROLE_MEMBER
-                }
+                buzzRoleFor(roles)
             } else {
                 null
             }
@@ -604,5 +646,20 @@ class AccountRelayGroupActions(
     ) {
         val template = GroupEditMetadataEvent.build(channel.groupId.id, archived = archived)
         account.broadcaster.signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+}
+
+/**
+ * Maps NIP-29 role names onto Buzz's closed role set (owner/admin/member/guest/bot), picking the
+ * most privileged one present. Anything else, including NIP-29's `moderator`, becomes `member`.
+ */
+internal fun buzzRoleFor(roles: List<String>): String {
+    fun has(role: String) = roles.any { it.equals(role, true) }
+    return when {
+        has(BUZZ_ROLE_OWNER) -> BUZZ_ROLE_OWNER
+        has(RelayGroupMembership.ROLE_ADMIN) || has(BUZZ_ROLE_ADMIN) -> BUZZ_ROLE_ADMIN
+        has(BUZZ_ROLE_BOT) -> BUZZ_ROLE_BOT
+        has(BUZZ_ROLE_GUEST) -> BUZZ_ROLE_GUEST
+        else -> BUZZ_ROLE_MEMBER
     }
 }

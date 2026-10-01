@@ -111,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_perm_microphone
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_perm_once
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_perm_title
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_perm_tor_note
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_forced
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_off
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_on
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -137,7 +138,7 @@ fun OriginBadge(
 
 /** The card frame every page-initiated prompt shares. */
 @Composable
-private fun PageCard(content: @Composable () -> Unit) {
+internal fun PageCard(content: @Composable () -> Unit) {
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -372,7 +373,14 @@ fun PageInfoSheet(
                         icon = { PillActionIcon(BrowserChrome.Action.TOR, tint = if (tor) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, size = 22.dp) },
                         iconContainer = if (tor) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
                         title = stringRes(if (tor) Res.string.browser_pill_info_tor else Res.string.browser_pill_info_open),
-                        supporting = stringRes(if (tor) Res.string.browser_pill_tor_on else Res.string.browser_pill_tor_off),
+                        supporting =
+                            stringRes(
+                                when {
+                                    tor -> Res.string.browser_pill_tor_on
+                                    ui.chrome.torForced -> Res.string.browser_pill_tor_forced
+                                    else -> Res.string.browser_pill_tor_off
+                                },
+                            ),
                         onClick = null,
                     )
                 }

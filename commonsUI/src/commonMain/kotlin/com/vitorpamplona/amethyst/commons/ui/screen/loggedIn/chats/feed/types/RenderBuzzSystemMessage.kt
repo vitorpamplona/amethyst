@@ -32,7 +32,9 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_admin_kick
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_archived
+import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_auto_archived
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_created
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_deleted
 import com.vitorpamplona.amethyst.commons.resources.buzz_system_channel_unarchived
@@ -178,6 +180,11 @@ fun buzzSystemMessageText(
             } ?: stringRes(Res.string.buzz_system_message_deleted, actor)
 
         SystemMessagePayload.DM_CREATED -> stringRes(Res.string.buzz_system_dm_created, actor)
+
+        // Relay-authored with no actor: the administrator who acted is deliberately not named.
+        SystemMessagePayload.ADMIN_KICK -> stringRes(Res.string.buzz_system_admin_kick, target)
+
+        SystemMessagePayload.CHANNEL_AUTO_ARCHIVED -> stringRes(Res.string.buzz_system_channel_auto_archived)
 
         else -> stringRes(Res.string.buzz_system_unknown, actor, payload.type.replace('_', ' '))
     }

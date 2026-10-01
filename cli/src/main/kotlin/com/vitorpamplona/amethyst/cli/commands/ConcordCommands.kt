@@ -42,8 +42,11 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEven
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordDissolution
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordListFragmentSet
+import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordLimits
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -53,6 +56,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
@@ -79,6 +83,15 @@ object ConcordCommands {
         |  concord import                              fetch + decrypt this account's kind:33302
         |                                               community list (carries heldRoots, CORD-06)
         |  concord channels COMMUNITY                  list a community's channels
+        |  concord channel create COMMUNITY NAME       create a channel (MANAGE_CHANNELS); --private
+        |          [--private [--role NAME]]            gives it its own key at channel epoch 0 plus a
+        |                                               bit-less access Role (default: the channel name);
+        |                                               grant that Role to let members read it
+        |  concord channel privatize COMMUNITY CHANNEL convert a Public channel to Private: a fresh key
+        |          [--role NAME]                        at the next channel epoch + an access Role
+        |  concord channel publicize COMMUNITY CHANNEL convert a Private channel back to Public (flag only)
+        |  concord channel rekey COMMUNITY CHANNEL     rotate a Private channel's key to exactly the
+        |                                               members its Roles entitle today (CORD-06)
         |  concord send COMMUNITY CHANNEL TEXT         post a message (CHANNEL = general|name|id)
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages (default 50);
         |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
@@ -96,7 +109,9 @@ object ConcordCommands {
         |                                               it in your invite list so it stays retired
         |  concord join URL                            redeem an invite link and save the community
         |  concord rekey [COMMUNITY]                   follow a Refounding we were re-keyed for:
-        |                                               open our blob and adopt the new epoch
+        |                                               open our blob and adopt the new epoch; then
+        |                                               follow each held private channel's rotations
+        |                                               (adopt the new key, or drop it when cut)
         |  concord recover [COMMUNITY] [--rejoin]      re-resolve the joined-through invite link and
         |                                               report whether a Refounding left us behind;
         |                                               --rejoin re-accepts that link (a bundle never
@@ -106,8 +121,12 @@ object ConcordCommands {
         |                                               and public: true/false + live invite links
         |                                               from the folded registries (CORD-05 §5)
         |  concord role COMMUNITY NAME POSITION PERM…  define a role (perms by name, e.g. BAN KICK)
-        |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member
+        |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member; the private channels it
+        |                                               opens are vended by Direct Invite, the ones it
+        |                                               closes are rotated (CORD-03/06)
         |  concord ban COMMUNITY USER                  ban a member
+        |  concord kick COMMUNITY USER                 cooperative kick (CORD-04 §6): strip the member's
+        |                                               roles, then the Guestbook KICK; re-joinable
         |  concord pins COMMUNITY CHANNEL              the channel's verified Pin List (CORD-04 §7)
         |  concord pin COMMUNITY CHANNEL RUMOR_ID      pin a message (PIN_MESSAGES); proves it with
         |                                               its original seal, capped at 25 / 32 KiB
@@ -133,7 +152,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|unban|pins|pin|unpin|refound|dissolve|timer>",
+            "concord <create|list|import|channels|channel|send|read|invite|invites|accept|decline|revoke|join|recover|rekey|roles|role|grant|ban|kick|unban|pins|pin|unpin|refound|dissolve|timer>",
             help = USAGE,
             routes =
                 mapOf(
@@ -141,6 +160,7 @@ object ConcordCommands {
                     "list" to { rest -> list(dataDir, rest) },
                     "import" to { rest -> import(dataDir, rest) },
                     "channels" to { rest -> ConcordChannelCommands.channels(dataDir, rest) },
+                    "channel" to { rest -> ConcordPrivateChannelCommands.channel(dataDir, rest) },
                     "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
                     "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
                     "invite" to { rest -> invite(dataDir, rest) },
@@ -155,6 +175,7 @@ object ConcordCommands {
                     "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
                     "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
                     "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
+                    "kick" to { rest -> ConcordModCommands.kick(dataDir, rest) },
                     "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
                     "pins" to { rest -> ConcordPinCommands.pins(dataDir, rest) },
                     "pin" to { rest -> ConcordPinCommands.pin(dataDir, rest) },
@@ -204,6 +225,7 @@ object ConcordCommands {
                     controlRoot = community.controlRoot.toHexKey(),
                     generalChannelId = community.generalChannelIdHex,
                     relays = relays,
+                    addedAt = TimeUtils.nowMillis(),
                 ),
             )
 
@@ -294,6 +316,7 @@ object ConcordCommands {
                             // unrecoverable, so a list entry without one must not clear ours.
                             inviteRef = e.inviteRef ?: prior?.inviteRef ?: "",
                             privateChannels = e.privateChannels.filter { it.key.isNotBlank() }.map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
+                            addedAt = maxOf(e.addedAt, prior?.addedAt ?: 0),
                         ),
                     )
                     mapOf(
@@ -569,6 +592,8 @@ object ConcordCommands {
                 // The stranded-recovery anchor; blank for a Direct Invite, which has no link.
                 inviteRef = inviteRef,
                 privateChannels = ConcordActions.privateChannelKeysOf(bundle).map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
+                // A (re-)join starts a new membership: a Kick from before it no longer applies.
+                addedAt = TimeUtils.nowMillis(),
             )
         ConcordStore(dataDir.concordFile).upsert(stored)
 
@@ -678,8 +703,17 @@ object ConcordCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val inbox = sweepDirectInvites(ctx, dataDir)
-            val joined = ConcordStore(dataDir.concordFile).load().map { entryFor(it) }
-            val views = ConcordDirectInviteInbox.visible(inbox.pending.value.values, joined)
+            val stored = ConcordStore(dataDir.concordFile).load()
+            val joined = stored.map { entryFor(it) }
+            val pending = inbox.pending.value.values
+            // Fold only a held community some invite would move to a newer epoch: that is the one
+            // case (a readmission after a ban) whose visibility depends on the held roster.
+            val newerEpochIds =
+                pending
+                    .filter { p -> stored.any { it.communityId.equals(p.invite.communityId, ignoreCase = true) && p.invite.rootEpoch > it.rootEpoch } }
+                    .mapTo(HashSet()) { it.invite.communityId.lowercase() }
+            val folded = stored.filter { it.communityId.lowercase() in newerEpochIds }.associate { it.communityId.lowercase() to ConcordChannelCommands.foldState(ctx, it) }
+            val views = ConcordDirectInviteInbox.visible(pending, joined, heldStateOf = { folded[it.lowercase()] }, me = ctx.signer.pubKey)
             Output.emit(mapOf("invites" to views.map { directInviteJson(it) })) {
                 if (views.isEmpty()) {
                     "no pending direct invites"
@@ -729,14 +763,30 @@ object ConcordCommands {
                     0
                 }
                 is DirectInviteAcceptPlan.CatchUp -> {
-                    val held = heldSc!!
-                    store.upsert(storedFrom(held, plan.entry))
-                    val added = plan.entry.privateChannels.filter { pc -> held.privateChannels.none { it.channelId.equals(pc.channelId, ignoreCase = true) && it.epoch == pc.epoch } }
+                    // Re-applied to the record as stored NOW (the fold above took a while), never the
+                    // snapshot the plan was computed from.
+                    val held = store.load().firstOrNull { it.communityId == heldSc!!.communityId } ?: heldSc!!
+                    val adopted = ConcordInviteVend.adoptCatchUp(entryFor(held), opened.invite, plan.channelIds) ?: plan.entry
+                    store.upsert(storedFrom(held, adopted))
+                    val added = adopted.privateChannels.filter { pc -> held.privateChannels.none { it.channelId.equals(pc.channelId, ignoreCase = true) && it.epoch == pc.epoch } }
                     Output.emit(done(mapOf("joined" to true, "catch_up" to true, "channels" to added.map { mapOf("id" to it.channelId, "name" to it.name, "epoch" to it.epoch) })))
                     0
                 }
                 // The Join is attributed to the seal-verified sender, never the bundle's claim.
                 DirectInviteAcceptPlan.Join -> joinBundle(ctx, dataDir, opened.invite, emptySet(), inviteRef = "", inviteCreator = opened.sender, inviteLabel = opened.invite.label)
+                // Readmitted at a newer epoch after a ban: the join re-checks the ban there, and the
+                // roots we already held stay banked so the history from before the ban reads.
+                DirectInviteAcceptPlan.Readmit -> {
+                    val code = joinBundle(ctx, dataDir, opened.invite, emptySet(), inviteRef = "", inviteCreator = opened.sender, inviteLabel = opened.invite.label)
+                    val old = heldSc
+                    if (code == 0 && old != null) {
+                        store.find(old.communityId)?.let { now ->
+                            val banked = (now.heldRoots + old.heldRoots + StoredHeldRoot(old.rootEpoch, old.root, old.controlPk, old.controlRoot)).distinctBy { it.epoch to it.root.lowercase() }
+                            store.upsert(now.copy(heldRoots = banked))
+                        }
+                    }
+                    code
+                }
             }
         }
     }
@@ -840,7 +890,9 @@ object ConcordCommands {
     }
 
     /** The quartz list entry a [StoredCommunity] describes — the shape every commons helper takes. */
-    fun entryFor(sc: StoredCommunity) =
+    fun entryFor(sc: StoredCommunity) = sc.channelCuts.entries.fold(entryShape(sc)) { entry, (id, epoch) -> ConcordChannelKeyring.withCut(entry, id, epoch) }
+
+    private fun entryShape(sc: StoredCommunity) =
         ConcordCommunityListEntry(
             id = sc.communityId,
             owner = sc.owner,
@@ -870,6 +922,7 @@ object ConcordCommands {
         name = entry.name.ifBlank { sc.name },
         inviteRef = entry.inviteRef ?: sc.inviteRef,
         privateChannels = entry.privateChannels.filter { it.key.isNotBlank() }.map { StoredPrivateChannel(it.channelId, it.key, it.epoch, it.name) },
+        channelCuts = ConcordChannelKeyring.cutsOf(entry),
     )
 
     /**
@@ -1048,7 +1101,15 @@ object ConcordCommands {
                 store.upsert(storedFrom(sc, adopted).copy(pendingRefounding = null))
                 results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to true, "from_epoch" to sc.rootEpoch, "root_epoch" to received.newEpoch, "rotator" to received.rotator)
             }
-            Output.emit(mapOf("communities" to results))
+            // Then every held Private Channel's own rotations (CORD-06 §2), off the records as stored
+            // now — a base adoption above may have moved the root they are sealed under.
+            val channelResults = mutableListOf<Map<String, Any?>>()
+            for (id in targets.map { it.communityId }) {
+                val fresh = store.load().firstOrNull { it.communityId == id } ?: continue
+                if (fresh.privateChannels.isEmpty() || isDissolved(ctx, fresh)) continue
+                channelResults += ConcordPrivateChannelCommands.drainChannelRekeys(ctx, store, fresh)
+            }
+            Output.emit(mapOf("communities" to results, "channel_rekeys" to channelResults))
             return 0
         }
     }
@@ -1099,6 +1160,43 @@ object ConcordCommands {
         val merged = ConcordInviteList.merge(base, patch)
         val event = ConcordInviteListEvent.create(ctx.signer, merged, TimeUtils.now())
         return if (ctx.publish(event, relays).values.any { it.accepted }) merged else null
+    }
+
+    /** Opens every Guestbook motion at [sc]'s current epoch (CORD-02 §5); empty when the plane can't be read. */
+    suspend fun guestbookEntriesOf(
+        ctx: Context,
+        sc: StoredCommunity,
+    ): List<GuestbookEntry> =
+        runCatching {
+            val gb = ConcordActions.guestbookPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
+            val relays = relaysFor(ctx, sc)
+            ctx.registerConcordStreamKeys(relays, listOf(gb.secretKey))
+            ctx
+                .drain(relays.associateWith { listOf(ConcordActions.planeFilter(gb.publicKeyHex)) }, pendingOnAuthRequired = true)
+                .mapNotNull { ConcordActions.guestbookEntry(it.second, gb) }
+        }.getOrDefault(emptyList())
+
+    /**
+     * Compliance with a Kick against this account (CORD-04 §6). Amethyst drains this on its
+     * revision tick; amy has no tick, so a command that folds the community is the moment to
+     * check. When the Guestbook, coalesced against [authority], carries an honored Kick naming us
+     * that postdates this membership, the community is dropped locally (as a Leave does) and the
+     * command stops with `kicked`. A re-invite re-joins. An unreadable Guestbook is no verdict.
+     */
+    suspend fun kickedGuard(
+        ctx: Context,
+        dataDir: DataDir,
+        sc: StoredCommunity,
+        authority: AuthorityResolver,
+    ): Int? {
+        val coalesced = Guestbook.coalesce(guestbookEntriesOf(ctx, sc), TimeUtils.nowMillis(), authority)
+        val kick = ConcordActions.honoredKickAgainst(coalesced, ctx.signer.pubKey, sc.owner, sc.addedAt) ?: return null
+        ConcordStore(dataDir.concordFile).remove(sc.communityId)
+        return Output.error(
+            "kicked",
+            "${kick.author} kicked this account from '${sc.name}' (CORD-04 §6), so it left the community locally; a new invite re-joins",
+            mapOf("community_id" to sc.communityId, "kicked_by" to kick.author),
+        )
     }
 
     fun notFound(handle: String): Int {

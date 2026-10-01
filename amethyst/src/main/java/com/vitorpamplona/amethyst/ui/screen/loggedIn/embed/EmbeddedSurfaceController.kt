@@ -40,6 +40,13 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 interface EmbeddedSurfaceController {
     fun attachView(view: SandboxedSdkView)
 
+    /**
+     * [view] left the composition. The controller outlives it (it lives in the process-scoped host), so it
+     * must let go of it — a view holds its Activity, and a warm controller still pointing at the view of an
+     * Activity the user backed out of would keep that whole Activity alive.
+     */
+    fun detachView(view: SandboxedSdkView)
+
     /** The session became the visible tab. */
     fun onShown() {
         // Optional hook: default no-op. Controllers that don't pause/resume applet JS need no action.
@@ -48,6 +55,22 @@ interface EmbeddedSurfaceController {
     /** The session is warm but off-screen; a controller may pause its applet here. */
     fun onHidden() {
         // Optional hook: default no-op. Controllers that don't pause/resume applet JS need no action.
+    }
+
+    /**
+     * The app left the screen ([visible] false) or came back. Even the visible tab has nobody looking at it
+     * while the app is in the background, so a controller stops anything that acts for the user right away.
+     */
+    fun onAppVisibility(visible: Boolean) {
+        // Optional hook: default no-op (napplet screens pause on their own lifecycle).
+    }
+
+    /**
+     * The app has been in the background long enough that the rest of it winds down too (relays disconnect
+     * at the same point): [idle] true pauses even the visible tab's page; false when the app returns.
+     */
+    fun onBackgroundIdle(idle: Boolean) {
+        // Optional hook: default no-op (napplet screens pause on their own lifecycle).
     }
 
     /** Permanently close the session (unbind the service); used on eviction. */

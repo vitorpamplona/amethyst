@@ -62,7 +62,13 @@ class ConcordChannelListFragmentationTest {
         salt: Int,
     ): HexKey = (seed * 7919 + salt).toString(16).padStart(8, '0').repeat(8)
 
-    /** A realistically heavy membership: staff secrets, two held roots, three private channels. */
+    /**
+     * A heavy membership: staff secrets, two held roots and a staff member's worth of private
+     * channels. Each join re-reads and re-packs the whole List, so the cost of building one grows
+     * with (joins x List size); fat entries span several fragments in a few dozen joins instead of
+     * hundreds, which keeps the suite inside `runTest`'s timeout on slow targets (the iOS
+     * simulator ran 250 lean joins past it).
+     */
     private fun entry(n: Int) =
         ConcordCommunityListEntry(
             id = hex(n, 1),
@@ -73,7 +79,7 @@ class ConcordChannelListFragmentationTest {
             controlPk = hex(n, 5),
             controlRoot = hex(n, 6),
             heldRoots = listOf(HeldRoot(0, hex(n, 7)), HeldRoot(1, hex(n, 8), hex(n, 9))),
-            privateChannels = (0 until 3).map { PrivateChannelKey(hex(n, 20 + it), hex(n, 30 + it), 1, "private-$it") },
+            privateChannels = (0 until PRIVATE_CHANNELS).map { PrivateChannelKey(hex(n, 100 + it), hex(n, 200 + it), 1, "private-$it") },
             relays = listOf("wss://nos.lol/", "wss://nostr.mom/"),
             name = "Community number $n",
             addedAt = 1_000L + n,
@@ -140,28 +146,28 @@ class ConcordChannelListFragmentationTest {
     fun aLargeListSplitsIntoFragmentsThatEachFitAnEvent() =
         runTest {
             val (list, repo) = device()
-            val published = joinAll(list, 250)
+            val published = joinAll(list, COUNT)
 
             val wire = repo.fragments
-            assertTrue(wire.size >= 2, "250 heavy memberships must not fit one fragment; got ${wire.size}")
+            assertTrue(wire.size >= 2, "$COUNT heavy memberships must not fit one fragment; got ${wire.size}")
             for (fragment in published) {
                 val bytes = fragment.toJson().encodeToByteArray().size
                 assertTrue(bytes <= ConcordListFragments.EVENT_CEILING_BYTES, "fragment ${fragment.index()} is $bytes bytes, over the ${ConcordListFragments.EVENT_CEILING_BYTES} ceiling")
             }
-            assertEquals(250, list.entries().size)
+            assertEquals(COUNT, list.entries().size)
         }
 
     @Test
     fun anotherDeviceReadsEveryMembershipFromThePublishedFragments() =
         runTest {
             val (first, repo) = device()
-            joinAll(first, 250)
+            joinAll(first, COUNT)
 
             val (second, _) = device(repo.fragments)
             val read = second.entries().associateBy { it.id }
 
-            assertEquals(250, read.size)
-            for (n in listOf(0, 1, 124, 248, 249)) {
+            assertEquals(COUNT, read.size)
+            for (n in listOf(0, 1, COUNT / 2, COUNT - 2, COUNT - 1)) {
                 val want = entry(n)
                 val got = read.getValue(want.id)
                 assertEquals(want.root, got.root)
@@ -176,27 +182,27 @@ class ConcordChannelListFragmentationTest {
     fun editsOnAnotherDeviceSurviveTheRoundTripAcrossFragments() =
         runTest {
             val (first, repo) = device()
-            joinAll(first, 250)
+            joinAll(first, COUNT)
 
             // The second device leaves a membership that lives in a later fragment and joins a new one.
             val (second, secondRepo) = device(repo.fragments)
-            second.unfollow(entry(240).id)
+            second.unfollow(entry(COUNT - 3).id)
             second.follow(entry(900))
 
             // The first device, fed what the second published, converges on the same List.
             val (third, _) = device(secondRepo.fragments)
             val ids = third.entries().map { it.id }.toSet()
-            assertEquals(250, ids.size)
-            assertTrue(entry(240).id !in ids, "the leave must hold across fragments")
+            assertEquals(COUNT, ids.size)
+            assertTrue(entry(COUNT - 3).id !in ids, "the leave must hold across fragments")
             assertTrue(entry(900).id in ids)
-            assertTrue(entry(0).id in ids && entry(249).id in ids)
+            assertTrue(entry(0).id in ids && entry(COUNT - 1).id in ids)
         }
 
     @Test
     fun aDeviceMissingFragmentsJoinsIntoAHeldFragmentWithRoom() =
         runTest {
             val (first, repo) = device()
-            joinAll(first, 250)
+            joinAll(first, COUNT)
             val wire = repo.fragments.sortedBy { it.index() }
             assertTrue(wire.size >= 3)
 
@@ -210,7 +216,7 @@ class ConcordChannelListFragmentationTest {
             val merged = (partialRepo.fragments + wire).groupBy { it.index() }.map { (_, copies) -> copies.maxBy { it.createdAt } }
             val (reader, _) = device(merged)
             val ids = reader.entries().map { it.id }.toSet()
-            assertEquals(251, ids.size, "every membership from every fragment plus the new join")
+            assertEquals(COUNT + 1, ids.size, "every membership from every fragment plus the new join")
             assertTrue(entry(901).id in ids)
         }
 
@@ -218,7 +224,7 @@ class ConcordChannelListFragmentationTest {
     fun aDeviceHoldingOnlyFullFragmentsRefusesTheJoinRatherThanOverflowing() =
         runTest {
             val (first, repo) = device()
-            joinAll(first, 250)
+            joinAll(first, COUNT)
             val fragmentZero = repo.fragments.first { it.index() == 0 }
 
             // Opening a new fragment is a repack, which needs the complete List (CORD-02 §8); an
@@ -228,4 +234,12 @@ class ConcordChannelListFragmentationTest {
             assertFailsWith<ConcordListTooLargeException> { partial.follow(entry(902)) }
             assertEquals(listOf(fragmentZero), partialRepo.fragments, "a refused write publishes nothing")
         }
+
+    companion object {
+        /** Private channels per membership: ~6 KB entries, a handful per fragment. */
+        private const val PRIVATE_CHANNELS = 30
+
+        /** Joins per test: enough for several fragments with the last one only partly filled. */
+        private const val COUNT = 30
+    }
 }

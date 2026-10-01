@@ -457,9 +457,11 @@ fun LocalImageView(
                         is AsyncImagePainter.State.Success -> {
                             SubcomposeAsyncImageContent(loadedImageModifier)
 
+                            val image = (state as AsyncImagePainter.State.Success).result.image
+                            RequestHdrFor(image, fullscreen = fullResolution)
+
                             SideEffect {
-                                val drawable = (state as AsyncImagePainter.State.Success).result.image
-                                MediaAspectRatioCache.add(content.localJavaFile.toString(), drawable.width, drawable.height)
+                                MediaAspectRatioCache.add(content.localJavaFile.toString(), image.width, image.height)
                             }
 
                             content.isVerified?.let {
@@ -599,9 +601,11 @@ fun UrlImageView(
 
                         ShowHashAnimated(content, controllerVisible, Modifier.align(Alignment.TopEnd))
 
+                        val image = (state as AsyncImagePainter.State.Success).result.image
+                        RequestHdrFor(image, fullscreen = fullResolution)
+
                         SideEffect {
-                            val drawable = (state as AsyncImagePainter.State.Success).result.image
-                            MediaAspectRatioCache.add(content.url, drawable.width, drawable.height)
+                            MediaAspectRatioCache.add(content.url, image.width, image.height)
                         }
                     }
 

@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.stream.BuzzEditTagOverlay
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
@@ -101,7 +102,15 @@ fun RenderBuzzEditedNote(
         RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
         return
     }
-    val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    // Render with the tags the edit leaves the message with (Buzz's applyEditTagOverlay): the edit's
+    // attachments and custom emoji, the original's channel/thread tags.
+    val tags =
+        remember(note.event, editNote.event) {
+            note.event
+                ?.tags
+                ?.let { BuzzEditTagOverlay.apply(it, editNote.event?.tags) }
+                ?.toImmutableListOfLists() ?: EmptyTagList
+        }
 
     Column {
         TranslatableRichTextViewer(

@@ -22,10 +22,12 @@ package com.vitorpamplona.quartz.buzz.rsReadState
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -36,7 +38,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * `kind:30078` [com.vitorpamplona.quartz.nip01Core.core.Event] subclass — a second class on the
  * same kind would break [com.vitorpamplona.quartz.utils.EventFactory] dispatch. Instead it is a
  * thin content/tag layer *on top of* [AppSpecificDataEvent]:
- *  - the `d` tag is `read-state:<slot-id>` ([dTagFor] / [slotIdFrom]),
+ *  - the `d` tag is `read-state:<slot-id>` ([dTagFor] / [slotIdFrom]), where `<slot-id>` is exactly
+ *    32 lowercase hex characters ([isValidSlotId]) — any other shape MUST be ignored, since the
+ *    fixed shape is what lets a relay recognize a read-state coordinate structurally,
  *  - a single `["t", "read-state"]` tag enables relay-side filtering,
  *  - `content` is a NIP-44 self-encrypted [ReadStateContent] (conversation key
  *    `nip44(user_privkey, user_pubkey)` — the user's own key on both sides).
@@ -47,18 +51,36 @@ object ReadState {
     const val D_TAG_PREFIX = "read-state:"
     const val T_TAG_VALUE = "read-state"
 
+    /** A `<slot-id>` is exactly this many lowercase hex characters (16 random bytes). */
+    const val SLOT_ID_LENGTH = 32
+
+    /** True when [slotId] is exactly 32 lowercase hex characters (`[0-9a-f]{32}`). */
+    fun isValidSlotId(slotId: String): Boolean = slotId.length == SLOT_ID_LENGTH && slotId.all { it in '0'..'9' || it in 'a'..'f' }
+
+    /** A fresh random `<slot-id>`: 16 secure random bytes as lowercase hex. */
+    fun newSlotId(): String = RandomInstance.bytes(SLOT_ID_LENGTH / 2).toHexKey()
+
     /** The addressable `d`-tag value for a given slot id. */
     fun dTagFor(slotId: String): String = "$D_TAG_PREFIX$slotId"
 
-    /** Extracts the `<slot-id>` from a `read-state:<slot-id>` d-tag value, or `null` if it does not match. */
-    fun slotIdFrom(dTagValue: String): String? = dTagValue.removePrefix(D_TAG_PREFIX).takeIf { it != dTagValue && it.isNotEmpty() }
+    /**
+     * Extracts the `<slot-id>` from a `read-state:<slot-id>` d-tag value, or `null` if it does not
+     * match — including a slot id that is not exactly 32 lowercase hex characters.
+     */
+    fun slotIdFrom(dTagValue: String): String? {
+        if (!dTagValue.startsWith(D_TAG_PREFIX)) return null
+        return dTagValue.substring(D_TAG_PREFIX.length).takeIf(::isValidSlotId)
+    }
 
-    /** True if [tags] are a well-formed NIP-RS coordinate: exactly one `read-state:` d-tag and one `["t","read-state"]`. */
+    /**
+     * True if [tags] are a well-formed NIP-RS coordinate: exactly one `d` tag, holding
+     * `read-state:<32 lowercase hex>`, and exactly one `["t","read-state"]`.
+     */
     fun isReadState(tags: TagArray): Boolean {
         val dTags = tags.count { it.size > 1 && it[0] == "d" }
         val readStateT = tags.count { it.size > 1 && it[0] == HashtagTag.TAG_NAME && it[1] == T_TAG_VALUE }
         val dValue = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.getOrNull(1)
-        return dTags == 1 && readStateT == 1 && dValue != null && dValue.startsWith(D_TAG_PREFIX)
+        return dTags == 1 && readStateT == 1 && dValue != null && slotIdFrom(dValue) != null
     }
 
     /** Adds the NIP-RS `["t", "read-state"]` filter tag to an [AppSpecificDataEvent] builder. */
@@ -74,6 +96,7 @@ object ReadState {
         signer: NostrSigner,
         createdAt: Long = TimeUtils.now(),
     ): AppSpecificDataEvent {
+        require(isValidSlotId(slotId)) { "NIP-RS slot id must be 32 lowercase hex characters" }
         val ciphertext = signer.nip44Encrypt(content.encodeToJson(), signer.pubKey)
         return signer.sign(
             AppSpecificDataEvent.build(dTagFor(slotId), ciphertext, createdAt) {

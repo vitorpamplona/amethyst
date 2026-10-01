@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.buzz.apPersonas
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -99,5 +100,78 @@ class PersonaEventTest {
                 sig = "00",
             )
         assertNull(event.personaOrNull())
+    }
+
+    // NIP-AP reference vector (docs/nips/NIP-AP.md): the content bytes are pinned, because they
+    // fix the event id and the desktop's persona content hash.
+    @Test
+    fun contentMatchesNipApVectorByteForByte() {
+        val persona =
+            PersonaContent(
+                displayName = "Test Agent",
+                systemPrompt = "You are a test assistant.",
+                avatarUrl = "https://example.com/avatar.png",
+                runtime = "goose",
+                model = "claude-opus-4",
+                provider = "anthropic",
+                namePool = listOf("Alpha", "Beta"),
+            )
+        assertEquals(
+            """{"display_name":"Test Agent","system_prompt":"You are a test assistant.","avatar_url":"https://example.com/avatar.png","runtime":"goose","model":"claude-opus-4","provider":"anthropic","name_pool":["Alpha","Beta"]}""",
+            persona.encodeToJson(),
+        )
+    }
+
+    @Test
+    fun newFieldsKeepUpstreamOrderAndRoundTrip() {
+        val json =
+            """{"display_name":"A","system_prompt":"p","acp_command":"buzz-claude-acp","avatar_url":"u","parallelism":2,"description":"d","session_policy":"thread"}"""
+        val persona = PersonaContent.decodeFromJson(json)
+        assertEquals("buzz-claude-acp", persona.acpCommand)
+        assertEquals("d", persona.description)
+        assertTrue(persona.isThreadSessionPolicy())
+        // Re-encoding is byte-identical, so an edit that changes nothing keeps the content hash.
+        assertEquals(json, persona.encodeToJson())
+    }
+
+    @Test
+    fun sharedTagIsWrittenAndRead() {
+        val persona = PersonaContent(displayName = "A", acpCommand = "buzz-goose-acp")
+        val shared = PersonaEvent.build(persona, slug = "a", shared = true)
+        assertEquals(listOf("shared", "true"), shared.tags.single { it[0] == "shared" }.toList())
+        assertTrue(PersonaEvent("00", "00", 0L, shared.tags, shared.content, "00").isShared())
+
+        val private = PersonaEvent.build(persona, slug = "a")
+        assertTrue(private.tags.none { it[0] == "shared" })
+        assertFalse(PersonaEvent("00", "00", 0L, private.tags, private.content, "00").isShared())
+    }
+
+    @Test
+    fun malformedSharedTagsReadAsNotShared() {
+        fun shared(vararg tags: Array<String>) = PersonaEvent("00", "00", 0L, arrayOf(arrayOf("d", "a"), *tags), "{}", "00").isShared()
+
+        assertFalse(shared(arrayOf("shared", "false")))
+        assertFalse(shared(arrayOf("shared", "true", "extra")))
+        assertFalse(shared(arrayOf("shared")))
+        assertFalse(shared(arrayOf("shared", "true"), arrayOf("shared", "true")))
+        assertTrue(shared(arrayOf("shared", "true")))
+    }
+
+    @Test
+    fun sharedHeadPublishesPortableAcpCommandOnly() {
+        // Unset becomes the explicit stock harness; a portable alias stays; a local path is dropped.
+        assertEquals("buzz-acp", PersonaContent(displayName = "A").forSharedCatalog().acpCommand)
+        assertEquals("buzz-codex-acp", PersonaContent(displayName = "A", acpCommand = "buzz-codex-acp").forSharedCatalog().acpCommand)
+        assertNull(PersonaContent(displayName = "A", acpCommand = "/usr/local/bin/my-acp").forSharedCatalog().acpCommand)
+
+        assertTrue(PersonaContent.isPortableAcpCommand("buzz-acp"))
+        assertFalse(PersonaContent.isPortableAcpCommand("buzz--acp"))
+        assertFalse(PersonaContent.isPortableAcpCommand("buzz-a b-acp"))
+    }
+
+    @Test
+    fun editStampsAfterThePriorHead() {
+        val future = 4_000_000_000L
+        assertEquals(future + 1, PersonaEvent.build(PersonaContent(displayName = "A"), "a", priorHeadCreatedAt = future).createdAt)
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -50,10 +51,12 @@ class BuzzHeldAttestations(
     val flow: StateFlow<OwnerAttestation?> = held
 
     /**
-     * The `auth` tag to attach to this account's NIP-42 AUTH event, or null when no verified
-     * attestation is held.
+     * The `auth` tag to attach to an AUTH event signed at [authCreatedAt], or null when no verified
+     * attestation is held or its `created_at<` / `created_at>` bounds exclude that moment. Buzz
+     * checks those bounds against the AUTH event's timestamp and refuses membership outside them,
+     * so an expired credential stays held (the UI can say it expired) but is not presented.
      */
-    fun authTag(): Array<String>? = held.value?.toTag()
+    fun authTag(authCreatedAt: Long = TimeUtils.now()): Array<String>? = held.value?.takeIf { it.isValidAt(authCreatedAt) }?.toTag()
 
     /**
      * Stores [attestation] as authorizing this account, if it verifies for [agentPubKey]. Returns

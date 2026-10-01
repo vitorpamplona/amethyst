@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
+import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -98,7 +99,8 @@ object ConcordModeration {
         communityId: ByteArray,
         entityId: ByteArray,
         owner: HexKey,
-    ): ControlEdition? = ConcordCommunityState.authorizedHeads(current, communityId, owner)[entityId.toHexKey()]?.known
+        floors: Map<String, EntityFloor> = emptyMap(),
+    ): ControlEdition? = ConcordCommunityState.authorizedHeads(current, communityId, owner, floors)[entityId.toHexKey()]?.known
 
     /** version/prevHash to chain onto the current head of [entityId], or a genesis at version 1 (CORD-04 §1). */
     private fun versioning(head: ControlEdition?): Pair<Long, ByteArray?> = if (head != null) (head.version + 1) to head.hash else 1L to null
@@ -140,8 +142,9 @@ object ConcordModeration {
         createdAt: Long,
         citation: AuthorityCitation?,
         owner: HexKey,
+        floors: Map<String, EntityFloor> = emptyMap(),
     ): Event {
-        val head = headOf(current, communityId, entityId, owner)
+        val head = headOf(current, communityId, entityId, owner, floors)
         val content = ConcordJson.encodePreserving(serializer, value, head?.content)
         return wrap(actor, controlPlane, communityId, kind, entityId, head, content, current, createdAt, citation, owner)
     }
@@ -207,7 +210,8 @@ object ConcordModeration {
         createdAt: Long,
         citation: AuthorityCitation? = null,
         owner: HexKey,
-    ): Event = editMetadata(actor, controlPlane, communityId, standing.withMessageExpiration(secs), current, createdAt, citation, owner)
+        floors: Map<String, EntityFloor> = emptyMap(),
+    ): Event = editMetadata(actor, controlPlane, communityId, standing.withMessageExpiration(secs), current, createdAt, citation, owner, floors)
 
     /**
      * Replaces the community metadata (name / icon / description / relays). The
@@ -224,10 +228,11 @@ object ConcordModeration {
         createdAt: Long,
         citation: AuthorityCitation? = null,
         owner: HexKey,
+        floors: Map<String, EntityFloor> = emptyMap(),
     ): Event {
         require(ConcordLimits.nameFits(metadata.name)) { "community name exceeds ${ConcordLimits.NAME_MAX_BYTES} bytes" }
         require(ConcordLimits.descriptionFits(metadata.description)) { "description exceeds ${ConcordLimits.DESCRIPTION_MAX_BYTES} bytes" }
-        return edit(actor, controlPlane, communityId, ControlEntityKind.METADATA, communityId, MetadataEntity.serializer(), metadata, current, createdAt, citation, owner)
+        return edit(actor, controlPlane, communityId, ControlEntityKind.METADATA, communityId, MetadataEntity.serializer(), metadata, current, createdAt, citation, owner, floors)
     }
 
     /**
@@ -390,9 +395,12 @@ object ConcordModeration {
         createdAt: Long,
         citation: AuthorityCitation? = null,
         owner: HexKey,
+        floors: Map<String, EntityFloor> = emptyMap(),
     ): Event {
         val entityId = ConcordInviteRegistry.coordinate(communityId, actor.pubKey)
-        val head = headOf(current, communityId, entityId, owner)
+        // Floor-aware: after a Refounding the honored head may be the prior epoch's (the anti-rollback
+        // floor), and chaining onto the current epoch's editions alone would fork below it.
+        val head = headOf(current, communityId, entityId, owner, floors)
         return wrap(actor, controlPlane, communityId, ControlEntityKind.INVITE_REGISTRY, entityId, head, ConcordInviteRegistry.encode(linkSigners), current, createdAt, citation, owner)
     }
 

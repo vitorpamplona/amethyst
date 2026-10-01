@@ -117,6 +117,9 @@ class RelayAuthenticator(
     /** The challenge each relay was last re-authenticated on because of an EOSE `"auth"` hint. */
     private val authHintRetried = LargeCache<NormalizedRelayUrl, String>()
 
+    /** The live connection per relay, so [reauthenticate] can reach it by URL. */
+    private val connections = LargeCache<NormalizedRelayUrl, IRelayClient>()
+
     private val _authStateFlow = MutableStateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>(persistentMapOf())
 
     /**
@@ -152,11 +155,13 @@ class RelayAuthenticator(
             }
 
             override fun onConnecting(relay: IRelayClient) {
+                connections.put(relay.url, relay)
                 authStatus.put(relay.url, RelayAuthStatus())
                 publishSnapshot(relay.url)
             }
 
             override fun onDisconnected(relay: IRelayClient) {
+                connections.remove(relay.url)
                 authStatus.remove(relay.url)
                 authHintRetried.remove(relay.url)
                 publishSnapshot(relay.url)
@@ -253,6 +258,16 @@ class RelayAuthenticator(
         if (authHintRetried.get(relay.url) == challenge) return
         authHintRetried.put(relay.url, challenge)
         reauthenticateWithStoredChallenge(relay)
+    }
+
+    /**
+     * Re-runs the sign/send pass on [relay]'s stored challenge, never prompting: for an identity
+     * approved after the relay's challenge was answered without it (a permission the user granted
+     * from a dialog that did not hold up the rest of that answer). The AUTH's `OK` then re-sends the
+     * refused REQs. A no-op with no live connection, no stored challenge, or an AUTH in flight.
+     */
+    fun reauthenticate(relay: NormalizedRelayUrl) {
+        reauthenticateWithStoredChallenge(connections.get(relay) ?: return)
     }
 
     private fun reauthenticateWithStoredChallenge(relay: IRelayClient) {

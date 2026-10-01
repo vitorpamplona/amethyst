@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BuzzMembershipPolicyTest {
@@ -141,5 +142,24 @@ class BuzzMembershipPolicyTest {
             policy.onAuthenticated(authEvent)
 
             assertTrue(reason(policy.accept(event(agentPub))).startsWith("restricted"))
+        }
+
+    @Test
+    fun attestationTimeBoundsAreCheckedAgainstTheAuthEvent() =
+        runTest {
+            // Valid only strictly between 1000 and 2000, like Buzz's verify_auth_tag_for_auth_event.
+            val attestation = OwnerAttestation.sign(agentPub, "created_at>1000&created_at<2000", owner.privKey!!)
+
+            suspend fun admitted(authAt: Long): Boolean {
+                val policy = policyOn(setOf(agentPub))
+                policy.onAuthenticated(RelayAuthEvent("00", agentPub, authAt, arrayOf(AuthTag.assemble(attestation)), "", "sig"))
+                return accepted(policy.accept(event(agentPub)))
+            }
+
+            assertTrue(admitted(1500), "inside the window")
+            assertFalse(admitted(2500), "expired")
+            assertFalse(admitted(500), "not yet valid")
+            assertFalse(admitted(2000), "the upper bound is strict")
+            assertFalse(admitted(1000), "the lower bound is strict")
         }
 }

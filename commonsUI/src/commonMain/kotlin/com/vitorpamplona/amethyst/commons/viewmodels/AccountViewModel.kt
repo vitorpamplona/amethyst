@@ -75,8 +75,18 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_done
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_failed
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_message_unnamed
+import com.vitorpamplona.amethyst.commons.resources.concord_kicked_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_kick_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_failed
 import com.vitorpamplona.amethyst.commons.resources.concord_members_roles_title
+import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_generic
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_message
 import com.vitorpamplona.amethyst.commons.resources.concord_pin_failed_title
@@ -285,6 +295,18 @@ class AccountViewModel(
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed_retry, kindLabel)
                 } else {
                     toastManager.toast(Res.string.pow_settings_title, Res.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                }
+            }
+        }
+
+        // An honored Kick made us leave a Concord community (CORD-04 §6); the removal is otherwise silent.
+        viewModelScope.launch {
+            account.concord.concordKicks.collect { notice ->
+                val name = notice.communityName?.takeIf { it.isNotBlank() }
+                if (name != null) {
+                    toastManager.toast(Res.string.concord_kicked_title, Res.string.concord_kicked_message, name)
+                } else {
+                    toastManager.toast(Res.string.concord_kicked_title, Res.string.concord_kicked_message_unnamed)
                 }
             }
         }
@@ -632,6 +654,30 @@ class AccountViewModel(
         toastManager.toast(Res.string.concord_pin_failed_title, message)
     }
 
+    /** Dissolve [communityId] for good (CORD-02 §9, owner only); a refusal surfaces as a toast. */
+    fun dissolveConcordCommunity(communityId: String) =
+        launchSigner {
+            if (!account.concord.dissolveConcordCommunity(communityId)) {
+                toastManager.toast(Res.string.concord_dissolve_community, Res.string.concord_dissolve_failed)
+            }
+        }
+
+    /**
+     * Rotate Private Channel [channelIdHex]'s key (CORD-06). The rotation publishes a chunk per
+     * member and can take a while, so both outcomes are toasted: a silent menu item left the
+     * user unsure whether anything happened, and a refused rotation keeps the old key live.
+     */
+    fun rotateConcordChannelKey(
+        communityId: String,
+        channelIdHex: HexKey,
+    ) = launchSigner {
+        if (account.concord.rekeyConcordChannel(communityId, channelIdHex)) {
+            toastManager.toast(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_done)
+        } else {
+            toastManager.toast(Res.string.concord_channel_rotate_key, Res.string.concord_channel_rotate_key_failed)
+        }
+    }
+
     /** Promote/demote [member] as an Admin of [communityId] (from the Members roster; owner only takes effect). */
     fun setConcordAdmin(
         communityId: String,
@@ -666,6 +712,16 @@ class AccountViewModel(
         ban: Boolean,
     ) = launchSigner {
         if (ban) account.concord.banConcordMember(communityId, member) else account.concord.unbanConcordMember(communityId, member)
+    }
+
+    /** Kick [member] from [communityId] (CORD-04 §6: strip their roles, then the Guestbook directive). */
+    fun kickConcordMember(
+        communityId: String,
+        member: HexKey,
+    ) = launchSigner {
+        if (!account.concord.kickConcordMember(communityId, member)) {
+            toastManager.toast(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
+        }
     }
 
     /**
@@ -1848,6 +1904,11 @@ class AccountViewModel(
         channel: RelayGroupChannel,
         pubkey: HexKey,
     ) = launchSigner { account.relayGroups.removeRelayGroupUser(channel, pubkey) }
+
+    fun addRelayGroupUser(
+        channel: RelayGroupChannel,
+        pubkey: HexKey,
+    ) = launchSigner { account.relayGroups.addRelayGroupUser(channel, pubkey) }
 
     fun putRelayGroupUser(
         channel: RelayGroupChannel,

@@ -89,7 +89,7 @@ fun RenderBolt12Zap(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
+        RenderTargetNote(note, quotesLeft, cardBackground, accountViewModel, nav)
 
         amountSats?.let { ActivityAmountRow(PlatformNumberFormatter().format(it), orange) }
 

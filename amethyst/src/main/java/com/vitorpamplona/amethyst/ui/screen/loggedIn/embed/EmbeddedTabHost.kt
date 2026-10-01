@@ -21,12 +21,19 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import com.vitorpamplona.amethyst.napplethost.NappletHostContract
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController
 
 /**
  * Process-level holder of **warm embedded sessions** — the persistent-surface-layer half of keep-warm.
@@ -37,7 +44,7 @@ import androidx.compose.ui.geometry.Rect
  *
  * Warm-keep is scoped to **bottom-row apps**: a session is retained only while its app is a bottom-bar
  * favorite (see [retainOnly], driven by the bottom-bar settings). A favorite opened outside the bottom
- * row restarts when it leaves, and a low-memory trim ([evictAll]) drops everything.
+ * row restarts when it leaves, and a low-memory trim ([rebuildAll]) drops everything.
  *
  * State is Compose snapshot state so [EmbeddedTabLayer] recomposes as sessions / the active id / the
  * content bounds change. Main-thread only.
@@ -109,12 +116,71 @@ object EmbeddedTabHost {
     ): EmbeddedSurfaceController {
         warm.firstOrNull { it.id == id }?.let { return it.controller }
         val controller = factory()
+        // A session built while the app is in the background (a rebuild, a preload) starts in that state.
+        if (!appVisible) controller.onAppVisibility(false)
+        if (backgroundIdle) controller.onBackgroundIdle(true)
         warm.add(Warm(id, controller))
         return controller
     }
 
+    // ---- the app in the background ----
+
+    /** How long the app sits in the background before even the visible tab's page is paused (see there). */
+    const val BACKGROUND_PAUSE_MS = NappletHostContract.BACKGROUND_PAUSE_MS
+
+    private var appVisible = true
+    private var backgroundIdle = false
+    private val backgroundTimer = Handler(Looper.getMainLooper())
+    private val goIdle =
+        Runnable {
+            backgroundIdle = true
+            warm.forEach { it.controller.onBackgroundIdle(true) }
+        }
+
+    /** The app's UI stopped (went to the background). */
+    fun onAppStopped() {
+        if (!appVisible) return
+        appVisible = false
+        warm.forEach { it.controller.onAppVisibility(false) }
+        backgroundTimer.postDelayed(goIdle, BACKGROUND_PAUSE_MS)
+    }
+
+    /** The app's UI started again. */
+    fun onAppStarted() {
+        backgroundTimer.removeCallbacks(goIdle)
+        if (appVisible) return
+        appVisible = true
+        warm.forEach { it.controller.onAppVisibility(true) }
+        if (backgroundIdle) {
+            backgroundIdle = false
+            warm.forEach { it.controller.onBackgroundIdle(false) }
+        }
+    }
+
     /** True if a warm session already exists for [id] (used by the preloader to skip re-acquiring). */
     fun isWarm(id: String): Boolean = warm.any { it.id == id }
+
+    /** True if [controller] is still the warm session for [id] (not torn down or replaced by a rebuild). */
+    fun isWarm(
+        id: String,
+        controller: Any?,
+    ): Boolean = warm.any { it.id == id && it.controller === controller }
+
+    /**
+     * The theme (dark or not) the warm sessions were built in. Kept here, next to the sessions, rather than in
+     * the watcher's `remember`: an Activity recreated while the process lives re-seeds a remembered value to
+     * the CURRENT theme, so a system dark-mode flip that happened meanwhile was never noticed and the warm
+     * pages stayed in the old theme.
+     */
+    private var builtDark: Boolean? = null
+
+    /** Rebuilds every warm session when the resolved theme differs from the one they were built in. */
+    fun rebuildIfThemeChanged(dark: Boolean) {
+        val previous = builtDark
+        builtDark = dark
+        // The first report only records what the sessions (built from the same preference) already use.
+        if (previous != null && previous != dark) rebuildAll(keepPages = true)
+    }
 
     /**
      * Seeds [contentBounds] with an approximate full-content rect when no tab has reported real bounds
@@ -167,6 +233,7 @@ object EmbeddedTabHost {
     fun takeKeyboardRestore(id: String): Boolean = keyboardUpOnLeave.remove(id)
 
     fun evict(id: String) {
+        parked.remove(id)
         val w = warm.firstOrNull { it.id == id } ?: return
         if (activeId == id) activeId = null
         keyboardUpOnLeave.remove(id)
@@ -174,35 +241,122 @@ object EmbeddedTabHost {
         w.controller.teardown()
     }
 
+    /**
+     * Tears down [id]'s warm session so its screen re-acquires a freshly built one (e.g. an nSite switched
+     * between Tor and the open web). Unlike [evict] this keeps [activeId]: the screen stays composed and
+     * never re-runs its `setActive`, so clearing it would park the new session off-screen — a blank tab.
+     */
+    fun rebuild(id: String) {
+        val w = warm.firstOrNull { it.id == id } ?: return
+        keyboardUpOnLeave.remove(id)
+        warm.remove(w)
+        w.controller.teardown()
+    }
+
+    // How many composed screens currently show each id. Re-navigating to the same route composes the new
+    // screen (which acquires the SAME warm controller) before the old one disposes; counting lets the old
+    // one's disposal see that the tab is still in use instead of evicting the controller under the new one.
+    private val holders = mutableMapOf<String, Int>()
+
+    /** A screen showing [id] entered composition. Pair with [release]. */
+    fun hold(id: String) {
+        holders[id] = (holders[id] ?: 0) + 1
+    }
+
+    // Non-bar tabs whose screen left composition while their back-stack entry lives on — another screen
+    // was pushed on top (even the tab's own Site settings). They stay warm until EVERY such entry is
+    // destroyed: the same tab can sit in the back stack twice (opened again from inside itself), and popping
+    // the top one must not take the session from under the one still waiting below.
+    private val parked = mutableMapOf<String, MutableSet<Lifecycle>>()
+
+    private fun isParked(id: String) = !parked[id].isNullOrEmpty()
+
+    /**
+     * The last screen showing [id] left composition. A bottom-bar tab ([keepWarm]) stays warm. Any other tab
+     * goes once its back-stack entry ([entry]'s lifecycle) is destroyed — right away when it already is (the
+     * user left it), or later when merely covered by a pushed screen, so coming back doesn't restart the
+     * page.
+     */
+    fun releaseWhenGone(
+        id: String,
+        entry: Lifecycle,
+        keepWarm: () -> Boolean,
+    ) {
+        if (keepWarm()) return
+
+        fun gone() {
+            parked[id]?.let {
+                it.remove(entry)
+                if (it.isEmpty()) parked.remove(id)
+            }
+            // A screen may have come back to this tab meanwhile, another entry may still hold it, or it may
+            // have joined the bottom bar.
+            if ((holders[id] ?: 0) == 0 && !isParked(id) && !keepWarm()) evict(id)
+        }
+        if (entry.currentState == Lifecycle.State.DESTROYED) {
+            gone()
+            return
+        }
+        // Already watched from an earlier time this entry was covered.
+        if (!parked.getOrPut(id) { mutableSetOf() }.add(entry)) return
+        entry.addObserver(
+            object : LifecycleEventObserver {
+                override fun onStateChanged(
+                    source: LifecycleOwner,
+                    event: Lifecycle.Event,
+                ) {
+                    if (event != Lifecycle.Event.ON_DESTROY) return
+                    entry.removeObserver(this)
+                    gone()
+                }
+            },
+        )
+    }
+
+    /** A screen showing [id] left composition. Returns true when no other screen still shows it. */
+    fun release(id: String): Boolean {
+        val left = (holders[id] ?: 1) - 1
+        if (left <= 0) holders.remove(id) else holders[id] = left
+        return left <= 0
+    }
+
     /** Drops every warm session whose id isn't in [keep] (bottom-row membership + the active tab). */
     fun retainOnly(keep: Set<String>) {
         warm
-            .filter { it.id !in keep }
+            .filter { it.id !in keep && !isParked(it.id) }
             .forEach { evict(it.id) }
     }
 
-    fun evictAll() {
-        activeId = null
-        keyboardUpOnLeave.clear()
-        val copy = warm.toList()
-        warm.clear()
-        copy.forEach { it.controller.teardown() }
-    }
-
     /**
-     * Something a WebView can only pick up at construction changed (the theme, or the account): tear down
-     * every warm session and bump [rebuildEpoch] so the visible screen and the preloader re-acquire freshly
-     * built sessions. Unlike [evictAll] this keeps [activeId], so the visible tab re-activates the instant
-     * its screen re-acquires — the user just sees the current tab reload, not a blanked-out surface.
+     * Something a WebView can only pick up at construction changed (the theme, or the account), or the
+     * system asked for memory back: tear down every warm session and bump [rebuildEpoch] so the visible
+     * screen and the preloader re-acquire freshly built sessions. This keeps [activeId], so the visible tab
+     * re-activates the instant its screen re-acquires — the user just sees the current tab reload, not a
+     * blanked-out surface.
+     *
+     * [keepPages]: each browser tab's rebuilt controller resumes the page it showed, with the user's Tor, zoom
+     * and desktop choices ([EmbeddedWebAppController.PageSnapshot]). Android sends the memory trim routinely,
+     * about a minute into the background, so without this every pinned site came back on its start URL. Never
+     * across an account switch: the next account must not open the previous one's pages.
      */
-    fun rebuildAll() {
+    fun rebuildAll(keepPages: Boolean) {
         // Every page is about to be rebuilt from scratch, so no field survives to restore a keyboard onto.
         keyboardUpOnLeave.clear()
         val copy = warm.toList()
         warm.clear()
+        pageSnapshots.clear()
+        if (keepPages) {
+            copy.forEach { w -> (w.controller as? EmbeddedWebAppController)?.let { pageSnapshots[w.id] = it.snapshot() } }
+        }
         copy.forEach { it.controller.teardown() }
         rebuildEpoch += 1
     }
+
+    // Page state carried from a torn-down browser tab to its rebuilt controller (see [rebuildAll]).
+    private val pageSnapshots = mutableMapOf<String, EmbeddedWebAppController.PageSnapshot>()
+
+    /** The page state [rebuildAll] saved for tab [id], handed over once. */
+    fun takePageSnapshot(id: String): EmbeddedWebAppController.PageSnapshot? = pageSnapshots.remove(id)
 
     /**
      * Account the warm sessions were built for, as the opaque WebView storage-profile name (null while
@@ -234,6 +388,6 @@ object EmbeddedTabHost {
         builtForProfile = profileName
         // Seeding on the first call (app start) must not bump the epoch: nothing is stale yet, and a
         // needless bump would restart the preload sweep that is just getting going.
-        if (!isFirstCall) rebuildAll()
+        if (!isFirstCall) rebuildAll(keepPages = false)
     }
 }

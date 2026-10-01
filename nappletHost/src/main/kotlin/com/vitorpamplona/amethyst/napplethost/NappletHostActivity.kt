@@ -33,6 +33,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -58,8 +59,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.ProxyConfig
-import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -68,6 +67,9 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
@@ -89,7 +91,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import java.lang.ref.WeakReference
-import java.util.concurrent.Executor
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -154,6 +155,9 @@ class NappletHostActivity : ComponentActivity() {
     private var fireSeq = 0
 
     private var proxyPort: Int = -1
+
+    /** Whether the process route is Tor right now, whatever this nSite asked for. */
+    private var routedOverTor = false
 
     // The resource edge (shell + verified blobs); built in onCreate once the manifest is parsed.
     private lateinit var contentServer: NappletContentServer
@@ -233,6 +237,15 @@ class NappletHostActivity : ComponentActivity() {
     // the broker binds after this surface is already resumed (bindService is async).
     private var resumed = false
 
+    // Requests that act for the user (publish, pay, upload…) made while this napplet was in the background.
+    // Pausing the WebView doesn't stop JavaScript, so they are held here and sent on the next resume.
+    private val heldWhilePaused = NappletHeldRequests<Message>(SystemClock::elapsedRealtime)
+
+    private val expireHeld =
+        Runnable {
+            if (!isDestroyed) heldWhilePaused.expire().forEach { bridgeReplyProxy?.failRequest(it, NappletHeldRequests.EXPIRED) }
+        }
+
     // Renews the broker's foreground lease while resumed. If this process dies, the heartbeat stops and
     // the broker reaps the stale lease, so a crash can't pin the main process's network up forever.
     private var foregroundHeartbeat: Job? = null
@@ -249,6 +262,7 @@ class NappletHostActivity : ComponentActivity() {
                 // If we're already foreground by the time the broker binds, report it now so the
                 // main-process resource hold is acquired for this session.
                 if (resumed) setBrokerForeground(true)
+                reportAttended()
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -262,6 +276,12 @@ class NappletHostActivity : ComponentActivity() {
 
         if (!readManifestExtras()) {
             Toast.makeText(this, getString(R.string.napplet_invalid), Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        // Fail closed: Tor is on but its port isn't known yet, so nothing (blobs or web traffic) may go out.
+        if (useTor && proxyPort <= 0) {
+            Toast.makeText(this, R.string.napplet_route_blocked, Toast.LENGTH_LONG).show()
             finish()
             return
         }
@@ -303,7 +323,15 @@ class NappletHostActivity : ComponentActivity() {
         // Route the WebView's own (off-origin) traffic through Tor for an nSite, unless this site was
         // opted out to the open web. Set process-wide before any page navigation; the shell + blobs are
         // served from cache via shouldInterceptRequest, so only the site's external requests hit this.
-        if (profile.exposesNetwork) applyWebViewProxy(effectiveProxy)
+        if (profile.exposesNetwork) {
+            // An open-web nSite still goes through Tor while another surface needs it: say so in the chrome.
+            WebViewProxyPolicy.observeRoute(this) {
+                routedOverTor = it
+                chrome?.let { c -> c.ui = c.ui.copy(chrome = c.ui.chrome.copy(torForced = !useTor && it)) }
+            }
+            // Start applying now, overlapping the index probe; the load itself waits in mountWebView.
+            WebViewProxyPolicy.claim(this, effectiveProxy)
+        }
         // Origin-restricted bridge: only the trusted shell page (main frame) can reach native.
         WebViewCompat.addWebMessageListener(
             webView,
@@ -368,9 +396,29 @@ class NappletHostActivity : ComponentActivity() {
         contentFrame.addView(webView, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         if (!started) {
             started = true
-            webView.loadUrl(NappletWebContract.SHELL_URL)
+            // Wait for the route to be in effect: a Tor nSite's first off-origin request must not leave early,
+            // and must not leave at all if the route can't be applied.
+            if (profile.exposesNetwork) {
+                WebViewProxyPolicy.claim(
+                    owner = this,
+                    torPort = if (useTor) proxyPort else NappletProxyClaims.NO_PROXY,
+                    onFailed = { if (!isDestroyed) Toast.makeText(this, R.string.napplet_route_blocked, Toast.LENGTH_LONG).show() },
+                ) { if (!isDestroyed) webView.loadUrl(NappletWebContract.SHELL_URL) }
+            } else {
+                webView.loadUrl(NappletWebContract.SHELL_URL)
+            }
         }
     }
+
+    private val backgroundPauseHandler = Handler(Looper.getMainLooper())
+
+    // webView.onPause() pauses THIS WebView (animations, media, geolocation). Do NOT call pauseTimers(): it's
+    // process-global and freezes EVERY WebView in `:napplet`, including the embedded browser/napplet surfaces,
+    // which never resume.
+    private val backgroundPause =
+        Runnable {
+            if (!isDestroyed && this::webView.isInitialized && !webViewGone) webView.onPause()
+        }
 
     override fun onResume() {
         super.onResume()
@@ -381,21 +429,34 @@ class NappletHostActivity : ComponentActivity() {
         // hold the main process resumed (Tor/relays/AUTH) while this napplet/nSite is in front, and
         // keep renewing that lease so a crash here can't pin the network up forever.
         resumed = true
+        reportAttended()
         startForegroundHeartbeat()
+        val held = heldWhilePaused.drain()
+        held.fail.forEach { bridgeReplyProxy?.failRequest(it, NappletHeldRequests.EXPIRED) }
+        held.send.forEach { if (brokerMessenger == null) pendingRequests.add(it) else sendToBroker(it) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Back within the grace: the page was never paused.
+        backgroundPauseHandler.removeCallbacks(backgroundPause)
+    }
+
+    override fun onStop() {
+        // Out of sight: pause the page after the same grace the rest of the app gets
+        // (NappletHostContract.BACKGROUND_PAUSE_MS), so a quick trip to another app doesn't interrupt it.
+        // Anything that acts for the user is already held (see [resumed]).
+        backgroundPauseHandler.postDelayed(backgroundPause, NappletHostContract.BACKGROUND_PAUSE_MS)
+        super.onStop()
     }
 
     override fun onPause() {
-        // Foreground-only: stop the applet's JS/timers in the background so it cannot fire a
-        // sign/decrypt/pay request whose consent prompt would surface over (and be confused with)
-        // Amethyst's own UI. Requests only happen while the user is looking at this napplet.
-        if (this::webView.isInitialized && !webViewGone) {
-            // webView.onPause() pauses THIS WebView's JS/DOM (the security goal — a backgrounded napplet can't
-            // fire a sign/decrypt/pay request). Do NOT call pauseTimers(): it's process-global and freezes
-            // EVERY WebView in `:napplet`, including the embedded browser/napplet surfaces, which never resume.
-            webView.onPause()
-        }
-        // No longer foreground: stop renewing and let the main process resume normal background scaling.
+        // Foreground-only for requests: while not resumed, the applet's requests that act for the user
+        // (sign/publish/pay…) are held until the user is back, so their consent prompt can't surface over
+        // (and be confused with) Amethyst's own UI and an "allow always" napplet can't act unwatched. The page
+        // itself keeps running until onStop's grace runs out.
         resumed = false
+        reportAttended()
         stopForegroundHeartbeat()
         setBrokerForeground(false)
         super.onPause()
@@ -433,6 +494,16 @@ class NappletHostActivity : ComponentActivity() {
         runCatching { broker.send(msg) }
     }
 
+    /** Tells the broker whether this napplet is being looked at, which gates decrypting its relay reads. */
+    private fun reportAttended() {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_SET_ATTENDED).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putBoolean(NappletIpc.KEY_ATTENDED, resumed) }
+            }
+        if (brokerMessenger == null) pendingRequests.add(msg) else sendToBroker(msg)
+    }
+
     /** Reports this surface's foreground state to the broker so it can hold the main process resumed. */
 
     private fun setBrokerForeground(foreground: Boolean) {
@@ -451,10 +522,13 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        backgroundPauseHandler.removeCallbacks(backgroundPause)
+        backgroundPauseHandler.removeCallbacks(expireHeld)
         uiScope.cancel()
         // Drop the broker's references to our reply Messenger BEFORE unbinding — a retained Messenger is a
         // binder and would pin this Activity (and its WebView) for the life of the `:napplet` process.
         releaseFromBroker()
+        WebViewProxyPolicy.release(this)
         // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()
@@ -567,25 +641,6 @@ class NappletHostActivity : ComponentActivity() {
         WebView.setWebContentsDebuggingEnabled(false)
         webView.webViewClient = NappletWebViewClient()
         webView.webChromeClient = NappletWebChromeClient()
-    }
-
-    /**
-     * Routes this process's WebView traffic through the Tor SOCKS proxy when [port] > 0, else clears any
-     * override so the site loads over the open web. Process-global (this `:napplet` process hosts only
-     * applet/site WebViews) and best-effort: a device whose WebView can't honor a SOCKS proxy falls back
-     * to direct — verified on-device, since SOCKS-over-WebView support varies by WebView version.
-     */
-    private fun applyWebViewProxy(port: Int) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
-        val executor = Executor { it.run() }
-        runCatching {
-            if (port > 0) {
-                val config = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:$port").build()
-                ProxyController.getInstance().setProxyOverride(config, executor) {}
-            } else {
-                ProxyController.getInstance().clearProxyOverride(executor) {}
-            }
-        }.onFailure { Log.w(TAG, "Failed to apply WebView proxy override", it) }
     }
 
     /** Serves only the trusted shell and the manifest's verified blobs; everything else 404s. */
@@ -787,6 +842,17 @@ class NappletHostActivity : ComponentActivity() {
                     }
             }
 
+        // In the background: an act on the user's behalf waits until they're looking at this napplet again.
+        if (!resumed && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
+            val refused = heldWhilePaused.hold(msg)
+            if (refused != null) {
+                bridgeReplyProxy?.failRequest(refused, NappletHeldRequests.TOO_MANY)
+            } else {
+                // Settle it with an error if nobody comes back for it, so the applet isn't left waiting forever.
+                backgroundPauseHandler.postDelayed(expireHeld, NappletHeldRequests.MAX_AGE_MS)
+            }
+            return
+        }
         val messenger = brokerMessenger
         if (messenger == null) {
             pendingRequests.add(msg)
@@ -940,6 +1006,7 @@ class NappletHostActivity : ComponentActivity() {
                             // Website-mode nSites can re-route over Tor; switching rebuilds the session, so the
                             // row taps through to a full relaunch rather than toggling inline.
                             torOn = if (profile.exposesNetwork && proxyPort > 0) useTor else null,
+                            torForced = !useTor && routedOverTor,
                             canFavorite = false,
                             hasAccessInfo = true,
                         ),

@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,7 +59,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.isBuzzEditableBy
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
@@ -89,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.note.platform.QuickZapAmountRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordExpiringPinDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -100,10 +104,13 @@ import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // null amount = open the on-chain dialog with no prefill.
 @Immutable
@@ -267,13 +274,25 @@ fun ChatMessageActionSheet(
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
             // Editing my own chat message. Two surfaces publish an edit today, gated by type:
-            //  - Buzz: kind-40002 stream message → a kind-40003 edit.
+            //  - Buzz: kind-9 message in a Buzz-dialect relay group (or a legacy kind-40002 one)
+            //    → a kind-40003 edit, by its author or the author's agent owner.
             //  - Concord: kind-9 channel message or kind-1111 thread reply (carries a
             //    ConcordChannel gatherer) → a kind-3302 edit wrapped on the channel plane.
             // Both restrict to my own messages; a note is only ever one of the two, so at
             // most one tile shows and both route through the same edit callback.
             val isMine = note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
-            val canEditBuzz = onWantsToEditChatMessage != null && note.event is StreamMessageV2Event && isMine
+            // Buzz lets the owner of an agent edit the agent's messages too, and credits a
+            // relay-signed message to the member it names, so its own rule decides.
+            val canEditBuzz =
+                onWantsToEditChatMessage != null &&
+                    (
+                        note.event is StreamMessageV2Event ||
+                            (
+                                note.event is ChatEvent &&
+                                    note.inGatherers?.any { it is RelayGroupChannel && BuzzRelayDialect.isBuzz(it.groupId.relayUrl) } == true
+                            )
+                    ) &&
+                    note.isBuzzEditableBy(accountViewModel.userProfile().pubkeyHex)
             val canEditConcord =
                 onWantsToEditChatMessage != null &&
                     (note.event is ChatEvent || note.event is CommentEvent) &&
@@ -368,15 +387,36 @@ fun ChatMessageActionSheet(
 
                     // Concord (CORD-04 §7): pin/unpin into the channel's Pin List. Only offered to a
                     // PIN_MESSAGES holder who can write the Control Plane (null otherwise).
-                    val concordPinned = remember(note) { accountViewModel.account.concord.concordPinState(note) }
+                    // Read off the main thread: it verifies the channel's whole Pin List.
+                    val concordPinState by produceState<Boolean?>(null, note) {
+                        value = withContext(Dispatchers.Default) { accountViewModel.account.concord.concordPinState(note) }
+                    }
+                    val concordPinned = concordPinState
                     if (concordPinned != null && !note.isDraft()) {
+                        var confirmExpiringPin by remember(note) { mutableStateOf(false) }
                         SectionDivider()
                         TileRow {
                             val label = if (concordPinned) Res.string.relay_group_unpin_message else Res.string.relay_group_pin_message
                             ActionTile(MaterialSymbols.PushPin, stringRes(label)) {
-                                accountViewModel.toggleConcordPin(note)
-                                onDismiss()
+                                // Pinning a disappearing message (CORD-08) keeps its words past the timer: ask first.
+                                val expires = note.event?.let { ConcordDisappearing.expirationOf(it) } != null
+                                if (!concordPinned && expires) {
+                                    confirmExpiringPin = true
+                                } else {
+                                    accountViewModel.toggleConcordPin(note)
+                                    onDismiss()
+                                }
                             }
+                        }
+                        if (confirmExpiringPin) {
+                            ConcordExpiringPinDialog(
+                                onConfirm = {
+                                    confirmExpiringPin = false
+                                    accountViewModel.toggleConcordPin(note)
+                                    onDismiss()
+                                },
+                                onDismiss = { confirmExpiringPin = false },
+                            )
                         }
                     }
                 }

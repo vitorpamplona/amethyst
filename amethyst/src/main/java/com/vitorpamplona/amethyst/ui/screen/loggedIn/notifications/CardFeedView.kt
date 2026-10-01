@@ -25,6 +25,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.Card
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
@@ -58,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
 import com.vitorpamplona.amethyst.commons.notifications.BadgeCard
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.ChannelInviteCard
+import com.vitorpamplona.amethyst.commons.notifications.ConcordDirectInviteNotificationCard
 import com.vitorpamplona.amethyst.commons.notifications.MessageSetCard
 import com.vitorpamplona.amethyst.commons.notifications.MultiSetCard
 import com.vitorpamplona.amethyst.commons.notifications.NoteCard
@@ -81,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.notifications.OpenPollsSectionHeader
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordDirectInviteCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -410,6 +414,14 @@ private fun RenderCardItem(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
             )
+        }
+
+        is ConcordDirectInviteNotificationCard -> {
+            // The same decision card as the Concord hub: the invite has no real event to hang a
+            // NoteCompose on (its gift wrap is authored by a throwaway key).
+            Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                ConcordDirectInviteCard(item.note.invite, accountViewModel, nav)
+            }
         }
 
         is ChannelInviteCard -> {

@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,11 +40,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinnedMessage
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
@@ -58,8 +61,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip92IMeta.appendMissingImetaUrls
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_expiring_body
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_expiring_confirm
+import com.vitorpamplona.amethyst.commons.resources.concord_pin_expiring_title
 import com.vitorpamplona.amethyst.commons.resources.concord_pinned_budget
 import com.vitorpamplona.amethyst.commons.resources.concord_pinned_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_pinned_open_hint
@@ -68,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.resources.concord_pinned_unavailable
 import com.vitorpamplona.amethyst.commons.resources.message_edited
 import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_description
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -76,8 +87,13 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.pins.ConcordPins
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -86,9 +102,15 @@ import org.jetbrains.compose.resources.StringResource
 
 /**
  * [channelId]'s verified pins (CORD-04 §7), re-read whenever the Control Plane seats a new Pin List
- * head, the fold changes, or a delete / Edit lands in the cache (a held delete hides its entry at
- * once; a held newer Edit marks it edited). Null until the community has folded the channel.
+ * head, the fold changes or finishes draining, a delete / Edit naming a pinned message lands in the
+ * cache (a held delete hides its entry at once; a held newer Edit marks it edited), or a pinned
+ * message's disappearing-message deadline passes (CORD-08 §3). Null until the community has folded
+ * the channel.
+ *
+ * The session is looked up again on every session-set change: it may not exist at first
+ * composition, and a Refounding replaces it — a captured one would read the dead epoch forever.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun rememberConcordChannelPins(
     communityId: String,
@@ -97,56 +119,100 @@ fun rememberConcordChannelPins(
 ): State<ConcordChannelPins?> {
     val account = accountViewModel.account
     return produceState<ConcordChannelPins?>(null, account, communityId, channelId) {
-        val session = account.concordSessions.sessionFor(communityId) ?: return@produceState
-        val evidence =
-            account.cache.live.newEventBundles.filter { notes ->
-                notes.any { it.event is DeletionRequestEvent || it.event is ConcordChatEditEvent }
+        account.concordSessions.revision
+            .map { account.concordSessions.sessionFor(communityId) }
+            .distinctUntilChanged { a, b -> a === b }
+            .collectLatest { session ->
+                if (session == null) {
+                    value = null
+                    return@collectLatest
+                }
+                // Only deletes and Edits that name a message this list carries can change the read.
+                val evidence =
+                    account.cache.live.newEventBundles.filter { notes ->
+                        val carried = value?.rumorIds ?: return@filter true
+                        notes.any { note ->
+                            val event = note.event
+                            (event is DeletionRequestEvent || event is ConcordChatEditEvent) &&
+                                event.tags.any { it.size >= 2 && it[0] == "e" && it[1] in carried }
+                        }
+                    }
+                merge(session.pinHeads.map { }, session.state.map { }, session.controlDrained.map { }, evidence.map { })
+                    .conflate()
+                    .collectLatest {
+                        // Re-read, then sleep until the next pinned message expires: an expired one
+                        // leaves the list, and nothing else would trigger that re-read. A new trigger
+                        // cancels the wait.
+                        while (true) {
+                            val pins = withContext(Dispatchers.Default) { account.concord.concordChannelPins(communityId, channelId) }
+                            value = pins
+                            val now = TimeUtils.now()
+                            val next = pins?.nextExpiry(now) ?: break
+                            delay((next - now) * 1000 + 250)
+                        }
+                    }
             }
-        merge(session.pinHeads.map { }, session.state.map { }, evidence.map { }).collect {
-            value = withContext(Dispatchers.Default) { account.concord.concordChannelPins(communityId, channelId) }
-        }
     }
 }
 
 /**
- * The deletion omission and the Edit refresh a PIN_MESSAGES holder owes keyless readers (§7), run
- * the way the spec asks: after a short random wait, re-read, and publish only if still owed — so
- * simultaneous curators collapse to one publisher and a burst of edits costs one write. One attempt
- * per distinct debt, so a failure never spins.
+ * [pins] as a reader should see them: entries by a banned author (CORD-04 §4 — every client declines
+ * to show their posts) or by someone this account mutes or blocks are left out.
  */
 @Composable
-fun ConcordPinDuties(
+fun rememberVisibleConcordPins(
     communityId: String,
-    channelId: String,
-    pins: ConcordChannelPins?,
+    pins: ConcordChannelPins,
     accountViewModel: AccountViewModel,
-) {
-    val debt =
-        remember(pins) {
-            pins
-                ?.takeIf { it.owesRepublish }
-                ?.let { p -> (p.killed.map { "d" + it.rumorId } + p.pins.mapNotNull { it.newerEdit?.let { e -> "e" + e.rumorId } }).sorted().joinToString("|") }
-        } ?: return
-    val attempted = remember(communityId, channelId) { HashSet<String>() }
-    LaunchedEffect(communityId, channelId, debt) {
-        if (debt in attempted || !accountViewModel.account.concord.canPinConcord(communityId)) return@LaunchedEffect
-        delay(ConcordPinning.dutyDelayMs())
-        attempted.add(debt)
-        accountViewModel.launchSigner { accountViewModel.account.concord.settleConcordPins(communityId, channelId) }
+): List<ConcordPinnedMessage> {
+    val account = accountViewModel.account
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val hidden by account.hiddenUsers.flow.collectAsStateWithLifecycle()
+    return remember(pins, revision, hidden) {
+        val authority =
+            account.concordSessions
+                .sessionFor(communityId)
+                ?.state
+                ?.value
+                ?.authority
+        ConcordPinning.visible(pins, isBanned = { authority?.isBanned(it) == true }, isHidden = { account.isHidden(it) })
     }
+}
+
+/**
+ * The Pin action on a disappearing message (one carrying a CORD-08 `expiration`) asks first: the pin
+ * carries the message's words in its proof, so it keeps them readable after the timer erased the
+ * message everywhere else.
+ */
+@Composable
+fun ConcordExpiringPinDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.concord_pin_expiring_title)) },
+        text = { Text(stringRes(Res.string.concord_pin_expiring_body)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringRes(Res.string.concord_pin_expiring_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
+    )
 }
 
 /** The channel header's pinned-messages entry point: a pin with a count badge. Hidden when there is nothing to show. */
 @Composable
 fun ConcordPinnedButton(
+    communityId: String,
     pins: ConcordChannelPins?,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    if (pins == null || (pins.count == 0 && !pins.sealedUnavailable)) return
+    if (pins == null) return
+    val count = rememberVisibleConcordPins(communityId, pins, accountViewModel).size
+    if (count == 0 && !pins.sealedUnavailable) return
     IconButton(onClick = onClick) {
         BadgedBox(
             badge = {
-                if (pins.count > 0) Badge { Text(pins.count.toString()) }
+                if (count > 0) Badge { Text(count.toString()) }
             },
         ) {
             Icon(symbol = MaterialSymbols.PushPin, contentDescription = stringRes(Res.string.relay_group_pinned_content_description))
@@ -156,8 +222,9 @@ fun ConcordPinnedButton(
 
 /**
  * The pinned-messages sheet: each verified pin with its author, time and words (marked edited when
- * revised), an "unavailable" notice when the list is sealed under a key this account never held,
- * a jump to the message when it resolves locally, and Unpin for those who may write pins.
+ * revised) rendered like the chat feed renders the message — links, mentions and its `imeta`
+ * attachments included — an "unavailable" notice when the list is sealed under a key this account
+ * never held, a jump to the message when it resolves locally, and Unpin for those who may write pins.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,11 +233,16 @@ fun ConcordPinnedMessagesSheet(
     channelId: String,
     pins: ConcordChannelPins,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onJumpToMessage: (HexKey) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val canPin = remember(pins) { accountViewModel.account.concord.canPinConcord(communityId) }
-    val session = remember(communityId) { accountViewModel.account.concordSessions.sessionFor(communityId) }
+    val revision by accountViewModel.account.concordSessions.revision
+        .collectAsStateWithLifecycle()
+    val session = remember(communityId, revision) { accountViewModel.account.concordSessions.sessionFor(communityId) }
+    // Banned authors and muted/blocked users stay out of the sheet, as they do from the feed.
+    val shown = rememberVisibleConcordPins(communityId, pins, accountViewModel)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -198,7 +270,7 @@ fun ConcordPinnedMessagesSheet(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-            if (pins.count > 0) {
+            if (shown.isNotEmpty()) {
                 Text(
                     text = stringRes(Res.string.concord_pinned_open_hint),
                     style = MaterialTheme.typography.labelSmall,
@@ -210,16 +282,18 @@ fun ConcordPinnedMessagesSheet(
 
             if (pins.sealedUnavailable) {
                 PinNotice(Res.string.concord_pinned_unavailable, MaterialSymbols.Lock)
-            } else if (pins.count == 0) {
+            } else if (shown.isEmpty() && pins.complete) {
+                // Only a drained fold may say "no pins"; before that the list may simply not be served yet.
                 PinNotice(Res.string.concord_pinned_empty, MaterialSymbols.PushPin)
             }
 
             LazyColumn {
-                items(pins.pins, key = { it.rumorId }) { pinned ->
+                items(shown, key = { it.rumorId }) { pinned ->
                     val jumpable = remember(pinned.rumorId, session) { session?.holdsRumor(pinned.rumorId) == true }
                     PinnedRow(
                         pinned = pinned,
                         accountViewModel = accountViewModel,
+                        nav = nav,
                         onClick =
                             if (jumpable) {
                                 {
@@ -257,6 +331,7 @@ private fun PinNotice(
 private fun PinnedRow(
     pinned: ConcordPinnedMessage,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onClick: (() -> Unit)?,
     onUnpin: (() -> Unit)?,
 ) {
@@ -292,12 +367,7 @@ private fun PinnedRow(
                     )
                 }
             }
-            Text(
-                text = pinned.content,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
-            )
+            PinnedContent(pinned, accountViewModel, nav)
         }
         if (onUnpin != null) {
             IconButton(onClick = onUnpin) {
@@ -305,6 +375,35 @@ private fun PinnedRow(
             }
         }
     }
+}
+
+/**
+ * The pinned message's words and attachments through the chat feed's own pipeline: the rumor rebuilt
+ * from the proof (its encrypted attachments' keys registered), an attachment-only message given its
+ * `imeta` URLs as text exactly as the feed does, and the shared rich-text viewer rendering the media.
+ */
+@Composable
+private fun PinnedContent(
+    pinned: ConcordPinnedMessage,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val rumor = remember(pinned) { accountViewModel.account.concord.concordPinnedRumor(pinned) }
+    val tags = remember(rumor) { rumor.tags.toImmutableListOfLists() }
+    val content = remember(rumor) { appendMissingImetaUrls(rumor.content, rumor) }
+    val background = MaterialTheme.colorScheme.surface
+    val backgroundColor = remember(background) { mutableStateOf(background) }
+    TranslatableRichTextViewer(
+        content = content,
+        canPreview = true,
+        quotesLeft = 0,
+        tags = tags,
+        backgroundColor = backgroundColor,
+        id = pinned.rumorId,
+        authorPubKey = pinned.author,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 /** [hex]'s best display name, reactively, falling back to a short hex. */

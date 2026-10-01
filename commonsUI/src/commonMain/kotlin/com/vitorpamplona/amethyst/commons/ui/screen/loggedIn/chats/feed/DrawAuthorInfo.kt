@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,10 +30,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzAgentLabel
+import com.vitorpamplona.amethyst.commons.buzz.ui.rememberBuzzContextualName
 import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -44,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.buzz.identityNames.IdentityNamePolicy
 
 @Composable
 fun DrawAuthorInfo(
@@ -54,8 +62,15 @@ fun DrawAuthorInfo(
     // A geohash chat resolves the message's `n` nickname here (throwaway keys have no profile);
     // null everywhere else, so authors render from their profile as usual.
     val nameOverride = LocalChatDisplayNameResolver.current?.invoke(baseNote)
+    // In a Buzz channel two members may share a name; Buzz tells them apart there.
+    val buzzChannel =
+        remember(baseNote) {
+            baseNote.inGatherers
+                ?.firstNotNullOfOrNull { it as? RelayGroupChannel }
+                ?.takeIf { BuzzRelayDialect.isBuzz(it.groupId.relayUrl) }
+        }
     baseNote.author?.let {
-        WatchAndDisplayUser(it, nameOverride, accountViewModel, nav)
+        WatchAndDisplayUser(it, nameOverride, buzzChannel, accountViewModel, nav)
     }
 }
 
@@ -80,14 +95,20 @@ fun authorNameColorFor(
 private fun WatchAndDisplayUser(
     author: User,
     nameOverride: String?,
+    buzzChannel: RelayGroupChannel?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val userState by observeUserInfo(author, accountViewModel)
     val nickname by observeUserDisplayNickname(author, accountViewModel)
     val petName = nickname?.petName
-    // A geohash message's `n` nickname wins over the (usually empty) profile of a throwaway key.
-    val displayName = nameOverride ?: petName ?: userState?.info?.bestName()
+    val profileName = userState?.info?.bestName()
+    // Buzz's contextual name ("Alice’s Honey", "Honey · 7xk2") when the channel has a namesake.
+    val contextual = buzzChannel?.let { rememberBuzzContextualName(it, author, accountViewModel) }?.name
+    val qualified = contextual != null && profileName != null && contextual != IdentityNamePolicy.trim(profileName)
+    // A geohash message's `n` nickname wins over the (usually empty) profile of a throwaway key, and a
+    // nickname the account set wins over everything else.
+    val displayName = nameOverride ?: petName ?: (if (qualified) contextual else profileName)
 
     val isLightTheme = MaterialTheme.colorScheme.isLight
     val nameColor =
@@ -114,13 +135,22 @@ private fun WatchAndDisplayUser(
             ObserveAndRenderUserCards(author, Size20dp, Modifier.align(Alignment.BottomCenter), accountViewModel)
         },
         name = {
-            CreateTextWithEmoji(
-                text = displayName ?: author.pubkeyDisplayHex(),
-                tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
-                color = nameColor,
-                maxLines = 1,
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                CreateTextWithEmoji(
+                    text = displayName ?: author.pubkeyDisplayHex(),
+                    tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
+                    color = nameColor,
+                    maxLines = 1,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                // An agent says so, and whose it is (its owner comes from the NIP-OA tag on its kind 0),
+                // unless its contextual name already does.
+                BuzzAgentLabel(author, userState?.nipOaOwner, accountViewModel, showOwner = !qualified)
+            }
         },
     )
 }

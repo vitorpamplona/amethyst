@@ -36,11 +36,12 @@ import android.os.Messenger
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import androidx.privacysandbox.ui.client.view.SandboxedSdkViewEventListener
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
@@ -49,6 +50,8 @@ import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBuffer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedAutoRecovery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedLoadStatus
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProbe
@@ -59,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.consoleLevelOf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -70,7 +74,9 @@ import java.util.concurrent.atomic.AtomicLong
 @RequiresApi(Build.VERSION_CODES.R)
 class EmbeddedWebAppController(
     private val appContext: Context,
-    private val proxyPort: Int,
+    // Read on every create and load rather than once: Tor may still be starting when the tab is made, and a
+    // Tor page loads nothing (fails closed) until its port is known.
+    private val proxyPort: () -> Int,
     private val initialUseTor: Boolean,
     private val backgroundColor: Int,
     private val themeType: String = "SYSTEM",
@@ -97,6 +103,36 @@ class EmbeddedWebAppController(
     private var hasLoadedReal = false
     private var blankRecovered = false
 
+    // Brings the tab back when its sandbox-side surface dies (see [onSurfaceLost]).
+    private val recovery = EmbeddedAutoRecovery(SystemClock::elapsedRealtime)
+
+    // The remote session behind the current view errored out: only a brand-new session can repaint it.
+    private var sessionDead = false
+
+    // Set after the first connection, so a later onServiceConnected is recognised as `:napplet` coming back.
+    private var everConnected = false
+
+    // Set by [unbind]: nothing that arrives afterwards may act.
+    private var tornDown = false
+
+    // A `:napplet` restart found this tab hidden: its session is re-created when it is next shown.
+    private var createOnShow = false
+
+    // A create is in flight: the view's old session erroring out now is the one being replaced, not news.
+    private var awaitingReady = false
+
+    // The current session's surface has shown in the view at least once (see [retry]).
+    private var uiDisplayed = false
+
+    // What the provider was last told (see [syncPageState]). Remembered so both are replayed right after each
+    // session is created: a parked tab can be hidden before the service even binds.
+    private var wantPaused = false
+    private var wantAttended = false
+
+    // The app is on screen / has been in the background long enough to pause even the visible tab.
+    private var appVisible = true
+    private var backgroundIdle = false
+
     /** Last known main-frame load state, so the tab layer renders the right overlay immediately. */
     override var loadStatus: EmbeddedLoadStatus = EmbeddedLoadStatus()
         private set
@@ -105,15 +141,65 @@ class EmbeddedWebAppController(
     override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
 
     /** JavaScript console output received from the embedded WebView, capped at [MAX_CONSOLE_LOGS] entries. */
-    override val consoleLogs = mutableStateListOf<ConsoleLine>()
+    private val console = ConsoleBuffer(MAX_CONSOLE_LOGS)
+    override val consoleLogs get() = console.lines
+    override val consoleErrorCount get() = console.errorCount
 
-    override fun clearConsoleLogs() = consoleLogs.clear()
+    override fun clearConsoleLogs() = console.clear()
+
+    // The user's per-tab page settings. The provider forgets them whenever the session is re-created (a
+    // `:napplet` restart, a rearm), so they are re-sent with every create — otherwise a site the user
+    // switched onto Tor would silently come back over clearnet while the pill still said Tor.
+    private var useTor = initialUseTor
+    private var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
+    private var desktopSite = false
+
+    // The page on screen, kept here rather than in the tab's screen: the screen leaves composition whenever
+    // the user switches bottom-bar tabs, and coming back must show where they were (the right address for
+    // share / favorite / site settings, and a Back that goes back in the page instead of leaving the tab).
+    var lastUrl: String? = null
+        private set
+    var lastTitle: String? = null
+        private set
+    var lastCanGoBack = false
+        private set
+    var lastCanGoForward = false
+        private set
+
+    /** A tab's page and per-tab settings, carried to the controller that replaces this one on a rebuild. */
+    class PageSnapshot(
+        val url: String?,
+        val useTor: Boolean,
+        val textZoom: Int,
+        val desktopSite: Boolean,
+    )
+
+    fun snapshot() = PageSnapshot(lastUrl, useTor, textZoom, desktopSite)
+
+    /** Takes over a torn-down predecessor's page and settings; call before [bind], which creates the session. */
+    fun restore(snapshot: PageSnapshot) {
+        lastUrl = snapshot.url
+        useTor = snapshot.useTor
+        textZoom = snapshot.textZoom
+        desktopSite = snapshot.desktopSite
+    }
+
+    /** The user's per-tab settings as last set, for a screen coming back to this tab. */
+    val isTorOn: Boolean get() = useTor
+
+    // Whether `:napplet` routes through Tor right now: another surface that needs Tor puts every page on it.
+    private val routedOverTor = mutableStateOf(false)
+
+    /** This page is set to the open web but goes through Tor anyway, because another open page needs Tor. */
+    val isTorForced: Boolean get() = !useTor && routedOverTor.value
+    val isDesktopSite: Boolean get() = desktopSite
+    val currentTextZoom: Int get() = textZoom
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
     // Re-minted whenever the remote session is re-created (see [attachView]), so a late close() from the
     // previous view can never reap the replacement.
-    private var sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
+    private var sessionId: String = newSessionId()
 
     /** Invoked on the main thread when the page navigates or retitles: (url, title or null, canGoBack, canGoForward). */
     var onUrlChanged: ((String, String?, Boolean, Boolean) -> Unit)? = null
@@ -128,6 +214,9 @@ class EmbeddedWebAppController(
 
     /** The camera / microphone / location request the page is waiting on, if any. */
     val pendingPermission = mutableStateOf<EmbeddedPermissionRequest?>(null)
+
+    /** The download the page started that awaits the user's consent, if any. */
+    val pendingDownload = mutableStateOf<EmbeddedDownloadRequest?>(null)
 
     /** The certificate of the page on screen, once page info asked for it (null for none, or not yet). */
     val pageCertificate = mutableStateOf<CertificateInfo?>(null)
@@ -150,11 +239,29 @@ class EmbeddedWebAppController(
                 service: IBinder?,
             ) {
                 serviceMessenger = Messenger(service)
+                if (everConnected) {
+                    // `:napplet` died and was restarted. Re-creating the session IS the recovery (a fresh
+                    // process has no session under any id), so nothing else is left pending; cover the
+                    // surface until the new page paints. Only the visible tab rebuilds now: every warm tab
+                    // reconnects at once, and rebuilding them all right after the OS reclaimed that memory
+                    // would just push it back up. The rest re-create when next shown.
+                    recovery.clearPending()
+                    sessionDead = false
+                    showRecovering()
+                    everConnected = true
+                    if (recovery.isShown) sendCreateSession() else createOnShow = true
+                    return
+                }
+                everConnected = true
                 sendCreateSession()
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
+                // `:napplet` died (the OS reclaimed it, or it crashed). Its WebViews went with it; the
+                // system restarts the bound service and [onServiceConnected] re-creates the session.
                 serviceMessenger = null
+                resetPageState()
+                showRecovering()
             }
         }
 
@@ -165,12 +272,17 @@ class EmbeddedWebAppController(
     }
 
     fun unbind() {
+        // Tell the provider to drop this tab's session now: one created for a view that was disposed before
+        // it attached never gets the surface close that would otherwise clean it up.
+        send(NappletBrowserContract.MSG_CLOSE_SESSION) {}
+        tornDown = true
         if (bound) {
             runCatching { appContext.unbindService(connection) }
             bound = false
         }
         // Drop refs so an evicted controller doesn't pin the surface view or the remote messenger.
         serviceMessenger = null
+        sandboxedSdkView?.setEventListener(null)
         sandboxedSdkView = null
         pendingAdapter = null
         adapterDelivered = false
@@ -178,13 +290,72 @@ class EmbeddedWebAppController(
         onImeEvent = null
         onMagnifierFrame = null
         onLoadStatusChanged = null
-        consoleLogs.clear()
+        console.clear()
+        resetPageState()
+    }
+
+    /**
+     * Drops UI state that belongs to the page on screen: once that page is gone (renderer death, session
+     * lost, `:napplet` restart) nothing will ever close it. A stale fullscreen flag swallowed every Back
+     * press, and a stale dialog or permission prompt auto-refused every new one from the rebuilt page.
+     */
+    private fun resetPageState() {
         pendingDialog.value = null
         pendingPermission.value = null
+        pendingDownload.value = null
         isFullscreen.value = false
+        _findResult.value = null
     }
 
     override fun teardown() = unbind()
+
+    override fun onShown() {
+        val deferredRecovery = recovery.onShown()
+        syncPageState()
+        if (createOnShow) {
+            createOnShow = false
+            sendCreateSession()
+        } else if (deferredRecovery) {
+            recover()
+        }
+    }
+
+    override fun onHidden() {
+        recovery.onHidden()
+        syncPageState()
+    }
+
+    override fun onAppVisibility(visible: Boolean) {
+        appVisible = visible
+        syncPageState()
+    }
+
+    override fun onBackgroundIdle(idle: Boolean) {
+        backgroundIdle = idle
+        syncPageState()
+    }
+
+    /**
+     * Tells the provider what the page may do now:
+     * - paused while parked off-screen, or once the app has sat in the background as long as the relays get
+     *   (EmbeddedTabHost.BACKGROUND_PAUSE_MS) — no animations, media or geolocation keep running;
+     * - attended only while it's the visible tab AND the app is on screen. The provider holds the page's
+     *   NIP-07 sign / encrypt / decrypt while it isn't, so a parked or backgrounded site can't sign (even with
+     *   "allow always") while nobody is looking. That one applies at once: it's about who is watching, not
+     *   about saving work.
+     */
+    private fun syncPageState() {
+        val pause = !recovery.isShown || backgroundIdle
+        if (pause != wantPaused) {
+            wantPaused = pause
+            send(if (pause) NappletBrowserContract.MSG_PAUSE else NappletBrowserContract.MSG_RESUME) {}
+        }
+        val attended = recovery.isShown && appVisible
+        if (attended != wantAttended) {
+            wantAttended = attended
+            send(NappletBrowserContract.MSG_SET_ATTENDED) { putBoolean(NappletBrowserContract.KEY_ENABLED, attended) }
+        }
+    }
 
     /**
      * Hands the surface view to the controller; applies the adapter if it already arrived, and re-arms the
@@ -208,6 +379,7 @@ class EmbeddedWebAppController(
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(backgroundColor)
+        view.setEventListener(surfaceListener(view))
         val adapter = pendingAdapter
         when {
             adapter != null -> {
@@ -217,30 +389,120 @@ class EmbeddedWebAppController(
             }
             // No adapter in hand and one was already spent on a previous (now disposed) view: the session
             // behind it is gone, so this view would stay blank forever. Re-create it.
-            adapterDelivered -> {
-                // Mint a FRESH session id. The disposed view's Session.close() reaches the sandbox
-                // asynchronously (it posts to the sandbox's main thread) and was measured landing ~1 s
-                // AFTER this create: reusing the id let that late close reap the session we had just asked
-                // for — a new WebView was built, destroyed, and the surface stayed black. A new id makes
-                // the stale close target only the corpse it belongs to.
-                sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
-                adapterDelivered = false
-                sendCreateSession()
-            }
+            adapterDelivered -> rearmSession()
             // else: the first session is still in flight; MSG_SESSION_READY will arm this view.
         }
     }
 
+    override fun detachView(view: SandboxedSdkView) {
+        if (sandboxedSdkView !== view) return
+        view.setEventListener(null)
+        sandboxedSdkView = null
+    }
+
+    /**
+     * Asks the sandbox for a brand-new session; the [NappletBrowserContract.MSG_SESSION_READY] reply arms
+     * the current view with its adapter.
+     *
+     * Mints a FRESH session id. A disposed view's Session.close() reaches the sandbox asynchronously (it
+     * posts to the sandbox's main thread) and was measured landing ~1 s AFTER the create: reusing the id let
+     * that late close reap the session we had just asked for — a new WebView was built, destroyed, and the
+     * surface stayed black. A new id makes the stale close target only the corpse it belongs to.
+     */
+    private fun rearmSession() {
+        // The session being replaced may never have opened a surface (its view went away first), in which
+        // case no surface close will ever reach the provider for it.
+        send(NappletBrowserContract.MSG_CLOSE_SESSION) {}
+        sessionId = newSessionId()
+        // This create IS the re-creation a `:napplet` restart deferred to the next show.
+        createOnShow = false
+        adapterDelivered = false
+        sessionDead = false
+        resetPageState()
+        sendCreateSession()
+    }
+
+    /**
+     * Watches [view]'s remote session. A session that errors out (its provider failed, or `:napplet` died)
+     * leaves the view holding a dead client that never reopens: it paints nothing, forever, until it is
+     * handed a NEW adapter.
+     */
+    private fun surfaceListener(view: SandboxedSdkView) =
+        object : SandboxedSdkViewEventListener {
+            override fun onUiDisplayed() {
+                // The load state reports when the page itself paints; this only says the surface opened.
+                if (sandboxedSdkView === view) uiDisplayed = true
+            }
+
+            override fun onUiError(error: Throwable) {
+                // A view this controller has since moved past (disposed, replaced) is not ours to revive, and an
+                // error landing while a new session is on its way is the old one dying: that create already
+                // is the rebuild.
+                if (sandboxedSdkView === view && !awaitingReady) onSurfaceLost(sessionDead = true)
+            }
+
+            override fun onUiClosed() {
+                // Nothing to do: closes are ours (a view disposed, or an adapter replaced on purpose).
+            }
+        }
+
+    /**
+     * The tab's page is gone: its WebView's renderer died ([sessionDead] false — the session lives on, and a
+     * MSG_RELOAD rebuilds the WebView inside it), or the whole remote session errored out ([sessionDead]
+     * true — only a new session can repaint the view). Either way the surface is a black rectangle that would
+     * stay that way, so rebuild it, as [EmbeddedAutoRecovery] allows.
+     */
+    private fun onSurfaceLost(sessionDead: Boolean) {
+        if (sessionDead) this.sessionDead = true
+        hasLoadedReal = false
+        resetPageState()
+        // `:napplet` itself is down: its restart re-creates the session (see [onServiceConnected]).
+        if (serviceMessenger?.binder?.isBinderAlive != true) {
+            showRecovering()
+            return
+        }
+        when (recovery.onLost()) {
+            EmbeddedAutoRecovery.Decision.RECOVER_NOW -> recover()
+            EmbeddedAutoRecovery.Decision.DEFERRED -> showRecovering()
+            EmbeddedAutoRecovery.Decision.GIVE_UP -> publishLoadStatus(EmbeddedLoadStatus(failed = true))
+        }
+    }
+
+    private fun recover() {
+        showRecovering()
+        if (sessionDead) rearmSession() else reload()
+    }
+
+    /** Covers the surface with the loading spinner until the rebuilt page paints. */
+    private fun showRecovering() {
+        hasLoadedReal = false
+        blankRecovered = false
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
+    }
+
+    // Set by the user's Retry: the next session starts over at [startUrl]. Every other re-creation (a crashed
+    // renderer, a `:napplet` restart, a memory-trim rebuild) resumes the page the user was on.
+    private var restartAtStart = false
+
+    /** Where a new session opens: the page on screen before it was lost, else the tab's own [startUrl]. */
+    private fun sessionUrl(): String {
+        val resume = lastUrl?.takeUnless { restartAtStart || it.isBlankPage() }
+        restartAtStart = false
+        return resume ?: startUrl
+    }
+
     private fun sendCreateSession() {
+        awaitingReady = true
+        uiDisplayed = false
         val msg =
             Message.obtain(null, NappletBrowserContract.MSG_CREATE_SESSION).apply {
                 replyTo = incoming
                 data =
                     Bundle().apply {
                         putString(NappletBrowserContract.KEY_SESSION_ID, sessionId)
-                        putString(NappletBrowserContract.KEY_URL, startUrl)
-                        putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort)
-                        putBoolean(NappletBrowserContract.KEY_USE_TOR, initialUseTor)
+                        putString(NappletBrowserContract.KEY_URL, sessionUrl())
+                        putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
+                        putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
                         putString(NappletBrowserContract.KEY_THEME, themeType)
                         // Opaque per-account storage partition, so an embedded site can't carry one
@@ -249,12 +511,25 @@ class EmbeddedWebAppController(
                     }
             }
         runCatching { serviceMessenger?.send(msg) }
+        // Messenger keeps order, so these land after the CREATE and are stored on the new tab.
+        if (textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) setTextZoom(textZoom)
+        if (desktopSite) setDesktopSite(true)
+        if (wantPaused) send(NappletBrowserContract.MSG_PAUSE) {}
+        // Always: a new session starts unattended, so a tab created in view must say it is being watched.
+        send(NappletBrowserContract.MSG_SET_ATTENDED) { putBoolean(NappletBrowserContract.KEY_ENABLED, wantAttended) }
     }
 
     private fun onServiceMessage(msg: Message): Boolean {
+        // Nothing may act on a torn-down tab (a late file-chooser request would still open a picker), nor on
+        // what a session this controller has since replaced still had in flight — a stale SESSION_READY
+        // would re-arm the view with that dead session's adapter.
+        if (tornDown) return true
+        val from = msg.data?.getString(NappletBrowserContract.KEY_SESSION_ID)
+        if (from != null && from != sessionId) return true
         when (msg.what) {
             NappletBrowserContract.MSG_SESSION_READY -> {
                 val coreLibInfo = msg.data?.getBundle(NappletBrowserContract.KEY_CORE_LIB_INFO) ?: return true
+                awaitingReady = false
                 val adapter = SandboxedUiAdapterFactory.createFromCoreLibInfo(coreLibInfo)
                 val view = sandboxedSdkView
                 if (view != null) {
@@ -269,6 +544,12 @@ class EmbeddedWebAppController(
                 val canGoBack = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_BACK, false) ?: false
                 val canGoForward = msg.data?.getBoolean(NappletBrowserContract.KEY_CAN_GO_FORWARD, false) ?: false
                 val title = msg.data?.getString(NappletBrowserContract.KEY_TITLE)
+                if (url != "about:blank") {
+                    lastUrl = url
+                    lastTitle = title
+                }
+                lastCanGoBack = canGoBack
+                lastCanGoForward = canGoForward
                 onUrlChanged?.invoke(url, title, canGoBack, canGoForward)
             }
             NappletBrowserContract.MSG_IME_EVENT -> {
@@ -279,15 +560,18 @@ class EmbeddedWebAppController(
                 val isLoading = msg.data?.getBoolean(NappletBrowserContract.KEY_IS_LOADING, false) ?: false
                 val failed = msg.data?.getBoolean(NappletBrowserContract.KEY_LOAD_FAILED, false) ?: false
                 val loadedUrl = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()
-                onLoadState(isLoading, failed, loadedUrl)
+                if (msg.data?.getBoolean(NappletBrowserContract.KEY_RENDERER_GONE, false) == true) {
+                    onSurfaceLost(sessionDead = false)
+                } else {
+                    onLoadState(isLoading, failed, loadedUrl)
+                }
             }
             NappletBrowserContract.MSG_CONSOLE_LOG -> {
                 val level = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_LEVEL) ?: "LOG"
                 val message = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_MESSAGE).orEmpty()
                 val source = msg.data?.getString(NappletBrowserContract.KEY_CONSOLE_SOURCE).orEmpty()
                 val line = msg.data?.getInt(NappletBrowserContract.KEY_CONSOLE_LINE, 0) ?: 0
-                if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
-                consoleLogs.add(ConsoleLine(consoleLevelOf(level), message, source, line))
+                console.add(ConsoleLine(consoleLevelOf(level), message, source, line))
             }
             NappletBrowserContract.MSG_FILE_CHOOSER_REQUEST -> {
                 val data = msg.data ?: return true
@@ -367,6 +651,31 @@ class EmbeddedWebAppController(
                 val id = msg.data?.getLong(NappletBrowserContract.KEY_PERMISSION_ID)
                 if (pendingPermission.value?.id == id) pendingPermission.value = null
             }
+            NappletBrowserContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
+            NappletBrowserContract.MSG_DOWNLOAD_CONSENT -> {
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)
+                val origin = data.getString(NappletBrowserContract.KEY_BROWSER_ORIGIN)
+                val name = data.getString(NappletBrowserContract.KEY_DOWNLOAD_NAME).orEmpty()
+                // An unnamed/absent origin means the sandbox couldn't even state who is asking: refuse.
+                if (origin == null || name.isEmpty() || pendingDownload.value != null || pendingDialog.value != null || pendingPermission.value != null) {
+                    answerDownload(id, allowed = false)
+                    return true
+                }
+                pendingDownload.value =
+                    EmbeddedDownloadRequest(
+                        id = id,
+                        origin = origin,
+                        fileName = name,
+                        sizeBytes = data.getLong(NappletBrowserContract.KEY_DOWNLOAD_SIZE, -1L),
+                        sourceHost = data.getString(NappletBrowserContract.KEY_DOWNLOAD_SOURCE),
+                        risky = data.getBoolean(NappletBrowserContract.KEY_DOWNLOAD_RISKY, false),
+                    )
+            }
+            NappletBrowserContract.MSG_DOWNLOAD_CANCEL -> {
+                val id = msg.data?.getLong(NappletBrowserContract.KEY_DOWNLOAD_ID)
+                if (pendingDownload.value?.id == id) pendingDownload.value = null
+            }
             NappletBrowserContract.MSG_FULLSCREEN -> isFullscreen.value = msg.data?.getBoolean(NappletBrowserContract.KEY_ENABLED, false) ?: false
             NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true
@@ -386,9 +695,13 @@ class EmbeddedWebAppController(
         return true
     }
 
-    fun navigate(url: String) = send(NappletBrowserContract.MSG_NAVIGATE) { putString(NappletBrowserContract.KEY_URL, url) }
+    fun navigate(url: String) =
+        send(NappletBrowserContract.MSG_NAVIGATE) {
+            putString(NappletBrowserContract.KEY_URL, url)
+            putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
+        }
 
-    fun reload() = send(NappletBrowserContract.MSG_RELOAD) {}
+    fun reload() = send(NappletBrowserContract.MSG_RELOAD) { putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort()) }
 
     /**
      * User-triggered recovery for a stuck, blank, or failed session: reload the canonical [startUrl] from
@@ -396,10 +709,15 @@ class EmbeddedWebAppController(
      * session that never got its URL), this re-navigates to the favorite's real URL.
      */
     override fun retry() {
-        blankRecovered = false
-        hasLoadedReal = false
-        publishLoadStatus(EmbeddedLoadStatus(isLoading = true))
-        navigate(startUrl)
+        recovery.clearPending()
+        showRecovering()
+        // A surface that never opened has nothing to navigate: only a new session can paint it.
+        if (sessionDead || (sandboxedSdkView != null && !uiDisplayed)) {
+            restartAtStart = true
+            rearmSession()
+        } else {
+            navigate(startUrl)
+        }
     }
 
     private fun onLoadState(
@@ -442,9 +760,15 @@ class EmbeddedWebAppController(
 
     override fun findNext(forward: Boolean) = send(NappletBrowserContract.MSG_FIND_NEXT) { putBoolean(NappletBrowserContract.KEY_FIND_FORWARD, forward) }
 
-    fun setDesktopSite(enabled: Boolean) = send(NappletBrowserContract.MSG_SET_DESKTOP) { putBoolean(NappletBrowserContract.KEY_ENABLED, enabled) }
+    fun setDesktopSite(enabled: Boolean) {
+        desktopSite = enabled
+        send(NappletBrowserContract.MSG_SET_DESKTOP) { putBoolean(NappletBrowserContract.KEY_ENABLED, enabled) }
+    }
 
-    fun setTextZoom(percent: Int) = send(NappletBrowserContract.MSG_SET_TEXT_ZOOM) { putInt(NappletBrowserContract.KEY_TEXT_ZOOM, percent) }
+    fun setTextZoom(percent: Int) {
+        textZoom = percent
+        send(NappletBrowserContract.MSG_SET_TEXT_ZOOM) { putInt(NappletBrowserContract.KEY_TEXT_ZOOM, percent) }
+    }
 
     /** Back to the app's home origin ([homeUrl]), Chrome's out-of-scope ✕. */
     fun backToScope(homeUrl: String) = send(NappletBrowserContract.MSG_BACK_TO_SCOPE) { putString(NappletBrowserContract.KEY_URL, homeUrl) }
@@ -486,7 +810,25 @@ class EmbeddedWebAppController(
         }
     }
 
-    fun setTor(useTor: Boolean) = send(NappletBrowserContract.MSG_SET_TOR) { putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor) }
+    /** Answers the download-consent card for [id]: true lets the sandbox fetch or write the file it described. */
+    fun answerDownload(
+        id: Long,
+        allowed: Boolean,
+    ) {
+        if (pendingDownload.value?.id == id) pendingDownload.value = null
+        send(NappletBrowserContract.MSG_DOWNLOAD_CONSENT_RESULT) {
+            putLong(NappletBrowserContract.KEY_DOWNLOAD_ID, id)
+            putBoolean(NappletBrowserContract.KEY_DOWNLOAD_ALLOWED, allowed)
+        }
+    }
+
+    fun setTor(useTor: Boolean) {
+        this.useTor = useTor
+        send(NappletBrowserContract.MSG_SET_TOR) {
+            putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
+            putInt(NappletBrowserContract.KEY_PROXY_PORT, proxyPort())
+        }
+    }
 
     override fun sendImeOp(json: String) = send(NappletBrowserContract.MSG_IME_OP) { putString(NappletBrowserContract.KEY_IME_PAYLOAD, json) }
 
@@ -523,6 +865,12 @@ class EmbeddedWebAppController(
 
     private companion object {
         private val SESSION_SEQ = AtomicLong()
+
+        // The provider outlives this process's restarts (and this counter with them): without a per-process
+        // nonce a fresh main process would hand out ids a still-running `:napplet` already holds.
+        private val PROCESS_NONCE = UUID.randomUUID().toString().take(8)
         private const val MAX_CONSOLE_LOGS = 200
+
+        private fun newSessionId() = "browser-$PROCESS_NONCE-${SESSION_SEQ.incrementAndGet()}"
     }
 }

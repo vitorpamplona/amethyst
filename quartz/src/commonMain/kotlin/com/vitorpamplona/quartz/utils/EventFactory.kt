@@ -27,8 +27,11 @@ import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
@@ -41,6 +44,7 @@ import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
 import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
@@ -62,6 +66,7 @@ import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
 import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.mpProjects.ProjectEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
@@ -82,6 +87,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teamCatalog.TeamCatalogEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
@@ -481,8 +487,11 @@ class EventFactory {
                 AgentProfileEvent.KIND -> AgentProfileEvent(id, pubKey, createdAt, tags, content, sig)
                 ObserverFrameEvent.KIND -> ObserverFrameEvent(id, pubKey, createdAt, tags, content, sig)
                 PersonaEvent.KIND -> PersonaEvent(id, pubKey, createdAt, tags, content, sig)
+                ArtifactEvent.KIND -> ArtifactEvent(id, pubKey, createdAt, tags, content, sig)
+                ArtifactRemovalEvent.KIND -> ArtifactRemovalEvent(id, pubKey, createdAt, tags, content, sig)
                 AuditEntryEvent.KIND -> AuditEntryEvent(id, pubKey, createdAt, tags, content, sig)
                 WindowBoundsEvent.KIND -> WindowBoundsEvent(id, pubKey, createdAt, tags, content, sig)
+                ThreadWindowBoundsEvent.KIND -> ThreadWindowBoundsEvent(id, pubKey, createdAt, tags, content, sig)
                 DmAddMemberEvent.KIND -> DmAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 DmCreatedEvent.KIND -> DmCreatedEvent(id, pubKey, createdAt, tags, content, sig)
                 DmHideEvent.KIND -> DmHideEvent(id, pubKey, createdAt, tags, content, sig)
@@ -494,6 +503,7 @@ class EventFactory {
                 ForumVoteEvent.KIND -> ForumVoteEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleEndedEvent.KIND -> HuddleEndedEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleGuidelinesEvent.KIND -> HuddleGuidelinesEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleLivenessEvent.KIND -> HuddleLivenessEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleParticipantJoinedEvent.KIND -> HuddleParticipantJoinedEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleParticipantLeftEvent.KIND -> HuddleParticipantLeftEvent(id, pubKey, createdAt, tags, content, sig)
                 HuddleReactionEvent.KIND -> HuddleReactionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -515,6 +525,7 @@ class EventFactory {
                 ModerationTimeoutEvent.KIND -> ModerationTimeoutEvent(id, pubKey, createdAt, tags, content, sig)
                 ModerationUntimeoutEvent.KIND -> ModerationUntimeoutEvent(id, pubKey, createdAt, tags, content, sig)
                 ProductFeedbackEvent.KIND -> ProductFeedbackEvent(id, pubKey, createdAt, tags, content, sig)
+                ProjectEvent.KIND -> ProjectEvent(id, pubKey, createdAt, tags, content, sig)
                 MemberAddedNotificationEvent.KIND -> MemberAddedNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 MemberRemovedNotificationEvent.KIND -> MemberRemovedNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 PairingEvent.KIND -> PairingEvent(id, pubKey, createdAt, tags, content, sig)
@@ -535,6 +546,7 @@ class EventFactory {
                 ChannelSummaryEvent.KIND -> ChannelSummaryEvent(id, pubKey, createdAt, tags, content, sig)
                 PresenceSnapshotEvent.KIND -> PresenceSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
                 TeamEvent.KIND -> TeamEvent(id, pubKey, createdAt, tags, content, sig)
+                TeamCatalogEvent.KIND -> TeamCatalogEvent(id, pubKey, createdAt, tags, content, sig)
                 ApprovalDenyEvent.KIND -> ApprovalDenyEvent(id, pubKey, createdAt, tags, content, sig)
                 ApprovalGrantEvent.KIND -> ApprovalGrantEvent(id, pubKey, createdAt, tags, content, sig)
                 WorkflowApprovalDeniedEvent.KIND -> WorkflowApprovalDeniedEvent(id, pubKey, createdAt, tags, content, sig)

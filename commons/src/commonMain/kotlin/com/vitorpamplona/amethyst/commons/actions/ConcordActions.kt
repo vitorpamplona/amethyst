@@ -33,8 +33,8 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
-import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
@@ -212,24 +212,30 @@ object ConcordActions {
 
     /**
      * The older Chat Planes of a channel this account can still read, beside [currentChannelPlane]:
-     *  - Public: its plane under every held prior root ([historicalChannelPlanes]), plus the
-     *    private-era plane when a channel key is held (a channel that was Private before);
-     *  - Private: none. Only the channel-key planes are its own; the root-derived plane is readable
-     *    by every member, so showing it would present public content as private (Armada
-     *    `channelsView`). With no priors kept per channel key, that leaves nothing.
+     *  - Public: its plane under every held prior root ([historicalChannelPlanes]), plus every
+     *    private-era plane a channel key is held for (a channel that was Private before);
+     *  - Private: the planes of the older channel keys the entry still carries (its `seed` and a
+     *    peer's `priors`, [ConcordChannelKeyring.historicalKeys]) — history across a channel rekey.
+     *    Never the root-derived plane: every member reads that one, so showing it would present
+     *    public content as private (Armada `channelsView`).
      */
     fun historicalChannelPlanes(
         entry: ConcordCommunityListEntry,
         channelIdHex: HexKey,
         isPrivate: Boolean,
     ): List<ChannelPlane> {
-        if (isPrivate) return emptyList()
+        val channelId = channelIdHex.hexToByteArray()
+        val olderKeys =
+            ConcordChannelKeyring.historicalKeys(entry, channelIdHex).map { old ->
+                ChannelPlane(channelIdHex, old.epoch, ConcordChannelKeys.privateChannel(old.key.hexToByteArray(), channelId, old.epoch))
+            }
+        if (isPrivate) return olderKeys
         val rootEras = historicalChannelPlanes(entry.heldRoots, listOf(channelIdHex))
         val privateEra =
             heldPrivateChannelKey(entry, channelIdHex)?.let { held ->
-                ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelIdHex.hexToByteArray(), held.epoch))
+                ChannelPlane(channelIdHex, held.epoch, ConcordChannelKeys.privateChannel(held.key.hexToByteArray(), channelId, held.epoch))
             }
-        return rootEras + listOfNotNull(privateEra)
+        return rootEras + listOfNotNull(privateEra) + olderKeys
     }
 
     /**
@@ -500,6 +506,11 @@ object ConcordActions {
      * Builds an encrypted-seal **edit** wrap (kind-3302 [ChannelChat.edit] of [target]) on the
      * [channel] plane. [newText] replaces [target]'s content on receivers that apply the edit overlay;
      * only the original author's edits take effect, so restrict callers to their own messages.
+     *
+     * The Edit carries [expiration] verbatim — by default [target]'s own NIP-40 deadline, and none
+     * when [target] has none — never `now + timer`: an Edit stamped with a fresh deadline would
+     * outlive (or cut short) the message it revises, so the revised words could survive the message
+     * the timer already erased (CORD-08 §2; the reference client keeps `expirationOf(original)`).
      */
     suspend fun buildChannelEdit(
         authorSigner: NostrSigner,
@@ -510,9 +521,10 @@ object ConcordActions {
         newText: String,
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
-        timerSecs: Long? = null,
+        expiration: Long? = ConcordDisappearing.expirationOf(target),
     ): Event {
-        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, withTimer(extraTags, ConcordChatEditEvent.KIND, createdAt, timerSecs))
+        val tags = ConcordDisappearing.withExpiration(extraTags.filterNot { it.isNotEmpty() && it[0] == "expiration" }.toTypedArray(), expiration)
+        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, tags)
         return wrapChat(rumor, channel, authorSigner)
     }
 
@@ -616,14 +628,16 @@ object ConcordActions {
     /**
      * [openChannelRumor] without the CORD-08 expiry refusal, for a caller that must tell an expired
      * rumor apart from garbage — the session, which purges an expired rumor's wrap instead of merely
-     * skipping it. Such a caller owns the refusal.
+     * skipping it. Such a caller owns the refusal. [kinds] widens the gate to
+     * [ChannelChat.PLANE_KINDS] for a caller that routes the WebXDC signal apart from chat rows.
      */
     fun openChannelRumorAnyExpiry(
         wrap: Event,
         channel: GroupKey,
         channelId: HexKey,
         epoch: Long,
-    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch) }
+        kinds: Set<Int> = ChannelChat.CHAT_KINDS,
+    ): Event? = ConcordStreamEnvelope.openOrNull(wrap, channel)?.let { ChannelChat.acceptOpened(it, channelId, epoch, kinds) }
 
     // ---- invites --------------------------------------------------------------
 
@@ -676,6 +690,7 @@ object ConcordActions {
         expiresAtMs: Long? = null,
         name: String = entry.name,
         icon: ImagePointer? = null,
+        onlyChannelIds: Set<HexKey>? = null,
     ): CommunityInvite =
         CommunityInvite(
             communityId = entry.id,
@@ -684,7 +699,12 @@ object ConcordActions {
             communityRoot = entry.root,
             rootEpoch = entry.rootEpoch,
             controlPk = entry.controlPk,
-            channels = ConcordInviteVend.toInviteChannels(ConcordInviteVend.vendableChannels(entry.privateChannels, authority, recipient)),
+            channels =
+                ConcordInviteVend.toInviteChannels(
+                    ConcordInviteVend
+                        .vendableChannels(entry.privateChannels, authority, recipient)
+                        .filter { onlyChannelIds == null || it.channelId.lowercase() in onlyChannelIds },
+                ),
             relays = entry.relays.take(ConcordInviteBundle.MAX_COMMUNITY_RELAYS),
             name = name.ifBlank { entry.name },
             icon = icon,
@@ -705,6 +725,7 @@ object ConcordActions {
         sender: HexKey,
         recipient: HexKey,
         expiresAtMs: Long? = null,
+        onlyChannelIds: Set<HexKey>? = null,
     ): ConcordDirectInviteDraft {
         val to = recipient.lowercase()
         if (!HEX64.matches(to)) return ConcordDirectInviteDraft.Refused(ConcordDirectInviteSendResult.INVALID_RECIPIENT)
@@ -719,6 +740,7 @@ object ConcordActions {
                 expiresAtMs = expiresAtMs,
                 name = state.metadata?.name ?: entry.name,
                 icon = state.metadata?.icon,
+                onlyChannelIds = onlyChannelIds?.mapTo(HashSet()) { it.lowercase() },
             ),
         )
     }
@@ -879,11 +901,42 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, guestbook, memberSigner, encrypted = true, createdAt = createdAt)
     }
 
-    /** Opens the guestbook [wraps] into their live membership set (joins minus later leaves). */
+    /**
+     * Builds a self-signed Guestbook LEAVE (kind 3306) wrap on the community's Guestbook Plane
+     * (CORD-02 §5): the member's own word that they left, so everyone else's coalesced roster drops
+     * them and a later Refounding stops re-keying them.
+     */
+    suspend fun buildGuestbookLeave(
+        memberSigner: NostrSigner,
+        guestbook: GroupKey,
+        createdAt: Long,
+    ): Event = ConcordStreamEnvelope.wrap(Guestbook.leave(memberSigner.pubKey, createdAt), guestbook, memberSigner, encrypted = true, createdAt = createdAt)
+
+    /**
+     * Builds an authorized Guestbook KICK (kind 3309) wrap naming [target], citing [citation] — the
+     * actor's own Grant head (`vac`, CORD-04 §5), null only for the owner. A Kick is the *second*
+     * layer of a removal: the caller strips the target's roles first (CORD-04 §6).
+     */
+    suspend fun buildGuestbookKick(
+        actorSigner: NostrSigner,
+        guestbook: GroupKey,
+        target: HexKey,
+        citation: AuthorityCitation?,
+        createdAt: Long,
+    ): Event {
+        val rumor = Guestbook.kick(actorSigner.pubKey, target.lowercase(), createdAt, citation = citation)
+        return ConcordStreamEnvelope.wrap(rumor, guestbook, actorSigner, encrypted = true, createdAt = createdAt)
+    }
+
+    /**
+     * Opens the guestbook [wraps] into their live membership set: joins minus later leaves and later
+     * Kicks honored against [authority] (none is honored without it).
+     */
     fun guestbookMembers(
         wraps: List<Event>,
         guestbook: GroupKey,
-    ): Set<HexKey> = projectGuestbook(wraps.mapNotNull { guestbookEntry(it, guestbook) })
+        authority: AuthorityResolver? = null,
+    ): Set<HexKey> = projectGuestbook(wraps.mapNotNull { guestbookEntry(it, guestbook) }, authority)
 
     /**
      * Opens a single guestbook [wrap] into its entry, or null when it doesn't belong to
@@ -898,17 +951,42 @@ object ConcordActions {
     fun guestbookEntry(
         wrap: Event,
         guestbook: GroupKey,
-    ): GuestbookEntry? = ConcordStreamEnvelope.openOrNull(wrap, guestbook)?.rumor?.let { Guestbook.parse(it) }
+    ): GuestbookEntry? =
+        ConcordStreamEnvelope
+            .openOrNull(wrap, guestbook)
+            // The Guestbook's seals MUST be encrypted (CORD-02 §5); a plaintext one is Control-only.
+            ?.takeIf { it.sealKind == ConcordStreamEnvelope.KIND_SEAL_ENCRYPTED }
+            ?.rumor
+            ?.let { Guestbook.parse(it) }
 
-    /** Last-writer-wins projection of already-opened [entries] down to the JOINed member set. */
-    fun projectGuestbook(entries: Collection<GuestbookEntry>): Set<HexKey> {
-        val latest = HashMap<HexKey, GuestbookEntry>()
-        for (entry in entries) {
-            val prev = latest[entry.member.lowercase()]
-            if (prev == null || entry.createdAt > prev.createdAt) latest[entry.member.lowercase()] = entry
-        }
-        return latest.values.filter { it.action == GuestbookAction.JOIN }.mapTo(HashSet()) { it.member.lowercase() }
+    /**
+     * The honored Kick naming [me] in a [coalesced] Guestbook (CORD-04 §6), or null. Only a Kick
+     * newer than [addedAtMs] — when this membership began — counts: an older one judged an earlier
+     * membership that a re-join has already put behind us. The owner is never kicked.
+     */
+    fun honoredKickAgainst(
+        coalesced: Map<HexKey, GuestbookEntry>,
+        me: HexKey,
+        owner: HexKey,
+        addedAtMs: Long,
+    ): GuestbookEntry? {
+        val self = me.lowercase()
+        if (self == owner.lowercase()) return null
+        return coalesced[self]?.takeIf { it.action == GuestbookAction.KICK && it.ms > addedAtMs }
     }
+
+    /**
+     * The CORD-02 §5 coalesce of already-opened [entries] (latest motion per npub, Kicks honored
+     * against [authority]) down to the JOINed member set.
+     */
+    fun projectGuestbook(
+        entries: Collection<GuestbookEntry>,
+        authority: AuthorityResolver? = null,
+        nowMs: Long = TimeUtils.nowMillis(),
+    ): Set<HexKey> = joinedMembers(Guestbook.coalesce(entries, nowMs, authority))
+
+    /** The npubs whose coalesced Guestbook state ([Guestbook.coalesce]) is a Join. */
+    fun joinedMembers(coalesced: Map<HexKey, GuestbookEntry>): Set<HexKey> = coalesced.filterValues { it.action == GuestbookAction.JOIN }.keys
 
     // ---- refounding / rekey (CORD-06) ----------------------------------------
 

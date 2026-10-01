@@ -70,7 +70,9 @@ object NappletBrowserContract {
      * Provider → client: the main-frame load state changed. Carries [KEY_IS_LOADING] (a navigation is in
      * flight), [KEY_LOAD_FAILED] (the main frame errored), and [KEY_URL] (the page it settled on). Lets
      * the main process draw a loading spinner / error overlay over the embedded surface, and recover a
-     * favorite whose session came up on a blank page (re-navigate to its real URL).
+     * favorite whose session came up on a blank page (re-navigate to its real URL). [KEY_RENDERER_GONE]
+     * marks a failure caused by the WebView renderer dying: the tab has no WebView left, so the client
+     * must [MSG_RELOAD] (which rebuilds it on the page it was showing).
      */
     const val MSG_LOAD_STATE = 10
 
@@ -184,6 +186,61 @@ object NappletBrowserContract {
     /** Leave HTML fullscreen (the user pressed back). */
     const val MSG_EXIT_FULLSCREEN = 33
 
+    /**
+     * Provider → client: a download the page started (an attachment, `<a download>`, or an inline
+     * `browser.download`) needs the user's consent before anything is fetched or written into the shared
+     * Downloads collection. Carries [KEY_DOWNLOAD_ID], the WebView-reported [KEY_BROWSER_ORIGIN] (never a
+     * page-supplied field), the sanitized [KEY_DOWNLOAD_NAME], [KEY_DOWNLOAD_SIZE], [KEY_DOWNLOAD_SOURCE], and
+     * [KEY_DOWNLOAD_RISKY] (an install-or-script-like extension). Answered with
+     * [MSG_DOWNLOAD_CONSENT_RESULT] on every outcome; the bytes themselves never leave the `:napplet` process.
+     */
+    const val MSG_DOWNLOAD_CONSENT = 34
+
+    /** Client → provider: the user's answer to [MSG_DOWNLOAD_CONSENT]: [KEY_DOWNLOAD_ID] + [KEY_DOWNLOAD_ALLOWED]. */
+    const val MSG_DOWNLOAD_CONSENT_RESULT = 35
+
+    /** Provider → client: withdraw the [MSG_DOWNLOAD_CONSENT] card [KEY_DOWNLOAD_ID] (its tab closed). */
+    const val MSG_DOWNLOAD_CANCEL = 36
+
+    /**
+     * Client → provider: the tab left the screen (parked off-screen by the tab layer). The page's WebView is
+     * paused — animations, media and geolocation stop — so warm tabs in the background don't keep burning
+     * CPU and battery. Mirrors [NappletEmbedContract.MSG_PAUSE] for napplets.
+     */
+    const val MSG_PAUSE = 39
+
+    /** Client → provider: the tab is the visible one again; resume its WebView. */
+    const val MSG_RESUME = 40
+
+    /**
+     * Client → provider: the tab was torn down (evicted, or rebuilt for a theme/account change). Drops the
+     * session and its WebView even if the surface never opened — a session created for a view that was
+     * disposed before it attached would otherwise sit in the provider forever, pinning its client.
+     */
+    const val MSG_CLOSE_SESSION = 41
+
+    /**
+     * Client → provider: whether the user is looking at this tab ([KEY_ENABLED]) — it's the visible tab AND
+     * the app is on screen. While not, the provider holds the page's requests that act for the user or use
+     * their key (NIP-07 sign / encrypt / decrypt) and sends them once the user is back, so a parked or
+     * backgrounded site can't sign — even with "allow always" — while nobody is watching. Reads still flow.
+     */
+    const val MSG_SET_ATTENDED = 37
+
+    /**
+     * Provider → client: whether the process's pages currently go through Tor ([KEY_USE_TOR]). Sent on every
+     * change. Tor always wins process-wide, so a tab set to the open web can still be on Tor because another
+     * open page needs it — the client shows why.
+     */
+    const val MSG_ROUTE = 38
+
+    /**
+     * On [MSG_LOAD_STATE]: the page was not loaded because its network route can't be honored (Tor wanted but
+     * not running yet, this WebView can't proxy, or applying the proxy failed). Nothing went out; the client
+     * shows the error + Retry even over a page that loaded before.
+     */
+    const val KEY_ROUTE_BLOCKED = "routeBlocked"
+
     const val KEY_CAN_GO_FORWARD = "canGoForward"
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"
@@ -205,6 +262,24 @@ object NappletBrowserContract {
     const val KEY_PERMISSION_ID = "permissionId"
     const val KEY_PERMISSIONS = "permissions"
     const val KEY_BROWSER_ORIGIN = "browserOrigin"
+
+    /** Correlates a [MSG_DOWNLOAD_CONSENT] prompt with its [MSG_DOWNLOAD_CONSENT_RESULT] answer. */
+    const val KEY_DOWNLOAD_ID = "downloadId"
+
+    /** The sanitized file name the consented download will be stored under (already path/control-char stripped). */
+    const val KEY_DOWNLOAD_NAME = "downloadName"
+
+    /** The size in bytes the consented download will write, or -1 when the server didn't say. */
+    const val KEY_DOWNLOAD_SIZE = "downloadSize"
+
+    /** The host a network download is fetched from (absent for inline data), shown when it isn't the page's. */
+    const val KEY_DOWNLOAD_SOURCE = "downloadSource"
+
+    /** Whether [KEY_DOWNLOAD_NAME]'s extension is one the user should double-check (installer/script-like). */
+    const val KEY_DOWNLOAD_RISKY = "downloadRisky"
+
+    /** The user's answer in [MSG_DOWNLOAD_CONSENT_RESULT]: true = save, false = discard. */
+    const val KEY_DOWNLOAD_ALLOWED = "downloadAllowed"
 
     const val KEY_FILE_CHOOSER_ID = "fileChooserId"
     const val KEY_FILE_CHOOSER_ACCEPT = "fileChooserAccept"
@@ -232,6 +307,7 @@ object NappletBrowserContract {
 
     const val KEY_IS_LOADING = "isLoading"
     const val KEY_LOAD_FAILED = "loadFailed"
+    const val KEY_RENDERER_GONE = "rendererGone"
 
     const val KEY_CONSOLE_LEVEL = "consoleLevel"
     const val KEY_CONSOLE_MESSAGE = "consoleMessage"

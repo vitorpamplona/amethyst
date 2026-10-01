@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
@@ -65,25 +64,53 @@ data class OwnerAttestation(
 
     /**
      * Verifies this attestation authorizes [agentPubKey]. Checks structural validity
-     * (valid hex keys, canonical conditions, no self-attestation) and then the owner's
-     * Schnorr signature over the commitment hash.
+     * (lowercase hex keys and signature, canonical conditions, no self-attestation) and then
+     * the owner's Schnorr signature over the commitment hash. Time clauses are NOT evaluated
+     * here; see [verifyForAuthAt].
      */
     fun verify(agentPubKey: HexKey): Boolean {
-        if (!agentPubKey.isValid() || !ownerPubKey.isValid()) return false
+        if (!agentPubKey.isValid() || !ownerPubKey.isValid() || !isLowercaseHex(ownerPubKey, 64)) return false
         // Self-attestation is explicitly prohibited: the owner must differ from the agent.
         if (ownerPubKey == agentPubKey) return false
         if (!AttestationConditions.isValid(conditions)) return false
-        if (sig.length != 128 || !Hex.isHex(sig)) return false
+        // Buzz rejects uppercase hex before it reaches its (permissive) decoder.
+        if (!isLowercaseHex(sig, 128)) return false
 
         val message = sha256(commitment(agentPubKey).encodeToByteArray())
         return Nip01Crypto.verify(sig.hexToByteArray(), message, ownerPubKey.hexToByteArray())
     }
+
+    /**
+     * The check Buzz runs at admission: [verify], plus every `created_at<` / `created_at>`
+     * clause evaluated against the signed authentication event's [authCreatedAt] (strictly).
+     * An expired or not-yet-valid credential grants nothing, so the relay treats the agent as a
+     * non-member (`restricted`).
+     */
+    fun verifyForAuthAt(
+        agentPubKey: HexKey,
+        authCreatedAt: Long,
+    ): Boolean = verify(agentPubKey) && isValidAt(authCreatedAt)
+
+    /** True when the time clauses admit an authentication signed at [authCreatedAt]. */
+    fun isValidAt(authCreatedAt: Long): Boolean = AttestationConditions.timeBoundsAllow(conditions, authCreatedAt)
+
+    /** The last second this credential admits an authentication, or null when unbounded. */
+    fun validUntil(): Long? = AttestationConditions.validUntil(conditions)
+
+    /** The first second this credential admits an authentication, or null when unbounded. */
+    fun validFrom(): Long? = AttestationConditions.validFrom(conditions)
 
     /** Builds the NIP-OA `auth` tag for this attestation. */
     fun toTag(): Array<String> = AuthTag.assemble(this)
 
     companion object {
         const val COMMITMENT_PREFIX = "nostr:agent-auth:"
+
+        /** Exactly [length] characters of lowercase hex, the only form Buzz accepts on the wire. */
+        fun isLowercaseHex(
+            value: String,
+            length: Int,
+        ): Boolean = value.length == length && value.all { it in '0'..'9' || it in 'a'..'f' }
 
         /** SHA-256 of the commitment string — the 32-byte message the owner signs. */
         fun commitmentHash(
@@ -117,6 +144,35 @@ data class OwnerAttestation(
         ): OwnerAttestation {
             val priv = requireNotNull(ownerKey.privKey) { "Owner key is read-only; cannot sign an attestation" }
             return sign(agentPubKey, conditions.encode(), priv)
+        }
+
+        /**
+         * The owner an agent's event declares through NIP-OA, or null. The event must carry
+         * **exactly one** `auth` tag (a malformed second one still counts, so there is no
+         * first-valid-tag fallback), it must verify for the event's own author [pubKey], and every
+         * condition must apply to this event ([AttestationConditions.appliesToEvent]).
+         *
+         * Buzz reads an agent's owner this way off the agent's kind-0 profile: that owner may edit
+         * the agent's channel messages, and names the agent in the UI. The event's own signature
+         * is the caller's to have checked. Ground truth: `profile_valid_oa_owner_pubkey` in Buzz's
+         * `desktop/src-tauri/src/nostr_convert.rs`.
+         */
+        fun verifiedOwnerOf(
+            pubKey: HexKey,
+            kind: Int,
+            createdAt: Long,
+            tags: Array<Array<String>>,
+        ): HexKey? {
+            var authTag: Array<String>? = null
+            for (tag in tags) {
+                if (tag.isEmpty() || tag[0] != AuthTag.TAG_NAME) continue
+                if (authTag != null) return null
+                authTag = tag
+            }
+            val attestation = AuthTag.parse(authTag ?: return null) ?: return null
+            if (!attestation.verify(pubKey)) return null
+            if (!AttestationConditions.appliesToEvent(attestation.conditions, kind, createdAt)) return null
+            return attestation.ownerPubKey
         }
 
         /** Parses a NIP-OA `auth` tag; see [AuthTag.parse]. Does not verify the signature. */

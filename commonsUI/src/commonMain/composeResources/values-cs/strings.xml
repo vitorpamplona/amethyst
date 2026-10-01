@@ -6488,4 +6488,5 @@
     <string name="cordn_voice_stop">Zastavit a odeslat</string>
     <string name="browser_address_hint">Hledat nebo zadat adresu</string>
     <string name="napplet_untitled">Nepojmenovaný nApplet</string>
+    <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
 </resources>

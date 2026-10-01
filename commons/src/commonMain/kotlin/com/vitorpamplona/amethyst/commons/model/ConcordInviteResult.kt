@@ -76,4 +76,10 @@ sealed interface ConcordInviteResult {
      * missing (CORD-02 §8). Nothing was announced. Retrying can help once the List loads.
      */
     data object NotSaved : ConcordInviteResult
+
+    /**
+     * This invite is already being accepted (a second tap, or the hub and Notifications at once).
+     * Nothing was done; the accept already running reports the outcome.
+     */
+    data object InProgress : ConcordInviteResult
 }

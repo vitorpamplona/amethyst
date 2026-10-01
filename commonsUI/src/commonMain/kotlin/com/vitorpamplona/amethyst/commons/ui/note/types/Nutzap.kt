@@ -93,7 +93,7 @@ fun RenderNutzap(
                 },
         )
 
-        RenderZappedPost(note, quotesLeft, cardBackground, accountViewModel, nav)
+        RenderTargetNote(note, quotesLeft, cardBackground, accountViewModel, nav)
 
         ActivityAmountRow(showAmount(BigDecimal(nutzapEvent.claimedSatsTotal())), orange)
 

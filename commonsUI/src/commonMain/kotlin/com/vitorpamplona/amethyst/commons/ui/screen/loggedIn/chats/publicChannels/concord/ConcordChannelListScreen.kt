@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -75,17 +76,29 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_name
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_access_role_label
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_create
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete_message
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_delete_title
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_make_private
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_make_private_message
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_make_public
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_make_public_message
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_name_label
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_no_messages
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_private_hint
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_private_toggle
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_rename_save
+import com.vitorpamplona.amethyst.commons.resources.concord_channel_rotate_key
 import com.vitorpamplona.amethyst.commons.resources.concord_channels_empty
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_action
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_community
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_confirm
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_message
+import com.vitorpamplona.amethyst.commons.resources.concord_dissolve_title
 import com.vitorpamplona.amethyst.commons.resources.concord_edit_title
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_action
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_links_action
@@ -118,6 +131,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -183,6 +197,7 @@ fun ConcordChannelListScreen(
     // Read once here (it is @Composable) so the post-leave navigation can use it from a callback.
     val canPop = nav.canPop()
     var showLeave by remember { mutableStateOf(false) }
+    var showDissolve by remember { mutableStateOf(false) }
     var showDirectInvite by remember { mutableStateOf(false) }
 
     if (showDirectInvite) {
@@ -203,6 +218,18 @@ fun ConcordChannelListScreen(
                 // right when we were pushed here; when this community is a bottom-nav root there is
                 // nothing to pop, so restart the stack on the Concord hub.
                 if (canPop) nav.popBack() else nav.newStack(Route.Concords)
+            },
+        )
+    }
+
+    if (showDissolve) {
+        ConcordDissolveDialog(
+            communityName = communityName,
+            onDismiss = { showDissolve = false },
+            onConfirm = {
+                showDissolve = false
+                // Stay here: the dissolved community stays readable, and this screen shows it read-only.
+                accountViewModel.dissolveConcordCommunity(communityId)
             },
         )
     }
@@ -236,13 +263,33 @@ fun ConcordChannelListScreen(
             initialName = editor.initialName,
             isCreate = editor.channelIdHex == null,
             onDismiss = { channelEditor = null },
-            onConfirm = { newName ->
+            onConfirm = { newName, makePrivate, accessRoleName ->
                 channelEditor = null
                 scope.launch {
                     if (editor.channelIdHex == null) {
-                        account.concord.createConcordChannel(communityId, newName)
+                        account.concord.createConcordChannel(communityId, newName, makePrivate, accessRoleName)
                     } else {
                         account.concord.renameConcordChannel(communityId, editor.channelIdHex, newName)
+                    }
+                }
+            },
+        )
+    }
+
+    // Privatise / publicise a channel (CORD-03 §2): both are MANAGE_CHANNELS edits, and both say
+    // plainly what they can't do — a conversion protects the future only.
+    var channelToConvert by remember { mutableStateOf<ConcordChannelConversion?>(null) }
+    channelToConvert?.let { target ->
+        ConcordChannelConvertDialog(
+            target = target,
+            onDismiss = { channelToConvert = null },
+            onConfirm = { accessRoleName ->
+                channelToConvert = null
+                scope.launch {
+                    if (target.toPrivate) {
+                        account.concord.privatizeConcordChannel(communityId, target.channelIdHex, accessRoleName)
+                    } else {
+                        account.concord.publicizeConcordChannel(communityId, target.channelIdHex)
                     }
                 }
             },
@@ -386,6 +433,21 @@ fun ConcordChannelListScreen(
                                 showLeave = true
                             },
                         )
+                        // Owner only, like the verifiers: anyone else's tombstone is ignored (CORD-02 §9).
+                        if (isOwner && state?.dissolved != true) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringRes(Res.string.concord_dissolve_community),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                onClick = {
+                                    menuOpen = false
+                                    showDissolve = true
+                                },
+                            )
+                        }
                     }
                 },
             )
@@ -432,6 +494,26 @@ fun ConcordChannelListScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
             ) {
+                // The community's description (CORD-02 §6). Only the Edit screen showed it, so a member
+                // never saw what the community is about.
+                state
+                    ?.metadata
+                    ?.description
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { description ->
+                        item(key = "concord-community-description") {
+                            Text(
+                                description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                            )
+                            HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
                     val name = def.name.ifBlank { entry.key }
@@ -444,6 +526,8 @@ fun ConcordChannelListScreen(
                                 .keys
                                 .sorted()
                         }
+                    // A rotation needs the current key (CORD-06): only a holder can rotate.
+                    val holdsKey = def.private && session?.entry?.let { ConcordChannelKeyring.heldKey(it, entry.key) } != null
                     ConcordChannelListRow(
                         communityId = communityId,
                         channelKey = entry.key,
@@ -455,6 +539,9 @@ fun ConcordChannelListScreen(
                         onClick = { nav.nav(Route.Concord(communityId, entry.key)) },
                         onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
                         onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                        onTogglePrivate = { channelToConvert = ConcordChannelConversion(entry.key, name, toPrivate = !def.private) },
+                        isPrivate = def.private,
+                        onRotateKey = if (holdsKey) ({ accountViewModel.rotateConcordChannelKey(communityId, entry.key) }) else null,
                     )
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -482,6 +569,9 @@ private fun ConcordChannelListRow(
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onTogglePrivate: () -> Unit,
+    isPrivate: Boolean,
+    onRotateKey: (() -> Unit)?,
 ) {
     val account = accountViewModel.account
     // getOrCreate (not getIfExists): a channel folded on the Control Plane may have no message note
@@ -545,6 +635,9 @@ private fun ConcordChannelListRow(
             ConcordChannelRowMenu(
                 onRename = onRename,
                 onDelete = onDelete,
+                onTogglePrivate = onTogglePrivate,
+                isPrivate = isPrivate,
+                onRotateKey = onRotateKey,
             )
         }
     }
@@ -667,17 +760,92 @@ fun ConcordLeaveDialog(
     )
 }
 
+/** Confirms dissolving a community (CORD-02 §9): irreversible, so the confirm button is the error color. */
+@Composable
+fun ConcordDissolveDialog(
+    communityName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.concord_dissolve_title, communityName)) },
+        text = { Text(stringRes(Res.string.concord_dissolve_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(Res.string.concord_dissolve_confirm), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(Res.string.cancel))
+            }
+        },
+    )
+}
+
 /** A pending channel create ([channelIdHex] null) or rename target. */
 private data class ConcordChannelEditor(
     val channelIdHex: String?,
     val initialName: String,
 )
 
-/** The per-channel-row overflow menu (rename / delete), shown only to channel managers. */
+/** A pending privatise ([toPrivate]) or publicise of [channelIdHex]. */
+private data class ConcordChannelConversion(
+    val channelIdHex: String,
+    val name: String,
+    val toPrivate: Boolean,
+)
+
+/** Confirms a Private/Public conversion; privatising also names the new access Role. */
+@Composable
+private fun ConcordChannelConvertDialog(
+    target: ConcordChannelConversion,
+    onDismiss: () -> Unit,
+    onConfirm: (String?) -> Unit,
+) {
+    var roleName by remember { mutableStateOf(target.name) }
+    val action = if (target.toPrivate) Res.string.concord_channel_make_private else Res.string.concord_channel_make_public
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(action)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (target.toPrivate) {
+                    Text(stringRes(Res.string.concord_channel_make_private_message, target.name, roleName.ifBlank { target.name }))
+                    OutlinedTextField(
+                        value = roleName,
+                        onValueChange = { roleName = it },
+                        singleLine = true,
+                        label = { Text(stringRes(Res.string.concord_channel_access_role_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    Text(stringRes(Res.string.concord_channel_make_public_message, target.name))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(roleName.trim().ifBlank { null }) }) {
+                Text(stringRes(action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(Res.string.cancel))
+            }
+        },
+    )
+}
+
+/** The per-channel-row overflow menu (rename / privacy / rotate / delete), shown only to channel managers. */
 @Composable
 private fun ConcordChannelRowMenu(
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onTogglePrivate: () -> Unit,
+    isPrivate: Boolean,
+    onRotateKey: (() -> Unit)?,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
@@ -696,6 +864,22 @@ private fun ConcordChannelRowMenu(
                     onRename()
                 },
             )
+            DropdownMenuItem(
+                text = { Text(stringRes(if (isPrivate) Res.string.concord_channel_make_public else Res.string.concord_channel_make_private)) },
+                onClick = {
+                    expanded = false
+                    onTogglePrivate()
+                },
+            )
+            onRotateKey?.let { rotate ->
+                DropdownMenuItem(
+                    text = { Text(stringRes(Res.string.concord_channel_rotate_key)) },
+                    onClick = {
+                        expanded = false
+                        rotate()
+                    },
+                )
+            }
             DropdownMenuItem(
                 text = {
                     Text(
@@ -718,9 +902,11 @@ private fun ConcordChannelEditDialog(
     initialName: String,
     isCreate: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
+    onConfirm: (name: String, makePrivate: Boolean, accessRoleName: String?) -> Unit,
 ) {
     var name by remember { mutableStateOf(initialName) }
+    var makePrivate by remember { mutableStateOf(false) }
+    var roleName by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -735,18 +921,48 @@ private fun ConcordChannelEditDialog(
             )
         },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                label = { Text(stringRes(Res.string.concord_channel_name_label)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text(stringRes(Res.string.concord_channel_name_label)) },
+                    isError = !concordNameFits(name),
+                    supportingText = { ConcordNameBudget(name) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // A new channel may be Private (CORD-03): its own key, and an access Role — the
+                // Roles scoped to a channel ARE its access list (CORD-04 §2).
+                if (isCreate) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringRes(Res.string.concord_channel_private_toggle), modifier = Modifier.weight(1f))
+                        Switch(checked = makePrivate, onCheckedChange = { makePrivate = it })
+                    }
+                    if (makePrivate) {
+                        Text(
+                            stringRes(Res.string.concord_channel_private_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = roleName,
+                            onValueChange = { roleName = it },
+                            singleLine = true,
+                            placeholder = { Text(name.trim()) },
+                            label = { Text(stringRes(Res.string.concord_channel_access_role_label)) },
+                            isError = !concordNameFits(roleName),
+                            supportingText = { if (roleName.isNotBlank()) ConcordNameBudget(roleName) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank(),
-                onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
+                // Past the 64-byte cap every reader drops the edition, so the action would silently no-op.
+                enabled = name.isNotBlank() && concordNameFits(name) && concordNameFits(roleName),
+                onClick = { if (name.isNotBlank() && concordNameFits(name) && concordNameFits(roleName)) onConfirm(name.trim(), makePrivate, roleName.trim().ifBlank { null }) },
             ) {
                 Text(
                     stringRes(
