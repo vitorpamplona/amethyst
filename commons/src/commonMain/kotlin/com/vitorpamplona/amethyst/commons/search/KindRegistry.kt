@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -123,6 +124,8 @@ object KindRegistry {
             "podcast" to listOf(PodcastMetadataEvent.KIND),
             "episode" to listOf(Podcasting20EpisodeEvent.KIND),
             "software" to listOf(SoftwareApplicationEvent.KIND),
+            // Curated sets of those apps (Zapstore's categories).
+            "appset" to listOf(AppCurationSetEvent.KIND),
             "followpack" to listOf(StarterPackEvent.KIND),
             "zappoll" to listOf(ZapPollEvent.KIND),
             // `video` is every video kind; these name the two the app gives their own feeds.
