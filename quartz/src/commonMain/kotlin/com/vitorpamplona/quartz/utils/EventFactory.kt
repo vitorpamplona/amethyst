@@ -966,8 +966,8 @@ class EventFactory {
          *
          * For most kinds that is just [create] with no tags. It is not for kinds whose class is
          * chosen by tags, where a tagless event can land on a different class than the kind's
-         * real events. Kind 38000 is the case that matters: with no tags it is a plain [Event]
-         * (junk), yet every typed shape of it — mint recommendation, ballot, prediction market —
+         * real events. Kind 38000 is the case that matters: with no tags it is an
+         * [UnrecognizedKind38000Event] (junk, unsearchable), yet every typed shape of it — mint recommendation, ballot, prediction market —
          * is a searchable, renderable class, so it answers as its primary class. (The other
          * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
          *

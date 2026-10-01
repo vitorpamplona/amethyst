@@ -158,10 +158,11 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 may hold encrypted private items in `content`, which must never be indexed.
 
 ‡ **Kind 38000 is shared** by NIP-87 mint recommendations and two app formats, and `EventFactory`
-picks the class by tags: `MintRecommendationEvent` when the first `k` is 38172/38173 (or, with no
-`k`, a non-blank `u`); else `BallotEvent` on a non-blank `election`; else `PredictionMarketEvent`
-on a `market`, ≥2 `outcome`s, or `type` + `end`; else a plain, unsearchable `Event` (the spam
-votes that make up most of the kind). Kind-level probes (`EventFactory.probe`) answer as
+picks the class by tags: `MintRecommendationEvent` when any `k` is 38172/38173 (or, with no
+`k`, a non-blank `u` or an `a` to a 38172/38173 address); else `BallotEvent` on a non-blank
+`election`; else `PredictionMarketEvent` on a `market`, ≥2 `outcome`s, or `type` + `end`; else
+`UnrecognizedKind38000Event` — addressable (stores still key it by `d`) but unsearchable (the
+spam votes that make up most of the kind). Kind-level probes (`EventFactory.probe`) answer as
 `MintRecommendationEvent`. A market's `title()`/`description()` come from its `data` tag JSON,
 the `title` tag, or JSON `content`, in that order.
 
