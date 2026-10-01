@@ -391,7 +391,7 @@ object SearchFieldExtractor {
             }
 
             is AppCurationSetEvent -> {
-                tiers(event, event.title(), event.description(), null)
+                tiers(event, event.titleOrName(), event.description(), null)
             }
 
             is RelaySetEvent -> {

@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
@@ -214,6 +215,7 @@ object RenderableKinds {
             // marketplace, apps, code and sites
             ClassifiedsEvent.KIND,
             SoftwareApplicationEvent.KIND,
+            AppCurationSetEvent.KIND,
             GitRepositoryEvent.KIND,
             RootSiteEvent.KIND,
             NamedSiteEvent.KIND,

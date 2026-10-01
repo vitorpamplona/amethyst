@@ -75,6 +75,8 @@ fun <T> ListCard(
     /** True when the event carries private members this viewer has no key for. */
     hasUnreadablePrivateItems: Boolean,
     backgroundColor: MutableState<Color>,
+    /** Extra lines under the description that only some list kinds carry, e.g. an app set's platforms. */
+    subtitle: (@Composable () -> Unit)? = null,
     itemContent: @Composable (T) -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -99,6 +101,8 @@ fun <T> ListCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+
+    subtitle?.invoke()
 
     // Only when there is nothing else to show. A card with visible members already reads as a list,
     // and most lists keep something private, so saying so on every one of them is noise. The line

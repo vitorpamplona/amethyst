@@ -300,6 +300,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
@@ -3828,6 +3829,7 @@ open class EventCache :
                 is AdvertisedRelayListEvent,
                 is CvmServerAnnouncementEvent,
                 is CvmToolsListEvent,
+                is AppCurationSetEvent,
                 is AppDefinitionEvent,
                 is AppRecommendationEvent,
                 is AppSpecificDataEvent,
