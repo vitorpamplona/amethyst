@@ -580,8 +580,8 @@
     <string name="concord_invite_revoking">Visszavonás…</string>
     <string name="concord_name_budget">%1$d / %2$d bájt</string>
     <string name="concord_invite_revoke_privatize_warning">Ez a közösség utolsó élő meghívási hivatkozása. A visszavonása priváttá teszi a közösséget, és lecseréli a kulcsait, így csak a jelenlegi tagok tartják meg a hozzáférést.</string>
-    <string name="concord_invite_revoked_privatized">A hivatkozás visszavonva. A közösség most privát, és a kulcsai le lettek cserélve.</string>
-    <string name="concord_invite_revoked_privatize_pending">A hivatkozás visszavonva. A közösség most privát, de a kulcsai nem lettek lecserélve: egy olyan adminisztrátornak kell lecserélnie őket, aki kitilthat tagokat.</string>
+    <string name="concord_invite_revoked_privatized">A hivatkozás vissza lett vonva. A közösség most privát, és a kulcsai le lettek cserélve.</string>
+    <string name="concord_invite_revoked_privatize_pending">A hivatkozás vissza lett vonva. A közösség most privát, de a kulcsai nem lettek lecserélve: egy olyan adminisztrátornak kell lecserélnie őket, aki kitilthat tagokat.</string>
     <string name="concord_mode_private">Privát</string>
     <plurals name="concord_mode_public">
         <item quantity="one">Nyilvános · %1$d élő meghívási hivatkozás</item>
@@ -3638,7 +3638,7 @@
     <string name="concord_channel_make_public_message">A közösség minden tagja olvashatja mostantól a(z) #%1$s csatornát. A privát állapotban közzétett üzenetek csak azoknak a tagoknak maradnak olvashatók, akik birtokolták a kulcsát.</string>
     <string name="concord_channel_name_label">Csatorna neve</string>
     <string name="concord_channel_no_messages">Még nincsenek üzenetek</string>
-    <string name="concord_channel_private_hint">Csak azok a tagok olvashatják, akik birtokolják a hozzáférési szerepkörét. Adja meg a szerepkört, hogy beengedje őket; a visszavonása lecseréli a csatornakulcsot.</string>
+    <string name="concord_channel_private_hint">Csak azok a tagok olvashatják, akik rendelkeznek az ehhez tartozó hozzáférési szerepkörrel. A szerepkör megadása lehetővé teszi számukra a belépést; a visszavonása a csatorna kulcsának frissítését eredményezi.</string>
     <string name="concord_channel_private_toggle">Privát csatorna</string>
     <string name="concord_channel_rename">Csatorna átnevezése</string>
     <string name="concord_channel_rename_save">Átnevezés</string>
@@ -5396,6 +5396,7 @@
     <string name="marmot_invite_device_rejected">Egyetlen átjátszó sem fogadta el a KeyPackage-et. Ellenőrizze az átjátszó beállításait, és próbálja újra.</string>
     <string name="chat_delivery_sending">Küldés\u2026</string>
     <string name="chat_delivery_failed">Nem sikerült elküldeni. Koppintson az újrapróbálkozáshoz.</string>
+    <string name="chat_delivery_rejected">Az átjátszó elutasította ezt az üzenetet</string>
     <plurals name="marmot_unread_messages">
         <item quantity="one">%1$d új üzenet</item>
         <item quantity="other">%1$d új üzenet</item>
@@ -5464,13 +5465,13 @@
     <string name="cordn_preview_video">Videó</string>
     <string name="cordn_preview_file">Fájl</string>
     <string name="new_conversation_cordn_title">Cordn csoport</string>
-    <string name="new_conversation_cordn_tagline">Titkosított csoportos csevegés, amelyet az Ön által választott koordinátor rendez.</string>
+    <string name="new_conversation_cordn_tagline">Titkosított csoportok egy Ön által választott koordinátoron</string>
     <string name="new_conversation_cordn_chip">Koordinált</string>
-    <string name="new_conversation_cordn_best">Azoknak a csapatoknak a legjobb, amelyek a beszélgetés egyetlen megbízható sorrendjét szeretnék.</string>
+    <string name="new_conversation_cordn_best">Azon csapatok számára, amelyek a beszélgetés egy megbízható sorrendjét szeretnék.</string>
     <string name="new_conversation_cordn_cta">Cordn csoport létrehozása</string>
-    <string name="new_conversation_cordn_pro_1">Végponttól végpontig titkosított MLS-sel – a koordinátor soha nem olvashat el egyetlen üzenetet sem.</string>
-    <string name="new_conversation_cordn_pro_2">Egy mindenki által elfogadott sorrend, így az előzményeket egy hibás óra sem keverheti össze.</string>
-    <string name="new_conversation_cordn_con_1">A koordinátor tudja, ki van a csoportban és mikor beszélnek, még ha nem is tudja elolvasni, mit mondanak.</string>
+    <string name="new_conversation_cordn_pro_1">A koordinátor nem tudja elolvasni az üzeneteket</string>
+    <string name="new_conversation_cordn_pro_2">Egy mindenki által elfogadott üzenetrendezési sorrend</string>
+    <string name="new_conversation_cordn_con_1">A koordinátor tudja, ki van a csoportban és mikor</string>
     <string name="cordn_invitations_entry_action">Meghívók áttekintése</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
@@ -6276,4 +6277,30 @@
     <string name="browser_pill_download_risky">Ez a fájltípus képes kódot futtatni. Ellenőrizze hogy a név megegyezik-e azzal, amit le akart tölteni.</string>
     <string name="browser_pill_download_save">Mentés</string>
     <string name="browser_pill_download_from">Innen: %1$s</string>
+    <string name="prediction_market">Fogadási piac</string>
+    <string name="prediction_market_status_open">Nyitva</string>
+    <string name="prediction_market_status_closed">Zárva</string>
+    <string name="prediction_market_status_resolved">Megoldva</string>
+    <string name="prediction_market_status_cancelled">Megszakítva</string>
+    <string name="prediction_market_demo">Bemutató · játékpénz</string>
+    <string name="prediction_market_closes_in">Bezár ekkor: %1$s</string>
+    <string name="prediction_market_closed_on">Bezárt ekkor: %1$s</string>
+    <string name="prediction_market_bet_range">Fogadások: %1$s-%2$s satoshi</string>
+    <string name="prediction_market_min_bet">Legkisebb tét: %1$s satoshi</string>
+    <string name="prediction_market_max_bet">Legnagyobb tét: %1$s satoshi</string>
+    <string name="prediction_market_fee">Díj: %1$s</string>
+    <string name="prediction_market_cancel_reason">Megszakítva: %1$s</string>
+    <string name="prediction_market_winning_outcome">Nyertes eredmény</string>
+    <plurals name="prediction_market_more_outcomes">
+        <item quantity="one">+%1$d további</item>
+        <item quantity="other">+%1$d további</item>
+    </plurals>
+    <string name="ballot">Szavazólap</string>
+    <string name="ballot_election">Választás: %1$s</string>
+    <string name="ballot_vote">Szavazás</string>
+    <string name="ballot_proof_hash">Bizonyíték: %1$s</string>
+    <plurals name="ballot_more_answers">
+        <item quantity="one">+%1$d további válasz</item>
+        <item quantity="other">+%1$d további válasz</item>
+    </plurals>
 </resources>
