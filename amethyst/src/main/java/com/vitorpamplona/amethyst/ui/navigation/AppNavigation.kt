@@ -203,6 +203,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsSc
 import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
+import com.vitorpamplona.amethyst.service.nowPlaying.AndroidAppIcon
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidNowPlayingAccess
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -658,7 +659,7 @@ fun BuildNavigation(
         composableFromEnd<Route.NowPlayingSettings> {
             val context = LocalContext.current
             val access = remember(context) { AndroidNowPlayingAccess(context.applicationContext) }
-            NowPlayingSettingsScreen(accountViewModel, nav, access)
+            NowPlayingSettingsScreen(accountViewModel, nav, access) { appId, label -> AndroidAppIcon(appId, label) }
         }
         composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
