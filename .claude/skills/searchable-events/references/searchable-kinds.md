@@ -4,8 +4,8 @@ Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexabl
 expression. **Update this file in the same PR as any change to the searchable set or to an
 `indexableContent()` body** (see SKILL.md). Verified against the code 2026-09-17.
 
-Counts: 137 concrete classes covering 140 kind values (`GitStatusEvent` spans 4 kinds;
-kind 30063 is shared by two NIPs — see the footnote). File paths are under
+Counts: 139 concrete classes covering 140 kind values (`GitStatusEvent` spans 4 kinds;
+kind 30063 is shared by two NIPs and kind 38000 by three classes — see the footnotes). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
 Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
@@ -134,7 +134,9 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 36787 | MusicTrackEvent | experimental/music/track | `listOfNotNull(title(), artist(), album(), content)` NL |
 | 37516 | GeocacheListingEvent | nipCCGeocaching/listing | `listOfNotNull(cacheName(), content)` NL (the `hint` is deliberately not indexed — matching a hint is spoiling it) |
 | 37517 | GeocacheCurationListEvent | nipCCGeocaching/curation | `listOfNotNull(title(), description(), content)` NL |
-| 38000 | MintRecommendationEvent | nip87Ecash/recommendation | `content` |
+| 38000 | MintRecommendationEvent ‡ | nip87Ecash/recommendation | `content` |
+| 38000 | BallotEvent ‡ | experimental/ballots | `(listOfNotNull(election()) + answers().map { it.answer })` NL |
+| 38000 | PredictionMarketEvent ‡ | experimental/predictionMarkets | `listOfNotNull(title(), description())` NL |
 | 38192 | Ps1SaveEvent | experimental/ps1saves | `listOfNotNull(summary(), saveTitle(), region(), filename())` NL |
 | 38383 | P2POrderEvent | nip69P2pOrderEvents | `(listOfNotNull(makerName(), currency()) + paymentMethods().orEmpty()).joinToString(" ")` (SP) |
 | 39000 | GroupMetadataEvent | nip29RelayGroups/metadata | `listOfNotNull(name(), about())` NL |
@@ -154,6 +156,14 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 `ReleaseArtifactSetEvent` parses both. It indexes `title()` and `description()`, plus `content`
 (the release notes) only when the event carries the NIP-82 `i` + `version` tags — a NIP-51 set
 may hold encrypted private items in `content`, which must never be indexed.
+
+‡ **Kind 38000 is shared** by NIP-87 mint recommendations and two app formats, and `EventFactory`
+picks the class by tags: `MintRecommendationEvent` when the first `k` is 38172/38173 (or, with no
+`k`, a non-blank `u`); else `BallotEvent` on a non-blank `election`; else `PredictionMarketEvent`
+on a `market`, ≥2 `outcome`s, or `type` + `end`; else a plain, unsearchable `Event` (the spam
+votes that make up most of the kind). Kind-level probes (`EventFactory.probe`) answer as
+`MintRecommendationEvent`. A market's `title()`/`description()` come from its `data` tag JSON,
+the `title` tag, or JSON `content`, in that order.
 
 ## Abstract bases (no kind of their own)
 

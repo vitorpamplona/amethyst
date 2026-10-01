@@ -521,8 +521,9 @@ class FullTextSearchModule(
 
     /**
      * The distinct kinds present in `event_headers` that currently parse
-     * to a [SearchableEvent]. Kind alone selects the event class in
-     * [EventFactory], so one probe per distinct kind is authoritative;
+     * to a [SearchableEvent]. One [EventFactory.probe] per distinct kind
+     * decides (a kind whose class is picked by tags answers as its
+     * primary class; the insert path still checks each event itself);
      * the result drives a `kind IN (...)` filter on the rebuild scan so
      * non-searchable rows are skipped at the SQL layer.
      */
@@ -537,15 +538,9 @@ class FullTextSearchModule(
         return out
     }
 
-    private fun isSearchableKind(kind: Int): Boolean = EventFactory.create<Event>(PROBE_ID, PROBE_ID, 0L, kind, EMPTY_TAGS, "", "") is SearchableEvent
+    private fun isSearchableKind(kind: Int): Boolean = EventFactory.probe(kind) is SearchableEvent
 
     companion object {
-        // A non-blank id keeps kinds that lazily hash a missing id (e.g.
-        // NIP-17 chat messages) from doing that work — the probe only
-        // inspects the resulting runtime type.
-        private const val PROBE_ID = "0"
-        private val EMPTY_TAGS = emptyArray<Array<String>>()
-
         /** Column order matches the positional `read.getText(1)`…`getText(7)` event rebuilds. */
         private const val SELECT_EVENT_COLUMNS =
             "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig FROM event_headers"

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip50Search
 
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -69,6 +70,9 @@ class IndexableContentGoldenTest {
                 arrayOf("t", "hashtag2"),
                 arrayOf("image", "https://example.com/i.png"),
                 arrayOf("published_at", "1700000000"),
+                // Kind 38000 picks its class by tags; without a mint `k` it would sample as the
+                // plain Event its junk parses to rather than as the mint recommendation it indexes.
+                *if (kind == MintRecommendationEvent.KIND) arrayOf(arrayOf("k", "38172")) else emptyArray(),
             ),
             "The content body.",
             "",

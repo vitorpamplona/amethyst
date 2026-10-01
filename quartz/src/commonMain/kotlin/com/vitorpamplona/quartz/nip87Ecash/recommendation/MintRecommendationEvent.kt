@@ -23,10 +23,14 @@ package com.vitorpamplona.quartz.nip87Ecash.recommendation
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstOrNull
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip87Ecash.MintUrlTag
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -62,6 +66,29 @@ class MintRecommendationEvent(
     companion object {
         const val KIND = 38000
 
+        /**
+         * True when a kind-38000 event is actually a NIP-87 mint recommendation.
+         *
+         * Kind 38000 is shared with unrelated apps (prediction markets, ballots, spam votes), so
+         * the kind number alone does not say what an event is. A recommendation names the kind of
+         * the mint it recommends in its `k` tag — 38172 (Cashu) or 38173 (Fedimint). Some early
+         * recommendations carry no `k` at all; those are accepted when they point at a mint URL
+         * (`u`). A `k` naming anything else is not a mint recommendation, whatever else it carries.
+         */
+        fun isMintRecommendation(tags: TagArray): Boolean {
+            val kTag = tags.fastFirstOrNull { it.size > 1 && it[0] == "k" }
+            if (kTag != null) {
+                val mintKind = kTag[1].toIntOrNull()
+                return mintKind == CashuMintEvent.KIND || mintKind == FedimintEvent.KIND
+            }
+            return tags.fastAny { it.size > 1 && it[0] == MintUrlTag.TAG_NAME && it[1].isNotBlank() }
+        }
+
+        /**
+         * [mintKind] must be [CashuMintEvent.KIND] or [FedimintEvent.KIND]: the `k` tag it writes is
+         * what [isMintRecommendation] reads back, so any other value signs into a plain kind-38000
+         * event rather than a [MintRecommendationEvent].
+         */
         fun build(
             mintIdentifier: String,
             mintKind: Int,

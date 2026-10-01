@@ -163,6 +163,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
@@ -191,6 +192,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
@@ -3962,6 +3964,9 @@ open class EventCache :
                 is CashuMintEvent,
                 is FedimintEvent,
                 is MintRecommendationEvent,
+                // Other apps' kind-38000 formats, split from mint recommendations by EventFactory.
+                is BallotEvent,
+                is PredictionMarketEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 // ============================================================
