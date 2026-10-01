@@ -26,8 +26,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.ThemeType
@@ -55,13 +53,8 @@ fun EmbeddedTabThemeWatcher() {
             ThemeType.SYSTEM -> systemDark
         }
 
-    // Holds the theme the warm surfaces were last built in; a mismatch (only after a real flip — the
-    // first composition seeds it equal) triggers exactly one rebuild.
-    val applied = remember { mutableStateOf(resolvedDark) }
+    // The host remembers the theme the warm surfaces were built in; a real flip triggers exactly one rebuild.
     LaunchedEffect(resolvedDark) {
-        if (applied.value != resolvedDark) {
-            applied.value = resolvedDark
-            EmbeddedTabHost.rebuildAll()
-        }
+        EmbeddedTabHost.rebuildIfThemeChanged(resolvedDark)
     }
 }

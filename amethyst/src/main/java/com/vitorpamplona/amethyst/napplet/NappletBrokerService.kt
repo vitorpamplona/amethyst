@@ -37,8 +37,10 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
@@ -93,9 +95,11 @@ class NappletBrokerService : Service() {
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
-    // Live relay subscriptions, keyed by the applet's subId. The account comes per-open from the
+    // Live relay subscriptions, keyed by the requesting surface plus the applet's subId. The account comes per-open from the
     // requesting surface's launch token, so a surface's REQs always target the account it acts as.
-    private val liveSubscriptions = NappletLiveSubscriptions(scope)
+    // Which surfaces the user is looking at: relay reads are decrypted for a page only while it is.
+    private val attendance = NappletAttendance<Messenger>()
+    private val liveSubscriptions = NappletLiveSubscriptions(scope, attendance)
 
     // NAP-RESOURCE cancellation is keyed by the trusted launch token plus the caller's request id.
     // Cancelling removes the job before it can emit a late terminal envelope to the sandbox.
@@ -158,7 +162,20 @@ class NappletBrokerService : Service() {
         // client's Messenger keeps a binder alive, which pins that surface's whole Activity (and its
         // WebView) in the `:napplet` process past onDestroy — reclaimable only by killing the process.
         if (msg.what == NappletIpc.MSG_RELEASE_CLIENT) {
-            msg.replyTo?.let { incBus.removeAll(it) }
+            msg.replyTo?.let {
+                incBus.removeAll(it)
+                liveSubscriptions.closeAllFor(it)
+                attendance.forget(it)
+            }
+            // Tokens the surface will never use again: drop their sessions and whatever runs under them.
+            // Only the surface that minted a token holds it (tokens are unguessable), so it can only ever
+            // give back its own.
+            msg.data?.getStringArray(NappletIpc.KEY_RELEASED_TOKENS)?.forEach { token ->
+                NappletLaunchRegistry.unregister(token)
+                identityWatch.stop(token)
+                val prefix = "$token\u0000"
+                resourceRequests.keys.filter { it.startsWith(prefix) }.forEach { key -> resourceRequests.remove(key)?.cancel() }
+            }
             // Release its foreground lease too; otherwise a destroyed surface keeps the main process
             // pinned resumed until the lease watchdog expires it.
             msg.data?.getString(NappletIpc.KEY_LAUNCH_TOKEN)?.let { token ->
@@ -171,6 +188,15 @@ class NappletBrokerService : Service() {
 
         // A sandbox surface (full-screen :napplet host) entered, renewed, or left the foreground. Hold the
         // main process resumed while at least one is foreground, so opening it doesn't tear down Tor/relays.
+        if (msg.what == NappletIpc.MSG_SET_ATTENDED) {
+            val owner = msg.replyTo ?: return true
+            val attended = msg.data?.getBoolean(NappletIpc.KEY_ATTENDED, false) ?: false
+            attendance.set(owner, attended)
+            // Encrypted events its subscriptions received meanwhile can be decrypted and delivered now.
+            if (attended) liveSubscriptions.onAttended(owner)
+            return true
+        }
+
         if (msg.what == NappletIpc.MSG_SET_FOREGROUND) {
             val data = msg.data ?: return true
             val token = data.getString(NappletIpc.KEY_LAUNCH_TOKEN) ?: return true
@@ -336,8 +362,22 @@ class NappletBrokerService : Service() {
             val identity = NappletIdentity(authorPubKey = BROWSER_IDENTITY_AUTHOR, identifier = origin)
             // Bind to the account active at mint time: a browser token minted for one account must
             // never sign as another if the user switches while the page is still open.
-            val mintAccount = Amethyst.instance.sessionManager.loggedInAccount() ?: return true
-            val token = NappletLaunchRegistry.register(identity, NappletCapability.WEBSITE_CAPABILITIES, mintAccount.pubKey)
+            val mintAccount = Amethyst.instance.sessionManager.loggedInAccount()
+            // The surface names the storage jar it runs in: a page left open across an account switch (its
+            // cookies, its session, belong to the previous account) must not be re-minted a token that acts
+            // as the new one — its token is evicted or released, and it asks again from the old jar.
+            val surfaceProfile = data.getString(NappletIpc.KEY_WEBVIEW_PROFILE)
+            if (mintAccount == null || surfaceProfile != NappletWebViewProfiles.forPubKey(mintAccount.pubKey)) {
+                // No one to act as: answer anyway (with no token), so the page's queued calls fail right away
+                // instead of waiting forever for a token that will never come.
+                val refusal =
+                    Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
+                        this.data = Bundle().apply { putString(NappletIpc.KEY_BROWSER_ORIGIN, origin) }
+                    }
+                runCatching { replyTo.send(refusal) }
+                return true
+            }
+            val token = NappletLaunchRegistry.register(identity, NappletCapability.WEBSITE_CAPABILITIES, mintAccount.pubKey, browserOrigin = true)
             val response =
                 Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
                     this.data =
@@ -366,6 +406,14 @@ class NappletBrokerService : Service() {
         val session = NappletLaunchRegistry.resolve(launchToken)
         if (session == null) {
             reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("Unknown napplet session.")))
+            // Tell the surface its token is gone, so a browser tab re-mints instead of failing every call.
+            if (launchToken != null) {
+                val unknown =
+                    Message.obtain(null, NappletIpc.MSG_TOKEN_UNKNOWN).apply {
+                        this.data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken) }
+                    }
+                runCatching { replyTo.send(unknown) }
+            }
             return true
         }
         val identity = session.identity
@@ -389,6 +437,12 @@ class NappletBrokerService : Service() {
                     reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("That account is no longer signed in.")))
                     return@launch
                 }
+                // A query's results are decrypted with the user's key: while nobody is looking at the page it
+                // waits (as its sign / decrypt requests do), and gives up like them.
+                if (requestType == "relay.query" && !attendance.awaitAttended(replyTo, NappletHeldRequests.MAX_AGE_MS)) {
+                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed(NappletHeldRequests.EXPIRED)))
+                    return@launch
+                }
                 when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
                     is NappletRequestRouter.Outcome.Ignore -> {}
                     is NappletRequestRouter.Outcome.Reply -> {
@@ -401,8 +455,8 @@ class NappletBrokerService : Service() {
                         }
                     }
                     is NappletRequestRouter.Outcome.OpenSubscription ->
-                        liveSubscriptions.open(outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
-                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
+                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
+                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId)
                     is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                     is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
                     is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)

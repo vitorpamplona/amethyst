@@ -118,7 +118,13 @@ object EmbeddedTabPreloadSweeper {
                     .associateBy { it.id }
             var stillPending = false
             for (id in favoriteIds) {
-                val app = byId[id] ?: continue
+                // Not loaded from disk yet (the favorites store hydrates asynchronously): retry, rather than
+                // letting the sweep end having warmed nothing.
+                val app = byId[id]
+                if (app == null) {
+                    stillPending = true
+                    continue
+                }
                 if (!EmbeddedTabFactory.preload(context, app, backgroundColor)) stillPending = true
                 // Each preload may build + attach a WebView on this (main) thread; yield between favorites
                 // so the sweep doesn't monopolize the frame and jank the paint that follows.

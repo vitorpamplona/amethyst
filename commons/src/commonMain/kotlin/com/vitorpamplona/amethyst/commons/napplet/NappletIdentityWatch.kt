@@ -49,6 +49,9 @@ class NappletIdentityWatch(
         boundPubKey: String,
         push: (String) -> Unit,
     ) {
+        // A surface re-created under the same launch token (a tab re-arming its session) starts a new watch
+        // with its own sink; replace the old stream rather than keep pushing to the gone surface's Messenger.
+        jobs.remove(watchId)?.cancel()
         jobs.getOrPut(watchId) {
             val id = watchId
             scope
@@ -61,6 +64,11 @@ class NappletIdentityWatch(
                     job.invokeOnCompletion { jobs.remove(id, job) }
                 }
         }
+    }
+
+    /** Stops the watch started under [watchId], if any. */
+    fun stop(watchId: String) {
+        jobs.remove(watchId)?.cancel()
     }
 
     fun stopAll() {

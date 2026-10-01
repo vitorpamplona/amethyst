@@ -5686,6 +5686,7 @@
     <string name="browser_pill_tor_title">Onion routing</string>
     <string name="browser_pill_tor_on">The site can't see your IP address</string>
     <string name="browser_pill_tor_off">The site can see your IP address</string>
+    <string name="browser_pill_tor_forced">Off for this site, but another open page uses Tor, so this one goes through Tor too</string>
     <string name="browser_pill_site_settings">Site settings</string>
     <string name="browser_pill_site_settings_none">Nothing allowed yet</string>
     <string name="browser_pill_access">What it can access</string>
