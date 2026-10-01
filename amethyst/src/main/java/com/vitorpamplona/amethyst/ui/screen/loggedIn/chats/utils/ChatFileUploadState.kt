@@ -43,6 +43,20 @@ class ChatFileUploadState(
     val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var selectedServer by mutableStateOf(defaultServer)
+
+    /**
+     * A server this chat must upload to, e.g. a Buzz workspace's own media server, whose relay
+     * refuses any other image host. While set, the picker is hidden and the choice is not saved
+     * as the user's default.
+     */
+    var lockedServer by mutableStateOf<ServerName?>(null)
+        private set
+
+    fun lockServer(server: ServerName?) {
+        lockedServer = server
+        selectedServer = server ?: defaultServer
+    }
+
     var caption by mutableStateOf("")
 
     var contentWarning by mutableStateOf(false)
@@ -73,7 +87,7 @@ class ChatFileUploadState(
         multiOrchestrator = null
         mediaUploadTracker.finishUpload()
         caption = ""
-        selectedServer = defaultServer
+        selectedServer = lockedServer ?: defaultServer
         encryptFiles = true
     }
 

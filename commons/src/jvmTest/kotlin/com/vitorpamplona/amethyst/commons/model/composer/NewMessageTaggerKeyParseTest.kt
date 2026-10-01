@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.getOrCreateAddr
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -184,4 +185,28 @@ class NewMessageTaggerKeyParseTest {
         )
         assertEquals(",", result?.restOfWord)
     }
+
+    @Test
+    fun userMentionsAsNamesWritesPlainAtNameAndStillTags() =
+        runBlocking {
+            val npub = "npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"
+            val hex = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
+            val user = dao.getOrCreateUser(hex)
+
+            val tagger = NewMessageTagger(message = "hi @$npub, there", dao = dao, userMentionsAsNames = true)
+            tagger.run()
+
+            assertEquals("hi @${user.toBestDisplayName()}, there", tagger.message)
+            assertEquals(listOf(hex), tagger.pTags?.map { it.pubkeyHex })
+        }
+
+    @Test
+    fun defaultStillWritesNostrUri() =
+        runBlocking {
+            val npub = "npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"
+            val tagger = NewMessageTagger(message = "hi @$npub", dao = dao)
+            tagger.run()
+
+            assertTrue(tagger.message.startsWith("hi nostr:nprofile1"))
+        }
 }

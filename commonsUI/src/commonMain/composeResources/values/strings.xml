@@ -5469,6 +5469,7 @@
     <string name="marmot_invite_device_rejected">No relay accepted the KeyPackage. Check your relay settings and try again.</string>
     <string name="chat_delivery_sending">Sending\u2026</string>
     <string name="chat_delivery_failed">Could not be sent. Tap to try again.</string>
+    <string name="chat_delivery_rejected">The relay refused this message</string>
     <plurals name="marmot_unread_messages">
         <item quantity="one">%1$d new message</item>
         <item quantity="other">%1$d new messages</item>
@@ -5543,15 +5544,14 @@
     <string name="cordn_preview_photo">Photo</string>
     <string name="cordn_preview_video">Video</string>
     <string name="cordn_preview_file">File</string>
-    <string name="new_conversation_cordn_title">Cordn group</string>
-    <string name="new_conversation_cordn_tagline">Encrypted group chat ordered by a coordinator you pick.</string>
+    <string name="new_conversation_cordn_title">Cordn Group</string>
+    <string name="new_conversation_cordn_tagline">Encrypted groups on a coordinator you pick</string>
     <string name="new_conversation_cordn_chip">Coordinated</string>
-    <string name="new_conversation_cordn_best">Best for teams that want one reliable ordering of the conversation.</string>
+    <string name="new_conversation_cordn_best">Teams that want one reliable ordering of the conversation.</string>
     <string name="new_conversation_cordn_cta">Create Cordn group</string>
-    <string name="new_conversation_cordn_pro_1">End-to-end encrypted with MLS — the coordinator can never read a message.</string>
-    <string name="new_conversation_cordn_pro_2">One agreed order for everyone, so history cannot be reshuffled by a bad clock.</string>
-    <string name="new_conversation_cordn_con_1">The coordinator learns who is in the group and when you talk, even though it cannot read what you say.</string>
-    <string name="cordn_invitations_entry">Invited to a cordn group?</string>
+    <string name="new_conversation_cordn_pro_1">Coordinator can't read messages</string>
+    <string name="new_conversation_cordn_pro_2">One agreed message order</string>
+    <string name="new_conversation_cordn_con_1">Coordinator sees who talks, and when</string>
     <string name="cordn_invitations_entry_action">Review invitations</string>
 
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
@@ -6383,4 +6383,30 @@
     <string name="now_playing_access_granted">Notification access is on</string>
     <string name="now_playing_apps">Apps</string>
     <string name="now_playing_apps_empty">Apps show up here after they play something. Turn one off to stop sharing it.</string>
+    <string name="prediction_market">Prediction market</string>
+    <string name="prediction_market_status_open">Open</string>
+    <string name="prediction_market_status_closed">Closed</string>
+    <string name="prediction_market_status_resolved">Resolved</string>
+    <string name="prediction_market_status_cancelled">Cancelled</string>
+    <string name="prediction_market_demo">Demo · play money</string>
+    <string name="prediction_market_closes_in">Closes in %1$s</string>
+    <string name="prediction_market_closed_on">Closed %1$s</string>
+    <string name="prediction_market_bet_range">Bets %1$s–%2$s sats</string>
+    <string name="prediction_market_min_bet">Min bet %1$s sats</string>
+    <string name="prediction_market_max_bet">Max bet %1$s sats</string>
+    <string name="prediction_market_fee">Fee %1$s</string>
+    <string name="prediction_market_cancel_reason">Cancelled: %1$s</string>
+    <string name="prediction_market_winning_outcome">Winning outcome</string>
+    <plurals name="prediction_market_more_outcomes">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="ballot">Ballot</string>
+    <string name="ballot_election">Election %1$s</string>
+    <string name="ballot_vote">Vote</string>
+    <string name="ballot_proof_hash">Proof %1$s</string>
+    <plurals name="ballot_more_answers">
+        <item quantity="one">+%1$d more answer</item>
+        <item quantity="other">+%1$d more answers</item>
+    </plurals>
 </resources>

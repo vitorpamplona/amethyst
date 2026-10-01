@@ -170,6 +170,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
@@ -211,6 +212,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPodcastEpisode
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPostApproval
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPredictionMarket
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPs1Save
@@ -309,6 +311,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
@@ -329,6 +332,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -1490,6 +1494,14 @@ private fun RenderNoteRow(
 
         is MintRecommendationEvent -> {
             RenderMintRecommendation(noteEvent)
+        }
+
+        is PredictionMarketEvent -> {
+            RenderPredictionMarket(baseNote, makeItShort, accountViewModel)
+        }
+
+        is BallotEvent -> {
+            RenderBallot(baseNote, accountViewModel)
         }
 
         is ClassifiedsEvent -> {

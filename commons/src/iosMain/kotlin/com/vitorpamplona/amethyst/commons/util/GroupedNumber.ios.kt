@@ -23,9 +23,22 @@ package com.vitorpamplona.amethyst.commons.util
 import platform.Foundation.NSNumber
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterDecimalStyle
+import platform.Foundation.numberWithDouble
 import platform.Foundation.numberWithLongLong
 
 actual fun formatGrouped(value: Long): String {
     val formatter = NSNumberFormatter().apply { numberStyle = NSNumberFormatterDecimalStyle }
     return formatter.stringFromNumber(NSNumber.numberWithLongLong(value)) ?: value.toString()
+}
+
+actual fun formatDecimal(
+    value: Double,
+    maxFractionDigits: Int,
+): String {
+    val formatter =
+        NSNumberFormatter().apply {
+            numberStyle = NSNumberFormatterDecimalStyle
+            maximumFractionDigits = maxFractionDigits.toULong()
+        }
+    return formatter.stringFromNumber(NSNumber.numberWithDouble(value)) ?: value.toString()
 }

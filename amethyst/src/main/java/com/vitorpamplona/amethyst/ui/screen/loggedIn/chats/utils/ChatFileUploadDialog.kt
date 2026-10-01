@@ -230,18 +230,20 @@ private fun ImageVideoPostChat(
         )
     }
 
-    SettingsRow(Res.string.file_server, Res.string.file_server_description) {
-        TextSpinner(
-            label = "",
-            placeholder =
-                fileServers
-                    .firstOrNull { it.baseUrl == accountViewModel.account.settings.defaultFileServer.baseUrl }
-                    ?.name
-                    ?: fileServers.firstOrNull()?.name
-                    ?: DEFAULT_MEDIA_SERVERS[0].name,
-            options = fileServerOptions,
-            onSelect = { fileUploadState.selectedServer = fileServers[it] },
-        )
+    if (fileUploadState.lockedServer == null) {
+        SettingsRow(Res.string.file_server, Res.string.file_server_description) {
+            TextSpinner(
+                label = "",
+                placeholder =
+                    fileServers
+                        .firstOrNull { it.baseUrl == accountViewModel.account.settings.defaultFileServer.baseUrl }
+                        ?.name
+                        ?: fileServers.firstOrNull()?.name
+                        ?: DEFAULT_MEDIA_SERVERS[0].name,
+                options = fileServerOptions,
+                onSelect = { fileUploadState.selectedServer = fileServers[it] },
+            )
+        }
     }
 
     if (fileUploadState.multiOrchestrator?.hasCompressible() == true) {

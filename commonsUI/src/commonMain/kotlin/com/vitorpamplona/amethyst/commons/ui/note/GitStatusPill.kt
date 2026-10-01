@@ -104,6 +104,22 @@ fun GitStatusPill(
             }
         }
 
+    StatusPill(label, symbol, container, content, modifier)
+}
+
+/**
+ * The filled, GitHub-style state badge behind [GitStatusPill]: an icon and a short label in
+ * [content] on a [container] fill. Shared by the other cards that show a lifecycle state
+ * (prediction markets) so every status badge in a feed looks alike.
+ */
+@Composable
+fun StatusPill(
+    label: String,
+    symbol: MaterialSymbol,
+    container: Color,
+    content: Color,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier =
             modifier
@@ -124,6 +140,7 @@ fun GitStatusPill(
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             color = content,
+            maxLines = 1,
         )
     }
 }

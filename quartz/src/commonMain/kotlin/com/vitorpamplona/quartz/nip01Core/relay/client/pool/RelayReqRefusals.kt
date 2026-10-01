@@ -214,6 +214,23 @@ class RelayReqRefusals(
 
     fun disallowedKinds(relay: NormalizedRelayUrl): Set<Int> = disallowedKinds[relay] ?: emptySet()
 
+    /** The most filters [relay] has said it accepts in one REQ, if it has said so. */
+    fun maxFilters(relay: NormalizedRelayUrl): Int? = maxFilters[relay]
+
+    /**
+     * Learn a filter cap from a NOTICE. Some relays (Buzz) refuse an over-cap REQ with a NOTICE
+     * instead of a CLOSED, so it names no subscription. Returns the cap when this notice taught
+     * one, so the caller can re-send whichever REQs went over it.
+     */
+    fun onNotice(
+        relay: NormalizedRelayUrl,
+        message: String,
+    ): Int? {
+        parseMaxFilters(message) ?: return null
+        learnMaxFilters(relay, message)
+        return maxFilters[relay]
+    }
+
     private fun classify(reason: String): Policy? {
         val t = reason.lowercase()
         if (SEARCH_REQUIRED_MARKERS.any { it in t }) return Policy.SEARCH_ONLY
@@ -229,10 +246,17 @@ class RelayReqRefusals(
         // "invalid number of filters: 4" (strfry policy) — the relay refused N, so it takes fewer.
         private val INVALID_FILTER_COUNT = Regex("""invalid number of filters:?\s*([0-9]+)""")
 
+        // "REQ contains 12 filters, maximum is 10" (Buzz, sent as a NOTICE) — names the cap itself.
+        private val FILTER_COUNT_WITH_MAXIMUM = Regex("""([0-9]+) filters?,?\s*(?:the )?max(?:imum)?(?: is|:)?\s*([0-9]+)""")
+
         fun parseMaxFilters(reason: String): Int? {
+            val lower = reason.lowercase()
+            FILTER_COUNT_WITH_MAXIMUM.find(lower)?.let { match ->
+                return match.groupValues[2].toIntOrNull()?.takeIf { it >= 1 }
+            }
             val refusedCount =
                 INVALID_FILTER_COUNT
-                    .find(reason.lowercase())
+                    .find(lower)
                     ?.groupValues
                     ?.get(1)
                     ?.toIntOrNull() ?: return null

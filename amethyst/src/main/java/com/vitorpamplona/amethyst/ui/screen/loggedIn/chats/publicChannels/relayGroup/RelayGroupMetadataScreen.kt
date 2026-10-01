@@ -156,7 +156,17 @@ fun RelayGroupCreateScreen(
         accountViewModel = accountViewModel,
         nav = nav,
         nip29Support = nip29Support,
-        onSuccess = { nav.popUpTo(Route.RelayGroup(viewModel.groupId, relay.url), Route.RelayGroupCreate::class) },
+        onSuccess = {
+            // A new forum opens on its thread list, where its posts live — the same screen the
+            // workspace list opens a forum on — not on the chat timeline a stream channel uses.
+            val destination =
+                if (viewModel.isForum) {
+                    Route.RelayGroupThreads(viewModel.groupId, relay.url)
+                } else {
+                    Route.RelayGroup(viewModel.groupId, relay.url)
+                }
+            nav.popUpTo(destination, Route.RelayGroupCreate::class)
+        },
     )
 }
 

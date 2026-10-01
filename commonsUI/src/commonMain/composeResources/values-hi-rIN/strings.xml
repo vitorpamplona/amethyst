@@ -577,6 +577,8 @@
     <string name="concord_invite_revoke_title">क्या इस योजक का निराकरण करें।</string>
     <string name="concord_invite_revoke_explainer">इस योजक के जो भी धारक अब भी हैं आगे से जुड नहीं सकेंगे। जो लोग पहले से इसके द्वारा जुड चुके हैं समुदाय में रहेंगे। इसको पूर्ववत नही किया जा सकता।</string>
     <string name="concord_invite_revoke_confirm">निराकरण</string>
+    <string name="concord_invite_revoking">निराकरण मध्य…</string>
+    <string name="concord_name_budget">%2$d में से %1$d अष्टक</string>
     <string name="concord_invite_revoke_privatize_warning">यह इस समुदाय का अन्तिम जीवित आमन्त्रण योजक है। इसके निराकरण से समुदाय निजी बन जाएगा तथा इसके कुंचिकाओं का वर्तन किया जाएगा। जिससे केवल वर्तमान सदस्य अभिगमन अधिकार रखेंगे।</string>
     <string name="concord_invite_revoked_privatized">योजक का निराकरण हो गया। समुदाय अब निजी है। तथा इसके कुंचिकाओं का वर्तन किया गया।</string>
     <string name="concord_invite_revoked_privatize_pending">योजक का निराकरण हो गया। समुदाय अब निजी है। पर इसके कुंचिकाओं का वर्तन नहीं किया गया। सदस्यों को प्रतिबन्धित करने का अधिकार रखनेवाला एक प्रशासक को इनका वर्तन करना चाहिए।</string>
@@ -600,7 +602,14 @@
     <string name="concord_timer_notice_off">%1$s ने सन्देश अदृश्यकरण अक्षम किया</string>
     <string name="concord_timer_active">सन्देश अदृश्य हो जाते हैं %1$s पश्चात</string>
     <string name="concord_dissolved_read_only">इस समुदाय को विघटित किया गया है तथा अब पठनेवशक्य है। आप इसका इतिहास पढ सकते हैं परन्तु कोई नए सन्देश नहीं भेज सकते।</string>
+    <string name="concord_dissolve_community">समुदाय विघटन</string>
+    <string name="concord_dissolve_title">क्या %1$s का विघटन करें।</string>
+    <string name="concord_dissolve_message">यह इस समुदाय का अन्त करता है सब के लिए। यह पठनेवशक्य बन जाएगा। सदस्य इसका इतिहास रखेंगे। पर कोई भी पत्र प्रकाशन नहीं कर सकता। तथा इसका परिवर्तन नहीं कर सकते। तथा आगे किसी को भी आमन्त्रण नहीं दे सकते। इसको पूर्ववत नहीं किया जा सकता।</string>
+    <string name="concord_dissolve_confirm">विघटन</string>
+    <string name="concord_dissolve_failed">समुदाय का विघटन नहीं किया गया। केवल इसका स्वत्वधारी कर सकता है एक लेखा से जिससे हस्ताक्षर सम्भाव्य।</string>
     <string name="concord_private_channel_no_key">यह एक निजी प्रणाली है। तथा आप इसकी कुंचिका नहीं रखते। इसलिए आप इसे पढ नहीं सकते। तथा यहाँ पत्र प्रकाशित नहीं कर सकते।</string>
+    <string name="concord_private_channel_cut">आपके लिए अब यह निजी प्रणाली अभिगम्य नहीं। इसकी कुंचिका का वर्तन आपके बिना किया गया। इसलिए आप नए सन्देश नहीं पढ सकते तथा पत्र प्रकाशन यहाँ नहीं कर सकते।</string>
+    <string name="concord_banned_notice">आप इस समुदाय में से प्रतिबन्धित हैं। इसलिए आप यहाँ पत्र प्रकाशन नहीं कर सकते। तथा आपके सन्देश सब के लिए छिपाए गए हैं।</string>
     <string name="concord_pinned_title">टाँके गए सन्देश</string>
     <string name="concord_pinned_empty">कोई टाँके गए सन्देश नहीं इस प्रणाली में अब तक।</string>
     <string name="concord_pinned_unavailable">इस प्रणाली के टाँके एक कुंचिका के साथ तालाबद्ध हैं जो आपके पास नहीं है। इसलिए वे यहाँ दिखाए नहीं जा सकते। तथा टाँकना स्थगित है जब तक उनको पढा नहीं जा सकता।</string>
@@ -3634,6 +3643,8 @@
     <string name="concord_channel_rename">प्रणाली पुनःनामकरण</string>
     <string name="concord_channel_rename_save">पुनःनामकरण</string>
     <string name="concord_channel_rotate_key">कुंचिका वर्तन</string>
+    <string name="concord_channel_rotate_key_done">कुंचिका वर्तित। सदस्य जिनके पास अभिगमन अधिकार अभी भी है नयी कुंचिका प्राप्त करेंगे। अन्य सभी काट दिए जाएँगे नए सन्देशों से।</string>
+    <string name="concord_channel_rotate_key_failed">कुंचिका वर्तन नहीं किया गया। एक पुनःप्रसारक इसे नहीं स्वीकारा। अथवा आप अब इस प्रणाली का वर्तन नहीं कर सकते। पुरानी कुंचिका अभी भी प्रचलित।</string>
     <string name="concord_channels_empty">कोई प्रणाली नहीं अब तक।</string>
     <string name="concord_create_action">बनाएँ</string>
     <string name="concord_create_failed">समुदाय बनाया नहीं जा सका। कोई पुनःप्रसारक ने उसे स्वीकारा नहीं। अथवा आपकी समुदाय सूची का अद्यतन असफल। पुनःप्रसारकों की जाँच करें तथा पुनःप्रयास करें।</string>
@@ -3652,8 +3663,12 @@
     <string name="concord_direct_invite_failed_loading">समुदाय आवहन अब भी चालू। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
     <string name="concord_direct_invite_failed_member">आप इस समुदाय में लोगों को आमन्त्रित नहीं कर सकते।</string>
     <string name="concord_direct_invite_from">%1$s द्वारा आमन्त्रित</string>
+    <string name="concord_direct_invite_label">आमन्त्रण</string>
     <string name="concord_direct_invite_hint">नाम एनपुब॰ अथवा निप॰पाँच</string>
     <string name="concord_direct_invite_send">%1$s को आमन्त्रण भेजें</string>
+    <string name="concord_direct_invite_sent_to">%1$s आमन्त्रित</string>
+    <string name="concord_direct_invite_sending">भेजा जा रहा है…</string>
+    <string name="concord_direct_invite_done">हो गया</string>
     <string name="concord_direct_invite_title">किसी को सीधे आमन्त्रित करें</string>
     <string name="concord_direct_invites_title">समुदाय आमन्त्रण</string>
     <string name="concord_edit_title">समुदाय सम्पादन</string>
@@ -3673,7 +3688,7 @@
     <string name="concord_invite_revoked_ok">आमन्त्रण योजक निराकृत।</string>
     <string name="concord_invite_title">आमन्त्रण योजक</string>
     <string name="concord_leave_community">समुदाय छोडें</string>
-    <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। समुदाय को सूचित नहीं किया जाएगा। तथा आपको उसके सदस्य कार्यसूची से हटाया नहीं जाएगा। सन्देश जिनका आप अरहस्यीकरण नहीं कर सकेंगे सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
+    <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से। तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। तथा सदस्य देखेंगे की आप चले गए। सन्देश जिनका आप आगे अरहस्यीकरण नहीं कर सकते सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
     <string name="concord_leave_owner_warning">आपने इस समुदाय को बनाया। छोड जाने से यह मिटेगा नहीं। किसी अन्य के हाथ सौंपा नहीं जाएगा। परन्तु स्वत्वधारी कुंचिका जो आपकी सूची में हैं वह हटाया जाएगा। आप आगे से इसका प्रबन्धन नहीं कर पाएँगे।</string>
     <string name="concord_leave_title">क्या समुदाय छोडें।</string>
     <string name="concord_make_admin">प्रशासक बनाएँ</string>
@@ -3684,6 +3699,7 @@
     <string name="concord_members_ban">प्रतिबन्ध</string>
     <string name="concord_members_ban_title">क्या सदस्य को प्रतिबन्धित करें।</string>
     <string name="concord_members_ban_message">वे आगे से पत्र प्रकाशित नहीं कर सकते। तथा उनके सन्देश सब से छिपाए गए। अन्य क्रमक समुदाय को उनकी सूची से हटा सकते हैं। वे नए सन्देश पढ सकते हैं जब तक कि आप उनको भी समुदाय से नहीं हटाते। आप उनको अप्रतिबन्धित कर सकते हैं भविष्य में।</string>
+    <string name="concord_members_ban_message_refound">वे अब पत्र प्रकाशन नहीं कर सकते। तथा उनके सन्देश सभी से छिपाए गए हैं। यह समुदाय निजी है। इसलिए प्रतिबन्धन करने से इसकी कुंचिकाओं का वर्तन होगा। वे नए सन्देशों तक अभिगमन खो देते हैं। आप आगे इनको अप्रतिबन्धित कर सकते हैं। पर उनके लिए नया आमन्त्रण आवश्यक पुनःपढने के लिए।</string>
     <string name="concord_members_make_admin">प्रशासक बनाएँ</string>
     <string name="concord_members_remove_admin">प्रशासक हटाएँ</string>
     <string name="concord_members_roles_failed">इस सदस्य के भूमिकाओं का अद्यतन करने में असफल।</string>
@@ -5448,14 +5464,13 @@
     <string name="cordn_preview_video">चलचित्र</string>
     <string name="cordn_preview_file">अभिलेख</string>
     <string name="new_conversation_cordn_title">कोर्डन समूह</string>
-    <string name="new_conversation_cordn_tagline">रहस्यीकृत समूह चर्चा क्रमबद्ध आपके द्वारा चयनित समायोजक द्वारा।</string>
+    <string name="new_conversation_cordn_tagline">रहस्यीकृत समूह आपके द्वारा चयनित समायोजक पर</string>
     <string name="new_conversation_cordn_chip">समायोजित</string>
-    <string name="new_conversation_cordn_best">सर्वोत्तम उन दलों के लिए जो वार्तालाप का एक विश्वसनीय अनुक्रमण चाहते हैं।</string>
+    <string name="new_conversation_cordn_best">दलों के लिए जो वार्तालाप का एक विश्वसनीय अनुक्रमण चाहते हैं।</string>
     <string name="new_conversation_cordn_cta">कोर्डन समूह बनाएँ</string>
-    <string name="new_conversation_cordn_pro_1">आरम्भ से अन्त तक रहस्यीकृत एमएलएस॰ के साथ। समायोजक सन्देश कभी पढ नहीं सकता।</string>
-    <string name="new_conversation_cordn_pro_2">एक स्वीकृत अनुक्रमण सभी के लिए। जिससे इतिहास को अस्तव्यस्त नहीं किया जा सकता एक भ्रष्ट घडी से।</string>
-    <string name="new_conversation_cordn_con_1">समायोजक जान लेता है समूह में कौन हैं तथा आप कब बात करते है। यद्यपि वह पढ नहीं सकता कि आप ने क्या कहा।</string>
-    <string name="cordn_invitations_entry">क्या आप एक कोर्डन समूह में आमन्त्रित हैं।</string>
+    <string name="new_conversation_cordn_pro_1">समायोजक सन्देशों को पढ नहीं सकता</string>
+    <string name="new_conversation_cordn_pro_2">एक स्वीकृत सन्देश क्रम</string>
+    <string name="new_conversation_cordn_con_1">समायोजक देखता है कौन बात कर रहे हैं तथा कब</string>
     <string name="cordn_invitations_entry_action">आमन्त्रण पुनरीक्षण</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
@@ -5586,6 +5601,7 @@
     <string name="browser_pill_tor_title">बहुरहस्यावृत संचार द्वारा</string>
     <string name="browser_pill_tor_on">यह जालस्थान आपका अंकीय जालपता नहीं देख सकता</string>
     <string name="browser_pill_tor_off">यह जालस्थान आपका अंकीय जालपता देख सकता है</string>
+    <string name="browser_pill_tor_forced">इस जालस्थान के लिए निष्क्रिय। पर एक अन्य खुला पृष्ठ टोर का प्रयोग करता है। इसलिए यह भी टोर द्वारा जाता है</string>
     <string name="browser_pill_site_settings">जालस्थान स्थापना विकल्प</string>
     <string name="browser_pill_site_settings_none">कुछ भी अनुमत नहीं अब तक</string>
     <string name="browser_pill_access">इसके लिए क्या अभिगम्य है</string>
@@ -6256,4 +6272,8 @@
     <string name="browser_permission_allowed">अनुमत</string>
     <string name="browser_permission_blocked">बाधित</string>
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <string name="browser_pill_download_title">क्या इस अभिलेख का अवरोहण करें।</string>
+    <string name="browser_pill_download_risky">यह अभिलेख प्रकार क्रमलेख चला सकता है। जाँच करें कि नाम का मेल है उससे जिसे आप प्राप्त करना चाहते थे।</string>
+    <string name="browser_pill_download_save">अभिलेखन</string>
+    <string name="browser_pill_download_from">%1$s से</string>
 </resources>

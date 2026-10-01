@@ -23,3 +23,8 @@ package com.vitorpamplona.amethyst.commons.util
 import java.text.NumberFormat
 
 actual fun formatGrouped(value: Long): String = NumberFormat.getNumberInstance().format(value)
+
+actual fun formatDecimal(
+    value: Double,
+    maxFractionDigits: Int,
+): String = NumberFormat.getNumberInstance().apply { maximumFractionDigits = maxFractionDigits }.format(value)

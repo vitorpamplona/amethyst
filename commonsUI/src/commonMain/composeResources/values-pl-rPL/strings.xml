@@ -5660,7 +5660,6 @@
     <string name="new_conversation_cordn_pro_1">Szyfrowanie typu „end-to-end” z wykorzystaniem MLS — koordynator nigdy nie ma możliwości odczytania wiadomości.</string>
     <string name="new_conversation_cordn_pro_2">Jedno uzgodnione postanowienie dla wszystkich, aby historia nie mogła zostać zmieniona przez błędny zegar.</string>
     <string name="new_conversation_cordn_con_1">Koordynator wie, kto należy do grupy i kiedy ktoś zabiera głos, mimo że nie potrafi odczytać treści wypowiedzi.</string>
-    <string name="cordn_invitations_entry">Zostałeś zaproszony do grupy „cordn”?</string>
     <string name="cordn_invitations_entry_action">Przejrzyj zaproszenia</string>
     <!-- cordn device migration (spec/applications/multi-device.md §9/§11), as a
          one-shot handoff rather than continuous sync. The exposure strings say
