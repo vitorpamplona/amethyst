@@ -81,11 +81,14 @@ class PredictionMarketEvent(
 
     fun description() = dataDetails?.description ?: contentDetails?.description
 
-    /** The outcomes one can bet on: the `outcome` tags, else the JSON `outcomes`. */
-    fun outcomes(): List<String> =
+    /** The outcomes one can bet on, id and label: the `outcome` tags, else the JSON `outcomes`. */
+    fun outcomeOptions(): List<PredictionMarketOutcome> =
         tags.marketOutcomes().ifEmpty {
             dataDetails?.outcomes?.ifEmpty { null } ?: contentDetails?.outcomes ?: emptyList()
         }
+
+    /** The outcomes as a reader sees them, by label. */
+    fun outcomes(): List<String> = outcomeOptions().map { it.label }
 
     /** The winning outcome, once resolved. */
     fun resolution() = tags.marketResolution() ?: dataDetails?.resolution ?: contentDetails?.resolution

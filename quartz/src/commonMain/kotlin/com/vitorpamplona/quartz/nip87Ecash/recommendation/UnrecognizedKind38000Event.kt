@@ -18,13 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.quartz.nip87Ecash.recommendation
 
-/** [value] with the locale's digit grouping: `1,234,567` in English, `1.234.567` in German. */
-expect fun formatGrouped(value: Long): String
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-/** [value] with the locale's decimal mark and at most [maxFractionDigits] digits after it: `4.21` in English, `4,21` in German. */
-expect fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-): String
+/**
+ * A kind-38000 event that is none of the formats Amethyst reads on that number — not a NIP-87
+ * [MintRecommendationEvent], a ballot or a prediction market. Most of them are `d`-only spam.
+ *
+ * Still addressable, because the kind is: stores key it by `d` (`event is AddressableEvent`), so
+ * a newer version replaces an older one and an `a`-tag deletion reaches it, as NIP-01 requires
+ * of every kind in 30000–39999. Not a SearchableEvent, so it is never indexed, and no card is
+ * drawn for it.
+ */
+@Immutable
+class UnrecognizedKind38000Event(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : BaseAddressableEvent(id, pubKey, createdAt, MintRecommendationEvent.KIND, tags, content, sig)

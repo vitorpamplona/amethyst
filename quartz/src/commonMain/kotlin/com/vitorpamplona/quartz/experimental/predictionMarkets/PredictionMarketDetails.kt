@@ -38,7 +38,7 @@ import kotlinx.serialization.json.longOrNull
 class PredictionMarketDetails(
     val title: String?,
     val description: String?,
-    val outcomes: List<String>,
+    val outcomes: List<PredictionMarketOutcome>,
     val category: String?,
     val status: String?,
     val reason: String?,
@@ -95,24 +95,40 @@ class PredictionMarketDetails(
         private fun JsonObject.double(key: String): Double? = primitive(key)?.doubleOrNull
 
         /**
-         * `outcomes` as display strings: a plain string per outcome (current shape), or an object
-         * per outcome whose `label` (else `id`, `name`) names it (BAO Fund and first shapes).
+         * `outcomes`: a plain string per outcome (current shape), or an object per outcome with an
+         * `id` and a `label` (else `name`) (BAO Fund and first shapes). Once per id, at most
+         * [PredictionMarketOutcome.MAX].
          */
-        private fun JsonObject.outcomes(): List<String> {
+        private fun JsonObject.outcomes(): List<PredictionMarketOutcome> {
             val array = this["outcomes"] as? JsonArray ?: return emptyList()
-            val result = ArrayList<String>(array.size)
+            val result = LinkedHashMap<String, PredictionMarketOutcome>(minOf(array.size, PredictionMarketOutcome.MAX))
             for (element in array) {
-                val name = outcomeName(element)
-                if (name != null && name !in result) result.add(name)
+                if (result.size >= PredictionMarketOutcome.MAX) break
+                val outcome = outcomeOf(element) ?: continue
+                if (outcome.id !in result) result[outcome.id] = outcome
             }
-            return result
+            return result.values.toList()
         }
 
-        private fun outcomeName(element: JsonElement): String? =
+        private fun outcomeOf(element: JsonElement): PredictionMarketOutcome? =
             when (element) {
-                is JsonPrimitive -> element.takeIf { it.isString }?.content?.ifBlank { null }
-                is JsonObject -> element.text("label") ?: element.text("id") ?: element.text("name")
-                else -> null
+                is JsonPrimitive -> {
+                    element
+                        .takeIf { it.isString }
+                        ?.content
+                        ?.ifBlank { null }
+                        ?.let { PredictionMarketOutcome(it, it) }
+                }
+
+                is JsonObject -> {
+                    val label = element.text("label") ?: element.text("name")
+                    val id = element.text("id") ?: label
+                    if (id == null) null else PredictionMarketOutcome(id, label ?: id)
+                }
+
+                else -> {
+                    null
+                }
             }
     }
 }

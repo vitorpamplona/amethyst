@@ -390,6 +390,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.UnrecognizedKind38000Event
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -3967,6 +3968,8 @@ open class EventCache :
                 // Other apps' kind-38000 formats, split from mint recommendations by EventFactory.
                 is BallotEvent,
                 is PredictionMarketEvent,
+                // Unread junk on 38000 still supersedes an older version at its address.
+                is UnrecognizedKind38000Event,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 // ============================================================

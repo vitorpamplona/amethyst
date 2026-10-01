@@ -80,9 +80,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColorOnSecondSurface
+import com.vitorpamplona.amethyst.commons.util.formatDecimal
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
+import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketOutcome
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketStatus
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -117,7 +119,7 @@ fun RenderPredictionMarket(
 private class PredictionMarketCardState(
     val title: String?,
     val description: String?,
-    val outcomes: ImmutableList<String>,
+    val outcomes: ImmutableList<PredictionMarketOutcome>,
     val status: PredictionMarketStatus?,
     val resolution: String?,
     val endsAt: Long?,
@@ -128,11 +130,13 @@ private class PredictionMarketCardState(
     val maxBetSats: String?,
     val feePercent: String?,
     val cancelReason: String?,
+    /** The moment the status was read, so the closing-time line agrees with the status badge. */
+    val now: Long,
 ) {
-    fun isWinner(outcome: String) = resolution != null && outcome.equals(resolution, ignoreCase = true)
+    fun isWinner(outcome: PredictionMarketOutcome) = outcome.isNamedBy(resolution)
 
     /** Two outcomes, one a yes and one a no — "YES"/"NO", "Yes (stays online)"/"No (goes offline)". */
-    val isBinary = outcomes.size == 2 && outcomes.any(::isYes) && outcomes.any(::isNo)
+    val isBinary = outcomes.size == 2 && outcomes.any { isYes(it.label) } && outcomes.any { isNo(it.label) }
 
     companion object {
         fun from(
@@ -141,7 +145,7 @@ private class PredictionMarketCardState(
         ) = PredictionMarketCardState(
             title = event.title() ?: socialPostHeadline(event.content),
             description = event.description()?.let(::collapseBlankLines),
-            outcomes = event.outcomes().toImmutableList(),
+            outcomes = event.outcomeOptions().toImmutableList(),
             status = event.status(now),
             resolution = event.resolution(),
             endsAt = event.endsAt(),
@@ -151,6 +155,7 @@ private class PredictionMarketCardState(
             maxBetSats = event.maxBetSats()?.let(::formatGrouped),
             feePercent = event.feePercent()?.let(::formatPercent),
             cancelReason = event.cancelReason(),
+            now = now,
         )
 
         fun isYes(outcome: String) = YES.containsMatchIn(outcome)
@@ -166,19 +171,21 @@ private class PredictionMarketCardState(
             return content.lineSequence().firstOrNull { it.isNotBlank() }?.trim()
         }
 
-        /** 4.21 → "4.21%", 2.0 → "2%". */
-        private fun formatPercent(value: Double): String {
-            val asLong = value.toLong()
-            return if (value == asLong.toDouble()) "$asLong%" else "$value%"
-        }
+        /** 4.21 → "4.21%" ("4,21%" in German), 2.0 → "2%"; nothing for NaN, infinities or a negative. */
+        private fun formatPercent(value: Double): String? = if (value.isFinite() && value >= 0) "${formatDecimal(value, 2)}%" else null
 
         /**
          * BAO's descriptions carry paragraph breaks ("…UTC.\n\nSource of Truth: …"); clipped to a
          * few lines, a blank line reads as a hole in the card. One line break each, never a gap.
          */
-        private fun collapseBlankLines(text: String): String = text.trim().replace(BLANK_LINES, "\n")
-
-        private val BLANK_LINES = Regex("""\s*\n\s*\n\s*""")
+        private fun collapseBlankLines(text: String): String =
+            // Line by line rather than a regex: a run of whitespace in a crafted event made the
+            // obvious pattern rescan it from every position — seconds on the main thread.
+            text
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .joinToString("\n")
     }
 }
 
@@ -227,7 +234,7 @@ fun PredictionMarketCard(
             if (state.status == PredictionMarketStatus.CANCELLED) {
                 state.cancelReason?.let { CancelReason(it) }
             } else {
-                state.endsAt?.let { ClosingTime(it, state.status) }
+                state.endsAt?.let { ClosingTime(it, state.status, state.now) }
             }
 
             MarketTerms(state.minBetSats, state.maxBetSats, state.feePercent)
@@ -341,7 +348,7 @@ private fun MarketOutcomes(state: PredictionMarketCardState) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         shown.forEach { outcome ->
-            OutcomeChip(outcome, isWinner = state.isWinner(outcome), muted = muted)
+            OutcomeChip(outcome.label, isWinner = state.isWinner(outcome), muted = muted)
         }
         if (hidden > 0) {
             Text(
@@ -370,7 +377,7 @@ private fun BinaryOutcomes(
             val isWinner = state.isWinner(outcome)
             val quiet = muted || (decided && !isWinner)
             val side =
-                if (PredictionMarketCardState.isYes(outcome)) {
+                if (PredictionMarketCardState.isYes(outcome.label)) {
                     MaterialTheme.colorScheme.allGoodColor
                 } else {
                     MaterialTheme.colorScheme.redColorOnSecondSurface
@@ -397,7 +404,7 @@ private fun BinaryOutcomes(
                     )
                 }
                 Text(
-                    text = outcome,
+                    text = outcome.label,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = color,
@@ -460,8 +467,12 @@ private fun OutcomeChip(
 private fun ClosingTime(
     endsAt: Long,
     status: PredictionMarketStatus?,
+    now: Long,
 ) {
-    val stillOpen = status == PredictionMarketStatus.OPEN && endsAt > TimeUtils.now()
+    // Read against the same moment as the status badge, so the two never disagree. A market
+    // declared closed or settled before its end has no closing time worth stating.
+    val stillOpen = status == PredictionMarketStatus.OPEN && endsAt > now
+    if (!stillOpen && endsAt > now) return
     val text =
         if (stillOpen) {
             stringRes(Res.string.prediction_market_closes_in, timeAheadNoDot(endsAt))

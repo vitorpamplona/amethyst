@@ -281,4 +281,33 @@ class PredictionMarketEventTest {
             assertEquals(1, seen)
         }
     }
+
+    @Test
+    fun outcomesKeepTheirIdForTheWinnerAndShowTheirLabel() {
+        // `resolution` names the id; a reader is shown the label.
+        val tagged =
+            market(
+                arrayOf(
+                    arrayOf("market", "m"),
+                    arrayOf("outcome", "opt1", "Foundry USA"),
+                    arrayOf("outcome", "opt2", "AntPool"),
+                    arrayOf("resolution", "opt1"),
+                ),
+                "",
+            )
+        assertEquals(listOf("Foundry USA", "AntPool"), tagged.outcomes())
+        val winner = tagged.outcomeOptions().single { it.isNamedBy(tagged.resolution()) }
+        assertEquals(PredictionMarketOutcome("opt1", "Foundry USA"), winner)
+
+        val json = market(arrayOf(arrayOf("market", "m")), """{"outcomes":[{"id":"A","label":"Foundry"},{"id":"B","label":"Other"}]}""")
+        assertEquals(listOf("Foundry", "Other"), json.outcomes())
+        assertTrue(json.outcomeOptions().first().isNamedBy("a"))
+    }
+
+    @Test
+    fun aCraftedFloodOfOutcomesIsCut() {
+        val flood = Array(5000) { arrayOf("outcome", "o$it") }
+        val event = market(arrayOf(arrayOf("market", "m"), *flood), "")
+        assertEquals(PredictionMarketOutcome.MAX, event.outcomeOptions().size)
+    }
 }

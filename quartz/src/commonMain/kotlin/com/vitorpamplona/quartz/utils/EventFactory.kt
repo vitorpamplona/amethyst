@@ -372,6 +372,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.UnrecognizedKind38000Event
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -762,14 +763,15 @@ class EventFactory {
                 // ballots, and most of what a big relay holds for it is spam (`d`-only "sybil test
                 // votes"). Parsing all of it as a recommendation rendered markets, ballots and spam
                 // as ecash mint cards. Disambiguate by tags, recommendation first — its `k` (the
-                // recommended mint's kind) or, on old events without one, its `u` (mint URL) — and
-                // fall back to a plain Event so junk gets no card and no search index entry.
+                // recommended mint's kind) or, on old events without one, its `u` (mint URL) or the
+                // mint's `a` — and fall back to UnrecognizedKind38000Event: still addressable, so
+                // stores replace and delete it by `d`, but never indexed and drawn as no card.
                 MintRecommendationEvent.KIND ->
                     when {
                         MintRecommendationEvent.isMintRecommendation(tags) -> MintRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                         BallotEvent.isBallot(tags) -> BallotEvent(id, pubKey, createdAt, tags, content, sig)
                         PredictionMarketEvent.isPredictionMarket(tags) -> PredictionMarketEvent(id, pubKey, createdAt, tags, content, sig)
-                        else -> Event(id, pubKey, createdAt, kind, tags, content, sig)
+                        else -> UnrecognizedKind38000Event(id, pubKey, createdAt, tags, content, sig)
                     }
                 MediaFollowListEvent.KIND -> MediaFollowListEvent(id, pubKey, createdAt, tags, content, sig)
                 MediaStarterPackEvent.KIND -> MediaStarterPackEvent(id, pubKey, createdAt, tags, content, sig)

@@ -18,13 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.quartz.experimental.predictionMarkets
 
-/** [value] with the locale's digit grouping: `1,234,567` in English, `1.234.567` in German. */
-expect fun formatGrouped(value: Long): String
+import androidx.compose.runtime.Immutable
 
-/** [value] with the locale's decimal mark and at most [maxFractionDigits] digits after it: `4.21` in English, `4,21` in German. */
-expect fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-): String
+/**
+ * One answer a market can resolve to. BAO writes some as a bare word (`["outcome","YES"]`, a
+ * JSON string) and some as an id with a label (`["outcome","opt1","Foundry USA"]`,
+ * `{"id":"A","label":"Yes"}`): a `resolution` names the [id], a reader is shown the [label].
+ */
+@Immutable
+data class PredictionMarketOutcome(
+    val id: String,
+    val label: String,
+) {
+    /** Whether [resolution] names this outcome — by its id, or by its label as some markets do. */
+    fun isNamedBy(resolution: String?): Boolean = resolution != null && (id.equals(resolution, ignoreCase = true) || label.equals(resolution, ignoreCase = true))
+
+    companion object {
+        /** More than any market offers; a crafted event with thousands is cut here. */
+        const val MAX = 64
+    }
+}

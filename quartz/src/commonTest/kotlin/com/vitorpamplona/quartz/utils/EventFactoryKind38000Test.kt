@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.utils
 
 import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -29,6 +30,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.UnrecognizedKind38000Event
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -105,29 +107,39 @@ class EventFactoryKind38000Test {
     }
 
     @Test
-    fun spamAndOneOffsArePlainEvents() {
+    fun spamAndOneOffsAreUnrecognizedButStillAddressable() {
         listOf(
             Kind38000Fixtures.SPAM_SYBIL_VOTE,
             Kind38000Fixtures.SPAM_APP_MANIFEST,
         ).forEach {
             val event = parse(it)
-            assertEquals(Event::class, event::class)
+            assertIs<UnrecognizedKind38000Event>(event)
+            // Stores key 30000–39999 by `d` only when the event is addressable: replacement and
+            // `a`-tag deletion must still reach the spam.
+            assertIs<AddressableEvent>(event)
             assertFalse(event is SearchableEvent)
         }
     }
 
     @Test
-    fun aKNamingAnotherKindIsNotARecommendationEvenWithAMintUrl() {
-        assertEquals(Event::class, build(arrayOf("k", "1"), arrayOf("u", "https://mint.example"))::class)
-        // The first k decides.
-        assertEquals(Event::class, build(arrayOf("k", "1"), arrayOf("k", "38172"))::class)
+    fun aKNamingOnlyOtherKindsIsNotARecommendationEvenWithAMintUrl() {
+        assertIs<UnrecognizedKind38000Event>(build(arrayOf("k", "1"), arrayOf("u", "https://mint.example")))
+        // Any k naming a mint kind counts, wherever it sits.
+        assertIs<MintRecommendationEvent>(build(arrayOf("k", "1"), arrayOf("k", "38172")))
         assertIs<MintRecommendationEvent>(build(arrayOf("k", "38173"), arrayOf("k", "1")))
     }
 
     @Test
+    fun aRecommendationNamingItsMintOnlyByAddressIsOne() {
+        assertIs<MintRecommendationEvent>(build(arrayOf("d", "x"), arrayOf("a", "38172:${"a".repeat(64)}:x")))
+        assertIs<MintRecommendationEvent>(build(arrayOf("d", "x"), arrayOf("a", "38173:${"a".repeat(64)}:x")))
+        assertIs<UnrecognizedKind38000Event>(build(arrayOf("d", "x"), arrayOf("a", "30023:${"a".repeat(64)}:x")))
+    }
+
+    @Test
     fun aBlankMintUrlWithoutKIsNotARecommendation() {
-        assertEquals(Event::class, build(arrayOf("d", "x"), arrayOf("u", " "))::class)
-        assertEquals(Event::class, build(arrayOf("u"))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("d", "x"), arrayOf("u", " "))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("u"))::class)
     }
 
     @Test
@@ -142,7 +154,7 @@ class EventFactoryKind38000Test {
 
     @Test
     fun aBlankElectionIsNotABallot() {
-        assertEquals(Event::class, build(arrayOf("election", ""))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("election", ""))::class)
     }
 
     @Test
@@ -151,10 +163,10 @@ class EventFactoryKind38000Test {
         assertIs<PredictionMarketEvent>(build(arrayOf("outcome", "YES"), arrayOf("outcome", "NO")))
         assertIs<PredictionMarketEvent>(build(arrayOf("type", "binary"), arrayOf("end", "1")))
 
-        assertEquals(Event::class, build(arrayOf("market", " "))::class)
-        assertEquals(Event::class, build(arrayOf("outcome", "YES"))::class)
-        assertEquals(Event::class, build(arrayOf("type", "binary"))::class)
-        assertEquals(Event::class, build(arrayOf("end", "1"))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("market", " "))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("outcome", "YES"))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("type", "binary"))::class)
+        assertEquals(UnrecognizedKind38000Event::class, build(arrayOf("end", "1"))::class)
     }
 
     @Test

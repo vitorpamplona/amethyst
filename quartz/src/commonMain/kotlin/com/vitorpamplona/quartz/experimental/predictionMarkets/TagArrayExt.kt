@@ -57,15 +57,17 @@ fun TagArray.marketNetwork() = firstNonBlankValue("network", "n")
 fun TagArray.marketCategory() = firstNonBlankValue("category", "c")
 
 /**
- * Every `outcome` tag's value, in order. The BAO Fund shape writes `["outcome", id, label]`;
- * the id is what a `resolution` names, so it is the one returned.
+ * Every `outcome` tag, in order, once per id and at most [PredictionMarketOutcome.MAX]. The BAO
+ * Fund shape writes `["outcome", id, label]`; the current shape a bare word, its own label.
  */
-fun TagArray.marketOutcomes(): List<String> {
-    val result = ArrayList<String>(2)
+fun TagArray.marketOutcomes(): List<PredictionMarketOutcome> {
+    val result = LinkedHashMap<String, PredictionMarketOutcome>(4)
     fastForEach {
-        if (it.size > 1 && it[0] == "outcome" && it[1].isNotBlank() && it[1] !in result) result.add(it[1])
+        if (result.size < PredictionMarketOutcome.MAX && it.size > 1 && it[0] == "outcome" && it[1].isNotBlank() && it[1] !in result) {
+            result[it[1]] = PredictionMarketOutcome(it[1], it.getOrNull(2)?.ifBlank { null } ?: it[1])
+        }
     }
-    return result
+    return result.values.toList()
 }
 
 /** The winning outcome, once the market is resolved. */
