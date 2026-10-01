@@ -54,12 +54,17 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
  * [leading] is an optional slot rendered inside the pill, before the text — used to
  * put the avatar of whoever the line is about ("Alice joined") next to the sentence,
  * so a membership change is recognizable without reading the name.
+ *
+ * [trailing] is an optional slot rendered inside the pill, after the text — used by
+ * system lines that are real messages (a NIP-17 rename) to keep their time and
+ * delivery ticks without wrapping them in an otherwise empty bubble.
  */
 @Composable
 fun ChatSystemMessage(
     text: String,
     onClick: (() -> Unit)? = null,
     leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -78,16 +83,27 @@ fun ChatSystemMessage(
                     Modifier
                 },
         ) {
-            if (leading == null) {
+            if (leading == null && trailing == null) {
                 SystemMessageText(text)
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier =
+                        Modifier.padding(
+                            start = if (leading != null) 8.dp else 0.dp,
+                            end = if (trailing != null) 10.dp else 0.dp,
+                        ),
                 ) {
-                    leading()
-                    SystemMessageText(text, startPadding = 0.dp)
+                    leading?.invoke()
+                    SystemMessageText(
+                        text = text,
+                        startPadding = if (leading != null) 0.dp else 12.dp,
+                        endPadding = if (trailing != null) 0.dp else 12.dp,
+                        // Lets a long sentence wrap instead of pushing the trailing slot out of the pill.
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    trailing?.invoke()
                 }
             }
         }
@@ -98,13 +114,15 @@ fun ChatSystemMessage(
 private fun SystemMessageText(
     text: String,
     startPadding: Dp = 12.dp,
+    endPadding: Dp = 12.dp,
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = text,
         fontSize = Font12SP,
         color = MaterialTheme.colorScheme.grayText,
         textAlign = TextAlign.Center,
-        modifier = Modifier.padding(start = startPadding, end = 12.dp, top = 5.dp, bottom = 5.dp),
+        modifier = modifier.padding(start = startPadding, end = endPadding, top = 5.dp, bottom = 5.dp),
     )
 }
 
@@ -117,6 +135,11 @@ private fun ChatSystemMessagePreview() {
         ChatSystemMessage(
             "Bob was added by Alice",
             leading = { Box(Modifier.size(Size18dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary)) },
+        )
+        ChatSystemMessage(
+            "You renamed the conversation",
+            leading = { Box(Modifier.size(Size18dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary)) },
+            trailing = { Text("10:42", fontSize = Font12SP, color = MaterialTheme.colorScheme.grayText) },
         )
     }
 }

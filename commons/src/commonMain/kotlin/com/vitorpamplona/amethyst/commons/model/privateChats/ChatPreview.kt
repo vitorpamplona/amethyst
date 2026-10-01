@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.privateChats
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -59,6 +61,16 @@ fun Event.hasEncryptedContent(): Boolean =
     }
 
 /**
+ * A NIP-17 message that only renames the conversation: it carries a `subject` tag and no text.
+ * It has nothing to show as a message body, so the feed, the room list and the notification each
+ * narrate it as a rename instead. A rename sent with an explanation is a regular message.
+ *
+ * Checks the content first: almost every message has text, and `isBlank` stops at its first
+ * non-space character, so the tag scan only runs for the rare empty one.
+ */
+fun Event.isSubjectOnlyChatMessage(): Boolean = this is ChatMessageEvent && content.isBlank() && subject() != null
+
+/**
  * What a chat row should render for a message, once the raw ciphertext is off the table.
  *
  * [Decrypting] and [Undecryptable] are kept apart on purpose: a message that is merely
@@ -68,6 +80,11 @@ sealed interface ChatPreview {
     /** Readable text, ready to render. */
     data class Body(
         val text: String,
+    ) : ChatPreview
+
+    /** A message that only renamed the conversation ([isSubjectOnlyChatMessage]) to [subject]. */
+    data class SubjectChange(
+        val subject: String,
     ) : ChatPreview
 
     /** Encrypted, decryptable by this account, plaintext not available yet. */
@@ -96,6 +113,8 @@ fun chatPreviewOf(
     canDecrypt: Boolean,
 ): ChatPreview {
     if (event == null) return ChatPreview.Missing
+
+    if (event.isSubjectOnlyChatMessage()) return ChatPreview.SubjectChange(event.subject() ?: "")
 
     if (!event.hasEncryptedContent()) return ChatPreview.Body(decrypted ?: event.content)
 

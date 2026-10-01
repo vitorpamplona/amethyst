@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeBottom
@@ -92,7 +93,8 @@ const val CHAT_GROUP_WINDOW_SECONDS = 10 * 60L
 
 /**
  * Event kinds that don't render as regular bubbles (zaps, raids, clips) or that
- * read as system messages (channel admin events) never join an author run.
+ * read as system messages (channel admin events, NIP-17 renames) never join an
+ * author run.
  */
 private fun isGroupableEvent(event: Event?): Boolean =
     event != null &&
@@ -100,7 +102,8 @@ private fun isGroupableEvent(event: Event?): Boolean =
         event !is LiveActivitiesRaidEvent &&
         event !is LiveActivitiesClipEvent &&
         event !is ChannelCreateEvent &&
-        event !is ChannelMetadataEvent
+        event !is ChannelMetadataEvent &&
+        !event.isSubjectOnlyChatMessage()
 
 /**
  * Whether [newer] continues the author run started by [older]. Mirrors the break

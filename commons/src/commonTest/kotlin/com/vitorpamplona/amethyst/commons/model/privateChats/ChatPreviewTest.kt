@@ -59,6 +59,50 @@ class ChatPreviewTest {
             sig = someSig,
         )
 
+    private fun nip17Rename(content: String = "") =
+        ChatMessageEvent(
+            id = "rn".padEnd(64, '0'),
+            pubKey = other,
+            createdAt = 1_000,
+            tags = arrayOf(arrayOf("p", me), arrayOf("subject", "Weekend plans")),
+            content = content,
+            sig = someSig,
+        )
+
+    // ---- subject-only renames ------------------------------------------------
+
+    @Test
+    fun renameWithoutTextIsSubjectOnly() {
+        assertTrue(nip17Rename().isSubjectOnlyChatMessage())
+        assertTrue(nip17Rename(content = "  \n").isSubjectOnlyChatMessage())
+    }
+
+    @Test
+    fun renameWithTextIsARegularMessage() {
+        assertFalse(nip17Rename(content = "new goals").isSubjectOnlyChatMessage())
+    }
+
+    @Test
+    fun messageWithoutSubjectIsNotARename() {
+        assertFalse(nip17Rumor().isSubjectOnlyChatMessage())
+    }
+
+    @Test
+    fun renamePreviewNamesTheNewSubject() {
+        assertEquals(
+            ChatPreview.SubjectChange("Weekend plans"),
+            chatPreviewOf(nip17Rename(), decrypted = null, myPubKey = me, canDecrypt = true),
+        )
+    }
+
+    @Test
+    fun renameWithTextPreviewsTheText() {
+        assertEquals(
+            ChatPreview.Body("new goals"),
+            chatPreviewOf(nip17Rename(content = "new goals"), decrypted = null, myPubKey = me, canDecrypt = true),
+        )
+    }
+
     // ---- hasEncryptedContent -------------------------------------------------
 
     @Test

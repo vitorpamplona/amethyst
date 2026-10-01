@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatSubjectChange
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatZap
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderConcordTimerNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
@@ -178,6 +180,9 @@ fun ChatroomMessageCompose(
             } else if (event is ConcordTimerNoticeEvent) {
                 // Concord kind-1740: "Alice set disappearing messages to 30 days" (CORD-08 §4).
                 RenderConcordTimerNotice(baseNote, accountViewModel, nav)
+            } else if (event?.isSubjectOnlyChatMessage() == true) {
+                // NIP-17 rename with no text: a system line under the subject divider, not an empty bubble.
+                RenderChatSubjectChange(baseNote, innerQuote, accountViewModel, nav)
             } else if (isBuzzActivityRow(event)) {
                 // Buzz agent-job (43xxx) and huddle (48xxx) lifecycle narration. Huddles
                 // especially must be caught here — their content is JSON, not chat text.

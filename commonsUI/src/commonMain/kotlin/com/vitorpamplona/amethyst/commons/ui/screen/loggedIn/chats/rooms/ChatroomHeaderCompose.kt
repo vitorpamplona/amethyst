@@ -92,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you_by
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
+import com.vitorpamplona.amethyst.commons.resources.chat_system_renamed_conversation_to
+import com.vitorpamplona.amethyst.commons.resources.chat_system_renamed_conversation_to_you
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_from
 import com.vitorpamplona.amethyst.commons.resources.concord_direct_invite_label
 import com.vitorpamplona.amethyst.commons.resources.concord_home_title
@@ -1324,6 +1326,15 @@ private fun RowScope.LastMessagePreview(
                     // 1:1 room's preview shows who spoke last instead of reading like the counterpart.
                     val sentByMe = lastMessage.author?.pubkeyHex == accountViewModel.account.signer.pubKey
                     if (sentByMe) stringRes(Res.string.chat_preview_you_prefix, preview.text) else preview.text
+                }
+                is ChatPreview.SubjectChange -> {
+                    // A rename with no text has no body to quote; say what it did instead of "You: ".
+                    val authorHex = lastMessage.event?.pubKey
+                    if (authorHex == accountViewModel.account.signer.pubKey) {
+                        stringRes(Res.string.chat_system_renamed_conversation_to_you, preview.subject)
+                    } else {
+                        stringRes(Res.string.chat_system_renamed_conversation_to, observeUserNameByHex(authorHex, accountViewModel), preview.subject)
+                    }
                 }
                 ChatPreview.Decrypting -> stringRes(Res.string.chat_preview_decrypting)
                 ChatPreview.Undecryptable -> stringRes(Res.string.could_not_decrypt_the_message)

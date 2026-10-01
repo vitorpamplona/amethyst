@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.composer.DraftTagState
+import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
@@ -54,6 +55,19 @@ import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.launch
+
+private const val SUBJECT_ONLY_CONTENT_TYPE = -2
+
+/**
+ * The lazy-list content type of a chat row: its event kind, except that a NIP-17 rename with no
+ * text gets its own type. It renders as a system pill rather than a bubble, so letting it share
+ * kind 14's slot with ordinary messages would make the list rebuild one layout into the other
+ * whenever a recycled slot crossed between the two.
+ */
+private fun chatRowContentType(item: Note): Int {
+    val event = item.event ?: return -1
+    return if (event.isSubjectOnlyChatMessage()) SUBJECT_ONLY_CONTENT_TYPE else event.kind
+}
 
 /**
  * A caller's own rendering for feed rows that are not chat bubbles.
@@ -245,7 +259,7 @@ fun ChatFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> chatRowContentType(item) }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 // Reverse layout: index - 1 is the newer message (visually below),
