@@ -36,10 +36,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -240,11 +240,14 @@ fun AudioCoverCard(
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val bars = rememberBars(info)
+    // Cap the WIDTH, not the height: with a full width wider than the cap (a tablet), a height cap
+    // left aspectRatio drawing a full-width square inside a 400dp-tall slot, and the overflow
+    // spilled over the author row above and the reaction row below.
     Box(
         modifier =
             modifier
+                .widthIn(max = 400.dp)
                 .fillMaxWidth()
-                .heightIn(max = 400.dp)
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(16.dp))
                 .clickableWithoutRipple(onClick),

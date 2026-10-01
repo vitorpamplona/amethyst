@@ -71,7 +71,7 @@ internal suspend fun runCommand(
             val watchdog =
                 thread(isDaemon = true, name = "now-playing-command-timeout") {
                     try {
-                        if (!started.waitFor(timeoutSeconds, TimeUnit.SECONDS)) started.destroyForcibly()
+                        if (!started.waitFor(timeoutSeconds, TimeUnit.SECONDS)) started.destroyTree()
                     } catch (_: InterruptedException) {
                         // The command finished first.
                     }
@@ -87,6 +87,16 @@ internal suspend fun runCommand(
             Log.d("OsNowPlayingReader") { "${command.first()} failed: ${e.message}" }
             null
         } finally {
-            process?.takeIf { it.isAlive }?.destroyForcibly()
+            process?.destroyTree()
         }
     }
+
+/**
+ * Kills [this] and everything it started. Killing only the process is not enough: a shell that forks
+ * its command (dash, Ubuntu's `/bin/sh`, does) leaves the child holding stdout open, so the read in
+ * [runCommand] would wait for that child however long it runs, timeout or not.
+ */
+private fun Process.destroyTree() {
+    descendants().forEach { it.destroyForcibly() }
+    if (isAlive) destroyForcibly()
+}
