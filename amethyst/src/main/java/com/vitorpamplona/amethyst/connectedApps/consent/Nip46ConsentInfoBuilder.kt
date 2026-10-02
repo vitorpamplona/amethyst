@@ -23,13 +23,12 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer.Companion.decryptCounterparty
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer.Companion.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTargets
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.authRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.utils.Log
@@ -144,7 +143,7 @@ object Nip46ConsentInfoBuilder {
         content: String,
     ): String =
         if (kind == RelayAuthEvent.KIND) {
-            tags.authRelays().joinToString(", ") { it.displayUrl() }
+            tags.relayAuthTargets().joinToString(", ") { it.display }
         } else {
             content.take(PREVIEW_MAX_CHARS).trim()
         }

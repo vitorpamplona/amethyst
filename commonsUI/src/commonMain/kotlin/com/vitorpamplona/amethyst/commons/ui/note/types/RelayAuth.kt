@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,11 +41,15 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthTarget
+import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTarget
+import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTargets
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_challenge
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_explainer
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_no_relay
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_title
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_unusual_relay
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.RenderRelay
 import com.vitorpamplona.amethyst.commons.ui.note.RenderRelayIcon
@@ -52,13 +57,13 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 /**
  * NIP-42 kind 22242: a login to a relay. It is not a post — its content is empty and nobody but
  * the relay ever sees it — so it renders as "log in to <relay>" instead of falling through to the
- * text-note layout. Mostly met in signer consent prompts, where an app asks to sign one.
+ * text-note layout. Mostly met in signer consent prompts, where an app asks to sign one, so the
+ * relay is shown exactly as the event names it (see [RelayAuthTarget]).
  */
 @Composable
 fun RenderRelayAuth(
@@ -67,7 +72,7 @@ fun RenderRelayAuth(
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayAuthEvent ?: return
-    val relays = remember(noteEvent) { noteEvent.relays() }
+    val relays = remember(noteEvent) { noteEvent.tags.relayAuthTargets() }
     val challenge = remember(noteEvent) { noteEvent.challenge() }
 
     RelayAuthCard(relays, challenge) { relay ->
@@ -77,7 +82,7 @@ fun RenderRelayAuth(
 
 @Composable
 fun RelayAuthCard(
-    relays: List<NormalizedRelayUrl>,
+    relays: List<RelayAuthTarget>,
     challenge: String?,
     relayIcon: @Composable (NormalizedRelayUrl) -> Unit,
 ) {
@@ -122,26 +127,45 @@ fun RelayAuthCard(
         }
 
         relays.forEach { relay ->
-            Row(
-                modifier = Modifier.padding(start = 32.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                relayIcon(relay)
-                Text(
-                    text = relay.displayUrl(),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Column(modifier = Modifier.padding(start = 32.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val url = relay.url
+                    if (url != null) {
+                        relayIcon(url)
+                    } else {
+                        Icon(
+                            symbol = MaterialSymbols.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    // Never ellipsized: the whole address is what the user is agreeing to.
+                    Text(
+                        text = relay.display,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (relay.unusual) MaterialTheme.colorScheme.error else Color.Unspecified,
+                    )
+                }
+                if (relay.unusual) {
+                    Text(
+                        text = stringRes(Res.string.relay_auth_event_unusual_relay),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
 
         challenge?.let {
             Text(
                 text = stringRes(Res.string.relay_auth_event_challenge, it),
-                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -156,7 +180,7 @@ fun RelayAuthCard(
 private fun RelayAuthCardPreview() {
     ThemeComparisonColumn {
         RelayAuthCard(
-            relays = listOf(NormalizedRelayUrl("wss://relay.damus.io/")),
+            relays = listOf(relayAuthTarget("wss://relay.damus.io"), relayAuthTarget("not a relay")),
             challenge = "4f2c9a1e-7b3d-4c8e-a6f0-2d9b1e3c5a7f",
         ) { relay ->
             RenderRelayIcon(

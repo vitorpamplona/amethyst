@@ -1135,7 +1135,8 @@
     <string name="relay_auth_session_row_desc">Logged in until you restart Amethyst</string>
     <string name="relay_auth_forget_session">Forget this login</string>
     <string name="relay_auth_event_title">Relay login</string>
-    <string name="relay_auth_event_explainer">Proves to the relay that you control this account. Nothing is posted.</string>
+    <string name="relay_auth_event_explainer">Not a post. It logs you in to this relay: whoever holds it can read what the relay only shows to you, like your private messages.</string>
+    <string name="relay_auth_event_unusual_relay">This is not a plain relay address. Check it before signing.</string>
     <string name="relay_auth_event_no_relay">No relay named in this login</string>
     <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
