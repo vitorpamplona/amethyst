@@ -63,6 +63,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -119,11 +120,16 @@ fun AddressEditor(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // The field shows what it will do: the page's badge while it still holds the page's URL,
-                // a search glyph once the user types something else.
+                // then a globe or a search glyph for what Go will do with what they typed.
                 if (field.text == initialUrl) {
                     SecurityIcon(security, size = 20.dp)
                 } else {
-                    Icon(MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        if (OmniboxInput.isAddress(field.text)) MaterialSymbols.Language else MaterialSymbols.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {

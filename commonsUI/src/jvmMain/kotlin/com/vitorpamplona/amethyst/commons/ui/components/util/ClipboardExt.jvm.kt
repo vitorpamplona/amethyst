@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.ui.components.util
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
@@ -44,10 +46,13 @@ actual suspend fun Clipboard.getText(): String? {
     }
 }
 
-actual fun Clipboard.hasText(): Boolean =
-    try {
-        Toolkit.getDefaultToolkit().systemClipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)
-    } catch (_: Exception) {
-        // Headless, or another app holds the clipboard open.
-        false
+// Off the UI thread: on X11 the flavor query is a round trip to whichever app owns the clipboard.
+actual suspend fun Clipboard.hasText(): Boolean =
+    withContext(Dispatchers.IO) {
+        try {
+            Toolkit.getDefaultToolkit().systemClipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)
+        } catch (_: Exception) {
+            // Headless, or another app holds the clipboard open.
+            false
+        }
     }

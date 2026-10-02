@@ -37,8 +37,9 @@ actual suspend fun Clipboard.getText(): String? =
         ?.toString()
 
 // The description is metadata: reading it doesn't trigger the "pasted from your clipboard" toast that
-// getPrimaryClip does.
-actual fun Clipboard.hasText(): Boolean =
+// getPrimaryClip does. Only the types whose items carry the text getText reads: a text/uri-list clip
+// (ClipData.newUri) has none, so offering to paste it would do nothing.
+actual suspend fun Clipboard.hasText(): Boolean =
     nativeClipboard.primaryClipDescription?.let {
-        it.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || it.hasMimeType("text/*")
+        it.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || it.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
     } == true

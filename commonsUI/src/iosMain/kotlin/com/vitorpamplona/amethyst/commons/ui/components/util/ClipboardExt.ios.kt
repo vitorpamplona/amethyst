@@ -35,4 +35,4 @@ actual suspend fun Clipboard.getText(): String? {
     return if (pasteboard.hasStrings) pasteboard.string else null
 }
 
-actual fun Clipboard.hasText(): Boolean = UIPasteboard.generalPasteboard.hasStrings
+actual suspend fun Clipboard.hasText(): Boolean = UIPasteboard.generalPasteboard.hasStrings

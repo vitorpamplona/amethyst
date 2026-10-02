@@ -80,6 +80,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -197,15 +198,24 @@ private fun BrowserLauncher(
     val searchEngine = SearchEngines.byId(searchEngineId)
 
     var field by remember { mutableStateOf(TextFieldValue("")) }
+
+    // The selection an inline completion produced. While the field's selection is still exactly this, the
+    // highlighted suffix is ghost text the user didn't type; any other selection (select-all, a shift-select)
+    // is the user's own.
+    var ghost by remember { mutableStateOf<TextRange?>(null) }
+    val ghostShowing = ghost != null && field.selection == ghost
+
     var focused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
-    // Checked from the clipboard's metadata each time the field gains focus, so "Paste and go" is only
-    // offered when there is something to paste; the contents are read only when the user taps it.
+    // Checked from the clipboard's metadata whenever the field gains focus or the window comes back (the
+    // user may have left to copy a link), so "Paste and go" is only offered when there is something to
+    // paste; the contents are read only when the user taps it.
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
     var clipboardHasText by remember { mutableStateOf(false) }
-    LaunchedEffect(focused) { clipboardHasText = focused && clipboard.hasText() }
+    LaunchedEffect(focused, windowFocused) { clipboardHasText = focused && windowFocused && clipboard.hasText() }
 
     // Favorites + visit history + the hardcoded Discover apps, flattened into the neutral candidate shape
     // the ranker consumes — so typing the omnibox finds a suggested app even before its first visit. The
@@ -262,9 +272,8 @@ private fun BrowserLauncher(
         value = withContext(Dispatchers.Default) { nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates) }
     }
 
-    // What the user actually typed, excluding any selected ghost-completion suffix (selection.min is the
-    // caret when collapsed, or the start of the highlighted suffix when a completion is showing).
-    val typed = field.text.take(field.selection.min.coerceIn(0, field.text.length))
+    // What the user actually typed, excluding the ghost-completion suffix while one is showing.
+    val typed = ghost?.takeIf { ghostShowing }?.let { field.text.take(it.start) } ?: field.text
     // One ranking per typed text: an appended character is ranked in onValueChange (for the inline
     // completion) and then again for this list on the recomposition that follows — keep the last one.
     val lastRanking = remember(candidates) { arrayOfNulls<Pair<String, List<OmniboxSuggestions.Suggestion>>>(1) }
@@ -281,6 +290,7 @@ private fun BrowserLauncher(
         // The site opens in its own window: coming back should land on a fresh launcher, not on the
         // half-typed address and its suggestions.
         field = TextFieldValue("")
+        ghost = null
         focusManager.clearFocus()
     }
 
@@ -300,23 +310,27 @@ private fun BrowserLauncher(
     // Inline autocomplete: when the user appends a character, offer the top host as selected ghost text so
     // the next keystroke replaces it. On deletion or mid-string edits, leave the value untouched.
     fun onValueChange(new: TextFieldValue) {
-        val prevTyped = field.text.take(field.selection.min.coerceIn(0, field.text.length))
+        // What is left once the selection (a ghost suffix, or anything the user selected) is typed over.
+        val kept = field.text.removeRange(field.selection.min, field.selection.max)
         val newText = new.text
         val appended =
             new.selection.collapsed &&
                 new.selection.start == newText.length &&
-                newText.length > prevTyped.length &&
-                newText.startsWith(prevTyped)
+                newText.length > kept.length &&
+                newText.startsWith(kept)
         if (appended) {
             // The completion has always looked at the top 8 (rank's default limit).
             val completion = OmniboxSuggestions.completion(newText, ranked(newText).take(8))
             if (completion != null) {
                 // Keep the user's own casing for the typed prefix; append only the remaining suffix.
                 val full = newText + completion.substring(newText.length)
-                field = TextFieldValue(full, TextRange(newText.length, full.length))
+                val suffix = TextRange(newText.length, full.length)
+                field = TextFieldValue(full, suffix)
+                ghost = suffix
                 return
             }
         }
+        if (new.text != field.text) ghost = null
         field = new
     }
 
@@ -328,8 +342,15 @@ private fun BrowserLauncher(
                 focused = focused,
                 onFocusChange = { focused = it },
                 onValueChange = ::onValueChange,
-                onAcceptCompletion = { field = field.copy(selection = TextRange(field.text.length)) },
-                onClear = { field = TextFieldValue("") },
+                hasCompletion = ghostShowing,
+                onAcceptCompletion = {
+                    field = field.copy(selection = TextRange(field.text.length))
+                    ghost = null
+                },
+                onClear = {
+                    field = TextFieldValue("")
+                    ghost = null
+                },
                 onOpen = { open(field.text) },
                 onPasteAndGo =
                     if (focused && field.text.isEmpty() && clipboardHasText) {
@@ -401,6 +422,7 @@ private fun OmniBar(
     focused: Boolean,
     onFocusChange: (Boolean) -> Unit,
     onValueChange: (TextFieldValue) -> Unit,
+    hasCompletion: Boolean,
     onAcceptCompletion: () -> Unit,
     onClear: () -> Unit,
     onOpen: () -> Unit,
@@ -409,7 +431,7 @@ private fun OmniBar(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val colors = MaterialTheme.colorScheme
-    val isAddress = isAddress(field.text)
+    val isAddress = OmniboxInput.isAddress(field.text)
 
     Row(
         modifier =
@@ -447,15 +469,6 @@ private fun OmniBar(
             )
             Spacer(Modifier.width(12.dp))
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (field.text.isEmpty()) {
-                    Text(
-                        stringRes(Res.string.browser_address_hint),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
                 BasicTextField(
                     value = field,
                     onValueChange = onValueChange,
@@ -470,6 +483,22 @@ private fun OmniBar(
                             imeAction = ImeAction.Go,
                         ),
                     keyboardActions = KeyboardActions(onGo = { onOpen() }),
+                    // The placeholder lives inside the field's decoration so it is part of the field's
+                    // semantics: a screen reader announces it as the field's hint, as Material's TextField does.
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (field.text.isEmpty()) {
+                                Text(
+                                    stringRes(Res.string.browser_address_hint),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = colors.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -480,7 +509,7 @@ private fun OmniBar(
                                 when (event.key) {
                                     // Tab takes the ghost completion instead of moving focus away.
                                     Key.Tab ->
-                                        if (!field.selection.collapsed) {
+                                        if (hasCompletion) {
                                             onAcceptCompletion()
                                             true
                                         } else {
@@ -516,12 +545,6 @@ private fun OmniBar(
     }
 }
 
-/** True when Go would open [text] as an address rather than search for it — the same rule [OmniboxInput.resolve] uses. */
-private fun isAddress(text: String): Boolean {
-    val trimmed = text.trim()
-    return trimmed.contains("://") || OmniboxInput.looksLikeHost(trimmed)
-}
-
 /**
  * The first row while typing: exactly what Go / Enter will do with the [entered] text — open it as an
  * address, or search for it — so the user never has to guess which one they're about to get.
@@ -533,7 +556,7 @@ private fun EnteredRow(
     onClick: () -> Unit,
 ) {
     val target = OmniboxInput.resolve(entered, searchEngine.queryPrefix) ?: return
-    val isAddress = isAddress(entered)
+    val isAddress = !target.isSearch
     val title =
         if (isAddress) {
             stringRes(Res.string.browser_omnibox_go_to, target.url.removePrefix("https://"))

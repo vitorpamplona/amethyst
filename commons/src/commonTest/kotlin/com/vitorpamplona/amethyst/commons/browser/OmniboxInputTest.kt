@@ -58,6 +58,27 @@ class OmniboxInputTest {
     }
 
     @Test
+    fun textWithSpacesIsASearchEvenWithAScheme() {
+        // Pasted prose that merely contains a link must not be loaded as a (broken) URL.
+        val resolved = OmniboxInput.resolve("check this out https://example.com")!!
+        assertEquals("https://duckduckgo.com/?q=check%20this%20out%20https%3A%2F%2Fexample.com", resolved.url)
+        assertTrue(resolved.isSearch)
+        assertTrue(!OmniboxInput.isAddress("check this out https://example.com"))
+    }
+
+    @Test
+    fun isAddressMatchesResolve() {
+        listOf("example.com", "http://example.com", "localhost:8080", "nostr://npub1abc").forEach {
+            assertTrue(OmniboxInput.isAddress(it), it)
+            assertTrue(!OmniboxInput.resolve(it)!!.isSearch, it)
+        }
+        listOf("cats", "how to tie a knot").forEach {
+            assertTrue(!OmniboxInput.isAddress(it), it)
+            assertTrue(OmniboxInput.resolve(it)!!.isSearch, it)
+        }
+    }
+
+    @Test
     fun searchPrefixIsConfigurable() {
         assertEquals("https://search.example/?s=cats", OmniboxInput.resolve("cats", "https://search.example/?s=")?.url)
     }

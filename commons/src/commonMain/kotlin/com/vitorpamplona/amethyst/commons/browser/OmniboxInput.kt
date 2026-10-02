@@ -27,9 +27,9 @@ package com.vitorpamplona.amethyst.commons.browser
  *
  * The rules, in order:
  * - blank → null (nothing to open)
- * - already has a scheme (`foo://…`) → used verbatim
+ * - already has a scheme (`foo://…`) and no spaces → used verbatim
  * - looks like a host/URL (no spaces, has a dot, or is `localhost`) → `https://` prepended
- * - anything else → a search on [searchPrefix] (DuckDuckGo by default), URL-encoded
+ * - anything else — including prose that merely contains a link → a search on [searchPrefix] (DuckDuckGo by default), URL-encoded
  *
  * [Resolved.forceTor] is set for `.onion` addresses, which only resolve over Tor; the caller ORs it with
  * the user's per-site choice. Pure and platform-agnostic (no `android.net.Uri`) so it lives in commons
@@ -42,6 +42,8 @@ object OmniboxInput {
     data class Resolved(
         val url: String,
         val forceTor: Boolean,
+        /** True when [url] is a search for the text rather than the address the user typed. */
+        val isSearch: Boolean = false,
     )
 
     fun resolve(
@@ -50,13 +52,21 @@ object OmniboxInput {
     ): Resolved? {
         val text = raw.trim()
         if (text.isEmpty()) return null
-        if (text.contains("://")) return Resolved(text, isOnion(text))
-        if (looksLikeHost(text)) {
-            val url = "https://$text"
-            return Resolved(url, isOnion(url))
-        }
-        return Resolved(searchPrefix + encodeQuery(text), forceTor = false)
+        if (!isAddress(text)) return Resolved(searchPrefix + encodeQuery(text), forceTor = false, isSearch = true)
+        val url = if (hasScheme(text)) text else "https://$text"
+        return Resolved(url, isOnion(url))
     }
+
+    /**
+     * True when [raw] would be opened as an address rather than searched for — the one rule [resolve]
+     * follows, exposed so the address bar's icon and hint can say what Go will do before it happens.
+     */
+    fun isAddress(raw: String): Boolean {
+        val text = raw.trim()
+        return hasScheme(text) || looksLikeHost(text)
+    }
+
+    private fun hasScheme(text: String): Boolean = text.contains("://") && text.none { it.isWhitespace() }
 
     /**
      * True when [text] (with no scheme) reads as a hostname/URL rather than a search query: no spaces, and
