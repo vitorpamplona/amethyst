@@ -1947,6 +1947,7 @@
     <string name="tor_continue_without_for_session">Use regular connection</string>
     <string name="tor_keep_waiting">Keep waiting</string>
     <string name="tor_splash_connecting">Connecting to Tor…</string>
+    <string name="tor_status_connected">Connected to Tor</string>
     <string name="tor_splash_error">Tor error: %1$s</string>
     <string name="tor_splash_explainer">Amethyst uses Tor to hide your IP address from relays. Starting Tor can take a minute and needs internet access.</string>
     <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>

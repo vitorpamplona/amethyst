@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.longs
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.profile
@@ -124,6 +125,8 @@ import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
+import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
+import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
@@ -163,6 +166,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
@@ -1078,32 +1082,41 @@ fun BottomContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Absolute.SpaceBetween,
         ) {
-            val string =
-                remember {
-                    buildAnnotatedString {
-                        withLink(
-                            LinkAnnotation.Clickable(
-                                "clickable",
-                                TextStyleBottomNavBar,
+            // The version (release notes link) and, while Tor is in use, its status beside it.
+            Row(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val string =
+                    remember {
+                        buildAnnotatedString {
+                            withLink(
+                                LinkAnnotation.Clickable(
+                                    "clickable",
+                                    TextStyleBottomNavBar,
+                                ) {
+                                    nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
+                                    nav.closeDrawer()
+                                },
                             ) {
-                                nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
-                                nav.closeDrawer()
-                            },
-                        ) {
-                            append("v")
-                            append(BuildConfig.VERSION_NAME)
-                            append("-")
-                            append(BuildConfig.FLAVOR.uppercase())
+                                append("v")
+                                append(BuildConfig.VERSION_NAME)
+                                append("-")
+                                append(BuildConfig.FLAVOR.uppercase())
+                            }
                         }
                     }
-                }
 
-            Text(
-                text = string,
-                modifier = Modifier.padding(start = 16.dp),
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-            )
+                Text(
+                    text = string,
+                    // Yields to the Tor icon on a narrow drawer instead of pushing it off.
+                    modifier = Modifier.weight(1f, fill = false).padding(start = 16.dp),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                )
+
+                TorStatusIcon(nav)
+            }
 
             IconButton(
                 onClick = {
@@ -1119,6 +1132,34 @@ fun BottomContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * Tor's state next to the app version, opening the Tor settings on tap. Hidden while Tor is off: that
+ * is a choice, not a fault, so it gets no icon at all rather than an alarming one. Connected only once
+ * the directory is ready ([TorServiceStatus.isFullyBootstrapped]); a bound proxy still downloading it
+ * cannot carry traffic yet, so it reads as connecting.
+ */
+@Composable
+private fun TorStatusIcon(nav: INav) {
+    val torStatus by Amethyst.instance.torManager.status
+        .collectAsStateWithLifecycle()
+    if (torStatus is TorServiceStatus.Off) return
+
+    val connected = torStatus.isFullyBootstrapped
+    IconButton(
+        onClick = {
+            nav.nav(Route.PrivacyOptions)
+            nav.closeDrawer()
+        },
+    ) {
+        Icon(
+            painter = painterRes(Res.drawable.ic_tor, 2),
+            contentDescription = stringRes(if (connected) Res.string.tor_status_connected else Res.string.tor_splash_connecting),
+            modifier = Size20Modifier,
+            tint = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
