@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.components.util
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
+import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
@@ -42,3 +43,11 @@ actual suspend fun Clipboard.getText(): String? {
         null
     }
 }
+
+actual fun Clipboard.hasText(): Boolean =
+    try {
+        Toolkit.getDefaultToolkit().systemClipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)
+    } catch (_: Exception) {
+        // Headless, or another app holds the clipboard open.
+        false
+    }

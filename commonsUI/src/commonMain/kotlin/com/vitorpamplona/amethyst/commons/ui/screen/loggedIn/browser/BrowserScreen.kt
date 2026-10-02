@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.browser
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,27 +45,43 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -96,6 +114,10 @@ import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
 import com.vitorpamplona.amethyst.commons.resources.browser_favorites
 import com.vitorpamplona.amethyst.commons.resources.browser_go
+import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_go_to
+import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_search_for
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_fill_in
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_paste_go
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_options
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_remove
 import com.vitorpamplona.amethyst.commons.resources.browser_suggested
@@ -103,6 +125,8 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_still_loading
+import com.vitorpamplona.amethyst.commons.ui.components.util.getText
+import com.vitorpamplona.amethyst.commons.ui.components.util.hasText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -121,6 +145,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
 
@@ -169,6 +194,15 @@ private fun BrowserLauncher(
     PreloadFavoriteNostrApps(apps, accountViewModel)
 
     var field by remember { mutableStateOf(TextFieldValue("")) }
+    var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    // Checked from the clipboard's metadata each time the field gains focus, so "Paste and go" is only
+    // offered when there is something to paste; the contents are read only when the user taps it.
+    var clipboardHasText by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) { clipboardHasText = focused && clipboard.hasText() }
 
     // Favorites + visit history + the hardcoded Discover apps, flattened into the neutral candidate shape
     // the ranker consumes — so typing the omnibox finds a suggested app even before its first visit. The
@@ -241,6 +275,10 @@ private fun BrowserLauncher(
     fun open(text: String) {
         val target = OmniboxInput.resolve(text) ?: return
         appLauncher.launchUrl(target.url, target.forceTor)
+        // The site opens in its own window: coming back should land on a fresh launcher, not on the
+        // half-typed address and its suggestions.
+        field = TextFieldValue("")
+        focusManager.clearFocus()
     }
 
     // Pin/unpin a plain web URL by its favorite id. Shared by the suggestion list and the Recent rows.
@@ -284,9 +322,18 @@ private fun BrowserLauncher(
             OmniBar(
                 nav = nav,
                 field = field,
+                focused = focused,
+                onFocusChange = { focused = it },
                 onValueChange = ::onValueChange,
+                onAcceptCompletion = { field = field.copy(selection = TextRange(field.text.length)) },
                 onClear = { field = TextFieldValue("") },
                 onOpen = { open(field.text) },
+                onPasteAndGo =
+                    if (focused && field.text.isEmpty() && clipboardHasText) {
+                        { scope.launch { clipboard.getText()?.let(::open) } }
+                    } else {
+                        null
+                    },
             )
         },
         bottomBar = {
@@ -298,12 +345,15 @@ private fun BrowserLauncher(
                 .fillMaxSize()
                 .padding(padding)
         when {
-            typed.isNotBlank() && suggestions.isNotEmpty() ->
+            typed.isNotBlank() ->
                 SuggestionGrid(
+                    entered = field.text,
                     suggestions = suggestions,
                     iconKeys = iconKeys,
                     historyUrls = historyUrls,
+                    onOpenEntered = { open(field.text) },
                     onOpen = { open(it.url) },
+                    onFillIn = { field = TextFieldValue(it, TextRange(it.length)) },
                     onToggleFavorite = { toggleFavorite(it.url, it.label) },
                     onRemoveFromHistory = { appServices.browserHistory.remove(it) },
                     modifier = contentModifier,
@@ -333,76 +383,220 @@ private fun BrowserLauncher(
     }
 }
 
+/**
+ * The launcher's address field: a rounded pill with the same anatomy as the in-site
+ * [AddressEditor][com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressEditor] —
+ * a leading glyph that says what Go will do (search vs. open an address), the field, clear, and a filled Go
+ * once there is something to go to. Focused and empty, it offers Paste and go when the clipboard holds
+ * text. Tab (or →) accepts the inline completion; Escape leaves the field.
+ */
 @Composable
 private fun OmniBar(
     nav: INav,
     field: TextFieldValue,
+    focused: Boolean,
+    onFocusChange: (Boolean) -> Unit,
     onValueChange: (TextFieldValue) -> Unit,
+    onAcceptCompletion: () -> Unit,
     onClear: () -> Unit,
     onOpen: () -> Unit,
+    onPasteAndGo: (() -> Unit)?,
 ) {
-    Row(
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val colors = MaterialTheme.colorScheme
+    val isAddress = isAddress(field.text)
+
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                // The omnibox is a plain Row in the topBar slot (not a Material3 TopAppBar), so it must
+                // The omnibox is a plain Column in the topBar slot (not a Material3 TopAppBar), so it must
                 // apply the top system insets itself — systemBars rather than just statusBars, so the
                 // caption bar of a desktop window (Waydroid/DeX freeform) is respected too.
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .padding(start = if (nav.canPop()) 4.dp else 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // When reached from the drawer (pushed onto the back stack) rather than as a bottom-bar tab, show
-        // a back arrow — same rule as the other launcher/feed top bars (see NappletsTopBar).
-        if (nav.canPop()) {
-            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
-        }
-        TextField(
-            value = field,
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            placeholder = { Text(stringRes(Res.string.browser_address_hint)) },
-            keyboardOptions =
-                KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    autoCorrectEnabled = false,
-                    keyboardType = KeyboardType.Uri,
-                    imeAction = ImeAction.Go,
-                ),
-            keyboardActions = KeyboardActions(onGo = { onOpen() }),
-            trailingIcon = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // When reached from the drawer (pushed onto the back stack) rather than as a bottom-bar tab, show
+            // a back arrow — same rule as the other launcher/feed top bars (see NappletsTopBar).
+            if (nav.canPop()) {
+                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+            }
+            Row(
+                Modifier
+                    .weight(1f)
+                    .height(52.dp)
+                    .clip(CircleShape)
+                    .background(if (focused) colors.surfaceContainerHighest else colors.surfaceContainerHigh)
+                    .border(if (focused) 2.dp else 1.dp, if (focused) colors.primary else colors.outlineVariant, CircleShape)
+                    // The whole pill is the target, not just the text line inside it.
+                    .clickable(interactionSource = null, indication = null) { focusRequester.requestFocus() }
+                    .padding(start = 16.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    if (isAddress) MaterialSymbols.Language else MaterialSymbols.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = if (focused) colors.primary else colors.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (field.text.isEmpty()) {
+                        Text(
+                            stringRes(Res.string.browser_address_hint),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colors.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    BasicTextField(
+                        value = field,
+                        onValueChange = onValueChange,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                        cursorBrush = SolidColor(colors.primary),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                capitalization = KeyboardCapitalization.None,
+                                autoCorrectEnabled = false,
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Go,
+                            ),
+                        keyboardActions = KeyboardActions(onGo = { onOpen() }),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { onFocusChange(it.isFocused) }
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                    when (event.key) {
+                                        // Tab takes the ghost completion instead of moving focus away.
+                                        Key.Tab ->
+                                            if (!field.selection.collapsed) {
+                                                onAcceptCompletion()
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        Key.Escape -> {
+                                            focusManager.clearFocus()
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                },
+                    )
+                }
                 if (field.text.isNotEmpty()) {
-                    IconButton(onClick = onClear) {
-                        Icon(MaterialSymbols.Clear, contentDescription = stringRes(Res.string.browser_clear))
+                    IconButton(onClick = {
+                        onClear()
+                        focusRequester.requestFocus()
+                    }) {
+                        Icon(MaterialSymbols.Cancel, contentDescription = stringRes(Res.string.browser_clear), modifier = Modifier.size(20.dp), tint = colors.onSurfaceVariant)
                     }
                 }
-            },
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
-        )
-        if (field.text.isNotBlank()) {
-            IconButton(onClick = onOpen) {
-                Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.browser_go))
+                if (field.text.isNotBlank()) {
+                    FilledIconButton(onClick = onOpen, modifier = Modifier.size(44.dp)) {
+                        Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.browser_go), modifier = Modifier.size(22.dp))
+                    }
+                }
             }
+        }
+
+        if (onPasteAndGo != null) {
+            AssistChip(
+                onClick = onPasteAndGo,
+                label = { Text(stringRes(Res.string.browser_pill_paste_go), maxLines = 1) },
+                leadingIcon = { Icon(MaterialSymbols.ContentPasteGo, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+                modifier = Modifier.padding(start = if (nav.canPop()) 48.dp else 0.dp),
+            )
         }
     }
 }
 
+/** True when Go would open [text] as an address rather than search for it — the same rule [OmniboxInput.resolve] uses. */
+private fun isAddress(text: String): Boolean {
+    val trimmed = text.trim()
+    return trimmed.contains("://") || OmniboxInput.looksLikeHost(trimmed)
+}
+
 /**
- * The typed-state body: ranked suggestions split into a highlighted Favorites group, then Recent (visited
- * sites), then Discover (the hardcoded web apps the user hasn't pinned or visited yet). Every row carries
- * the same 3-dot menu as the idle Recent cards (pin/unpin; plus remove-from-history for visited sites).
+ * The first row while typing: exactly what Go / Enter will do with the [entered] text — open it as an
+ * address, or search for it — so the user never has to guess which one they're about to get.
+ */
+@Composable
+private fun EnteredRow(
+    entered: String,
+    onClick: () -> Unit,
+) {
+    val target = OmniboxInput.resolve(entered) ?: return
+    val isAddress = isAddress(entered)
+    val title =
+        if (isAddress) {
+            stringRes(Res.string.browser_omnibox_go_to, target.url.removePrefix("https://"))
+        } else {
+            stringRes(Res.string.browser_omnibox_search_for, entered.trim())
+        }
+    val subtitle = if (isAddress) null else OmniboxInput.hostOf(OmniboxInput.DEFAULT_SEARCH_PREFIX)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (isAddress) MaterialSymbols.Language else MaterialSymbols.Search,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) {
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+        }
+        Icon(
+            MaterialSymbols.AutoMirrored.ArrowForward,
+            contentDescription = null,
+            modifier = Modifier.padding(horizontal = 12.dp).size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * The typed-state body: what Go will do with the [entered] text, then ranked suggestions split into a
+ * highlighted Favorites group, then Recent (visited sites), then Discover (the hardcoded web apps the user
+ * hasn't pinned or visited yet). Every row carries a ↖ that puts its address in the field to keep typing
+ * from, and the same 3-dot menu as the idle Recent cards (pin/unpin; plus remove-from-history for visited
+ * sites).
  */
 @Composable
 private fun SuggestionGrid(
+    entered: String,
     suggestions: List<OmniboxSuggestions.Suggestion>,
     iconKeys: Set<String>,
     historyUrls: Set<String>,
+    onOpenEntered: () -> Unit,
     onOpen: (OmniboxSuggestions.Suggestion) -> Unit,
+    onFillIn: (String) -> Unit,
     onToggleFavorite: (OmniboxSuggestions.Suggestion) -> Unit,
     onRemoveFromHistory: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -426,6 +620,7 @@ private fun SuggestionGrid(
                 highlighted = highlighted,
                 removableFromHistory = suggestion.url in historyUrls,
                 onClick = { onOpen(suggestion) },
+                onFillIn = { onFillIn(suggestion.url.removePrefix("https://")) },
                 onToggleFavorite = { onToggleFavorite(suggestion) },
                 onRemoveFromHistory = { onRemoveFromHistory(suggestion.url) },
             )
@@ -433,6 +628,7 @@ private fun SuggestionGrid(
     }
 
     LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = modifier) {
+        item(key = "entered") { EnteredRow(entered, onOpenEntered) }
         section("f", Res.string.browser_favorites, favorites, highlighted = true)
         section("o", Res.string.favorite_app_recent, recent, highlighted = false)
         section("s", Res.string.browser_suggested, discover, highlighted = false)
@@ -446,6 +642,7 @@ private fun SuggestionRow(
     highlighted: Boolean,
     removableFromHistory: Boolean,
     onClick: () -> Unit,
+    onFillIn: () -> Unit,
     onToggleFavorite: () -> Unit,
     onRemoveFromHistory: () -> Unit,
 ) {
@@ -478,6 +675,9 @@ private fun SuggestionRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+        IconButton(onClick = onFillIn) {
+            Icon(MaterialSymbols.NorthWest, contentDescription = stringRes(Res.string.browser_pill_fill_in), modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Box {
             IconButton(onClick = { menuOpen = true }) {
