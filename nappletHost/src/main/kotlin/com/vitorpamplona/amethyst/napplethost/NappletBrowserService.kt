@@ -108,6 +108,8 @@ class NappletBrowserService : Service() {
         val themeType: String,
         // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
         val webViewProfile: String?,
+        // SearchEngines id the main process chose; handed to popups, whose address bar resolves here.
+        val searchEngine: String?,
     ) {
         var webView: WebView? = null
 
@@ -272,6 +274,7 @@ class NappletBrowserService : Service() {
                         bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, Color.WHITE),
                         themeType = data.getString(NappletBrowserContract.KEY_THEME).orEmpty().ifBlank { "SYSTEM" },
                         webViewProfile = data.getString(NappletBrowserContract.KEY_WEBVIEW_PROFILE),
+                        searchEngine = data.getString(NappletBrowserContract.KEY_SEARCH_ENGINE),
                     )
                 tabs[sessionId] = tab
                 // Bind the broker once; a re-sent MSG_CREATE_SESSION (e.g. client reconnect) must not
@@ -835,7 +838,7 @@ class NappletBrowserService : Service() {
             val tab = tab ?: return false
             if (!isUserGesture) return false
             val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
-            val (token, child) = BrowserPopups.create(this@NappletBrowserService, shimJs, tab.proxyPort, tab.useTor, tab.themeType, tab.webViewProfile)
+            val (token, child) = BrowserPopups.create(this@NappletBrowserService, shimJs, tab.proxyPort, tab.useTor, tab.themeType, tab.webViewProfile, tab.searchEngine)
             transport.webView = child
             resultMsg.sendToTarget()
             runCatching { startActivity(NappletBrowserActivity.popupIntent(this@NappletBrowserService, token)) }

@@ -34,3 +34,5 @@ actual suspend fun Clipboard.getText(): String? {
     val pasteboard = UIPasteboard.generalPasteboard
     return if (pasteboard.hasStrings) pasteboard.string else null
 }
+
+actual suspend fun Clipboard.hasText(): Boolean = UIPasteboard.generalPasteboard.hasStrings

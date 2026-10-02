@@ -27,3 +27,9 @@ expect suspend fun Clipboard.setText(text: String)
 
 /** The clipboard's current plain text, or null when it holds none. */
 expect suspend fun Clipboard.getText(): String?
+
+/**
+ * Whether the clipboard holds text, answered from its metadata without reading the contents — so offering
+ * "Paste and go" neither makes Android announce a paste nor iOS prompt for one. Only the tap should read.
+ */
+expect suspend fun Clipboard.hasText(): Boolean

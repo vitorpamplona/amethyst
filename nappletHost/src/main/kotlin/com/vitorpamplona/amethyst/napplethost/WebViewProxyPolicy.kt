@@ -97,6 +97,9 @@ object WebViewProxyPolicy {
         sync(null)
     }
 
+    /** Whether another live surface needs Tor, which keeps the shared route on Tor whatever [owner] picks. */
+    fun torWantedByOthers(owner: Any): Boolean = claims.torWantedByOthers(owner)
+
     /** Tells [listener] (now, and on every change) whether the process currently routes through Tor. */
     fun observeRoute(
         owner: Any,

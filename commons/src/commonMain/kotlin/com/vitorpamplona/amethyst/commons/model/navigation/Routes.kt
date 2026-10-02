@@ -581,6 +581,8 @@ sealed class Route {
 
     @Serializable object ProfileUiSettings : Route()
 
+    @Serializable object SearchEngineSettings : Route()
+
     @Serializable object VideoPlayerSettings : Route()
 
     @Serializable object CallSettings : Route()

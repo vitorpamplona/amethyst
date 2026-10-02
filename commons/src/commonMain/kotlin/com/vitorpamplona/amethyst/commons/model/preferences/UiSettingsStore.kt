@@ -27,6 +27,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
@@ -129,6 +130,7 @@ class UiSettingsStore(
         val UI_COMPOSE_SIGNATURE = stringPreferencesKey("ui.compose_signature")
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
         val UI_SHOW_PAYTO_ZAP_CHIP = booleanPreferencesKey("ui.show_payto_zap_chip")
+        val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -173,6 +175,7 @@ class UiSettingsStore(
                 composeSignature = preferences[UI_COMPOSE_SIGNATURE] ?: "",
                 showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
                 showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
+                searchEngine = preferences[UI_SEARCH_ENGINE] ?: SearchEngines.DEFAULT.id,
             )
         }
 
@@ -215,6 +218,7 @@ class UiSettingsStore(
             preferences[UI_COMPOSE_SIGNATURE] = sharedSettings.composeSignature
             preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
             preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
+            preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
         }
 
         /**

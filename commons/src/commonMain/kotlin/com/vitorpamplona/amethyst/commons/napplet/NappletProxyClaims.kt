@@ -68,6 +68,12 @@ class NappletProxyClaims {
         return route()
     }
 
+    /**
+     * Whether a surface other than [owner] wants Tor — in which case the process stays on Tor even if
+     * [owner] switches to the open web, so offering [owner] an open-web retry would change nothing.
+     */
+    fun torWantedByOthers(owner: Any): Boolean = claims.any { (other, port) -> other !== owner && port > 0 }
+
     fun route(): Route = Route(claims.values.lastOrNull { it > 0 } ?: NO_PROXY)
 
     companion object {

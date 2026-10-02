@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components.util
 
 import android.content.ClipData
+import android.content.ClipDescription
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 
@@ -34,3 +35,11 @@ actual suspend fun Clipboard.getText(): String? =
         ?.getItemAt(0)
         ?.text
         ?.toString()
+
+// The description is metadata: reading it doesn't trigger the "pasted from your clipboard" toast that
+// getPrimaryClip does. Only the types whose items carry the text getText reads: a text/uri-list clip
+// (ClipData.newUri) has none, so offering to paste it would do nothing.
+actual suspend fun Clipboard.hasText(): Boolean =
+    nativeClipboard.primaryClipDescription?.let {
+        it.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || it.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+    } == true

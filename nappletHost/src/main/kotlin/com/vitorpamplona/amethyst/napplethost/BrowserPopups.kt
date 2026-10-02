@@ -69,6 +69,7 @@ object BrowserPopups {
         val useTor: Boolean,
         val themeType: String,
         val webViewProfile: String?,
+        val searchEngine: String?,
     ) {
         private var target: BridgeTarget? = null
         private val queued = mutableListOf<() -> Unit>()
@@ -110,6 +111,7 @@ object BrowserPopups {
         useTor: Boolean,
         themeType: String,
         webViewProfile: String?,
+        searchEngine: String?,
     ): Pair<String, WebView> {
         val app = context.applicationContext
         val wrapper = MutableContextWrapper(nightThemedContext(app, themeType))
@@ -118,7 +120,7 @@ object BrowserPopups {
         // the popup must see the same logged-in session anyway.
         NappletWebViewProfile.apply(app, webView, webViewProfile)
         BrowserWebTools.applyBrowserSettings(webView)
-        val entry = Pending(webView, wrapper, proxyPort, useTor, themeType, webViewProfile)
+        val entry = Pending(webView, wrapper, proxyPort, useTor, themeType, webViewProfile, searchEngine)
         WebViewCompat.addWebMessageListener(webView, NappletWebContract.BRIDGE_NAME, setOf("*")) { view, message, origin, isMainFrame, reply ->
             entry.dispatch(view, message, origin, isMainFrame, reply)
         }

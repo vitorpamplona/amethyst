@@ -115,6 +115,7 @@ object FavoriteAppLauncher {
                     // Opaque per-account storage partition, so a web app can't carry one npub's session
                     // into another. Derived here (the sandbox never sees the pubkey).
                     webViewProfile = NappletWebViewProfiles.current(),
+                    searchEngine = Amethyst.instance.uiPrefs.value.searchEngine.value,
                 ).apply {
                     if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                 }

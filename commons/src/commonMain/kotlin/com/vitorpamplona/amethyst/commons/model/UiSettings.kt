@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -64,6 +65,8 @@ data class UiSettings(
     // be bank or Venmo handles carrying legal names, and this puts them one tap
     // from every note in the feed.
     val showPayToZapChip: Boolean = true,
+    // The browser omnibox's search engine, by [SearchEngines] id. Unknown ids fall back to the default.
+    val searchEngine: String = SearchEngines.DEFAULT.id,
 )
 
 enum class ThemeType(
