@@ -103,7 +103,8 @@ object OmniboxInput {
             .substringBefore('#')
             .substringBefore(':')
 
-    private fun isOnion(url: String): Boolean = hostOf(url)?.endsWith(".onion", ignoreCase = true) == true
+    /** Whether [url]'s host is a Tor onion service, which only resolves over Tor. */
+    fun isOnion(url: String): Boolean = hostOf(url)?.endsWith(".onion", ignoreCase = true) == true
 
     private const val UNRESERVED = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~"
     private val HEX = "0123456789ABCDEF".toCharArray()

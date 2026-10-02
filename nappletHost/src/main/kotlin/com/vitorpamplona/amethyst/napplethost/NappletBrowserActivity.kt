@@ -68,6 +68,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.scale
@@ -85,7 +90,10 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
 import com.vitorpamplona.amethyst.commons.browser.DownloadCooldown
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.browser.PageLoadFailure
 import com.vitorpamplona.amethyst.commons.browser.SearchEngines
+import com.vitorpamplona.amethyst.commons.browser.ui.PageLoadError
+import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserChromeTheme
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
@@ -141,6 +149,21 @@ class NappletBrowserActivity : ComponentActivity() {
     private var root: FrameLayout? = null
     private var loadingView: View? = null
     private var crashView: View? = null
+
+    /** Our own page over the WebView's built-in one after a main-frame load failure; see [showLoadError]. */
+    private var loadErrorView: View? = null
+    private var loadError by mutableStateOf<LoadErrorState?>(null)
+
+    private data class LoadErrorState(
+        val failure: PageLoadFailure,
+        val host: String,
+        val detail: String?,
+        val viaTor: Boolean,
+        /** Whether flipping this page's Tor choice could change the outcome; see [canSwitchTor]. */
+        val canSwitchTor: Boolean,
+        val retrying: Boolean = false,
+    )
+
     private var resumed = false
 
     // The pill, find, console and page dialogs — the shared Compose chrome (see BrowserChromeHost).
@@ -366,9 +389,11 @@ class NappletBrowserActivity : ComponentActivity() {
         val wv = buildWebView(popup)
         contentFrame.addView(wv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         if (popup == null) {
-            loadingView = buildLoadingView().also { contentFrame.addView(it) }
-            // Wait for this page's route to be in effect before the first request leaves.
-            claimRoute { if (webView === wv) wv.loadUrl(startUrl) }
+            if (!guardOnion(wv, startUrl, isMainFrame = true)) {
+                loadingView = buildLoadingView().also { contentFrame.addView(it) }
+                // Wait for this page's route to be in effect before the first request leaves.
+                claimRoute { if (webView === wv) wv.loadUrl(startUrl) }
+            }
         } else {
             wv.url?.let { if (it.isNotBlank() && it != "about:blank") startUrl = it }
         }
@@ -732,7 +757,7 @@ class NappletBrowserActivity : ComponentActivity() {
         ): Boolean {
             val uri = request.url
             val scheme = uri.scheme?.lowercase()
-            if (scheme == "http" || scheme == "https") return false
+            if (scheme == "http" || scheme == "https") return guardOnion(view, uri.toString(), request.isForMainFrame)
             return BrowserWebTools.openExternal(this@NappletBrowserActivity, uri, request.hasGesture()) { view.loadUrl(it) }
         }
 
@@ -744,6 +769,8 @@ class NappletBrowserActivity : ComponentActivity() {
             // A fresh main-frame navigation: arm history gating and show the new address.
             pendingMainFrameUrl = url
             mainFrameLoadFailed = false
+            // Keep the error page up while the next attempt loads: under it is the WebView's own error page.
+            loadError?.let { loadError = it.copy(retrying = true) }
             // The page is being replaced: nothing it asked for (replies, subscription pushes) may reach the next
             // one, even a next one that never talks to the bridge.
             if (bridge.onNavigation()) releasePage()
@@ -771,7 +798,14 @@ class NappletBrowserActivity : ComponentActivity() {
         ) {
             // A main-frame failure (DNS miss on a misspelled host, no connection, …) disqualifies this
             // navigation from history. Sub-resource errors are irrelevant to whether the page opened.
-            if (request.isForMainFrame) mainFrameLoadFailed = true
+            if (request.isForMainFrame) {
+                mainFrameLoadFailed = true
+                val description = error.description?.toString()
+                val failedUrl = request.url?.toString() ?: view.url.orEmpty()
+                PageLoadFailure.forPage(error.errorCode, description, failedUrl, routedOverTor)?.let { failure ->
+                    showLoadError(failedUrl, failure, description)
+                }
+            }
             logConsoleError(request, getString(R.string.napplet_console_load_error, error.errorCode, error.description?.toString().orEmpty()))
         }
 
@@ -790,6 +824,7 @@ class NappletBrowserActivity : ComponentActivity() {
             // The page has painted its first frame — drop the loading screen.
             loadingView?.let { contentFrame.removeView(it) }
             loadingView = null
+            if (!mainFrameLoadFailed) hideLoadError()
             showUrl(url)
         }
 
@@ -809,6 +844,7 @@ class NappletBrowserActivity : ComponentActivity() {
             syncNavigation(view)
             updateChromeState { copy(isLoading = false) }
             showUrl(url)
+            if (!mainFrameLoadFailed) hideLoadError()
             // Record only a clean http(s) main-frame load — never a typed-but-failed address.
             if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
                 recordHistory(url, view.title)
@@ -1810,6 +1846,85 @@ class NappletBrowserActivity : ComponentActivity() {
             addView(View(this@NappletBrowserActivity).apply { layoutParams = LinearLayout.LayoutParams(1, dp(20)) })
             addView(ProgressBar(this@NappletBrowserActivity))
         }
+
+    /**
+     * Covers the WebView's built-in error page (an Android robot over "net::ERR_…" text) with one that says
+     * what went wrong in words and offers a retry. It sits in [contentFrame] under the pill, so the address
+     * can still be edited. It stays up through the next attempt (showing it is retrying) and goes away only
+     * once a page really paints, so a retry never flashes the built-in page underneath.
+     */
+    private fun showLoadError(
+        url: String,
+        failure: PageLoadFailure,
+        detail: String?,
+    ) {
+        loadError = LoadErrorState(failure, BrowserChrome.displayHost(url).ifBlank { url }, detail, routedOverTor, canSwitchTor(failure, url))
+        if (loadErrorView != null) return
+        val dark = isDarkTheme()
+        loadErrorView =
+            ComposeView(this)
+                .apply {
+                    setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+                    setContent {
+                        val state = loadError ?: return@setContent
+                        BrowserChromeTheme(dark) {
+                            PageLoadError(
+                                failure = state.failure,
+                                host = state.host,
+                                detail = state.detail,
+                                viaTor = state.viaTor,
+                                retrying = state.retrying,
+                                onRetry = { webView?.reload() },
+                                onSwitchTor = if (state.canSwitchTor) ({ setNetworkMode(!useTor) }) else null,
+                            )
+                        }
+                    }
+                }.also { contentFrame.addView(it, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)) }
+    }
+
+    /**
+     * Whether the error page may offer to flip this page's Tor choice. An onion off Tor can be opened with
+     * Tor when Tor is running. Otherwise only a reachability failure while this page asked for Tor (some
+     * sites drop Tor exits), never for an onion, and only when no other open surface also needs Tor — the
+     * route is shared and Tor wins, so the open-web retry would go through Tor again anyway.
+     */
+    private fun canSwitchTor(
+        failure: PageLoadFailure,
+        url: String,
+    ): Boolean =
+        when {
+            proxyPort <= 0 -> false
+            failure == PageLoadFailure.ONION_NEEDS_TOR -> !useTor
+            else -> useTor && PageLoadFailure.mayBeTorBlocked(failure) && !OmniboxInput.isOnion(url) && !WebViewProxyPolicy.torWantedByOthers(this)
+        }
+
+    /**
+     * Keeps a `.onion` link from leaving on the open web, where its name would be looked up by the regular
+     * resolver and fail as "not found": a main-frame navigation to an onion on a page with Tor off switches
+     * this page to Tor first (as a typed onion address does), or, with no Tor to switch to, shows why it
+     * can't open. Returns whether the navigation was taken over.
+     */
+    private fun guardOnion(
+        view: WebView,
+        url: String,
+        isMainFrame: Boolean,
+    ): Boolean {
+        if (!isMainFrame || useTor || !OmniboxInput.isOnion(url)) return false
+        if (proxyPort > 0) {
+            useTor = true
+            updateChromeState { copy(torOn = true, torForced = false) }
+            claimRoute { if (webView === view) view.loadUrl(url) }
+        } else {
+            showLoadError(url, PageLoadFailure.ONION_NEEDS_TOR, null)
+        }
+        return true
+    }
+
+    private fun hideLoadError() {
+        loadError = null
+        loadErrorView?.let { contentFrame.removeView(it) }
+        loadErrorView = null
+    }
 
     /** Chrome's "Aw, Snap!": the page's renderer died; offer to load [url] again in a fresh WebView. */
     private fun showCrashView(url: String) {

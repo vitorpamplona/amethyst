@@ -32,6 +32,17 @@ class NappletProxyClaimsTest {
     private val openTab = Any()
 
     @Test
+    fun torWantedByOthersIgnoresTheAskingSurface() {
+        claims.claim(torTab, 9050)
+        assertEquals(false, claims.torWantedByOthers(torTab))
+        assertEquals(true, claims.torWantedByOthers(openTab))
+        claims.claim(openTab, NappletProxyClaims.NO_PROXY)
+        assertEquals(false, claims.torWantedByOthers(torTab))
+        claims.release(torTab)
+        assertEquals(false, claims.torWantedByOthers(openTab))
+    }
+
+    @Test
     fun noClaimsMeansNoProxy() {
         assertEquals(DIRECT, claims.route())
     }
