@@ -1450,11 +1450,13 @@ private fun TimeAgo(
     hasNewMessages: Boolean,
 ) {
     if (channelLastTime == null) return
-    // No leading "•": the time sits alone at the end of the title line, so there is nothing to
-    // separate it from. It takes the accent only when the row is unread, beside the dot below it.
+    // The compact "• 10h" form. Not TimeAgoStyle.Short: on Android that goes through the platform's
+    // relative-span formatter ("12 hr. ago", "4 days ago"), which is several times wider and eats
+    // into the title. Tight variant because TimeAgoGap already provides the space before the dot.
+    // It takes the accent only when the row is unread, beside the dot below it.
     ToggleableTimeAgoText(
         timestamp = channelLastTime,
-        style = TimeAgoStyle.Short,
+        style = TimeAgoStyle.DottedTight,
         color = if (hasNewMessages) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
         fontSize = MaterialTheme.typography.bodySmall.fontSize,
         modifier = TimeAgoGap,
