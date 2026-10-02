@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.resources.drawer_section_you
 import com.vitorpamplona.amethyst.commons.resources.followers
 import com.vitorpamplona.amethyst.commons.resources.following
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.longs
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.profile
@@ -1073,32 +1074,56 @@ fun BottomContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Absolute.SpaceBetween,
         ) {
-            val string =
-                remember {
-                    buildAnnotatedString {
-                        withLink(
-                            LinkAnnotation.Clickable(
-                                "clickable",
-                                TextStyleBottomNavBar,
+            // Grouping version text and Tor status icon together on the left side
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val string =
+                    remember {
+                        buildAnnotatedString {
+                            withLink(
+                                LinkAnnotation.Clickable(
+                                    "clickable",
+                                    TextStyleBottomNavBar,
+                                ) {
+                                    nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
+                                    nav.closeDrawer()
+                                },
                             ) {
-                                nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
-                                nav.closeDrawer()
-                            },
-                        ) {
-                            append("v")
-                            append(BuildConfig.VERSION_NAME)
-                            append("-")
-                            append(BuildConfig.FLAVOR.uppercase())
+                                append("v")
+                                append(BuildConfig.VERSION_NAME)
+                                append("-")
+                                append(BuildConfig.FLAVOR.uppercase())
+                            }
                         }
                     }
-                }
 
-            Text(
-                text = string,
-                modifier = Modifier.padding(start = 16.dp),
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-            )
+                Text(
+                    text = string,
+                    modifier = Modifier.padding(start = 16.dp, end = 8.dp),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                )
+
+                val torStatus by Amethyst.instance.torManager.status
+                    .collectAsStateWithLifecycle()
+
+                // Tip uyuşmazlığı hatalarını aşmak için değeri güvenli bir şekilde String'e çeviriyoruz
+                val statusString = torStatus.toString()
+                val torColor =
+                    if (statusString.contains("Active", ignoreCase = true) || statusString.contains("Connected", ignoreCase = true)) {
+                        MaterialTheme.colorScheme.primary // Bağlıysa ana tema rengi (Yeşil/Mor vb.)
+                    } else if (statusString.contains("Connecting", ignoreCase = true) || statusString.contains("Bootstrapping", ignoreCase = true)) {
+                        MaterialTheme.colorScheme.secondary // Bağlanıyorsa ara renk
+                    } else {
+                        MaterialTheme.colorScheme.error // Kapalı/Hata durumunda hata rengi (Kırmızı)
+                    }
+
+                Icon(
+                    painter = painterRes(Res.drawable.ic_tor, 2),
+                    contentDescription = "Tor Status",
+                    modifier = Size20Modifier,
+                    tint = torColor,
+                )
+            }
 
             IconButton(
                 onClick = {
