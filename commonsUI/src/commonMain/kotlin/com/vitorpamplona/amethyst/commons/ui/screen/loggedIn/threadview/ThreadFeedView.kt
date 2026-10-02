@@ -223,6 +223,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicationSection
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAddMember
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayDiscovery
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayLeaveRequest
@@ -341,6 +342,7 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
@@ -1119,6 +1121,8 @@ private fun FullBleedNoteCompose(
                     RenderRelayJoinRequest(baseNote, accountViewModel, nav)
                 } else if (noteEvent is RelayLeaveRequestEvent) {
                     RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RelayAuthEvent) {
+                    RenderRelayAuth(baseNote, accountViewModel, nav)
                 } else if (noteEvent is TextNoteModificationEvent) {
                     RenderTextModificationEvent(
                         note = baseNote,

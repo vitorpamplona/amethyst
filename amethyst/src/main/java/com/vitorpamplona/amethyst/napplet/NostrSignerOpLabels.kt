@@ -35,10 +35,12 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
+import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentInfoBuilder
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -46,12 +48,19 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Human-readable label for a [NostrSignerOp]. */
 suspend fun NostrSignerOp.label(context: Context): String =
     when (this) {
-        is NostrSignerOp.SignKind -> loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
+        is NostrSignerOp.SignKind ->
+            if (kind == RelayAuthEvent.KIND) {
+                // A relay login is not "signing" anything the user would recognise; say what it does.
+                loadStringRes(Res.string.napplet_op_relay_login)
+            } else {
+                loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
+            }
         NostrSignerOp.Encrypt -> loadStringRes(Res.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> loadStringRes(Res.string.napplet_op_decrypt)
         is NostrSignerOp.DecryptFrom -> loadStringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
@@ -96,8 +105,8 @@ suspend fun buildSignerConsentInfo(
     val summary = (narrowOp ?: op).label(context)
     val preview =
         when (request) {
-            is NappletRequest.Publish -> request.content.take(160).trim()
-            is NappletRequest.SignEvent -> request.content.take(160).trim()
+            is NappletRequest.Publish -> Nip46ConsentInfoBuilder.signPreview(request.kind, request.tags, request.content)
+            is NappletRequest.SignEvent -> Nip46ConsentInfoBuilder.signPreview(request.kind, request.tags, request.content)
             is NappletRequest.PublishEncrypted -> request.content.take(160).trim()
             // Encryption shows the plaintext the page wants sealed; decryption has only ciphertext,
             // which tells the user nothing, so its preview stays empty and the counterparty in

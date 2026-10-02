@@ -42,7 +42,9 @@ class RelayAuthEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun relay() = tags.firstNotNullOfOrNull(RelayTag::parse)
 
-    fun challenge() = tags.firstNotNullOfOrNull(ChallengeTag::parse)
+    fun relays() = tags.authRelays()
+
+    fun challenge() = tags.authChallenge()
 
     companion object {
         const val KIND = 22242

@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
@@ -172,5 +174,25 @@ class Nip46ConsentInfoBuilderTest {
             assertNull(info.counterpartyPubKey)
             assertNull(info.narrowOp)
             assertNotNull(info.previewTemplate)
+        }
+
+    @Test
+    fun aRelayLoginPreviewNamesTheRelayInsteadOfItsEmptyContent() =
+        runTest {
+            val auth = RelayAuthEvent.build(RelayUrlNormalizer.normalize("wss://relay.damus.io"), "chal-123")
+            val template = EventTemplate<Event>(auth.createdAt, auth.kind, auth.tags, auth.content)
+            val info = build(BunkerRequestSign(event = template), op = NostrSignerOp.SignKind(RelayAuthEvent.KIND))
+
+            assertEquals("relay.damus.io", info.contentPreview)
+            assertEquals(template, info.previewTemplate)
+        }
+
+    @Test
+    fun aRegularPostPreviewIsStillItsContent() =
+        runTest {
+            val template = EventTemplate<Event>(1L, 1, emptyArray(), "  hello world  ")
+            val info = build(BunkerRequestSign(event = template), op = NostrSignerOp.SignKind(1))
+
+            assertEquals("hello world", info.contentPreview)
         }
 }

@@ -24,8 +24,12 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAut
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer.Companion.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.authRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.utils.Log
@@ -91,10 +95,7 @@ object Nip46ConsentInfoBuilder {
 
         val preview =
             when {
-                request is BunkerRequestSign ->
-                    request.event.content
-                        .take(PREVIEW_MAX_CHARS)
-                        .trim()
+                request is BunkerRequestSign -> signPreview(request.event.kind, request.event.tags, request.event.content)
                 plaintext != null -> plaintext.take(PREVIEW_MAX_CHARS).trim()
                 else -> ""
             }
@@ -131,6 +132,22 @@ object Nip46ConsentInfoBuilder {
             narrowOpLabel = counterpartyFace?.name?.let { strings.allowAlwaysFor(it) },
         )
     }
+
+    /**
+     * The one-line preview of an event an app asks to sign. Usually its content; a NIP-42 relay
+     * login has none, so it names the relay(s) instead — otherwise a batched row reads as a blank
+     * "sign Relay Auth" with nothing to say where the user is logging in.
+     */
+    fun signPreview(
+        kind: Int,
+        tags: TagArray,
+        content: String,
+    ): String =
+        if (kind == RelayAuthEvent.KIND) {
+            tags.authRelays().joinToString(", ") { it.displayUrl() }
+        } else {
+            content.take(PREVIEW_MAX_CHARS).trim()
+        }
 
     /**
      * Decrypts the message the app asked to read. Never throws and never hangs: a signer that fails,
