@@ -125,6 +125,8 @@ import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
+import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
+import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
@@ -164,6 +166,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
@@ -1074,8 +1077,11 @@ fun BottomContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Absolute.SpaceBetween,
         ) {
-            // Grouping version text and Tor status icon together on the left side
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // The version (release notes link) and, while Tor is in use, its status beside it.
+            Row(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 val string =
                     remember {
                         buildAnnotatedString {
@@ -1098,31 +1104,13 @@ fun BottomContent(
 
                 Text(
                     text = string,
-                    modifier = Modifier.padding(start = 16.dp, end = 8.dp),
+                    // Yields to the Tor icon on a narrow drawer instead of pushing it off.
+                    modifier = Modifier.weight(1f, fill = false).padding(start = 16.dp),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                 )
 
-                val torStatus by Amethyst.instance.torManager.status
-                    .collectAsStateWithLifecycle()
-
-                // Tip uyuşmazlığı hatalarını aşmak için değeri güvenli bir şekilde String'e çeviriyoruz
-                val statusString = torStatus.toString()
-                val torColor =
-                    if (statusString.contains("Active", ignoreCase = true) || statusString.contains("Connected", ignoreCase = true)) {
-                        MaterialTheme.colorScheme.primary // Bağlıysa ana tema rengi (Yeşil/Mor vb.)
-                    } else if (statusString.contains("Connecting", ignoreCase = true) || statusString.contains("Bootstrapping", ignoreCase = true)) {
-                        MaterialTheme.colorScheme.secondary // Bağlanıyorsa ara renk
-                    } else {
-                        MaterialTheme.colorScheme.error // Kapalı/Hata durumunda hata rengi (Kırmızı)
-                    }
-
-                Icon(
-                    painter = painterRes(Res.drawable.ic_tor, 2),
-                    contentDescription = "Tor Status",
-                    modifier = Size20Modifier,
-                    tint = torColor,
-                )
+                TorStatusIcon(nav)
             }
 
             IconButton(
@@ -1139,6 +1127,34 @@ fun BottomContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * Tor's state next to the app version, opening the Tor settings on tap. Hidden while Tor is off: that
+ * is a choice, not a fault, so it gets no icon at all rather than an alarming one. Connected only once
+ * the directory is ready ([TorServiceStatus.isFullyBootstrapped]); a bound proxy still downloading it
+ * cannot carry traffic yet, so it reads as connecting.
+ */
+@Composable
+private fun TorStatusIcon(nav: INav) {
+    val torStatus by Amethyst.instance.torManager.status
+        .collectAsStateWithLifecycle()
+    if (torStatus is TorServiceStatus.Off) return
+
+    val connected = torStatus.isFullyBootstrapped
+    IconButton(
+        onClick = {
+            nav.nav(Route.PrivacyOptions)
+            nav.closeDrawer()
+        },
+    ) {
+        Icon(
+            painter = painterRes(Res.drawable.ic_tor, 2),
+            contentDescription = stringRes(if (connected) Res.string.tor_status_connected else Res.string.tor_splash_connecting),
+            modifier = Size20Modifier,
+            tint = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
