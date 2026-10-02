@@ -27,7 +27,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -141,10 +140,6 @@ class NappletBrowserActivity : ComponentActivity() {
 
     // The pill, find, console and page dialogs — the shared Compose chrome (see BrowserChromeHost).
     private var chrome: BrowserChromeHost? = null
-
-    // A thin determinate progress bar pinned to the top edge (browser-style), driven by the chrome
-    // client's onProgressChanged; hidden at 100%.
-    private val topProgressBar by lazy { buildTopProgressBar() }
 
     // The NIP-07 shim + browser extras, injected at document start in this window and in its popups.
     private var shimJs: String = ""
@@ -348,8 +343,6 @@ class NappletBrowserActivity : ComponentActivity() {
             }
         this.root = root
         chrome = buildChrome().also { it.attach(root) }
-        // Added last so the thin loading bar paints above the content (and over the grabber's top edge).
-        root.addView(topProgressBar)
         setContentView(root)
         // Pad by the system bars + cutout AND the IME: on an edge-to-edge window (enforced for targetSdk
         // 35+ on Android 15+) windowSoftInputMode=adjustResize no longer shrinks the window, so without
@@ -1840,26 +1833,13 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     /**
-     * A thin determinate progress bar pinned to the top edge, like a browser's. Driven by
-     * [BrowserChromeClient.onProgressChanged]: visible while the page loads and gone at 100%.
+     * Feeds the page's load progress to the pill, which draws it under the grabber (and as a ring around
+     * Stop when open); cleared at 100%.
      */
-    private fun buildTopProgressBar(): ProgressBar =
-        ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            isIndeterminate = false
-            visibility = View.GONE
-            progressTintList = ColorStateList.valueOf(resolveThemeColor(android.R.attr.colorPrimary))
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP)
-        }
-
-    /** Shows the thin top bar at [progress]% while loading, hiding it once the page is fully loaded. */
     private fun updateLoadProgress(progress: Int) {
         if (progress >= 100) {
-            topProgressBar.visibility = View.GONE
             updateUi { copy(loadProgress = null, chrome = chrome.copy(isLoading = false)) }
         } else {
-            topProgressBar.progress = progress
-            topProgressBar.visibility = View.VISIBLE
             updateUi { copy(loadProgress = progress / 100f) }
         }
     }

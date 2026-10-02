@@ -24,7 +24,6 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
@@ -198,10 +197,6 @@ class NappletHostActivity : ComponentActivity() {
     // first paint, so there's never a blank/dark gap between the index probe and the shell's first frame.
     private var loadingView: View? = null
 
-    // A thin determinate progress bar pinned to the top edge (browser-style), driven by the
-    // WebChromeClient's onProgressChanged; hidden at 100%.
-    private val topProgressBar by lazy { buildTopProgressBar() }
-
     // The trusted pull-down pill, find and the developer console — the shared Compose chrome.
     private var chrome: BrowserChromeHost? = null
 
@@ -354,9 +349,6 @@ class NappletHostActivity : ComponentActivity() {
                 addView(contentFrame, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             }
         chrome = buildChrome().also { it.attach(root) }
-        // Added last so the thin loading bar paints above the content (and over the grabber's top edge); it's
-        // GONE except while loading, so it never obscures the trusted chrome.
-        root.addView(topProgressBar)
         setContentView(root)
         // Activities are edge-to-edge by default on recent Android; pad by the system bar, display-cutout
         // and IME insets so neither the chrome nor the applet draws under the system bars or the soft
@@ -736,7 +728,7 @@ class NappletHostActivity : ComponentActivity() {
         }
     }
 
-    /** Drives the top loading bar, opens the file picker, and forwards `console.*` output to the panel. */
+    /** Feeds load progress to the pill, opens the file picker, and forwards `console.*` output to the panel. */
     private inner class NappletWebChromeClient : WebChromeClient() {
         /**
          * Without this override WebView's base implementation returns false and shows no picker at all, so
@@ -784,14 +776,14 @@ class NappletHostActivity : ComponentActivity() {
         return true
     }
 
-    /** Shows the thin top bar at [progress]% while loading, hiding it once the page is fully loaded. */
+    /**
+     * Feeds the page's load progress to the pill, which draws it under the grabber (and as a ring around
+     * Stop when open); cleared at 100%.
+     */
     private fun updateLoadProgress(progress: Int) {
         if (progress >= 100) {
-            topProgressBar.visibility = View.GONE
             chrome?.let { it.ui = it.ui.copy(loadProgress = null, chrome = it.ui.chrome.copy(isLoading = false)) }
         } else {
-            topProgressBar.progress = progress
-            topProgressBar.visibility = View.VISIBLE
             chrome?.let { it.ui = it.ui.copy(loadProgress = progress / 100f, chrome = it.ui.chrome.copy(isLoading = true)) }
         }
     }
@@ -1081,20 +1073,6 @@ class NappletHostActivity : ComponentActivity() {
             }
         if (brokerMessenger != null) sendToBroker(msg)
     }
-
-    /**
-     * A thin determinate progress bar pinned to the top edge, like a browser's. Driven by
-     * [NappletWebChromeClient.onProgressChanged]: visible while the shell + verified blobs load and gone
-     * at 100%, so a slow load (e.g. a large bundle over Tor) shows progress instead of a blank dark WebView.
-     */
-    private fun buildTopProgressBar(): ProgressBar =
-        ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            isIndeterminate = false
-            visibility = View.GONE
-            progressTintList = ColorStateList.valueOf(resolveThemeColor(android.R.attr.colorPrimary))
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP)
-        }
 
     /** Persists the new routing choice in the main process, then relaunches this screen to apply it. */
     private fun setNetworkMode(newUseTor: Boolean) {
