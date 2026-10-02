@@ -269,7 +269,7 @@ fun ChatFeedLoaded(
                     // before the bubble. Composing it after put the header below its own message —
                     // i.e. visually heading the NEXT (newer) message while showing this one's date,
                     // which is why a "Jul 1, 2025" header sat on top of a Sep 23 bubble.
-                    NewDateOrSubjectDivisor(older, item)
+                    NewDateOrSubjectDivisor(older, item, accountViewModel)
 
                     // Per-relay paging markers for the gap toward the next-older message. Older items sit
                     // ABOVE newer ones under `reverseLayout`, so that gap is the space above this bubble —

@@ -386,6 +386,18 @@ fun NormalChatNote(
                 nav,
             )
         },
+        // Group chats put each author's face beside their run; one-on-one chats and my own
+        // messages have none (drawAuthorInfo is already false for both).
+        authorAvatar =
+            if (drawAuthorInfo && !isLoggedInUser && !innerQuote) {
+                {
+                    note.author?.let { author ->
+                        ChatAuthorAvatar(author.pubkeyHex, accountViewModel) { nav.nav(routeFor(author)) }
+                    }
+                }
+            } else {
+                null
+            },
     ) { bgColor ->
         MessageBubbleLines(
             note,

@@ -420,11 +420,13 @@ val ColorScheme.subtleBorder: Color
 val ColorScheme.chatBackground: Color
     get() = if (isLight) LightChatBackground else DarkChatBackground
 
-// Accent-following bubble fill for the logged-in user's own chat messages. Stronger
-// than mediumImportanceLink so "mine" vs "theirs" vs background read at a glance
-// while the default onBackground text stays readable on top of it.
+// Accent-following bubble fill for the logged-in user's own chat messages. A tint, not a
+// fill: enough accent that "mine" vs "theirs" reads at a glance, low enough that a screen
+// of my own messages is a deep muted tone carrying white text, not a wall of purple (at
+// 45% the bubbles were the loudest thing on the screen and the gray captions on them
+// were hard to read).
 val ColorScheme.chatBubbleMe: Color
-    get() = primary.copy(alpha = if (isLight) 0.36f else 0.45f)
+    get() = primary.copy(alpha = if (isLight) 0.20f else 0.24f)
 
 val ColorScheme.chatBubbleThem: Color
     get() = if (isLight) LightChatBubbleThem else DarkChatBubbleThem

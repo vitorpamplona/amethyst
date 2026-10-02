@@ -245,7 +245,9 @@ val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
 val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
 val ShowMoreRelaysButtonBoxModifer = Modifier.width(55.dp).height(17.dp)
 
-val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
+// Caps a bubble at ~3/4 of the row: past that, a long message turns into a wide slab
+// that reads like a document instead of a line of conversation.
+val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.78f)
 
 val ModifierWidth3dp = Modifier.width(3.dp)
 
@@ -272,14 +274,17 @@ val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
 val ChatPaddingInnerQuoteModifier = Modifier
+
+// Two gaps only, so the column has a rhythm: ~2dp between bubbles of one author run and
+// ~10dp where a new run starts. The gap lives on top of the bubble that opens a run.
 val ChatPaddingModifier =
     Modifier
         .fillMaxWidth(1f)
         .padding(
             start = 12.dp,
             end = 12.dp,
-            top = 3.dp,
-            bottom = 3.dp,
+            top = 9.dp,
+            bottom = 1.dp,
         )
 
 // Tighter top gap for a message visually connected to the previous message of the
@@ -291,7 +296,7 @@ val ChatPaddingGroupedModifier =
             start = 12.dp,
             end = 12.dp,
             top = 1.dp,
-            bottom = 3.dp,
+            bottom = 1.dp,
         )
 
 val profileContentHeaderModifier =

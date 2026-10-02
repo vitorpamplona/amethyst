@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
 import com.vitorpamplona.amethyst.commons.resources.marmot_awaiting_reinvite
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_disbanding
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_composer_leaving
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_body
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_reset
-import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -286,7 +286,7 @@ fun MarmotGroupMessageComposer(
             shape = EditFieldBorder,
             placeholder = {
                 Text(
-                    text = stringRes(Res.string.reply_here),
+                    text = stringRes(Res.string.chat_composer_hint),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

@@ -407,6 +407,9 @@
     <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
     <string name="chat_preview_decrypting">Decrypting…</string>
     <string name="chat_preview_you_prefix">You: %1$s</string>
+    <string name="chat_subject_changed_by">%1$s renamed the chat to “%2$s”</string>
+    <string name="chat_subject_changed_by_you">You renamed the chat to “%1$s”</string>
+    <string name="chat_composer_hint">Message</string>
     <string name="chat_preview_photo">Photo</string>
     <string name="chat_preview_video">Video</string>
     <string name="chat_preview_note">Shared a note</string>
@@ -4316,6 +4319,10 @@
     <string name="marmot_group_disbanded_toast">Group disbanded</string>
     <string name="marmot_group_disbanding_toast">Ending the group. It finishes once the group agrees.</string>
     <string name="marmot_group_info_updated">Group info updated</string>
+    <plurals name="chat_room_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>

@@ -51,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_GROUP_WINDOW_SECONDS
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
-import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
 import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
@@ -100,6 +98,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ActionTile
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorAvatar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorNameSize
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatAuthorNameWeight
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatChipFlowRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.MoreActionsToggle
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ReactionChip
@@ -256,6 +257,13 @@ internal fun CordnMessageRow(
                     null
                 },
             drawAuthorLine = { CordnAuthorLine(message.envelope.pubKey, accountViewModel, nav) },
+            // Everyone else's face sits beside their run, as in every other group chat.
+            authorAvatar =
+                if (isMine) {
+                    null
+                } else {
+                    { ChatAuthorAvatar(message.envelope.pubKey, accountViewModel) { nav.nav(Route.Profile(message.envelope.pubKey)) } }
+                },
         ) { bgColor ->
             CordnBubbleContents(
                 message = message,
@@ -356,10 +364,9 @@ private fun CordnBubbleContents(
 }
 
 /**
- * Name and face on the first bubble of a burst, in the shared chat author layout — so a
- * cordn sender is drawn exactly like a DM sender, colour included. [authorNameColorFor]
- * derives a stable hue from the pubkey, which is what makes authors scannable in a
- * fast-moving room.
+ * Name on the first bubble of a burst, styled like a DM sender's, colour included — the
+ * face sits beside the burst ([ChatAuthorAvatar]). [authorNameColorFor] derives a stable
+ * hue from the pubkey, which is what makes authors scannable in a fast-moving room.
  *
  * [observeUserNameByHex] falls back to a hex prefix until the profile arrives. Looking a
  * sender up for a display name is safe: a profile is public relay data the cache already
@@ -375,24 +382,13 @@ private fun CordnAuthorLine(
     val isLightTheme = MaterialTheme.colorScheme.isLight
     val nameColor = remember(pubKey, isLightTheme) { authorNameColorFor(pubKey, isLightTheme) }
 
-    UserDisplayNameLayout(
-        picture = {
-            UserPicture(
-                userHex = pubKey,
-                size = Size20dp,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        },
-        name = {
-            Text(
-                text = name,
-                color = nameColor,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
+    Text(
+        text = name,
+        color = nameColor,
+        fontWeight = ChatAuthorNameWeight,
+        fontSize = ChatAuthorNameSize,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 

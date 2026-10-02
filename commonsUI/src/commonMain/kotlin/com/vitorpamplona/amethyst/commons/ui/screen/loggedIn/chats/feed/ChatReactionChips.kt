@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
-import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
@@ -213,6 +212,15 @@ fun ChatReactionChips(
 }
 
 /**
+ * The edge of an engagement chip: a ring in the screen's background color rather than a
+ * hairline. Riding the bubble's border, the ring cuts the chip out of the bubble cleanly;
+ * the outlined pill it replaces drew one more line on every bubble that had a reaction.
+ * A chip I'm part of says so with its accent fill alone.
+ */
+@Composable
+fun chatChipRing(): BorderStroke = BorderStroke(2.dp, MaterialTheme.colorScheme.background)
+
+/**
  * The strip of engagement chips that rides a chat bubble's bottom border. Shared so
  * every chat surface lays its chips out identically — [ChatReactionChips] fills it from
  * a [Note]'s reactions and zaps, cordn fills it from its own annotation fold.
@@ -276,7 +284,7 @@ private fun MinichatChip(
     Surface(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+        border = chatChipRing(),
         // Plain clickable (not the Surface onClick overload) so the chip keeps its
         // content height instead of being padded to the 48dp minimum touch target,
         // which would drop it below the bubble border the reaction chips ride.
@@ -316,17 +324,10 @@ fun ReactionChipView(
             MaterialTheme.colorScheme.surfaceVariant
         }
 
-    val border =
-        if (chip.includesMe) {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.60f))
-        } else {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder)
-        }
-
     Surface(
         shape = ButtonBorder,
         color = background,
-        border = border,
+        border = chatChipRing(),
         modifier =
             Modifier
                 .clip(ButtonBorder)
@@ -355,7 +356,7 @@ private fun ZapChip(
     Surface(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+        border = chatChipRing(),
         // Plain clickable (not the Surface onClick overload) so the chip keeps its
         // content height instead of being padded to the 48dp minimum touch target,
         // which would drop it below the bubble border the reaction chips ride.
@@ -385,7 +386,7 @@ private fun PendingZapChip() {
     Surface(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+        border = chatChipRing(),
     ) {
         ChipContentRow {
             ZappedIcon(Size14Modifier)
