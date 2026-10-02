@@ -394,6 +394,12 @@
     <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
     <string name="chat_preview_decrypting">अरसहस्यीकरण…</string>
     <string name="chat_preview_you_prefix">आप : %1$s</string>
+    <string name="chat_subject_changed_by">%1$s ने चर्चा का नया नाम %2$s रखा</string>
+    <string name="chat_subject_changed_by_you">आप ने इस चर्चा का नया नाम रखा %1$s</string>
+    <string name="chat_composer_hint">सन्देश</string>
+    <string name="chat_preview_photo">चित्र</string>
+    <string name="chat_preview_video">चलचित्र</string>
+    <string name="chat_preview_note">एक टीका बाँटा</string>
     <string name="group_picture">समूह चित्र</string>
     <string name="explicit_content">अभद्र विषयवस्तु</string>
     <string name="relay_notice">पुनःप्रसारक सूचना</string>
@@ -4272,6 +4278,10 @@
     <string name="marmot_group_disbanded_toast">समूह विघटित</string>
     <string name="marmot_group_disbanding_toast">समूह का अन्त किया जा रहा है। इसका अन्त हो जाएगा जब समूह सहमत होगा।</string>
     <string name="marmot_group_info_updated">समूह विवरण का अद्यतन किया गया</string>
+    <plurals name="chat_room_member_count">
+        <item quantity="one">%1$d सदस्य</item>
+        <item quantity="other">%1$d सदस्य</item>
+    </plurals>
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d सदस्य</item>
         <item quantity="other">%1$d सदस्य</item>
