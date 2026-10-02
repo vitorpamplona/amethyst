@@ -209,4 +209,15 @@ class NewMessageTaggerKeyParseTest {
 
             assertTrue(tagger.message.startsWith("hi nostr:nprofile1"))
         }
+
+    @Test
+    fun possessiveAtMentionBecomesNostrUri() =
+        runBlocking {
+            val npub = "npub19ma2w9dmk3kat0nt0k5dwuqzvmg3va9ezwup0zkakhpwv0vcwvcsg8axkl"
+            val tagger = NewMessageTagger(message = "@$npub's ERP screens look good", dao = dao)
+            tagger.run()
+
+            val nprofile = tagger.pTags!!.single().toNProfile()
+            assertEquals("nostr:$nprofile's ERP screens look good", tagger.message)
+        }
 }

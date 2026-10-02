@@ -603,7 +603,13 @@ class ChatNewMessageViewModel :
     ) {
         val room = room.value ?: return
 
-        val messageText = message.text.toString()
+        // Rewrites typed `@npub…`/`note1…` references into `nostr:` URIs. Only the rewritten text is
+        // used: the tagger's pTags must NOT reach the event, since a NIP-17 room is defined by its
+        // p-tags — adding a mentioned user would send the message to a different conversation.
+        val tagger = NewMessageTagger(message.text.toString(), null, null, accountViewModel)
+        tagger.run()
+
+        val messageText = tagger.message
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
