@@ -1134,6 +1134,11 @@
     <string name="relay_auth_session_section">Just for now</string>
     <string name="relay_auth_session_row_desc">Logged in until you restart Amethyst</string>
     <string name="relay_auth_forget_session">Forget this login</string>
+    <string name="relay_auth_event_title">Relay login</string>
+    <string name="relay_auth_event_explainer">Not a post. It logs you in to this relay: whoever holds it can read what the relay only shows to you, like your private messages.</string>
+    <string name="relay_auth_event_unusual_relay">This is not a plain relay address. Check it before signing.</string>
+    <string name="relay_auth_event_no_relay">No relay named in this login</string>
+    <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
     <string name="relay_auth_session_undo_blocked">Not restored. “Never log in” is on, so Amethyst won't log in to %1$s.</string>
     <string name="relay_auth_blocked_section">Blocked by your block list</string>
@@ -4506,6 +4511,7 @@
     <string name="napplet_op_decrypt">read your private messages</string>
     <string name="napplet_op_decrypt_from">read your private messages with %1$s</string>
     <string name="napplet_op_encrypt">encrypt a message</string>
+    <string name="napplet_op_relay_login">log in to relays as you</string>
     <string name="napplet_op_sign_kind_named">sign for %1$s (kind: %2$d)</string>
     <string name="napplet_permissions_title">Connected Apps</string>
     <string name="napplets">nApplets</string>

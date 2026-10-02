@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_allow_always
@@ -97,10 +98,16 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.ShowFullTextCache
+import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.NoteBody
+import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
+import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
@@ -347,11 +354,11 @@ private fun SignerConsentDialog(
 }
 
 /**
- * The "what you're acting on" block: the unsigned event rendered as a real NoteCompose (what it will
- * look like once signed) with a JSON toggle for sign/publish, or the raw content / decrypted plaintext
+ * The "what you're acting on" block: the unsigned event rendered as a note (what it will look like
+ * once signed, see [UnsignedNotePreview]) with a JSON toggle for sign/publish, or the raw content / decrypted plaintext
  * for encrypt/decrypt. Shared by the single-request dialog and each expanded batch row so a user can
  * always inspect exactly what they are signing/encrypting/decrypting. Best-effort: if the main Activity
- * is gone (only the foreground signer service alive) the NoteCompose is skipped and the JSON stands in.
+ * is gone (only the foreground signer service alive) the note is skipped and the JSON stands in.
  */
 @Composable
 private fun SignerConsentPreview(info: SignerConsentInfo) {
@@ -381,13 +388,7 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             if (previewNote != null && accountViewModel != null) {
-                NoteCompose(
-                    baseNote = previewNote,
-                    isQuotedNote = true,
-                    quotesLeft = 0,
-                    accountViewModel = accountViewModel,
-                    nav = previewNav,
-                )
+                UnsignedNotePreview(previewNote, accountViewModel, previewNav)
             } else if (info.contentPreview.isNotBlank()) {
                 Text("“${info.contentPreview}”", style = MaterialTheme.typography.bodySmall)
             }
@@ -420,6 +421,48 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
                 }
             }
         }
+    }
+}
+
+/**
+ * The event as it will read once signed: author line and content, nothing else. Deliberately not
+ * [com.vitorpamplona.amethyst.commons.ui.note.NoteCompose], which wraps a note in a reaction row,
+ * a long-press quick-action popup and a ⋮ options menu — controls that make no sense on a consent
+ * prompt, and would react to, zap or broadcast an event that does not exist yet. For the same
+ * reason a reply names its parent in one line ([ReplyRenderType.LINE]) instead of embedding it as
+ * a full note, and quotes are not expanded (`quotesLeft = 0`). Content-level actions are blocked
+ * too ([blockInteractions]).
+ */
+@Composable
+private fun UnsignedNotePreview(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Renderers fade long content into this color, so it must match the preview Surface.
+    val surface = MaterialTheme.colorScheme.surfaceVariant
+    val backgroundColor = remember(surface) { mutableStateOf(surface) }
+    val editState = observeEdits(note, accountViewModel)
+    // Everything being signed must be readable without a tap (taps are blocked below), so the
+    // text renderer starts expanded instead of cutting long content behind "Show more".
+    remember(note.idHex) { ShowFullTextCache.cache.put(note.idHex, true) }
+
+    // Read-only: renderers carry their own actions (poll votes, RSVPs, badge accepts, profile and
+    // link taps) that would act on an event that does not exist yet. Drags still scroll the dialog.
+    Column(Modifier.blockInteractions()) {
+        NoteBody(
+            baseNote = note,
+            showAuthorPicture = true,
+            unPackReply = ReplyRenderType.LINE,
+            showSecondRow = false,
+            quotesLeft = 0,
+            backgroundColor = backgroundColor,
+            editState = editState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            // An empty slot replaces the default ⋮ options menu.
+            moreOptions = {},
+        )
     }
 }
 

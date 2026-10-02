@@ -221,6 +221,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicationIndex
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicationSection
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAddMember
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayDiscovery
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayGroupMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayJoinRequest
@@ -372,6 +373,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
@@ -1305,6 +1307,10 @@ private fun RenderNoteRow(
 
         is RelayLeaveRequestEvent -> {
             RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
+        }
+
+        is RelayAuthEvent -> {
+            RenderRelayAuth(baseNote, accountViewModel, nav)
         }
 
         is PinListEvent -> {

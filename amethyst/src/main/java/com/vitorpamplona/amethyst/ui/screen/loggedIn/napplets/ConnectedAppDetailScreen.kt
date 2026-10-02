@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_decision_deny
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind
 import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_ask_each_time
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
@@ -141,6 +142,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnli
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -838,7 +840,12 @@ private fun GrantOption(
 @Composable
 private fun NostrSignerOp.opLabel(): String =
     when (this) {
-        is NostrSignerOp.SignKind -> stringRes(Res.string.napplet_op_sign_kind, kind)
+        is NostrSignerOp.SignKind ->
+            if (kind == RelayAuthEvent.KIND) {
+                stringRes(Res.string.napplet_op_relay_login)
+            } else {
+                stringRes(Res.string.napplet_op_sign_kind, kind)
+            }
         NostrSignerOp.Encrypt -> stringRes(Res.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> stringRes(Res.string.napplet_op_decrypt)
         is NostrSignerOp.DecryptFrom -> stringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
