@@ -98,6 +98,8 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.ShowFullTextCache
+import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteBody
@@ -428,7 +430,8 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
  * a long-press quick-action popup and a ⋮ options menu — controls that make no sense on a consent
  * prompt, and would react to, zap or broadcast an event that does not exist yet. For the same
  * reason a reply names its parent in one line ([ReplyRenderType.LINE]) instead of embedding it as
- * a full note, and quotes are not expanded (`quotesLeft = 0`).
+ * a full note, and quotes are not expanded (`quotesLeft = 0`). Content-level actions are blocked
+ * too ([blockInteractions]).
  */
 @Composable
 private fun UnsignedNotePreview(
@@ -440,8 +443,13 @@ private fun UnsignedNotePreview(
     val surface = MaterialTheme.colorScheme.surfaceVariant
     val backgroundColor = remember(surface) { mutableStateOf(surface) }
     val editState = observeEdits(note, accountViewModel)
+    // Everything being signed must be readable without a tap (taps are blocked below), so the
+    // text renderer starts expanded instead of cutting long content behind "Show more".
+    remember(note.idHex) { ShowFullTextCache.cache.put(note.idHex, true) }
 
-    Column {
+    // Read-only: renderers carry their own actions (poll votes, RSVPs, badge accepts, profile and
+    // link taps) that would act on an event that does not exist yet. Drags still scroll the dialog.
+    Column(Modifier.blockInteractions()) {
         NoteBody(
             baseNote = note,
             showAuthorPicture = true,
