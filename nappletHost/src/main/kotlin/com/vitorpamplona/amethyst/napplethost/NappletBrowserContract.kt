@@ -339,6 +339,12 @@ object NappletBrowserContract {
     const val KEY_THEME = "theme"
 
     /**
+     * The user's omnibox search engine, as a [com.vitorpamplona.amethyst.commons.browser.SearchEngines]
+     * id, so an address typed into a popup window this tab opens searches with the same engine.
+     */
+    const val KEY_SEARCH_ENGINE = "searchEngine"
+
+    /**
      * Opaque per-account WebView storage-profile name (a truncated SHA-256 of the account pubkey,
      * minted in the main process). Partitions cookies/localStorage/IndexedDB/service workers per
      * account so an embedded site can't carry one npub's session into another. See

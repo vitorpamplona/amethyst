@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
+import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressSuggestion
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
@@ -220,7 +221,8 @@ private fun EmbeddedWebAppTab(
     }
 
     fun onNavigate(text: String) {
-        val resolved = OmniboxInput.resolve(text) ?: return
+        val engine = SearchEngines.byId(Amethyst.instance.uiPrefs.value.searchEngine.value)
+        val resolved = OmniboxInput.resolve(text, engine.queryPrefix) ?: return
         // .onion only resolves over Tor.
         if (resolved.forceTor && proxyAvailable && !torOn) {
             torOn = true

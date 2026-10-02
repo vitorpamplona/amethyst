@@ -235,6 +235,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NIP47Setup
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ReactionsSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SearchEngineSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SpammingUsersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UpdateZapAmountScreen
@@ -654,6 +655,7 @@ fun BuildNavigation(
         composableFromEnd<Route.DrawerSettings> { DrawerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.SearchEngineSettings> { SearchEngineSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.NowPlayingSettings> {

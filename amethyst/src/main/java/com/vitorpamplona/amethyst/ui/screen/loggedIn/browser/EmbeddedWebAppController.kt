@@ -80,6 +80,8 @@ class EmbeddedWebAppController(
     private val initialUseTor: Boolean,
     private val backgroundColor: Int,
     private val themeType: String = "SYSTEM",
+    // Read on every create, so a session made after the user changes engines picks the new one up.
+    private val searchEngine: () -> String? = { null },
 ) : EmbeddedSurfaceController,
     EmbeddedImeBridge,
     EmbeddedMagnifierProbe,
@@ -505,6 +507,7 @@ class EmbeddedWebAppController(
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, useTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
                         putString(NappletBrowserContract.KEY_THEME, themeType)
+                        putString(NappletBrowserContract.KEY_SEARCH_ENGINE, searchEngine())
                         // Opaque per-account storage partition, so an embedded site can't carry one
                         // npub's session into another. Derived here (the sandbox never sees the pubkey).
                         putString(NappletBrowserContract.KEY_WEBVIEW_PROFILE, NappletWebViewProfiles.current())

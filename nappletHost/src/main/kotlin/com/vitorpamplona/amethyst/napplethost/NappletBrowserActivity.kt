@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission.Decision
 import com.vitorpamplona.amethyst.commons.browser.DownloadCooldown
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
@@ -129,6 +130,9 @@ class NappletBrowserActivity : ComponentActivity() {
     private var useTor: Boolean = true
     private var themeType: String = "SYSTEM"
     private var webViewProfile: String? = null
+
+    // SearchEngines id from the main process (the sandbox can't read the user's settings itself).
+    private var searchEngine: String? = null
 
     // Key for this window's foreground lease with the broker; stable for the Activity's life.
     private var leaseKey: String = ""
@@ -301,6 +305,7 @@ class NappletBrowserActivity : ComponentActivity() {
             useTor = popup.useTor
             themeType = popup.themeType
             webViewProfile = popup.webViewProfile
+            searchEngine = popup.searchEngine
             leaseKey = "popup:$popupToken"
         } else {
             startUrl = intent.getStringExtra(EXTRA_URL)?.takeIf { it.isNotBlank() } ?: run {
@@ -311,6 +316,7 @@ class NappletBrowserActivity : ComponentActivity() {
             useTor = intent.getBooleanExtra(EXTRA_USE_TOR, true)
             themeType = intent.getStringExtra(EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
             webViewProfile = intent.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE)
+            searchEngine = intent.getStringExtra(EXTRA_SEARCH_ENGINE)
             leaseKey = startUrl
         }
         title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
@@ -658,7 +664,7 @@ class NappletBrowserActivity : ComponentActivity() {
         ): Boolean {
             if (!isUserGesture) return false
             val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
-            val (token, child) = BrowserPopups.create(this@NappletBrowserActivity, shimJs, proxyPort, useTor, themeType, webViewProfile)
+            val (token, child) = BrowserPopups.create(this@NappletBrowserActivity, shimJs, proxyPort, useTor, themeType, webViewProfile, searchEngine)
             transport.webView = child
             resultMsg.sendToTarget()
             startActivity(popupIntent(this@NappletBrowserActivity, token))
@@ -951,7 +957,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     /** Loads a user-typed address from "Edit address", forcing Tor for `.onion` when available. */
     private fun loadAddress(text: String) {
-        val resolved = OmniboxInput.resolve(text) ?: return
+        val resolved = OmniboxInput.resolve(text, SearchEngines.byId(searchEngine).queryPrefix) ?: return
         if (resolved.forceTor && !useTor) {
             useTor = true
             updateChromeState { copy(torOn = true, torForced = false) }
@@ -1904,6 +1910,7 @@ class NappletBrowserActivity : ComponentActivity() {
         private const val EXTRA_THEME = "theme"
         private const val EXTRA_IS_FAVORITE = "isFavorite"
         private const val EXTRA_POPUP_TOKEN = "popupToken"
+        private const val EXTRA_SEARCH_ENGINE = "searchEngine"
 
         /** `TaskDescription.Builder.setIcon(Icon)` exists from this SDK on. */
         private const val ICON_BUILDER_SDK = 37
@@ -1917,6 +1924,7 @@ class NappletBrowserActivity : ComponentActivity() {
             theme: String = "SYSTEM",
             isFavorite: Boolean = false,
             webViewProfile: String? = null,
+            searchEngine: String? = null,
         ): Intent =
             Intent()
                 .setClassName(context, ACTIVITY_CLASS)
@@ -1929,6 +1937,7 @@ class NappletBrowserActivity : ComponentActivity() {
                 // Opaque per-account storage partition; shares the host contract's key so there is one
                 // name for the concept across every WebView creation site.
                 .putExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE, webViewProfile)
+                .putExtra(EXTRA_SEARCH_ENGINE, searchEngine)
                 // Distinct task identity per URL for documentLaunchMode=intoExisting.
                 .setData(url.toUri())
 

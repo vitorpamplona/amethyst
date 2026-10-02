@@ -50,8 +50,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -96,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryEntry
 import com.vitorpamplona.amethyst.commons.browser.DefaultWebClients
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.browser.OmniboxSuggestions
+import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import com.vitorpamplona.amethyst.commons.browser.SuggestedWebApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
@@ -193,6 +192,10 @@ private fun BrowserLauncher(
     // showing "isn't loaded yet" until the user happens to visit the nsite/napplet feed.
     PreloadFavoriteNostrApps(apps, accountViewModel)
 
+    val searchEngineId by accountViewModel.settings.uiSettingsFlow.searchEngine
+        .collectAsStateWithLifecycle()
+    val searchEngine = SearchEngines.byId(searchEngineId)
+
     var field by remember { mutableStateOf(TextFieldValue("")) }
     var focused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -273,7 +276,7 @@ private fun BrowserLauncher(
     val suggestions = remember(typed, candidates) { ranked(typed) }
 
     fun open(text: String) {
-        val target = OmniboxInput.resolve(text) ?: return
+        val target = OmniboxInput.resolve(text, searchEngine.queryPrefix) ?: return
         appLauncher.launchUrl(target.url, target.forceTor)
         // The site opens in its own window: coming back should land on a fresh launcher, not on the
         // half-typed address and its suggestions.
@@ -348,6 +351,7 @@ private fun BrowserLauncher(
             typed.isNotBlank() ->
                 SuggestionGrid(
                     entered = field.text,
+                    searchEngine = searchEngine,
                     suggestions = suggestions,
                     iconKeys = iconKeys,
                     historyUrls = historyUrls,
@@ -387,8 +391,8 @@ private fun BrowserLauncher(
  * The launcher's address field: a rounded pill with the same anatomy as the in-site
  * [AddressEditor][com.vitorpamplona.amethyst.commons.browser.ui.pill.AddressEditor] —
  * a leading glyph that says what Go will do (search vs. open an address), the field, clear, and a filled Go
- * once there is something to go to. Focused and empty, it offers Paste and go when the clipboard holds
- * text. Tab (or →) accepts the inline completion; Escape leaves the field.
+ * once there is something to go to. Focused and empty, that trailing slot is a paste-and-go button
+ * instead, when the clipboard holds text. Tab (or →) accepts the inline completion; Escape leaves the field.
  */
 @Composable
 private fun OmniBar(
@@ -407,114 +411,107 @@ private fun OmniBar(
     val colors = MaterialTheme.colorScheme
     val isAddress = isAddress(field.text)
 
-    Column(
+    Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                // The omnibox is a plain Column in the topBar slot (not a Material3 TopAppBar), so it must
+                // The omnibox is a plain Row in the topBar slot (not a Material3 TopAppBar), so it must
                 // apply the top system insets itself — systemBars rather than just statusBars, so the
                 // caption bar of a desktop window (Waydroid/DeX freeform) is respected too.
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
                 .padding(start = if (nav.canPop()) 4.dp else 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // When reached from the drawer (pushed onto the back stack) rather than as a bottom-bar tab, show
-            // a back arrow — same rule as the other launcher/feed top bars (see NappletsTopBar).
-            if (nav.canPop()) {
-                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
-            }
-            Row(
-                Modifier
-                    .weight(1f)
-                    .height(52.dp)
-                    .clip(CircleShape)
-                    .background(if (focused) colors.surfaceContainerHighest else colors.surfaceContainerHigh)
-                    .border(if (focused) 2.dp else 1.dp, if (focused) colors.primary else colors.outlineVariant, CircleShape)
-                    // The whole pill is the target, not just the text line inside it.
-                    .clickable(interactionSource = null, indication = null) { focusRequester.requestFocus() }
-                    .padding(start = 16.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    if (isAddress) MaterialSymbols.Language else MaterialSymbols.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = if (focused) colors.primary else colors.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(12.dp))
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    if (field.text.isEmpty()) {
-                        Text(
-                            stringRes(Res.string.browser_address_hint),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    BasicTextField(
-                        value = field,
-                        onValueChange = onValueChange,
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
-                        cursorBrush = SolidColor(colors.primary),
-                        keyboardOptions =
-                            KeyboardOptions(
-                                capitalization = KeyboardCapitalization.None,
-                                autoCorrectEnabled = false,
-                                keyboardType = KeyboardType.Uri,
-                                imeAction = ImeAction.Go,
-                            ),
-                        keyboardActions = KeyboardActions(onGo = { onOpen() }),
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { onFocusChange(it.isFocused) }
-                                .onPreviewKeyEvent { event ->
-                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                    when (event.key) {
-                                        // Tab takes the ghost completion instead of moving focus away.
-                                        Key.Tab ->
-                                            if (!field.selection.collapsed) {
-                                                onAcceptCompletion()
-                                                true
-                                            } else {
-                                                false
-                                            }
-                                        Key.Escape -> {
-                                            focusManager.clearFocus()
-                                            true
-                                        }
-                                        else -> false
-                                    }
-                                },
+        // When reached from the drawer (pushed onto the back stack) rather than as a bottom-bar tab, show
+        // a back arrow — same rule as the other launcher/feed top bars (see NappletsTopBar).
+        if (nav.canPop()) {
+            IconButton(onClick = nav::popBack) { ArrowBackIcon() }
+        }
+        Row(
+            Modifier
+                .weight(1f)
+                .height(52.dp)
+                .clip(CircleShape)
+                .background(if (focused) colors.surfaceContainerHighest else colors.surfaceContainerHigh)
+                .border(if (focused) 2.dp else 1.dp, if (focused) colors.primary else colors.outlineVariant, CircleShape)
+                // The whole pill is the target, not just the text line inside it.
+                .clickable(interactionSource = null, indication = null) { focusRequester.requestFocus() }
+                .padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (isAddress) MaterialSymbols.Language else MaterialSymbols.Search,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (focused) colors.primary else colors.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(12.dp))
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                if (field.text.isEmpty()) {
+                    Text(
+                        stringRes(Res.string.browser_address_hint),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (field.text.isNotEmpty()) {
-                    IconButton(onClick = {
-                        onClear()
-                        focusRequester.requestFocus()
-                    }) {
-                        Icon(MaterialSymbols.Cancel, contentDescription = stringRes(Res.string.browser_clear), modifier = Modifier.size(20.dp), tint = colors.onSurfaceVariant)
-                    }
-                }
-                if (field.text.isNotBlank()) {
-                    FilledIconButton(onClick = onOpen, modifier = Modifier.size(44.dp)) {
-                        Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.browser_go), modifier = Modifier.size(22.dp))
-                    }
+                BasicTextField(
+                    value = field,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                    cursorBrush = SolidColor(colors.primary),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            capitalization = KeyboardCapitalization.None,
+                            autoCorrectEnabled = false,
+                            keyboardType = KeyboardType.Uri,
+                            imeAction = ImeAction.Go,
+                        ),
+                    keyboardActions = KeyboardActions(onGo = { onOpen() }),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { onFocusChange(it.isFocused) }
+                            .onPreviewKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                when (event.key) {
+                                    // Tab takes the ghost completion instead of moving focus away.
+                                    Key.Tab ->
+                                        if (!field.selection.collapsed) {
+                                            onAcceptCompletion()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    Key.Escape -> {
+                                        focusManager.clearFocus()
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            },
+                )
+            }
+            if (field.text.isNotEmpty()) {
+                IconButton(onClick = {
+                    onClear()
+                    focusRequester.requestFocus()
+                }) {
+                    Icon(MaterialSymbols.Cancel, contentDescription = stringRes(Res.string.browser_clear), modifier = Modifier.size(20.dp), tint = colors.onSurfaceVariant)
                 }
             }
-        }
-
-        if (onPasteAndGo != null) {
-            AssistChip(
-                onClick = onPasteAndGo,
-                label = { Text(stringRes(Res.string.browser_pill_paste_go), maxLines = 1) },
-                leadingIcon = { Icon(MaterialSymbols.ContentPasteGo, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
-                modifier = Modifier.padding(start = if (nav.canPop()) 48.dp else 0.dp),
-            )
+            if (field.text.isNotBlank()) {
+                FilledIconButton(onClick = onOpen, modifier = Modifier.size(44.dp)) {
+                    Icon(MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.browser_go), modifier = Modifier.size(22.dp))
+                }
+            } else if (onPasteAndGo != null) {
+                IconButton(onClick = onPasteAndGo) {
+                    Icon(MaterialSymbols.ContentPasteGo, contentDescription = stringRes(Res.string.browser_pill_paste_go), modifier = Modifier.size(20.dp), tint = colors.onSurfaceVariant)
+                }
+            }
         }
     }
 }
@@ -532,9 +529,10 @@ private fun isAddress(text: String): Boolean {
 @Composable
 private fun EnteredRow(
     entered: String,
+    searchEngine: SearchEngines.SearchEngine,
     onClick: () -> Unit,
 ) {
-    val target = OmniboxInput.resolve(entered) ?: return
+    val target = OmniboxInput.resolve(entered, searchEngine.queryPrefix) ?: return
     val isAddress = isAddress(entered)
     val title =
         if (isAddress) {
@@ -542,7 +540,7 @@ private fun EnteredRow(
         } else {
             stringRes(Res.string.browser_omnibox_search_for, entered.trim())
         }
-    val subtitle = if (isAddress) null else OmniboxInput.hostOf(OmniboxInput.DEFAULT_SEARCH_PREFIX)
+    val subtitle = if (isAddress) null else searchEngine.name
     Row(
         modifier =
             Modifier
@@ -591,6 +589,7 @@ private fun EnteredRow(
 @Composable
 private fun SuggestionGrid(
     entered: String,
+    searchEngine: SearchEngines.SearchEngine,
     suggestions: List<OmniboxSuggestions.Suggestion>,
     iconKeys: Set<String>,
     historyUrls: Set<String>,
@@ -628,7 +627,7 @@ private fun SuggestionGrid(
     }
 
     LazyVerticalGrid(columns = GridCells.Fixed(1), modifier = modifier) {
-        item(key = "entered") { EnteredRow(entered, onOpenEntered) }
+        item(key = "entered") { EnteredRow(entered, searchEngine, onOpenEntered) }
         section("f", Res.string.browser_favorites, favorites, highlighted = true)
         section("o", Res.string.favorite_app_recent, recent, highlighted = false)
         section("s", Res.string.browser_suggested, discover, highlighted = false)

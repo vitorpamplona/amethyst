@@ -73,7 +73,14 @@ object EmbeddedTabFactory {
                         if (nightMask == Configuration.UI_MODE_NIGHT_YES) "DARK" else "LIGHT"
                     }
                 }
-            EmbeddedWebAppController(context.applicationContext, ::currentTorPort, initialUseTor, backgroundColor, theme).also {
+            EmbeddedWebAppController(
+                context.applicationContext,
+                ::currentTorPort,
+                initialUseTor,
+                backgroundColor,
+                theme,
+                searchEngine = { Amethyst.instance.uiPrefs.value.searchEngine.value },
+            ).also {
                 EmbeddedTabHost.takePageSnapshot(webAppId(url))?.let(it::restore)
                 it.bind(url)
             }

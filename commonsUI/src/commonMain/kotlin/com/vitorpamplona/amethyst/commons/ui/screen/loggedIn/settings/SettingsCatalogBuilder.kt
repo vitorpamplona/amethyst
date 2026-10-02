@@ -96,6 +96,8 @@ import com.vitorpamplona.amethyst.commons.resources.resource_usage_search_keywor
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_title
 import com.vitorpamplona.amethyst.commons.resources.route_home
 import com.vitorpamplona.amethyst.commons.resources.route_import_follows
+import com.vitorpamplona.amethyst.commons.resources.search_engine_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.search_engine_settings
 import com.vitorpamplona.amethyst.commons.resources.security_filters
 import com.vitorpamplona.amethyst.commons.resources.security_filters_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.translations
@@ -198,6 +200,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.notification_settings, MaterialSymbols.Notifications, Res.string.notification_settings_search_keywords, Route.NotificationSettings),
                     symEntry(Res.string.compose_settings, MaterialSymbols.Edit, Res.string.compose_search_keywords, Route.ComposeSettings),
                     symEntry(Res.string.profile_ui_settings, MaterialSymbols.AccountCircle, Res.string.profile_ui_search_keywords, Route.ProfileUiSettings),
+                    symEntry(Res.string.search_engine_settings, MaterialSymbols.TravelExplore, Res.string.search_engine_search_keywords, Route.SearchEngineSettings),
                     symEntry(Res.string.calendar_reminder_settings_title, MaterialSymbols.CalendarMonth, Res.string.calendar_reminder_search_keywords, Route.CalendarReminderSettings),
                     symEntry(Res.string.ots_explorer_settings, MaterialSymbols.Search, Res.string.ots_explorer_search_keywords, Route.OtsSettings),
                     symEntry(Res.string.namecoin_settings, MaterialSymbols.Security, Res.string.namecoin_search_keywords, Route.NamecoinSettings),

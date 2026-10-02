@@ -6355,6 +6355,9 @@
     <string name="browser_address_hint">Search or enter address</string>
     <string name="browser_omnibox_go_to">Go to %1$s</string>
     <string name="browser_omnibox_search_for">Search for “%1$s”</string>
+    <string name="search_engine_settings">Search engine</string>
+    <string name="search_engine_settings_description">What the browser's address bar searches with when what you type isn't a web address.</string>
+    <string name="search_engine_search_keywords" translatable="false">search engine, browser, address bar, omnibox, duckduckgo, google</string>
     <string name="napplet_untitled">Untitled nApplet</string>
     <string name="browser_permission_section">Site permissions</string>
     <string name="browser_permission_camera">Use your camera</string>

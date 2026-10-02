@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.browser.SearchEngines
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -57,6 +58,7 @@ class UiSettingsFlow(
     val composeSignature: MutableStateFlow<String> = MutableStateFlow(""),
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val searchEngine: MutableStateFlow<String> = MutableStateFlow(SearchEngines.DEFAULT.id),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -90,6 +92,7 @@ class UiSettingsFlow(
             composeSignature,
             showOnchainWallet,
             showPayToZapChip,
+            searchEngine,
         )
 
     // emits at every change in any of the propertyes.
@@ -127,6 +130,7 @@ class UiSettingsFlow(
                 flows[27] as String,
                 flows[28] as Boolean,
                 flows[29] as Boolean,
+                flows[30] as String,
             )
         }
 
@@ -162,6 +166,7 @@ class UiSettingsFlow(
             composeSignature.value,
             showOnchainWallet.value,
             showPayToZapChip.value,
+            searchEngine.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -287,6 +292,10 @@ class UiSettingsFlow(
             showPayToZapChip.tryEmit(torSettings.showPayToZapChip)
             any = true
         }
+        if (searchEngine.value != torSettings.searchEngine) {
+            searchEngine.tryEmit(torSettings.searchEngine)
+            any = true
+        }
 
         return any
     }
@@ -342,6 +351,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.composeSignature),
                 MutableStateFlow(uiSettings.showOnchainWallet),
                 MutableStateFlow(uiSettings.showPayToZapChip),
+                MutableStateFlow(uiSettings.searchEngine),
             )
     }
 }
