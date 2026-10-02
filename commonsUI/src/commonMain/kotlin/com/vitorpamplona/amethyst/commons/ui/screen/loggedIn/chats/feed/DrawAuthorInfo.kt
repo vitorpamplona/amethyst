@@ -23,14 +23,13 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,8 +44,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.InnerUserPicture
-import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -106,9 +104,9 @@ val ChatAuthorNameWeight = FontWeight.SemiBold
 val ChatAuthorNameSize = 13.sp
 
 /**
- * The author's face beside the last bubble of their run in a group chat. Plain picture: the
- * trust score and follow mark it used to carry inside the bubble were unreadable at this size
- * and live on the profile one tap away.
+ * The author's face beside the last bubble of their run in a group chat, with the follow mark
+ * and NIP-85 trust score [BaseUserPicture] draws on every profile picture. Tapping it opens the
+ * profile.
  */
 @Composable
 fun ChatAuthorAvatar(
@@ -116,16 +114,12 @@ fun ChatAuthorAvatar(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    LoadUser(baseUserHex = userHex) { user ->
-        val userState = user?.let { observeUserInfo(it, accountViewModel).value }
-        InnerUserPicture(
-            userHex = userHex,
-            userPicture = userState?.info?.picture,
-            userName = userState?.info?.bestName(),
-            size = ChatAuthorAvatarSize,
-            modifier = Modifier.clip(CircleShape).clickable(onClick = onClick),
-        )
-    }
+    BaseUserPicture(
+        baseUserHex = userHex,
+        size = ChatAuthorAvatarSize,
+        accountViewModel = accountViewModel,
+        outerModifier = Modifier.size(ChatAuthorAvatarSize).clickable(onClick = onClick),
+    )
 }
 
 @Composable

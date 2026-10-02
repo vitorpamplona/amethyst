@@ -224,10 +224,9 @@ fun ClickableUserPicture(
 }
 
 /**
- * The faces of a Messages-list room. A 1:1 room shows its counterpart with the usual follow and
- * trust badges. A group shows at most two faces, overlapped, and no badges: at list size a 2x2
- * mosaic leaves each face ~24dp, and a trust score plus a follow shield on every one of them is
- * noise nobody can read.
+ * The faces of a chat room (Messages-list rows, chat headers). A 1:1 room shows its counterpart;
+ * a group shows at most two faces, overlapped, instead of a 2x2 mosaic. Every face keeps the
+ * usual follow mark and NIP-85 trust score, as [BaseUserPicture] draws them everywhere else.
  */
 @Composable
 fun ChatRoomFaces(
@@ -249,7 +248,7 @@ fun ChatRoomFaces(
             val ring = 2.dp
             Box(Modifier.size(size)) {
                 Box(Modifier.align(Alignment.TopStart)) {
-                    BadgelessUserPicture(userHexList[0], face, accountViewModel)
+                    BaseUserPicture(userHexList[0], face, accountViewModel)
                 }
                 // The front face sits in a disc of the background color, which cuts a clean ring
                 // out of the face behind it instead of letting the two pictures smear together.
@@ -261,24 +260,9 @@ fun ChatRoomFaces(
                             .size(face + ring * 2)
                             .background(MaterialTheme.colorScheme.background, CircleShape),
                 ) {
-                    BadgelessUserPicture(userHexList[1], face, accountViewModel)
+                    BaseUserPicture(userHexList[1], face, accountViewModel)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BadgelessUserPicture(
-    userHex: HexKey,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-) {
-    LoadUser(userHex) {
-        if (it != null) {
-            ObserveAndDrawInnerUserPicture(it, size, accountViewModel)
-        } else {
-            InnerUserPicture(userHex = userHex, userPicture = null, userName = null, size = size, modifier = Modifier)
         }
     }
 }
