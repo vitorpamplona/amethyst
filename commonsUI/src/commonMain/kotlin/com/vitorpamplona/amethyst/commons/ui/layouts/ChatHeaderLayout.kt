@@ -29,14 +29,39 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.commons.ui.components.NewItemsBubble
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatRowAvatarModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 
+private val ChatRowPadding = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+private val ChatRowAvatarGap = Modifier.width(12.dp)
+private val ChatRowLineGap = Modifier.padding(top = 3.dp)
+private val ChatRowDotGap = Modifier.width(8.dp)
+
+/**
+ * Title weight of a Messages-list row. Read rows sit at Medium so the list is calm; only a row with
+ * something new goes Bold, which makes bold *mean* unread instead of being on every line.
+ */
+fun chatRowTitleWeight(hasNewMessages: Boolean): FontWeight = if (hasNewMessages) FontWeight.Bold else FontWeight.Medium
+
+/**
+ * One Messages-list row: picture, then a title line over a preview line.
+ *
+ * The row owns its unread emphasis so every room kind agrees on it: [hasNewMessages] turns the title
+ * Bold (titles inherit it from [LocalTextStyle] — don't hardcode a weight in [firstRow]), lifts the
+ * preview from gray to full-contrast (preview text inherits [LocalContentColor] — don't hardcode a
+ * color in [secondRow]), and draws the unread dot at the end of the preview line.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatHeaderLayout(
@@ -45,33 +70,46 @@ fun ChatHeaderLayout(
     secondRow: @Composable RowScope.() -> Unit,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    hasNewMessages: Boolean = false,
 ) {
     Row(
         modifier =
             Modifier
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                .padding(10.dp),
+                .then(ChatRowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Size55Modifier) { channelPicture() }
+        Box(ChatRowAvatarModifier) { channelPicture() }
 
-        Spacer(modifier = DoubleHorzSpacer)
+        Spacer(modifier = ChatRowAvatarGap)
 
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            CompositionLocalProvider(
+                LocalTextStyle provides LocalTextStyle.current.copy(fontWeight = chatRowTitleWeight(hasNewMessages)),
             ) {
-                firstRow()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    firstRow()
+                }
             }
 
-            Spacer(modifier = Height4dpModifier)
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            CompositionLocalProvider(
+                LocalContentColor provides if (hasNewMessages) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.grayText,
             ) {
-                secondRow()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = ChatRowLineGap,
+                ) {
+                    secondRow()
+
+                    if (hasNewMessages) {
+                        Spacer(modifier = ChatRowDotGap)
+                        NewItemsBubble()
+                    }
+                }
             }
         }
     }

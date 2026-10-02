@@ -134,12 +134,26 @@ val Size110dp = 110.dp
 val Size165dp = 165.dp
 
 /**
- * Max width for a type/label chip sitting beside a room name on a Messages-list row (the NIP-28
- * "Public Chat" pill, the NIP-29 relay-host chip, the Concord community chip, ...). Roughly half a
- * phone row so a long relay URL or community name is truncated (middle ellipsis) instead of crowding
- * the room name out — the name is weighted and keeps whatever the capped chip doesn't take.
+ * Max width for a label sitting beside a room name (the NIP-29 relay host, the Concord community, the
+ * cordn coordinator on a Messages-list row; the relay/community chips in the Notifications feed).
+ * Roughly half a phone row so a long relay URL or community name is truncated (middle ellipsis)
+ * instead of crowding the room name out — the name is weighted and keeps whatever the label doesn't take.
  */
 val ChatLabelMaxWidth = 140.dp
+
+/**
+ * Avatar size of a Messages-list row. Smaller than the 55dp feed avatar on purpose: in a list that is
+ * read by name, a big saturated picture on every row outweighs the name it sits next to.
+ */
+val ChatRowAvatarSize = 48.dp
+val ChatRowAvatarModifier = Modifier.size(ChatRowAvatarSize)
+val ChatRowPictureModifier = Modifier.size(ChatRowAvatarSize).clip(shape = CircleShape)
+
+/**
+ * Content padding of the Messages list: a little air on top, and enough at the bottom that the last
+ * row's timestamp scrolls clear of the new-conversation FAB.
+ */
+val ChatListPadding = PaddingValues(top = 4.dp, bottom = 96.dp)
 
 val StdEndPadding = Modifier.padding(end = 10.dp)
 val HalfEndPadding = Modifier.padding(end = 5.dp)

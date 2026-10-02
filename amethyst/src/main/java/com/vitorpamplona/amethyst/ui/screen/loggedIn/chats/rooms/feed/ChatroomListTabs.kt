@@ -27,7 +27,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,7 +81,10 @@ fun MessagesTabHeader(
     val coroutineScope = rememberCoroutineScope()
 
     Box(Modifier.fillMaxWidth()) {
-        SecondaryTabRow(
+        // A primary row draws its indicator under the label only, not across the whole half of the
+        // screen, and the unselected tab steps back to the placeholder gray so the selection reads
+        // from the text itself instead of from a wide accent bar.
+        PrimaryTabRow(
             containerColor = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
@@ -91,6 +94,8 @@ fun MessagesTabHeader(
                 Tab(
                     selected = pagerState.currentPage == index,
                     text = { Text(text = stringRes(tab.resource)) },
+                    selectedContentColor = MaterialTheme.colorScheme.onBackground,
+                    unselectedContentColor = MaterialTheme.colorScheme.placeholderText,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                 )
             }

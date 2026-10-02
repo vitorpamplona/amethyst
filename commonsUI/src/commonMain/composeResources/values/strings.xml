@@ -407,6 +407,9 @@
     <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
     <string name="chat_preview_decrypting">Decrypting…</string>
     <string name="chat_preview_you_prefix">You: %1$s</string>
+    <string name="chat_preview_photo">Photo</string>
+    <string name="chat_preview_video">Video</string>
+    <string name="chat_preview_note">Shared a note</string>
     <string name="group_picture">Group Picture</string>
     <string name="explicit_content">Explicit Content</string>
     <string name="relay_notice">Relay Notice</string>

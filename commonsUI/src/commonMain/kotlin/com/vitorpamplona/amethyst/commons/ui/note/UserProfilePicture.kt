@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -219,6 +221,66 @@ fun ClickableUserPicture(
         }
 
     BaseUserPicture(baseUserHex, size, accountViewModel, modifier, myModifier)
+}
+
+/**
+ * The faces of a Messages-list room. A 1:1 room shows its counterpart with the usual follow and
+ * trust badges. A group shows at most two faces, overlapped, and no badges: at list size a 2x2
+ * mosaic leaves each face ~24dp, and a trust score plus a follow shield on every one of them is
+ * noise nobody can read.
+ */
+@Composable
+fun ChatRoomFaces(
+    userHexList: List<HexKey>,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+) {
+    when (userHexList.size) {
+        0 -> {}
+
+        1 -> {
+            LoadUser(baseUserHex = userHexList.first()) {
+                it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier.size(size)) }
+            }
+        }
+
+        else -> {
+            val face = size * 0.68f
+            val ring = 2.dp
+            Box(Modifier.size(size)) {
+                Box(Modifier.align(Alignment.TopStart)) {
+                    BadgelessUserPicture(userHexList[0], face, accountViewModel)
+                }
+                // The front face sits in a disc of the background color, which cuts a clean ring
+                // out of the face behind it instead of letting the two pictures smear together.
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(face + ring * 2)
+                            .background(MaterialTheme.colorScheme.background, CircleShape),
+                ) {
+                    BadgelessUserPicture(userHexList[1], face, accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgelessUserPicture(
+    userHex: HexKey,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+) {
+    LoadUser(userHex) {
+        if (it != null) {
+            ObserveAndDrawInnerUserPicture(it, size, accountViewModel)
+        } else {
+            InnerUserPicture(userHex = userHex, userPicture = null, userName = null, size = size, modifier = Modifier)
+        }
+    }
 }
 
 @Composable

@@ -42,8 +42,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
 /**
  * A tappable chip naming the Concord community a message belongs to. Wears the same highlighted wash as
  * the NIP-29 relay-host chip ([secondaryContainer] — a gray on the dark theme) so every "which server /
- * community does this room belong to" chip reads the same across the Messages screen. Shared by the
- * Messages row and the Notifications feed so a Concord message reads the same wherever it surfaces; the
+ * community does this room belong to" chip reads the same in the Notifications feed. (The Messages
+ * list names the community with the quieter `ChatRowLabel` instead, since it repeats on every row.) The
  * width is capped at [ChatLabelMaxWidth] with a middle ellipsis so a long community name is truncated
  * instead of crowding the room name out.
  */

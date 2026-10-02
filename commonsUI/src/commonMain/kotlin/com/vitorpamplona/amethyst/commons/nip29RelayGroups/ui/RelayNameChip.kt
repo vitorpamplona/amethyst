@@ -48,8 +48,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
  * so every "which server / community does this room belong to" chip reads the same way. Unlike the
  * muted note-header [com.vitorpamplona.amethyst.commons.ui.note.HeaderPill] (PoW/OTS/location
  * markers), this one is a first-class navigation entry point, so it keeps the stronger
- * `secondaryContainer` highlight. Shared by the Messages row and the Notifications feed so a Buzz
- * message reads the same wherever it surfaces; the width is capped at [ChatLabelMaxWidth] with a
+ * `secondaryContainer` highlight. Used by the Notifications feed; the Messages list names the relay
+ * with the quieter `ChatRowLabel` instead, since there it repeats on every row. The width is capped at [ChatLabelMaxWidth] with a
  * middle ellipsis so a long host is truncated instead of crowding the channel name out.
  */
 @Composable
