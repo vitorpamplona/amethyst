@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
 
 /**
  * Cross-platform rich-text renderer. Owns everything identical on every front
@@ -104,9 +105,10 @@ fun RichTextViewer(
     val renderer = LocalRichTextSegmentRenderer.current
     val baseStyle = LocalTextStyle.current
     val paragraphStyle = remember(baseStyle) { baseStyle.copy(lineHeight = 1.3.em) }
+    val paragraphs = remember(state, canPreview) { dropBlankLineAfterBlocks(state.paragraphs, canPreview) }
 
     Column(modifier) {
-        state.paragraphs.forEach { paragraph ->
+        paragraphs.forEach { paragraph ->
             val align = if (paragraph.isRTL) Alignment.End else Alignment.Start
             if (paragraph is ImageGalleryParagraph) {
                 renderer.Gallery(paragraph, state, Modifier.align(align))
