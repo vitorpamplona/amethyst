@@ -21,7 +21,8 @@
 package com.vitorpamplona.quartz.utils.cache
 
 /**
- * Linux/Native actual for [LargeCache] — the store behind Amethyst's `LocalCache`.
+ * Kotlin/Native actual (Apple and Linux) for [LargeCache] — the store behind Amethyst's
+ * `LocalCache`.
  *
  * All of the concurrency and the performance rationale lives in [StripedHashMap]; this
  * class is only the [ICacheOperations] surface over it. The short version: `LocalCache`
@@ -40,8 +41,16 @@ package com.vitorpamplona.quartz.utils.cache
  * - There is no snapshot and no defensive `entries.toList()`, so no
  *   `ConcurrentModificationException` window and no per-scan copy.
  *
+ * Apple used to wrap charlietap's `CacheMap` instead. That is a left-right map: its
+ * `entries`/`keys`/`values` hand out live views of one of its two inner `HashMap`s and
+ * release the read guard before the caller iterates them, so every bulk operation here
+ * (`filter`, `map`, `keys()`, even a defensive `entries.toList()`) walked a `HashMap` a
+ * writer could be mutating. Kotlin/Native's `HashMap` detects that and throws
+ * `ConcurrentModificationException` — which is how `NostrClient`'s pool scans failed on
+ * the iOS simulator while a bunker round-trip subscribed and published from other threads.
+ *
  * Iteration is weakly consistent and in bucket order. JVM/Android iterates in
- * sorted-key order (`ConcurrentSkipListMap`) and Apple in hash order; nothing in the
+ * sorted-key order (`ConcurrentSkipListMap`); nothing in the
  * codebase depends on a specific one. The `from`/`to` range overloads degrade to a full
  * scan here, as they always have — they have no callers outside the JVM-only
  * `LargeSoftCache`.

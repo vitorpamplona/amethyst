@@ -27,11 +27,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The linux actual is the only [LargeCache] whose thread safety is hand-rolled rather
- * than delegated to a concurrent map, so it gets its own multi-threaded test. The
- * copy-on-write version this replaced would fail every assertion here: its
- * read-copy-write was not a CAS loop, so concurrent writers silently dropped each
- * other's entries.
+ * The native actual (Apple and Linux) is the only [LargeCache] whose thread safety is
+ * hand-rolled rather than delegated to a concurrent map, so it gets its own
+ * multi-threaded test. The Linux copy-on-write version it replaced would fail every
+ * assertion here: its read-copy-write was not a CAS loop, so concurrent writers silently
+ * dropped each other's entries. The Apple `CacheMap` version it replaced failed
+ * [scansNeverThrowWhileKeysComeAndGo] with a `ConcurrentModificationException`.
  *
  * Uses `Worker` rather than coroutines on purpose — a coroutine dispatcher gives no
  * guarantee of genuine parallelism, and parallelism is the whole point.
@@ -116,5 +117,38 @@ class LargeCacheConcurrencyTest {
         }
 
         assertEquals(1_000 + (workerCount / 2) * perWorker, cache.size())
+    }
+
+    @Test
+    fun scansNeverThrowWhileKeysComeAndGo() {
+        val cache = LargeCache<Int, Int>()
+        repeat(1_000) { cache.put(it, it) }
+
+        // The shape NostrClient's pool has: one thread adds and drops subscriptions while
+        // another walks the whole map to rebuild filters. Every bulk read must tolerate a
+        // structural change landing mid-walk, removals included.
+        inParallel { id ->
+            if (id % 2 == 0) {
+                repeat(perWorker) { i ->
+                    val key = 1_000 + id * perWorker + i
+                    cache.put(key, i)
+                    cache.remove(key - 1)
+                }
+            } else {
+                repeat(200) {
+                    cache.filter { _, v -> v >= 0 }
+                    cache.map { k, _ -> k }
+                    cache.mapNotNull { k, v -> if (v % 2 == 0) k else null }
+                    cache.keys().forEach { check(it >= 0) }
+                    cache.values().forEach { check(it >= 0) }
+                    cache.forEach { k, _ -> check(k >= 0) }
+                }
+            }
+        }
+
+        // Each writer leaves only its last key behind; its first remove takes out 999
+        // (the first writer's) or a key that was never there (the others').
+        assertEquals(999 + workerCount / 2, cache.size())
+        assertEquals(998, cache.get(998))
     }
 }

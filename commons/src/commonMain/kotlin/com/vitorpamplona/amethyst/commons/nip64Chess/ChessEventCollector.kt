@@ -70,7 +70,7 @@ class ChessEventCollector(
     val startEvent: StateFlow<JesterEvent?> = _startEvent.asStateFlow()
 
     // Move events (deduplicated by event ID). String keys are Comparable, so
-    // LargeCache (ConcurrentSkipListMap on JVM, CacheMap on Apple) works.
+    // LargeCache (ConcurrentSkipListMap on JVM, StripedHashMap on native) works.
     private val moves = LargeCache<String, JesterEvent>()
 
     // Track all processed event IDs for fast deduplication. A plain HashSet

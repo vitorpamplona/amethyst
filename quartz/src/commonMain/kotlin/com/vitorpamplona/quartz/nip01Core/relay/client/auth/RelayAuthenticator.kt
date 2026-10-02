@@ -106,7 +106,7 @@ class RelayAuthenticator(
 ) : IAuthStatus {
     // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
     // this state is mutated concurrently — LargeCache wraps a platform-tuned
-    // concurrent map (ConcurrentSkipListMap on jvmAndroid, CacheMap on Apple).
+    // concurrent map (ConcurrentSkipListMap on jvmAndroid, StripedHashMap on native).
     //
     // This stays mutable because RelayAuthStatus carries an LruCache that has
     // to be addressable from the dispatcher thread. The Compose-observable
