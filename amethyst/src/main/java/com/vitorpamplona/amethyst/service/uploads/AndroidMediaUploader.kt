@@ -618,7 +618,9 @@ class AndroidMediaUploader(
                             uploadBlossom(clean?.uri ?: finalUri, compressed.contentType, clean?.size ?: compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context, SharedUploadAuth(), buzzWorkspace = true)
                                 .also { if (it is UploadingState.Error) updateState(0.0, it) }
                         } finally {
-                            clean?.file?.delete()
+                            clean?.file?.let { file ->
+                                if (!file.delete()) Log.w("UploadOrchestrator") { "Failed to delete sanitized temp file: ${file.path}" }
+                            }
                         }
                     }
                 }
