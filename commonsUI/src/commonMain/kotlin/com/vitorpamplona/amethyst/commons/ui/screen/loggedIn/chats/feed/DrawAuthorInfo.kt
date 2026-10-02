@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,9 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.buzz.ui.BuzzAgentLabel
 import com.vitorpamplona.amethyst.commons.buzz.ui.rememberBuzzContextualName
-import com.vitorpamplona.amethyst.commons.chats.ui.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -42,17 +44,18 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNickname
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
-import com.vitorpamplona.amethyst.commons.ui.note.InnerUserPicture
-import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndRenderUserCards
-import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
+import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.identityNames.IdentityNamePolicy
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
+/**
+ * The author's name at the top of the first bubble of their run. Name only: the face sits
+ * outside the bubble, beside the run's last bubble ([ChatAuthorAvatar]), so the bubble keeps
+ * to what was said instead of opening with a picture and its badges.
+ */
 @Composable
 fun DrawAuthorInfo(
     baseNote: Note,
@@ -77,7 +80,9 @@ fun DrawAuthorInfo(
 /**
  * A stable, pubkey-derived name color so authors are scannable in fast-moving
  * group rooms. The hue comes from the pubkey; saturation/lightness are tuned per
- * theme so every hue stays readable on the "them" bubble fill.
+ * theme so every hue stays readable on the "them" bubble fill. Saturation is kept
+ * low: the hue only has to tell two names apart, and at full strength every author
+ * line was another bright color competing with the message under it.
  */
 fun authorNameColorFor(
     pubkeyHex: String,
@@ -85,10 +90,36 @@ fun authorNameColorFor(
 ): Color {
     val hue = (pubkeyHex.take(6).toIntOrNull(16) ?: pubkeyHex.hashCode()).mod(360).toFloat()
     return if (isLightTheme) {
-        Color.hsl(hue, saturation = 0.70f, lightness = 0.35f)
+        Color.hsl(hue, saturation = 0.45f, lightness = 0.38f)
     } else {
-        Color.hsl(hue, saturation = 0.55f, lightness = 0.70f)
+        Color.hsl(hue, saturation = 0.38f, lightness = 0.74f)
     }
+}
+
+/** Size of the author face beside a chat bubble. */
+val ChatAuthorAvatarSize = 28.dp
+
+/** Weight and size of the author name inside a bubble: a label over the message, not a heading. */
+val ChatAuthorNameWeight = FontWeight.SemiBold
+val ChatAuthorNameSize = 13.sp
+
+/**
+ * The author's face beside the last bubble of their run in a group chat, with the follow mark
+ * and NIP-85 trust score [BaseUserPicture] draws on every profile picture. Tapping it opens the
+ * profile.
+ */
+@Composable
+fun ChatAuthorAvatar(
+    userHex: HexKey,
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit,
+) {
+    BaseUserPicture(
+        baseUserHex = userHex,
+        size = ChatAuthorAvatarSize,
+        accountViewModel = accountViewModel,
+        outerModifier = Modifier.size(ChatAuthorAvatarSize).clickable(onClick = onClick),
+    )
 }
 
 @Composable
@@ -116,41 +147,21 @@ private fun WatchAndDisplayUser(
             authorNameColorFor(author.pubkeyHex, isLightTheme)
         }
 
-    UserDisplayNameLayout(
-        picture = {
-            InnerUserPicture(
-                userHex = author.pubkeyHex,
-                userPicture = userState?.info?.picture,
-                userName = displayName,
-                size = Size20dp,
-                modifier = Modifier,
-            )
-
-            WatchUserFollows(author.pubkeyHex, accountViewModel) { newFollowingState ->
-                if (newFollowingState) {
-                    FollowingIcon(Size5Modifier)
-                }
-            }
-
-            ObserveAndRenderUserCards(author, Size20dp, Modifier.align(Alignment.BottomCenter), accountViewModel)
-        },
-        name = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                CreateTextWithEmoji(
-                    text = displayName ?: author.pubkeyDisplayHex(),
-                    tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
-                    color = nameColor,
-                    maxLines = 1,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                // An agent says so, and whose it is (its owner comes from the NIP-OA tag on its kind 0),
-                // unless its contextual name already does.
-                BuzzAgentLabel(author, userState?.nipOaOwner, accountViewModel, showOwner = !qualified)
-            }
-        },
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        CreateTextWithEmoji(
+            text = displayName ?: author.pubkeyDisplayHex(),
+            tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
+            color = nameColor,
+            maxLines = 1,
+            fontWeight = ChatAuthorNameWeight,
+            fontSize = ChatAuthorNameSize,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        // An agent says so, and whose it is (its owner comes from the NIP-OA tag on its kind 0),
+        // unless its contextual name already does.
+        BuzzAgentLabel(author, userState?.nipOaOwner, accountViewModel, showOwner = !qualified)
+    }
 }

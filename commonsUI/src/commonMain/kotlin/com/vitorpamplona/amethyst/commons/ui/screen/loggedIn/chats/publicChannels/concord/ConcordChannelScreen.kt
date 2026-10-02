@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggesti
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
 import com.vitorpamplona.amethyst.commons.resources.concord_banned_notice
 import com.vitorpamplona.amethyst.commons.resources.concord_dissolved_read_only
 import com.vitorpamplona.amethyst.commons.resources.concord_private_channel_cut
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_timer_active
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
-import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -589,7 +589,7 @@ private fun ConcordMessageComposer(
             shape = EditFieldBorder,
             placeholder = {
                 Text(
-                    text = stringRes(Res.string.reply_here),
+                    text = stringRes(Res.string.chat_composer_hint),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

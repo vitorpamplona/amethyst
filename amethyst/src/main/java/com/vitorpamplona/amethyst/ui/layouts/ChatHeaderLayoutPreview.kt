@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.layouts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
@@ -42,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -69,10 +67,9 @@ fun ChannelNamePreview() {
                 },
                 secondRow = {
                     Text(PREVIEW_MESSAGE, Modifier.weight(1f))
-                    Spacer(modifier = Height4dpModifier)
-                    NewItemsBubble()
                 },
                 onClick = {},
+                hasNewMessages = true,
             )
 
             HorizontalDivider(thickness = DividerThickness)

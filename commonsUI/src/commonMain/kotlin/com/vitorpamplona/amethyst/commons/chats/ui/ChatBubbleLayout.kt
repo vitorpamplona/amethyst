@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -103,6 +104,10 @@ private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
 // already has 6dp bottom padding; the chips poke ~12dp in, so ~8dp more clears them.
 private val ChatChipOverlapReserve = 8.dp
 
+// The column the author face sits in, beside a group chat's bubbles, and its gap to them.
+private val ChatAuthorGutterModifier = Modifier.width(28.dp)
+private val ChatAuthorGutterGap = Modifier.width(6.dp)
+
 // Swipe-to-reply: releasing past the threshold fires the reply; the bubble never
 // drags further than the max.
 private val SwipeReplyThreshold = 56.dp
@@ -133,6 +138,10 @@ fun ChatBubbleLayout(
     // status glyphs). Null skips it entirely.
     footerRow: (@Composable () -> Unit)? = null,
     drawAuthorLine: @Composable () -> Unit,
+    // The author's face in a group chat, drawn OUTSIDE the bubble, beside the last bubble of
+    // the author's run (the other bubbles of the run keep its width as an indent so the run
+    // lines up). Null for one-on-one chats, own messages and quotes: no gutter at all.
+    authorAvatar: (@Composable () -> Unit)? = null,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val loggedInColors = MaterialTheme.colorScheme.chatBubbleMe
@@ -306,7 +315,14 @@ fun ChatBubbleLayout(
         Row(
             modifier = (if (innerQuote) Modifier else Modifier.fillMaxWidth()).then(swipeModifier),
             horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Bottom,
         ) {
+            if (authorAvatar != null && !isLoggedInUser && !innerQuote) {
+                Box(ChatAuthorGutterModifier) {
+                    if (groupPosition.isLastOfGroup) authorAvatar()
+                }
+                Spacer(ChatAuthorGutterGap)
+            }
             InnerChatBubble(
                 isLoggedInUser = isLoggedInUser,
                 innerQuote = innerQuote,

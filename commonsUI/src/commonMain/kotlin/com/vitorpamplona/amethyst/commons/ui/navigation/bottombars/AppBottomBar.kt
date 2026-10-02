@@ -34,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
@@ -145,6 +148,8 @@ internal fun rememberFavoriteIconModel(fav: FavoriteApp): Any? =
         is FavoriteApp.NostrApp -> rememberNappletIconModel(fav.coordinate)
     }
 
+private val GrayscaleFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+
 /** The icon block for a pinned favorite entry, shared by the bottom bar and the rail. */
 @Composable
 internal fun FavoriteEntryIcon(
@@ -158,6 +163,9 @@ internal fun FavoriteEntryIcon(
             tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
             modifier = Size25Modifier,
             iconModel = iconModel,
+            // A favicon is a full-color brand mark sitting among monochrome glyphs; unselected it
+            // goes grayscale like its neighbours and gets its color back once it is the open tab.
+            colorFilter = if (selected) null else GrayscaleFilter,
         )
     }
 }
@@ -192,6 +200,10 @@ private fun RenderBottomMenu(
         ) {
             // Render in the user's saved order — built-ins, favorites and pinned groups interleaved.
             // Each entry resolves to a shared BottomBarSlot (route + icon), the same one the rail uses.
+            // The selected pill is a neutral wash rather than the accent container: the selected
+            // icon is already accent-tinted, and an accent pill behind it made the bar one of the
+            // loudest things on every screen.
+            val itemColors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             items.forEach { entry ->
                 val slot = rememberBottomBarSlot(entry, favoritesById, accountViewModel) ?: return@forEach
                 val selected = slot.route == selectedRoute
@@ -200,6 +212,7 @@ private fun RenderBottomMenu(
                     icon = { slot.icon(selected) },
                     selected = selected,
                     onClick = { nav(slot.route) },
+                    colors = itemColors,
                 )
             }
         }

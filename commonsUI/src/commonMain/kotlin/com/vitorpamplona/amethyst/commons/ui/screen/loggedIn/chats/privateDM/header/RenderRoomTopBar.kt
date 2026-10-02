@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,15 +52,17 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_video
 import com.vitorpamplona.amethyst.commons.resources.call_voice
+import com.vitorpamplona.amethyst.commons.resources.chat_room_member_count
 import com.vitorpamplona.amethyst.commons.resources.edits_the_channel_metadata
 import com.vitorpamplona.amethyst.commons.resources.messages_group_descriptor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.ChatRoomFaces
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
-import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.collections.immutable.toPersistentList
@@ -92,7 +96,7 @@ fun RenderRoomTopBar(
 
                         Spacer(modifier = DoubleHorzSpacer)
 
-                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal, accountViewModel = accountViewModel)
+                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.SemiBold, accountViewModel = accountViewModel)
 
                         if (onVideoCallClick != null) {
                             IconButton(
@@ -141,13 +145,26 @@ fun RenderRoomTopBar(
         TopBarExtensibleWithBackButton(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    NonClickableUserPictures(
-                        room = room,
-                        accountViewModel = accountViewModel,
+                    // Two overlapping faces without badges, as on the Messages list: a 2x2
+                    // mosaic with a trust score on each face is unreadable at header size.
+                    ChatRoomFaces(
+                        userHexList = remember(room) { room.users.toList() },
                         size = Size34dp,
+                        accountViewModel = accountViewModel,
                     )
 
-                    RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp).weight(1f), FontWeight.Normal, accountViewModel)
+                    // The name, then who is in it: a group header with only a name gave no
+                    // hint of how many people would read what you type.
+                    Column(Modifier.padding(start = 10.dp).weight(1f)) {
+                        RoomNameOnlyDisplay(room, Modifier, FontWeight.SemiBold, accountViewModel)
+                        Text(
+                            // room.users is everyone but me.
+                            text = pluralStringRes(Res.plurals.chat_room_member_count, room.users.size + 1, room.users.size + 1),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 1,
+                        )
+                    }
 
                     if (onVideoCallClick != null) {
                         IconButton(

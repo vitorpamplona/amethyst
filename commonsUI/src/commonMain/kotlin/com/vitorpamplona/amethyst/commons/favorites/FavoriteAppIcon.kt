@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -43,6 +44,8 @@ fun FavoriteAppIcon(
     tint: Color,
     modifier: Modifier = Modifier,
     iconModel: Any? = null,
+    // Applied to the drawn icon (image or its placeholder glyph), e.g. to desaturate it.
+    colorFilter: ColorFilter? = null,
 ) {
     val symbol = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
     val model = iconModel ?: app.iconUrl?.takeIf { it.isNotBlank() }
@@ -58,6 +61,7 @@ fun FavoriteAppIcon(
             placeholder = glyph,
             error = glyph,
             fallback = glyph,
+            colorFilter = colorFilter,
         )
     }
 }

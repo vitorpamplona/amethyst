@@ -25,8 +25,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LocalTextStyle
@@ -39,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,7 +46,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.concordCommunityHasUnreadFlow
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
 import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
-import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -74,9 +72,10 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreview
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreviewLabels
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreviewText
 import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
 import com.vitorpamplona.amethyst.commons.model.relayGroupChannelLastReadRoute
-import com.vitorpamplona.amethyst.commons.nip29RelayGroups.ui.RelayNameChip
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderByParentFilterAssemblerSubscription
@@ -91,6 +90,9 @@ import com.vitorpamplona.amethyst.commons.resources.channel_invite_leave
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you
 import com.vitorpamplona.amethyst.commons.resources.channel_invite_row_added_you_by
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_decrypting
+import com.vitorpamplona.amethyst.commons.resources.chat_preview_note
+import com.vitorpamplona.amethyst.commons.resources.chat_preview_photo
+import com.vitorpamplona.amethyst.commons.resources.chat_preview_video
 import com.vitorpamplona.amethyst.commons.resources.chat_preview_you_prefix
 import com.vitorpamplona.amethyst.commons.resources.chat_system_renamed_conversation_to
 import com.vitorpamplona.amethyst.commons.resources.chat_system_renamed_conversation_to_you
@@ -123,17 +125,16 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_server_label
 import com.vitorpamplona.amethyst.commons.resources.remove_from_messages
 import com.vitorpamplona.amethyst.commons.resources.unmute_notifications
 import com.vitorpamplona.amethyst.commons.resources.unpin_conversation
-import com.vitorpamplona.amethyst.commons.ui.components.NewItemsBubble
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.ChatHeaderLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.chatRowTitleWeight
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
-import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.note.ChatRoomFaces
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
-import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
@@ -153,11 +154,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coordinatorDisplayName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.ChatLabelMaxWidth
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatRowAvatarSize
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatRowPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -419,6 +418,7 @@ private fun ChannelRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Public,
         onClick = { nav.nav(routeFor(channel)) },
         onLongClick = { menuOpen = true },
     )
@@ -479,6 +479,7 @@ private fun ChannelRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Timer,
         onClick = { nav.nav(routeFor(channel)) },
     )
 }
@@ -514,6 +515,7 @@ private fun GeohashRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.LocationOn,
         onClick = { nav.nav(Route.GeohashChat(geohashChannel.geohash)) },
     )
 }
@@ -545,7 +547,7 @@ private fun MarmotGroupRoomCompose(
         // An unnamed group without an avatar (White Noise's 1:1 chats) is about its people:
         // show them, as a NIP-17 room does, instead of a relay icon.
         ChannelName(
-            channelPicture = { NonClickableUserPictures(userHexList = otherMembers, size = Size55dp, accountViewModel = accountViewModel) },
+            channelPicture = { ChatRoomFaces(userHexList = otherMembers, size = ChatRowAvatarSize, accountViewModel = accountViewModel) },
             channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, Res.string.marmot_group, modifier) },
             channelLastTime = lastMessage.createdAt(),
             channelLastContent = lastContent,
@@ -579,6 +581,7 @@ private fun MarmotGroupRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Lock,
         onClick = { nav.nav(Route.MarmotGroupChat(chatroom.nostrGroupId)) },
     )
 }
@@ -683,6 +686,7 @@ internal fun CordnGroupRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Groups,
         onClick = { nav.nav(Route.CordnGroupChat(chatroom.coordinatorPubKey, chatroom.gid)) },
     )
 }
@@ -791,20 +795,15 @@ fun RelayGroupRow(
             channelIdHex = channel.groupId.id,
             channelPicture = channelPicture,
             channelTitle = { modifier ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-                    Text(
-                        text = channel.toBestDisplayName(),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    RelayNameChip(
-                        label = channel.groupId.relayUrl.displayUrl(),
-                        onClick = { nav.nav(Route.RelayGroupServer(channel.groupId.relayUrl.url)) },
-                    )
-                }
+                // A group id is only unique within its host relay, so the relay is part of the
+                // room's identity and is spelled out; tapping it opens that relay's groups.
+                ChannelTitleWithLabelInfo(
+                    channelName = channel.toBestDisplayName(),
+                    labelIcon = MaterialSymbols.Dns,
+                    labelText = channel.groupId.relayUrl.displayUrl(),
+                    modifier = modifier,
+                    onLabelClick = { nav.nav(Route.RelayGroupServer(channel.groupId.relayUrl.url)) },
+                )
             },
             channelLastTime = lastTime,
             channelLastContent = lastContent,
@@ -823,6 +822,7 @@ fun RelayGroupRow(
                     nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url))
                 }
             },
+            fallbackSymbol = MaterialSymbols.Groups,
             onLongClick = { menuOpen = true },
         )
 
@@ -959,22 +959,20 @@ private fun ConcordRoomCompose(
             channelIdHex = channel.channelId.channelId,
             channelPicture = rememberConcordImageModel(channel.communityIcon, accountViewModel),
             channelTitle = { modifier ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-                    Text(
-                        text = channel.toBestDisplayName(),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                val communityName = channel.communityName
+                if (communityName != null) {
+                    // The label names the parent community and, when tapped, opens that community's
+                    // channel list — the "chip that opens the Concord Channel" entry point.
+                    ChannelTitleWithLabelInfo(
+                        channelName = channel.toBestDisplayName(),
+                        labelIcon = MaterialSymbols.Group,
+                        labelText = communityName,
+                        modifier = modifier,
+                        onLabelClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
                     )
-                    channel.communityName?.let { communityName ->
-                        Spacer(Modifier.width(6.dp))
-                        // The chip names the parent community and, when tapped, opens that community's
-                        // channel list — the "chip that opens the Concord Channel" entry point.
-                        ConcordCommunityPill(
-                            communityName = communityName,
-                            onClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
-                        )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                        ChannelTitleText(channel.toBestDisplayName())
                     }
                 }
             },
@@ -987,6 +985,7 @@ private fun ConcordRoomCompose(
                 accountViewModel.settings.autoPlayVideosFlow
                     .collectAsStateWithLifecycle()
                     .value,
+            fallbackSymbol = MaterialSymbols.Group,
             onClick = { nav.nav(Route.Concord(channel.channelId.communityId, channel.channelId.channelId)) },
             onLongClick = { menuOpen = true },
         )
@@ -1044,6 +1043,7 @@ private fun RelayGroupServerRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Dns,
         onClick = { nav.nav(Route.RelayGroupServer(relay.url)) },
     )
 }
@@ -1081,6 +1081,7 @@ private fun ConcordDirectInviteRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Group,
         onClick = { nav.nav(Route.Concords) },
     )
 }
@@ -1134,56 +1135,71 @@ private fun ConcordServerRoomCompose(
             accountViewModel.settings.autoPlayVideosFlow
                 .collectAsStateWithLifecycle()
                 .value,
+        fallbackSymbol = MaterialSymbols.Group,
         onClick = { nav.nav(Route.ConcordServer(row.communityId)) },
     )
 }
 
 /**
- * Renders a Messages row title as the channel name followed by a muted [HeaderPill] naming the room
- * type (Public Chat, Marmot Group, ...). The pill mirrors the Concord community chip so every group
- * kind reads the same way across the screen: bold name, then a faint rounded chip with a type icon
- * and short label. The name yields space to the chip so a long title can't crowd it out.
+ * Renders a Messages row title as the channel name followed by the room-kind glyph (globe for a
+ * Public Chat, lock for a Marmot Group, ...). The kind's word is the glyph's content description:
+ * spelled out in a chip on every row it competed with the room name for attention. The title takes
+ * its weight from [ChatHeaderLayout] (bold only when unread), so none is set here.
  */
 @Composable
-private fun ChannelTitleWithLabelInfo(
+internal fun ChannelTitleWithLabelInfo(
     channelName: String,
     labelIcon: MaterialSymbol,
     label: StringResource,
     modifier: Modifier,
     labelContentDescription: String? = null,
-) = ChannelTitleWithLabelInfo(channelName, labelIcon, stringRes(id = label), modifier, labelContentDescription)
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+        ChannelTitleText(channelName)
+        Spacer(TitleLabelGap)
+        ChatRowTypeIcon(labelIcon, labelContentDescription ?: stringRes(id = label))
+    }
+}
+
+private val TitleLabelGap = Modifier.width(6.dp)
+
+@Composable
+private fun RowScope.ChannelTitleText(channelName: String) {
+    Text(
+        text = channelName,
+        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.weight(1f, fill = false),
+    )
+}
 
 /**
- * As above, for a pill whose text is a name rather than a fixed word.
+ * As above, for a label that is a name rather than a fixed word, so it is spelled out as a muted
+ * [ChatRowLabel]: the relay a NIP-29 group lives on, the Concord community a channel belongs to.
  *
- * A cordn room's pill carries its coordinator, which is a value and not a
+ * A cordn room's label carries its coordinator, which is a value and not a
  * string resource: the coordinator is the one server that carries every message
  * in that group, so which one it is tells a reader more than being told twice
  * that this is a cordn chat.
  */
 @Composable
-private fun ChannelTitleWithLabelInfo(
+internal fun ChannelTitleWithLabelInfo(
     channelName: String,
     labelIcon: MaterialSymbol,
     labelText: String,
     modifier: Modifier,
     labelContentDescription: String? = null,
+    onLabelClick: (() -> Unit)? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        Text(
-            text = channelName,
-            fontWeight = FontWeight.Bold,
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
-        )
-        Spacer(Modifier.width(6.dp))
-        HeaderPill(
+        ChannelTitleText(channelName)
+        Spacer(TitleLabelGap)
+        ChatRowLabel(
             symbol = labelIcon,
             text = labelText,
-            modifier = Modifier.widthIn(max = ChatLabelMaxWidth),
             contentDescription = labelContentDescription,
+            onClick = onLabelClick,
         )
     }
 }
@@ -1226,25 +1242,36 @@ private fun UserRoomCompose(
     // menu-text slots, confining pin-toggle invalidations to those scopes.
     val pinnedRooms = accountViewModel.pinnedChatroomsFlow().collectAsStateWithLifecycle()
 
+    // A sent message I authored counts as read (#1286, #1287); an unsent draft still needs my attention.
+    val newestEvent = lastMessage.event
+    val countsAsRead =
+        !isDraft &&
+            newestEvent != null &&
+            chatMessageMarksRoomAsRead(newestEvent, room, accountViewModel.account.signer.pubKey)
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(privateChatLastReadRoute(room)).collectAsStateWithLifecycle()
+    val hasNewMessages = !countsAsRead && (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime
+
     ChatHeaderLayout(
         channelPicture = {
-            NonClickableUserPictures(
-                room = room,
+            ChatRoomFaces(
+                userHexList = remember(room) { room.users.toList() },
+                size = ChatRowAvatarSize,
                 accountViewModel = accountViewModel,
-                size = Size55dp,
             )
         },
         firstRow = {
+            val titleWeight = chatRowTitleWeight(hasNewMessages)
             val counterpartHex = room.users.singleOrNull()
             if (counterpartHex != null) {
                 // 1:1 room: resolve the counterpart once and share it between the name and the
                 // report-warning icon below, instead of each doing its own LoadUser.
                 LoadUser(baseUserHex = counterpartHex) { counterpart ->
-                    RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = counterpart)
+                    RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = counterpart, fontWeight = titleWeight)
                     RoomReportWarningIcon(counterpart, accountViewModel)
                 }
             } else {
-                RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = null)
+                RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = null, fontWeight = titleWeight)
             }
             if (room in pinnedRooms.value) {
                 Icon(
@@ -1253,28 +1280,15 @@ private fun UserRoomCompose(
                     modifier = Size15Modifier,
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
-                Spacer(modifier = StdHorzSpacer)
             }
-            TimeAgo(lastMessage.createdAt())
+            TimeAgo(lastMessage.createdAt(), hasNewMessages)
         },
         secondRow = {
             LastMessagePreview(lastMessage, accountViewModel)
-
-            // A sent message I authored counts as read (#1286, #1287); an unsent draft still needs my attention.
-            val newestEvent = lastMessage.event
-            val countsAsRead =
-                !isDraft &&
-                    newestEvent != null &&
-                    chatMessageMarksRoomAsRead(newestEvent, room, accountViewModel.account.signer.pubKey)
-
-            val lastReadTime by accountViewModel.account.loadLastReadFlow(privateChatLastReadRoute(room)).collectAsStateWithLifecycle()
-            if (!countsAsRead && (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
-                Spacer(modifier = Height4dpModifier)
-                NewItemsBubble()
-            }
         },
         onClick = { nav.nav(Route.Room(room)) },
         onLongClick = { popupExpanded = true },
+        hasNewMessages = hasNewMessages,
     )
 
     DropdownMenu(
@@ -1341,14 +1355,7 @@ private fun RowScope.LastMessagePreview(
                 ChatPreview.Missing -> stringRes(Res.string.referenced_event_not_found)
             }
 
-        Text(
-            text,
-            color = MaterialTheme.colorScheme.grayText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
-            modifier = Modifier.weight(1f),
-        )
+        PreviewLine(rememberTidyPreview(text))
     }
 }
 
@@ -1365,18 +1372,25 @@ fun ChannelName(
     autoPlayGif: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    // A room with no picture of its own shows this glyph on a tonal disc instead of a robohash.
+    // Null keeps the robohash (search results, where a robot face is the established look).
+    fallbackSymbol: MaterialSymbol? = null,
 ) {
     ChannelName(
         channelPicture = {
-            RobohashFallbackAsyncImage(
-                robot = channelIdHex,
-                model = channelPicture,
-                contentDescription = stringRes(Res.string.channel_image),
-                modifier = AccountPictureModifier,
-                loadProfilePicture = loadProfilePicture,
-                loadRobohash = loadRobohash,
-                autoPlayGif = autoPlayGif,
-            )
+            if (fallbackSymbol != null && channelPicture.isNullOrBlank()) {
+                ChatRowTonalAvatar(fallbackSymbol)
+            } else {
+                RobohashFallbackAsyncImage(
+                    robot = channelIdHex,
+                    model = channelPicture,
+                    contentDescription = stringRes(Res.string.channel_image),
+                    modifier = ChatRowPictureModifier,
+                    loadProfilePicture = loadProfilePicture,
+                    loadRobohash = loadRobohash,
+                    autoPlayGif = autoPlayGif,
+                )
+            }
         },
         channelTitle,
         channelLastTime,
@@ -1401,45 +1415,63 @@ fun ChannelName(
         channelPicture = channelPicture,
         firstRow = {
             channelTitle(Modifier.weight(1f))
-            TimeAgo(channelLastTime)
+            TimeAgo(channelLastTime, hasNewMessages)
         },
         secondRow = {
-            if (channelLastContent != null) {
-                Text(
-                    channelLastContent,
-                    color = MaterialTheme.colorScheme.grayText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                Text(
-                    stringRes(Res.string.referenced_event_not_found),
-                    color = MaterialTheme.colorScheme.grayText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            if (hasNewMessages) {
-                Spacer(modifier = Height4dpModifier)
-                NewItemsBubble()
-            }
+            PreviewLine(channelLastContent?.let { rememberTidyPreview(it) } ?: stringRes(Res.string.referenced_event_not_found))
         },
         onClick = onClick,
         onLongClick = onLongClick,
+        hasNewMessages = hasNewMessages,
     )
 }
 
+/** The preview line of a row. Its color comes from [ChatHeaderLayout], which lifts it when unread. */
 @Composable
-private fun TimeAgo(channelLastTime: Long?) {
-    if (channelLastTime == null) return
-    ToggleableTimeAgoText(
-        timestamp = channelLastTime,
-        style = TimeAgoStyle.Dotted,
-        color = MaterialTheme.colorScheme.grayText,
+private fun RowScope.PreviewLine(text: String) {
+    Text(
+        text,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
+        modifier = Modifier.weight(1f),
     )
 }
+
+/**
+ * [text] as a preview line should say it: see [ChatPreviewText.tidy]. Keyed on the text, so a row
+ * re-tidies only when its newest message changes.
+ */
+@Composable
+private fun rememberTidyPreview(text: String): String {
+    val labels =
+        ChatPreviewLabels(
+            photo = stringRes(Res.string.chat_preview_photo),
+            video = stringRes(Res.string.chat_preview_video),
+            note = stringRes(Res.string.chat_preview_note),
+        )
+    return remember(text, labels) {
+        ChatPreviewText.tidy(text, labels) { hex -> LocalCache.getUserIfExists(hex)?.toBestDisplayName() }
+    }
+}
+
+@Composable
+private fun TimeAgo(
+    channelLastTime: Long?,
+    hasNewMessages: Boolean,
+) {
+    if (channelLastTime == null) return
+    // The compact "• 10h" form. Not TimeAgoStyle.Short: on Android that goes through the platform's
+    // relative-span formatter ("12 hr. ago", "4 days ago"), which is several times wider and eats
+    // into the title. Tight variant because TimeAgoGap already provides the space before the dot.
+    // It takes the accent only when the row is unread, beside the dot below it.
+    ToggleableTimeAgoText(
+        timestamp = channelLastTime,
+        style = TimeAgoStyle.DottedTight,
+        color = if (hasNewMessages) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
+        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+        modifier = TimeAgoGap,
+    )
+}
+
+private val TimeAgoGap = Modifier.padding(start = 8.dp)

@@ -54,8 +54,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
 import com.vitorpamplona.amethyst.commons.resources.recipient_missing_dm_relays
-import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.retry_without_encryption
 import com.vitorpamplona.amethyst.commons.resources.this_message_will_disappear_in
 import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
@@ -226,7 +226,7 @@ fun EditField(
         modifier = Modifier.fillMaxWidth(),
         placeholder = {
             Text(
-                text = stringRes(Res.string.reply_here),
+                text = stringRes(Res.string.chat_composer_hint),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

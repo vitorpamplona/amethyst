@@ -358,7 +358,6 @@ private fun RenderDeliveryTicks(
     onRetry: () -> Unit,
 ) {
     val pendingColor = MaterialTheme.colorScheme.placeholderText
-    val deliveredColor = MaterialTheme.colorScheme.allGoodColor
 
     // The send's own lifecycle outranks relay acceptance: until the event has
     // been handed to the relay pool there is nothing for a relay to have
@@ -398,19 +397,23 @@ private fun RenderDeliveryTicks(
     // the sender's own self-copy wrap only shows in the detail dialog.
     val others = delivery.otherRecipients
     if (others != null && others.size > 1) {
-        // Group DM: double check once everyone got it, plus a delivered count.
+        // Group DM: a double check once everyone got it. The k/n count only shows while
+        // someone is still missing it: "6/6" on every bubble restated the double check in a
+        // bright color, while "4/6" is the one case worth reading.
         val deliveredCount = others.count { it.isDelivered }
         Row(verticalAlignment = Alignment.CenterVertically) {
             DeliveryLadderTick(
                 pending = deliveredCount == 0 && !seenSomewhere,
                 fullyAccepted = delivery.isFullyAccepted,
             )
-            Text(
-                text = "$deliveredCount/${others.size}",
-                fontSize = Font12SP,
-                color = if (delivery.isFullyAccepted) deliveredColor else pendingColor,
-                maxLines = 1,
-            )
+            if (!delivery.isFullyAccepted) {
+                Text(
+                    text = "$deliveredCount/${others.size}",
+                    fontSize = Font12SP,
+                    color = pendingColor,
+                    maxLines = 1,
+                )
+            }
         }
         return
     }
@@ -433,8 +436,11 @@ private fun DeliveryLadderTick(
         pending ->
             TickIcon(MaterialSymbols.Schedule, Res.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
 
+        // Same caption gray as the time beside it: the single vs double check already says
+        // how far it got, and a green glyph on every bubble was a third accent on the screen.
+        // Color is kept for the states that need the reader: rejected and failed.
         fullyAccepted ->
-            TickIcon(MaterialSymbols.DoneAll, Res.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.allGoodColor)
+            TickIcon(MaterialSymbols.DoneAll, Res.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.placeholderText)
 
         else ->
             TickIcon(MaterialSymbols.Done, Res.string.chat_delivery_accepted, MaterialTheme.colorScheme.placeholderText)

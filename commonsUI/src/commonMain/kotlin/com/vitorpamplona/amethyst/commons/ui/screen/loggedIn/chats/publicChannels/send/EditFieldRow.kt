@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggesti
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
 import com.vitorpamplona.amethyst.commons.resources.cancel
-import com.vitorpamplona.amethyst.commons.resources.reply_here
+import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
@@ -199,7 +199,7 @@ fun EditFieldRow(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringRes(Res.string.reply_here),
+                    text = stringRes(Res.string.chat_composer_hint),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

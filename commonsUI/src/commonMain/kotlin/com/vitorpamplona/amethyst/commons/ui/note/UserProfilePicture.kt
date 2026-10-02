@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -219,6 +221,50 @@ fun ClickableUserPicture(
         }
 
     BaseUserPicture(baseUserHex, size, accountViewModel, modifier, myModifier)
+}
+
+/**
+ * The faces of a chat room (Messages-list rows, chat headers). A 1:1 room shows its counterpart;
+ * a group shows at most two faces, overlapped, instead of a 2x2 mosaic. Every face keeps the
+ * usual follow mark and NIP-85 trust score, as [BaseUserPicture] draws them everywhere else.
+ */
+@Composable
+fun ChatRoomFaces(
+    userHexList: List<HexKey>,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+) {
+    when (userHexList.size) {
+        0 -> {}
+
+        1 -> {
+            LoadUser(baseUserHex = userHexList.first()) {
+                it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier.size(size)) }
+            }
+        }
+
+        else -> {
+            val face = size * 0.68f
+            val ring = 2.dp
+            Box(Modifier.size(size)) {
+                Box(Modifier.align(Alignment.TopStart)) {
+                    BaseUserPicture(userHexList[0], face, accountViewModel)
+                }
+                // The front face sits in a disc of the background color, which cuts a clean ring
+                // out of the face behind it instead of letting the two pictures smear together.
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(face + ring * 2)
+                            .background(MaterialTheme.colorScheme.background, CircleShape),
+                ) {
+                    BaseUserPicture(userHexList[1], face, accountViewModel)
+                }
+            }
+        }
+    }
 }
 
 @Composable

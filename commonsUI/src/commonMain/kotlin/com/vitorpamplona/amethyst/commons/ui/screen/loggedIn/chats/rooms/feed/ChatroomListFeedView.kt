@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -63,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatListPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.util.JavaSerializable
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -216,7 +215,7 @@ private fun FeedLoaded(
     }
 
     LazyColumn(
-        contentPadding = rememberFeedContentPadding(FeedPadding),
+        contentPadding = rememberFeedContentPadding(ChatListPadding),
         state = listState,
     ) {
         itemsIndexed(
@@ -231,9 +230,8 @@ private fun FeedLoaded(
                 )
             }
 
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
+            // No divider between rows: the row padding already separates them, and a hairline under
+            // every row added a line of noise per conversation.
 
             // Rendered unconditionally at the protocol's oldest room so the card can run its own
             // "All caught up" crossfade-and-collapse when that protocol exhausts.

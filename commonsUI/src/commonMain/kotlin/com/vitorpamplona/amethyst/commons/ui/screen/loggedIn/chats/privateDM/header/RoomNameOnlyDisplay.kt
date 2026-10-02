@@ -114,6 +114,7 @@ fun RoomNameDisplay(
     // this function no longer self-resolves, so a caller must decide explicitly rather than
     // silently rendering a blank 1:1 name.
     preloadedUser: User?,
+    fontWeight: FontWeight = FontWeight.Bold,
 ) {
     val roomSubject by accountViewModel.account.chatroomList
         .getOrCreatePrivateChatroom(room)
@@ -123,16 +124,16 @@ fun RoomNameDisplay(
     CrossfadeIfEnabled(targetState = roomSubject, modifier = modifier) {
         if (!it.isNullOrBlank()) {
             if (room.users.size > 1) {
-                DisplayRoomSubject(it)
+                DisplayRoomSubject(it, fontWeight)
             } else {
-                DisplayUserAndSubject(it, accountViewModel, preloadedUser)
+                DisplayUserAndSubject(it, accountViewModel, preloadedUser, fontWeight)
             }
         } else if (room.users.size == 1) {
             Row {
-                preloadedUser?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
+                preloadedUser?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight, accountViewModel = accountViewModel) }
             }
         } else {
-            DisplayUserSetAsSubject(room, accountViewModel)
+            DisplayUserSetAsSubject(room, accountViewModel, fontWeight)
         }
     }
 }
@@ -156,20 +157,21 @@ private fun DisplayUserAndSubject(
     subject: String,
     accountViewModel: AccountViewModel,
     preloadedUser: User?,
+    fontWeight: FontWeight,
 ) {
     Row {
         Text(
             text = subject,
-            fontWeight = FontWeight.Bold,
+            fontWeight = fontWeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = " - ",
-            fontWeight = FontWeight.Bold,
+            fontWeight = fontWeight,
             maxLines = 1,
         )
-        preloadedUser?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
+        preloadedUser?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight, accountViewModel = accountViewModel) }
     }
 }
 

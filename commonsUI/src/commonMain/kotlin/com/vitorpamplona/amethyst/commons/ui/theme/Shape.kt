@@ -134,12 +134,26 @@ val Size110dp = 110.dp
 val Size165dp = 165.dp
 
 /**
- * Max width for a type/label chip sitting beside a room name on a Messages-list row (the NIP-28
- * "Public Chat" pill, the NIP-29 relay-host chip, the Concord community chip, ...). Roughly half a
- * phone row so a long relay URL or community name is truncated (middle ellipsis) instead of crowding
- * the room name out — the name is weighted and keeps whatever the capped chip doesn't take.
+ * Max width for a label sitting beside a room name (the NIP-29 relay host, the Concord community, the
+ * cordn coordinator on a Messages-list row; the relay/community chips in the Notifications feed).
+ * Roughly half a phone row so a long relay URL or community name is truncated (middle ellipsis)
+ * instead of crowding the room name out — the name is weighted and keeps whatever the label doesn't take.
  */
 val ChatLabelMaxWidth = 140.dp
+
+/**
+ * Avatar size of a Messages-list row. Smaller than the 55dp feed avatar on purpose: in a list that is
+ * read by name, a big saturated picture on every row outweighs the name it sits next to.
+ */
+val ChatRowAvatarSize = 48.dp
+val ChatRowAvatarModifier = Modifier.size(ChatRowAvatarSize)
+val ChatRowPictureModifier = Modifier.size(ChatRowAvatarSize).clip(shape = CircleShape)
+
+/**
+ * Content padding of the Messages list: a little air on top, and enough at the bottom that the last
+ * row's timestamp scrolls clear of the new-conversation FAB.
+ */
+val ChatListPadding = PaddingValues(top = 4.dp, bottom = 96.dp)
 
 val StdEndPadding = Modifier.padding(end = 10.dp)
 val HalfEndPadding = Modifier.padding(end = 5.dp)
@@ -231,7 +245,9 @@ val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
 val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
 val ShowMoreRelaysButtonBoxModifer = Modifier.width(55.dp).height(17.dp)
 
-val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
+// Caps a bubble at ~3/4 of the row: past that, a long message turns into a wide slab
+// that reads like a document instead of a line of conversation.
+val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.78f)
 
 val ModifierWidth3dp = Modifier.width(3.dp)
 
@@ -258,14 +274,17 @@ val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
 val ChatPaddingInnerQuoteModifier = Modifier
+
+// Two gaps only, so the column has a rhythm: ~2dp between bubbles of one author run and
+// ~10dp where a new run starts. The gap lives on top of the bubble that opens a run.
 val ChatPaddingModifier =
     Modifier
         .fillMaxWidth(1f)
         .padding(
             start = 12.dp,
             end = 12.dp,
-            top = 3.dp,
-            bottom = 3.dp,
+            top = 9.dp,
+            bottom = 1.dp,
         )
 
 // Tighter top gap for a message visually connected to the previous message of the
@@ -277,7 +296,7 @@ val ChatPaddingGroupedModifier =
             start = 12.dp,
             end = 12.dp,
             top = 1.dp,
-            bottom = 3.dp,
+            bottom = 1.dp,
         )
 
 val profileContentHeaderModifier =

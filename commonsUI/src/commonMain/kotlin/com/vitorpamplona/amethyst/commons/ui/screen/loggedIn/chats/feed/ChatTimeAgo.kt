@@ -41,8 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pinned_content_d
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayPoW
-import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
-import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
@@ -54,17 +53,21 @@ import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 
+/**
+ * The time on a chat bubble, as a clock time ("9:08"; "Sep 28, 9:08" once it is not today).
+ *
+ * Not relative: "32 min. ago" on every bubble was long, kept changing under the reader, and
+ * made a column of near-identical captions. A conversation is read by when things were said.
+ * The chat time is wrapped in a tap target that opens the relay/delivery dialog, so it is
+ * plain text with no toggle of its own.
+ */
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
-    ToggleableTimeAgoText(
-        timestamp = baseNote.createdAt() ?: 0L,
-        style = TimeAgoStyle.Short,
+    Text(
+        text = timeAbsoluteNoDot(baseNote.createdAt() ?: 0L),
         color = MaterialTheme.colorScheme.placeholderText,
         fontSize = Font12SP,
-        // The chat time is wrapped in a tap target that opens the relay/delivery dialog,
-        // so it must not steal the tap to toggle relative/absolute. The absolute time is
-        // shown in that dialog instead.
-        toggleable = false,
+        maxLines = 1,
     )
 }
 
