@@ -1246,7 +1246,7 @@
     <string name="podcast_episode_topics_placeholder">अल्पविराम पृथक्कृत विषयसूचक</string>
     <string name="podcast_episode_audio_url_label">ध्वनि जालपता</string>
     <string name="podcast_episode_audio_url_placeholder">https://…/episode.mp3</string>
-    <string name="podcast_episode_audio_picked">ध्वनि अभिलेख आरोहणार्थ तत्पर</string>
+    <string name="podcast_episode_audio_picked">श्रव्य अभिलेख आरोहणार्थ तत्पर</string>
     <string name="podcast_episode_delete">कडी मिटाएँ</string>
     <string name="podcast_episode_delete_confirm">क्या इस कडी को मिटा दें। इसे पूर्ववत नहीं किया जा सकता।</string>
     <string name="podcast_show_description_label">विवरण</string>
@@ -1718,7 +1718,7 @@
     <string name="music_playlist_private">निजी</string>
     <string name="music_playlist_unknown_track">अज्ञात अभिलेख</string>
     <string name="music_playlist_loading_track">अभिलेख आवहन…</string>
-    <string name="music_track_audio_picked">ध्वनि अभिलेख आरोहण के लिए तत्पर</string>
+    <string name="music_track_audio_picked">श्रव्य अभिलेख आरोहण के लिए तत्पर</string>
     <string name="music_playlist_edit_action">संगीतसूची सम्पादन</string>
     <string name="music_playlist_title_label">शीर्षक</string>
     <string name="music_playlist_description_label">विवरण (विकल्पात्मक)</string>
@@ -2306,6 +2306,11 @@
     <string name="chat_system_created_channel">%1$s ने %2$s प्रणाली बनाया</string>
     <string name="chat_system_created_channel_unnamed">%1$s ने प्रणाली बनाया</string>
     <string name="chat_system_updated_channel">%1$s ने प्रणाली परिचय का अद्यतन किया</string>
+    <string name="chat_system_renamed_conversation">%1$s ने इस वार्तालाप का पुनःनामकरण किया</string>
+    <string name="chat_system_renamed_conversation_you">आप ने इस वार्तालाप का पुनःनामकरण किया</string>
+    <string name="chat_system_renamed_conversation_to">%1$s ने इस वार्तालाप का नया नाम रखा %2$s</string>
+    <string name="chat_system_renamed_conversation_to_you">आप ने इस वार्तालाप का नया नाम रखा %1$s</string>
+    <string name="chat_notification_renamed_conversation_to">इस वार्तालाप का नया नाम रखा गया %1$s</string>
     <string name="buzz_message_edited">(सम्पादित)</string>
     <string name="buzz_diff_truncated">(अन्तर ह्रस्वकृत)</string>
     <string name="buzz_system_member_joined">%1$s जुड गए</string>
@@ -3758,7 +3763,7 @@
     <string name="discover_follows">अनुचरण पोटलियाँ</string>
     <string name="discover_live_v2">वर्तमानप्रवाह</string>
     <string name="discover_marketplace">व्यापारक्षेत्र</string>
-    <string name="discover_reads">पठितव्य</string>
+    <string name="discover_reads">पठनीय</string>
     <string name="dm_relays_title">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
     <plurals name="dm_sender_reported">
         <item quantity="one">वृत्तान्त आपके द्वारा अनुचरित %1$d व्यक्ति से</item>
@@ -3952,7 +3957,7 @@
     <string name="hide_community_rules_violations_explainer">समुदाय सूचनावलियों से पत्र हटाया जाता है जब समुदाय द्वारा निप॰९बी नियम अभिलेख प्रकाशित है तथा घटना उसका उल्लंघन करेगा। कोई प्रभाव नहीं जब समुदाय के कोई व्यवस्थित नियम नहीं।</string>
     <string name="hide_community_rules_violations_title">समुदाय नियमों का उल्लंघन करनेवाले पत्रों को छुपाएँ</string>
     <string name="hide_password">पारणशब्द छिपाएँ</string>
-    <string name="highlights">प्रमुखताएँ</string>
+    <string name="highlights">उद्दीप्तव्य</string>
     <string name="hls_state_uploading_with_label_format">आरोहण चालू %1$s (%3$d में से %2$d)</string>
     <string name="home_content_type_articles">लेख</string>
     <string name="home_content_type_attestations">साक्ष्यांकन सूची</string>
@@ -3962,7 +3967,7 @@
     <string name="home_content_type_comments">टिप्पणियाँ तथा प्रतिवचन</string>
     <string name="home_content_type_ephemeral_chat">अस्थायी चर्चाएँ</string>
     <string name="home_content_type_fundraisers">धनसंग्रहण</string>
-    <string name="home_content_type_highlights">प्रमुखताएँ</string>
+    <string name="home_content_type_highlights">उद्दीप्तव्य</string>
     <string name="home_content_type_interactive_stories">अन्तरक्रियाशील कहानियाँ</string>
     <string name="home_content_type_live_activities">वर्तमान गतिविधियाँ</string>
     <string name="home_content_type_music">संगीत तथा ध्वनि</string>
@@ -4042,7 +4047,7 @@
     <string name="kind_appt_rsvp">समयनियुक्ति याचित प्रतिवचन</string>
     <string name="kind_article_curation_set">लेख सूची</string>
     <string name="kind_audio_header">ध्वनि शीर्षक</string>
-    <string name="kind_audio_track">ध्वनि अभिलेख</string>
+    <string name="kind_audio_track">श्रव्य अभिलेख</string>
     <string name="kind_authored_podcasts">कृत पुटप्रसार</string>
     <string name="kind_badge_awards">पदक पुरस्कार</string>
     <string name="kind_badge_definitions">पदक परिभाषाएँ</string>
@@ -4115,7 +4120,7 @@
     <string name="kind_good_wiki_authors">विश्वसनीय समूहसम्पाद्य लेखक</string>
     <string name="kind_good_wiki_relays">विश्वसनीय समूहसम्पाद्य पुनःप्रसारक</string>
     <string name="kind_hashtag_follows">विषयसूचक अनुचरित</string>
-    <string name="kind_highlights">प्रमुखताएँ</string>
+    <string name="kind_highlights">उद्दीप्तव्य</string>
     <string name="kind_http_auth">एचटीटीपी॰ प्रमाणीकरण</string>
     <string name="kind_index_relay_list">निर्देशिका पुनःप्रसारक सूची</string>
     <string name="kind_interest_set">रुचियाँ</string>
@@ -4312,7 +4317,7 @@
         <item quantity="other">%1$d अभिलेख</item>
     </plurals>
     <string name="music_playlist_uploading_banner">बाहरी चित्र का आरोहण तथा प्रकाशन चालू। यह चलता रहेगा आप पटल से विगमन करें तो भी।</string>
-    <string name="music_track_audio_upload_cta">ध्वनि अभिलेख आरोहण</string>
+    <string name="music_track_audio_upload_cta">श्रव्य अभिलेख आरोहण</string>
     <string name="music_track_audio_upload_hint">एक एमपीत्री॰ अथवा वेव॰ अथवा फ्लाक॰ का चयन करें। इसका आरोहण किया जाएगा आपके श्रव्यदृश्याभिलेख सेवासंगणक पर अभिलेखन करने पर।</string>
     <string name="music_track_cover_upload_cta">बाहरी चित्र आरोहण करें</string>
     <string name="music_track_cover_upload_hint">एक वर्गाकार चित्र का चयन करें इस अभिलेख की कलाकृती के रूप में।</string>
@@ -4697,8 +4702,8 @@
     <string name="podcast_cover_upload_hint">वर्गाकार चित्र जो दिखेगा कडी के लिए</string>
     <string name="podcast_edit_episode">कडी सम्पादन</string>
     <string name="podcast_edit_show">आपका पुटप्रसार</string>
-    <string name="podcast_episode_audio_upload_cta">ध्वनि अभिलेख जोडें</string>
-    <string name="podcast_episode_audio_upload_hint">एमपी३॰ अथवा एम४ए॰ अथवा अन्य ध्वनि</string>
+    <string name="podcast_episode_audio_upload_cta">श्रव्य अभिलेख जोडें</string>
+    <string name="podcast_episode_audio_upload_hint">एमपी३॰ अथवा एम४ए॰ अथवा अन्य श्रव्य</string>
     <string name="podcast_episode_chapters_label">अध्याय जालपता</string>
     <plurals name="podcast_episode_count">
         <item quantity="one">%1$d कडी</item>
@@ -4728,7 +4733,7 @@
         <item quantity="other">%1$d पूर्वावलोकन</item>
     </plurals>
     <string name="podcast_trailer_upload_cta">पूर्वावलोकन अम्श जोडें</string>
-    <string name="podcast_trailer_upload_hint">लघु ध्वनि अथवा दृश्य पूर्वीक्षण</string>
+    <string name="podcast_trailer_upload_hint">लघु श्रव्य अथवा दृश्य पूर्वीक्षण</string>
     <string name="podcast_value_error_title">मूल्य के लिए मूल्य अपक्रम</string>
     <string name="podcast_value_keysend_requires_nwc">एक नोस्टर धनकोष संयोजन जोडें कुंचिकाप्रेषण (जालबिन्दु) प्राप्तकर्ताओं को भेजने के लिए।</string>
     <string name="podcast_value_keysend_not_supported">आपका धनकोष कुंचिकाप्रेषण का अवलम्बन नहीं करता। इसलिए जालबिन्दु प्राप्तकर्ताओं को छोड दिया गया।</string>
@@ -5097,7 +5102,7 @@
     <string name="resource_usage_subsystem_push">प्रेषण पंजीकरण</string>
     <string name="resource_usage_subsystem_relay">पुनःप्रसारक समचरणीकरण</string>
     <string name="resource_usage_subsystem_uploads">आरोहण</string>
-    <string name="resource_usage_subsystem_video">दृश्य तथा ध्वनि</string>
+    <string name="resource_usage_subsystem_video">दृश्य तथा श्रव्य</string>
     <string name="resource_usage_tile_avg_relays">मध्यमान पुनःप्रसारक संयोजन</string>
     <string name="resource_usage_tile_battery_rate">विद्युतकोश प्रति घण्टा क्रमकाभ्यन्तर</string>
     <string name="resource_usage_tile_cellular">चलनशील आज</string>
@@ -5396,6 +5401,7 @@
     <string name="marmot_invite_device_rejected">किसी भी पुनःप्रसारक ने कुंचिकापोटली स्वीकारा नहीं। अपने पुनःप्रसारक स्थापना विकल्पों का जाँच करें तथा पुनःप्रयास करें।</string>
     <string name="chat_delivery_sending">भेजा जा रहा है\u2026</string>
     <string name="chat_delivery_failed">भेजने में असफल। पुनःप्रयास करने के लिए दबाएँ।</string>
+    <string name="chat_delivery_rejected">पुनःप्रसारक ने इस सन्देश को नहीं स्वीकारा</string>
     <plurals name="marmot_unread_messages">
         <item quantity="one">%1$d नया सन्देश</item>
         <item quantity="other">%1$d नए सन्देश</item>
@@ -6276,4 +6282,54 @@
     <string name="browser_pill_download_risky">यह अभिलेख प्रकार क्रमलेख चला सकता है। जाँच करें कि नाम का मेल है उससे जिसे आप प्राप्त करना चाहते थे।</string>
     <string name="browser_pill_download_save">अभिलेखन</string>
     <string name="browser_pill_download_from">%1$s से</string>
+    <string name="audio_card_untitled">%1$s श्रव्य</string>
+    <string name="audio_card_untitled_no_format">श्रव्य</string>
+    <string name="playable_media_untitled">श्रव्यदृश्याभिलेख</string>
+    <string name="now_playing_settings">अब बजाया जा रहा है</string>
+    <string name="now_playing_search_keywords">संगीत श्रवणमध्य स्थिति गाना पुटप्रसार स्पोटिफै निप॰अडतीस बाँटें चालू</string>
+    <string name="now_playing_description">आपकी स्थिति सार्वजनिक है। यह विद्यमान है आपके नाम के नीचे तथा अदृश्य होता है जब ध्वनि अभिलेख समाप्त होता है अथवा आप इसका चालन रोकते हैं।</string>
+    <string name="now_playing_preview_title">अन्यों को यह कैसे दिखता है</string>
+    <string name="now_playing_preview_example">गाना शीर्षक। कलाकार</string>
+    <string name="now_playing_preview_live">वर्तमान</string>
+    <string name="now_playing_preview_sample">उदाहरण</string>
+    <string name="now_playing_preview_off">निष्क्रिय</string>
+    <string name="now_playing_preview_you">आप</string>
+    <string name="now_playing_section_sources">इससे बाँटें</string>
+    <string name="now_playing_share_in_app">अमेथिस्ट</string>
+    <string name="now_playing_share_in_app_description">संगीत ध्वनि अभिलेख तथा पुटप्रसार कडियाँ जो आप यहाँ बजाते हैं</string>
+    <string name="now_playing_share_other_apps">अन्य क्रमक</string>
+    <string name="now_playing_share_other_apps_description">स्पोटिफै यूट्यूबम्यूसिक पुटप्रसार बाजक तथा अन्य क्रमक श्रव्यदृश्याभिलेख नियन्त्रण सुविधा युक्त</string>
+    <string name="now_playing_access_needed_title">सूचना अभिगमन अधिकार आवश्यक</string>
+    <string name="now_playing_access_needed">आण्ड्रोइड केवल अन्य क्रमकों के श्रव्यदृश्याभिलेख नियन्त्रण सुविधाओं को दिखाता है उन क्रमकों को जिनके पास सूचना अभिगमन अधिकार है। अमेथिस्ट पढता है कि क्या चलाया जा रहा है। तथा आपके सूचनाओं का विषयवस्तु कभी पढता नहीं।</string>
+    <string name="now_playing_grant_access">अभिगमन अधिकार प्रदान करें</string>
+    <string name="now_playing_manage_access">प्रबन्धन</string>
+    <string name="now_playing_access_granted">सूचना अभिगमन अधिकार सक्रिय</string>
+    <string name="now_playing_apps">क्रमक</string>
+    <string name="now_playing_apps_empty">क्रमक यहाँ विद्यमान होते हैं जब वे कुछ बजाते हैं। एक को निष्क्रिय करें उसे बाँटना रोकने के लिए।</string>
+    <string name="prediction_market">पूर्वानुमान व्यापारक्षेत्र</string>
+    <string name="prediction_market_status_open">खुला</string>
+    <string name="prediction_market_status_closed">आवृत</string>
+    <string name="prediction_market_status_resolved">सुलझाया गया</string>
+    <string name="prediction_market_status_cancelled">निरस्त</string>
+    <string name="prediction_market_demo">प्रदर्शन। अवास्तविक खेल धन</string>
+    <string name="prediction_market_closes_in">आवृत %1$s पश्चात</string>
+    <string name="prediction_market_closed_on">आवृत %1$s</string>
+    <string name="prediction_market_bet_range">पण %1$s। %2$s साट्स</string>
+    <string name="prediction_market_min_bet">न्यूनतम पण %1$s साट्स</string>
+    <string name="prediction_market_max_bet">अधिकतम पण %1$s साट्स</string>
+    <string name="prediction_market_fee">शुल्क %1$s</string>
+    <string name="prediction_market_cancel_reason">निरस्त। %1$s</string>
+    <string name="prediction_market_winning_outcome">जीतनेवाला परिणाम</string>
+    <plurals name="prediction_market_more_outcomes">
+        <item quantity="one">स %1$d अधिक</item>
+        <item quantity="other">स %1$d अधिक</item>
+    </plurals>
+    <string name="ballot">मतपत्र</string>
+    <string name="ballot_election">निर्वाचन %1$s</string>
+    <string name="ballot_vote">मतदान</string>
+    <string name="ballot_proof_hash">प्रमाण %1$s</string>
+    <plurals name="ballot_more_answers">
+        <item quantity="one">स %1$d अधिक उत्तर</item>
+        <item quantity="other">स %1$d अधिक उत्तर</item>
+    </plurals>
 </resources>
