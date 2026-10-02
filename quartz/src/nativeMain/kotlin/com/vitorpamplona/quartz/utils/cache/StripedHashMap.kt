@@ -43,7 +43,9 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * - **One lock around a `HashMap`** writes fast but has to hand bulk operations an O(n)
  *   copy, because a caller's lambda must not run inside the critical section (the
  *   linux `PlatformLock` is a spin lock and is not reentrant, and `LocalCache`
- *   predicates reach back into the cache).
+ *   predicates reach back into the cache). Apple's former `CacheMap` (left-right over
+ *   two `HashMap`s) skipped the copy and so let scans race writers into a
+ *   `ConcurrentModificationException`.
  *
  * A chained table avoids all three. Structure is only touched when a key is *added*
  * (one node, prepended), an overwrite is a single volatile store into the existing

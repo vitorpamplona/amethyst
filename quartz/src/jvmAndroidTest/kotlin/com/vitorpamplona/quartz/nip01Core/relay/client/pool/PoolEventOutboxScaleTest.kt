@@ -62,20 +62,18 @@ import kotlin.time.TimeSource
  * two HashMaps per put, 60k live        ratio 2.28 - 5.21
  * ```
  *
- * The last row is what Apple targets actually run: LargeCache there wraps
+ * The last row is what Apple targets used to run: LargeCache there wrapped
  * charlietap's CacheMap, whose LeftRight `mutate` applies each write to both
  * of its two maps under a lock — O(1), no copying. It still crossed the 5.0
  * threshold on a loaded machine, which is how this failed on the iOS simulator
  * without anything being wrong with the outbox. The `retains nothing` row is
  * the control: same allocations, nothing kept alive, ratio flat.
  *
- * So on Apple the O(1) guarantee comes from the data structure by
- * construction and does not need pinning here; on JVM/Android it comes from
- * LargeCache being a ConcurrentHashMap, and a regression in this class
- * (someone reintroducing a copy-on-write map, or a per-publish full scan)
- * shows up cleanly. Note that Kotlin/Native's linuxX64 LargeCache IS
- * copy-on-write today — that is a real cost, but not one a wall-clock ratio
- * can report reliably, as the numbers above show.
+ * Kotlin/Native (Apple and Linux) now backs LargeCache with StripedHashMap,
+ * O(1) per write by construction, so the guarantee does not need pinning
+ * there; on JVM/Android it comes from LargeCache being a concurrent map, and a
+ * regression in this class (someone reintroducing a copy-on-write map, or a
+ * per-publish full scan) shows up cleanly.
  */
 class PoolEventOutboxScaleTest {
     private val relay = NormalizedRelayUrl("wss://scale.relay.test")

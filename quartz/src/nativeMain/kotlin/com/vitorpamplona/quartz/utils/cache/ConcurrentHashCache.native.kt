@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.utils.cache
 
 /**
- * Linux/Native actual for [ConcurrentHashCache], over the same [StripedHashMap] as
- * `LargeCache.linux.kt` — read its docs for why.
+ * Kotlin/Native actual (Apple and Linux) for [ConcurrentHashCache], over the same
+ * [StripedHashMap] as `LargeCache.native.kt` — read its docs for why.
  *
  * This one was the worst-placed of the copy-on-write caches: its only caller,
  * `CachingEventDecoder`, writes once per event arriving from a relay, so every decode

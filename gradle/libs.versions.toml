@@ -10,7 +10,6 @@ accompanistAdaptive = "0.37.3"
 # LargeCache/ConcurrentHashCache — they read those views directly and through the
 # stdlib Map operators (filter/map/groupBy/associate/count). Bumping needs a port to
 # the new forEach/forEachKey/forEachValue API, verified on an Apple target.
-cachemapVersion = "0.2.4"
 composeMultiplatform = "1.12.1"
 activityCompose = "1.13.0"
 # 9.4.0's PerModuleBundleTask rejects an AAB entry whose name contains a colon, which every
@@ -174,7 +173,6 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 audiowaveform = { group = "com.github.lincollincol", name = "compose-audiowaveform", version.ref = "audiowaveform" }
-charlietap-cachemap = { module = "io.github.charlietap:cachemap", version.ref = "cachemapVersion" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }

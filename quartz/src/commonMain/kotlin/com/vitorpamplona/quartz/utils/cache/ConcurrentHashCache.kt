@@ -30,8 +30,8 @@ package com.vitorpamplona.quartz.utils.cache
  * duplicate check in
  * [com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder].
  *
- * Actuals: JVM/Android → `ConcurrentHashMap`; Apple → `CacheMap` (same
- * backing as [LargeCache]); Linux → copy-on-write (CI-only target).
+ * Actuals: JVM/Android → `ConcurrentHashMap`; Apple and Linux → a striped-lock
+ * chained hash table (`StripedHashMap`, same backing as [LargeCache]).
  */
 expect class ConcurrentHashCache<K : Any, V : Any>() {
     fun get(key: K): V?
