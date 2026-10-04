@@ -477,7 +477,16 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      voice reply, the calendar collections and event detail, the geocache detail and editor,
      the live-activity channel, chess, Cordn group creation, the QR share and the compose
      settings. 204 of 252 screens shared.
-   - **Next:** 48 screens remain, and what blocks them is the platform itself:
+   - **Wave 11 (2026-10-04):** Profile and settings. `AppServices` gained `namecoinSettings`,
+     `namecoinClients` (a port over the JVM-only ElectrumX and Core RPC clients), `otsSettings`
+     and `nip46ClientStore`. `AppPlatform` gained `rememberAppLanguages` (Android reads
+     `locales_config.xml`) and `SpeakNameButton` (text-to-speech). `OtsSettings` and its store are
+     in commonMain, on quartz's new `BitcoinExplorerUrls`; `RpcProbeResult` is too.
+     `deviceDescription()` is an expect in commons. Copy-to-clipboard goes through the shared
+     `Clipboard.setText`; the brand icons for identity claims are Compose resources. Moved: the
+     profile (60 files: header, tabs, payment sheet), the app, NIP-46, Namecoin and OTS settings.
+     210 of 252 screens shared.
+   - **Next:** 42 screens remain, and what blocks them is the platform itself:
      - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
      - The Nests activity and PiP.
      - The call screens.

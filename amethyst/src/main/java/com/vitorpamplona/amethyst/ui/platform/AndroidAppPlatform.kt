@@ -38,8 +38,10 @@ import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
+import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import kotlinx.collections.immutable.ImmutableMap
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRememberNappletIconModel
@@ -59,6 +61,15 @@ object AndroidAppPlatform : AppPlatform {
 
     // Per flavour: Play links the hosted policies, F-Droid surfaces none.
     override fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = flavorLegalSettingsCategory(uriHandler)
+
+    @Composable
+    override fun SpeakNameButton(name: String) = DrawPlayName(name)
+
+    @Composable
+    override fun rememberAppLanguages(): ImmutableMap<String, String> {
+        val context = LocalContext.current
+        return remember(context) { context.getLangPreferenceDropdownEntries() }
+    }
 
     @Composable
     override fun AppBottomBar(

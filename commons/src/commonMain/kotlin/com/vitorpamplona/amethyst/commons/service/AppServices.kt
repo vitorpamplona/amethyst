@@ -22,12 +22,16 @@ package com.vitorpamplona.amethyst.commons.service
 
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
@@ -63,6 +67,18 @@ interface AppServices {
 
     /** Resolves `.bit` names and `d/`/`id/` identifiers over the configured ElectrumX servers. */
     val namecoinResolver: NamecoinNameResolver
+
+    /** The Namecoin backend settings (servers, Core RPC, pinned certificates). */
+    val namecoinSettings: NamecoinSettingsStore
+
+    /** The live Namecoin clients the settings screen tests and reconfigures. */
+    val namecoinClients: NamecoinClients get() = NamecoinClients.None
+
+    /** The OpenTimestamps blockchain explorer setting. */
+    val otsSettings: OtsSettingsStore
+
+    /** The NIP-46 remote-signer clients this device has connected to. */
+    val nip46ClientStore: Nip46ClientStore
 
     /** Finds the server behind a `blossom:` URI (BUD-10). */
     val blossomServerFinder: BlossomServerFinder get() = BlossomServerFinder.None

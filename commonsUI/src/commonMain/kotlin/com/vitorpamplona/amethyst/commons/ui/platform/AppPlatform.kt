@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 
 /**
  * The app shell's pieces that shared screens embed but only the front end can draw yet: the
@@ -47,6 +49,13 @@ interface AppPlatform {
     /** The settings screen's legal links, when the build's distribution calls for them. */
     fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
 
+    /**
+     * The languages the app is translated into, as display name ("Deutsch") to language tag
+     * ("de"), for the language picker. Empty where the platform follows the system language only.
+     */
+    @Composable
+    fun rememberAppLanguages(): ImmutableMap<String, String> = persistentMapOf()
+
     @Composable
     fun AppBottomBar(
         selectedRoute: Route?,
@@ -57,6 +66,10 @@ interface AppPlatform {
 
     @Composable
     fun AroundMeLocationLabel() {}
+
+    /** A button that reads [name] aloud with the platform's text-to-speech; nothing where there is none. */
+    @Composable
+    fun SpeakNameButton(name: String) {}
 
     /** A full-screen dialog to pick a place (map, search, "use my location"), as a geohash. */
     @Composable
@@ -134,6 +147,9 @@ fun AppBottomBar(
 
 @Composable
 fun AroundMeLocationLabel() = LocalAppPlatform.current.AroundMeLocationLabel()
+
+@Composable
+fun SpeakNameButton(name: String) = LocalAppPlatform.current.SpeakNameButton(name)
 
 @Composable
 fun GeohashLocationPickerDialog(

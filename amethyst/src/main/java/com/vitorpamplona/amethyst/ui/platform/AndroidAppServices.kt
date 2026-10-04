@@ -23,18 +23,26 @@ package com.vitorpamplona.amethyst.ui.platform
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.RpcProbeResult
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ServerTestResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -64,6 +72,14 @@ object AndroidAppServices : AppServices {
 
     override val namecoinResolver: NamecoinNameResolver get() = Amethyst.instance.namecoinResolver
 
+    override val namecoinSettings: NamecoinSettingsStore get() = Amethyst.instance.namecoinPrefs
+
+    override val namecoinClients: NamecoinClients = AndroidNamecoinClients
+
+    override val otsSettings: OtsSettingsStore get() = Amethyst.instance.otsPrefs
+
+    override val nip46ClientStore: Nip46ClientStore get() = Amethyst.instance.nip46ClientStore
+
     override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
 
     override val deviceLocation: DeviceLocation get() = Amethyst.instance.locationManager
@@ -84,4 +100,20 @@ private object AndroidBlossomServerFinder : BlossomServerFinder {
         Amethyst.instance.blossomResolver
             .findServers(blossomUri)
             ?.serverUrl
+}
+
+/** The app's ElectrumX and Namecoin Core clients, built lazily by [Amethyst.instance]. */
+private object AndroidNamecoinClients : NamecoinClients {
+    override suspend fun testElectrumxServer(server: ElectrumxServer): ServerTestResult = Amethyst.instance.electrumXClient.testServer(server)
+
+    override suspend fun probeCoreRpc(config: NamecoinCoreRpcConfig): RpcProbeResult = Amethyst.instance.namecoinCoreRpcClient.probe(config)
+
+    override fun addPinnedCert(pem: String) {
+        Amethyst.instance.electrumXClient.addPinnedCert(pem)
+        Amethyst.instance.namecoinCoreRpcClient.addPinnedCert(pem)
+    }
+
+    override fun setCoreRpcConfig(config: NamecoinCoreRpcConfig) {
+        Amethyst.instance.namecoinCoreRpcClient.setConfig(config)
+    }
 }
