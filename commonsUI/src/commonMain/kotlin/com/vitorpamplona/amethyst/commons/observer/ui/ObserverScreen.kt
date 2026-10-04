@@ -603,18 +603,19 @@ private fun Details(story: ObserverStory) {
                     }
 
                     is ObserverDetail.Starts -> {
+                        val epoch = detail.epochSeconds
                         when {
-                            detail.epochSeconds != null && story.event.kind == 30311 -> {
-                                // A 24/7 stream can have started days ago: the date is part of the fact.
-                                stringRes(Res.string.observer_on_air_since, formatLongDate(detail.epochSeconds) + " · " + timeOfDay(detail.epochSeconds * 1000))
+                            epoch == null -> {
+                                stringRes(Res.string.observer_detail_all_day, detail.date ?: "")
                             }
 
-                            detail.epochSeconds != null -> {
-                                stringRes(Res.string.observer_detail_starts, formatLongDate(detail.epochSeconds) + " · " + timeOfDay(detail.epochSeconds * 1000))
+                            // A 24/7 stream can have started days ago: the date is part of the fact.
+                            story.event.kind == 30311 -> {
+                                stringRes(Res.string.observer_on_air_since, formatLongDate(epoch) + " · " + timeOfDay(epoch * 1000))
                             }
 
                             else -> {
-                                stringRes(Res.string.observer_detail_all_day, detail.date ?: "")
+                                stringRes(Res.string.observer_detail_starts, formatLongDate(epoch) + " · " + timeOfDay(epoch * 1000))
                             }
                         }
                     }
