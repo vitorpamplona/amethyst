@@ -572,6 +572,7 @@ private fun Byline(story: ObserverStory) {
         Signal(MaterialSymbols.Favorite, story.reactions)
         Signal(MaterialSymbols.Sync, story.reposts)
         Signal(MaterialSymbols.Reply, story.replies)
+        Signal(MaterialSymbols.Bolt, story.zaps)
     }
 }
 
@@ -604,7 +605,8 @@ private fun Details(story: ObserverStory) {
                     is ObserverDetail.Starts -> {
                         when {
                             detail.epochSeconds != null && story.event.kind == 30311 -> {
-                                stringRes(Res.string.observer_on_air_since, timeOfDay(detail.epochSeconds * 1000))
+                                // A 24/7 stream can have started days ago: the date is part of the fact.
+                                stringRes(Res.string.observer_on_air_since, formatLongDate(detail.epochSeconds) + " · " + timeOfDay(detail.epochSeconds * 1000))
                             }
 
                             detail.epochSeconds != null -> {

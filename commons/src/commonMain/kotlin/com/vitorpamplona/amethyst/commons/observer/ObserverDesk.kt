@@ -44,7 +44,9 @@ enum class ObserverDesk(
     val perAuthor: Int,
 ) {
     NOTES(listOf(1), 400, 20),
-    PICTURES(listOf(20), 60, 8),
+
+    /** Three per author: picture bots post in runs of dozens, and one run should not be the photo page. */
+    PICTURES(listOf(20), 60, 3),
 
     /**
      * Streams on the air right now, and only those. A 30311 is replaceable and

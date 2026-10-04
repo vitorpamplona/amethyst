@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.limitToRouteTextArg
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.observer.ui.ObserverScreen
 import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
@@ -168,7 +169,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashScre
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagScreen
-import com.vitorpamplona.amethyst.commons.observer.ui.ObserverScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.HighlightsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.NewHighlightScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.HomeScreen
@@ -285,7 +285,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScre
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
-import com.vitorpamplona.amethyst.ui.observer.DisplayObserverProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
@@ -299,6 +298,7 @@ import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
+import com.vitorpamplona.amethyst.ui.observer.DisplayObserverProgress
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen

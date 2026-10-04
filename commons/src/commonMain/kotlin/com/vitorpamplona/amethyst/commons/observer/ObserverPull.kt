@@ -86,7 +86,12 @@ class ObserverPull(
                 scoreListSeen = list != null,
                 // quartz's tag parser requires all three fields, so a hintless entry
                 // is rejected there — the same parser the relay resolves it with.
-                rankService = list?.tags?.serviceProviders()?.firstOrNull { it.service == ProviderTypes.rank }?.pubkey,
+                rankService =
+                    list
+                        ?.tags
+                        ?.serviceProviders()
+                        ?.firstOrNull { it.service == ProviderTypes.rank }
+                        ?.pubkey,
                 probeLensed = lensed.await(),
                 probeAnonymous = anonymous.await(),
             )
@@ -140,9 +145,19 @@ class ObserverPull(
         }
 
     /**
-     * What the reader's web of trust did with each story today: reactions,
-     * reposts and replies, through the SAME lens and trust floor, so a like from
-     * a stranger the lens does not vouch for counts for nothing.
+     * What people did with each story today: reactions, reposts and replies
+     * through the SAME lens and trust floor, so a reply from a stranger the
+     * lens does not vouch for counts for nothing; and zaps, unranked.
+     *
+     * Measured on search.brainstorm.world, 2026-10-04, one 24-hour window: it
+     * mirrors replies, but held 2 kind-7 reactions and no kind-6/16 reposts at
+     * all — so on this relay the lensed signal is in practice replies. Zap
+     * receipts ARE mirrored (1,325 in the window). They are asked with
+     * `include:spam` rather than through the lens because a receipt is signed by
+     * the recipient's Lightning server, not by the person who zapped, so a trust
+     * floor on its author measures the wrong key; a zap costs its sender real
+     * sats, which is its own spam filter. Reactions and reposts are still asked
+     * for, so the page ranks better the day the relay starts mirroring them.
      *
      * This is the native editor's replacement for the model's judgement. The
      * relay selects by trust score but delivers by `created_at`, and the score
@@ -160,17 +175,26 @@ class ObserverPull(
         if (ids.isEmpty() && addresses.isEmpty()) return emptyMap()
 
         val lens = "observer:$reader sort:rank filter:rank:gte:$trustFloor"
-        val filters =
-            ids.chunked(ENGAGEMENT_CHUNK).map { chunk ->
-                Filter(kinds = REACTION_KINDS, tags = mapOf("e" to chunk), since = since, until = until, limit = ENGAGEMENT_LIMIT, search = lens)
-            } +
-                addresses.chunked(ENGAGEMENT_CHUNK).map { chunk ->
-                    Filter(kinds = REACTION_KINDS, tags = mapOf("a" to chunk), since = since, until = until, limit = ENGAGEMENT_LIMIT, search = lens)
-                }
+
+        fun filters(
+            kinds: List<Int>,
+            search: String,
+        ) = ids.chunked(ENGAGEMENT_CHUNK).map { chunk ->
+            Filter(kinds = kinds, tags = mapOf("e" to chunk), since = since, until = until, limit = ENGAGEMENT_LIMIT, search = search)
+        } +
+            addresses.chunked(ENGAGEMENT_CHUNK).map { chunk ->
+                Filter(kinds = kinds, tags = mapOf("a" to chunk), since = since, until = until, limit = ENGAGEMENT_LIMIT, search = search)
+            }
+
+        val filters = filters(REACTION_KINDS, lens) + filters(ZAP_KINDS, INCLUDE_SPAM)
 
         val found =
             coroutineScope {
-                filters.map { async { fetch(it, DESK_IDLE_MS) } }.awaitAll().flatten().distinctBy { it.id }
+                filters
+                    .map { async { fetch(it, DESK_IDLE_MS) } }
+                    .awaitAll()
+                    .flatten()
+                    .distinctBy { it.id }
             }
         return tally(found, ids.toSet(), addresses.toSet())
     }
@@ -260,6 +284,7 @@ class ObserverPull(
         const val DEFAULT_TRUST_FLOOR = 20
 
         val REACTION_KINDS = listOf(1, 6, 7, 16)
+        val ZAP_KINDS = listOf(9735)
 
         /** ~67 bytes per id; 300 keeps one filter near 20 KB, far under the relay's 262 KB frame. */
         private const val ENGAGEMENT_CHUNK = 300
@@ -287,6 +312,7 @@ class ObserverPull(
             val reactions = mutableMapOf<String, MutableSet<HexKey>>()
             val reposts = mutableMapOf<String, MutableSet<HexKey>>()
             val replies = mutableMapOf<String, MutableSet<HexKey>>()
+            val zaps = mutableMapOf<String, MutableSet<HexKey>>()
 
             found.forEach { event ->
                 val bucket =
@@ -294,8 +320,10 @@ class ObserverPull(
                         7 -> reactions
                         6, 16 -> reposts
                         1 -> replies
+                        9735 -> zaps
                         else -> return@forEach
                     }
+                val who = if (event.kind == 9735) zapSender(event) else event.pubKey
                 val targets =
                     event.tags
                         .mapNotNull { tag ->
@@ -306,16 +334,30 @@ class ObserverPull(
                                 else -> null
                             }
                         }.distinct()
-                targets.forEach { bucket.getOrPut(it) { mutableSetOf() }.add(event.pubKey) }
+                targets.forEach { bucket.getOrPut(it) { mutableSetOf() }.add(who) }
             }
 
-            return (reactions.keys + reposts.keys + replies.keys).associateWith {
+            return (reactions.keys + reposts.keys + replies.keys + zaps.keys).associateWith {
                 ObserverEngagement(
                     reactions = reactions[it]?.size ?: 0,
                     reposts = reposts[it]?.size ?: 0,
                     replies = replies[it]?.size ?: 0,
+                    zaps = zaps[it]?.size ?: 0,
                 )
             }
         }
+
+        /**
+         * Who paid, not who signed: a NIP-57 receipt is signed by the Lightning
+         * server. The sender is the `P` tag when the server wrote one, else the
+         * pubkey inside the embedded zap request; a receipt that names neither
+         * counts once under the server's key rather than not at all.
+         */
+        internal fun zapSender(receipt: Event): HexKey =
+            receipt.tagValue("P")?.takeIf { it.length == 64 }
+                ?: receipt.tagValue("description")?.let { ZAP_REQUEST_PUBKEY.find(it)?.groupValues?.get(1) }
+                ?: receipt.pubKey
+
+        private val ZAP_REQUEST_PUBKEY = Regex(""""pubkey"\s*:\s*"([0-9a-f]{64})"""")
     }
 }

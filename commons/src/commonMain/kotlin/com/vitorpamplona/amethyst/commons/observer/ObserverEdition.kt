@@ -100,11 +100,12 @@ data class ObserverStory(
     val reactions: Int,
     val reposts: Int,
     val replies: Int,
+    val zaps: Int,
     val details: List<ObserverDetail>,
 ) {
     val author: HexKey get() = event.pubKey
     val createdAt: Long get() = event.createdAt
-    val score: Int get() = ObserverEngagement.score(reactions, reposts, replies)
+    val score: Int get() = ObserverEngagement.score(reactions, reposts, replies, zaps)
 }
 
 /** Typed facts a story carries beyond its text. The UI owns their wording. */
@@ -153,24 +154,32 @@ sealed interface ObserverDetail {
     ) : ObserverDetail
 }
 
-/** What the reader's web of trust did with an event in the window. */
+/**
+ * What people did with an event in the window, each counted once per person.
+ * Reactions, reposts and replies come through the reader's lens; zaps do not
+ * need it, because a zap costs its sender real sats.
+ */
 @Immutable
 data class ObserverEngagement(
     val reactions: Int = 0,
     val reposts: Int = 0,
     val replies: Int = 0,
+    val zaps: Int = 0,
 ) {
-    val score: Int get() = score(reactions, reposts, replies)
+    val score: Int get() = score(reactions, reposts, replies, zaps)
+
+    operator fun plus(other: ObserverEngagement) = ObserverEngagement(reactions + other.reactions, reposts + other.reposts, replies + other.replies, zaps + other.zaps)
 
     companion object {
         val NONE = ObserverEngagement()
 
-        /** A reply costs more than a like, and a repost puts your name behind it. */
+        /** A reply costs more than a like, a repost puts your name behind it, and a zap puts money behind it. */
         fun score(
             reactions: Int,
             reposts: Int,
             replies: Int,
-        ) = reactions + 2 * reposts + 3 * replies
+            zaps: Int,
+        ) = reactions + 2 * reposts + 3 * replies + 3 * zaps
     }
 }
 

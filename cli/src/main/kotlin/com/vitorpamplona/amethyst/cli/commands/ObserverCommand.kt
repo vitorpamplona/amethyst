@@ -132,6 +132,7 @@ object ObserverCommand {
             "reactions" to s.reactions,
             "reposts" to s.reposts,
             "replies" to s.replies,
+            "zaps" to s.zaps,
             "details" to s.details.map { it.toString() },
         )
 
@@ -158,8 +159,23 @@ object ObserverCommand {
         s: ObserverStory,
         withBody: Boolean,
     ) {
-        sb.append("• ").append(s.headline).append(" — ").append(s.byline)
-        if (s.score > 0) sb.append(" [♥").append(s.reactions).append(" ↻").append(s.reposts).append(" ↩").append(s.replies).append("]")
+        sb
+            .append("• ")
+            .append(s.headline)
+            .append(" — ")
+            .append(s.byline)
+        if (s.score > 0) {
+            sb
+                .append(" [♥")
+                .append(s.reactions)
+                .append(" ↻")
+                .append(s.reposts)
+                .append(" ↩")
+                .append(s.replies)
+                .append(" ⚡")
+                .append(s.zaps)
+                .append("]")
+        }
         sb.appendLine()
         if (withBody && s.body.isNotBlank()) sb.append("    ").appendLine(s.body)
         s.imageUrl?.let { sb.append("    image: ").appendLine(it) }

@@ -141,7 +141,7 @@ object ObserverEditor {
                     printed = printed.size,
                     authors = printed.mapTo(mutableSetOf()) { it.author }.size,
                     dayNotes = corpus.dayNotes,
-                    signals = corpus.engagement.values.sumOf { it.reactions + it.reposts + it.replies },
+                    signals = corpus.engagement.values.sumOf { it.reactions + it.reposts + it.replies + it.zaps },
                 ),
             lead = lead,
             topStories = top,
@@ -196,11 +196,7 @@ object ObserverEditor {
         val byAddress = (event as? AddressableEvent)?.let { corpus.engagement[it.addressTag()] }
         if (byId == null) return byAddress ?: ObserverEngagement.NONE
         if (byAddress == null) return byId
-        return ObserverEngagement(
-            byId.reactions + byAddress.reactions,
-            byId.reposts + byAddress.reposts,
-            byId.replies + byAddress.replies,
-        )
+        return byId + byAddress
     }
 
     /**
@@ -290,6 +286,7 @@ object ObserverEditor {
             reactions = engagement.reactions,
             reposts = engagement.reposts,
             replies = engagement.replies,
+            zaps = engagement.zaps,
             details = details(event, desk, names),
         )
     }
@@ -311,12 +308,23 @@ object ObserverEditor {
 
                 ObserverDesk.LIVE -> {
                     event.tagValue("starts")?.toLongOrNull()?.let { add(ObserverDetail.Starts(it, null, null)) }
-                    event.tagValue("current_participants")?.toIntOrNull()?.takeIf { it > 0 }?.let { add(ObserverDetail.Watching(it)) }
+                    event
+                        .tagValue("current_participants")
+                        ?.toIntOrNull()
+                        ?.takeIf { it > 0 }
+                        ?.let { add(ObserverDetail.Watching(it)) }
                 }
 
                 ObserverDesk.POLLS -> {
                     // Two shapes in the wild, `["option", "0", "A"]` and `["option", "Bu2a9f", "Yes"]`: the label is always the third field.
-                    val options = event.tagValues("option").mapNotNull { it.getOrNull(2)?.trim()?.takeIf(String::isNotBlank)?.take(80) }
+                    val options =
+                        event.tagValues("option").mapNotNull {
+                            it
+                                .getOrNull(2)
+                                ?.trim()
+                                ?.takeIf(String::isNotBlank)
+                                ?.take(80)
+                        }
                     if (options.isNotEmpty()) add(ObserverDetail.PollOptions(options.take(8)))
                 }
 
@@ -335,8 +343,16 @@ object ObserverEditor {
                         add(
                             ObserverDetail.Price(
                                 amount.take(20),
-                                price.getOrNull(2)?.trim()?.takeIf { it.isNotBlank() }?.take(12),
-                                price.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }?.take(12),
+                                price
+                                    .getOrNull(2)
+                                    ?.trim()
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.take(12),
+                                price
+                                    .getOrNull(3)
+                                    ?.trim()
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.take(12),
                             ),
                         )
                     }
@@ -346,7 +362,11 @@ object ObserverEditor {
                 else -> {}
             }
             event.tagValue("location")?.takeIf { it.isNotBlank() }?.let { add(ObserverDetail.Location(it.take(120))) }
-            event.tagValue("duration")?.toIntOrNull()?.takeIf { it > 0 }?.let { add(ObserverDetail.Duration(it)) }
+            event
+                .tagValue("duration")
+                ?.toIntOrNull()
+                ?.takeIf { it > 0 }
+                ?.let { add(ObserverDetail.Duration(it)) }
         }
 
     /**
@@ -363,7 +383,11 @@ object ObserverEditor {
             if (mime == null && IMAGE_URL.matches(meta.url) && isHttps(meta.url)) return meta.url
         }
         for (name in IMAGE_TAGS) {
-            event.tagValue(name)?.trim()?.takeIf { isHttps(it) }?.let { return it }
+            event
+                .tagValue(name)
+                ?.trim()
+                ?.takeIf { isHttps(it) }
+                ?.let { return it }
         }
         return URL.findAll(event.content).map { it.value.trimEnd('.', ',', ')') }.firstOrNull { IMAGE_URL.matches(it) && isHttps(it) }
     }

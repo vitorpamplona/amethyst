@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.cli.commands.NappletCommands
 import com.vitorpamplona.amethyst.cli.commands.NipCommand
 import com.vitorpamplona.amethyst.cli.commands.NotesCommands
 import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
+import com.vitorpamplona.amethyst.cli.commands.ObserverCommand
 import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
 import com.vitorpamplona.amethyst.cli.commands.Podcast20Commands
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
-import com.vitorpamplona.amethyst.cli.commands.ObserverCommand
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.SnoCommands

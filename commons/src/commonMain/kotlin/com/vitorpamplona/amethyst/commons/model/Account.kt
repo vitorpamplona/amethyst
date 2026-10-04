@@ -49,8 +49,6 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.observer.ObserverPress
-import com.vitorpamplona.amethyst.commons.observer.ObserverPull
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -167,6 +165,8 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.observer.ObserverPress
+import com.vitorpamplona.amethyst.commons.observer.ObserverPull
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLedger

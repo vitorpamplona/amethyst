@@ -124,7 +124,13 @@ class ObserverEditorTest {
 
         assertEquals(a1.id, edition.lead?.event?.id)
         assertEquals(listOf(b1.id), edition.topStories.map { it.event.id })
-        assertEquals(listOf(a2.id), edition.sections.single { it.kind == ObserverSectionKind.WIRE }.stories.map { it.event.id })
+        assertEquals(
+            listOf(a2.id),
+            edition.sections
+                .single { it.kind == ObserverSectionKind.WIRE }
+                .stories
+                .map { it.event.id },
+        )
     }
 
     @Test
@@ -183,19 +189,25 @@ class ObserverEditorTest {
 
         val classifieds = edition.sections.single { it.kind == ObserverSectionKind.CLASSIFIEDS }
         assertEquals(listOf(active.id), classifieds.stories.map { it.event.id })
-        assertEquals(ObserverDetail.Price("210000", "SATS", null), classifieds.stories.single().details.single())
+        assertEquals(
+            ObserverDetail.Price("210000", "SATS", null),
+            classifieds.stories
+                .single()
+                .details
+                .single(),
+        )
     }
 
     @Test
     fun calendarRunsInDateOrderAcrossBothShapes() {
-        val later = note(alice, "", kind = 31923, tags = arrayOf(arrayOf("title", "Meetup"), arrayOf("start", "1790000000"), arrayOf("start_tzid", "America/New_York")))
+        val later = note(alice, "", kind = 31923, tags = arrayOf(arrayOf("title", "Meetup"), arrayOf("start", "1791500000"), arrayOf("start_tzid", "America/New_York")))
         val sooner = note(bob, "", kind = 31922, tags = arrayOf(arrayOf("title", "Conference"), arrayOf("start", "2026-10-05")))
         val undated = note(carol, "", kind = 31923, tags = arrayOf(arrayOf("title", "Someday")))
         val edition = ObserverEditor.edit(corpus(mapOf(ObserverDesk.CALENDAR to listOf(undated, later, sooner))))
 
         val calendar = edition.sections.single { it.kind == ObserverSectionKind.CALENDAR }
         assertEquals(listOf("Conference", "Meetup", "Someday"), calendar.stories.map { it.headline })
-        assertEquals(ObserverDetail.Starts(1790000000, null, "America/New_York"), calendar.stories[1].details.single())
+        assertEquals(ObserverDetail.Starts(1791500000, null, "America/New_York"), calendar.stories[1].details.single())
     }
 
     @Test
@@ -225,7 +237,13 @@ class ObserverEditorTest {
         assertNull(ObserverEditor.imageOf(clip))
 
         val edition = ObserverEditor.edit(corpus(mapOf(ObserverDesk.PICTURES to listOf(picture, clip))))
-        assertEquals(listOf(picture.id), edition.sections.single { it.kind == ObserverSectionKind.PHOTOS }.stories.map { it.event.id })
+        assertEquals(
+            listOf(picture.id),
+            edition.sections
+                .single { it.kind == ObserverSectionKind.PHOTOS }
+                .stories
+                .map { it.event.id },
+        )
     }
 
     @Test
@@ -282,6 +300,20 @@ class ObserverEditorTest {
                 note(dave, "+", kind = 7, tags = arrayOf(arrayOf("e", key(501)))),
             )
         assertEquals(mapOf(story to ObserverEngagement(reactions = 2, reposts = 1, replies = 1)), ObserverPull.tally(events, setOf(story), emptySet()))
+    }
+
+    @Test
+    fun zapsCountWhoPaidNotTheServerThatSigned() {
+        val story = key(600)
+        val server = key(700)
+        val request = """{"pubkey":"$carol","kind":9734,"tags":[["e","$story"]]}"""
+        val events =
+            listOf(
+                Event(key(nextId++), server, 1, 9735, arrayOf(arrayOf("e", story), arrayOf("P", alice)), "", ""),
+                Event(key(nextId++), server, 2, 9735, arrayOf(arrayOf("e", story), arrayOf("P", alice)), "", ""),
+                Event(key(nextId++), server, 3, 9735, arrayOf(arrayOf("e", story), arrayOf("description", request)), "", ""),
+            )
+        assertEquals(mapOf(story to ObserverEngagement(zaps = 2)), ObserverPull.tally(events, setOf(story), emptySet()))
     }
 
     @Test
