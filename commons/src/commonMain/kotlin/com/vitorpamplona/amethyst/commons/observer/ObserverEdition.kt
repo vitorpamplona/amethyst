@@ -67,6 +67,22 @@ data class ObserverTrend(
     val authors: Int,
 )
 
+/**
+ * How much room a story gets once it is a post on the page. The paper is a
+ * feed of posts of three sizes rather than one long text: the size is the
+ * editorial weight, decided by [ObserverEditor] so it can be tested.
+ */
+enum class ObserverStorySize {
+    /** Full-width image, big headline, long body: the lead and the day's notable stories. */
+    LARGE,
+
+    /** Headline, a few lines and a thumbnail: each section's best, and anything notable. */
+    MEDIUM,
+
+    /** One or two lines: the rest of what the lens surfaced. */
+    SMALL,
+}
+
 enum class ObserverSectionKind {
     PHOTOS,
     LONG_READS,
@@ -102,6 +118,7 @@ data class ObserverStory(
     val replies: Int,
     val zaps: Int,
     val details: List<ObserverDetail>,
+    val size: ObserverStorySize = ObserverStorySize.SMALL,
 ) {
     val author: HexKey get() = event.pubKey
     val createdAt: Long get() = event.createdAt

@@ -54,7 +54,11 @@ class ObserverPress(
     private val reader: HexKey,
     private val pull: ObserverPull,
     private val scope: CoroutineScope,
-    /** Hands every event the paper prints to the app's cache, so tapping a story opens it immediately. */
+    /**
+     * Hands every event the paper prints — the stories and their authors'
+     * profiles — to the app's cache, so each post draws its author's picture
+     * and tapping it opens the thread immediately.
+     */
     private val onEvents: (List<Event>) -> Unit = {},
     private val now: () -> Long = { TimeUtils.now() },
 ) {
@@ -151,7 +155,8 @@ class ObserverPress(
                     val engagement = pull.engagement(reader, since, until, stories)
 
                     _state.value = State.Printing(Step.READING_BYLINES, startedAt = startedAt)
-                    val names = pull.names(bylinesFor(reader, stories))
+                    val profiles = pull.profiles(bylinesFor(reader, stories))
+                    val names = ObserverPull.displayNames(profiles)
 
                     _state.value = State.Printing(Step.LAYING_OUT, startedAt = startedAt)
                     val edition =
@@ -159,7 +164,7 @@ class ObserverPress(
                             ObserverCorpus(corpus.reader, since, until, corpus.ranked, engagement, names, corpus.dayNotes),
                         )
 
-                    onEvents(stories)
+                    onEvents(stories + profiles.values)
                     _edition.value = edition
                     _state.value = State.Ready(printedAt = now(), seen = readerIsLooking.value)
                 } catch (e: CancellationException) {

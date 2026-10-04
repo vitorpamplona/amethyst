@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.observer.ObserverEdition
 import com.vitorpamplona.amethyst.commons.observer.ObserverPress
 import com.vitorpamplona.amethyst.commons.observer.ObserverPull
 import com.vitorpamplona.amethyst.commons.observer.ObserverStory
+import com.vitorpamplona.amethyst.commons.observer.ObserverStorySize
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -125,6 +126,7 @@ object ObserverCommand {
         mapOf(
             "id" to s.event.id,
             "kind" to s.event.kind,
+            "size" to s.size.name.lowercase(),
             "byline" to s.byline,
             "headline" to s.headline,
             "body" to s.body,
@@ -144,23 +146,25 @@ object ObserverCommand {
             appendLine()
             edition.lead?.let {
                 appendLine("== LEAD ==")
-                line(this, it, withBody = true)
+                line(this, it)
             }
             if (edition.topStories.isNotEmpty()) appendLine("== TOP STORIES ==")
-            edition.topStories.forEach { line(this, it, withBody = true) }
+            edition.topStories.forEach { line(this, it) }
             edition.sections.forEach { section ->
                 appendLine("== ${section.kind.name} (${section.stories.size}) ==")
-                section.stories.forEach { line(this, it, withBody = false) }
+                section.stories.forEach { line(this, it) }
             }
         }
 
     private fun line(
         sb: StringBuilder,
         s: ObserverStory,
-        withBody: Boolean,
     ) {
+        // The post's size, as the app lays it out: [L]arge, [M]edium, [S]mall.
         sb
-            .append("• ")
+            .append("[")
+            .append(s.size.name.first())
+            .append("] ")
             .append(s.headline)
             .append(" — ")
             .append(s.byline)
@@ -177,8 +181,8 @@ object ObserverCommand {
                 .append("]")
         }
         sb.appendLine()
-        if (withBody && s.body.isNotBlank()) sb.append("    ").appendLine(s.body)
-        s.imageUrl?.let { sb.append("    image: ").appendLine(it) }
+        if (s.size != ObserverStorySize.SMALL && s.body.isNotBlank()) sb.append("    ").appendLine(s.body)
+        if (s.size != ObserverStorySize.SMALL) s.imageUrl?.let { sb.append("    image: ").appendLine(it) }
         s.details.forEach { sb.append("    ").appendLine(it.toString()) }
     }
 }

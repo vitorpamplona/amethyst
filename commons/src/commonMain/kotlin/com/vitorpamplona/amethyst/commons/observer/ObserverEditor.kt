@@ -65,6 +65,9 @@ object ObserverEditor {
     const val STORY_BODY_CHARS = 420
     const val BRIEF_BODY_CHARS = 240
 
+    /** Measured on a live edition: without a cap, 13 of 17 large posts landed in the wire. */
+    const val MAX_LARGE_PER_SECTION = 3
+
     fun edit(corpus: ObserverCorpus): ObserverEdition {
         val names = corpus.names
         val pruned = ObserverDesk.entries.associateWith { desk -> prune(desk, corpus.ranked[desk].orEmpty()) }
@@ -94,8 +97,14 @@ object ObserverEditor {
         }
         val used = front.mapTo(mutableSetOf()) { it.id }
 
-        val lead = front.firstOrNull()?.let { storyOf(it, deskOf(it), LEAD_BODY_CHARS) }
-        val top = front.drop(1).map { storyOf(it, deskOf(it), STORY_BODY_CHARS) }
+        val notable = notableScore(pruned.values.flatten().map { engagementOf(corpus, it).score })
+
+        val lead = front.firstOrNull()?.let { storyOf(it, deskOf(it), LEAD_BODY_CHARS).copy(size = ObserverStorySize.LARGE) }
+        val top =
+            front.drop(1).map { event ->
+                val story = storyOf(event, deskOf(event), STORY_BODY_CHARS)
+                story.copy(size = if (story.imageUrl != null) ObserverStorySize.LARGE else ObserverStorySize.MEDIUM)
+            }
 
         fun section(
             kind: ObserverSectionKind,
@@ -106,7 +115,16 @@ object ObserverEditor {
         ): ObserverSection? {
             val events = sort(desks.flatMap { pruned.getValue(it) }.filter { it.id !in used && keep(it) })
             if (events.isEmpty()) return null
-            return ObserverSection(kind, events.map { storyOf(it, deskOf(it), bodyChars) })
+            var larges = 0
+            val stories =
+                events.mapIndexed { index, event ->
+                    val story = storyOf(event, deskOf(event), bodyChars)
+                    var size = sizeInSection(kind, index, story, notable)
+                    // A section is a run of posts, not a wall of big ones.
+                    if (size == ObserverStorySize.LARGE && ++larges > MAX_LARGE_PER_SECTION) size = ObserverStorySize.MEDIUM
+                    story.copy(size = size)
+                }
+            return ObserverSection(kind, stories)
         }
 
         val sections =
@@ -149,6 +167,37 @@ object ObserverEditor {
             trending = trending(pruned.values.flatten()),
         )
     }
+
+    /**
+     * The score a story needs to count as notable today: the top quarter of
+     * everything that got any signal at all. Relative, because a quiet day and a
+     * busy one should both have a few big posts; never below 1, so a story
+     * nobody touched is never notable.
+     */
+    internal fun notableScore(scores: List<Int>): Int {
+        val positive = scores.filter { it > 0 }.sorted()
+        if (positive.isEmpty()) return Int.MAX_VALUE
+        return positive[(positive.size * 3) / 4].coerceAtLeast(1)
+    }
+
+    /**
+     * A section opens with its best story at MEDIUM so every section has a
+     * face; anything notable is at least MEDIUM, and LARGE when it has a
+     * picture to carry it. Photographs are pictures first, so they are never
+     * reduced to a line. Everything else is a SMALL post.
+     */
+    internal fun sizeInSection(
+        kind: ObserverSectionKind,
+        index: Int,
+        story: ObserverStory,
+        notable: Int,
+    ): ObserverStorySize =
+        when {
+            kind == ObserverSectionKind.PHOTOS -> ObserverStorySize.MEDIUM
+            story.score >= notable && story.imageUrl != null -> ObserverStorySize.LARGE
+            story.score >= notable || index == 0 -> ObserverStorySize.MEDIUM
+            else -> ObserverStorySize.SMALL
+        }
 
     private fun deskOf(event: Event): ObserverDesk = ObserverDesk.entries.firstOrNull { event.kind in it.kinds } ?: ObserverDesk.NOTES
 

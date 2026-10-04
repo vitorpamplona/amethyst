@@ -160,6 +160,90 @@ class ObserverEditorTest {
     }
 
     @Test
+    fun eachStoryIsAPostSizedByWhatItEarned() {
+        val photo = arrayOf(arrayOf("imeta", "url https://cdn.example/a.jpg", "m image/jpeg"))
+        val lead = note(alice, "The lead story of the day, which everyone replied to and zapped.", tags = photo)
+        val topWithPicture = note(bob, "A top story with a picture attached so it can run large.", tags = photo)
+        val topWithout = note(carol, "A top story with no picture, which runs as a medium post.")
+        val wire = (1..6).map { note(dave, "Wire item number $it, long enough to be a story on its own.", createdAt = 500L - it) }
+        val edition =
+            ObserverEditor.edit(
+                corpus(
+                    mapOf(ObserverDesk.NOTES to listOf(lead, topWithPicture, topWithout) + wire),
+                    engagement =
+                        mapOf(
+                            lead.id to ObserverEngagement(replies = 9),
+                            topWithPicture.id to ObserverEngagement(replies = 5),
+                            topWithout.id to ObserverEngagement(replies = 4),
+                        ),
+                ),
+            )
+
+        assertEquals(ObserverStorySize.LARGE, edition.lead?.size)
+        val topSizes = edition.topStories.associate { it.event.id to it.size }
+        assertEquals(ObserverStorySize.LARGE, topSizes[topWithPicture.id])
+        assertEquals(ObserverStorySize.MEDIUM, topSizes[topWithout.id])
+        // One story per author above the fold: Dave's first note is a top story, the
+        // rest open the wire with a MEDIUM face and continue as SMALL posts.
+        val wireSizes =
+            edition.sections
+                .single { it.kind == ObserverSectionKind.WIRE }
+                .stories
+                .map { it.size }
+        assertEquals(ObserverStorySize.MEDIUM, wireSizes.first())
+        assertTrue(wireSizes.drop(1).all { it == ObserverStorySize.SMALL })
+    }
+
+    @Test
+    fun aSectionIsNotAWallOfLargePosts() {
+        val photo = arrayOf(arrayOf("imeta", "url https://cdn.example/a.jpg", "m image/jpeg"))
+        // Ten authors, so the one-per-author fold holds nobody back: the first five
+        // fill the fold, and the other five are wire posts that all earned LARGE.
+        val authors = (10..19).map { key(it) }
+        val notes = authors.map { note(it, "A picture post that got replies from the web of trust today.", tags = photo) }
+        val edition =
+            ObserverEditor.edit(
+                corpus(
+                    mapOf(ObserverDesk.NOTES to notes),
+                    engagement = notes.associate { it.id to ObserverEngagement(replies = 5) },
+                ),
+            )
+        val wire = edition.sections.single { it.kind == ObserverSectionKind.WIRE }.stories
+        assertEquals(5, wire.size)
+        assertEquals(ObserverEditor.MAX_LARGE_PER_SECTION, wire.count { it.size == ObserverStorySize.LARGE })
+        assertTrue(wire.drop(ObserverEditor.MAX_LARGE_PER_SECTION).all { it.size == ObserverStorySize.MEDIUM })
+    }
+
+    @Test
+    fun notableIsTheTopQuarterOfWhatGotAnySignal() {
+        assertEquals(Int.MAX_VALUE, ObserverEditor.notableScore(listOf(0, 0, 0)))
+        assertEquals(1, ObserverEditor.notableScore(listOf(0, 1)))
+        assertEquals(9, ObserverEditor.notableScore(listOf(0, 1, 2, 3, 9, 12)))
+    }
+
+    @Test
+    fun sectionSizes() {
+        val photo = arrayOf(arrayOf("imeta", "url https://cdn.example/a.jpg", "m image/jpeg"))
+
+        fun sized(
+            kind: ObserverSectionKind,
+            index: Int,
+            score: Int,
+            withImage: Boolean,
+        ): ObserverStorySize {
+            val event = note(alice, "Something worth printing today, at some length.", tags = if (withImage) photo else emptyArray())
+            val story = ObserverEditor.story(event, ObserverDesk.NOTES, ObserverEngagement(replies = score), emptyMap(), 200)
+            return ObserverEditor.sizeInSection(kind, index, story, notable = 3)
+        }
+
+        assertEquals(ObserverStorySize.MEDIUM, sized(ObserverSectionKind.PHOTOS, 7, 0, true))
+        assertEquals(ObserverStorySize.LARGE, sized(ObserverSectionKind.WIRE, 5, 1, true))
+        assertEquals(ObserverStorySize.MEDIUM, sized(ObserverSectionKind.WIRE, 5, 1, false))
+        assertEquals(ObserverStorySize.MEDIUM, sized(ObserverSectionKind.POLLS, 0, 0, false))
+        assertEquals(ObserverStorySize.SMALL, sized(ObserverSectionKind.POLLS, 1, 0, true))
+    }
+
+    @Test
     fun emptyDesksPrintNoSection() {
         val edition = ObserverEditor.edit(corpus(mapOf(ObserverDesk.NOTES to listOf(note(alice, "Just one story on a very quiet day, nothing else.")))))
         assertTrue(edition.sections.isEmpty())

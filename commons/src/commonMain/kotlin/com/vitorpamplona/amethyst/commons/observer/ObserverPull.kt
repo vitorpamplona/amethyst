@@ -199,8 +199,12 @@ class ObserverPull(
         return tally(found, ids.toSet(), addresses.toSet())
     }
 
-    /** kind 0 for everyone the page will name, batched; newest wins. */
-    suspend fun names(pubkeys: Collection<HexKey>): Map<HexKey, String> {
+    /**
+     * kind 0 for everyone the page will name, batched; newest wins. Returned
+     * whole, not just the names, so the app can cache them and draw each post
+     * with its author's real picture.
+     */
+    suspend fun profiles(pubkeys: Collection<HexKey>): Map<HexKey, MetadataEvent> {
         if (pubkeys.isEmpty()) return emptyMap()
         val found =
             coroutineScope {
@@ -211,23 +215,13 @@ class ObserverPull(
                     .awaitAll()
                     .flatten()
             }
-        val best = mutableMapOf<HexKey, Event>()
+        val best = mutableMapOf<HexKey, MetadataEvent>()
         found.forEach { event ->
-            val seen = best[event.pubKey]
-            if (seen == null || seen.createdAt < event.createdAt) best[event.pubKey] = event
+            val meta = event as? MetadataEvent ?: MetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
+            val seen = best[meta.pubKey]
+            if (seen == null || seen.createdAt < meta.createdAt) best[meta.pubKey] = meta
         }
         return best
-            .mapNotNull { (pubkey, event) ->
-                val meta = event as? MetadataEvent ?: MetadataEvent(event.id, event.pubKey, event.createdAt, event.tags, event.content, event.sig)
-                val name =
-                    runCatching { meta.contactMetaData()?.bestName() }
-                        .getOrNull()
-                        ?.replace(WHITESPACE, " ")
-                        ?.trim()
-                        ?.take(MAX_NAME)
-                        ?.takeIf { it.isNotBlank() }
-                name?.let { pubkey to it }
-            }.toMap()
     }
 
     /**
@@ -298,6 +292,19 @@ class ObserverPull(
         private const val COUNT_DEADLINE_MS = 20_000L
 
         private val WHITESPACE = Regex("""\s+""")
+
+        /** A byline per profile: its best name, one line, bounded. Profiles with no name are left out. */
+        fun displayNames(profiles: Map<HexKey, MetadataEvent>): Map<HexKey, String> =
+            profiles
+                .mapNotNull { (pubkey, meta) ->
+                    runCatching { meta.contactMetaData()?.bestName() }
+                        .getOrNull()
+                        ?.replace(WHITESPACE, " ")
+                        ?.trim()
+                        ?.take(MAX_NAME)
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { pubkey to it }
+                }.toMap()
 
         /**
          * Counts each person once per story per kind of signal: five likes from
