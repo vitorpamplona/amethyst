@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.mls.group
 import com.vitorpamplona.quartz.mls.messages.CommitResult
 import com.vitorpamplona.quartz.mls.tree.Capabilities
 import com.vitorpamplona.quartz.mls.tree.Extension
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * The application's rules about who in a group may do what.
@@ -127,6 +128,14 @@ interface MlsGroupPolicy {
      * declared.
      */
     val knownExtensionTypes: Set<Int> get() = emptySet()
+
+    /**
+     * The clock, in unix seconds, that LeafNode lifetimes (RFC 9420 §7.2) are
+     * checked against. Wall time in production; a test pins it to a moment
+     * inside a recorded fixture's validity window, so fixtures signed by
+     * another implementation don't expire out from under the suite.
+     */
+    fun now(): Long = TimeUtils.now()
 
     companion object {
         /** RFC 9420 exactly as written: any member may commit anything valid. */

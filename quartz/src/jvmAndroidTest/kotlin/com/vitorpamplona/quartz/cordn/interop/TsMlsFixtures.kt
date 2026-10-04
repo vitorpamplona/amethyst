@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.cordn.interop
 
+import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.mls.group.MlsGroupPolicy
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import kotlin.io.encoding.Base64
@@ -43,6 +45,19 @@ object TsMlsFixtures {
     fun b64(name: String): ByteArray = Base64.decode(text(name))
 
     fun hex(name: String): ByteArray = text(name).chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+    /**
+     * 2026-09-21T09:46:40Z, inside the fixtures' KeyPackage lifetime
+     * (2026-09-17T03:34:16Z to 2026-10-03T08:34:16Z). ts-mls signed those
+     * lifetimes, so they cannot be extended here; the clock moves instead.
+     */
+    const val NOW: Long = 1_790_000_000L
+
+    /** [CordnGroupPolicy] with its clock pinned to [NOW]. */
+    val cordnPolicy: MlsGroupPolicy =
+        object : MlsGroupPolicy by CordnGroupPolicy {
+            override fun now(): Long = NOW
+        }
 }
 
 /**

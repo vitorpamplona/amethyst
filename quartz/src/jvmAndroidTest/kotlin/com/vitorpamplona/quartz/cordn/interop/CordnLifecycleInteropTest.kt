@@ -260,7 +260,7 @@ class CordnLifecycleInteropTest {
         val group =
             MlsGroup.create(
                 identity = CordnCredential.of(alice).identity,
-                policy = CordnGroupPolicy,
+                policy = TsMlsFixtures.cordnPolicy,
                 initialExtensions = listOf(CordnGroupMetadata(name = "from Kotlin").toExtension()),
             )
 

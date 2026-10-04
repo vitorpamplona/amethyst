@@ -2001,7 +2001,7 @@ class MlsGroup private constructor(
             // the signer authorized.
             val lifetime = updatePath.leafNode.lifetime
             if (lifetime != null) {
-                val now = TimeUtils.now()
+                val now = policy.now()
                 require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                     "LeafNode lifetime expired or not yet valid in UpdatePath"
                 }
@@ -2809,7 +2809,7 @@ class MlsGroup private constructor(
         // Validate lifetime
         val lifetime = leafNode.lifetime
         if (lifetime != null) {
-            val now = TimeUtils.now()
+            val now = policy.now()
             require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                 "KeyPackage lifetime expired or not yet valid"
             }
