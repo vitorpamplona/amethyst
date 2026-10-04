@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import org.jetbrains.compose.resources.StringResource
 
 private val Serif = FontFamily.Serif
@@ -130,8 +131,8 @@ fun ObserverScreen(
     }
     LaunchedEffect(state) { if (state is ObserverPress.State.Ready) press.markSeen() }
 
-    val openStory: (ObserverStory) -> Unit = { story ->
-        nav.nav { routeFor(story.event, accountViewModel.account) }
+    val openEvent: (Event) -> Unit = { event ->
+        nav.nav { routeFor(event, accountViewModel.account) }
     }
 
     Scaffold(
@@ -150,7 +151,7 @@ fun ObserverScreen(
             if (current == null) {
                 Cover(state, onPrint = press::print, modifier = Modifier.widthIn(max = 720.dp))
             } else {
-                Paper(current, state, accountViewModel, nav, onPrint = press::print, onOpen = openStory, modifier = Modifier.widthIn(max = 720.dp))
+                Paper(current, state, accountViewModel, nav, onPrint = press::print, onOpen = openEvent, modifier = Modifier.widthIn(max = 720.dp))
             }
         }
     }
@@ -247,7 +248,7 @@ private fun Paper(
     accountViewModel: AccountViewModel,
     nav: INav,
     onPrint: () -> Unit,
-    onOpen: (ObserverStory) -> Unit,
+    onOpen: (Event) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 32.dp)) {
@@ -282,6 +283,11 @@ private fun Paper(
             items(edition.topStories, key = { "top-" + it.event.id }) { Post(it, accountViewModel, nav, onOpen) }
         }
 
+        // Summary posts: the day's conversations and topics, after the top stories.
+        items(edition.roundups, key = { "roundup-" + it.kind.name + (it.topic ?: it.anchor?.event?.id ?: "") }) {
+            ObserverRoundupCard(it, accountViewModel, nav, onOpen, Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+        }
+
         edition.sections.forEach { section(it, accountViewModel, nav, onOpen) }
 
         item(key = "colophon") {
@@ -301,9 +307,14 @@ private fun LazyListScope.section(
     section: ObserverSection,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onOpen: (ObserverStory) -> Unit,
+    onOpen: (Event) -> Unit,
 ) {
     item(key = "header-" + section.kind.name) { SectionHeader(stringRes(sectionTitle(section.kind))) }
+    section.roundup?.let { roundup ->
+        item(key = "roundup-" + section.kind.name) {
+            ObserverRoundupCard(roundup, accountViewModel, nav, onOpen, Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+        }
+    }
     if (section.kind == ObserverSectionKind.PHOTOS) {
         item(key = "photos") {
             LazyRow(
@@ -324,7 +335,7 @@ private fun Post(
     story: ObserverStory,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onOpen: (ObserverStory) -> Unit,
+    onOpen: (Event) -> Unit,
 ) {
     ObserverPostCard(story, accountViewModel, nav, onOpen, Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
 }

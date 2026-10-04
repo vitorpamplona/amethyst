@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 private val Serif = FontFamily.Serif
 
@@ -96,13 +97,13 @@ fun ObserverPostCard(
     story: ObserverStory,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onOpen: (ObserverStory) -> Unit,
+    onOpen: (Event) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { onOpen(story) },
+        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { onOpen(story.event) },
     ) {
         when (story.size) {
             ObserverStorySize.LARGE -> LargePost(story, accountViewModel, nav)
@@ -219,13 +220,13 @@ fun ObserverPhotoPost(
     story: ObserverStory,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onOpen: (ObserverStory) -> Unit,
+    onOpen: (Event) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = modifier.clip(RoundedCornerShape(16.dp)).clickable { onOpen(story) },
+        modifier = modifier.clip(RoundedCornerShape(16.dp)).clickable { onOpen(story.event) },
     ) {
         Column {
             story.imageUrl?.let {
@@ -329,71 +330,78 @@ private fun Signal(
 @Composable
 private fun Details(story: ObserverStory) {
     if (story.details.isEmpty()) return
-    val timeOfDay = rememberTimeOfDayFormatter()
     Column(Modifier.padding(top = 4.dp)) {
         story.details.forEach { detail ->
-            val text =
-                when (detail) {
-                    is ObserverDetail.Price -> {
-                        val amount = listOfNotNull(detail.amount, detail.currency).joinToString(" ")
-                        detail.frequency?.let { stringRes(Res.string.observer_detail_price_per, amount, it) } ?: amount
-                    }
-
-                    is ObserverDetail.Starts -> {
-                        val epoch = detail.epochSeconds
-                        when {
-                            epoch == null -> {
-                                stringRes(Res.string.observer_detail_all_day, detail.date ?: "")
-                            }
-
-                            // A 24/7 stream can have started days ago: the date is part of the fact.
-                            story.event.kind == 30311 -> {
-                                stringRes(Res.string.observer_on_air_since, formatLongDate(epoch) + " · " + timeOfDay(epoch * 1000))
-                            }
-
-                            else -> {
-                                stringRes(Res.string.observer_detail_starts, formatLongDate(epoch) + " · " + timeOfDay(epoch * 1000))
-                            }
-                        }
-                    }
-
-                    is ObserverDetail.Location -> {
-                        stringRes(Res.string.observer_detail_location, detail.text)
-                    }
-
-                    is ObserverDetail.Duration -> {
-                        val minutes = detail.seconds / 60
-                        val seconds = detail.seconds % 60
-                        stringRes(Res.string.observer_detail_duration, if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s")
-                    }
-
-                    is ObserverDetail.PollOptions -> {
-                        detail.options.joinToString("  ·  ")
-                    }
-
-                    is ObserverDetail.QuotedAuthor -> {
-                        stringRes(Res.string.observer_detail_quoting, detail.name)
-                    }
-
-                    is ObserverDetail.Source -> {
-                        stringRes(Res.string.observer_detail_source, detail.text)
-                    }
-
-                    is ObserverDetail.Watching -> {
-                        pluralStringRes(Res.plurals.observer_detail_watching, detail.count, detail.count)
-                    }
-
-                    is ObserverDetail.ItemStatus -> {
-                        stringRes(Res.string.observer_detail_status, detail.text)
-                    }
-                }
             Text(
-                text,
+                observerDetailText(detail, story.event.kind),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+    }
+}
+
+/** One fact in the reader's words: a price, a date, an audience. Shared by posts and roundups. */
+@Composable
+fun observerDetailText(
+    detail: ObserverDetail,
+    eventKind: Int,
+): String {
+    val timeOfDay = rememberTimeOfDayFormatter()
+    return when (detail) {
+        is ObserverDetail.Price -> {
+            val amount = listOfNotNull(detail.amount, detail.currency).joinToString(" ")
+            detail.frequency?.let { stringRes(Res.string.observer_detail_price_per, amount, it) } ?: amount
+        }
+
+        is ObserverDetail.Starts -> {
+            val epoch = detail.epochSeconds
+            when {
+                epoch == null -> {
+                    stringRes(Res.string.observer_detail_all_day, detail.date ?: "")
+                }
+
+                // A 24/7 stream can have started days ago: the date is part of the fact.
+                eventKind == 30311 -> {
+                    stringRes(Res.string.observer_on_air_since, formatLongDate(epoch) + " · " + timeOfDay(epoch * 1000))
+                }
+
+                else -> {
+                    stringRes(Res.string.observer_detail_starts, formatLongDate(epoch) + " · " + timeOfDay(epoch * 1000))
+                }
+            }
+        }
+
+        is ObserverDetail.Location -> {
+            stringRes(Res.string.observer_detail_location, detail.text)
+        }
+
+        is ObserverDetail.Duration -> {
+            val minutes = detail.seconds / 60
+            val seconds = detail.seconds % 60
+            stringRes(Res.string.observer_detail_duration, if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s")
+        }
+
+        is ObserverDetail.PollOptions -> {
+            detail.options.joinToString("  ·  ")
+        }
+
+        is ObserverDetail.QuotedAuthor -> {
+            stringRes(Res.string.observer_detail_quoting, detail.name)
+        }
+
+        is ObserverDetail.Source -> {
+            stringRes(Res.string.observer_detail_source, detail.text)
+        }
+
+        is ObserverDetail.Watching -> {
+            pluralStringRes(Res.plurals.observer_detail_watching, detail.count, detail.count)
+        }
+
+        is ObserverDetail.ItemStatus -> {
+            stringRes(Res.string.observer_detail_status, detail.text)
         }
     }
 }

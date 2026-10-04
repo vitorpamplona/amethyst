@@ -45,6 +45,8 @@ data class ObserverEdition(
     val topStories: List<ObserverStory>,
     val sections: List<ObserverSection>,
     val trending: List<ObserverTrend>,
+    /** Summary posts that run after the top stories: the day's conversations and topics. */
+    val roundups: List<ObserverRoundup> = emptyList(),
 ) {
     val isEmpty: Boolean get() = lead == null && topStories.isEmpty() && sections.isEmpty()
 }
@@ -102,7 +104,53 @@ enum class ObserverSectionKind {
 data class ObserverSection(
     val kind: ObserverSectionKind,
     val stories: List<ObserverStory>,
+    /** A summary post that opens the section, when the section has one (live, upcoming, releases). */
+    val roundup: ObserverRoundup? = null,
 )
+
+enum class ObserverRoundupKind {
+    /** A story people argued about: its headline and a few trusted replies. */
+    CONVERSATION,
+
+    /** A hashtag several people used today, with the best line from each. */
+    TOPIC,
+
+    /** Every stream on the air, by audience. */
+    LIVE,
+
+    /** Calendar events starting in the next seven days, in date order. */
+    UPCOMING,
+
+    /** App releases and code repositories, together. */
+    RELEASES,
+}
+
+/**
+ * A summary post: several items gathered into one card, in their authors' own
+ * words. Like every story, it is built on the device and never published.
+ */
+@Immutable
+data class ObserverRoundup(
+    val kind: ObserverRoundupKind,
+    /** The hashtag of a TOPIC roundup; null for the others, whose title is fixed. */
+    val topic: String? = null,
+    /** The story a CONVERSATION is about. */
+    val anchor: ObserverStory? = null,
+    /** Distinct people in the roundup — everyone counted, not only the lines shown. */
+    val people: Int,
+    val lines: List<ObserverRoundupLine>,
+)
+
+/** One voice in a roundup: who, the line itself, and a fact when the kind has one (a date, an audience). */
+@Immutable
+data class ObserverRoundupLine(
+    val event: Event,
+    val byline: String,
+    val text: String,
+    val detail: ObserverDetail? = null,
+) {
+    val author: HexKey get() = event.pubKey
+}
 
 @Immutable
 data class ObserverStory(
@@ -212,6 +260,8 @@ class ObserverCorpus(
     /** Display names from kind 0, by pubkey. */
     val names: Map<HexKey, String>,
     val dayNotes: Long?,
+    /** Trusted replies (through the lens and floor), by the id or address they answer. */
+    val replies: Map<String, List<Event>> = emptyMap(),
 ) {
     fun all(): List<Event> = ranked.values.flatten()
 }

@@ -6514,6 +6514,15 @@
     <string name="observer_detail_source">From %1$s</string>
     <string name="observer_detail_status">Status: %1$s</string>
     <string name="observer_on_air_since">On air since %1$s</string>
+    <string name="observer_roundup_conversation">The conversation</string>
+    <string name="observer_roundup_topic">Talk of the day: #%1$s</string>
+    <string name="observer_roundup_live">On the air now</string>
+    <string name="observer_roundup_upcoming">Coming up this week</string>
+    <string name="observer_roundup_releases">New releases</string>
+    <plurals name="observer_roundup_people">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
     <plurals name="observer_stats_stories">
         <item quantity="one">%1$d story from %2$d people</item>
         <item quantity="other">%1$d stories from %2$d people</item>

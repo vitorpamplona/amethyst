@@ -169,10 +169,10 @@ class ObserverPull(
         since: Long,
         until: Long,
         events: List<Event>,
-    ): Map<String, ObserverEngagement> {
+    ): Signals {
         val ids = events.filter { it !is AddressableEvent }.map { it.id }.distinct()
         val addresses = events.filterIsInstance<AddressableEvent>().map { it.addressTag() }.distinct()
-        if (ids.isEmpty() && addresses.isEmpty()) return emptyMap()
+        if (ids.isEmpty() && addresses.isEmpty()) return Signals(emptyMap(), emptyMap())
 
         val lens = "observer:$reader sort:rank filter:rank:gte:$trustFloor"
 
@@ -196,8 +196,20 @@ class ObserverPull(
                     .flatten()
                     .distinctBy { it.id }
             }
-        return tally(found, ids.toSet(), addresses.toSet())
+        val idSet = ids.toSet()
+        val addressSet = addresses.toSet()
+        return Signals(tally(found, idSet, addressSet), replies(found, idSet, addressSet))
     }
+
+    /**
+     * What [engagement] found: the counts that rank the page, and the trusted
+     * replies themselves, kept so the paper can print a conversation and not
+     * only the number of people in it.
+     */
+    class Signals(
+        val engagement: Map<String, ObserverEngagement>,
+        val replies: Map<String, List<Event>>,
+    )
 
     /**
      * kind 0 for everyone the page will name, batched; newest wins. Returned
@@ -352,6 +364,29 @@ class ObserverPull(
                     zaps = zaps[it]?.size ?: 0,
                 )
             }
+        }
+
+        /** Kind-1 replies by the story they answer (`e` not marked mention, or `a`), newest last. */
+        internal fun replies(
+            found: List<Event>,
+            ids: Set<String>,
+            addresses: Set<String>,
+        ): Map<String, List<Event>> {
+            val out = mutableMapOf<String, MutableList<Event>>()
+            found.forEach { event ->
+                if (event.kind != 1) return@forEach
+                event.tags
+                    .mapNotNull { tag ->
+                        if (tag.size < 2) return@mapNotNull null
+                        when (tag[0]) {
+                            "e" -> tag[1].takeIf { it in ids && tag.getOrNull(3) != "mention" }
+                            "a" -> tag[1].takeIf { it in addresses }
+                            else -> null
+                        }
+                    }.distinct()
+                    .forEach { out.getOrPut(it) { mutableListOf() }.add(event) }
+            }
+            return out.mapValues { (_, list) -> list.sortedBy { it.createdAt } }
         }
 
         /**

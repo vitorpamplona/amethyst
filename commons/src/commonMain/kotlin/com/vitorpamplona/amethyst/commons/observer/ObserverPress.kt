@@ -152,19 +152,24 @@ class ObserverPress(
 
                     _state.value = State.Printing(Step.READING_SIGNALS, startedAt = startedAt)
                     val stories = corpus.all()
-                    val engagement = pull.engagement(reader, since, until, stories)
+                    val signals = pull.engagement(reader, since, until, stories)
+                    val replies =
+                        signals.replies.values
+                            .flatten()
+                            .distinctBy { it.id }
 
                     _state.value = State.Printing(Step.READING_BYLINES, startedAt = startedAt)
-                    val profiles = pull.profiles(bylinesFor(reader, stories))
+                    // Repliers are named in the conversation roundups, so they need bylines too.
+                    val profiles = pull.profiles(bylinesFor(reader, stories + replies))
                     val names = ObserverPull.displayNames(profiles)
 
                     _state.value = State.Printing(Step.LAYING_OUT, startedAt = startedAt)
                     val edition =
                         ObserverEditor.edit(
-                            ObserverCorpus(corpus.reader, since, until, corpus.ranked, engagement, names, corpus.dayNotes),
+                            ObserverCorpus(corpus.reader, since, until, corpus.ranked, signals.engagement, names, corpus.dayNotes, signals.replies),
                         )
 
-                    onEvents(stories + profiles.values)
+                    onEvents(stories + replies + profiles.values)
                     _edition.value = edition
                     _state.value = State.Ready(printedAt = now(), seen = readerIsLooking.value)
                 } catch (e: CancellationException) {

@@ -147,6 +147,27 @@ object ObserverEditor {
             )
 
         val printed = listOfNotNull(lead) + top + sections.flatMap { it.stories }
+        val trending = trending(pruned.values.flatten())
+
+        // Summary posts. The conversations and topics run after the top stories;
+        // live, upcoming and releases open their own sections.
+        val roundups = ObserverRoundups.conversations(printed, corpus.replies, names) + ObserverRoundups.topics(trending, printed)
+        val releases =
+            ObserverRoundups.releases(
+                sections.filter { it.kind == ObserverSectionKind.APPS || it.kind == ObserverSectionKind.CODE }.flatMap { it.stories },
+            )
+        val releasesHost = sections.firstOrNull { it.kind == ObserverSectionKind.APPS || it.kind == ObserverSectionKind.CODE }?.kind
+        val withRoundups =
+            sections.map { section ->
+                val roundup =
+                    when (section.kind) {
+                        ObserverSectionKind.LIVE -> ObserverRoundups.live(section.stories)
+                        ObserverSectionKind.CALENDAR -> ObserverRoundups.upcoming(section.stories, corpus.until)
+                        releasesHost -> releases
+                        else -> null
+                    }
+                if (roundup != null) section.copy(roundup = roundup) else section
+            }
 
         return ObserverEdition(
             reader = corpus.reader,
@@ -163,8 +184,9 @@ object ObserverEditor {
                 ),
             lead = lead,
             topStories = top,
-            sections = sections,
-            trending = trending(pruned.values.flatten()),
+            sections = withRoundups,
+            trending = trending,
+            roundups = roundups,
         )
     }
 

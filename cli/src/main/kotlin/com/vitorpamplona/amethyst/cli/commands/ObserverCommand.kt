@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.observer.ObserverEdition
 import com.vitorpamplona.amethyst.commons.observer.ObserverPress
 import com.vitorpamplona.amethyst.commons.observer.ObserverPull
+import com.vitorpamplona.amethyst.commons.observer.ObserverRoundup
 import com.vitorpamplona.amethyst.commons.observer.ObserverStory
 import com.vitorpamplona.amethyst.commons.observer.ObserverStorySize
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -120,6 +121,16 @@ object ObserverCommand {
             "top_stories" to edition.topStories.map(::story),
             "sections" to edition.sections.map { mapOf("kind" to it.kind.name.lowercase(), "stories" to it.stories.map(::story)) },
             "trending" to edition.trending.map { mapOf("hashtag" to it.hashtag, "authors" to it.authors) },
+            "roundups" to (edition.roundups + edition.sections.mapNotNull { it.roundup }).map(::roundupJson),
+        )
+
+    private fun roundupJson(r: ObserverRoundup): Map<String, Any?> =
+        mapOf(
+            "kind" to r.kind.name.lowercase(),
+            "topic" to r.topic,
+            "anchor" to r.anchor?.event?.id,
+            "people" to r.people,
+            "lines" to r.lines.map { mapOf("id" to it.event.id, "byline" to it.byline, "text" to it.text, "detail" to it.detail?.toString()) },
         )
 
     private fun story(s: ObserverStory): Map<String, Any?> =
@@ -150,11 +161,37 @@ object ObserverCommand {
             }
             if (edition.topStories.isNotEmpty()) appendLine("== TOP STORIES ==")
             edition.topStories.forEach { line(this, it) }
+            edition.roundups.forEach { roundup(this, it) }
             edition.sections.forEach { section ->
                 appendLine("== ${section.kind.name} (${section.stories.size}) ==")
+                section.roundup?.let { roundup(this, it) }
                 section.stories.forEach { line(this, it) }
             }
         }
+
+    /** A summary post: its kind and subject, then one quoted line per voice. */
+    private fun roundup(
+        sb: StringBuilder,
+        r: ObserverRoundup,
+    ) {
+        sb
+            .append("[ROUNDUP ")
+            .append(r.kind.name)
+            .append("] ")
+            .append(r.topic?.let { "#$it" } ?: r.anchor?.headline ?: "")
+            .append(" (")
+            .append(r.people)
+            .appendLine(" people)")
+        r.lines.forEach { line ->
+            sb
+                .append("    > ")
+                .append(line.byline)
+                .append(": ")
+                .append(line.text)
+            line.detail?.let { sb.append("  {").append(it).append("}") }
+            sb.appendLine()
+        }
+    }
 
     private fun line(
         sb: StringBuilder,
