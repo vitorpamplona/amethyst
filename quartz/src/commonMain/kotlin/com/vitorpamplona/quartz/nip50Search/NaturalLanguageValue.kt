@@ -30,27 +30,39 @@ package com.vitorpamplona.quartz.nip50Search
  * tokens that label data rather than describe it: `music`, `eng`, `openlibrary`, `IS_A_PROPERTY_OF`,
  * `concept-header`, `OL19722168W`, `2026-06-01`.
  *
- * Allocation-free: the read path calls it once per value per event per keystroke.
+ * Allocation-free, and a single scan for nearly every value: the read path calls it once per
+ * value per event per keystroke.
  */
 fun isNaturalLanguageValue(value: String): Boolean {
     var start = 0
     var end = value.length
     while (start < end && value[start].isWhitespace()) start++
     while (end > start && value[end - 1].isWhitespace()) end--
-    if (start == end || isMachineValue(value, start, end)) return false
+    if (start == end || isStructuredValue(value, start, end)) return false
 
+    var nonAscii = false
     for (i in start until end) {
         val c = value[i]
-        if (c.isWhitespace() || c.code > 127) return true
+        // The token shapes in isMachineToken cannot contain whitespace.
+        if (c.isWhitespace()) return true
+        if (c.code > 127) nonAscii = true
     }
-    return isCapitalizedWord(value, start, end)
+
+    // A single token. A capitalized letters-only word can only collide with a hex id, so the
+    // other machine checks are needed just for the rare non-ASCII token, such as an IRI.
+    return if (nonAscii) {
+        !isMachineToken(value, start, end)
+    } else {
+        isCapitalizedWord(value, start, end) && !isHexId(value, start, end)
+    }
 }
 
 /**
  * Whether a tag value is an identifier or a structure rather than text: a JSON object or array,
- * a number (including a signed one and an ISBN-10 ending in `X`), a URI of any scheme
- * (`https://…`, `wss://…`, `tag:…`, `urn:…`, `isbn:…`), an event address (`kind:pubkey:d`), a
- * long hex id, a UUID, or a NIP-19 bech32 entity. Empty and blank values count as machine
+ * a URL (`https://…`, `wss://…`, even with unescaped spaces in its path), an event address
+ * (`kind:pubkey:d`, even with spaces in `d`), or, as a single token, a number (including a
+ * signed one and an ISBN-10 ending in `X`), a URI of any scheme (`tag:…`, `urn:…`, `isbn:…`),
+ * a long hex id, a UUID, or a NIP-19 bech32 entity. Empty and blank values count as machine
  * values too: there is nothing in them to index.
  */
 fun isMachineValue(value: String): Boolean {
@@ -58,10 +70,13 @@ fun isMachineValue(value: String): Boolean {
     var end = value.length
     while (start < end && value[start].isWhitespace()) start++
     while (end > start && value[end - 1].isWhitespace()) end--
-    return start == end || isMachineValue(value, start, end)
+    if (start == end || isStructuredValue(value, start, end)) return true
+    for (i in start until end) if (value[i].isWhitespace()) return false
+    return isMachineToken(value, start, end)
 }
 
-private fun isMachineValue(
+/** The machine shapes recognizable from their first characters, whitespace or not. */
+private fun isStructuredValue(
     v: String,
     start: Int,
     end: Int,
@@ -69,17 +84,20 @@ private fun isMachineValue(
     val first = v[start]
     val last = v[end - 1]
     if ((first == '{' && last == '}') || (first == '[' && last == ']')) return true
+    return isUrl(v, start, end) || isAddress(v, start, end)
+}
 
-    // Every other shape is a single token.
-    for (i in start until end) if (v[i].isWhitespace()) return false
-
-    return isNumber(v, start, end) ||
+/** The machine shapes that are a single token. */
+private fun isMachineToken(
+    v: String,
+    start: Int,
+    end: Int,
+): Boolean =
+    isNumber(v, start, end) ||
         isUri(v, start, end) ||
-        isAddress(v, start, end) ||
         isHexId(v, start, end) ||
         isUuid(v, start, end) ||
         isBech32(v, start)
-}
 
 private fun Char.isAsciiDigit() = this in '0'..'9'
 
@@ -108,21 +126,41 @@ private fun isNumber(
     return i == end
 }
 
-/** An RFC 3986 scheme followed by `:` and something more, as a single token. */
+/** The index of the `:` that ends a leading RFC 3986 scheme, or -1 when there is none. */
+private fun schemeEnd(
+    v: String,
+    start: Int,
+    end: Int,
+): Int {
+    if (!v[start].isAsciiLetter()) return -1
+    var i = start + 1
+    while (i < end) {
+        val c = v[i]
+        if (c == ':') return i
+        if (!(c.isAsciiLetter() || c.isAsciiDigit() || c == '+' || c == '.' || c == '-')) return -1
+        i++
+    }
+    return -1
+}
+
+/** A scheme followed by `:` and something more, as a single token. */
 private fun isUri(
     v: String,
     start: Int,
     end: Int,
 ): Boolean {
-    if (!v[start].isAsciiLetter()) return false
-    var i = start + 1
-    while (i < end) {
-        val c = v[i]
-        if (c == ':') return i + 1 < end
-        if (!(c.isAsciiLetter() || c.isAsciiDigit() || c == '+' || c == '.' || c == '-')) return false
-        i++
-    }
-    return false
+    val colon = schemeEnd(v, start, end)
+    return colon >= 0 && colon + 1 < end
+}
+
+/** A scheme followed by `://`. Unlike "Song: Gold", never text. */
+private fun isUrl(
+    v: String,
+    start: Int,
+    end: Int,
+): Boolean {
+    val colon = schemeEnd(v, start, end)
+    return colon >= 0 && colon + 2 < end && v[colon + 1] == '/' && v[colon + 2] == '/'
 }
 
 /** `<kind>:<64-hex pubkey>` optionally followed by `:<d>`. */

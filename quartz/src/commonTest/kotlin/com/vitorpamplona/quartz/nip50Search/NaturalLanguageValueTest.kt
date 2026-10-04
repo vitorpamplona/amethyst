@@ -76,6 +76,11 @@ class NaturalLanguageValueTest {
             "{\"word\": {\"slug\": \"ol-ol98624w\", \"name\": \"Waking with Enemies\"}}",
             "[\"title\", \"artist\"]",
             "Re:Zero",
+            // URLs and addresses with unescaped spaces, as feeds publish them
+            "https://wlvl.com/assets/images/podcasts/Century Podcast logo.jpg",
+            "https://headstarts.uk/msp/longy/Katherines Wheel/katherines wheel.xml",
+            "39998:2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331:first one no uuid",
+            "ABCDEFABCDEFABCDEFABCDEFABCDEFAB",
         ).forEach { assertFalse(isNaturalLanguageValue(it), it) }
     }
 
@@ -97,13 +102,15 @@ class NaturalLanguageValueTest {
             "c65d75f4d058f4746e12e44441cacea0",
             "8ad7c296-67e9-5f57-ba52-2ff732e62e87",
             "npub1f5pre6wl6ad87vr4hr5wppqq30sh58m4p33mthnjreh03qadcajs7gwt3z",
+            "https://wlvl.com/assets/images/podcasts/Century Podcast logo.jpg",
+            "39998:2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331:first one no uuid",
             "",
         ).forEach { assertTrue(isMachineValue(it), it) }
     }
 
     @Test
     fun wordsAndPhrasesAreNotMachineValues() {
-        listOf("history", "literary-fiction", "Song: Gold", "Fiction", "Paris, 1920", "1984 Orwell").forEach {
+        listOf("history", "literary-fiction", "Song: Gold", "Fiction", "Paris, 1920", "1984 Orwell", "{ राधेय }Rishi Verma").forEach {
             assertFalse(isMachineValue(it), it)
         }
     }

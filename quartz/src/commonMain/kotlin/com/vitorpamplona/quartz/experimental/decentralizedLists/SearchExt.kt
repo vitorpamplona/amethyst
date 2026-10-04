@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.isMachineValue
 import com.vitorpamplona.quartz.nip50Search.isNaturalLanguageValue
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 
 /**
  * The human-authored text of any kind in the family, in a fixed order: the header's `names`
@@ -100,9 +101,10 @@ fun TagArray.forEachSearchableListField(visitor: IndexableFieldVisitor): Boolean
  * `relationshipType` and tags nobody has named yet — so this walk decides by what a value looks
  * like rather than by the tag it sits in.
  *
- * Skips the tags [forEachSearchableListField] already visits, plus two NIP-defined metadata tags
+ * Skips the tags [forEachSearchableListField] already visits, plus the NIP-defined metadata tags
  * that are not the event's own text: `alt` (NIP-31 fallback text, which here restates `title`
- * and `artist` behind a fixed "Song: … by …" prefix) and `client` (NIP-89 app name).
+ * and `artist` behind a fixed "Song: … by …" prefix), `client` (NIP-89 app name) and `imeta`
+ * (NIP-92 `key value` pairs, whose space would otherwise pass every URL and hash as text).
  *
  * @return false when the visitor stopped the walk.
  */
@@ -128,6 +130,7 @@ private fun isExtraFieldTagName(name: String) =
         HashtagTag.TAG_NAME,
         AltTag.TAG_NAME,
         ClientTag.TAG_NAME,
+        IMetaTag.TAG_NAME,
         -> false
 
         else -> true

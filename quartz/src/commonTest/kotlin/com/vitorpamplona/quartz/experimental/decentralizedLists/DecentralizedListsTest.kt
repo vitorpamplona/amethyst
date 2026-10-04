@@ -340,6 +340,8 @@ class DecentralizedListsTest {
                     arrayOf("e", headerId, "wss://relay.example.com", "mention"),
                     arrayOf("alt", "Book: Herfsttij der Middeleeuwen by Johan Huizinga"),
                     arrayOf("client", "Brainstorm"),
+                    arrayOf("imeta", "url https://example.com/cover.jpg", "m image/jpeg", "alt A book cover"),
+                    arrayOf("artwork", "https://example.com/Cover Art.jpg"),
                 ),
             ),
         )
