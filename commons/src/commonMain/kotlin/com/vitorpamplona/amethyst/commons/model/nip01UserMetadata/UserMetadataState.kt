@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -70,6 +71,8 @@ class UserMetadataState(
         lnAddress: String? = null,
         lnURL: String? = null,
         clinkOffer: String? = null,
+        pictureMeta: PictureMeta? = null,
+        bannerMeta: PictureMeta? = null,
     ): MetadataEvent {
         val latest = getUserMetadataEvent()
 
@@ -88,6 +91,8 @@ class UserMetadataState(
                     lnAddress = lnAddress,
                     lnURL = lnURL,
                     clinkOffer = clinkOffer,
+                    pictureMeta = pictureMeta,
+                    bannerMeta = bannerMeta,
                 )
             } else {
                 MetadataEvent.createNew(
@@ -102,6 +107,8 @@ class UserMetadataState(
                     lnAddress = lnAddress,
                     lnURL = lnURL,
                     clinkOffer = clinkOffer,
+                    pictureMeta = pictureMeta,
+                    bannerMeta = bannerMeta,
                 )
             }
 

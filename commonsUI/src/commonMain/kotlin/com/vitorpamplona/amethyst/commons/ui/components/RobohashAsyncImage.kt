@@ -100,6 +100,7 @@ fun RobohashFallbackAsyncImage(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     autoPlayGif: Boolean = true,
+    onError: (() -> Unit)? = null,
 ) {
     val useThumbnailCache = LocalProfilePictureCache.current
     if (model != null && loadProfilePicture && isAnimatedMediaUrl(model)) {
@@ -110,6 +111,7 @@ fun RobohashFallbackAsyncImage(
             modifier = modifier,
             loadRobohash = loadRobohash,
             autoPlay = autoPlayGif,
+            onError = onError,
         )
     } else if (model != null && loadProfilePicture) {
         val fallbackPainter =
@@ -143,6 +145,7 @@ fun RobohashFallbackAsyncImage(
             alpha = alpha,
             colorFilter = colorFilter,
             filterQuality = filterQuality,
+            onState = onError?.let { onError -> { if (it is AsyncImagePainter.State.Error) onError() } },
         ) {
             val state by painter.state.collectAsState()
             AnimatedImageAutoPlay((state as? AsyncImagePainter.State.Success)?.result?.image, autoPlayGif)
@@ -195,6 +198,7 @@ fun GifProfilePicture(
     modifier: Modifier,
     loadRobohash: Boolean,
     autoPlay: Boolean,
+    onError: (() -> Unit)? = null,
 ) {
     val fallbackPainter =
         if (loadRobohash) {
@@ -235,6 +239,7 @@ fun GifProfilePicture(
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
+            onState = onError?.let { onError -> { if (it is AsyncImagePainter.State.Error) onError() } },
         ) {
             val state by painter.state.collectAsState()
             AnimatedImageAutoPlay((state as? AsyncImagePainter.State.Success)?.result?.image, autoPlay)

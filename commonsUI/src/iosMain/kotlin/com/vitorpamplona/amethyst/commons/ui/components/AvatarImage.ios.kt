@@ -43,6 +43,7 @@ internal actual fun AvatarImage(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     autoPlayGif: Boolean,
+    onError: () -> Unit,
 ) {
     if (pictureUrl != null && loadProfilePicture) {
         val fallbackPainter =
@@ -60,6 +61,7 @@ internal actual fun AvatarImage(
             fallback = fallbackPainter,
             error = fallbackPainter,
             contentScale = ContentScale.Crop,
+            onError = { onError() },
         )
     } else if (loadRobohash) {
         Image(

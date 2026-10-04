@@ -64,6 +64,7 @@ val LocalProfilePictureCache = staticCompositionLocalOf { false }
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
  * @param autoPlayGif Whether animated (GIF/AVIF) pictures play. Only Android can animate them;
  *   desktop shows their first frame either way.
+ * @param pictureFallbacks NIP-92 `fallback` URLs tried, in order, when [pictureUrl] fails to load.
  * @param badge Optional overlay drawn on top of the avatar (bottom-right by
  *   convention). Used by Desktop for the WoT trust-score chip; Android call
  *   sites leave it null. When null the avatar renders as before (no extra
@@ -79,6 +80,7 @@ fun UserAvatar(
     loadProfilePicture: Boolean = LocalDisplaySettings.current.showProfilePictures,
     loadRobohash: Boolean = LocalDisplaySettings.current.loadRobohash,
     autoPlayGif: Boolean = LocalDisplaySettings.current.autoPlayVideos,
+    pictureFallbacks: List<String> = emptyList(),
     badge: @Composable (BoxScope.() -> Unit)? = null,
 ) {
     if (badge != null) {
@@ -92,6 +94,7 @@ fun UserAvatar(
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
                 autoPlayGif = autoPlayGif,
+                pictureFallbacks = pictureFallbacks,
                 badge = null,
             )
             badge()
@@ -106,18 +109,24 @@ fun UserAvatar(
                 .clip(shape = CircleShape)
         }
 
+    val picture = rememberFallbackUrlState(pictureUrl, pictureFallbacks)
+
     AvatarImage(
         userHex = userHex,
-        pictureUrl = pictureUrl,
+        pictureUrl = picture.url,
         contentDescription = contentDescription,
         modifier = avatarModifier,
         loadProfilePicture = loadProfilePicture,
         loadRobohash = loadRobohash,
         autoPlayGif = autoPlayGif,
+        onError = picture::onError,
     )
 }
 
-/** Draws the avatar picture into an already sized and clipped [modifier]. */
+/**
+ * Draws the avatar picture into an already sized and clipped [modifier]. [onError] is called when
+ * [pictureUrl] fails to load, so the caller can move on to the next fallback URL.
+ */
 @Composable
 internal expect fun AvatarImage(
     userHex: String,
@@ -127,4 +136,5 @@ internal expect fun AvatarImage(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     autoPlayGif: Boolean,
+    onError: () -> Unit,
 )
