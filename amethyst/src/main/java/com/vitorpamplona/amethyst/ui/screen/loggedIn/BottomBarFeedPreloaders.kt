@@ -120,6 +120,9 @@ private fun PreloadFor(
 
         NavBarItem.NSITES -> {}
 
+        // The Observer prints on demand through its own press; there is no feed to warm up.
+        NavBarItem.OBSERVER -> {}
+
         // The browser is a "new tab" launcher with no feed to preload.
         NavBarItem.BROWSER -> {}
 

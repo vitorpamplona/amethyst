@@ -168,6 +168,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashScre
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagScreen
+import com.vitorpamplona.amethyst.commons.observer.ui.ObserverScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.HighlightsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.NewHighlightScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.HomeScreen
@@ -284,6 +285,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScre
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
+import com.vitorpamplona.amethyst.ui.observer.DisplayObserverProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
@@ -425,6 +427,7 @@ fun AppNavigation(
         DisplayCrashMessages(accountViewModel, nav)
         DisplayResourceUsageAlert(accountViewModel, nav)
         DisplayBroadcastProgress(accountViewModel)
+        DisplayObserverProgress(accountViewModel, nav)
         DisplayBlossomSyncProgress()
 
         ObserveIncomingCalls(accountViewModel)
@@ -502,6 +505,7 @@ fun BuildNavigation(
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Observer> { ObserverScreen(accountViewModel, nav) }
         composableFromEnd<Route.Browser>(capWidth = false) { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }

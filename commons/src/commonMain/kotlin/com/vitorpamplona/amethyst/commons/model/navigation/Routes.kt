@@ -125,6 +125,9 @@ sealed class Route {
 
     @Serializable object Nsites : Route()
 
+    /** The Nostr Observer: today's front page, laid out from the reader's web-of-trust lens. */
+    @Serializable object Observer : Route()
+
     @Serializable object Browser : Route()
 
     @Serializable object FavoriteApps : Route()

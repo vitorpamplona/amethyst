@@ -99,6 +99,7 @@ private val DrawerYouItems: List<NavBarItem> =
 
 private val DrawerFeedsItems: List<NavBarItem> =
     listOfNotNull(
+        NavBarItem.OBSERVER,
         NavBarItem.ARTICLES,
         NavBarItem.PICTURES,
         NavBarItem.SHORTS,

@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
+import com.vitorpamplona.amethyst.cli.commands.ObserverCommand
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.SnoCommands
@@ -307,6 +308,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
         "graperank" -> GrapeRankCommand.dispatch(dataDir, tail)
         "search" -> SearchCommand.dispatch(dataDir, tail)
+        "observer" -> ObserverCommand.run(dataDir, tail)
         "zap" -> ZapCommand.dispatch(dataDir, tail)
         "bolt12" -> Bolt12Commands.dispatch(dataDir, tail)
         "offer" -> OfferCommands.dispatch(dataDir, tail)
@@ -360,7 +362,7 @@ private fun printVerbList() {
         |  identity:    init create login logoff whoami use status
         |  primitives:  decode encode verify key filter nip kind pow namecoin
         |  events:      event publish fetch subscribe count sync encrypt decrypt gift
-        |  social:      notes profile follow unfollow search zap dm outbox
+        |  social:      notes profile follow unfollow search observer zap dm outbox
         |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
         |  trust:       graperank fof
@@ -796,6 +798,10 @@ private fun printUsage() {
         |  search note QUERY [--limit N]              search event content
         |                    [--kind K[,K…]]           (default kind:1; e.g. 1,30023; --kinds alias)
         |                    [--timeout SECS]
+        |
+        |Nostr Observer:
+        |  observer [USER] [--relay URL]              today's front page from USER's web-of-trust lens
+        |                                             (default: you); laid out locally, no server
         |                                              uses your kind:10007 search-relay
         |                                              list, falls back to Amethyst defaults
         |

@@ -97,6 +97,7 @@ in `commonsUI`, under the same package.
 | `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
+| `observer`     | mixed | The Nostr Observer, native: `ObserverPull` reads the reader's day off the search relay through their `observer:` web-of-trust lens (readiness probe, one REQ per desk, the lens's reactions/reposts/replies), `ObserverEditor` lays out an `ObserverEdition` on the device with no model, and `ObserverPress` runs it on the account scope. The newspaper screen and the progress banner are in `commonsUI` `observer/ui`; `amy observer` prints the same edition. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
 | `emojicoder`   | no  | Variation-selector emoji encode/decode. |
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |

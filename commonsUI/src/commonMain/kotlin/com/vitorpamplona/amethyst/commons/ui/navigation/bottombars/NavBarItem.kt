@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplets
 import com.vitorpamplona.amethyst.commons.resources.nests
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_title
 import com.vitorpamplona.amethyst.commons.resources.nsites
+import com.vitorpamplona.amethyst.commons.resources.observer
 import com.vitorpamplona.amethyst.commons.resources.pictures
 import com.vitorpamplona.amethyst.commons.resources.polls
 import com.vitorpamplona.amethyst.commons.resources.profile
@@ -288,6 +289,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = Res.string.nsites,
                 icon = MaterialSymbols.Language,
                 resolveRoute = { Route.Nsites },
+            ),
+        NavBarItem.OBSERVER to
+            NavBarItemDef(
+                id = NavBarItem.OBSERVER,
+                labelRes = Res.string.observer,
+                icon = MaterialSymbols.News,
+                resolveRoute = { Route.Observer },
             ),
         NavBarItem.BROWSER to
             NavBarItemDef(
@@ -552,6 +560,7 @@ val BottomBarCategories: List<NavBarCategory> =
             Res.string.bottom_bar_category_feeds,
             MaterialSymbols.Subscriptions,
             listOf(
+                NavBarItem.OBSERVER,
                 NavBarItem.ARTICLES,
                 NavBarItem.LONGS,
                 NavBarItem.PICTURES,

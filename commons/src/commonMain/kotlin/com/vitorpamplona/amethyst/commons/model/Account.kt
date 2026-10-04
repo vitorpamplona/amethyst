@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.observer.ObserverPress
+import com.vitorpamplona.amethyst.commons.observer.ObserverPull
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -908,6 +910,20 @@ class Account(
 
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
+
+    /**
+     * The Nostr Observer's press: prints today's front page from this account's web-of-trust
+     * lens on the search relay, laid out on the device. Lazy — nothing runs until the reader asks
+     * for a paper. Printed events go into the cache so tapping a story opens it immediately.
+     */
+    val observerPress: ObserverPress by lazy {
+        ObserverPress(
+            reader = signer.pubKey,
+            pull = ObserverPull(client),
+            scope = scope,
+            onEvents = { events -> events.forEach { cache.justConsume(it, null, false) } },
+        )
+    }
 
     val followSetDecryptionCache = FollowSetDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)

@@ -55,6 +55,7 @@ enum class NavBarItem {
     SOFTWARE_APPS,
     NAPPLETS,
     NSITES,
+    OBSERVER,
     BROWSER,
     FAVORITE_APPS,
     CALENDARS,

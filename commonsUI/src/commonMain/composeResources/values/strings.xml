@@ -6463,4 +6463,67 @@
         <item quantity="one">+%1$d more answer</item>
         <item quantity="other">+%1$d more answers</item>
     </plurals>
+    <string name="observer">Nostr Observer</string>
+    <string name="observer_masthead">The Nostr Observer</string>
+    <string name="observer_motto">All the notes fit to rank</string>
+    <string name="observer_intro_title">Your paper, from your web of trust</string>
+    <string name="observer_intro_body">The Observer reads the last 24 hours of Nostr through your own web-of-trust lens and lays it out as a front page, right here on your phone. No server and no AI write it: every headline is the author's own words, ranked by what the people you trust liked, shared and replied to.</string>
+    <string name="observer_print">Print today's paper</string>
+    <string name="observer_reprint">Reprint</string>
+    <string name="observer_printing">Printing your Observer…</string>
+    <string name="observer_step_checking_lens">Checking your web-of-trust lens</string>
+    <string name="observer_step_desks">Reading the desks (%1$d of %2$d)</string>
+    <string name="observer_step_signals">Reading what your web of trust liked and shared</string>
+    <string name="observer_step_bylines">Looking up bylines</string>
+    <string name="observer_step_layout">Laying out the page</string>
+    <string name="observer_ready">Your paper is ready</string>
+    <string name="observer_read">Read</string>
+    <string name="observer_dismiss">Dismiss</string>
+    <string name="observer_cancel">Stop printing</string>
+    <string name="observer_try_again">Try again</string>
+    <string name="observer_failed">The press stopped before the paper was finished.</string>
+    <string name="observer_no_lens_title">No paper today</string>
+    <string name="observer_no_score_list">You have not chosen who works out your web of trust (a NIP-85 trust provider list). The Observer only prints a paper ranked through your own lens, never one ranked some other way.</string>
+    <string name="observer_no_rank_service">Your trust provider list does not name a public ranking service the search relay can read.</string>
+    <string name="observer_not_projected">Your web of trust is still being loaded into the search relay. This clears on its own, try again later.</string>
+    <string name="observer_relay_silent">The search relay did not answer. Check your connection and try again.</string>
+    <string name="observer_empty">Your lens surfaced nothing in the last 24 hours.</string>
+    <string name="observer_ranked_as">Ranked as %1$s</string>
+    <string name="observer_edition_code">No. %1$s</string>
+    <string name="observer_day_notes">%1$s notes above your trust floor today</string>
+    <string name="observer_trending">Trending in your web</string>
+    <string name="observer_top_stories">Top stories</string>
+    <string name="observer_section_photos">Photographs</string>
+    <string name="observer_section_long_reads">Long reads</string>
+    <string name="observer_section_live">On the air</string>
+    <string name="observer_section_video">Video</string>
+    <string name="observer_section_highlights">Highlights</string>
+    <string name="observer_section_polls">Polls</string>
+    <string name="observer_section_calendar">Calendar</string>
+    <string name="observer_section_classifieds">Classifieds</string>
+    <string name="observer_section_apps">Releases</string>
+    <string name="observer_section_code">Code</string>
+    <string name="observer_section_wiki">Wiki</string>
+    <string name="observer_section_wire">The wire</string>
+    <string name="observer_detail_price_per">%1$s per %2$s</string>
+    <string name="observer_detail_starts">Starts %1$s</string>
+    <string name="observer_detail_all_day">%1$s, all day</string>
+    <string name="observer_detail_location">At %1$s</string>
+    <string name="observer_detail_duration">Runs %1$s</string>
+    <string name="observer_detail_quoting">Words by %1$s</string>
+    <string name="observer_detail_source">From %1$s</string>
+    <string name="observer_detail_status">Status: %1$s</string>
+    <string name="observer_on_air_since">On air since %1$s</string>
+    <plurals name="observer_stats_stories">
+        <item quantity="one">%1$d story from %2$d people</item>
+        <item quantity="other">%1$d stories from %2$d people</item>
+    </plurals>
+    <plurals name="observer_stats_signals">
+        <item quantity="one">ranked by %1$d signal from your web of trust</item>
+        <item quantity="other">ranked by %1$d signals from your web of trust</item>
+    </plurals>
+    <plurals name="observer_detail_watching">
+        <item quantity="one">%1$d watching</item>
+        <item quantity="other">%1$d watching</item>
+    </plurals>
 </resources>
