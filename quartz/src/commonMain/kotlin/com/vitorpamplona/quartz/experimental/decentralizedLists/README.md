@@ -95,7 +95,8 @@ indexed when it has whitespace or a non-ASCII character, or is a single
 capitalized word ("Fiction", "Aristotle"), and is never a machine value (JSON,
 a number, a URI of any scheme, an address, a hex id, a UUID, bech32). `t`
 values skip the natural-language test but not the machine one. `alt` (NIP-31
-fallback text that restates other tags) and `client` are not indexed.
+fallback text that restates other tags), `client` and `imeta` (NIP-92 `key
+value` pairs) are not indexed.
 
 `content` is not part of the spec, and ids, pubkeys and coordinates are
 served by `#p`/`#e`/`#a`/`#z` filters, so none of them are indexed.
