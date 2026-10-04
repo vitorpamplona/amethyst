@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.metric
 import com.vitorpamplona.quartz.experimental.trustedLists.title
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
@@ -219,6 +220,35 @@ class SearchTest : BaseDBTest() {
             db.assertQuery(null, Filter(search = "uniqmetric"))
             db.assertQuery(null, Filter(search = "uniqlist"))
             db.assertQuery(null, Filter(search = memberKey))
+        }
+
+    @Test
+    fun testDecentralizedListItemsAreSearchableByEveryNaturalLanguageTag() =
+        forEachDB { db ->
+            val item =
+                signer.sign<AddressableListItemEvent>(
+                    TimeUtils.now(),
+                    AddressableListItemEvent.KIND,
+                    arrayOf(
+                        arrayOf("d", "ol-uniqbookslug"),
+                        arrayOf("title", "Uniqtitle Middeleeuwen"),
+                        arrayOf("author", "Johan Uniqauthor"),
+                        arrayOf("subject", "Uniqsubject"),
+                        arrayOf("lang", "uniqlang"),
+                        arrayOf("alt", "Book: Uniqalt"),
+                    ),
+                    "",
+                )
+            db.store.insertEvent(item)
+
+            db.assertQuery(item, Filter(search = "uniqtitle"))
+            db.assertQuery(item, Filter(search = "uniqauthor"))
+            db.assertQuery(item, Filter(search = "uniqsubject"))
+
+            // the slug, a lowercase data label and the NIP-31 fallback text are not indexed
+            db.assertQuery(null, Filter(search = "uniqbookslug"))
+            db.assertQuery(null, Filter(search = "uniqlang"))
+            db.assertQuery(null, Filter(search = "uniqalt"))
         }
 
     @Test

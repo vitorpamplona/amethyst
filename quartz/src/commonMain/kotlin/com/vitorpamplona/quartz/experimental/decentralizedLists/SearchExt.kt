@@ -35,12 +35,17 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.Description
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.isMachineValue
+import com.vitorpamplona.quartz.nip50Search.isNaturalLanguageValue
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 
 /**
  * The human-authored text of any kind in the family, in a fixed order: the header's `names`
  * and `titles` (singular, then plural), the item's `name` and `title`, `description`,
- * `comments`, then each `t` item value. Headers and items share one walk because the spec's
+ * `comments`, then each `t` value that is not a machine value, then
+ * [forEachSearchableListExtraField]. Headers and items share one walk because the spec's
  * nonstandard method lets an item carry header tags; each kind simply has fewer of them set.
  *
  * `content` is not part of the spec and ids/pubkeys/coordinates are served by tag filters,
@@ -84,10 +89,49 @@ fun TagArray.forEachSearchableListField(visitor: IndexableFieldVisitor): Boolean
     description?.let { if (!visitor.visit(it)) return false }
     comments?.let { if (!visitor.visit(it)) return false }
     fastForEach { tag ->
-        HashtagTag.parse(tag)?.let { if (!visitor.visit(it)) return false }
+        HashtagTag.parse(tag)?.let { if (!isMachineValue(it) && !visitor.visit(it)) return false }
+    }
+    return forEachSearchableListExtraField(visitor)
+}
+
+/**
+ * Every value of every other tag that reads as natural language ([isNaturalLanguageValue]), in
+ * tag order. The family's tag set is open — deployments add `author`, `subject`, `artist`,
+ * `relationshipType` and tags nobody has named yet — so this walk decides by what a value looks
+ * like rather than by the tag it sits in.
+ *
+ * Skips the tags [forEachSearchableListField] already visits, plus two NIP-defined metadata tags
+ * that are not the event's own text: `alt` (NIP-31 fallback text, which here restates `title`
+ * and `artist` behind a fixed "Song: … by …" prefix) and `client` (NIP-89 app name).
+ *
+ * @return false when the visitor stopped the walk.
+ */
+fun TagArray.forEachSearchableListExtraField(visitor: IndexableFieldVisitor): Boolean {
+    fastForEach { tag ->
+        if (tag.size < 2 || !isExtraFieldTagName(tag[0])) return@fastForEach
+        for (i in 1 until tag.size) {
+            val value = tag[i]
+            if (isNaturalLanguageValue(value) && !visitor.visit(value)) return false
+        }
     }
     return true
 }
+
+private fun isExtraFieldTagName(name: String) =
+    when (name) {
+        NamesTag.TAG_NAME,
+        TitlesTag.TAG_NAME,
+        NameTag.TAG_NAME,
+        TitleTag.TAG_NAME,
+        DescriptionTag.TAG_NAME,
+        CommentsTag.TAG_NAME,
+        HashtagTag.TAG_NAME,
+        AltTag.TAG_NAME,
+        ClientTag.TAG_NAME,
+        -> false
+
+        else -> true
+    }
 
 /**
  * The TITLE role of [forEachSearchableListField], for search engines that weight fields: what the
@@ -102,6 +146,22 @@ fun TagArray.searchableListTitles(): List<String?> {
 
 /** The DESCRIPTION role of [forEachSearchableListField]: `description`, then `comments`. */
 fun TagArray.searchableListDescriptions(): List<String?> = listOf(description(), comments())
+
+/**
+ * The TEXT role of [forEachSearchableListField]: the [forEachSearchableListExtraField] values, one
+ * per line, or null when the event has none. The `t` values are not here; the search funnel
+ * carries them as hashtags.
+ */
+fun TagArray.searchableListExtraText(): String? =
+    buildString {
+        forEachSearchableListExtraField { field ->
+            if (field != null) {
+                if (isNotEmpty()) append('\n')
+                append(field)
+            }
+            true
+        }
+    }.ifEmpty { null }
 
 /** The write-path join of [forEachSearchableListField]: one field per line. */
 fun TagArray.searchableListContent() =
