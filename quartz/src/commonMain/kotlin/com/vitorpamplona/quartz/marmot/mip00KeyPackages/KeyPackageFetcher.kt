@@ -23,8 +23,12 @@ package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Discovery helpers for MIP-00 KeyPackages.
@@ -73,19 +77,49 @@ object KeyPackageFetcher {
      * relays and pick whichever replied first, which would frequently be the
      * older event. Draining to EOSE and selecting by `created_at` matches
      * MDK/whitenoise semantics and keeps freshly-rotated bundles reachable.
+     *
+     * Draining to EOSE is bounded by [settleAfterFirstMs], though. The relay
+     * set unions the invitee's relays with ours, and one of them that never
+     * sends EOSE held every invite for the whole [idleTimeoutMs] — adding a
+     * member took most of a minute. Once a KeyPackage has arrived, the other
+     * relays get [settleAfterFirstMs] to report a newer one and the fetch
+     * stops. A relay slower than that can only cost us a rotation that
+     * happened in the last moments, and the older package still opens.
      */
     suspend fun fetchKeyPackage(
         client: INostrClient,
         targetPubKey: HexKey,
         relays: Set<NormalizedRelayUrl>,
         idleTimeoutMs: Long = 30_000,
+        settleAfterFirstMs: Long = 3_000,
     ): KeyPackageEvent? {
         if (relays.isEmpty()) return null
         val filter = MarmotFilters.keyPackagesByAuthor(targetPubKey)
-        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs)
-        // fetchAll returns events sorted by created_at DESC, so the first
-        // KeyPackageEvent is the most recent one any relay had.
-        return events.firstNotNullOfOrNull { it as? KeyPackageEvent }
+        // Collected from inside onEvent (single-threaded) rather than read from the
+        // return value, which a cancelled fetch discards.
+        val found = mutableListOf<KeyPackageEvent>()
+        val firstArrived = CompletableDeferred<Unit>()
+        coroutineScope {
+            val fetch =
+                launch {
+                    client.fetchAllWithHooks(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs) { _, event ->
+                        if (event is KeyPackageEvent) {
+                            found.add(event)
+                            firstArrived.complete(Unit)
+                        }
+                        true
+                    }
+                }
+            val settle =
+                launch {
+                    firstArrived.await()
+                    delay(settleAfterFirstMs)
+                    fetch.cancel()
+                }
+            fetch.join()
+            settle.cancel()
+        }
+        return found.maxByOrNull { it.createdAt }
     }
 
     /**

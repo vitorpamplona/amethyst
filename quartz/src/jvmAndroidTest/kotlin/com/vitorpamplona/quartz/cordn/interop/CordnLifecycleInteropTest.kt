@@ -260,10 +260,11 @@ class CordnLifecycleInteropTest {
         val group =
             MlsGroup.create(
                 identity = CordnCredential.of(alice).identity,
-                policy = TsMlsFixtures.cordnPolicy,
+                policy = CordnGroupPolicy,
                 initialExtensions = listOf(CordnGroupMetadata(name = "from Kotlin").toExtension()),
             )
 
+        group.clock = { TsMlsFixtures.validAt("bob2-kp.bin") }
         val result = group.addMember(TsMlsFixtures.bytes("bob2-kp.bin"))
 
         assertEquals(1L, group.epoch)

@@ -103,12 +103,21 @@ const val TRANSPORT_RETRY_GRACE_MS = 5_000L
  */
 private const val RECONNECTED = "\u0000publish-retry-reconnected"
 
+/**
+ * True when at least one relay in [relayList] accepted [event].
+ *
+ * By default this waits for every relay's verdict (or the timeout) first. Set [untilFirstAccept]
+ * when one acceptance is all the caller needs: it returns at the first `OK true` instead of
+ * waiting out the slowest relay. The other relays still get the event — the pool delivers it
+ * regardless — only the wait for their answers is skipped.
+ */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirm(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Boolean = publishAndCollectResults(event, relayList, timeoutInSeconds).any { it.value.accepted }
+    untilFirstAccept: Boolean = false,
+): Boolean = publishAndCollectResults(event, relayList, timeoutInSeconds, untilFirstAccept = untilFirstAccept).any { it.value.accepted }
 
 /**
  * Sends an event to the given relays and waits for OK responses.
@@ -135,6 +144,9 @@ suspend fun INostrClient.publishAndConfirmDetailed(
  * per-relay reason alongside the verdict. Relays that never answered inside
  * the timeout are present with `accepted = false, message = "no response
  * within timeout"`, so the result always covers the full [relayList].
+ *
+ * With [untilFirstAccept] the wait ends at the first `OK true`; relays that had
+ * not answered by then are reported as `no response within timeout`.
  */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndCollectResults(
@@ -142,6 +154,7 @@ suspend fun INostrClient.publishAndCollectResults(
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
     transportRetries: Int = DEFAULT_TRANSPORT_RETRIES,
+    untilFirstAccept: Boolean = false,
 ): Map<NormalizedRelayUrl, PublishResult> {
     val resultChannel = Channel<DetailedResult>(UNLIMITED)
     val mark = TimeSource.Monotonic.markNow()
@@ -290,6 +303,8 @@ suspend fun INostrClient.publishAndCollectResults(
                                         resetBackoff()
                                         reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
                                     }
+
+                                    if (untilFirstAccept && receivedResults[result.relay]?.accepted == true) break
                                 }
                             }
                             // A relay whose last word was a transport failure and whose retry

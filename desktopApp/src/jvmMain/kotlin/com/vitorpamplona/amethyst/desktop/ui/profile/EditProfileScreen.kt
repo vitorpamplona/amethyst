@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.profile.EditProfileFields
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
 import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.upload.toPictureMeta
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -89,6 +90,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -136,6 +138,11 @@ fun EditProfileDialog(
     var broadcastStatus by remember { mutableStateOf<ProfileBroadcastStatus>(ProfileBroadcastStatus.Idle) }
     var isUploadingAvatar by remember { mutableStateOf(false) }
     var isUploadingBanner by remember { mutableStateOf(false) }
+
+    // NIP-92 imeta of the images uploaded in this dialog. MetadataEvent drops them on save if the
+    // URL field no longer names the uploaded file.
+    var pictureMeta by remember { mutableStateOf<PictureMeta?>(null) }
+    var bannerMeta by remember { mutableStateOf<PictureMeta?>(null) }
     var showUnsavedWarning by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
@@ -177,14 +184,14 @@ fun EditProfileDialog(
 
     fun uploadFile(
         file: File,
-        onUrl: (String) -> Unit,
+        onUrl: (String, PictureMeta) -> Unit,
         setUploading: (Boolean) -> Unit,
     ) {
         scope.launch(Dispatchers.IO) {
             setUploading(true)
             try {
                 val result = orchestrator.upload(file, null, serverBaseUrl, account.signer, fallbackServerBaseUrls = blossomServers?.value.orEmpty())
-                result.blossom.url?.let { onUrl(it) }
+                result.blossom.url?.let { onUrl(it, result.toPictureMeta(it)) }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -196,7 +203,7 @@ fun EditProfileDialog(
     }
 
     fun pickAndUpload(
-        onUrl: (String) -> Unit,
+        onUrl: (String, PictureMeta) -> Unit,
         setUploading: (Boolean) -> Unit,
     ) {
         scope.launch(Dispatchers.IO) {
@@ -234,6 +241,8 @@ fun EditProfileDialog(
                             lnAddress = fields.lnAddress.value,
                             lnURL = fields.lnURL.value,
                             clinkOffer = fields.clinkOffer.value,
+                            pictureMeta = pictureMeta,
+                            bannerMeta = bannerMeta,
                         )
                     } else {
                         MetadataEvent.createNew(
@@ -248,6 +257,8 @@ fun EditProfileDialog(
                             lnAddress = fields.lnAddress.value,
                             lnURL = fields.lnURL.value,
                             clinkOffer = fields.clinkOffer.value,
+                            pictureMeta = pictureMeta,
+                            bannerMeta = bannerMeta,
                         )
                     }
                 val signedMetadata = account.signer.sign(metadataTemplate)
@@ -296,27 +307,43 @@ fun EditProfileDialog(
         }
     }
 
+    fun onPictureUploaded(
+        url: String,
+        meta: PictureMeta,
+    ) {
+        fields.picture.value = url
+        pictureMeta = meta
+    }
+
+    fun onBannerUploaded(
+        url: String,
+        meta: PictureMeta,
+    ) {
+        fields.banner.value = url
+        bannerMeta = meta
+    }
+
     EditProfileContent(
         fields = fields,
         onSave = ::save,
         onCancel = ::tryDismiss,
         onPickAvatar = {
             pickAndUpload(
-                onUrl = { fields.picture.value = it },
+                onUrl = ::onPictureUploaded,
                 setUploading = { isUploadingAvatar = it },
             )
         },
         onPickBanner = {
             pickAndUpload(
-                onUrl = { fields.banner.value = it },
+                onUrl = ::onBannerUploaded,
                 setUploading = { isUploadingBanner = it },
             )
         },
         onDropAvatar = { file ->
-            uploadFile(file, { fields.picture.value = it }, { isUploadingAvatar = it })
+            uploadFile(file, ::onPictureUploaded, { isUploadingAvatar = it })
         },
         onDropBanner = { file ->
-            uploadFile(file, { fields.banner.value = it }, { isUploadingBanner = it })
+            uploadFile(file, ::onBannerUploaded, { isUploadingBanner = it })
         },
         isUploadingAvatar = isUploadingAvatar,
         isUploadingBanner = isUploadingBanner,

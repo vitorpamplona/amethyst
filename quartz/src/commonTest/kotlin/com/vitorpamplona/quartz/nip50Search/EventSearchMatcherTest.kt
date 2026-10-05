@@ -66,18 +66,49 @@ class EventSearchMatcherTest {
     }
 
     @Test
-    fun tagValuesAreSearchedExceptTheOnesNobodyMeansToSearch() {
+    fun aSearchableKindMatchesWhatItIndexesAndNothingElse() {
+        // Kind 1 indexes its subject and content, as a store's full-text index does; a hashtag
+        // the kind leaves out of its index is left out here too, so local and store search agree.
         assertTrue(matches("subj", note("body", arrayOf(arrayOf("subject", "a subject")))))
-        assertTrue(matches("bitcoin", note("body", arrayOf(arrayOf("t", "bitcoin")))))
-        // `p`/`e`/`a` hold hex ids, `client` and `alt` hold text the author did not write.
+        assertFalse(matches("bitcoin", note("body", arrayOf(arrayOf("t", "bitcoin")))))
         assertFalse(matches("amethyst", note("body", arrayOf(arrayOf("client", "amethyst")))))
         assertFalse(matches("deadbeef", note("body", arrayOf(arrayOf("p", "deadbeef".repeat(8))))))
     }
 
     @Test
+    fun aDecentralizedListItemMatchesItsNaturalLanguageTagsButNotItsData() {
+        val book =
+            note(
+                "",
+                arrayOf(
+                    arrayOf("d", "ol-ol1141875w"),
+                    arrayOf("title", "Herfsttij der Middeleeuwen"),
+                    arrayOf("author", "Johan Huizinga"),
+                    arrayOf("subject", "Middle Ages"),
+                    arrayOf("medium", "music"),
+                    arrayOf("cover", "https://covers.openlibrary.org/b/id/7245546-L.jpg"),
+                ),
+                kind = 39999,
+            )
+        assertTrue(matches("huizinga", book))
+        assertTrue(matches("middle ages", book))
+        assertFalse(matches("music", book))
+        assertFalse(matches("openlibrary", book))
+        assertFalse(matches("ol1141875w", book))
+    }
+
+    @Test
+    fun aKindWithNoIndexableFieldsFallsBackToItsTagsAndContent() {
+        assertTrue(matches("bitcoin", note("+", arrayOf(arrayOf("t", "bitcoin")), kind = 7)))
+        assertTrue(matches("+", note("+", kind = 7)))
+        // `p`/`e`/`a` hold hex ids, `client` and `alt` hold text the author did not write.
+        assertFalse(matches("amethyst", note("+", arrayOf(arrayOf("client", "amethyst")), kind = 7)))
+        assertFalse(matches("deadbeef", note("+", arrayOf(arrayOf("p", "deadbeef".repeat(8))), kind = 7)))
+    }
+
+    @Test
     fun indexableFieldsBeyondContentAreSearched() {
-        // A long-form title lives in a tag, but its summary reaches the matcher through the
-        // visitor as well — both paths must find it.
+        // A long-form title and summary live in tags; they reach the matcher through the visitor.
         val article = note("the body", arrayOf(arrayOf("title", "Lightning"), arrayOf("summary", "a summary")), kind = 30023)
         assertTrue(matches("Lightning", article))
         assertTrue(matches("summary", article))

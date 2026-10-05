@@ -299,7 +299,7 @@ class DecentralizedListsTest {
             )
         assertEquals("Fido\nVery good\nFido", item.indexableContent())
 
-        listOf<SearchableEvent>(header, item).forEach { event ->
+        listOf<SearchableEvent>(header, item, book).forEach { event ->
             val fields = mutableListOf<String>()
             event.forEachIndexableField { field ->
                 field?.let { fields.add(it) }
@@ -309,5 +309,57 @@ class DecentralizedListsTest {
         }
 
         assertEquals("", assertIs<ListItemEvent>(event(9999, emptyArray())).indexableContent())
+    }
+
+    // A book item as a Decentralized Lists deployment publishes it: deployment-specific tags
+    // around the spec's own, most of them machine data.
+    private val book =
+        assertIs<AddressableListItemEvent>(
+            event(
+                39999,
+                arrayOf(
+                    arrayOf("d", "ol-ol1141875w"),
+                    arrayOf("z", "39998:$author:books"),
+                    arrayOf("title", "Herfsttij der Middeleeuwen"),
+                    arrayOf("t", "history"),
+                    arrayOf("t", "tag:soundcloud,2010:tracks/711391888"),
+                    arrayOf("t", "https://example.com/ep/1"),
+                    arrayOf("author", "Johan Huizinga"),
+                    arrayOf("subject", "Middle Ages"),
+                    arrayOf("subject", "Fiction"),
+                    arrayOf("subject", "Civilisation médiévale"),
+                    arrayOf("open-library-id", "OL1141875W"),
+                    arrayOf("isbn", "9780226360935"),
+                    arrayOf("isbn10", "057507681X"),
+                    arrayOf("year", "1919"),
+                    arrayOf("lang", "eng"),
+                    arrayOf("source", "openlibrary"),
+                    arrayOf("cover", "https://covers.openlibrary.org/b/id/7245546-L.jpg"),
+                    arrayOf("json", "{\"word\": {\"name\": \"Herfsttij der Middeleeuwen\"}}"),
+                    arrayOf("p", author, "wss://relay.example.com", "Johan Fan"),
+                    arrayOf("e", headerId, "wss://relay.example.com", "mention"),
+                    arrayOf("alt", "Book: Herfsttij der Middeleeuwen by Johan Huizinga"),
+                    arrayOf("client", "Brainstorm"),
+                    arrayOf("imeta", "url https://example.com/cover.jpg", "m image/jpeg", "alt A book cover"),
+                    arrayOf("artwork", "https://example.com/Cover Art.jpg"),
+                ),
+            ),
+        )
+
+    @Test
+    fun searchIndexesEveryNaturalLanguageTagValue() {
+        assertEquals(
+            "Herfsttij der Middeleeuwen\nhistory\nJohan Huizinga\nMiddle Ages\nFiction\nCivilisation médiévale\nJohan Fan",
+            book.indexableContent(),
+        )
+    }
+
+    @Test
+    fun searchSkipsMachineHashtagsButKeepsSingleWordOnes() {
+        val item =
+            assertIs<ListItemEvent>(
+                event(9999, arrayOf(arrayOf("t", "romance"), arrayOf("t", "8ad7c296-67e9-5f57-ba52-2ff732e62e87"), arrayOf("t", "473"))),
+            )
+        assertEquals("romance", item.indexableContent())
     }
 }

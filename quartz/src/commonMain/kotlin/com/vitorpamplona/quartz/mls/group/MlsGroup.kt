@@ -152,6 +152,15 @@ class MlsGroup private constructor(
      */
     private val policy: MlsGroupPolicy = MlsGroupPolicy.Permissive,
 ) {
+    /**
+     * Unix seconds the RFC 9420 lifetime checks on incoming LeafNodes compare against.
+     *
+     * Internal so only this module's tests can move it: they replay fixed interop vectors
+     * (ts-mls KeyPackages carrying a two-week lifetime), and must check them inside the window
+     * they were minted for rather than against whatever day the suite happens to run.
+     */
+    internal var clock: () -> Long = TimeUtils::now
+
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
     val leafIndex: Int get() = myLeafIndex
@@ -2001,7 +2010,7 @@ class MlsGroup private constructor(
             // the signer authorized.
             val lifetime = updatePath.leafNode.lifetime
             if (lifetime != null) {
-                val now = policy.now()
+                val now = clock()
                 require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                     "LeafNode lifetime expired or not yet valid in UpdatePath"
                 }
@@ -2809,7 +2818,7 @@ class MlsGroup private constructor(
         // Validate lifetime
         val lifetime = leafNode.lifetime
         if (lifetime != null) {
-            val now = policy.now()
+            val now = clock()
             require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                 "KeyPackage lifetime expired or not yet valid"
             }

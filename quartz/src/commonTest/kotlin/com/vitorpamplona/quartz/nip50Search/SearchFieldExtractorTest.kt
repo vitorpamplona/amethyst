@@ -477,6 +477,30 @@ class SearchFieldExtractorTest {
     }
 
     @Test
+    fun decentralizedListItemExtraTagsAreTheTextTier() {
+        // Deployment tags rank below what the item is called and what it is about; machine
+        // values and the NIP-31 alt text are not indexed at all.
+        val tags =
+            arrayOf(
+                arrayOf("d", "ol-ol98624w"),
+                arrayOf("title", "Waking with Enemies"),
+                arrayOf("author", "Christopher Pike"),
+                arrayOf("subject", "Horror tales"),
+                arrayOf("lang", "eng"),
+                arrayOf("isbn", "9781534445145"),
+                arrayOf("alt", "Book: Waking with Enemies by Christopher Pike"),
+            )
+        val fields = SearchFieldExtractor.extract(AddressableListItemEvent("3c".repeat(32), alice, 1L, tags, "", ""))
+        assertEquals(
+            IndexableFields.Tiered(
+                primary = listOf("Waking with Enemies"),
+                text = "Christopher Pike\nHorror tales",
+            ),
+            fields,
+        )
+    }
+
+    @Test
     fun textTracksIndexWhatIsSaidNotTheTimings() {
         val vtt = "WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.000 align:start\n<v Roger>Hello nostr\n"
         val fields = SearchFieldExtractor.extract(TextTrackEvent("3c".repeat(32), alice, 1L, arrayOf(arrayOf("d", "subtitles:v1")), vtt, ""))

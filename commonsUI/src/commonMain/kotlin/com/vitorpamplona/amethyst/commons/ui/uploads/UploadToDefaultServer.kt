@@ -52,7 +52,20 @@ suspend fun uploadToDefaultServer(
     onError: (title: String, message: String) -> Unit,
     quality: CompressorQuality = CompressorQuality.MEDIUM,
     stripMetadata: Boolean = true,
-): String? {
+): String? = uploadToDefaultServerWithMetadata(media, account, uploader, onError, quality, stripMetadata)?.url
+
+/**
+ * Same as [uploadToDefaultServer], but returns the whole upload result, whose file header
+ * (hash, size, dimensions, blurhash) fills a NIP-92 `imeta` for the uploaded URL.
+ */
+suspend fun uploadToDefaultServerWithMetadata(
+    media: SelectedMedia,
+    account: Account,
+    uploader: MediaUploader,
+    onError: (title: String, message: String) -> Unit,
+    quality: CompressorQuality = CompressorQuality.MEDIUM,
+    stripMetadata: Boolean = true,
+): UploadOrchestrator.OrchestratorResult.ServerResult? {
     val state =
         try {
             UploadOrchestrator().upload(
@@ -80,7 +93,7 @@ suspend fun uploadToDefaultServer(
         is UploadingState.Finished -> {
             val uploaded = state.result
             if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                uploaded.url
+                uploaded
             } else {
                 onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading))
                 null

@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
+import com.vitorpamplona.amethyst.commons.ui.components.rememberFallbackUrlState
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -113,6 +114,8 @@ import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.ProfileImageMetas
+import com.vitorpamplona.quartz.nip01Core.metadata.profileImageMetas
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -184,6 +187,14 @@ fun UserProfileScreen(
                 ?.value
                 ?.info
                 ?.banner,
+        )
+    }
+    var imageMetas by remember {
+        mutableStateOf(
+            cachedMetadata
+                ?.flow
+                ?.value
+                ?.imageMetas ?: ProfileImageMetas.EMPTY,
         )
     }
     var nip05 by remember {
@@ -432,6 +443,7 @@ fun UserProfileScreen(
                                 about = metadata.about
                                 picture = metadata.picture
                                 banner = metadata.banner
+                                imageMetas = event.profileImageMetas(metadata)
                                 nip05 = metadata.nip05
                                 website = metadata.website
                                 lnAddress = metadata.lnAddress()
@@ -1006,8 +1018,10 @@ fun UserProfileScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 banner?.takeIf { it.isNotBlank() }?.let { bannerUrl ->
+                                    val bannerCandidates = rememberFallbackUrlState(bannerUrl, imageMetas.banner?.fallback ?: emptyList())
                                     AsyncImage(
-                                        model = bannerUrl,
+                                        model = bannerCandidates.url,
+                                        onError = { bannerCandidates.onError() },
                                         contentDescription = "Profile banner",
                                         contentScale = ContentScale.Crop,
                                         modifier =
@@ -1025,6 +1039,7 @@ fun UserProfileScreen(
                                     WoTBadgedAvatar(
                                         userHex = pubKeyHex,
                                         pictureUrl = picture,
+                                        pictureFallbacks = imageMetas.picture?.fallback ?: emptyList(),
                                         size = 56.dp,
                                         contentDescription = "Profile picture",
                                     )

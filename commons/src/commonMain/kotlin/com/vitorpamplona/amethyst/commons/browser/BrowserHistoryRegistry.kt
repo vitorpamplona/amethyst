@@ -92,15 +92,33 @@ class BrowserHistoryRegistry(
     /**
      * Records a successful visit to [url], moving it to the front. An existing entry for the same URL is
      * bumped (visit count +1, title refreshed if non-blank); otherwise a new entry is prepended.
+     *
+     * [replaces] is the URL this page replaced in place — a search engine rewriting its own query, a JS
+     * redirect. That was one visit, not two, so the visit moves off the replaced entry: it is dropped if
+     * this was its only visit, otherwise its count goes back down by one.
      */
     fun record(
         url: String,
         title: String,
+        replaces: String? = null,
     ) {
         val host = OmniboxInput.hostOf(url) ?: url
         val now = TimeUtils.nowMillis()
         val key = historyKey(url)
-        update { current ->
+        val replacedKey = replaces?.let(::historyKey)?.takeIf { it != key }
+        update { history ->
+            val current =
+                if (replacedKey == null) {
+                    history
+                } else {
+                    history.mapNotNull {
+                        when {
+                            historyKey(it.url) != replacedKey -> it
+                            it.visitCount <= 1 -> null
+                            else -> it.copy(visitCount = it.visitCount - 1)
+                        }
+                    }
+                }
             val existing = current.firstOrNull { historyKey(it.url) == key }
             val entry =
                 if (existing != null) {

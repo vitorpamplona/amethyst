@@ -215,4 +215,70 @@ class BrowserHistoryRegistryTest {
 
             assertEquals("only the one", listOf("https://keep.example"), registry.history.value.map { it.url })
         }
+
+    /**
+     * One DuckDuckGo search left three rows: the typed `%20` query, the `+` query the page rewrote it to,
+     * and the `&ia=web` it rewrote that to. Each rewrite replaced the page in place, so it is one visit.
+     */
+    @Test
+    fun aPageReplacedInPlaceIsOneVisit() =
+        runTest {
+            val (registry, _) = session(newFile())
+            registry.init()
+            advanceUntilIdle()
+
+            registry.record("https://duckduckgo.com/?q=nostr%20protocol", "DuckDuckGo")
+            registry.record("https://duckduckgo.com/?q=nostr+protocol", "DuckDuckGo", replaces = "https://duckduckgo.com/?q=nostr%20protocol")
+            registry.record("https://duckduckgo.com/?q=nostr+protocol&ia=web", "nostr protocol at DuckDuckGo", replaces = "https://duckduckgo.com/?q=nostr+protocol")
+
+            assertEquals(
+                "only the landed url",
+                listOf("https://duckduckgo.com/?q=nostr+protocol&ia=web"),
+                registry.history.value.map { it.url },
+            )
+            assertEquals(
+                "one visit",
+                1,
+                registry.history.value
+                    .single()
+                    .visitCount,
+            )
+        }
+
+    /** A page visited before keeps its row when a later visit to it is replaced — it only loses that visit. */
+    @Test
+    fun replacingAnEarlierVisitedPageOnlyTakesBackOneVisit() =
+        runTest {
+            val (registry, _) = session(newFile())
+            registry.init()
+            advanceUntilIdle()
+
+            registry.record("https://example.com/a", "A")
+            registry.record("https://example.com/a", "A")
+            registry.record("https://example.com/b", "B", replaces = "https://example.com/a")
+
+            val byUrl = registry.history.value.associate { it.url to it.visitCount }
+            assertEquals("a keeps its first visit", 1, byUrl["https://example.com/a"])
+            assertEquals("b got the replaced one", 1, byUrl["https://example.com/b"])
+        }
+
+    /** A reload reports the page as replacing itself; that must not cost it a visit. */
+    @Test
+    fun replacingAPageWithItselfIsAPlainRevisit() =
+        runTest {
+            val (registry, _) = session(newFile())
+            registry.init()
+            advanceUntilIdle()
+
+            registry.record("https://example.com/a", "A")
+            registry.record("https://example.com/a", "A", replaces = "https://example.com/a")
+
+            assertEquals(
+                "still counted",
+                2,
+                registry.history.value
+                    .single()
+                    .visitCount,
+            )
+        }
 }

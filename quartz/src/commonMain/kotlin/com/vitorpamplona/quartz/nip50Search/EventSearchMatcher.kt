@@ -31,8 +31,14 @@ import com.vitorpamplona.quartz.nip01Core.core.fastAny
  *
  * ## What it matches
  *
- * Terms are ANDed and each is a case-insensitive substring — of a tag value, or of the event's
- * own indexable fields. Substring rather than token because that is what Amethyst's local search
+ * Terms are ANDed and each is a case-insensitive substring of the event's indexable fields — the
+ * same text a store's full-text index holds ([SearchableEvent.forEachIndexableField] is the read
+ * side of [SearchableEvent.indexableContent]), so local search and a store or relay agree on what
+ * an event can be found by. A tag value is searched only when the kind indexes it: a hashtag, an
+ * id, a URL or a data label the kind leaves out of its index is left out here too. A kind that is
+ * not a [SearchableEvent] has no indexable fields, so it falls back to its tag values and content.
+ *
+ * Substring rather than token because that is what Amethyst's local search
  * has always done (`content.contains(text, true)`), and switching to tokens would silently stop
  * matching mid-word queries; AND rather than one literal phrase because that is what a relay does
  * with the same string, and the point of routing local search through a `Filter` is that the two
@@ -57,8 +63,9 @@ import com.vitorpamplona.quartz.nip01Core.core.fastAny
 class EventSearchMatcher(
     search: String?,
     /**
-     * Tag names whose values are not worth searching — `p`/`e`/`a` hold hex ids that only ever
-     * match by accident, `client` and `alt` hold text the author did not write.
+     * For a kind that is not a [SearchableEvent]: tag names whose values are not worth searching —
+     * `p`/`e`/`a` hold hex ids that only ever match by accident, `client` and `alt` hold text the
+     * author did not write.
      */
     private val exceptTagNames: Set<String> = DEFAULT_EXCLUDED_TAGS,
 ) {
@@ -82,11 +89,9 @@ class EventSearchMatcher(
         event: Event,
         term: String,
     ): Boolean {
-        if (event.tags.fastAny { it.size > 1 && it[0] !in exceptTagNames && it[1].contains(term, true) }) {
-            return true
-        }
-        if (event !is SearchableEvent) return event.content.contains(term, true)
-        return visitor.matches(event, term)
+        if (event is SearchableEvent) return visitor.matches(event, term)
+        return event.content.contains(term, true) ||
+            event.tags.fastAny { it.size > 1 && it[0] !in exceptTagNames && it[1].contains(term, true) }
     }
 
     /**

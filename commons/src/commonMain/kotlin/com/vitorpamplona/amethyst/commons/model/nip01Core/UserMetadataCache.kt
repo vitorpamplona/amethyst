@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.ProfileImageMetas
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
@@ -49,6 +50,17 @@ class UserInfo(
     val nipOaOwner: HexKey? by lazy {
         pubKey?.let { OwnerAttestation.verifiedOwnerOf(it, MetadataEvent.KIND, createdAt, tags.lists) }
     }
+
+    /** NIP-92 `imeta` descriptions (fallbacks, blurhash, dim, ...) of the [info] picture and banner. */
+    val imageMetas: ProfileImageMetas by lazy {
+        ProfileImageMetas.parse(tags.lists, info.picture, info.banner)
+    }
+
+    /** Alternative URLs to try, in order, when the profile picture fails to load. */
+    fun pictureFallbacks(): List<String> = imageMetas.picture?.fallback ?: emptyList()
+
+    /** Alternative URLs to try, in order, when the banner fails to load. */
+    fun bannerFallbacks(): List<String> = imageMetas.banner?.fallback ?: emptyList()
 }
 
 @Stable

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -40,16 +41,19 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserBanner
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.rememberFallbackUrlState
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -58,15 +62,20 @@ fun DrawBanner(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val banner by observeUserBanner(baseUser, accountViewModel)
+    val userInfo by observeUserInfo(baseUser, accountViewModel)
 
-    DrawBanner(banner, accountViewModel)
+    DrawBanner(userInfo?.info?.banner, userInfo?.imageMetas?.banner, accountViewModel)
 }
 
+/**
+ * Draws the profile [banner]. Its NIP-92 [bannerMeta], when the profile declares one, supplies a
+ * blurhash to show while it loads and the `fallback` URLs to try when it fails.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DrawBanner(
     banner: String?,
+    bannerMeta: PictureMeta?,
     accountViewModel: AccountViewModel,
 ) {
     if (!banner.isNullOrBlank()) {
@@ -75,12 +84,12 @@ fun DrawBanner(
         var zoomImageDialogOpen by remember { mutableStateOf(false) }
         var sourceBounds by remember { mutableStateOf<Rect?>(null) }
 
-        AsyncImage(
-            model = banner,
-            contentDescription = stringRes(id = Res.string.profile_image),
-            contentScale = ContentScale.Crop,
-            placeholder = painterRes(Res.drawable.profile_banner, 1),
-            error = painterRes(Res.drawable.profile_banner, 1),
+        val bannerUrl = rememberFallbackUrlState(banner, bannerMeta?.fallback ?: emptyList())
+        // Whichever URL is on screen: the primary, or the fallback that replaced it.
+        val shownBanner = bannerUrl.url ?: banner
+        val hasPreviewHash = !bannerMeta?.blurhash.isNullOrBlank() || !bannerMeta?.thumbhash.isNullOrBlank()
+
+        Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -90,15 +99,35 @@ fun DrawBanner(
                         onClick = { zoomImageDialogOpen = true },
                         onLongClick = {
                             scope.launch {
-                                clipboardManager.setText(banner)
+                                clipboardManager.setText(shownBanner)
                             }
                         },
                     ),
-        )
+        ) {
+            if (bannerMeta != null && hasPreviewHash) {
+                DisplayBlurHash(
+                    blurhash = bannerMeta.blurhash,
+                    thumbhash = bannerMeta.thumbhash,
+                    description = bannerMeta.alt,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize(),
+                )
+            }
+
+            AsyncImage(
+                model = bannerUrl.url,
+                contentDescription = bannerMeta?.alt ?: stringRes(id = Res.string.profile_image),
+                contentScale = ContentScale.Crop,
+                placeholder = if (hasPreviewHash) null else painterRes(Res.drawable.profile_banner, 1),
+                error = painterRes(Res.drawable.profile_banner, 1),
+                onError = { bannerUrl.onError() },
+                modifier = Modifier.matchParentSize(),
+            )
+        }
 
         if (zoomImageDialogOpen) {
             ZoomableImageDialog(
-                imageUrl = RichTextParser.parseImageOrVideo(banner),
+                imageUrl = RichTextParser.parseImageOrVideo(shownBanner),
                 sourceBounds = sourceBounds,
                 onDismiss = { zoomImageDialogOpen = false },
                 accountViewModel = accountViewModel,
