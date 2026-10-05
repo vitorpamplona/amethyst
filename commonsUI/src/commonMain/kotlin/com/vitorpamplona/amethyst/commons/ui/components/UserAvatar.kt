@@ -109,18 +109,32 @@ fun UserAvatar(
                 .clip(shape = CircleShape)
         }
 
-    val picture = rememberFallbackUrlState(pictureUrl, pictureFallbacks)
+    if (pictureFallbacks.isEmpty()) {
+        // Almost every profile: no state to keep and no error hook for the feed's avatars.
+        AvatarImage(
+            userHex = userHex,
+            pictureUrl = pictureUrl,
+            contentDescription = contentDescription,
+            modifier = avatarModifier,
+            loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
+            autoPlayGif = autoPlayGif,
+            onError = null,
+        )
+    } else {
+        val picture = rememberFallbackUrlState(pictureUrl, pictureFallbacks)
 
-    AvatarImage(
-        userHex = userHex,
-        pictureUrl = picture.url,
-        contentDescription = contentDescription,
-        modifier = avatarModifier,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
-        autoPlayGif = autoPlayGif,
-        onError = picture::onError,
-    )
+        AvatarImage(
+            userHex = userHex,
+            pictureUrl = picture.url,
+            contentDescription = contentDescription,
+            modifier = avatarModifier,
+            loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
+            autoPlayGif = autoPlayGif,
+            onError = picture::onError,
+        )
+    }
 }
 
 /**
@@ -136,5 +150,5 @@ internal expect fun AvatarImage(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     autoPlayGif: Boolean,
-    onError: () -> Unit,
+    onError: (() -> Unit)?,
 )

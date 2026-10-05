@@ -33,7 +33,7 @@ internal actual fun AvatarImage(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     autoPlayGif: Boolean,
-    onError: () -> Unit,
+    onError: (() -> Unit)?,
 ) {
     RobohashFallbackAsyncImage(
         robot = userHex,

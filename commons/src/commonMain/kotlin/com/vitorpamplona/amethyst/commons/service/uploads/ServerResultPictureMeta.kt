@@ -31,7 +31,8 @@ fun UploadOrchestrator.OrchestratorResult.ServerResult.toPictureMeta(): PictureM
         url = url,
         mimeType = fileHeader.mimeType,
         hash = fileHeader.hash,
-        size = fileHeader.size,
+        // A server that reports no size leaves it at 0, which is not a size.
+        size = fileHeader.size.takeIf { it > 0 },
         dimension = fileHeader.dim?.takeIf { it.hasSize() },
         blurhash = fileHeader.blurHash?.blurhash,
         thumbhash = fileHeader.thumbHash?.thumbhash,

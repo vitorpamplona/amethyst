@@ -30,8 +30,9 @@ import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
  * NIP-92 `imeta` descriptions of the images a kind 0 names in its `picture` and `banner`
  * fields: https://github.com/nostr-protocol/nips/pull/2494
  *
- * An `imeta` describes a field only when its `url` is exactly that field's value; any other
- * `imeta` on a kind 0 is ignored.
+ * An `imeta` describes a field only when its `url` is that field's value; any other `imeta` on a
+ * kind 0 is ignored. Both sides are compared trimmed, because profile values are trimmed
+ * everywhere they are read and written, and a URL cannot carry surrounding whitespace anyway.
  */
 class ProfileImageMetas(
     val picture: PictureMeta?,
@@ -45,16 +46,20 @@ class ProfileImageMetas(
             picture: String?,
             banner: String?,
         ): ProfileImageMetas {
-            if (picture.isNullOrBlank() && banner.isNullOrBlank()) return EMPTY
+            val pictureUrl = picture?.trim()?.ifEmpty { null }
+            val bannerUrl = banner?.trim()?.ifEmpty { null }
+            if (pictureUrl == null && bannerUrl == null) return EMPTY
 
             var pictureMeta: PictureMeta? = null
             var bannerMeta: PictureMeta? = null
 
             tags.fastForEach { tag ->
-                if (pictureMeta != null && bannerMeta != null) return@fastForEach
+                if (tag.isEmpty() || tag[0] != IMetaTag.TAG_NAME) return@fastForEach
+                if ((pictureUrl == null || pictureMeta != null) && (bannerUrl == null || bannerMeta != null)) return@fastForEach
                 IMetaTag.parse(tag)?.forEach { imeta ->
-                    if (pictureMeta == null && imeta.url == picture) pictureMeta = PictureMeta.parse(imeta)
-                    if (bannerMeta == null && imeta.url == banner) bannerMeta = PictureMeta.parse(imeta)
+                    val url = imeta.url.trim()
+                    if (pictureMeta == null && url == pictureUrl) pictureMeta = PictureMeta.parse(imeta)
+                    if (bannerMeta == null && url == bannerUrl) bannerMeta = PictureMeta.parse(imeta)
                 }
             }
 
@@ -71,38 +76,57 @@ fun MetadataEvent.profileImageMetas(metadata: UserMetadata? = contactMetaData())
         ProfileImageMetas.parse(tags, metadata.picture, metadata.banner)
     }
 
-/** The first url of an `imeta` tag, or null if [tag] is not one. */
-private fun imetaUrl(tag: Array<String>): String? = IMetaTag.parse(tag)?.firstOrNull()?.url
+/** The trimmed first url of an `imeta` tag, or null if [tag] is not one. */
+private fun imetaUrl(tag: Array<String>): String? {
+    if (tag.isEmpty() || tag[0] != IMetaTag.TAG_NAME) return null
+    return IMetaTag
+        .parse(tag)
+        ?.firstOrNull()
+        ?.url
+        ?.trim()
+}
 
 /**
- * Rewrites the kind 0's `imeta` tags so they describe exactly the images it now names.
+ * Rewrites the kind 0's `imeta` tags after its `picture`/`banner` changed from
+ * [previousPicture]/[previousBanner] to [picture]/[banner].
  *
- * [previous] are the tags of the kind 0 being replaced: its `imeta`s for a `picture` or
- * `banner` that did not change are carried over, and the ones for images no longer in use
- * are dropped. A non-null [pictureMeta] / [bannerMeta] whose url is the current field value
- * replaces whatever described that image before.
+ * Of the [previous] kind 0's `imeta`s, the ones for an image still in use are carried over and the
+ * ones for an image the profile stopped using are dropped. An `imeta` whose url was never the
+ * picture or banner is not ours to judge, so it is kept as is. A non-null [pictureMeta] /
+ * [bannerMeta] whose url is the new field value replaces whatever described that image before.
  */
 fun TagArrayBuilder<MetadataEvent>.updateProfileImageMetas(
     previous: TagArray,
+    previousPicture: String?,
+    previousBanner: String?,
     picture: String?,
     banner: String?,
     pictureMeta: PictureMeta? = null,
     bannerMeta: PictureMeta? = null,
 ) {
-    remove(IMetaTag.TAG_NAME)
+    val pictureUrl = picture?.trim()?.ifEmpty { null }
+    val bannerUrl = banner?.trim()?.ifEmpty { null }
 
-    val newPicture = pictureMeta?.takeIf { it.url == picture }
-    val newBanner = bannerMeta?.takeIf { it.url == banner && it.url != newPicture?.url }
+    val newPicture = pictureMeta?.takeIf { pictureUrl != null && it.url.trim() == pictureUrl }
+    val newBanner = bannerMeta?.takeIf { bannerUrl != null && it.url.trim() == bannerUrl && it.url.trim() != newPicture?.url?.trim() }
 
-    val replaced = setOfNotNull(newPicture?.url, newBanner?.url)
-    val inUse = setOfNotNull(picture?.ifBlank { null }, banner?.ifBlank { null })
+    val replaced = setOfNotNull(newPicture?.url?.trim(), newBanner?.url?.trim())
+    val inUse = setOfNotNull(pictureUrl, bannerUrl)
+    val retired = setOfNotNull(previousPicture?.trim(), previousBanner?.trim()) - inUse
     val carried = mutableSetOf<String>()
+
+    remove(IMetaTag.TAG_NAME)
 
     previous.fastForEach { tag ->
         val url = imetaUrl(tag) ?: return@fastForEach
-        if (url in inUse && url !in replaced && carried.add(url)) {
-            add(tag)
-        }
+        val keep =
+            when (url) {
+                in replaced -> false
+                in inUse -> carried.add(url)
+                in retired -> false
+                else -> true
+            }
+        if (keep) add(tag)
     }
 
     newPicture?.let { add(it.toIMetaArray()) }

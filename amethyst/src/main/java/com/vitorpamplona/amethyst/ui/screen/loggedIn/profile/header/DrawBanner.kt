@@ -85,7 +85,9 @@ fun DrawBanner(
         var sourceBounds by remember { mutableStateOf<Rect?>(null) }
 
         val bannerUrl = rememberFallbackUrlState(banner, bannerMeta?.fallback ?: emptyList())
-        val hasPreviewHash = bannerMeta?.blurhash != null || bannerMeta?.thumbhash != null
+        // Whichever URL is on screen: the primary, or the fallback that replaced it.
+        val shownBanner = bannerUrl.url ?: banner
+        val hasPreviewHash = !bannerMeta?.blurhash.isNullOrBlank() || !bannerMeta?.thumbhash.isNullOrBlank()
 
         Box(
             modifier =
@@ -97,7 +99,7 @@ fun DrawBanner(
                         onClick = { zoomImageDialogOpen = true },
                         onLongClick = {
                             scope.launch {
-                                clipboardManager.setText(banner)
+                                clipboardManager.setText(shownBanner)
                             }
                         },
                     ),
@@ -125,7 +127,7 @@ fun DrawBanner(
 
         if (zoomImageDialogOpen) {
             ZoomableImageDialog(
-                imageUrl = RichTextParser.parseImageOrVideo(banner),
+                imageUrl = RichTextParser.parseImageOrVideo(shownBanner),
                 sourceBounds = sourceBounds,
                 onDismiss = { zoomImageDialogOpen = false },
                 accountViewModel = accountViewModel,

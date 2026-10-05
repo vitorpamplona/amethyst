@@ -24,15 +24,18 @@ import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 /**
- * The NIP-92 `imeta` description of an image uploaded to [url], for a kind 0 `picture` or
- * `banner` (https://github.com/nostr-protocol/nips/pull/2494).
+ * The NIP-92 `imeta` description of an image uploaded to [url]: for a kind 0 `picture` or
+ * `banner` (https://github.com/nostr-protocol/nips/pull/2494) or a NIP-68 picture post.
+ *
+ * Every field comes from [UploadResult.metadata], computed on the bytes that left this machine,
+ * so hash, size, dimensions and blurhash all describe the same file.
  */
 fun UploadResult.toPictureMeta(url: String): PictureMeta =
     PictureMeta(
         url = url,
-        mimeType = blossom.type ?: metadata.mimeType,
-        hash = blossom.sha256 ?: metadata.sha256,
-        size = (blossom.size ?: metadata.size).toInt(),
+        mimeType = metadata.mimeType,
+        hash = metadata.sha256,
+        size = metadata.size.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
         dimension =
             if (metadata.width != null && metadata.height != null && metadata.width > 0 && metadata.height > 0) {
                 DimensionTag(metadata.width, metadata.height)

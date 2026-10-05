@@ -255,4 +255,37 @@ class ProfileImageMetasTest {
         assertEquals(1, event.tags.count { it[0] == "imeta" })
         assertMeta(pictureMeta, event.profileImageMetas().banner)
     }
+
+    @Test
+    fun updateKeepsImetaThatWasNeverPictureOrBanner() {
+        val unrelated = arrayOf("imeta", "url https://other.example/badge.png", "dim 64x64")
+        val first =
+            event(
+                "{\"picture\":\"$picture\"}",
+                arrayOf("imeta", "url $picture", "dim 400x400"),
+                unrelated,
+            )
+
+        val second = signer.sign(MetadataEvent.updateFromPast(first, picture = "https://blossom.example/new.png", createdAt = 1740669817))
+
+        assertNull(second.profileImageMetas().picture)
+        val imetas = second.tags.filter { it[0] == "imeta" }
+        assertEquals(1, imetas.size)
+        assertContentEquals(unrelated, imetas[0])
+    }
+
+    @Test
+    fun matchesIgnoringSurroundingWhitespace() {
+        val event =
+            event(
+                "{\"picture\":\"$picture \"}",
+                arrayOf("imeta", "url $picture", "dim 400x400"),
+            )
+
+        assertNotNull(event.profileImageMetas().picture)
+
+        // A name-only edit leaves the untrimmed picture alone and must keep its imeta.
+        val second = signer.sign(MetadataEvent.updateFromPast(event, name = "luna", createdAt = 1740669817))
+        assertEquals(1, second.tags.count { it[0] == "imeta" })
+    }
 }

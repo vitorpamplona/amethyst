@@ -271,8 +271,10 @@ class MetadataEvent(
 
                 updateProfileImageMetas(
                     previous = emptyArray(),
-                    picture = currentMetadata[PictureTag.TAG_NAME]?.text,
-                    banner = currentMetadata[BannerTag.TAG_NAME]?.text,
+                    previousPicture = null,
+                    previousBanner = null,
+                    picture = (currentMetadata[PictureTag.TAG_NAME] as? JsonPrimitive)?.content,
+                    banner = (currentMetadata[BannerTag.TAG_NAME] as? JsonPrimitive)?.content,
                     pictureMeta = pictureMeta,
                     bannerMeta = bannerMeta,
                 )
@@ -307,6 +309,8 @@ class MetadataEvent(
         ): EventTemplate<MetadataEvent> {
             // Tries to not delete any existing attribute that we do not work with.
             val currentMetadata = latest.contactMetadataJson()?.toMutableMap() ?: mutableMapOf()
+            val previousPicture = (currentMetadata[PictureTag.TAG_NAME] as? JsonPrimitive)?.content
+            val previousBanner = (currentMetadata[BannerTag.TAG_NAME] as? JsonPrimitive)?.content
 
             updateFieldsWeWorkWith(
                 currentMetadata,
@@ -334,11 +338,13 @@ class MetadataEvent(
                     remove(IdentityClaimTag.TAG_NAME)
                     claims(newClaims)
 
-                    // NIP-92: keep the imetas of unchanged images, drop the ones no longer in use.
+                    // NIP-92: keep the imetas of unchanged images, drop the ones of images no longer in use.
                     updateProfileImageMetas(
                         previous = latest.tags,
-                        picture = currentMetadata[PictureTag.TAG_NAME]?.text,
-                        banner = currentMetadata[BannerTag.TAG_NAME]?.text,
+                        previousPicture = previousPicture,
+                        previousBanner = previousBanner,
+                        picture = (currentMetadata[PictureTag.TAG_NAME] as? JsonPrimitive)?.content,
+                        banner = (currentMetadata[BannerTag.TAG_NAME] as? JsonPrimitive)?.content,
                         pictureMeta = pictureMeta,
                         bannerMeta = bannerMeta,
                     )
