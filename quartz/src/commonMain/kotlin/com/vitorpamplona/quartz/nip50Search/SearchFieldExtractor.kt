@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListDescriptions
+import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListExtraText
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListTitles
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
@@ -629,9 +630,10 @@ object SearchFieldExtractor {
             // already, so -- as for 1111/1311/30382 -- they are not passed again, and
             // content is not part of the spec. One branch for all four: an item may
             // carry header tags (the spec's nonstandard method), and the tag helpers
-            // read whichever are present.
+            // read whichever are present. Every other natural-language tag value
+            // (author, subject, artist, ...) is the text tier, below both.
             is DecentralizedListEvent -> {
-                tiers(event, event.tags.searchableListTitles(), event.tags.searchableListDescriptions(), null)
+                tiers(event, event.tags.searchableListTitles(), event.tags.searchableListDescriptions(), event.tags.searchableListExtraText())
             }
 
             // kind 1 LAST among the explicit branches, defensively: a future

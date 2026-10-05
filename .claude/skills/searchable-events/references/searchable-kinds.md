@@ -2,7 +2,7 @@
 
 Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexableContent()`
 expression. **Update this file in the same PR as any change to the searchable set or to an
-`indexableContent()` body** (see SKILL.md). Verified against the code 2026-09-17.
+`indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-04.
 
 Counts: 139 concrete classes covering 140 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 is shared by two NIPs and kind 38000 by three classes — see the footnotes). File paths are under
@@ -65,7 +65,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 9736 | Bolt12ZapEvent | nipB1Bolt12Zaps/zap | `content` |
 | 9737 | Bolt12ZapIntentEvent | nipB1Bolt12Zaps/intent | `content` |
 | 9802 | HighlightEvent | nip84Highlights | `listOfNotNull(comment(), context(), content)` NL |
-| 9998 | ListHeaderEvent | experimental/decentralizedLists/header | `tags.searchableListContent()` NL — `names` (singular, plural), `titles` (singular, plural), `name`, `title`, `description`, `comments`, then every `t` value; ids/pubkeys/coordinates are left to tag filters |
+| 9998 | ListHeaderEvent | experimental/decentralizedLists/header | `tags.searchableListContent()` NL — `names` (singular, plural), `titles` (singular, plural), `name`, `title`, `description`, `comments`, then in tag order every `t` value that is not `isMachineValue` and every value of every other tag (except `alt`, `client`, `imeta`) that passes `isNaturalLanguageValue` (has whitespace or non-ASCII, or is one capitalized letters-only word; never JSON, numbers, URIs of any scheme, addresses, hex ids, UUIDs, bech32) |
 | 9999 | ListItemEvent | experimental/decentralizedLists/item | same as 9998 |
 | 10003 | BookmarkListEvent | nip51Lists/bookmarkList | `listOfNotNull(title())` NL |
 | 10100 | AgentProfileEvent | buzz/agentProfiles | `profileOrNull()?.let { listOfNotNull(it.name, it.displayName).joinToString("\n") } ?: ""` |
