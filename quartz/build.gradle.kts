@@ -207,10 +207,6 @@ kotlin {
                     implementation(libs.kotlin.test)
                     implementation(libs.kotlinx.coroutines.test)
 
-                    // Pins TimeUtils.now() for the ts-mls fixtures, whose signed
-                    // KeyPackage lifetimes have a fixed expiry.
-                    implementation(libs.mockk)
-
                     // In-process Nostr relay (geode) so JVM/Android host
                     // tests don't need network access or a Rust toolchain.
                     // testFixtures (RelayClientTest base, fixtures,

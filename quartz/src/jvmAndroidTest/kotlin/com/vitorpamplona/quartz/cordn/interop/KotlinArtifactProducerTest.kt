@@ -79,76 +79,75 @@ class KotlinArtifactProducerTest {
 
     @Test
     fun `produce the artifacts ts-mls verifies`() {
-        TsMlsFixtures.withinKeyPackageLifetime {
-            // --- epoch 0: alice creates a cordn group carrying metadata ---------
-            val group =
-                MlsGroup.create(
-                    identity = CordnCredential.of(alice).identity,
-                    policy = CordnGroupPolicy,
-                    initialExtensions = listOf(metadata.toExtension()),
-                )
-            write("k-alice.pk", alice)
-            write("k-meta.json", metadataJson(metadata))
-
-            // --- epoch 1: add THEIR key package ---------------------------------
-            // bob2 is a real ts-mls KeyPackage. Using ours would make this a test
-            // of our own encoder talking to itself.
-            val add = group.addMember(TsMlsFixtures.bytes("bob2-kp.bin"))
-            val welcome = assertNotNull(add.welcomeBytes, "adding a member must produce a Welcome")
-            assertEquals(1L, group.epoch)
-
-            write("k-welcome.b64", Base64.encode(welcome))
-            write("k-exporter-e1.hex", exporterHex(group))
-
-            // --- an application message at epoch 1 -------------------------------
-            val envelope =
-                CordnEnvelope.build(
-                    pubKey = alice,
-                    createdAt = 1_700_000_100L,
-                    kind = 9,
-                    content = "hello from quartz 💎",
-                )
-            write("k-app-sealed.b64", CordnApplicationMessage.seal(group, alice, envelope))
-            write("k-envelope.json", envelopeJson(envelope))
-
-            // --- epoch 2: a metadata change -------------------------------------
-            // Sealed with the PRE-commit key the commit itself reports. Sealing
-            // under the post-commit epoch would lock out every member still at
-            // epoch 1 — which is everyone this commit is addressed to.
-            group.proposeGroupContextExtensions(
-                group.extensions.filterNot { it.extensionType == CordnGroupMetadata.EXTENSION_TYPE } +
-                    updatedMetadata.toExtension(),
+        // --- epoch 0: alice creates a cordn group carrying metadata ---------
+        val group =
+            MlsGroup.create(
+                identity = CordnCredential.of(alice).identity,
+                policy = CordnGroupPolicy,
+                initialExtensions = listOf(metadata.toExtension()),
             )
-            val commit = group.commit()
-            assertEquals(2L, group.epoch)
-            assertTrue(commit.preCommitExporterSecret.isNotEmpty(), "the policy must supply a commit exporter")
+        write("k-alice.pk", alice)
+        write("k-meta.json", metadataJson(metadata))
 
-            write("k-commit-meta-sealed.b64", SealedPayload.seal(commit.framedCommitBytes, commit.preCommitExporterSecret))
-            write("k-meta-2.json", metadataJson(updatedMetadata))
-            write("k-exporter-e2.hex", exporterHex(group))
+        // --- epoch 1: add THEIR key package ---------------------------------
+        // bob2 is a real ts-mls KeyPackage. Using ours would make this a test
+        // of our own encoder talking to itself.
+        group.clock = { TsMlsFixtures.validAt("bob2-kp.bin") }
+        val add = group.addMember(TsMlsFixtures.bytes("bob2-kp.bin"))
+        val welcome = assertNotNull(add.welcomeBytes, "adding a member must produce a Welcome")
+        assertEquals(1L, group.epoch)
 
-            // Our own round trip, so a broken artifact fails here rather than only
-            // in a script someone may not run.
-            assertEquals(
-                updatedMetadata.name,
-                CordnGroupMetadata.fromExtensions(group.extensions)?.name,
+        write("k-welcome.b64", Base64.encode(welcome))
+        write("k-exporter-e1.hex", exporterHex(group))
+
+        // --- an application message at epoch 1 -------------------------------
+        val envelope =
+            CordnEnvelope.build(
+                pubKey = alice,
+                createdAt = 1_700_000_100L,
+                kind = 9,
+                content = "hello from quartz 💎",
             )
-            assertEquals(
-                9,
-                listOf(
-                    "k-alice.pk",
-                    "k-meta.json",
-                    "k-welcome.b64",
-                    "k-exporter-e1.hex",
-                    "k-app-sealed.b64",
-                    "k-envelope.json",
-                    "k-commit-meta-sealed.b64",
-                    "k-meta-2.json",
-                    "k-exporter-e2.hex",
-                ).count { File(out, it).exists() },
-                "every artifact verify.ts reads must be written",
-            )
-        }
+        write("k-app-sealed.b64", CordnApplicationMessage.seal(group, alice, envelope))
+        write("k-envelope.json", envelopeJson(envelope))
+
+        // --- epoch 2: a metadata change -------------------------------------
+        // Sealed with the PRE-commit key the commit itself reports. Sealing
+        // under the post-commit epoch would lock out every member still at
+        // epoch 1 — which is everyone this commit is addressed to.
+        group.proposeGroupContextExtensions(
+            group.extensions.filterNot { it.extensionType == CordnGroupMetadata.EXTENSION_TYPE } +
+                updatedMetadata.toExtension(),
+        )
+        val commit = group.commit()
+        assertEquals(2L, group.epoch)
+        assertTrue(commit.preCommitExporterSecret.isNotEmpty(), "the policy must supply a commit exporter")
+
+        write("k-commit-meta-sealed.b64", SealedPayload.seal(commit.framedCommitBytes, commit.preCommitExporterSecret))
+        write("k-meta-2.json", metadataJson(updatedMetadata))
+        write("k-exporter-e2.hex", exporterHex(group))
+
+        // Our own round trip, so a broken artifact fails here rather than only
+        // in a script someone may not run.
+        assertEquals(
+            updatedMetadata.name,
+            CordnGroupMetadata.fromExtensions(group.extensions)?.name,
+        )
+        assertEquals(
+            9,
+            listOf(
+                "k-alice.pk",
+                "k-meta.json",
+                "k-welcome.b64",
+                "k-exporter-e1.hex",
+                "k-app-sealed.b64",
+                "k-envelope.json",
+                "k-commit-meta-sealed.b64",
+                "k-meta-2.json",
+                "k-exporter-e2.hex",
+            ).count { File(out, it).exists() },
+            "every artifact verify.ts reads must be written",
+        )
     }
 
     /** verify.ts compares name, description and adminPubkeys against the extension. */

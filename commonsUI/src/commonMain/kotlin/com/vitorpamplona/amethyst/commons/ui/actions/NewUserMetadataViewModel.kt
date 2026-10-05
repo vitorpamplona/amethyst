@@ -27,12 +27,15 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.toPictureMeta
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServerWithMetadata
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
@@ -44,6 +47,11 @@ class NewUserMetadataViewModel : ViewModel() {
 
     val picture = mutableStateOf("")
     val banner = mutableStateOf("")
+
+    // NIP-92 imeta of the images uploaded in this session. Dropped on save if the user then
+    // replaces the URL by hand, since an imeta only describes the exact URL it names.
+    private var pictureMeta: PictureMeta? = null
+    private var bannerMeta: PictureMeta? = null
 
     val website = mutableStateOf("")
     val pronouns = mutableStateOf("")
@@ -117,6 +125,8 @@ class NewUserMetadataViewModel : ViewModel() {
                 lnAddress = lnAddress.value,
                 lnURL = lnURL.value,
                 clinkOffer = clinkOffer.value,
+                pictureMeta = pictureMeta,
+                bannerMeta = bannerMeta,
             )
 
         val identities =
@@ -138,6 +148,8 @@ class NewUserMetadataViewModel : ViewModel() {
         about.value = ""
         picture.value = ""
         banner.value = ""
+        pictureMeta = null
+        bannerMeta = null
         website.value = ""
         nip05.value = ""
         lnAddress.value = ""
@@ -158,8 +170,10 @@ class NewUserMetadataViewModel : ViewModel() {
                 galleryUri = uri,
                 uploader = uploader,
                 onError = onError,
+                setUploading = { isUploadingImageForPicture = it },
             )?.let {
-                picture.value = it
+                picture.value = it.url
+                pictureMeta = it.toPictureMeta()
             }
         }
     }
@@ -174,8 +188,10 @@ class NewUserMetadataViewModel : ViewModel() {
                 galleryUri = uri,
                 uploader = uploader,
                 onError = onError,
+                setUploading = { isUploadingImageForBanner = it },
             )?.let {
-                banner.value = it
+                banner.value = it.url
+                bannerMeta = it.toPictureMeta()
             }
         }
     }
@@ -191,8 +207,10 @@ class NewUserMetadataViewModel : ViewModel() {
                 galleryUri = uri,
                 uploader = uploader,
                 onError = onError,
+                setUploading = { isUploadingImageForPicture = it },
             )?.let {
-                picture.value = it
+                picture.value = it.url
+                pictureMeta = it.toPictureMeta()
             }
 
             create()
@@ -203,12 +221,13 @@ class NewUserMetadataViewModel : ViewModel() {
         galleryUri: SelectedMedia,
         uploader: MediaUploader,
         onError: (String, String) -> Unit,
-    ): String? {
-        isUploadingImageForPicture = true
+        setUploading: (Boolean) -> Unit,
+    ): UploadOrchestrator.OrchestratorResult.ServerResult? {
+        setUploading(true)
         return try {
-            uploadToDefaultServer(galleryUri, account, uploader, onError)
+            uploadToDefaultServerWithMetadata(galleryUri, account, uploader, onError)
         } finally {
-            isUploadingImageForPicture = false
+            setUploading(false)
         }
     }
 }

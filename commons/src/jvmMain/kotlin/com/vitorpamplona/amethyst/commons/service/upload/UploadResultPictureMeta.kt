@@ -18,32 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.components
+package com.vitorpamplona.amethyst.commons.service.upload
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
-@Composable
-internal actual fun AvatarImage(
-    userHex: String,
-    pictureUrl: String?,
-    contentDescription: String?,
-    modifier: Modifier,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
-    autoPlayGif: Boolean,
-    onError: (() -> Unit)?,
-) {
-    RobohashFallbackAsyncImage(
-        robot = userHex,
-        model = pictureUrl,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = ContentScale.Crop,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
-        autoPlayGif = autoPlayGif,
-        onError = onError,
+/**
+ * The NIP-92 `imeta` description of an image uploaded to [url]: for a kind 0 `picture` or
+ * `banner` (https://github.com/nostr-protocol/nips/pull/2494) or a NIP-68 picture post.
+ *
+ * Every field comes from [UploadResult.metadata], computed on the bytes that left this machine,
+ * so hash, size, dimensions and blurhash all describe the same file.
+ */
+fun UploadResult.toPictureMeta(url: String): PictureMeta =
+    PictureMeta(
+        url = url,
+        mimeType = metadata.mimeType,
+        hash = metadata.sha256,
+        size = metadata.size.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
+        dimension =
+            if (metadata.width != null && metadata.height != null && metadata.width > 0 && metadata.height > 0) {
+                DimensionTag(metadata.width, metadata.height)
+            } else {
+                null
+            },
+        blurhash = metadata.blurhash,
+        thumbhash = metadata.thumbhash,
     )
-}

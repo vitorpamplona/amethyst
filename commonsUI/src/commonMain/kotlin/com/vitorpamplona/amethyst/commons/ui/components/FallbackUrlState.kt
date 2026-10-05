@@ -21,29 +21,35 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
+/**
+ * Walks a primary URL and its NIP-92 `fallback` URLs in order: [url] is the one to load now, and
+ * [onError] moves to the next candidate after it fails. Once the last candidate fails, [onError]
+ * is a no-op and the caller's own error state stays on screen.
+ */
+@Stable
+class FallbackUrlState(
+    private val primary: String?,
+    private val fallbacks: List<String>,
+) {
+    private var index by mutableIntStateOf(0)
+
+    val url: String? get() = if (index == 0) primary else fallbacks.getOrNull(index - 1)
+
+    fun hasNext() = primary != null && index < fallbacks.size
+
+    fun onError() {
+        if (hasNext()) index++
+    }
+}
 
 @Composable
-internal actual fun AvatarImage(
-    userHex: String,
-    pictureUrl: String?,
-    contentDescription: String?,
-    modifier: Modifier,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
-    autoPlayGif: Boolean,
-    onError: (() -> Unit)?,
-) {
-    RobohashFallbackAsyncImage(
-        robot = userHex,
-        model = pictureUrl,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = ContentScale.Crop,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
-        autoPlayGif = autoPlayGif,
-        onError = onError,
-    )
-}
+fun rememberFallbackUrlState(
+    primary: String?,
+    fallbacks: List<String>,
+): FallbackUrlState = remember(primary, fallbacks) { FallbackUrlState(primary, fallbacks) }

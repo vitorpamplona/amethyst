@@ -23,12 +23,9 @@ package com.vitorpamplona.quartz.cordn.interop
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
-import com.vitorpamplona.quartz.utils.TimeUtils
-import io.mockk.every
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -49,27 +46,13 @@ object TsMlsFixtures {
     fun hex(name: String): ByteArray = text(name).chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     /**
-     * A moment inside the vendored KeyPackages' RFC 9420 lifetime
-     * (2026-09-17 03:34:16 to 2026-10-03 08:34:16 UTC): 2026-09-24 00:00:00 UTC.
+     * A Unix time inside the lifetime of the vendored KeyPackage [name]. ts-mls mints them with
+     * a two-week window, so any test that hands one to an [MlsGroup] must pin the group's clock
+     * here, or it starts failing once the fixtures are two weeks old.
      */
-    const val KEY_PACKAGE_VALID_AT = 1790208000L
-
-    /**
-     * Runs [block] with [TimeUtils.now] pinned to [KEY_PACKAGE_VALID_AT].
-     *
-     * The engine checks an Add's KeyPackage lifetime against the wall clock, and
-     * the fixtures' window is fixed: they are signed, so it cannot be widened.
-     * Without the pin, every test that admits one of them fails once the window
-     * closes. This tests wire compatibility, not expiry.
-     */
-    fun <T> withinKeyPackageLifetime(block: () -> T): T {
-        mockkObject(TimeUtils)
-        try {
-            every { TimeUtils.now() } returns KEY_PACKAGE_VALID_AT
-            return block()
-        } finally {
-            unmockkObject(TimeUtils)
-        }
+    fun validAt(name: String): Long {
+        val lifetime = checkNotNull(MlsKeyPackage.decodeTls(TlsReader(bytes(name))).leafNode.lifetime) { "fixture '$name' has no lifetime" }
+        return lifetime.notBefore + (lifetime.notAfter - lifetime.notBefore) / 2
     }
 }
 
