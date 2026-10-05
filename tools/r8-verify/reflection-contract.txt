@@ -121,9 +121,9 @@ class  com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 # These need the CLASS pinned, which the `-keepclassmembers enum *` rule below
 # deliberately does not do: it keeps constant names and lets the class be
 # renamed. Add a line here whenever an enum becomes a route argument.
-class com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab
-class com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
-class com.vitorpamplona.amethyst.ui.navigation.routes.GeocacheTab
+class com.vitorpamplona.amethyst.commons.model.navigation.DiscoverTab
+class com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType
+class com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab
 
 
 # --- Enum constants persisted as strings -------------------------------------
@@ -150,7 +150,7 @@ enum com.vitorpamplona.amethyst.commons.model.AccentColorType PURPLE
 enum com.vitorpamplona.amethyst.commons.model.ProfileGalleryType CLASSIC
 enum com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 enum com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
-enum com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ChannelExpand
+enum com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ChannelExpand
 # Still listed after ScheduledPost moved to kotlinx: this one is also the on-disk
 # format of the scheduled-post file, and a plain @Serializable enum is not obviously
 # immune — kotlinx builds its descriptor from the entries, and it has not been proven

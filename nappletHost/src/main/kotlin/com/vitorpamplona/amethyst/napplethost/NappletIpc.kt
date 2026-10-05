@@ -78,7 +78,8 @@ object NappletIpc {
 
     /**
      * Host → broker (browser mode): record a *successfully loaded* page in the device-local visit history
-     * (main process only). Carries [KEY_HISTORY_URL] (the landed URL) and [KEY_HISTORY_TITLE]. Sent only
+     * (main process only). Carries [KEY_HISTORY_URL] (the landed URL), [KEY_HISTORY_TITLE] and, when the page
+     * replaced the previously recorded one in place, [KEY_HISTORY_REPLACES]. Sent only
      * after a clean main-frame page-finish — never for a typed-but-failed address — so misspellings never
      * enter history. The `:napplet` process can't touch the main process's store, so it relays it here.
      */
@@ -188,6 +189,9 @@ object NappletIpc {
 
     /** The page title of a successfully loaded browser page, for the visit-history record. */
     const val KEY_HISTORY_TITLE = "historyTitle"
+
+    /** The previously recorded URL a page replaced in place (a redirect or a rewritten query), if any. */
+    const val KEY_HISTORY_REPLACES = "historyReplaces"
 
     /** The host a captured favicon belongs to. */
     const val KEY_ICON_HOST = "iconHost"

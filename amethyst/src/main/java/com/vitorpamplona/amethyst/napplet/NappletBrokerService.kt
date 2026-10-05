@@ -230,7 +230,11 @@ class NappletBrokerService : Service() {
             val url = data.getString(NappletIpc.KEY_HISTORY_URL)?.takeIf { it.isNotBlank() } ?: return true
             val history = Amethyst.instance.browserHistory
             history.init()
-            history.record(url, data.getString(NappletIpc.KEY_HISTORY_TITLE).orEmpty())
+            history.record(
+                url = url,
+                title = data.getString(NappletIpc.KEY_HISTORY_TITLE).orEmpty(),
+                replaces = data.getString(NappletIpc.KEY_HISTORY_REPLACES),
+            )
             return true
         }
 

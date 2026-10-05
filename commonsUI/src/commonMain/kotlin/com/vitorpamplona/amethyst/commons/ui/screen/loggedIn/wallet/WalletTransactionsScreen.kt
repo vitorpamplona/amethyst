@@ -172,7 +172,7 @@ fun WalletTransactionsScreen(
             // branch the screen would claim "no transactions yet" and hide the reason.
             EmptyState(
                 title = stringRes(Res.string.wallet_transactions_load_failed),
-                modifier = Modifier.padding(padding).padding(24.dp),
+                modifier = Modifier.padding(padding).padding(vertical = 24.dp),
                 description = currentError,
                 onRefresh = { walletViewModel.fetchTransactions() },
                 refreshLabel = stringRes(Res.string.wallet_refresh),
