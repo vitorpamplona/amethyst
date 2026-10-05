@@ -252,23 +252,25 @@ class CordnLifecycleInteropTest {
 
     @Test
     fun `we can add a ts-mls member to a group we created`() {
-        // The reverse direction, as far as it goes without running their client:
-        // a group built by our engine under CordnGroupPolicy accepts a real
-        // ts-mls KeyPackage and produces a Welcome for it. A capability or
-        // required_capabilities mismatch between the two profiles would fail
-        // exactly here.
-        val group =
-            MlsGroup.create(
-                identity = CordnCredential.of(alice).identity,
-                policy = CordnGroupPolicy,
-                initialExtensions = listOf(CordnGroupMetadata(name = "from Kotlin").toExtension()),
-            )
+        TsMlsFixtures.withinKeyPackageLifetime {
+            // The reverse direction, as far as it goes without running their client:
+            // a group built by our engine under CordnGroupPolicy accepts a real
+            // ts-mls KeyPackage and produces a Welcome for it. A capability or
+            // required_capabilities mismatch between the two profiles would fail
+            // exactly here.
+            val group =
+                MlsGroup.create(
+                    identity = CordnCredential.of(alice).identity,
+                    policy = CordnGroupPolicy,
+                    initialExtensions = listOf(CordnGroupMetadata(name = "from Kotlin").toExtension()),
+                )
 
-        val result = group.addMember(TsMlsFixtures.bytes("bob2-kp.bin"))
+            val result = group.addMember(TsMlsFixtures.bytes("bob2-kp.bin"))
 
-        assertEquals(1L, group.epoch)
-        assertEquals(setOf(alice, bob), CordnCredential.memberIdentities(group))
-        assertTrue(result.welcomeBytes != null, "a Welcome must be produced for the joiner")
+            assertEquals(1L, group.epoch)
+            assertEquals(setOf(alice, bob), CordnCredential.memberIdentities(group))
+            assertTrue(result.welcomeBytes != null, "a Welcome must be produced for the joiner")
+        }
     }
 
     // ---- 7. the delivery id ------------------------------------------------

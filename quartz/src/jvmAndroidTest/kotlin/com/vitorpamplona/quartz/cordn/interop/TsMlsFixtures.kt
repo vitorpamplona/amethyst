@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
+import com.vitorpamplona.quartz.utils.TimeUtils
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -43,6 +47,30 @@ object TsMlsFixtures {
     fun b64(name: String): ByteArray = Base64.decode(text(name))
 
     fun hex(name: String): ByteArray = text(name).chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+    /**
+     * A moment inside the vendored KeyPackages' RFC 9420 lifetime
+     * (2026-09-17 03:34:16 to 2026-10-03 08:34:16 UTC): 2026-09-24 00:00:00 UTC.
+     */
+    const val KEY_PACKAGE_VALID_AT = 1790208000L
+
+    /**
+     * Runs [block] with [TimeUtils.now] pinned to [KEY_PACKAGE_VALID_AT].
+     *
+     * The engine checks an Add's KeyPackage lifetime against the wall clock, and
+     * the fixtures' window is fixed: they are signed, so it cannot be widened.
+     * Without the pin, every test that admits one of them fails once the window
+     * closes. This tests wire compatibility, not expiry.
+     */
+    fun <T> withinKeyPackageLifetime(block: () -> T): T {
+        mockkObject(TimeUtils)
+        try {
+            every { TimeUtils.now() } returns KEY_PACKAGE_VALID_AT
+            return block()
+        } finally {
+            unmockkObject(TimeUtils)
+        }
+    }
 }
 
 /**
