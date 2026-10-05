@@ -85,8 +85,8 @@ Filter(
 
 All four kinds are `SearchableEvent`s sharing one walk
 (`forEachSearchableListField`): `names` and `titles` (singular then plural),
-`name`, `title`, `description`, `comments`, then every `t` item value, then
-every value of every other tag that reads as natural language.
+`name`, `title`, `description`, `comments`, then, in tag order, every `t`
+item value and every value of every other tag that reads as natural language.
 
 The tag set is open — deployments add `author`, `subject`, `artist`,
 `relationshipType` and tags nobody has named yet — so that last step decides

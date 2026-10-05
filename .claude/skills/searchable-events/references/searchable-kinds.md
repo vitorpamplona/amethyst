@@ -65,7 +65,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 9736 | Bolt12ZapEvent | nipB1Bolt12Zaps/zap | `content` |
 | 9737 | Bolt12ZapIntentEvent | nipB1Bolt12Zaps/intent | `content` |
 | 9802 | HighlightEvent | nip84Highlights | `listOfNotNull(comment(), context(), content)` NL |
-| 9998 | ListHeaderEvent | experimental/decentralizedLists/header | `tags.searchableListContent()` NL — `names` (singular, plural), `titles` (singular, plural), `name`, `title`, `description`, `comments`, then every `t` value that is not `isMachineValue`, then every value of every other tag (except `alt`, `client`, `imeta`) that passes `isNaturalLanguageValue` (has whitespace or non-ASCII, or is one capitalized letters-only word; never JSON, numbers, URIs of any scheme, addresses, hex ids, UUIDs, bech32) |
+| 9998 | ListHeaderEvent | experimental/decentralizedLists/header | `tags.searchableListContent()` NL — `names` (singular, plural), `titles` (singular, plural), `name`, `title`, `description`, `comments`, then in tag order every `t` value that is not `isMachineValue` and every value of every other tag (except `alt`, `client`, `imeta`) that passes `isNaturalLanguageValue` (has whitespace or non-ASCII, or is one capitalized letters-only word; never JSON, numbers, URIs of any scheme, addresses, hex ids, UUIDs, bech32) |
 | 9999 | ListItemEvent | experimental/decentralizedLists/item | same as 9998 |
 | 10003 | BookmarkListEvent | nip51Lists/bookmarkList | `listOfNotNull(title())` NL |
 | 10100 | AgentProfileEvent | buzz/agentProfiles | `profileOrNull()?.let { listOfNotNull(it.name, it.displayName).joinToString("\n") } ?: ""` |

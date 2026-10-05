@@ -36,15 +36,15 @@ package com.vitorpamplona.quartz.nip50Search
 fun isNaturalLanguageValue(value: String): Boolean {
     var start = 0
     var end = value.length
-    while (start < end && value[start].isWhitespace()) start++
-    while (end > start && value[end - 1].isWhitespace()) end--
+    while (start < end && value[start].isSpace()) start++
+    while (end > start && value[end - 1].isSpace()) end--
     if (start == end || isStructuredValue(value, start, end)) return false
 
     var nonAscii = false
     for (i in start until end) {
         val c = value[i]
         // The token shapes in isMachineToken cannot contain whitespace.
-        if (c.isWhitespace()) return true
+        if (c.isSpace()) return true
         if (c.code > 127) nonAscii = true
     }
 
@@ -68,10 +68,10 @@ fun isNaturalLanguageValue(value: String): Boolean {
 fun isMachineValue(value: String): Boolean {
     var start = 0
     var end = value.length
-    while (start < end && value[start].isWhitespace()) start++
-    while (end > start && value[end - 1].isWhitespace()) end--
+    while (start < end && value[start].isSpace()) start++
+    while (end > start && value[end - 1].isSpace()) end--
     if (start == end || isStructuredValue(value, start, end)) return true
-    for (i in start until end) if (value[i].isWhitespace()) return false
+    for (i in start until end) if (value[i].isSpace()) return false
     return isMachineToken(value, start, end)
 }
 
@@ -98,6 +98,12 @@ private fun isMachineToken(
         isHexId(v, start, end) ||
         isUuid(v, start, end) ||
         isBech32(v, start)
+
+/**
+ * [isWhitespace] with an ASCII fast path: on the JVM, [isWhitespace] is two Unicode table lookups
+ * per character, and nearly every character this file scans is ASCII.
+ */
+private fun Char.isSpace() = if (code < 0x80) this == ' ' || this in '\t'..'\r' || this in '\u001C'..'\u001F' else isWhitespace()
 
 private fun Char.isAsciiDigit() = this in '0'..'9'
 
