@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.replaceClaims
 import com.vitorpamplona.quartz.nip39ExtIdentities.twitterClaim
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.text
@@ -234,6 +235,8 @@ class MetadataEvent(
             mastodon: String? = null,
             github: String? = null,
             clinkOffer: String? = null,
+            pictureMeta: PictureMeta? = null,
+            bannerMeta: PictureMeta? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -266,6 +269,16 @@ class MetadataEvent(
                 mastodon?.let { mastodonClaim(it) }
                 github?.let { githubClaim(it) }
 
+                updateProfileImageMetas(
+                    previous = emptyArray(),
+                    previousPicture = null,
+                    previousBanner = null,
+                    picture = (currentMetadata[PictureTag.TAG_NAME] as? JsonPrimitive)?.content,
+                    banner = (currentMetadata[BannerTag.TAG_NAME] as? JsonPrimitive)?.content,
+                    pictureMeta = pictureMeta,
+                    bannerMeta = bannerMeta,
+                )
+
                 initializer()
             }
         }
@@ -289,11 +302,15 @@ class MetadataEvent(
             mastodon: String? = null,
             github: String? = null,
             clinkOffer: String? = null,
+            pictureMeta: PictureMeta? = null,
+            bannerMeta: PictureMeta? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
             // Tries to not delete any existing attribute that we do not work with.
             val currentMetadata = latest.contactMetadataJson()?.toMutableMap() ?: mutableMapOf()
+            val previousPicture = (currentMetadata[PictureTag.TAG_NAME] as? JsonPrimitive)?.content
+            val previousBanner = (currentMetadata[BannerTag.TAG_NAME] as? JsonPrimitive)?.content
 
             updateFieldsWeWorkWith(
                 currentMetadata,
@@ -320,6 +337,17 @@ class MetadataEvent(
                     val newClaims = latest.replaceClaims(twitter, mastodon, github)
                     remove(IdentityClaimTag.TAG_NAME)
                     claims(newClaims)
+
+                    // NIP-92: keep the imetas of unchanged images, drop the ones of images no longer in use.
+                    updateProfileImageMetas(
+                        previous = latest.tags,
+                        previousPicture = previousPicture,
+                        previousBanner = previousBanner,
+                        picture = (currentMetadata[PictureTag.TAG_NAME] as? JsonPrimitive)?.content,
+                        banner = (currentMetadata[BannerTag.TAG_NAME] as? JsonPrimitive)?.content,
+                        pictureMeta = pictureMeta,
+                        bannerMeta = bannerMeta,
+                    )
 
                     initializer()
                 }

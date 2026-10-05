@@ -92,6 +92,7 @@ class KotlinArtifactProducerTest {
         // --- epoch 1: add THEIR key package ---------------------------------
         // bob2 is a real ts-mls KeyPackage. Using ours would make this a test
         // of our own encoder talking to itself.
+        group.clock = { TsMlsFixtures.validAt("bob2-kp.bin") }
         val add = group.addMember(TsMlsFixtures.bytes("bob2-kp.bin"))
         val welcome = assertNotNull(add.welcomeBytes, "adding a member must produce a Welcome")
         assertEquals(1L, group.epoch)

@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
+import com.vitorpamplona.amethyst.commons.service.upload.toPictureMeta
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
@@ -1027,26 +1028,7 @@ private fun PostTypeSelector(
     }
 }
 
-private fun buildPictureMetas(results: List<UploadResult>): List<com.vitorpamplona.quartz.nip68Picture.PictureMeta> =
-    results.mapNotNull { result ->
-        val url = result.blossom.url ?: return@mapNotNull null
-        val meta = result.metadata
-        com.vitorpamplona.quartz.nip68Picture.PictureMeta(
-            url = url,
-            mimeType = meta.mimeType,
-            blurhash = meta.blurhash,
-            dimension =
-                meta.width?.let { w ->
-                    meta.height?.let { h ->
-                        com.vitorpamplona.quartz.nip94FileMetadata.tags
-                            .DimensionTag(w, h)
-                    }
-                },
-            hash = meta.sha256,
-            size = meta.size.toInt(),
-            thumbhash = meta.thumbhash,
-        )
-    }
+private fun buildPictureMetas(results: List<UploadResult>): List<com.vitorpamplona.quartz.nip68Picture.PictureMeta> = results.mapNotNull { result -> result.blossom.url?.let { result.toPictureMeta(it) } }
 
 private suspend fun publishPicture(
     description: String,
