@@ -165,6 +165,12 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private var resumed = false
 
+    // The back-stack slot the last history record came from. A page that finishes in the same slot of the
+    // same WebView replaced that page in place (a JS redirect, a rewritten query), so it is the same visit.
+    private var lastRecordedView: WebView? = null
+    private var lastRecordedIndex = -1
+    private var lastRecordedUrl: String? = null
+
     // The pill, find, console and page dialogs — the shared Compose chrome (see BrowserChromeHost).
     private var chrome: BrowserChromeHost? = null
 
@@ -840,7 +846,7 @@ class NappletBrowserActivity : ComponentActivity() {
             if (!mainFrameLoadFailed) hideLoadError()
             // Record only a clean http(s) main-frame load — never a typed-but-failed address.
             if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
-                recordHistory(url, view.title)
+                recordHistory(view, url, view.title)
                 scheduleFaviconSniff(view, url)
             }
         }
@@ -938,15 +944,23 @@ class NappletBrowserActivity : ComponentActivity() {
 
     /** Relays a successfully loaded page to the main-process broker for the device-local visit history. */
     private fun recordHistory(
+        view: WebView,
         url: String,
         title: String?,
     ) {
+        val index = view.copyBackForwardList().currentIndex
+        val replaces = lastRecordedUrl?.takeIf { view === lastRecordedView && index == lastRecordedIndex && it != url }
+        lastRecordedView = view
+        lastRecordedIndex = index
+        lastRecordedUrl = url
+
         val msg =
             Message.obtain(null, NappletIpc.MSG_RECORD_HISTORY).apply {
                 data =
                     Bundle().apply {
                         putString(NappletIpc.KEY_HISTORY_URL, url)
                         putString(NappletIpc.KEY_HISTORY_TITLE, title.orEmpty())
+                        if (replaces != null) putString(NappletIpc.KEY_HISTORY_REPLACES, replaces)
                     }
             }
         queueToBroker(msg)
