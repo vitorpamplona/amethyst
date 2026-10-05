@@ -119,6 +119,13 @@ fun ObserverRoundupCard(
                 HorizontalDivider(Modifier.padding(horizontal = 14.dp))
             }
 
+            roundup.summary?.let { summary ->
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                    Text(summary, fontFamily = Serif, style = MaterialTheme.typography.bodyMedium)
+                    WrittenLabel()
+                }
+            }
+
             Spacer(Modifier.height(4.dp))
             roundup.lines.forEach { line -> Line(line, accountViewModel, nav, onOpen) }
         }

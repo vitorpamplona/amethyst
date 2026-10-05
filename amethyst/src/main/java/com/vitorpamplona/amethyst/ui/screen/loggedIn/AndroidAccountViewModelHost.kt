@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.observer.ObserverWriter
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
+import com.vitorpamplona.amethyst.service.ai.ObserverWriterFactory
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader
@@ -102,6 +104,8 @@ class AndroidAccountViewModelHost(
     override val supportsWritingAssistant: Boolean get() = WritingAssistantFactory.IS_SUPPORTED
 
     override fun createWritingAssistant(): WritingAssistant = WritingAssistantFactory.create(modules.appContext)
+
+    override fun createObserverWriter(): ObserverWriter? = ObserverWriterFactory.create()
 
     override val savedAccounts: Flow<Set<HexKey>> =
         LocalPreferences

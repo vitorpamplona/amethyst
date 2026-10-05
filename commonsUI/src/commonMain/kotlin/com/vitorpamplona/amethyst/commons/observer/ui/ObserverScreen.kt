@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.observer.ObserverSectionKind
 import com.vitorpamplona.amethyst.commons.observer.ObserverStory
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.observer
+import com.vitorpamplona.amethyst.commons.resources.observer_brief_title
 import com.vitorpamplona.amethyst.commons.resources.observer_day_notes
 import com.vitorpamplona.amethyst.commons.resources.observer_edition_code
 import com.vitorpamplona.amethyst.commons.resources.observer_empty
@@ -131,6 +132,10 @@ fun ObserverScreen(
     }
     LaunchedEffect(state) { if (state is ObserverPress.State.Ready) press.markSeen() }
 
+    // Each run gets its own on-device writer (Gemini Nano where the build and phone have it);
+    // the press closes it when the run ends.
+    val printWithWriter: () -> Unit = { press.print(accountViewModel.host.createObserverWriter()) }
+
     val openEvent: (Event) -> Unit = { event ->
         nav.nav { routeFor(event, accountViewModel.account) }
     }
@@ -139,7 +144,7 @@ fun ObserverScreen(
         topBar = {
             TopBarWithBackButton(stringRes(Res.string.observer), nav) {
                 if (edition != null && state !is ObserverPress.State.Printing) {
-                    IconButton(onClick = press::print) {
+                    IconButton(onClick = printWithWriter) {
                         Icon(MaterialSymbols.Refresh, contentDescription = stringRes(Res.string.observer_reprint))
                     }
                 }
@@ -149,9 +154,9 @@ fun ObserverScreen(
         val current = edition
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             if (current == null) {
-                Cover(state, onPrint = press::print, modifier = Modifier.widthIn(max = 720.dp))
+                Cover(state, onPrint = printWithWriter, modifier = Modifier.widthIn(max = 720.dp))
             } else {
-                Paper(current, state, accountViewModel, nav, onPrint = press::print, onOpen = openEvent, modifier = Modifier.widthIn(max = 720.dp))
+                Paper(current, state, accountViewModel, nav, onPrint = printWithWriter, onOpen = openEvent, modifier = Modifier.widthIn(max = 720.dp))
             }
         }
     }
@@ -387,6 +392,21 @@ private fun FrontMatter(edition: ObserverEdition) {
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        // The model's front-page brief of the whole day, when it wrote one.
+        edition.brief?.let { brief ->
+            Spacer(Modifier.height(12.dp))
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    stringRes(Res.string.observer_brief_title).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
+                )
+                Text(brief, fontFamily = Serif, style = MaterialTheme.typography.bodyLarge)
+                WrittenLabel()
+            }
+        }
     }
 }
 

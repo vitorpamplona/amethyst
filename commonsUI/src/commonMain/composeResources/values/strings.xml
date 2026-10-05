@@ -6467,7 +6467,7 @@
     <string name="observer_masthead">The Nostr Observer</string>
     <string name="observer_motto">All the notes fit to rank</string>
     <string name="observer_intro_title">Your paper, from your web of trust</string>
-    <string name="observer_intro_body">The Observer reads the last 24 hours of Nostr through your own web-of-trust lens and lays it out as a front page, right here on your phone. No server and no AI write it: every headline is the author's own words, ranked by what the people you trust liked, shared and replied to.</string>
+    <string name="observer_intro_body">The Observer reads the last 24 hours of Nostr through your own web-of-trust lens and lays it out as a front page, ranked by what the people you trust replied to and zapped. Where your phone has an on-device AI model, it writes the headlines and summaries right here, and nothing leaves the phone. Every summary keeps the author's own words underneath.</string>
     <string name="observer_print">Print today's paper</string>
     <string name="observer_reprint">Reprint</string>
     <string name="observer_printing">Printing your Observer…</string>
@@ -6514,6 +6514,11 @@
     <string name="observer_detail_source">From %1$s</string>
     <string name="observer_detail_status">Status: %1$s</string>
     <string name="observer_on_air_since">On air since %1$s</string>
+    <string name="observer_step_preparing_writer">Getting the on-device writer ready</string>
+    <string name="observer_step_writing">Writing the stories (%1$d of %2$d)</string>
+    <string name="observer_written_on_device">Summary written on this phone by AI</string>
+    <string name="observer_from_the_post">From the post</string>
+    <string name="observer_brief_title">Today in your web</string>
     <string name="observer_roundup_conversation">The conversation</string>
     <string name="observer_roundup_topic">Talk of the day: #%1$s</string>
     <string name="observer_roundup_live">On the air now</string>

@@ -69,7 +69,9 @@ import com.vitorpamplona.amethyst.commons.resources.observer_detail_source
 import com.vitorpamplona.amethyst.commons.resources.observer_detail_starts
 import com.vitorpamplona.amethyst.commons.resources.observer_detail_status
 import com.vitorpamplona.amethyst.commons.resources.observer_detail_watching
+import com.vitorpamplona.amethyst.commons.resources.observer_from_the_post
 import com.vitorpamplona.amethyst.commons.resources.observer_on_air_since
+import com.vitorpamplona.amethyst.commons.resources.observer_written_on_device
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
@@ -122,12 +124,20 @@ private fun LargePost(
     Column(Modifier.padding(14.dp)) {
         PostHeader(story, 40.dp, accountViewModel, nav)
         Spacer(Modifier.height(10.dp))
-        if (story.desk == ObserverDesk.HIGHLIGHTS) {
+        val written = story.written
+        if (written != null) {
+            // The model's headline and summary lead; the author's own words follow as the evidence.
+            Text(written.headline, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 29.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(written.summary, fontFamily = Serif, style = MaterialTheme.typography.bodyLarge)
+            WrittenLabel()
+            FromThePost(story, maxLines = 8)
+        } else if (story.desk == ObserverDesk.HIGHLIGHTS) {
             Quote(story.headline, large = true)
         } else {
             Text(story.headline, fontFamily = Serif, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 29.sp)
         }
-        if (story.body.isNotBlank()) {
+        if (written == null && story.body.isNotBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(story.body, fontFamily = Serif, style = MaterialTheme.typography.bodyLarge, maxLines = 14, overflow = TextOverflow.Ellipsis)
         }
@@ -156,12 +166,19 @@ private fun MediumPost(
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                if (story.desk == ObserverDesk.HIGHLIGHTS) {
+                val written = story.written
+                if (written != null) {
+                    Text(written.headline, fontFamily = Serif, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(written.summary, fontFamily = Serif, style = MaterialTheme.typography.bodyMedium)
+                    WrittenLabel()
+                    FromThePost(story, maxLines = 3)
+                } else if (story.desk == ObserverDesk.HIGHLIGHTS) {
                     Quote(story.headline, large = false)
                 } else {
                     Text(story.headline, fontFamily = Serif, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
-                if (story.body.isNotBlank()) {
+                if (written == null && story.body.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
                         story.body,
@@ -194,7 +211,7 @@ private fun SmallPost(
         UserPicture(userHex = story.author, size = 24.dp, accountViewModel = accountViewModel, nav = nav)
         Column(Modifier.weight(1f)) {
             Text(
-                story.headline,
+                story.written?.headline ?: story.headline,
                 fontFamily = Serif,
                 fontStyle = if (story.desk == ObserverDesk.HIGHLIGHTS) FontStyle.Italic else FontStyle.Normal,
                 fontWeight = FontWeight.SemiBold,
@@ -266,6 +283,43 @@ private fun PostHeader(
                 maxLines = 1,
             )
         }
+    }
+}
+
+/**
+ * Says plainly that the headline and summary above were written by a model on this phone,
+ * not by the author — a reader should never have to guess which words are whose.
+ */
+@Composable
+fun WrittenLabel(modifier: Modifier = Modifier) {
+    Row(modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringRes(Res.string.observer_written_on_device), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** The author's own words under a written summary, so every summary carries its source. */
+@Composable
+private fun FromThePost(
+    story: ObserverStory,
+    maxLines: Int,
+) {
+    val original = listOf(story.headline, story.body).filter { it.isNotBlank() }.joinToString(" ")
+    if (original.isBlank()) return
+    Spacer(Modifier.height(8.dp))
+    Text(stringRes(Res.string.observer_from_the_post).uppercase(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(Modifier.height(IntrinsicSize.Min).padding(top = 2.dp)) {
+        Box(Modifier.width(2.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            original,
+            fontFamily = Serif,
+            fontStyle = FontStyle.Italic,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

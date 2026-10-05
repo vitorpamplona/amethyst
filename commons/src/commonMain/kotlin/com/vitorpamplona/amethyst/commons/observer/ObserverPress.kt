@@ -68,6 +68,12 @@ class ObserverPress(
         READING_SIGNALS,
         READING_BYLINES,
         LAYING_OUT,
+
+        /** Checking for the on-device model, and fetching it when the phone supports one it does not have yet. */
+        PREPARING_WRITER,
+
+        /** The model writing headlines and summaries; [State.Printing.writtenDone] of [State.Printing.writtenTotal]. */
+        WRITING,
     }
 
     @Immutable
@@ -79,16 +85,24 @@ class ObserverPress(
             val desksDone: Int = 0,
             val desksTotal: Int = ObserverDesk.entries.size,
             val startedAt: Long,
+            val writtenDone: Int = 0,
+            val writtenTotal: Int = 0,
         ) : State {
-            /** A predictable bar: the desks are most of the wait, the rest is a few quick reads. */
+            /**
+             * A predictable bar. Reading is the first half — the desks are most of
+             * it — and writing the second, one step per story the model writes.
+             * Without a model the bar ends at the half and the paper is ready.
+             */
             val fraction: Float
                 get() =
                     when (step) {
-                        Step.CHECKING_LENS -> 0.05f
-                        Step.READING_DESKS -> 0.05f + 0.6f * desksDone / desksTotal.coerceAtLeast(1)
-                        Step.READING_SIGNALS -> 0.7f
-                        Step.READING_BYLINES -> 0.85f
-                        Step.LAYING_OUT -> 0.95f
+                        Step.CHECKING_LENS -> 0.03f
+                        Step.READING_DESKS -> 0.03f + 0.37f * desksDone / desksTotal.coerceAtLeast(1)
+                        Step.READING_SIGNALS -> 0.42f
+                        Step.READING_BYLINES -> 0.46f
+                        Step.LAYING_OUT -> 0.5f
+                        Step.PREPARING_WRITER -> 0.52f
+                        Step.WRITING -> 0.55f + 0.45f * writtenDone / writtenTotal.coerceAtLeast(1)
                     }
         }
 
@@ -125,9 +139,18 @@ class ObserverPress(
 
     val isPrinting: Boolean get() = _state.value is State.Printing
 
-    /** Starts a fresh edition for the last 24 hours. A press already running is left alone. */
-    fun print() {
-        if (job?.isActive == true) return
+    /**
+     * Starts a fresh edition for the last 24 hours. A press already running is
+     * left alone. [writer] is the on-device model that writes the headlines and
+     * summaries; without one — no model on this phone, or a build that ships
+     * none — the paper prints in its authors' own words. The press owns the
+     * writer from here and closes it when the run ends.
+     */
+    fun print(writer: ObserverWriter? = null) {
+        if (job?.isActive == true) {
+            writer?.close()
+            return
+        }
         job =
             scope.launch(Dispatchers.IO) {
                 val startedAt = now()
@@ -170,7 +193,19 @@ class ObserverPress(
                         )
 
                     onEvents(stories + replies + profiles.values)
+                    // The paper is readable from here; the model fills it in as it writes.
                     _edition.value = edition
+
+                    if (writer != null) {
+                        _state.value = State.Printing(Step.PREPARING_WRITER, startedAt = startedAt)
+                        if (prepare(writer)) {
+                            ObserverWritingPass.write(edition, writer) { done, total, written ->
+                                _edition.value = written
+                                _state.value = State.Printing(Step.WRITING, startedAt = startedAt, writtenDone = done, writtenTotal = total)
+                            }
+                        }
+                    }
+
                     _state.value = State.Ready(printedAt = now(), seen = readerIsLooking.value)
                 } catch (e: CancellationException) {
                     _state.value = State.Idle
@@ -178,9 +213,30 @@ class ObserverPress(
                 } catch (e: Exception) {
                     Log.w("ObserverPress", "Could not print the paper", e)
                     _state.value = State.Failed(e.message)
+                } finally {
+                    writer?.close()
                 }
             }
     }
+
+    /**
+     * Whether the model can write now. A phone that supports it but has not
+     * fetched it yet fetches it here: the reader asked for a paper, and the
+     * model is what writes one. Anything else prints without it.
+     */
+    private suspend fun prepare(writer: ObserverWriter): Boolean =
+        try {
+            when (writer.status()) {
+                ObserverWriterStatus.AVAILABLE -> true
+                ObserverWriterStatus.DOWNLOADABLE, ObserverWriterStatus.DOWNLOADING -> writer.download() == ObserverWriterStatus.AVAILABLE
+                ObserverWriterStatus.UNAVAILABLE -> false
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("ObserverPress", "The on-device model is not usable", e)
+            false
+        }
 
     fun cancel() {
         job?.cancel()

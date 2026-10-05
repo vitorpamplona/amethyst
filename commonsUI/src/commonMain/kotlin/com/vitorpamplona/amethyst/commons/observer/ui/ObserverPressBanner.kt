@@ -72,7 +72,9 @@ import com.vitorpamplona.amethyst.commons.resources.observer_step_bylines
 import com.vitorpamplona.amethyst.commons.resources.observer_step_checking_lens
 import com.vitorpamplona.amethyst.commons.resources.observer_step_desks
 import com.vitorpamplona.amethyst.commons.resources.observer_step_layout
+import com.vitorpamplona.amethyst.commons.resources.observer_step_preparing_writer
 import com.vitorpamplona.amethyst.commons.resources.observer_step_signals
+import com.vitorpamplona.amethyst.commons.resources.observer_step_writing
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
 
@@ -238,6 +240,8 @@ fun ObserverPrintingProgress(
                     ObserverPress.Step.READING_SIGNALS -> stringRes(Res.string.observer_step_signals)
                     ObserverPress.Step.READING_BYLINES -> stringRes(Res.string.observer_step_bylines)
                     ObserverPress.Step.LAYING_OUT -> stringRes(Res.string.observer_step_layout)
+                    ObserverPress.Step.PREPARING_WRITER -> stringRes(Res.string.observer_step_preparing_writer)
+                    ObserverPress.Step.WRITING -> stringRes(Res.string.observer_step_writing, state.writtenDone, state.writtenTotal)
                 },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

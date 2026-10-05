@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.observer.ObserverWriter
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
@@ -96,6 +97,12 @@ interface AccountViewModelHost {
 
     /** A new on-device writing assistant, or null where the platform has none. */
     fun createWritingAssistant(): WritingAssistant? = null
+
+    /**
+     * A new on-device model for the Nostr Observer to write headlines and summaries with, or
+     * null where the platform has none. The press that receives it closes it.
+     */
+    fun createObserverWriter(): ObserverWriter? = null
 
     /**
      * Whether the account [npub] has saved its secret key, as a live flag. Absent reads as true,

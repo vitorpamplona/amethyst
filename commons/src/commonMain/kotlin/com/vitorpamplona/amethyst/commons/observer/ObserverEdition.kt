@@ -47,6 +47,8 @@ data class ObserverEdition(
     val trending: List<ObserverTrend>,
     /** Summary posts that run after the top stories: the day's conversations and topics. */
     val roundups: List<ObserverRoundup> = emptyList(),
+    /** The front-page brief: a few sentences on the whole day, written by the on-device model. */
+    val brief: String? = null,
 ) {
     val isEmpty: Boolean get() = lead == null && topStories.isEmpty() && sections.isEmpty()
 }
@@ -139,6 +141,15 @@ data class ObserverRoundup(
     /** Distinct people in the roundup — everyone counted, not only the lines shown. */
     val people: Int,
     val lines: List<ObserverRoundupLine>,
+    /** What the voices add up to, written by the on-device model; the lines stay underneath as evidence. */
+    val summary: String? = null,
+)
+
+/** A headline and summary the on-device model wrote for one story. */
+@Immutable
+data class ObserverWritten(
+    val headline: String,
+    val summary: String,
 )
 
 /** One voice in a roundup: who, the line itself, and a fact when the kind has one (a date, an audience). */
@@ -167,6 +178,8 @@ data class ObserverStory(
     val zaps: Int,
     val details: List<ObserverDetail>,
     val size: ObserverStorySize = ObserverStorySize.SMALL,
+    /** The on-device model's headline and summary, when it wrote one that passed [ObserverCopy]'s checks. */
+    val written: ObserverWritten? = null,
 ) {
     val author: HexKey get() = event.pubKey
     val createdAt: Long get() = event.createdAt
