@@ -359,7 +359,7 @@ class Context(
             // Publish-before-apply: a group-state change becomes canonical only
             // once a relay in the group's own scope returns OK true. Anything
             // weaker (queued, sent, no error yet) is explicitly not success.
-            MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+            MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays, untilFirstAccept = true) },
             publishObligationStore,
             ingestDedupStore,
         )
