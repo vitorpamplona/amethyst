@@ -35,13 +35,20 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.Description
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.isMachineValue
+import com.vitorpamplona.quartz.nip50Search.isNaturalLanguageValue
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 
 /**
- * The human-authored text of any kind in the family, in a fixed order: the header's `names`
- * and `titles` (singular, then plural), the item's `name` and `title`, `description`,
- * `comments`, then each `t` item value. Headers and items share one walk because the spec's
- * nonstandard method lets an item carry header tags; each kind simply has fewer of them set.
+ * The human-authored text of any kind in the family: first, in a fixed order, the header's `names`
+ * and `titles` (singular, then plural), the item's `name` and `title`, `description` and
+ * `comments`; then, in tag order, each `t` value that is not a machine value and every value of
+ * every other tag that reads as natural language ([forEachOtherField]). Headers and items share
+ * one walk because the spec's nonstandard method lets an item carry header tags; each kind simply
+ * has fewer of them set.
  *
  * `content` is not part of the spec and ids/pubkeys/coordinates are served by tag filters,
  * so neither is indexed.
@@ -51,7 +58,8 @@ import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 fun TagArray.forEachSearchableListField(visitor: IndexableFieldVisitor): Boolean {
     // The read path runs once per event per keystroke, so this is two allocation-free passes
     // instead of one full scan (and one parsed object) per field. The first pass only remembers
-    // the first well-formed tag of each field; the fixed visiting order is applied afterwards.
+    // the first well-formed tag of each named field, so their fixed order can be applied before
+    // the second pass visits everything else.
     var names: Array<String>? = null
     var titles: Array<String>? = null
     var name: String? = null
@@ -83,8 +91,51 @@ fun TagArray.forEachSearchableListField(visitor: IndexableFieldVisitor): Boolean
     title?.let { if (!visitor.visit(it)) return false }
     description?.let { if (!visitor.visit(it)) return false }
     comments?.let { if (!visitor.visit(it)) return false }
+    return forEachOtherField(visitor, withHashtags = true)
+}
+
+/**
+ * Every tag the first pass of [forEachSearchableListField] does not own, in tag order: each `t`
+ * value that is not [isMachineValue] (only [withHashtags]), and every value of every other tag
+ * that [isNaturalLanguageValue]. The family's tag set is open — deployments add `author`,
+ * `subject`, `artist`, `relationshipType` and tags nobody has named yet — so this decides by what
+ * a value looks like rather than by the tag it sits in.
+ *
+ * Skips the NIP-defined metadata tags that are not the event's own text: `alt` (NIP-31 fallback
+ * text, which here restates `title` and `artist` behind a fixed "Song: … by …" prefix), `client`
+ * (NIP-89 app name) and `imeta` (NIP-92 `key value` pairs, whose space would otherwise pass every
+ * URL and hash as text).
+ *
+ * @return false when the visitor stopped the walk.
+ */
+private fun TagArray.forEachOtherField(
+    visitor: IndexableFieldVisitor,
+    withHashtags: Boolean,
+): Boolean {
     fastForEach { tag ->
-        HashtagTag.parse(tag)?.let { if (!visitor.visit(it)) return false }
+        if (tag.size < 2) return@fastForEach
+        when (tag[0]) {
+            HashtagTag.TAG_NAME -> {
+                if (withHashtags && !isMachineValue(tag[1]) && !visitor.visit(tag[1])) return false
+            }
+
+            NamesTag.TAG_NAME,
+            TitlesTag.TAG_NAME,
+            NameTag.TAG_NAME,
+            TitleTag.TAG_NAME,
+            DescriptionTag.TAG_NAME,
+            CommentsTag.TAG_NAME,
+            AltTag.TAG_NAME,
+            ClientTag.TAG_NAME,
+            IMetaTag.TAG_NAME,
+            -> {}
+
+            else -> {
+                for (i in 1 until tag.size) {
+                    if (isNaturalLanguageValue(tag[i]) && !visitor.visit(tag[i])) return false
+                }
+            }
+        }
     }
     return true
 }
@@ -103,10 +154,19 @@ fun TagArray.searchableListTitles(): List<String?> {
 /** The DESCRIPTION role of [forEachSearchableListField]: `description`, then `comments`. */
 fun TagArray.searchableListDescriptions(): List<String?> = listOf(description(), comments())
 
+/**
+ * The TEXT role of [forEachSearchableListField]: the natural-language values of the tags the
+ * fixed-order fields do not own, one per line, or null when the event has none. The `t` values
+ * are not here; the search funnel carries them as hashtags.
+ */
+fun TagArray.searchableListExtraText(): String? = joinFields { forEachOtherField(it, withHashtags = false) }.ifEmpty { null }
+
 /** The write-path join of [forEachSearchableListField]: one field per line. */
-fun TagArray.searchableListContent() =
+fun TagArray.searchableListContent() = joinFields { forEachSearchableListField(it) }
+
+private inline fun joinFields(walk: (IndexableFieldVisitor) -> Boolean) =
     buildString {
-        forEachSearchableListField { field ->
+        walk { field ->
             if (field != null) {
                 if (isNotEmpty()) append('\n')
                 append(field)

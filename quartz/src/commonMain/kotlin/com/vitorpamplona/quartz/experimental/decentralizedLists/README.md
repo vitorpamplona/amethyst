@@ -85,7 +85,19 @@ Filter(
 
 All four kinds are `SearchableEvent`s sharing one walk
 (`forEachSearchableListField`): `names` and `titles` (singular then plural),
-`name`, `title`, `description`, `comments`, then every `t` item value.
+`name`, `title`, `description`, `comments`, then, in tag order, every `t`
+item value and every value of every other tag that reads as natural language.
+
+The tag set is open — deployments add `author`, `subject`, `artist`,
+`relationshipType` and tags nobody has named yet — so that last step decides
+by the value, not the tag (`nip50Search/NaturalLanguageValue.kt`): a value is
+indexed when it has whitespace or a non-ASCII character, or is a single
+capitalized word ("Fiction", "Aristotle"), and is never a machine value (JSON,
+a number, a URI of any scheme, an address, a hex id, a UUID, bech32). `t`
+values skip the natural-language test but not the machine one. `alt` (NIP-31
+fallback text that restates other tags), `client` and `imeta` (NIP-92 `key
+value` pairs) are not indexed.
+
 `content` is not part of the spec, and ids, pubkeys and coordinates are
 served by `#p`/`#e`/`#a`/`#z` filters, so none of them are indexed.
 
