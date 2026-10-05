@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.cordn.interop
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import kotlin.io.encoding.Base64
@@ -43,6 +44,16 @@ object TsMlsFixtures {
     fun b64(name: String): ByteArray = Base64.decode(text(name))
 
     fun hex(name: String): ByteArray = text(name).chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+    /**
+     * A Unix time inside the lifetime of the vendored KeyPackage [name]. ts-mls mints them with
+     * a two-week window, so any test that hands one to an [MlsGroup] must pin the group's clock
+     * here, or it starts failing once the fixtures are two weeks old.
+     */
+    fun validAt(name: String): Long {
+        val lifetime = checkNotNull(MlsKeyPackage.decodeTls(TlsReader(bytes(name))).leafNode.lifetime) { "fixture '$name' has no lifetime" }
+        return lifetime.notBefore + (lifetime.notAfter - lifetime.notBefore) / 2
+    }
 }
 
 /**
