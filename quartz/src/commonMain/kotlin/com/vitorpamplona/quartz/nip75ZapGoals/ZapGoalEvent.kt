@@ -92,7 +92,7 @@ class ZapGoalEvent(
      * NIP-75: who the goal's zaps go to, as NIP-57 `zap` splits. Only splits a zap would pay:
      * positive weight, and a 64-hex key when the beneficiary is a pubkey.
      */
-    fun beneficiaries(): List<BaseZapSplitSetup> = tags.zapSplitSetup().filter { it !is ZapSplitSetup || Hex.isHex64(it.pubKeyHex) }
+    fun beneficiaries(): List<BaseZapSplitSetup> = tags.zapSplitSetup().filter { it !is ZapSplitSetup || (it.pubKeyHex.length == 64 && Hex.isHex64(it.pubKeyHex)) }
 
     /** NIP-75: the event this goal is linked to (`e`), if any. */
     fun goalEventId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)

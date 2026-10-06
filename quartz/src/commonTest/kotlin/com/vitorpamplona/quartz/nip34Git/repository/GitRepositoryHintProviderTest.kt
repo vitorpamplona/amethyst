@@ -45,7 +45,7 @@ class GitRepositoryHintProviderTest {
                 arrayOf("d", "quartz"),
                 arrayOf("name", "quartz"),
                 arrayOf("description", "Nostr library"),
-                arrayOf("maintainers", other, third, "not-a-key"),
+                arrayOf("maintainers", other, third, "not-a-key", other + "ff"),
                 arrayOf("t", "kotlin"),
             ),
             "readme",

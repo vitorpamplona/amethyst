@@ -75,7 +75,8 @@ class GitRepositoryEvent(
     // The `maintainers` tag lists bare pubkeys, without relay hints.
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
-    override fun linkedPubKeys(): List<HexKey> = maintainers().filter(Hex::isHex64)
+    // Hex.isHex64 only reads the first 64 chars, so the length is checked too.
+    override fun linkedPubKeys(): List<HexKey> = maintainers().filter { it.length == 64 && Hex.isHex64(it) }
 
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 

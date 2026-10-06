@@ -35,16 +35,18 @@ class ZapReceiptHintProviderTest {
     private fun receipt(
         requestAuthor: String,
         vararg tags: Array<String>,
+        anon: Boolean = false,
     ): ZapReceiptEvent {
-        val request = ZapRequestEvent("33".repeat(32), requestAuthor, 1700000000, arrayOf(arrayOf("p", b)), "great post", "00".repeat(64))
+        val requestTags = if (anon) arrayOf(arrayOf("p", b), arrayOf("anon")) else arrayOf(arrayOf("p", b))
+        val request = ZapRequestEvent("33".repeat(32), requestAuthor, 1700000000, requestTags, "great post", "00".repeat(64))
         return ZapReceiptEvent("44".repeat(32), c, 1700000001, arrayOf(*tags, arrayOf("description", request.toJson())), "", "00".repeat(64))
     }
 
     @Test
-    fun receiptLinksRecipientSenderAndRequestAuthor() {
+    fun receiptLinksRecipientAndPublicSender() {
         val event = receipt(zapper, arrayOf("p", b, relay), arrayOf("P", zapper), arrayOf("e", eventId))
-        // the sender appears as `P` and as the request author; consumers dedupe
-        assertEquals(listOf(b, zapper, zapper), event.linkedPubKeys())
+        // the sender of a public zap, read once from the embedded request
+        assertEquals(listOf(b, zapper), event.linkedPubKeys())
         // only lowercase `p` has a relay slot
         assertEquals(listOf(b), event.pubKeyHints().map { it.pubkey })
         assertEquals(listOf(eventId), event.linkedEventIds())
@@ -52,10 +54,19 @@ class ZapReceiptHintProviderTest {
     }
 
     @Test
-    fun anonymousRequestKeyIsLinkedToo() {
+    fun anonymousSenderKeyIsNotLinked() {
+        // An anonymous or private zap is signed by a throwaway or derived key, which the
+        // LNURL server also copies into `P`: neither is a user worth linking.
         val anon = "55".repeat(32)
-        val event = receipt(anon, arrayOf("p", b))
-        assertEquals(listOf(b, anon), event.linkedPubKeys())
+        val event = receipt(anon, arrayOf("p", b), arrayOf("P", anon), anon = true)
+        assertEquals(listOf(b), event.linkedPubKeys())
+    }
+
+    @Test
+    fun senderIsNotLinkedWithoutTheEmbeddedRequest() {
+        // `P` alone cannot say whether the zap was anonymous.
+        val event = ZapReceiptEvent("44".repeat(32), c, 1700000001, arrayOf(arrayOf("p", b), arrayOf("P", zapper)), "", "00".repeat(64))
+        assertEquals(listOf(b), event.linkedPubKeys())
     }
 
     @Test

@@ -45,6 +45,8 @@ class ZapGoalAccessorsTest {
                 // not a 64-hex key, and a zero weight: neither is paid
                 arrayOf("zap", "zz".repeat(32), relay, "1"),
                 arrayOf("zap", alice, relay, "0"),
+                // a hex key with trailing junk is not a key either
+                arrayOf("zap", alice + "00", relay, "1"),
             )
 
         assertEquals(listOf(bob, "me@getalby.com"), goal.beneficiaries().map { (it as? ZapSplitSetup)?.pubKeyHex ?: (it as ZapSplitSetupLnAddress).lnAddress })

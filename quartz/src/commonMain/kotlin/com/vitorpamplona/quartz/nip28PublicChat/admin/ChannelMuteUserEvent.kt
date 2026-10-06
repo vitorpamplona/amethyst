@@ -48,8 +48,11 @@ class ChannelMuteUserEvent(
     PubKeyHintProvider,
     EventHintProvider,
     SearchableEvent {
-    // NIP-28: the content is the moderator's human-written reason for muting.
-    override fun indexableContent() = content
+    // NIP-28: the content carries the moderator's human-written reason for muting.
+    override fun indexableContent() = reason() ?: ""
+
+    /** The reason for muting: the `reason` of NIP-28's JSON content, or the plain-text content. */
+    fun reason(): String? = moderationReason(content)
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

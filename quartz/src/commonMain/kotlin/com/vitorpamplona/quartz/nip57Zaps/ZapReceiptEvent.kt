@@ -64,21 +64,19 @@ class ZapReceiptEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    // The zapped `p` recipients, the uppercase `P` sender, and the embedded request's
-    // author (the same sender, or the throwaway key of an anonymous/private zap).
-    // Only `p` has a relay slot, so [pubKeyHints] stays `p`-only. The sender usually appears
-    // twice (`P` and the request author); consumers dedupe, so no distinct() pass here.
+    // The zapped `p` recipients, plus the sender of a public zap. The sender of an anonymous
+    // or private zap (an `anon` tag in the embedded request) is a throwaway or derived key:
+    // linking it would create a User, fetch metadata that never exists and record a relay hint
+    // for it on every receipt. The sender is read from the embedded request, not from the
+    // receipt's `P` tag, because only the request says whether the zap was anonymous; `P` is a
+    // copy of that request's author anyway (NIP-57). Only `p` has a relay slot, so
+    // [pubKeyHints] stays `p`-only.
     override fun linkedPubKeys(): List<HexKey> {
         val recipients = zappedAuthor()
-        val sender = zapSender()
-        val requestAuthor = zappedRequestAuthor()
-        if (sender == null && requestAuthor == null) return recipients
-
-        val keys = ArrayList<HexKey>(recipients.size + 2)
-        keys.addAll(recipients)
-        if (sender != null) keys.add(sender)
-        if (requestAuthor != null) keys.add(requestAuthor)
-        return keys
+        val request = zapRequest ?: return recipients
+        if (request.hasAnonTag()) return recipients
+        val sender = zappedRequestAuthor() ?: return recipients
+        return recipients + sender
     }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)

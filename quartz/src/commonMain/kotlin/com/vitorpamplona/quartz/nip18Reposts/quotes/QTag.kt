@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip18Reposts.quotes
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
@@ -107,9 +108,9 @@ interface QTag {
         fun parseAddressAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length != 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            // Shape-checked like ATag.parseAsHint, so `foo:bar` is not indexed as an address.
+            ensure(AddressSerializer.isAddressShape(tag[1])) { return null }
 
             val relayHint = pickRelayHint(tag)
             ensure(relayHint != null) { return null }

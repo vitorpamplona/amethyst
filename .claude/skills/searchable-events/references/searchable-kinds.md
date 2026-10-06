@@ -30,8 +30,8 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 40 | ChannelCreateEvent | nip28PublicChat/admin | `channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }` (SP) |
 | 41 | ChannelMetadataEvent | nip28PublicChat/admin | same as kind 40 (SP) |
 | 42 | ChannelMessageEvent | nip28PublicChat/message | `content` |
-| 43 | ChannelHideMessageEvent | nip28PublicChat/admin | `content` (the reason) |
-| 44 | ChannelMuteUserEvent | nip28PublicChat/admin | `content` (the reason) |
+| 43 | ChannelHideMessageEvent | nip28PublicChat/admin | `reason()` — the `reason` of NIP-28's `{"reason": …}` JSON content, or the plain-text content |
+| 44 | ChannelMuteUserEvent | nip28PublicChat/admin | `reason()` — as kind 43 |
 | 54 | PodcastEpisodeEvent | nipF4Podcasts/episode | `listOfNotNull(title(), description(), content)` NL |
 | 62 | RequestToVanishEvent | nip62RequestToVanish | `content` |
 | 64 | ChessGameEvent | nip64Chess/game | `searchText().all()` NL — the PGN's `Event`, `Site`, `White`, `Black`, `Annotator`, `Opening`, `Variation`, `WhiteTeam`, `BlackTeam` tag-pair values, then its `{…}` comments; never the movetext |

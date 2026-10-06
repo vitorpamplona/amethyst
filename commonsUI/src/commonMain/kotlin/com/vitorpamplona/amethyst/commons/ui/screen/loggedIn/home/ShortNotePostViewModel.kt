@@ -901,9 +901,16 @@ open class ShortNotePostViewModel :
         }
 
         // The reply-marked e/a tag, else the root-marked one (a direct reply to a root carries
-        // only the root marker), else - for a draft from a client that writes no markers - the
-        // last positional one. A fork-only draft has none of these, so it does not read as a reply.
-        originalNote = draftEvent.replyingToAddressOrEvent()?.let { LocalCache.checkGetOrCreateNote(it) }
+        // only the root marker). Markers only: an unmarked `a` (a community, a mention) must not
+        // turn a top-level draft into a reply, so replyingToAddressOrEvent()'s positional
+        // fallback is not used here.
+        originalNote =
+            draftEvent.tags
+                .firstOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "reply" }
+                ?.let { LocalCache.checkGetOrCreateNote(it[1]) }
+                ?: draftEvent.tags
+                    .firstOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }
+                    ?.let { LocalCache.checkGetOrCreateNote(it[1]) }
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null

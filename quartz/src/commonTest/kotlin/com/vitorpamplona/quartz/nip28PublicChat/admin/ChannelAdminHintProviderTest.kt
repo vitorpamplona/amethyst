@@ -81,4 +81,28 @@ class ChannelAdminHintProviderTest {
         val hide = ChannelHideMessageEvent(id, pk, 1L, arrayOf(arrayOf("e", eventId, relay, "root"), arrayOf("e", eventId2)), "off-topic", sig)
         assertEquals("off-topic", hide.indexableContent())
     }
+
+    @Test
+    fun specJsonReasonIsIndexedWithoutItsJson() {
+        // NIP-28's own examples write the content as `{"reason": "..."}`.
+        val hide = ChannelHideMessageEvent(id, pk, 1L, arrayOf(arrayOf("e", eventId2)), "{\"reason\": \"Dick pic\"}", sig)
+        assertEquals("Dick pic", hide.reason())
+        assertEquals("Dick pic", hide.indexableContent())
+
+        val mute = ChannelMuteUserEvent(id, pk, 1L, arrayOf(arrayOf("p", other)), "{\"reason\": \"Posting dick pics\"}", sig)
+        assertEquals("Posting dick pics", mute.indexableContent())
+    }
+
+    @Test
+    fun jsonWithoutAReasonIndexesNothing() {
+        val hide = ChannelHideMessageEvent(id, pk, 1L, arrayOf(arrayOf("e", eventId2)), "{}", sig)
+        assertEquals(null, hide.reason())
+        assertEquals("", hide.indexableContent())
+    }
+
+    @Test
+    fun proseInBracesIsKeptAsWritten() {
+        val hide = ChannelHideMessageEvent(id, pk, 1L, arrayOf(arrayOf("e", eventId2)), "{spam}", sig)
+        assertEquals("{spam}", hide.indexableContent())
+    }
 }

@@ -45,8 +45,11 @@ class ChannelHideMessageEvent(
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     SearchableEvent {
-    // NIP-28: the content is the moderator's human-written reason for hiding.
-    override fun indexableContent() = content
+    // NIP-28: the content carries the moderator's human-written reason for hiding.
+    override fun indexableContent() = reason() ?: ""
+
+    /** The reason for hiding: the `reason` of NIP-28's JSON content, or the plain-text content. */
+    fun reason(): String? = moderationReason(content)
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
