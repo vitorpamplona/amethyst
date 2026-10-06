@@ -44,9 +44,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,21 +58,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.nip82_assets_count
 import com.vitorpamplona.amethyst.commons.resources.nip82_by_author
 import com.vitorpamplona.amethyst.commons.resources.nip82_download
 import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LinkIcon
@@ -82,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
@@ -97,16 +92,9 @@ import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 
 /**
  * NIP-82 kind 32267 — compact feed card. Renders icon, name, latest version
@@ -208,74 +196,12 @@ fun RenderSoftwareApplication(
     )
 }
 
-/**
- * Latest NIP-82 [ReleaseArtifactSetEvent] version for [app], kept live.
- *
- * Releases (kind 30063) are separate events that point back to the app via an
- * `i` tag rather than an `a` tag, so they are never indexed as replies to the
- * app note and never ping its flows. Instead we register an index-driven
- * [LocalCache.observeNotes] observer, so a newer release arriving while the
- * card is visible updates the version chip without a manual refresh.
- *
- * The filter narrows on the release's `i` tag (the app id), not just the
- * author, so the observer only ever loads *this* app's releases — an author
- * with many apps would otherwise pull every release they ever published into
- * the observer's working set. A blind `limit` is deliberately avoided:
- * [LocalCache.filter] applies `take(limit)` before sorting by `created_at`,
- * so it could drop the very release we are looking for.
- */
+/** The version of [app]'s current release (see [SoftwareReleases.latest]), kept live. */
 @Composable
 fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
-    val flow =
-        remember(app.pubKey, app.id) {
-            val filter =
-                Filter(
-                    kinds = listOf(ReleaseArtifactSetEvent.KIND),
-                    authors = listOf(app.pubKey),
-                    tags = mapOf(AppIdTag.TAG_NAME to listOf(app.appId())),
-                )
-            LocalCache
-                .observeNotes(filter)
-                .map { notes -> latestNip82Release(notes, app)?.version() }
-                .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
-        }
-    return flow.collectAsStateWithLifecycle(initialValue = null)
+    val releases = produceNip82Releases(app)
+    return remember(releases) { derivedStateOf { SoftwareReleases.latest(releases.value)?.version() } }
 }
-
-fun findLatestNip82Release(app: SoftwareApplicationEvent): ReleaseArtifactSetEvent? = nip82ReleasesFor(app).maxByOrNull { it.createdAt }
-
-/** Picks the newest NIP-82 release for [app] out of an already-narrowed [notes] collection. */
-private fun latestNip82Release(
-    notes: Collection<Note>,
-    app: SoftwareApplicationEvent,
-): ReleaseArtifactSetEvent? {
-    val prefix = "${app.dTag()}@"
-    return notes
-        .mapNotNull { it.asNip82ReleaseFor(prefix) }
-        .maxByOrNull { it.createdAt }
-}
-
-/** kind-30063 addressables authored by [app] whose `d` tag is `<app-id>@<version>`. */
-private fun nip82ReleasesFor(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> {
-    val prefix = "${app.dTag()}@"
-    return LocalCache.addressables
-        .filterIntoSet(ReleaseArtifactSetEvent.KIND, app.pubKey) { _, addr ->
-            val ev = addr.event ?: return@filterIntoSet false
-            ev.dTag().startsWith(prefix) && ev.isNip82SoftwareRelease()
-        }.mapNotNull { it.event as? ReleaseArtifactSetEvent }
-}
-
-/**
- * This note as the NIP-82 release for [prefix] (`<app-id>@`). kind 30063 is shared
- * with NIP-51 release artifact sets, so only events carrying the NIP-82 tags qualify.
- */
-private fun Note.asNip82ReleaseFor(prefix: String): ReleaseArtifactSetEvent? {
-    val ev = event as? ReleaseArtifactSetEvent ?: return null
-    return ev.takeIf { it.dTag().startsWith(prefix) && it.isNip82SoftwareRelease() }
-}
-
-fun findAllNip82Releases(app: SoftwareApplicationEvent): List<ReleaseArtifactSetEvent> = nip82ReleasesFor(app).sortedByDescending { it.createdAt }
 
 @Composable
 fun AppIcon(
@@ -413,12 +339,23 @@ fun ScreenshotsStrip(
     }
 }
 
+/**
+ * Website and source links. A `repository` that is not a web URL (Armada's
+ * `nostr://npub…/relay/repo`, which only `git-remote-nostr` can clone) opens the app's NIP-34
+ * repository ([gitRepository], its `a 30617` pointer) inside the app when it has one.
+ */
 @Composable
 fun AppLinksColumn(
     website: String?,
     repository: String?,
+    gitRepository: Address? = null,
+    nav: INav? = null,
 ) {
-    if (website == null && repository == null) return
+    val webRepository = repository?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+    val inAppRepository = gitRepository?.takeIf { webRepository == null && nav != null }
+    val externalRepository = repository.takeIf { inAppRepository == null }
+    if (website == null && externalRepository == null && inAppRepository == null) return
+
     val uri = LocalUriHandler.current
     Column {
         website?.let {
@@ -431,14 +368,25 @@ fun AppLinksColumn(
                 )
             }
         }
-        repository?.let {
+        if (inAppRepository != null && nav != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
                 ClickableTextPrimary(
-                    text = stringRes(Res.string.nip82_repository_label, it.removePrefix("https://").removePrefix("http://")),
-                    onClick = { runCatching { uri.openUri(it) } },
+                    text = stringRes(Res.string.nip82_repository_label, inAppRepository.dTag),
+                    onClick = { nav.nav(Route.GitRepository(inAppRepository)) },
                     modifier = Modifier.padding(start = 5.dp),
                 )
+            }
+        } else {
+            externalRepository?.let {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
+                    ClickableTextPrimary(
+                        text = stringRes(Res.string.nip82_repository_label, it.removePrefix("https://").removePrefix("http://")),
+                        onClick = { runCatching { uri.openUri(it) } },
+                        modifier = Modifier.padding(start = 5.dp),
+                    )
+                }
             }
         }
     }
@@ -469,214 +417,6 @@ fun Chip(
 }
 
 /**
- * NIP-82 kind 30063 — Software Release card. Renders the version and channel as
- * a header, the aggregated platforms as chips, the release notes (markdown), and
- * a count of bundled assets.
- */
-@Composable
-fun RenderSoftwareRelease(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    // kind 30063 is shared between NIP-51 release artifact sets and NIP-82 software
-    // releases; only render the NIP-82 form here.
-    val event = note.event as? ReleaseArtifactSetEvent ?: return
-    if (!event.isNip82SoftwareRelease()) return
-
-    RenderSoftwareReleaseBody(event = event, accountViewModel = accountViewModel, nav = nav)
-}
-
-@Composable
-fun RenderSoftwareReleaseBody(
-    event: ReleaseArtifactSetEvent,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    showAppId: Boolean = true,
-) {
-    val appId = remember(event) { event.appId() }
-    val version = remember(event) { event.version() }
-    val channel = remember(event) { event.channel() }
-    val assets = remember(event) { event.assets() }
-    val notes = event.content
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = Size5dp)
-                .clip(QuoteBorder)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
-                .padding(12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                if (showAppId) {
-                    appId?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                version?.let {
-                    Text(
-                        text = stringRes(Res.string.nip82_version_label, it),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-            channel?.let {
-                Chip(it.uppercase(), tint = MaterialTheme.colorScheme.tertiaryContainer)
-            }
-        }
-
-        if (notes.isNotBlank()) {
-            Spacer(StdVertSpacer)
-            Text(
-                text = notes,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (assets.isNotEmpty()) {
-            Spacer(StdVertSpacer)
-            val n = assets.size
-            Text(
-                text = pluralStringRes(Res.plurals.nip82_assets_count, n, n),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-            Spacer(Modifier.height(6.dp))
-            BundledAssetsList(
-                assetIds = assets.map { it.eventId },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-    }
-}
-
-@Composable
-private fun BundledAssetsList(
-    assetIds: List<String>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        assetIds.forEach { id ->
-            key(id) {
-                LoadAssetNote(id) { assetNote ->
-                    if (assetNote != null) {
-                        SoftwareAssetRow(assetNote, accountViewModel)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadAssetNote(
-    eventId: String,
-    content: @Composable (Note?) -> Unit,
-) {
-    val note by produceState<Note?>(initialValue = LocalCache.getNoteIfExists(eventId), eventId) {
-        if (value == null) {
-            value = LocalCache.checkGetOrCreateNote(eventId)
-        }
-    }
-    content(note)
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SoftwareAssetRow(
-    note: Note,
-    accountViewModel: AccountViewModel,
-) {
-    // Subscribe so a missing asset event is fetched from the relay and we recompose when it arrives.
-    val eventState = observeNoteEvent<SoftwareAssetEvent>(note, accountViewModel)
-    val event = eventState.value ?: return
-
-    val uri = LocalUriHandler.current
-    val version = remember(event) { event.version() }
-    val mimeType = remember(event) { event.mimeType() }
-    val sizeBytes = remember(event) { event.sizeInBytes() }
-    val platforms = remember(event) { event.platforms() }
-    val downloadUrl = remember(event) { event.url() }
-    val variant = remember(event) { event.variant() }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                mimeType?.let {
-                    Text(
-                        text = prettyMime(it),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                }
-                version?.let {
-                    Text(
-                        text = stringRes(Res.string.nip82_version_label, it),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                    )
-                }
-                variant?.let {
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "· $it",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                    )
-                }
-                sizeBytes?.let {
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "· ${formatBytes(it.toLong())}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                    )
-                }
-            }
-            if (platforms.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    platforms.forEach { Chip(it) }
-                }
-            }
-        }
-        downloadUrl?.let {
-            Spacer(Modifier.width(8.dp))
-            ClickableTextPrimary(
-                text = stringRes(Res.string.nip82_download),
-                onClick = { runCatching { uri.openUri(it) } },
-            )
-        }
-    }
-}
-
-/**
  * NIP-82 kind 3063 — Software Asset card. A compact descriptor of a single
  * install artifact: MIME type, version, size, platforms, and a download link.
  */
@@ -695,7 +435,7 @@ fun RenderSoftwareAsset(
     val mimeType = remember(event) { event.mimeType() }
     val sizeBytes = remember(event) { event.sizeInBytes() }
     val platforms = remember(event) { event.platforms() }
-    val downloadUrl = remember(event) { event.url() }
+    val downloadUrl = remember(event) { SoftwareAssetDownloads.url(event) }
 
     Column(
         modifier =

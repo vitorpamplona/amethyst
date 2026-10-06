@@ -1232,6 +1232,21 @@
     <string name="nip82_by_author">by</string>
     <string name="nip82_older_releases_show">Show older releases</string>
     <string name="nip82_older_releases_hide">Hide older releases</string>
+    <string name="nip82_new_release">New release</string>
+    <string name="nip82_commit_label">Commit %1$s</string>
+    <string name="nip82_section_downloads">Downloads</string>
+    <string name="nip82_for_this_device">For this device</string>
+    <string name="nip82_not_from_developer">Not published by this app's developer</string>
+    <string name="nip82_min_android_api">API %1$s+</string>
+    <string name="nip82_min_platform_version">%1$s %2$s+</string>
+    <string name="nip82_os_android">Android</string>
+    <string name="nip82_os_ios">iOS</string>
+    <string name="nip82_os_macos">macOS</string>
+    <string name="nip82_os_windows">Windows</string>
+    <string name="nip82_os_linux">Linux</string>
+    <string name="nip82_os_freebsd">FreeBSD</string>
+    <string name="nip82_os_wasm">WebAssembly</string>
+    <string name="nip82_os_other">Other</string>
     <string name="meeting_room_in_space">In %1$s</string>
     <string name="meeting_room_in_space_unknown">a Nest</string>
     <string name="nest_stage">Stage</string>
@@ -4756,6 +4771,10 @@
     <string name="nip46_signer_remote_app">Remote signer app</string>
     <string name="nip46_signer_title">Remote Signer</string>
     <string name="nip51_list_has_private_members">This list has private members only its author can see</string>
+    <plurals name="nip82_downloads_count">
+        <item quantity="one">%1$d download</item>
+        <item quantity="other">%1$d downloads</item>
+    </plurals>
     <plurals name="nip82_assets_count">
         <item quantity="one">%1$d asset bundled</item>
         <item quantity="other">%1$d assets bundled</item>

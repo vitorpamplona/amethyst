@@ -1047,7 +1047,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is SoftwareAssetEvent) {
                     RenderSoftwareAsset(baseNote, accountViewModel, nav)
                 } else if (noteEvent is ReleaseArtifactSetEvent && noteEvent.isNip82SoftwareRelease()) {
-                    RenderSoftwareRelease(baseNote, accountViewModel, nav)
+                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav, expanded = true)
                 } else if (noteEvent is DraftWrapEvent) {
                     RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {

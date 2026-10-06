@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_section_latest_release
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_links
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_platforms
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_topics
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -86,8 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.ScreenshotsStrip
 import com.vitorpamplona.amethyst.commons.ui.note.types.TopicChipFlow
 import com.vitorpamplona.amethyst.commons.ui.note.types.VersionChip
-import com.vitorpamplona.amethyst.commons.ui.note.types.findAllNip82Releases
-import com.vitorpamplona.amethyst.commons.ui.note.types.findLatestNip82Release
+import com.vitorpamplona.amethyst.commons.ui.note.types.produceNip82Releases
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.dal.ThreadFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 @Composable
 fun SoftwareAppDetailScreen(
@@ -189,9 +190,17 @@ private fun SoftwareAppDetailBody(
     val license = remember(event) { event.license() }
     val website = remember(event) { event.url() }
     val repo = remember(event) { event.repository() }
+    val gitRepo =
+        remember(event) {
+            event.appLinks().firstOrNull { it.kind == GitRepositoryEvent.KIND }?.let { Address(it.kind, it.pubKeyHex, it.dTag) }
+        }
 
-    val latestRelease = remember(event) { findLatestNip82Release(event) }
-    val olderReleases = remember(event) { findAllNip82Releases(event).drop(1) }
+    val releases by produceNip82Releases(event)
+    val latestRelease = remember(releases) { SoftwareReleases.latest(releases) }
+    val olderReleases = remember(releases, latestRelease) { releases.filter { it !== latestRelease } }
+
+    val background = MaterialTheme.colorScheme.background
+    val backgroundColor = remember(background) { mutableStateOf(background) }
 
     val threadState by threadViewModel.feedState.feedContent.collectAsStateWithLifecycle()
     val comments: List<Note> =
@@ -259,11 +268,11 @@ private fun SoftwareAppDetailBody(
             }
         }
 
-        if (website != null || repo != null) {
+        if (website != null || repo != null || gitRepo != null) {
             item(key = "links") {
                 Spacer(Modifier.height(12.dp))
                 Section(title = stringRes(Res.string.nip82_section_links)) {
-                    AppLinksColumn(website = website, repository = repo)
+                    AppLinksColumn(website = website, repository = repo, gitRepository = gitRepo, nav = nav)
                 }
             }
         }
@@ -275,9 +284,10 @@ private fun SoftwareAppDetailBody(
                     SectionLabel(stringRes(Res.string.nip82_section_latest_release))
                     RenderSoftwareReleaseBody(
                         event = latestRelease,
+                        app = event,
+                        backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav,
-                        showAppId = false,
                     )
                 }
             }
@@ -301,9 +311,10 @@ private fun SoftwareAppDetailBody(
                     Column(PaddingHorizontal12Modifier) {
                         RenderSoftwareReleaseBody(
                             event = release,
+                            app = event,
+                            backgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
                             nav = nav,
-                            showAppId = false,
                         )
                     }
                 }

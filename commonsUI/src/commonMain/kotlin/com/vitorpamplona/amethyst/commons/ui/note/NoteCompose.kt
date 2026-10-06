@@ -1070,7 +1070,7 @@ private fun RenderNoteRow(
             // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
             // tag signature matches.
             if (noteEvent.isNip82SoftwareRelease()) {
-                RenderSoftwareRelease(baseNote, accountViewModel, nav)
+                RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
             }
         }
 

@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -58,6 +59,7 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -268,6 +270,13 @@ fun routeForInner(
 
         is SoftwareApplicationEvent -> {
             Route.SoftwareAppDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
+        // A NIP-82 release opens the page of the app it belongs to, which lists its downloads
+        // next to the app's other releases. A NIP-51 release artifact set stays a plain note.
+        is ReleaseArtifactSetEvent -> {
+            val app = if (noteEvent.isNip82SoftwareRelease()) noteEvent.appAddress() else null
+            if (app != null) Route.SoftwareAppDetail(app) else Route.Note(noteEvent.addressTag())
         }
 
         // Calendar appointments route to their dedicated detail screen rather than the generic

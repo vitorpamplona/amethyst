@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.softwareapps
+
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+
+/** The operating systems NIP-82 assets are grouped under, in display order. */
+enum class SoftwareOs {
+    ANDROID,
+    IOS,
+    MACOS,
+    WINDOWS,
+    LINUX,
+    FREEBSD,
+    WASM,
+    OTHER,
+}
+
+/**
+ * Reads NIP-82 platform identifiers (Appendix A, `<os>-<arch>` loosely after `uname -sm`) and
+ * MIME types (Appendix C) into the OS and CPU a person recognises.
+ */
+object SoftwarePlatforms {
+    /** The OS of an Appendix A identifier; [SoftwareOs.OTHER] for custom ones. */
+    fun os(platformId: String): SoftwareOs {
+        val id = platformId.lowercase()
+        return when {
+            id.startsWith("android-") -> SoftwareOs.ANDROID
+            id.startsWith("ios-") -> SoftwareOs.IOS
+            id.startsWith("darwin-") -> SoftwareOs.MACOS
+            id.startsWith("windows-") -> SoftwareOs.WINDOWS
+            id.startsWith("linux-") -> SoftwareOs.LINUX
+            id.startsWith("freebsd-") -> SoftwareOs.FREEBSD
+            id.startsWith("wasm") || id.startsWith("wasi-") -> SoftwareOs.WASM
+            else -> SoftwareOs.OTHER
+        }
+    }
+
+    /**
+     * The CPU of an Appendix A identifier as people name it: "Apple silicon"/"Intel" on macOS,
+     * "ARM64", "x86-64" and so on elsewhere. Null when the identifier names no architecture.
+     */
+    fun arch(platformId: String): String? {
+        val id = platformId.lowercase()
+        val os = os(id)
+        val cpu =
+            when (os) {
+                SoftwareOs.WASM ->
+                    id
+                        .removePrefix("wasi-")
+                        .removePrefix("wasm")
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { "$it-bit" }
+                SoftwareOs.OTHER -> null
+                else -> id.substringAfter('-', "").takeIf { it.isNotEmpty() }
+            } ?: return null
+
+        if (os == SoftwareOs.MACOS) {
+            when (cpu) {
+                "arm64", "aarch64" -> return "Apple silicon"
+                "x86_64" -> return "Intel"
+            }
+        }
+        return when (cpu) {
+            "arm64", "aarch64", "arm64-v8a" -> "ARM64"
+            "armeabi-v7a", "armv7l" -> "ARMv7"
+            "x86_64" -> "x86-64"
+            "x86" -> "x86"
+            "riscv64" -> "RISC-V 64"
+            else -> cpu
+        }
+    }
+
+    /** The OS a MIME type implies on its own (Appendix C), or null when it implies none. */
+    fun osForMime(mime: String?): SoftwareOs? =
+        when (mime?.lowercase()) {
+            "application/vnd.android.package-archive" -> SoftwareOs.ANDROID
+            "application/vnd.apple.ipa" -> SoftwareOs.IOS
+            "application/x-apple-diskimage", "application/vnd.apple.installer+xml", "application/x-mach-binary" -> SoftwareOs.MACOS
+            "application/x-msi", "application/vnd.microsoft.portable-executable", "application/x-msdownload" -> SoftwareOs.WINDOWS
+            "application/vnd.appimage", "application/vnd.flatpak", "application/x-executable",
+            "application/vnd.debian.binary-package", "application/x-rpm", "application/x-redhat-package-manager",
+            -> SoftwareOs.LINUX
+            "application/wasm" -> SoftwareOs.WASM
+            else -> null
+        }
+
+    /**
+     * The OSes an asset runs on: from its `f` tags, or, when it has none, from its MIME type,
+     * since NIP-82 says an asset without `f` is restricted by its MIME type alone.
+     */
+    fun osesOf(
+        platforms: List<String>,
+        mime: String?,
+    ): List<SoftwareOs> =
+        if (platforms.isNotEmpty()) {
+            platforms.map(::os).distinct()
+        } else {
+            listOf(osForMime(mime) ?: SoftwareOs.OTHER)
+        }
+
+    fun osesOf(asset: SoftwareAssetEvent) = osesOf(asset.platforms(), asset.mimeType())
+
+    /** The OSes behind a release's aggregate `f` tags, in [SoftwareOs] order. */
+    fun osesOfPlatforms(platforms: List<String>): List<SoftwareOs> = platforms.map(::os).distinct().sorted()
+
+    /**
+     * How well an asset fits this device: 0 is the device's preferred platform, higher numbers
+     * are platforms it can still run (an emulated architecture, say), and null means it does
+     * not run here. [devicePlatforms] is [devicePlatformIds], preferred first.
+     */
+    fun deviceFit(
+        platforms: List<String>,
+        mime: String?,
+        devicePlatforms: List<String>,
+    ): Int? {
+        if (devicePlatforms.isEmpty()) return null
+        if (platforms.isNotEmpty()) {
+            val lowered = platforms.map { it.lowercase() }
+            return devicePlatforms.indexOfFirst { it in lowered }.takeIf { it >= 0 }
+        }
+        // No `f` tags: any device of the OS the MIME type implies, ranked after exact matches.
+        val os = osForMime(mime) ?: return null
+        return if (os == os(devicePlatforms.first())) devicePlatforms.size else null
+    }
+}
