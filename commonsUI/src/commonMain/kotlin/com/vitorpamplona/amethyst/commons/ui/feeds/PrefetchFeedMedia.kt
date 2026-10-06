@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -138,7 +139,7 @@ private fun PrefetchVisibleMedia(
 
     LaunchedEffect(stateKey, accountViewModel) {
         visibleEnds.collectLatest { ends ->
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 currentNotes.notesAround(ends, radius).forEach { note ->
                     if (note.idHex !in warmed) {
                         note.warm(context, platform, accountViewModel)

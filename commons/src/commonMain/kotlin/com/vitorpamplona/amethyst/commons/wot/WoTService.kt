@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,7 +58,7 @@ import kotlinx.coroutines.launch
  * ## Concurrency
  *
  * All internal state is mutated from a single writer coroutine
- * ([writerLoop]) on [writerDispatcher] (default [Dispatchers.Default]), so
+ * ([writerLoop]) on [writerDispatcher] (default [Dispatchers.IO]), so
  * concurrent [applyKind3] / [onFollowSetChange] / [markReadyOnce] calls
  * from different threads are serialized without extra locking.
  *
@@ -70,7 +71,7 @@ import kotlinx.coroutines.launch
 class WoTService(
     private val scope: CoroutineScope,
     /** Dispatcher for the internal writer coroutine. Tests override with `Dispatchers.Unconfined` for synchronous behavior. */
-    private val writerDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val writerDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AutoCloseable {
     /**
      * Sparse per-pubkey score map. Entries with count 0 are removed

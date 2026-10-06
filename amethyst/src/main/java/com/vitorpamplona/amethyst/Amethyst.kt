@@ -152,7 +152,8 @@ class Amethyst : Application() {
         instance.favoriteApps.init()
 
         // Mirror web-app favorites into the launcher's long-press shortcuts (open in Amethyst's browser).
-        CoroutineScope(Dispatchers.Default).launch {
+        // IO: publishing goes through ShortcutManager, a binder call into system_server.
+        CoroutineScope(Dispatchers.IO).launch {
             instance.favoriteApps.favorites
                 .map { apps -> apps.filterIsInstance<FavoriteApp.WebApp>().map { it.url to it.label } }
                 .distinctUntilChanged()

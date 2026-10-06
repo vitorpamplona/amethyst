@@ -104,6 +104,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -238,7 +239,7 @@ fun produceLatestReleaseVersion(app: SoftwareApplicationEvent): State<String?> {
                 .observeNotes(filter)
                 .map { notes -> latestNip82Release(notes, app)?.version() }
                 .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
     return flow.collectAsStateWithLifecycle(initialValue = null)
 }

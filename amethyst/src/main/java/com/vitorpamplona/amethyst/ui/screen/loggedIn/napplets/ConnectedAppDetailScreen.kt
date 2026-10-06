@@ -173,7 +173,7 @@ fun ConnectedAppDetailScreen(
 
     LaunchedEffect(coordinate, reload) {
         state =
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 loadDetailState(coordinate, capabilityLedger, signerLedger, untitled)
             }
     }
@@ -200,7 +200,7 @@ fun ConnectedAppDetailScreen(
     var nip46Info by remember(coordinate) { mutableStateOf<Nip46ClientInfo?>(null) }
     LaunchedEffect(coordinate) {
         if (nip46Client != null) {
-            nip46Info = withContext(Dispatchers.Default) { Amethyst.instance.nip46ClientStore.load(coordinate) }
+            nip46Info = withContext(Dispatchers.IO) { Amethyst.instance.nip46ClientStore.load(coordinate) }
         }
     }
     val allActivity by accountViewModel.account.nip46Signer.activityLog.entries
