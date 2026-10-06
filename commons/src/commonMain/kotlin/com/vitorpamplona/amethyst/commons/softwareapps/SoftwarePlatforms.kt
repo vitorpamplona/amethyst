@@ -58,7 +58,8 @@ object SoftwarePlatforms {
         return when {
             id.startsWith("android-") -> SoftwareOs.ANDROID
             id.startsWith("ios-") -> SoftwareOs.IOS
-            id.startsWith("darwin-") -> SoftwareOs.MACOS
+            // `macos-` is not Appendix A, but publishers use it.
+            id.startsWith("darwin-") || id.startsWith("macos-") -> SoftwareOs.MACOS
             id.startsWith("windows-") -> SoftwareOs.WINDOWS
             id.startsWith("linux-") -> SoftwareOs.LINUX
             id.startsWith("freebsd-") -> SoftwareOs.FREEBSD

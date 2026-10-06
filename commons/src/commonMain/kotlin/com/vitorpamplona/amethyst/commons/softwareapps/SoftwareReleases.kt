@@ -75,6 +75,33 @@ object SoftwareReleases {
     }
 
     /**
+     * True when the release names an app in its own signer's namespace (its `a` pubkey is
+     * the signer, or it has no `a` and so falls back to the signer's app). Such a release
+     * cannot pass itself off as someone else's app, so it is safe to show on its own when that
+     * app event is missing; most releases in the wild have no `a` and no findable app.
+     */
+    fun isSelfPublished(release: ReleaseArtifactSetEvent): Boolean = (release.app()?.pubKeyHex ?: release.pubKey) == release.pubKey
+
+    /**
+     * Whether a release's app branding and downloads may be shown. With [app] loaded, the
+     * release must be one of its own ([isReleaseOf]); without it, only a [isSelfPublished]
+     * release may be, since one pointing at another publisher's app is not verifiable yet.
+     */
+    fun canShow(
+        release: ReleaseArtifactSetEvent,
+        app: SoftwareApplicationEvent?,
+    ): Boolean = if (app != null) isReleaseOf(release, app) else isSelfPublished(release)
+
+    /**
+     * The OSes a release ships for: its aggregate `f` tags, or, for the releases that omit
+     * them (NIP-82 requires them), its app's.
+     */
+    fun oses(
+        release: ReleaseArtifactSetEvent,
+        app: SoftwareApplicationEvent?,
+    ): List<SoftwareOs> = SoftwarePlatforms.osesOfPlatforms(release.platforms().ifEmpty { app?.platforms().orEmpty() })
+
+    /**
      * The cache/relay filter that can hold [app]'s releases. `i` is required on every release and
      * equals the app's `d`; [isReleaseOf] then checks the `a` address and the signer.
      */

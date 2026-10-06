@@ -20,20 +20,122 @@
  */
 package com.vitorpamplona.amethyst.commons.softwareapps
 
+import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+
+/**
+ * What a download row says about one asset. The UI localizes [cpuPlatforms] (through
+ * [SoftwarePlatforms.cpu]) and formats [sizeBytes]; everything else is shown as is.
+ *
+ * [title] is the format and variant ("ZIP · msvc") when the MIME type is one people know,
+ * else the file name ("SHA256SUMS.txt"): `application/octet-stream` says nothing, and
+ * publishers list checksums and readmes next to the installers.
+ */
+data class DownloadRowText(
+    val title: String,
+    /** True when [title] is the file name, whose distinguishing part is often its end. */
+    val titleIsFileName: Boolean,
+    /**
+     * For a file-name title, its type from the extension ("ISO", "SHA256", "JSON"), which a
+     * truncated name can hide; null otherwise.
+     */
+    val fileKind: String?,
+    val cpuPlatforms: List<String>,
+    val sizeBytes: Long?,
+    val minPlatformVersion: String?,
+    val assetVersion: String?,
+)
+
+/** A release's downloads arranged for display; see [SoftwareAssetDownloads.group]. */
+class DownloadGroups(
+    val forThisDevice: SoftwareAssetEvent?,
+    val deviceOs: SoftwareOs?,
+    val byOs: List<Pair<SoftwareOs, List<SoftwareAssetEvent>>>,
+)
 
 /** Where to download a NIP-82 asset from, and what to call the file. */
 object SoftwareAssetDownloads {
+    private val TARBALL = Regex("""\.(tar\.(?:gz|xz|bz2|zst)|tgz)$""", RegexOption.IGNORE_CASE)
+
     /**
-     * The file extension to save the asset under: its `filename`'s ("zip", "AppImage"), else
-     * the usual one for its MIME type (NIP-82 Appendix C). Null when neither says.
+     * The file extension to save the asset under: its `filename`'s ("zip", "AppImage",
+     * "tar.gz"), else the usual one for its MIME type (NIP-82 Appendix C). Null when neither
+     * says.
      */
-    fun extension(asset: SoftwareAssetEvent): String? =
-        asset
-            .filename()
-            ?.substringAfterLast('.', "")
-            ?.takeIf { it.isNotEmpty() && it.length <= 16 && it.all { c -> c.isLetterOrDigit() } }
-            ?: extensionForMime(asset.mimeType())
+    fun extension(asset: SoftwareAssetEvent): String? {
+        val filename = asset.filename()
+        if (filename != null) {
+            TARBALL.find(filename)?.let { return it.groupValues[1] }
+            filename
+                .substringAfterLast('.', "")
+                .takeIf { it.isNotEmpty() && it.length <= 16 && it.all { c -> c.isLetterOrDigit() } }
+                ?.let { return it }
+        }
+        return extensionForMime(asset.mimeType())
+    }
+
+    /**
+     * The asset's format as people name it ("APK", "ZIP", "TAR.GZ"), or null when its MIME
+     * type is missing or not one [prettyMime] knows.
+     */
+    fun formatLabel(asset: SoftwareAssetEvent): String? {
+        val mime = asset.mimeType() ?: return null
+        val label = prettyMime(mime).takeIf { it != mime } ?: return null
+        // A gzip/xz MIME type on a tarball: the archive is the tar, the compression is a detail.
+        if (label == "GZ" || label == "XZ" || label == "TAR") {
+            asset.filename()?.let { name -> TARBALL.find(name)?.let { return it.groupValues[1].uppercase() } }
+        }
+        return label
+    }
+
+    /** The text of [asset]'s row under [os]; see [DownloadRowText]. */
+    fun describe(
+        asset: SoftwareAssetEvent,
+        os: SoftwareOs,
+        releaseVersion: String?,
+    ): DownloadRowText {
+        val format = formatLabel(asset)
+        val variant = asset.variant()
+        val filename = asset.filename()
+        val title =
+            if (format != null) {
+                listOfNotNull(format, variant).joinToString(" · ")
+            } else {
+                filename ?: variant ?: asset.mimeType() ?: os.name
+            }
+        val titleIsFileName = format == null && title == filename
+        return DownloadRowText(
+            title = title,
+            titleIsFileName = titleIsFileName,
+            fileKind = if (titleIsFileName) extension(asset)?.uppercase() else null,
+            cpuPlatforms = asset.platforms().filter { SoftwarePlatforms.os(it) == os }.distinct(),
+            sizeBytes = asset.sizeInBytes()?.toLong(),
+            minPlatformVersion = asset.minPlatformVersion(),
+            assetVersion = asset.version()?.takeIf { it != releaseVersion },
+        )
+    }
+
+    /**
+     * [assets] grouped by OS in [SoftwareOs] order (an asset for several OSes is listed under
+     * each), with the best fit for [devicePlatforms] picked out and left out of the groups, so
+     * it is not listed twice; a group it leaves empty is dropped.
+     */
+    fun group(
+        assets: List<SoftwareAssetEvent>,
+        devicePlatforms: List<String>,
+    ): DownloadGroups {
+        val forThisDevice =
+            assets
+                .mapNotNull { asset -> SoftwarePlatforms.deviceFit(asset.platforms(), asset.mimeType(), devicePlatforms)?.let { asset to it } }
+                .minByOrNull { it.second }
+                ?.first
+        val oses = assets.associateWith { SoftwarePlatforms.osesOf(it) }
+        val byOs =
+            SoftwareOs.entries.mapNotNull { os ->
+                assets.filter { it !== forThisDevice && os in oses.getValue(it) }.takeIf { it.isNotEmpty() }?.let { os to it }
+            }
+        return DownloadGroups(forThisDevice, devicePlatforms.firstOrNull()?.let(SoftwarePlatforms::os), byOs)
+    }
 
     fun extensionForMime(mime: String?): String? =
         when (mime?.lowercase()) {

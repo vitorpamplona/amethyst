@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_os_wasm
 import com.vitorpamplona.amethyst.commons.resources.nip82_os_windows
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_downloads
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
+import com.vitorpamplona.amethyst.commons.softwareapps.DownloadGroups
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareCpu
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareOs
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.util.devicePlatformIds
-import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
@@ -181,7 +181,8 @@ fun RenderSoftwareRelease(
     val appAddress = remember(event) { event.appAddress() }
     val appNote = remember(appAddress) { appAddress?.let { LocalCache.getOrCreateAddressableNote(it) } }
     val app = appNote?.let { observeNoteEvent<SoftwareApplicationEvent>(it, accountViewModel).value }
-    val trusted = remember(event, app) { app != null && SoftwareReleases.isReleaseOf(event, app) }
+    val trusted = remember(event, app) { SoftwareReleases.canShow(event, app) }
+    val shownApp = app.takeIf { trusted }
 
     Column(
         modifier =
@@ -192,7 +193,7 @@ fun RenderSoftwareRelease(
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
                 .padding(12.dp),
     ) {
-        ReleaseAppHeader(event, app.takeIf { trusted }, appAddress.takeIf { trusted }, nav)
+        ReleaseAppHeader(event, shownApp, appAddress.takeIf { shownApp != null }, nav)
 
         if (app != null && !trusted) {
             Spacer(Modifier.height(6.dp))
@@ -207,7 +208,7 @@ fun RenderSoftwareRelease(
             ReleaseDetails(event, app, backgroundColor, accountViewModel, nav)
         } else {
             ReleaseNotes(event, backgroundColor, expandable = !expanded, accountViewModel, nav)
-            ReleaseSummaryFooter(event)
+            ReleaseSummaryFooter(event, shownApp)
         }
     }
 }
@@ -257,7 +258,7 @@ fun RenderSoftwareReleaseBody(
 
 /** Icon, app name and "New release" on the left; version and a non-default channel on the right. */
 @Composable
-private fun ReleaseAppHeader(
+internal fun ReleaseAppHeader(
     event: ReleaseArtifactSetEvent,
     app: SoftwareApplicationEvent?,
     appAddress: Address?,
@@ -345,11 +346,17 @@ private fun ReleaseNotes(
     }
 }
 
-/** The OSes behind the release's aggregate `f` tags, and how many downloads it bundles. */
+/**
+ * The OSes the release ships for (its aggregate `f` tags, or [app]'s when it omits them) and
+ * how many downloads it bundles.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReleaseSummaryFooter(event: ReleaseArtifactSetEvent) {
-    val oses = remember(event) { SoftwarePlatforms.osesOfPlatforms(event.platforms()) }
+internal fun ReleaseSummaryFooter(
+    event: ReleaseArtifactSetEvent,
+    app: SoftwareApplicationEvent?,
+) {
+    val oses = remember(event, app) { SoftwareReleases.oses(event, app) }
     val assetCount = remember(event) { event.assets().size }
     if (oses.isEmpty() && assetCount == 0) return
 
@@ -432,10 +439,6 @@ private fun CommitLine(
     )
 }
 
-/**
- * The release's downloads, grouped by OS in [SoftwareOs] order, with the best fit for this
- * device repeated on top.
- */
 @Composable
 private fun DownloadsList(
     assets: List<SoftwareAssetEvent>,
@@ -443,21 +446,20 @@ private fun DownloadsList(
     accountViewModel: AccountViewModel,
 ) {
     val devicePlatforms = remember { devicePlatformIds() }
-    val deviceOs = remember(devicePlatforms) { devicePlatforms.firstOrNull()?.let(SoftwarePlatforms::os) }
-    val forThisDevice =
-        remember(assets) {
-            assets
-                .mapNotNull { asset -> SoftwarePlatforms.deviceFit(asset.platforms(), asset.mimeType(), devicePlatforms)?.let { asset to it } }
-                .minByOrNull { it.second }
-                ?.first
-        }
-    val groups =
-        remember(assets) {
-            SoftwareOs.entries.mapNotNull { os ->
-                assets.filter { os in SoftwarePlatforms.osesOf(it) }.takeIf { it.isNotEmpty() }?.let { os to it }
-            }
-        }
+    val groups = remember(assets, devicePlatforms) { SoftwareAssetDownloads.group(assets, devicePlatforms) }
+    DownloadsSection(groups, releaseVersion) { asset -> DownloadButton(asset, accountViewModel) }
+}
 
+/**
+ * The release's downloads, grouped by OS in [SoftwareOs] order, with the best fit for this
+ * device repeated on top. [downloadButton] draws each row's action.
+ */
+@Composable
+internal fun DownloadsSection(
+    groups: DownloadGroups,
+    releaseVersion: String?,
+    downloadButton: @Composable (SoftwareAssetEvent) -> Unit,
+) {
     Text(
         text = stringRes(Res.string.nip82_section_downloads),
         style = MaterialTheme.typography.labelLarge,
@@ -465,7 +467,8 @@ private fun DownloadsList(
         fontWeight = FontWeight.SemiBold,
     )
 
-    forThisDevice?.let { asset ->
+    groups.forThisDevice?.let { asset ->
+        val os = groups.deviceOs ?: SoftwarePlatforms.osesOf(asset).first()
         Spacer(Modifier.height(6.dp))
         Text(
             text = stringRes(Res.string.nip82_for_this_device),
@@ -473,10 +476,10 @@ private fun DownloadsList(
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(4.dp))
-        DownloadRow(asset, deviceOs ?: SoftwarePlatforms.osesOf(asset).first(), releaseVersion, highlighted = true, accountViewModel)
+        DownloadRow(asset, os, releaseVersion, highlighted = true, downloadButton)
     }
 
-    groups.forEach { (os, list) ->
+    groups.byOs.forEach { (os, list) ->
         Spacer(Modifier.height(8.dp))
         Text(
             text = osLabel(os),
@@ -487,7 +490,7 @@ private fun DownloadsList(
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             list.forEach { asset ->
                 key(asset.id) {
-                    DownloadRow(asset, os, releaseVersion, highlighted = false, accountViewModel)
+                    DownloadRow(asset, os, releaseVersion, highlighted = false, downloadButton)
                 }
             }
         }
@@ -495,8 +498,9 @@ private fun DownloadsList(
 }
 
 /**
- * One download: its format and variant ("EXE · Installer"), then the CPU, size, minimum OS
- * version, and the asset's own version when it differs from the release's.
+ * One download: [SoftwareAssetDownloads.describe]'s title ("ZIP · msvc", or the file name),
+ * then the CPU, size, minimum OS version, and the asset's own version when it differs from
+ * the release's.
  */
 @Composable
 private fun DownloadRow(
@@ -504,23 +508,21 @@ private fun DownloadRow(
     os: SoftwareOs,
     releaseVersion: String?,
     highlighted: Boolean,
-    accountViewModel: AccountViewModel,
+    downloadButton: @Composable (SoftwareAssetEvent) -> Unit,
 ) {
-    val format = remember(asset) { asset.mimeType()?.let(::prettyMime) }
-    val variant = remember(asset) { asset.variant()?.replaceFirstChar { it.uppercaseChar() } }
-    val platformsOfOs = remember(asset, os) { asset.platforms().filter { SoftwarePlatforms.os(it) == os } }
-    val archs = platformsOfOs.mapNotNull { archLabel(it) }.distinct().joinToString(", ")
-    val size = remember(asset) { asset.sizeInBytes()?.let { formatBytes(it.toLong()) } }
-    val assetVersion = remember(asset, releaseVersion) { asset.version()?.takeIf { it != releaseVersion } }
-    val minVersion = asset.minPlatformVersion()?.let { minPlatformLabel(os, it) }
-
-    val title = listOfNotNull(format, variant).joinToString(" · ").ifEmpty { asset.filename() ?: osLabel(os) }
+    val text = remember(asset, os, releaseVersion) { SoftwareAssetDownloads.describe(asset, os, releaseVersion) }
+    val archs =
+        text.cpuPlatforms
+            .mapNotNull { archLabel(it) }
+            .distinct()
+            .joinToString(", ")
     val details =
         listOfNotNull(
+            text.fileKind,
             archs.ifEmpty { null },
-            size,
-            minVersion,
-            assetVersion?.let { stringRes(Res.string.nip82_version_label, it) },
+            text.sizeBytes?.let { formatBytes(it) },
+            text.minPlatformVersion?.let { minPlatformLabel(os, it) },
+            text.assetVersion?.let { stringRes(Res.string.nip82_version_label, it) },
         ).joinToString(" · ")
 
     val shape = RoundedCornerShape(8.dp)
@@ -539,12 +541,14 @@ private fun DownloadRow(
                 ).padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Column(Modifier.weight(1f)) {
+            // Sibling file names share long prefixes ("app-installer-1.8.22-…") and differ at the
+            // end (".sha256", ".json"), so a file name is cut in the middle, not at the end.
             Text(
-                text = title,
+                text = text.title,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = if (text.titleIsFileName) TextOverflow.MiddleEllipsis else TextOverflow.Ellipsis,
             )
             if (details.isNotEmpty()) {
                 Text(
@@ -555,7 +559,7 @@ private fun DownloadRow(
             }
         }
         Spacer(Modifier.width(8.dp))
-        DownloadButton(asset, accountViewModel)
+        downloadButton(asset)
     }
 }
 
@@ -576,37 +580,46 @@ private fun DownloadButton(
     val hash = remember(asset) { asset.hash() }
     if (directUrl == null && hash == null) return
 
+    DownloadAction(
+        onClick = {
+            if (directUrl != null) {
+                runCatching { uri.openUri(directUrl) }
+            } else if (hash != null) {
+                scope.launch {
+                    val server =
+                        accountViewModel.account.settings.defaultFileServer
+                            .takeIf { it.type == ServerType.Blossom }
+                            ?.baseUrl
+                    val extension = SoftwareAssetDownloads.extension(asset)
+                    val blossomUri =
+                        BlossomUri(
+                            sha256 = hash,
+                            extension = extension ?: "bin",
+                            servers = listOfNotNull(server),
+                            authors = listOf(asset.pubKey),
+                            size = asset.sizeInBytes()?.toLong(),
+                        ).toUriString()
+                    val url =
+                        finder.findServerUrl(blossomUri)
+                            ?: server?.let { BlossomServerUrl.blob(it, hash, extension.orEmpty()) }
+                    if (url != null) runCatching { uri.openUri(url) }
+                }
+            }
+        },
+    )
+}
+
+/** The "Download" link at the end of a download row. */
+@Composable
+internal fun DownloadAction(onClick: () -> Unit) {
     val label = stringRes(Res.string.nip82_download)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .clickable {
-                    if (directUrl != null) {
-                        runCatching { uri.openUri(directUrl) }
-                    } else if (hash != null) {
-                        scope.launch {
-                            val server =
-                                accountViewModel.account.settings.defaultFileServer
-                                    .takeIf { it.type == ServerType.Blossom }
-                                    ?.baseUrl
-                            val extension = SoftwareAssetDownloads.extension(asset)
-                            val blossomUri =
-                                BlossomUri(
-                                    sha256 = hash,
-                                    extension = extension ?: "bin",
-                                    servers = listOfNotNull(server),
-                                    authors = listOf(asset.pubKey),
-                                    size = asset.sizeInBytes()?.toLong(),
-                                ).toUriString()
-                            val url =
-                                finder.findServerUrl(blossomUri)
-                                    ?: server?.let { BlossomServerUrl.blob(it, hash, extension.orEmpty()) }
-                            if (url != null) runCatching { uri.openUri(url) }
-                        }
-                    }
-                }.padding(horizontal = 6.dp, vertical = 4.dp),
+                .clickable(onClick = onClick)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
     ) {
         Icon(
             symbol = MaterialSymbols.Download,

@@ -42,6 +42,9 @@ class SoftwarePlatformsTest {
         // An unknown architecture has no CPU but keeps its raw name for display.
         assertNull(SoftwarePlatforms.cpu("linux-loongarch64"))
         assertEquals("loongarch64", SoftwarePlatforms.rawArch("linux-loongarch64"))
+        // Not Appendix A, but seen on relays.
+        assertEquals(SoftwareOs.MACOS, SoftwarePlatforms.os("macos-aarch64"))
+        assertEquals(SoftwareCpu.APPLE_SILICON, SoftwarePlatforms.cpu("macos-aarch64"))
         assertEquals(SoftwareOs.OTHER, SoftwarePlatforms.os("haiku"))
         assertNull(SoftwarePlatforms.cpu("haiku"))
         assertNull(SoftwarePlatforms.rawArch("haiku"))

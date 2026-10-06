@@ -496,12 +496,13 @@ fun RenderSoftwareAsset(
     }
 }
 
+// A no-break space keeps "13.3 MB" from wrapping between the number and its unit.
 internal fun formatBytes(bytes: Long): String {
-    if (bytes < 1024L) return "$bytes B"
+    if (bytes < 1024L) return "$bytes\u00A0B"
     val kb = bytes / 1024.0
-    if (kb < 1024) return "${DecimalPatternFormatter("0.0").format(kb)} KB"
+    if (kb < 1024) return "${DecimalPatternFormatter("0.0").format(kb)}\u00A0KB"
     val mb = kb / 1024
-    if (mb < 1024) return "${DecimalPatternFormatter("0.0").format(mb)} MB"
+    if (mb < 1024) return "${DecimalPatternFormatter("0.0").format(mb)}\u00A0MB"
     val gb = mb / 1024
-    return "${DecimalPatternFormatter("0.00").format(gb)} GB"
+    return "${DecimalPatternFormatter("0.00").format(gb)}\u00A0GB"
 }

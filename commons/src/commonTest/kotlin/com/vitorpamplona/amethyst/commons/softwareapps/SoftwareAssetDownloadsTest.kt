@@ -76,6 +76,49 @@ class SoftwareAssetDownloadsTest {
     }
 
     @Test
+    fun tarballsKeepTheirDoubleExtensionAndLabel() {
+        val tarball =
+            SoftwareAssetEvent(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                tags =
+                    arrayOf(
+                        arrayOf("m", "application/gzip"),
+                        arrayOf("x", hash),
+                        arrayOf("url", "https://cdn.example.com/$hash"),
+                        arrayOf("filename", "ngit-v3.0.3-x86_64-unknown-linux-musl.tar.gz"),
+                        arrayOf("variant", "musl"),
+                    ),
+                content = "",
+                sig = "",
+            )
+        assertEquals("tar.gz", SoftwareAssetDownloads.extension(tarball))
+        assertEquals("https://cdn.example.com/$hash.tar.gz", SoftwareAssetDownloads.url(tarball))
+        assertEquals("TAR.GZ", SoftwareAssetDownloads.formatLabel(tarball))
+        assertEquals("TAR.GZ · musl", SoftwareAssetDownloads.describe(tarball, SoftwareOs.LINUX, null).title)
+    }
+
+    @Test
+    fun unknownFormatsAreTitledByTheirFileName() {
+        val text = SoftwareAssetDownloads.describe(asset("https://example.com/SHA256SUMS.txt", "SHA256SUMS.txt"), SoftwareOs.OTHER, null)
+        // The fixture's MIME type is a known one (zip), so swap in an unknown asset.
+        val sums =
+            SoftwareAssetEvent(
+                id = "0".repeat(64),
+                pubKey = "1".repeat(64),
+                createdAt = 0,
+                tags = arrayOf(arrayOf("m", "text/plain"), arrayOf("x", hash), arrayOf("filename", "SHA256SUMS.txt")),
+                content = "",
+                sig = "",
+            )
+        val described = SoftwareAssetDownloads.describe(sums, SoftwareOs.OTHER, null)
+        assertEquals("ZIP", text.title)
+        assertEquals("SHA256SUMS.txt", described.title)
+        assertEquals("TXT", described.fileKind)
+    }
+
+    @Test
     fun noUrlMeansFindItByHash() {
         assertNull(SoftwareAssetDownloads.url(asset(null, "Armada.zip")))
     }

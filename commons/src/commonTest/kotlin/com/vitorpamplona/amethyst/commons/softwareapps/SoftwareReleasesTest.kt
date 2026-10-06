@@ -84,6 +84,19 @@ class SoftwareReleasesTest {
     }
 
     @Test
+    fun withoutTheAppOnlySelfPublishedReleasesShow() {
+        val own = release(publisher, "1.0", withATag = false)
+        assertTrue(SoftwareReleases.isSelfPublished(own))
+        assertTrue(SoftwareReleases.canShow(own, null))
+
+        // Points at someone else's app: unverifiable until that app loads.
+        val foreign = release(stranger, "99.0")
+        assertFalse(SoftwareReleases.isSelfPublished(foreign))
+        assertFalse(SoftwareReleases.canShow(foreign, null))
+        assertFalse(SoftwareReleases.canShow(foreign, app))
+    }
+
+    @Test
     fun releasesOfAnotherAppDoNotMatch() {
         val other =
             ReleaseArtifactSetEvent(
