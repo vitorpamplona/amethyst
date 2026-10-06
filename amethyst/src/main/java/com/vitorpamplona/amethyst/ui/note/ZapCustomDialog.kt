@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -58,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -68,7 +65,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -118,12 +114,14 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.CancellationException
 
 class ZapOptionViewModel : ViewModel() {
     private var account: Account? = null
@@ -266,7 +264,7 @@ fun ZapCustomDialog(
                                 onClick = {
                                     postViewModel.customAmount = TextFieldValue(amount.toString())
                                 },
-                                label = { Text("⚡ ${showAmount(amount.toBigDecimal())}") },
+                                label = { Text("⚡ ${showAmount(BigDecimal(amount))}") },
                             )
                         }
                     }
@@ -517,7 +515,7 @@ fun DisplayPayable(
             }
             Row {
                 Text(
-                    text = showAmount((payable.amountMilliSats / 1000.0f).toBigDecimal()),
+                    text = showAmount(BigDecimal((payable.amountMilliSats / 1000.0f).toString())),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold,
@@ -535,68 +533,16 @@ fun DisplayPayable(
         }
 
         Spacer(modifier = DoubleHorzSpacer)
-        val context = LocalContext.current
+        val walletLauncher = rememberWalletAppLauncher()
 
         PayButton(isActive = !paid.value) {
-            payViaIntent(payable.invoice, context, noWalletFoundStr, { paid.value = true }) {
+            walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { paid.value = true }) {
                 accountViewModel.toastManager.toast(
                     Res.string.error_dialog_zap_error,
                     UserBasedErrorMessage(it, payable.info.user),
                 )
             }
         }
-    }
-}
-
-fun payViaIntent(
-    invoice: String,
-    context: Context,
-    noWalletFound: String,
-    onPaid: () -> Unit,
-    onError: (String) -> Unit,
-) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, "lightning:$invoice".toUri())
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-        context.startActivity(intent)
-        onPaid()
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        // don't display ugly error messages
-        // if (e.message != null) {
-        //   onError(stringRes(Res.string.no_wallet_found_with_error, e.message!!))
-        // } else {
-        onError(noWalletFound)
-        // }
-    }
-}
-
-/**
- * Hands a reusable BOLT12 offer (`lno1…`, from a recipient's kind:10058) off to an
- * installed wallet. Unlike a BOLT11 invoice, a BOLT12 offer is NOT a `lightning:`
- * payload — that scheme is defined for `lnbc…` invoices. Offers travel as the `lno`
- * parameter of a BIP21/BIP321 bitcoin URI (`bitcoin:?lno=lno1…`), where the on-chain
- * address is optional so a Lightning-only offer stands on its own. The wallet resolves
- * the offer, collects the amount, and completes the payment; this is a plain intent,
- * not a NIP-57/NIP-B1 zap, so it produces no Nostr receipt.
- */
-fun payViaBolt12Intent(
-    offer: String,
-    context: Context,
-    noWalletFound: String,
-    onPaid: () -> Unit,
-    onError: (String) -> Unit,
-) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, "bitcoin:?lno=$offer".toUri())
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-        context.startActivity(intent)
-        onPaid()
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        onError(noWalletFound)
     }
 }
 

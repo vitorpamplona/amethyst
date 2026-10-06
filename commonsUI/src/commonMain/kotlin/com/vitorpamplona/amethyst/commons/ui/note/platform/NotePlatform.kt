@@ -133,6 +133,16 @@ interface NotePlatform {
         nav: INav?,
     ) {}
 
+    /**
+     * Fetches the OpenGraph preview of [url] off the main thread and hands it to [onResult]; for
+     * forms that pre-fill from a link rather than render a card. Nothing where the platform has no fetcher.
+     */
+    fun loadUrlPreview(
+        url: String,
+        accountViewModel: AccountViewModel,
+        onResult: suspend (UrlPreviewState) -> Unit,
+    ) {}
+
     /** The OpenGraph preview of [url], starting from the platform's cache. */
     @Composable
     fun rememberUrlPreviewState(

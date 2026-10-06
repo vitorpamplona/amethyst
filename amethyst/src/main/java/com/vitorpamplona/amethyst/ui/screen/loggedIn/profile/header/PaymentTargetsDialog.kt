@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.PaymentTargetPill
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.paymentTargetUri
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier

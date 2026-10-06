@@ -477,7 +477,41 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      voice reply, the calendar collections and event detail, the geocache detail and editor,
      the live-activity channel, chess, Cordn group creation, the QR share and the compose
      settings. 204 of 252 screens shared.
-   - **Next:** 48 screens remain, and what blocks them is the platform itself:
+   - **Wave 11 (2026-10-04):** Profile and settings. `AppServices` gained `namecoinSettings`,
+     `namecoinClients` (a port over the JVM-only ElectrumX and Core RPC clients), `otsSettings`
+     and `nip46ClientStore`. `AppPlatform` gained `rememberAppLanguages` (Android reads
+     `locales_config.xml`) and `SpeakNameButton` (text-to-speech). `OtsSettings` and its store are
+     in commonMain, on quartz's new `BitcoinExplorerUrls`; `RpcProbeResult` is too.
+     `deviceDescription()` is an expect in commons. Copy-to-clipboard goes through the shared
+     `Clipboard.setText`; the brand icons for identity claims are Compose resources. Moved: the
+     profile (60 files: header, tabs, payment sheet), the app, NIP-46, Namecoin and OTS settings.
+     210 of 252 screens shared.
+   - **Wave 12 (2026-10-06):** Messages, Notifications, Calendars and the mechanical screens.
+     `HorizontalTwoPane` is an expect (Android keeps Accompanist's fold-aware `TwoPane`; JVM and
+     iOS split a `Row`), and the Messages pane picks single or two panes with the shell's own
+     600/840 dp breakpoints (`widthClassOf`). `AppPlatform` gained `logDebugState`,
+     `appVersionName`, `releaseNotesId` and `NotificationProviderPrompt`; the chart theme left the
+     app's `Theme.kt`. The calendar views run on `SearchDate` instead of `java.time`, with
+     `DateSkeletonFormatter` for month and weekday names. `AccountViewModelHost` gained
+     `probeAudioFile` (Android's `MediaMetadataRetriever`) for the music and podcast uploaders,
+     and `requestScheduledPostCatchUp`. The Blossom health probe is an expect over the HTTP
+     client; NIP-86 calls go through a `Nip86Executor` port. Web bookmark previews use the note
+     slot's `loadUrlPreview`. Moved: the Messages list, Notifications (cards, summary chart,
+     donation cards), Calendars (day, week, month), the music and podcast uploaders, the media
+     server lists, relay management, web bookmarks and scheduled posts. 220 of 252 screens
+     shared.
+   - **Wave 13 (2026-10-06):** Notification and calendar-reminder settings, Blossom import and
+     the blob manager. `AppPlatform` gained `NotificationDeliverySettings` (push provider,
+     background service, per-account participation, battery optimization) and
+     `NotificationCategorySettings` (Android's channels); the shared screen keeps the display
+     toggles. `AppServices` gained `calendarReminderSettings`, `setCalendarRemindersScheduled`,
+     `blossomClient(server)` and `blossomMirrorQueue`. `BlossomBlobClient` is a commonMain
+     interface that the OkHttp `BlossomClient` implements, and its two exceptions moved with it;
+     the mirror queue, payment handler, prompt ledger and in-flight invoice set are in commons
+     (on `ConcurrentSet` instead of `synchronized`). The blob viewer's pinch-zoom (`zoomable`, already
+     an app dependency, Apache-2.0, Compose Multiplatform) is now a commonsUI dependency. 224 of
+     252 screens shared.
+   - **Next:** 28 screens remain, and what blocks them is the platform itself:
      - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
      - The Nests activity and PiP.
      - The call screens.
@@ -487,8 +521,7 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - The Cordn backup/migrate file flows.
      - Share-as-image (bitmaps).
      - `AccountSessionManager` (login and sign-up).
-     - The Blossom health probe.
-     - `AppSettingsScreen` (`BuildConfig`).
+     - The HLS video uploader (LightCompressor).
      Each needs a slot or a port of its own, so step 7 can start alongside them.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and

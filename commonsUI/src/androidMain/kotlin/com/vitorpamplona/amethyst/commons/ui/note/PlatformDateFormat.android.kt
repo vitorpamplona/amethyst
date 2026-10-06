@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
+import android.content.Context
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.text.DateFormat as JavaDateFormat
 
 /**
  * Per-thread cached [SimpleDateFormat] keyed off the current default [Locale] and time zone.
@@ -63,11 +65,35 @@ actual class DateSkeletonFormatter actual constructor(
     actual fun format(epochMillis: Long): String = get().format(epochMillis)
 }
 
-/** Built per call, as before the move: the system 12/24-hour setting can change under a running app. */
+private class CachedTimeOfDay(
+    val is24Hour: Boolean,
+    val locale: Locale,
+    val zoneId: String,
+    val formatter: JavaDateFormat,
+)
+
+private val timeOfDayCache = ThreadLocal<CachedTimeOfDay>()
+
+/**
+ * The system's time-of-day format. The 12/24-hour setting, the locale and the zone can all change
+ * under a running app, so they are re-read on every call; the formatter is rebuilt only when one
+ * of them did. Building one per call was a pattern parse on every timestamp a feed drew.
+ */
+private fun timeOfDayFormat(context: Context): JavaDateFormat {
+    val is24Hour = DateFormat.is24HourFormat(context)
+    val locale = Locale.getDefault()
+    val zoneId = TimeZone.getDefault().id
+    val cached = timeOfDayCache.get()
+    if (cached != null && cached.is24Hour == is24Hour && cached.locale == locale && cached.zoneId == zoneId) return cached.formatter
+    val fresh = DateFormat.getTimeFormat(context)
+    timeOfDayCache.set(CachedTimeOfDay(is24Hour, locale, zoneId, fresh))
+    return fresh
+}
+
 @Composable
 actual fun rememberTimeOfDayFormatter(): (epochMillis: Long) -> String {
     val context = LocalContext.current
-    return remember(context) { { epochMillis -> DateFormat.getTimeFormat(context).format(Date(epochMillis)) } }
+    return remember(context) { { epochMillis -> timeOfDayFormat(context).format(Date(epochMillis)) } }
 }
 
 @Composable

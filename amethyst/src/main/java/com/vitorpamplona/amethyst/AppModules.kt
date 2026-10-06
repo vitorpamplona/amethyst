@@ -43,6 +43,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
+import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_LOG_STORE
+import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
@@ -82,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -92,8 +96,6 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
-import com.vitorpamplona.amethyst.service.calendar.CALENDAR_REMINDER_LOG_STORE
-import com.vitorpamplona.amethyst.service.calendar.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderLogMigrations
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
@@ -141,7 +143,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundService
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
@@ -1028,10 +1029,14 @@ class AppModules(
         }
     }
 
+    /** A Blossom client for [serverBaseUrl], on the upload role's HTTP client (Tor-aware). */
+    fun blossomClient(serverBaseUrl: String) = BlossomClient(roleBasedHttpClientBuilder.okHttpClientForUploads(serverBaseUrl))
+
     /** App-level BUD-04 mirror sweep, so "sync all" keeps running as the user navigates. */
     val blossomMirrorQueue by lazy {
         BlossomMirrorQueue(
             scope = applicationIOScope,
+            clientFor = ::blossomClient,
             onActive = { BlossomSyncForegroundService.start(appContext) },
         )
     }

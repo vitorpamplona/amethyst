@@ -22,12 +22,21 @@ package com.vitorpamplona.amethyst.commons.service
 
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
+import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
@@ -64,11 +73,42 @@ interface AppServices {
     /** Resolves `.bit` names and `d/`/`id/` identifiers over the configured ElectrumX servers. */
     val namecoinResolver: NamecoinNameResolver
 
+    /** The Namecoin backend settings (servers, Core RPC, pinned certificates). */
+    val namecoinSettings: NamecoinSettingsStore
+
+    /** The live Namecoin clients the settings screen tests and reconfigures. */
+    val namecoinClients: NamecoinClients get() = NamecoinClients.None
+
+    /** The OpenTimestamps blockchain explorer setting. */
+    val otsSettings: OtsSettingsStore
+
+    /** Sends NIP-86 relay-management calls (over Tor when the settings say so). */
+    val nip86Executor: Nip86Executor get() = Nip86Executor.None
+
+    /** The NIP-46 remote-signer clients this device has connected to. */
+    val nip46ClientStore: Nip46ClientStore
+
     /** Finds the server behind a `blossom:` URI (BUD-10). */
     val blossomServerFinder: BlossomServerFinder get() = BlossomServerFinder.None
 
     /** The device's position as geohashes. */
     val deviceLocation: DeviceLocation get() = DeviceLocation.None
+
+    /** Device-wide calendar reminder settings; the file is cached by [appStores]. */
+    val calendarReminderSettings: CalendarReminderSettingsStore
+        get() = CalendarReminderSettingsStore(appStores.getDataStore(CALENDAR_REMINDER_SETTINGS_STORE))
+
+    /**
+     * Starts or stops the background job that fires calendar reminders. Platforms without one
+     * ignore it.
+     */
+    fun setCalendarRemindersScheduled(enabled: Boolean) {}
+
+    /** A Blossom client for one server, built on that server's HTTP client (Tor, pooling). */
+    fun blossomClient(serverBaseUrl: String): BlossomBlobClient
+
+    /** The app-wide BUD-04 mirror sweep, which keeps running while the user navigates. */
+    val blossomMirrorQueue: BlossomMirrorQueue
 
     /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
     fun cachedPlaceName(geohash: String): String? = null

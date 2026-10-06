@@ -123,6 +123,10 @@ kotlin {
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 
+                // Pinch-to-zoom (net.engawapg zoomable, Compose Multiplatform: Android, desktop,
+                // iOS; Apache-2.0). Already in the app; the Blossom blob viewer uses it here.
+                implementation(libs.zoomable)
+
                 // Charts (Vico 3, Compose Multiplatform, Apache-2.0): the notification
                 // summary builds its chart model off the main thread. `api` because the
                 // model is part of that state holder's public surface.
@@ -216,6 +220,7 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
                 // Camera permission prompt for TakePicture. Apache-2.0, already in the app.
                 implementation(libs.accompanist.permissions)
+                implementation(libs.accompanist.adaptive)
                 // BiometricPrompt behind rememberDeviceAuthenticator. Apache-2.0, already in the app.
                 implementation(libs.androidx.biometric.ktx)
             }

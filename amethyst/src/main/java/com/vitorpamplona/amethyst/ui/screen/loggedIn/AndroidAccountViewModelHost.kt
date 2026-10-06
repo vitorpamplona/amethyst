@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.app.NotificationManager
+import android.media.MediaMetadataRetriever
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.AppModules
@@ -33,12 +34,15 @@ import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.service.uploads.AudioFileMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizer
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
@@ -51,10 +55,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.withContext
 import okio.Path
 
 /** [AccountViewModelHost] over the app's [AppModules]. Lazy services are read on first use. */
@@ -100,6 +106,35 @@ class AndroidAccountViewModelHost(
 
     // Built on the application context: the assistant outlives any one Activity inside the ViewModel.
     override val supportsWritingAssistant: Boolean get() = WritingAssistantFactory.IS_SUPPORTED
+
+    override fun requestScheduledPostCatchUp() = ScheduledPostWorker.scheduleCatchUp(modules.appContext)
+
+    override suspend fun probeAudioFile(uri: MediaUri): AudioFileMetadata? =
+        withContext(Dispatchers.IO) {
+            // Heavy (opens the file); the application context so a picker that outlives the
+            // screen cannot leak its Activity.
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(modules.appContext, uri)
+
+                fun tag(key: Int) = retriever.extractMetadata(key)?.trim()?.ifBlank { null }
+                val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                AudioFileMetadata(
+                    durationSeconds = durationMs?.let { (it / 1000).toInt().takeIf { secs -> secs > 0 } },
+                    title = tag(MediaMetadataRetriever.METADATA_KEY_TITLE),
+                    // ARTIST is the track-level credit; ALBUMARTIST is the fallback for files
+                    // that only carry the latter.
+                    artist = tag(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: tag(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
+                    album = tag(MediaMetadataRetriever.METADATA_KEY_ALBUM),
+                )
+            } catch (_: Exception) {
+                // Some providers reject MediaMetadataRetriever, or the file is not a real audio
+                // container yet; the user fills the fields in by hand.
+                null
+            } finally {
+                retriever.release()
+            }
+        }
 
     override fun createWritingAssistant(): WritingAssistant = WritingAssistantFactory.create(modules.appContext)
 

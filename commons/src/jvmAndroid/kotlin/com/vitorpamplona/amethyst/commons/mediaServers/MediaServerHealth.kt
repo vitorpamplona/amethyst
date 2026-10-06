@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.mediaServers
 
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -28,27 +29,6 @@ import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-
-/**
- * Reachability status of a media server, shown as a colored dot next to each
- * entry in the Media Servers list.
- */
-enum class ServerHealth {
-    /** Not probed yet. */
-    Unknown,
-
-    /** A probe is in flight. */
-    Checking,
-
-    /** Responded quickly. */
-    Online,
-
-    /** Responded, but slower than [MediaServerHealthProbe.SLOW_THRESHOLD_MS]. */
-    Slow,
-
-    /** Could not be reached (DNS, refused, timeout, TLS). */
-    Offline,
-}
 
 /**
  * A one-shot, lightweight reachability check for a Blossom server. Issues a `HEAD` to
@@ -133,3 +113,7 @@ object MediaServerHealthProbe {
             ServerHealth.Offline
         }
 }
+
+actual fun cachedMediaServerHealth(baseUrl: String): ServerHealth? = MediaServerHealthProbe.cached(baseUrl)
+
+actual suspend fun IRoleBasedHttpClientBuilder.probeMediaServer(baseUrl: String): ServerHealth = MediaServerHealthProbe.probe(baseUrl, ::okHttpClientForPreview)
