@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -56,10 +57,11 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.GeocacheMapTab
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map.GeocacheMapTab
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -88,10 +90,13 @@ fun GeocachesScreen(
     WatchAccountForGeocachesScreen(nearby, accountViewModel)
     GeocachesFilterAssemblerSubscription(accountViewModel)
 
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.GEOCACHES_SCREEN) { GeocacheTab.entries.size }
+    // No Map tab where the platform has no map, rather than a tab that opens onto an empty page.
+    val hasMap = LocalAppPlatform.current.hasGeocacheMap
+    val tabs = remember(hasMap) { if (hasMap) GeocacheTab.entries.toList() else GeocacheTab.entries.filter { it != GeocacheTab.MAP } }
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.GEOCACHES_SCREEN) { tabs.size }
 
     LaunchedEffect(initialTab) {
-        initialTab?.let { pagerState.scrollToPage(it.ordinal) }
+        initialTab?.let { tab -> tabs.indexOf(tab).takeIf { it >= 0 }?.let { pagerState.scrollToPage(it) } }
     }
 
     DisappearingScaffold(
@@ -103,7 +108,7 @@ fun GeocachesScreen(
         topBar = {
             Column {
                 GeocachesTopBar(accountViewModel, nav)
-                GeocacheTabRow(pagerState)
+                GeocacheTabRow(tabs, pagerState)
             }
         },
         bottomBar = {
@@ -122,7 +127,8 @@ fun GeocachesScreen(
         floatingButton = {
             // No "hide a cache" button on Finds or Hunts: neither is a place where a new cache
             // belongs, and a FAB that changes meaning per tab is worse than one that is absent.
-            if (pagerState.currentPage != GeocacheTab.FINDS.ordinal && pagerState.currentPage != GeocacheTab.HUNTS.ordinal) {
+            val currentTab = tabs.getOrNull(pagerState.currentPage)
+            if (currentTab != GeocacheTab.FINDS && currentTab != GeocacheTab.HUNTS) {
                 FabBottomBarPadded(nav) {
                     NewGeocacheButton(nav)
                 }
@@ -132,9 +138,10 @@ fun GeocachesScreen(
     ) {
         Column(Modifier.fillMaxSize()) {
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), userScrollEnabled = false) { page ->
-                when (GeocacheTab.entries[page]) {
+                when (tabs[page]) {
                     GeocacheTab.NEARBY ->
-                        GeocacheListTab(nearby, ScrollStateKeys.GEOCACHES_NEARBY, GeocacheListKind.NEARBY, accountViewModel, nav)
+                        // The screen already watches `nearby` (the Map tab reads it too), so don't watch it twice.
+                        GeocacheListTab(nearby, ScrollStateKeys.GEOCACHES_NEARBY, GeocacheListKind.NEARBY, accountViewModel, nav, watchLifecycle = false)
                     GeocacheTab.MAP ->
                         GeocacheMapTab(nearby, accountViewModel, nav)
                     GeocacheTab.HUNTS ->
@@ -151,7 +158,10 @@ fun GeocachesScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GeocacheTabRow(pagerState: PagerState) {
+private fun GeocacheTabRow(
+    tabs: List<GeocacheTab>,
+    pagerState: PagerState,
+) {
     val scope = rememberCoroutineScope()
 
     SecondaryScrollableTabRow(
@@ -162,7 +172,7 @@ private fun GeocacheTabRow(pagerState: PagerState) {
         edgePadding = 8.dp,
         divider = {},
     ) {
-        GeocacheTab.entries.forEachIndexed { index, tab ->
+        tabs.forEachIndexed { index, tab ->
             Tab(
                 selected = pagerState.currentPage == index,
                 text = { Text(stringResource(tab.labelRes())) },
@@ -188,8 +198,9 @@ private fun GeocacheListTab(
     kind: GeocacheListKind,
     accountViewModel: AccountViewModel,
     nav: INav,
+    watchLifecycle: Boolean = true,
 ) {
-    WatchLifecycleAndUpdateModel(feedContentState)
+    if (watchLifecycle) WatchLifecycleAndUpdateModel(feedContentState)
 
     RefresheableBox(feedContentState, true) {
         SaveableFeedContentState(feedContentState, scrollStateKey = scrollStateKey) { listState ->

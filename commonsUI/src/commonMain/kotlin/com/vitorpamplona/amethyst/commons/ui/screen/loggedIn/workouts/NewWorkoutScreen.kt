@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -70,14 +69,15 @@ import com.vitorpamplona.amethyst.commons.resources.workout_notes
 import com.vitorpamplona.amethyst.commons.resources.workout_seconds
 import com.vitorpamplona.amethyst.commons.resources.workout_title
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.commons.ui.platform.DetectedWorkoutCarousel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.labelRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.DetectedWorkoutCarousel
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 
@@ -87,7 +87,7 @@ fun NewWorkoutScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val postViewModel: NewWorkoutViewModel = viewModel()
+    val postViewModel: NewWorkoutViewModel = rememberViewModel { NewWorkoutViewModel() }
     postViewModel.init(accountViewModel)
     postViewModel.prefill(prefill)
 
