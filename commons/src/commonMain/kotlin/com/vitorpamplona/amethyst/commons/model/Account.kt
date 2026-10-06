@@ -1214,6 +1214,11 @@ class Account(
     val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
     val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
 
+    // My Fitness reads the user's own workouts whatever the Workouts feed has selected, so it keys
+    // the same workouts data source to a fixed "Mine" instead of defaultWorkoutsFollowList.
+    val mineWorkoutsListName = MutableStateFlow<TopFilter>(TopFilter.Mine)
+    val liveMineWorkoutsPerRelay = OutboxLoaderState(topNavFilterFlow(mineWorkoutsListName), cache, scope).flow
+
     val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGitRepositoriesFollowList)
     val liveGitRepositoriesFollowListsPerRelay = OutboxLoaderState(liveGitRepositoriesFollowLists, cache, scope).flow
 

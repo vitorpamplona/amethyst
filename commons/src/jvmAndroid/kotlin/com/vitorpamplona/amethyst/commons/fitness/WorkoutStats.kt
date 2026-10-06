@@ -35,13 +35,14 @@ import kotlin.math.roundToInt
  * Pure and platform-free on purpose — every number the screen displays is derived here, so
  * the arithmetic can be tested without Health Connect, a device, or Compose.
  *
- * Everything is scoped to [WINDOW_DAYS]. Health Connect only serves the most recent 30 days
- * unless an app also holds `READ_HEALTH_DATA_HISTORY`, which Amethyst deliberately does not
- * request; four whole weeks is the largest honest window inside that limit, and it makes the
+ * Everything is scoped to [WINDOW_DAYS]. Without `READ_HEALTH_DATA_HISTORY`, which Amethyst
+ * deliberately does not request, Health Connect lets an app read back to 30 days before it was
+ * first granted access — so on a fresh grant, 30 days is all there is. Amethyst reads four whole
+ * weeks every time, the largest window that is always inside that limit, and it makes the
  * "this week vs last week" comparison land inside it too.
  */
 object WorkoutStats {
-    /** Four whole weeks — see the class note on the 30-day Health Connect limit. */
+    /** Four whole weeks — see the class note on Health Connect's history limit. */
     const val WINDOW_DAYS = 28L
 
     /** Days in the recent-comparison period. */
@@ -195,7 +196,7 @@ object WorkoutStats {
      * and positive, so a user whose watch records no elevation never sees an empty "biggest
      * climb" card.
      */
-    private fun bests(workouts: List<DetectedWorkout>): List<Best> =
+    internal fun bests(workouts: List<DetectedWorkout>): List<Best> =
         listOfNotNull(
             workouts
                 .filter { (it.distanceMeters ?: 0.0) > 0 }

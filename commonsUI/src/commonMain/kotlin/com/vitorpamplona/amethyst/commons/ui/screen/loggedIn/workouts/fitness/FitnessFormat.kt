@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.fitness
 
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -41,7 +41,7 @@ import kotlin.math.roundToLong
  * measurement preference, the same way the workout composer does, so a user never sees
  * kilometres on a screen where the rest of the app shows them miles.
  */
-internal fun prefersMiles(): Boolean = phonePrefersMiles()
+fun prefersMiles(): Boolean = phonePrefersMiles()
 
 /**
  * `7h 12m` / `42m` / `45s` — a total, so hours run past 24 rather than wrapping.
@@ -51,7 +51,7 @@ internal fun prefersMiles(): Boolean = phonePrefersMiles()
  * to this function.
  */
 @Composable
-internal fun formatDuration(totalSeconds: Long): String {
+fun formatDuration(totalSeconds: Long): String {
     if (totalSeconds <= 0) return stringRes(Res.string.my_fitness_duration_minutes, 0)
 
     val hours = totalSeconds / 3600
@@ -65,7 +65,7 @@ internal fun formatDuration(totalSeconds: Long): String {
 }
 
 /** Distance in the user's unit, to one decimal — the bare number, paired with [distanceUnit]. */
-internal fun formatDistanceValue(
+fun formatDistanceValue(
     meters: Double,
     miles: Boolean,
 ): String {
@@ -74,10 +74,10 @@ internal fun formatDistanceValue(
 }
 
 @Composable
-internal fun distanceUnit(miles: Boolean): String = if (miles) stringRes(Res.string.my_fitness_unit_mi) else stringRes(Res.string.my_fitness_unit_km)
+fun distanceUnit(miles: Boolean): String = if (miles) stringRes(Res.string.my_fitness_unit_mi) else stringRes(Res.string.my_fitness_unit_km)
 
 /** Climb reads better as a whole number of metres or feet than as a decimal. */
-internal fun formatElevationValue(
+fun formatElevationValue(
     meters: Double,
     miles: Boolean,
 ): String {
@@ -86,4 +86,4 @@ internal fun formatElevationValue(
 }
 
 @Composable
-internal fun elevationUnit(miles: Boolean): String = if (miles) stringRes(Res.string.my_fitness_unit_ft) else stringRes(Res.string.my_fitness_unit_m)
+fun elevationUnit(miles: Boolean): String = if (miles) stringRes(Res.string.my_fitness_unit_ft) else stringRes(Res.string.my_fitness_unit_m)

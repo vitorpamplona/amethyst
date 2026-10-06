@@ -30,8 +30,8 @@ import kotlin.math.abs
  * it.
  *
  * Health Connect knows what their watch recorded. It does not know about a workout they typed
- * into Amethyst by hand, or one they posted from another NIP-101e client, and it cannot see
- * further back than 30 days. Their own kind 1301 events know all of those and none of the
+ * into Amethyst by hand, or one they posted from another NIP-101e client, and Amethyst only reads
+ * its last four weeks (see [WorkoutStats.WINDOW_DAYS]). Their own kind 1301 events know all of those and none of the
  * device detail. Neither source alone is the truth, so the dashboard reads both.
  *
  * The practical consequence is that My Fitness works with no health permissions at all — a user
