@@ -40,11 +40,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Concurrency guarantees the service relies on when it fans requests out into child coroutines so
- * their consent prompts can batch: the identity signer's crypto must never run concurrently (an
- * external NIP-55 app can't take overlapping IPC ops), while authorization — which may block on a
- * user prompt for a long time — must NOT hold that lock, so a pending prompt can't stall other
- * clients' signing.
+ * Concurrency guarantees the service relies on when it fans requests out into child coroutines: a
+ * busy client's authorized requests reach the identity signer in parallel (nothing serializes them),
+ * and authorization — which may block on a user prompt for a long time — never stalls other clients'
+ * signing.
  */
 class BunkerRequestProcessorConcurrencyTest {
     private val userPubKey = "a".repeat(64)
@@ -128,7 +127,7 @@ class BunkerRequestProcessorConcurrencyTest {
     }
 
     @Test
-    fun cryptoIsSerializedAcrossConcurrentAuthorizedRequests() =
+    fun authorizedRequestsReachTheSignerConcurrently() =
         runTest {
             val signGate = CompletableDeferred<Unit>()
             val signer = GatedSigner(userPubKey, signGate)
@@ -138,14 +137,14 @@ class BunkerRequestProcessorConcurrencyTest {
             launch { processor.process(clientPubKey, signTemplate("2")) }
             testScheduler.advanceUntilIdle()
 
-            // Both were authorized instantly, but only one may be inside the signer at a time.
-            assertEquals(1, signer.inFlight, "only one sign holds the crypto lock")
-            assertEquals(1, signer.maxConcurrent, "crypto never overlapped")
+            // Both were authorized instantly and are inside the signer together; one slow op does not
+            // hold up the next.
+            assertEquals(2, signer.inFlight, "both signs run at once")
 
             signGate.complete(Unit)
             testScheduler.advanceUntilIdle()
-            assertEquals(2, signer.signCount, "both eventually signed, one after the other")
-            assertEquals(1, signer.maxConcurrent, "still never overlapped")
+            assertEquals(2, signer.signCount)
+            assertEquals(2, signer.maxConcurrent)
         }
 
     @Test

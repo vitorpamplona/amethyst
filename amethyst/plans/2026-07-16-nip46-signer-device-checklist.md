@@ -146,12 +146,11 @@ that loop via `collectLatest`.
   under a `Semaphore(maxConcurrentHandles)` (now 1024); dedup/staleness stay on
   the single consumer, only `handle()` runs concurrently. So a request awaiting a
   prompt no longer stalls auto-allowed traffic, and several prompts can be pending
-  at once. Two guards keep this safe: (1) the identity signer's crypto is
-  serialized by `BunkerRequestProcessor.cryptoLock` — authorization (the prompt)
-  runs UNLOCKED, only the sign/encrypt/decrypt holds the lock — so an external
-  NIP-55 app never sees concurrent IPC ops; (2) first-connect consent is
-  serialized by `Nip46PermissionAuthorizer.connectLock` so two connects can't stack
-  dialogs. Per-op prompts batch: the shared `SignerConsentCoordinator.pending`
+  at once. The identity signer's crypto is NOT serialized (the old
+  `BunkerRequestProcessor.cryptoLock` was removed 2026-10-06): local keys are pure
+  crypto and NIP-55 signers like Amber accept overlapping calls, so a high-throughput
+  client's ops run in parallel. First-connect consent is still serialized by
+  `Nip46PermissionAuthorizer.connectLock` so two connects can't stack dialogs. Per-op prompts batch: the shared `SignerConsentCoordinator.pending`
   flow drives one dialog (1 pending) or a checkbox list (>1). Covered by
   `BunkerRequestProcessorConcurrencyTest`, but the on-device paths below still need
   a real run:
@@ -160,8 +159,8 @@ that loop via `collectLatest`.
         "Remember" toggle. Approving a subset leaves the rest pending.
   - [ ] **Auto-allowed keeps flowing:** while a prompt sits open, a REASONABLE
         auto-allowed request from another app still gets signed and answered.
-  - [ ] **No concurrent external-signer ops:** with a NIP-55 external signer, two
-        approved requests do not drive overlapping IPC (they serialize).
+  - [ ] **Concurrent external-signer ops:** with a NIP-55 external signer (Amber),
+        a burst of approved requests drives overlapping calls and every one is answered.
   - [ ] **Fail-closed on dismiss:** backing out of the batched sheet denies every
         still-open request (not just the selected ones).
 - **Relay-set change cancels in-flight work.** A `logout` (or a new nostrconnect
@@ -181,8 +180,8 @@ that loop via `collectLatest`.
   with no reply. The per-key check runs before the pairing lookup (a DataStore
   read), and only keys found unpaired spend the shared budget, so a flood can't
   lock out a paired app. Known paired keys are cached in memory for the run.
-  Follow-up: `isPaired` on an unknown key creates (and caches forever) a
-  DataStore instance per key, so rotating keys still grow that cache.
+  Reads of the per-app permission store check the file exists first, so a
+  pairing lookup for an unknown key opens no DataStore.
 - **Per-request bookkeeping batched (2026-10-06).** The activity log and the
   persisted seen-id set each take a drop-oldest channel send per request; one
   coroutine publishes the log at most every 250 ms and saves the ids every 2 s.

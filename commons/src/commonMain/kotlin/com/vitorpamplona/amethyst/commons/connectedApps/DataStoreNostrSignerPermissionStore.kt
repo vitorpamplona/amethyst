@@ -49,8 +49,14 @@ class DataStoreNostrSignerPermissionStore(
 ) : NostrSignerPermissionStore {
     private fun storeFor(coordinate: String): DataStore<Preferences> = stores.getDataStore(nameFor(coordinate))
 
+    /**
+     * The coordinate's saved preferences, or null when nothing was ever written for it. Reads go through
+     * here so a lookup for an unknown app (e.g. a stranger's NIP-46 pairing check) opens no store.
+     */
+    private suspend fun readFor(coordinate: String): Preferences? = stores.getDataStoreIfExists(nameFor(coordinate))?.data?.first()
+
     override suspend fun loadPolicy(coordinate: String): AppSignerPolicy? {
-        val raw = storeFor(coordinate).data.first()[KEY_POLICY] ?: return null
+        val raw = readFor(coordinate)?.get(KEY_POLICY) ?: return null
         return runCatching { AppSignerPolicy.valueOf(raw) }.getOrNull()
     }
 
@@ -72,7 +78,7 @@ class DataStoreNostrSignerPermissionStore(
         coordinate: String,
         op: NostrSignerOp,
     ): NostrOpDecision? {
-        val raw = storeFor(coordinate).data.first()[opKey(op)] ?: return null
+        val raw = readFor(coordinate)?.get(opKey(op)) ?: return null
         return runCatching { NostrOpDecision.valueOf(raw) }.getOrNull()
     }
 
@@ -108,7 +114,7 @@ class DataStoreNostrSignerPermissionStore(
         }
 
     override suspend fun allOpDecisions(coordinate: String): Map<String, NostrOpDecision> {
-        val prefs = storeFor(coordinate).data.first()
+        val prefs = readFor(coordinate) ?: return emptyMap()
         val result = mutableMapOf<String, NostrOpDecision>()
         for ((key, value) in prefs.asMap()) {
             val name = key.name
@@ -126,7 +132,7 @@ class DataStoreNostrSignerPermissionStore(
         coordinate: String,
         op: NostrSignerOp,
     ): Long? {
-        val raw = storeFor(coordinate).data.first()[opExpiryKey(op)] ?: return null
+        val raw = readFor(coordinate)?.get(opExpiryKey(op)) ?: return null
         return raw.toLongOrNull()
     }
 
@@ -146,7 +152,7 @@ class DataStoreNostrSignerPermissionStore(
     }
 
     override suspend fun loadLastUsed(coordinate: String): Long? {
-        val raw = storeFor(coordinate).data.first()[KEY_LAST_USED] ?: return null
+        val raw = readFor(coordinate)?.get(KEY_LAST_USED) ?: return null
         return raw.toLongOrNull()
     }
 
