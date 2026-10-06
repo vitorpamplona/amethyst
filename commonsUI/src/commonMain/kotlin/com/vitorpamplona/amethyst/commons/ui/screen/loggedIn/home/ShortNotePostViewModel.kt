@@ -880,11 +880,7 @@ open class ShortNotePostViewModel :
             zapRaiserAmount.value = zapRaiser
         }
 
-        eTags =
-            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
-                note
-            }
+        eTags = draftEvent.threadReferenceIds().mapNotNull { LocalCache.checkGetOrCreateNote(it) }
 
         pTags =
             draftEvent
@@ -988,9 +984,9 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentionKeys()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
@@ -1060,11 +1056,7 @@ open class ShortNotePostViewModel :
             zapRaiserAmount.value = zapRaiser
         }
 
-        eTags =
-            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
-                note
-            }
+        eTags = draftEvent.threadReferenceIds().mapNotNull { LocalCache.checkGetOrCreateNote(it) }
 
         pTags =
             draftEvent

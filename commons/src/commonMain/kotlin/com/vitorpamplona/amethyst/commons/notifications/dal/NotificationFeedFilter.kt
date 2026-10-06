@@ -457,9 +457,14 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ReactionEvent && event !is RepostEvent && event !is GenericRepostEvent) return false
-        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        val namesAuthor =
+            when (val event = note.event) {
+                is ReactionEvent -> event.originalAuthor().isNotEmpty()
+                is RepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                is GenericRepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                else -> return false
+            }
+        if (namesAuthor) return false
         return note.replyTo
             ?.lastOrNull()
             ?.author
@@ -476,9 +481,13 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
-        if (!event.isTaggedUser(me)) return false
+        val mentionsMe =
+            when (val event = note.event) {
+                is ChatEvent -> me in event.mentionKeys()
+                is StreamMessageV2Event -> me in event.mentions()
+                else -> return false
+            }
+        if (!mentionsMe) return false
         val group = LocalCache.getRelayGroupChannelForContent(note) ?: return false
         return BuzzRelayDialect.isBuzz(group.groupId.relayUrl)
     }
@@ -503,9 +512,14 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
-        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        val event = note.event ?: return false
+        val mentionsAnyone =
+            when (event) {
+                is ChatEvent -> event.mentionKeys().isNotEmpty()
+                is StreamMessageV2Event -> event.mentions().isNotEmpty()
+                else -> return false
+            }
+        if (mentionsAnyone) return false
 
         val threadTargets = setOfNotNull(event.tags.buzzThreadReply(), event.tags.buzzThreadRoot())
         if (threadTargets.isEmpty()) return false

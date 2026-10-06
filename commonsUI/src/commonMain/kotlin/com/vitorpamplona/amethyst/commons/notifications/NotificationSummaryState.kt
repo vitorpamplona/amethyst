@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.util.showCount
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -159,7 +158,7 @@ class NotificationSummaryState(
                     }
 
                     noteEvent is BaseThreadedEvent &&
-                        noteEvent.isTaggedUser(currentUser) &&
+                        currentUser in noteEvent.mentionKeys() &&
                         noteEvent.pubKey != currentUser -> {
                         val isCitation =
                             noteEvent.findCitations().any {
@@ -266,7 +265,7 @@ class NotificationSummaryState(
                         }
 
                         noteEvent is BaseThreadedEvent &&
-                            noteEvent.isTaggedUser(currentUser) &&
+                            currentUser in noteEvent.mentionKeys() &&
                             noteEvent.pubKey != currentUser -> {
                             val isCitation =
                                 noteEvent.findCitations().any {

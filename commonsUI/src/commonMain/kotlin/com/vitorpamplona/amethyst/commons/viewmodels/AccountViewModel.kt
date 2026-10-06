@@ -2966,7 +2966,7 @@ class AccountViewModel(
                 )
 
             // If we have a response, get the tagged Request Event otherwise null
-            return@withContext response?.event?.tags?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)?.let {
+            return@withContext (response?.event as? DvmContentDiscoveryResponseEvent)?.jobRequestId()?.let {
                 LocalCache.getOrCreateNote(it)
             }
         }

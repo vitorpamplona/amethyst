@@ -63,8 +63,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 
 @Composable
 fun EmojiPackSelectionScreen(
@@ -125,7 +125,7 @@ private fun EmojiPackSelectionBody(
             ) { selectionNote ->
                 selectionNote?.let {
                     val hasAddedThis by observeNoteAndMap(it, accountViewModel) { currentNote ->
-                        currentNote.event?.isTaggedAddressableNote(note.idHex) == true
+                        (currentNote.event as? EmojiListEvent)?.hasEmojiPack(note.idHex) == true
                     }
 
                     EmojiPackSelectionItem(
