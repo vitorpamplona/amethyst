@@ -92,11 +92,7 @@ class AddressSerializer {
             if (kindEnd == 0 || kindEnd > 5) return false
             val keyEnd = kindEnd + 65
             if (value.length <= keyEnd || value[kindEnd] != ':' || value[keyEnd] != ':') return false
-            for (i in kindEnd + 1 until keyEnd) {
-                val c = value[i]
-                if (c !in '0'..'9' && c !in 'a'..'f' && c !in 'A'..'F') return false
-            }
-            return true
+            return Hex.isHex(value, kindEnd + 1, keyEnd)
         }
     }
 }
