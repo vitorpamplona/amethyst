@@ -56,8 +56,9 @@ class NostrSignerPermissionLedgerTest {
             // user, or leak. These are replaceable *configuration* (0/3/10002), unlike addressable
             // *content* such as long-form (30023) which is allowed. A nutzap in particular *is* the
             // payment (it carries the ecash proofs), unlike a zap request (9734) which only fetches an
-            // invoice. Decryption reveals private content, so it also asks.
-            for (kind in listOf(0, 3, 5, 10002, 9321, 27235, 22242, 1059)) {
+            // invoice. Decryption reveals private content, so it also asks. A report (1984) accuses
+            // someone else in public, and web-of-trust apps score people by them: it asks too.
+            for (kind in listOf(0, 3, 5, 10002, 9321, 27235, 22242, 1059, 1984)) {
                 assertEquals(
                     NostrOpDecision.ASK,
                     ledger.decide(coordinate, NostrSignerOp.SignKind(kind)),

@@ -578,6 +578,7 @@
     <string name="mutual">Yours</string>
     <string name="gallery">Gallery</string>
     <string name="reports">Reports</string>
+    <string name="report_card_title">Report: %1$s</string>
     <string name="number_reports">%1$s Reports</string>
     <string name="relays"> Relays</string>
     <string name="website">Website</string>
@@ -4594,6 +4595,16 @@
     <string name="napplet_op_seal_message_to">send a private message to %1$s</string>
     <string name="napplet_op_seal_message">send a private message</string>
     <string name="napplet_consent_seal_unknown">An encrypted private message. Amethyst didn't encrypt it, so it can't show what's inside.</string>
+    <string name="consent_report_person">Reports %1$s publicly</string>
+    <string name="consent_report_person_reason">Reports %1$s publicly as %2$s</string>
+    <string name="consent_report_content">Reports content publicly</string>
+    <string name="consent_delete_about">Deletes your %1$s about %2$s</string>
+    <string name="consent_delete_events">events</string>
+    <string name="consent_delete_nothing">Names nothing to delete</string>
+    <plurals name="consent_delete_count">
+        <item quantity="one">Deletes %1$d of your %2$s</item>
+        <item quantity="other">Deletes %1$d of your %2$s</item>
+    </plurals>
     <string name="consent_list_adds">Adds %1$s</string>
     <string name="consent_list_removes">Removes %1$s</string>
     <string name="consent_list_no_change">No change to who is on this list</string>

@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.consent_delete_about
+import com.vitorpamplona.amethyst.commons.resources.consent_delete_count
+import com.vitorpamplona.amethyst.commons.resources.consent_delete_events
+import com.vitorpamplona.amethyst.commons.resources.consent_delete_nothing
 import com.vitorpamplona.amethyst.commons.resources.consent_list_adds
 import com.vitorpamplona.amethyst.commons.resources.consent_list_keeps
 import com.vitorpamplona.amethyst.commons.resources.consent_list_names_more
@@ -30,16 +35,22 @@ import com.vitorpamplona.amethyst.commons.resources.consent_list_no_change
 import com.vitorpamplona.amethyst.commons.resources.consent_list_removes
 import com.vitorpamplona.amethyst.commons.resources.consent_list_unknown
 import com.vitorpamplona.amethyst.commons.resources.consent_list_wipe
+import com.vitorpamplona.amethyst.commons.resources.consent_report_content
+import com.vitorpamplona.amethyst.commons.resources.consent_report_person
+import com.vitorpamplona.amethyst.commons.resources.consent_report_person_reason
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 
 /**
@@ -156,4 +167,56 @@ private suspend fun names(pubkeys: Set<HexKey>): String {
     val more = pubkeys.size - shown.size
     val listed = shown.joinToString(", ")
     return if (more > 0) loadPluralStringRes(Res.plurals.consent_list_names_more, more, listed, more) else listed
+}
+
+/**
+ * For a NIP-09 deletion (kind 5), what it removes. The event itself is just ids, so the prompt
+ * otherwise shows nothing: name the deleted kind ("Deletes 1 of your Reports"), and when the target
+ * is cached and names a person, who it was about ("Deletes your Report about Vitor").
+ */
+suspend fun deletionChange(
+    kind: Int,
+    tags: Array<Array<String>>,
+): ListChange? {
+    if (kind != DeletionRequestEvent.KIND) return null
+    val targets = tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") }.map { it[1] }
+    if (targets.isEmpty()) return ListChange(loadStringRes(Res.string.consent_delete_nothing), warning = false)
+    val deletedKind = tags.firstOrNull { it.size > 1 && it[0] == "k" }?.get(1)?.toIntOrNull()
+    val kindName = deletedKind?.let { kindNameFor(it) } ?: loadStringRes(Res.string.consent_delete_events)
+
+    // One cached target that names a person reads best as "about Vitor".
+    val subject =
+        targets
+            .singleOrNull()
+            ?.let { LocalCache.getNoteIfExists(it)?.event }
+            ?.tags
+            ?.taggedUserIds()
+            ?.firstOrNull()
+    val text =
+        if (subject != null) {
+            loadStringRes(Res.string.consent_delete_about, kindName, counterpartyLabel(subject))
+        } else {
+            loadPluralStringRes(Res.plurals.consent_delete_count, targets.size, targets.size, kindName)
+        }
+    return ListChange(text, warning = targets.size > 1)
+}
+
+/**
+ * For a NIP-56 report (kind 1984), who is being reported and why. The report renders as just its
+ * reason ("Spam"); the person it accuses is the decision, so it leads the prompt in red.
+ */
+suspend fun reportChange(
+    kind: Int,
+    tags: Array<Array<String>>,
+): ListChange? {
+    if (kind != ReportEvent.KIND) return null
+    val person = tags.firstOrNull { it.size > 1 && it[0] == "p" }
+    val reason = person?.getOrNull(2)?.ifBlank { null }
+    val text =
+        when {
+            person == null -> loadStringRes(Res.string.consent_report_content)
+            reason != null -> loadStringRes(Res.string.consent_report_person_reason, counterpartyLabel(person[1]), reason)
+            else -> loadStringRes(Res.string.consent_report_person, counterpartyLabel(person[1]))
+        }
+    return ListChange(text, warning = true)
 }

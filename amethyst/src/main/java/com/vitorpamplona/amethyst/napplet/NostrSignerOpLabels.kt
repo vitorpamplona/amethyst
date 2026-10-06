@@ -121,7 +121,7 @@ suspend fun buildSignerConsentInfo(
     // the message and its recipient instead (see NappletRecentEncryptions).
     val seal = if (signKind != null && signContent != null) sealContents(signKind, signContent, recentEncryptions) else null
     val isUnreadableSeal = signKind == SealEvent.KIND && seal == null
-    val change = if (signKind != null && signTags != null) listChange(account, signKind, signTags) else null
+    val change = if (signKind != null && signTags != null) listChange(account, signKind, signTags) ?: deletionChange(signKind, signTags) ?: reportChange(signKind, signTags) else null
 
     val counterparty = seal?.recipient ?: request.counterpartyPubKey()
     // For decrypt this names the counterparty ("read your private messages with Alice").
