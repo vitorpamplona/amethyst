@@ -50,7 +50,7 @@ class PresenceUpdateEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(tags.presenceSubject())
 
     /** The raw presence status string — the `status` tag, or the `content` fallback. */
     fun status(): String = tags.presenceStatus() ?: content
@@ -62,7 +62,7 @@ class PresenceUpdateEvent(
      * Whose presence this reports. On a client-published event that is the author; on the
      * relay-synthesized read form (relay-signed, subject in a `p` tag) it is the `p` tag.
      */
-    fun subjectPubKey(): HexKey = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1) ?: pubKey
+    fun subjectPubKey(): HexKey = tags.presenceSubject() ?: pubKey
 
     companion object {
         const val KIND = 20001

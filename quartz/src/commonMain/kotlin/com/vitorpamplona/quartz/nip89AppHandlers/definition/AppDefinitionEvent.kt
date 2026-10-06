@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.isTaggedKind
@@ -138,7 +137,7 @@ class AppDefinitionEvent(
     fun supportedNips() = tags.supportedNips()
 
     /** Related addressable events referenced via `a` tags (source repo, store listing, ...). */
-    fun relatedAddresses() = tags.taggedATags()
+    fun relatedAddresses(): List<ATag> = tags.mapNotNull(ATag::parse)
 
     /** The client (NIP-89 `client` tag) that published this handler, if any. */
     fun client() = tags.client().firstOrNull()
@@ -147,7 +146,7 @@ class AppDefinitionEvent(
     // own handler (`client` slot 2, relay in slot 3).
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(ClientTag::parseAddressAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress) + tags.mapNotNull(ClientTag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = relatedAddresses().map { it.toTag() } + tags.mapNotNull(ClientTag::parseAddressId)
 
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)

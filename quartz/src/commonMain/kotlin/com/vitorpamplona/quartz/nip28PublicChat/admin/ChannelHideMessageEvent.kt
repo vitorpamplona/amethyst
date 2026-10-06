@@ -50,7 +50,7 @@ class ChannelHideMessageEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(channelId()) + eventsToHide()
 
     /**
      * NIP-28 names the channel only through a MARKED root (Quartz writes one; the spec's own 43

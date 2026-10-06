@@ -65,7 +65,7 @@ class VoiceReplyEvent(
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(RootAddressTag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(RootAddressTag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> = listOfNotNull(rootAddressId())
 
     fun replyAuthor() = tags.firstNotNullOfOrNull(ReplyAuthorTag::parse)
 
@@ -85,6 +85,9 @@ class VoiceReplyEvent(
 
     /** The thread's root scope (NIP-22 `E`): the voice message the conversation started from. */
     fun rootEventId(): HexKey? = tags.firstNotNullOfOrNull(RootEventTag::parseKey)
+
+    /** NIP-22: the addressable event at the root of the thread (`A`), when the root is one. */
+    fun rootAddressId(): String? = tags.firstNotNullOfOrNull(RootAddressTag::parseValidAddress)
 
     /** The root scope's author (NIP-22 `P`). */
     fun rootAuthorKey(): HexKey? = tags.firstNotNullOfOrNull(RootAuthorTag::parseKey)

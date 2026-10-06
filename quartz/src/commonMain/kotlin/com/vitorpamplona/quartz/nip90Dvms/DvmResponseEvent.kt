@@ -55,9 +55,16 @@ abstract class DvmResponseEvent(
     PubKeyHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint) + tags.dvmInputEventHints()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId) + tags.dvmInputEventIds()
+    // NIP-90 gives a result / feedback exactly one `e` (the job request) and one `p` (the customer).
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(jobRequestId()) + tags.dvmInputEventIds()
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(customer())
+
+    /** NIP-90: the id of the job request this result or feedback answers (`e`). */
+    fun jobRequestId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** NIP-90: the customer who requested the job (`p`). */
+    fun customer(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 }

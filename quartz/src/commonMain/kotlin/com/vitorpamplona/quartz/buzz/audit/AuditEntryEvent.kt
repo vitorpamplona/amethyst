@@ -54,7 +54,7 @@ class AuditEntryEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(actor())
 
     /** The recorded action — the `action` tag. */
     fun action(): AuditAction? = tags.auditAction()

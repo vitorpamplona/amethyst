@@ -58,7 +58,7 @@ class JobRequestEvent(
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(target())
 
     /** The task description - the event `content`. */
     fun request() = content

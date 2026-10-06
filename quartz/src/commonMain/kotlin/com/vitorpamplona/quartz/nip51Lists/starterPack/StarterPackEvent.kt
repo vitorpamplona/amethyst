@@ -69,7 +69,7 @@ class StarterPackEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = followIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

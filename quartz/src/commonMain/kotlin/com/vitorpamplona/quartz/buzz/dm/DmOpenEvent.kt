@@ -53,7 +53,7 @@ class DmOpenEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = participants()
 
     /** The DM participants - one per `p` tag. */
     fun participants() = tags.dmParticipants()

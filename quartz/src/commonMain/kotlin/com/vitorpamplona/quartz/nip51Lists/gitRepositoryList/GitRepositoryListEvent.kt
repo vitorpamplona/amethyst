@@ -45,7 +45,7 @@ class GitRepositoryListEvent(
     AddressHintProvider {
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
+    override fun linkedAddressIds() = publicRepositories().map { it.address.toValue() }
 
     fun publicRepositories() = tags.mapNotNull(AddressBookmark::parse)
 

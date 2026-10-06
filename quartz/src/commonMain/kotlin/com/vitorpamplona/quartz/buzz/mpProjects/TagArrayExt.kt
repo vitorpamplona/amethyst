@@ -40,6 +40,12 @@ fun TagArray.projectDescription(): String? = fastFirstNotNullOfOrNull(Descriptio
 /** The member repositories whose `a` tags are well-formed (malformed ones are skipped). */
 fun TagArray.projectMembers(): List<ProjectMember> = fastMapNotNullDense(ProjectMemberTag::parse)
 
+/**
+ * The canonical `30617:<owner>:<repo>` address ids of the same well-formed member `a` tags as
+ * [projectMembers], read without building a [ProjectMember] or an `Address` per tag.
+ */
+fun TagArray.projectMemberAddressIds(): List<String> = mapNotNull(ProjectMemberTag::parseAddressId)
+
 /** The discussion channel reference — the `buzz-channel` tag. */
 fun TagArray.projectChannel(): String? = fastFirstNotNullOfOrNull(ChannelTag::parse)
 

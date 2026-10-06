@@ -57,11 +57,18 @@ class NutzapEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-61 allows one `e` (the zapped event) and one `p` (the recipient).
+    override fun linkedEventIds() = listOfNotNull(zappedEventId())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = listOfNotNull(recipient())
+
+    /** NIP-61: the pubkey the nutzap is paying (`p`). */
+    fun recipient(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
+
+    /** NIP-61: the event being nutzapped (`e`); null for a profile nutzap. */
+    fun zappedEventId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
 
     fun proofs() = tags.proofs()
 

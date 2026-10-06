@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
@@ -117,15 +119,40 @@ class PictureEvent(
     @kotlin.jvm.Transient
     private var linkedAddressIdsCache: List<String>? = null
 
-    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: (tags.mapNotNull(PTag::parseKey) + annotatedUsers() + citedNIP19().pubKeys()).also { linkedPubKeysCache = it }
+    override fun linkedPubKeys(): List<HexKey> =
+        linkedPubKeysCache ?: ArrayList<HexKey>().also { keys ->
+            keys.addAll(depictedUsers())
+            keys.addAll(annotatedUsers())
+            keys.addAll(citedNIP19().pubKeys())
+            linkedPubKeysCache = keys
+        }
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 
-    override fun linkedEventIds(): List<HexKey> = linkedEventIdsCache ?: (tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()).also { linkedEventIdsCache = it }
+    override fun linkedEventIds(): List<HexKey> =
+        linkedEventIdsCache ?: ArrayList<HexKey>().also { ids ->
+            quotedEvents().mapTo(ids) { it.eventId }
+            ids.addAll(citedNIP19().eventIds())
+            linkedEventIdsCache = ids
+        }
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
 
-    override fun linkedAddressIds(): List<String> = linkedAddressIdsCache ?: (tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()).also { linkedAddressIdsCache = it }
+    override fun linkedAddressIds(): List<String> =
+        linkedAddressIdsCache ?: ArrayList<String>().also { ids ->
+            quotedAddresses().mapTo(ids) { it.address.toValue() }
+            ids.addAll(citedNIP19().addressIds())
+            linkedAddressIdsCache = ids
+        }
+
+    /** NIP-68: the people in the picture, from its `p` tags. [annotatedUsers] places them on an image. */
+    fun depictedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    /** Events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedEvents(): List<QEventTag> = tags.mapNotNull(QEventTag::parse)
+
+    /** Addressable events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedAddresses(): List<QAddressableTag> = tags.mapNotNull(QAddressableTag::parse)
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

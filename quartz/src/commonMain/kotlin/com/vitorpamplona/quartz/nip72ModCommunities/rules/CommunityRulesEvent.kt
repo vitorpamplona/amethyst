@@ -64,7 +64,8 @@ class CommunityRulesEvent(
     PubKeyHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // A rules document governs one community.
+    override fun linkedAddressIds() = listOfNotNull(communityAddress())
 
     // `p` allow/deny rules and `wot` roots name people, but slot 2 is the policy / depth, not a
     // relay: there is nothing to hint, only keys to link.
@@ -104,7 +105,7 @@ class CommunityRulesEvent(
     fun minRulesCreatedAt(): Long? = tags.firstNotNullOfOrNull(MinRulesCreatedAtTag::parse)
 
     /** Address (`a` tag) of the community this rules document governs. */
-    fun communityAddress(): String? = tags.firstNotNullOfOrNull(ATag::parseAddressId)
+    fun communityAddress(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 34551

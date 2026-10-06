@@ -75,11 +75,11 @@ class AcceptedBadgeSetEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = badgeAwardEvents().map { it.eventId }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = badgeAwardDefinitions().map { it.toValue() }
 
     fun acceptedBadges() = tags.acceptedBadges()
 

@@ -65,10 +65,13 @@ class AudioTrackEvent(
 
     fun participants() = tags.mapNotNull(ParticipantTag::parse)
 
+    /** The participants' pubkeys (every valid `p` tag, in tag order), without building [ParticipantTag]s. */
+    fun participantKeys(): List<HexKey> = tags.mapNotNull(ParticipantTag::parseKey)
+
     // Participants are plain `p` tags, so the NIP-01 parsers read them (and validate the relay).
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = participantKeys()
 
     fun type() = tags.firstNotNullOfOrNull(TypeTag::parse)
 

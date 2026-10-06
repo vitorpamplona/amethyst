@@ -48,7 +48,7 @@ class ForumVoteEvent(
     EventHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(target())
 
     /** The channel UUID (the `h` tag) this vote belongs to. */
     fun channel() = tags.forumChannel()

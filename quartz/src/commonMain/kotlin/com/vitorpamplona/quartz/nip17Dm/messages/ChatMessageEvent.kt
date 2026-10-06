@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -79,13 +81,32 @@ class ChatMessageEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId)
+    override fun linkedEventIds(): List<HexKey> {
+        val result = ArrayList<HexKey>()
+        result.addAll(replyTo())
+        quotedEvents().mapTo(result) { it.eventId }
+        return result
+    }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseValidAddress) + tags.mapNotNull(QTag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> {
+        val result = ArrayList<String>()
+        result.addAll(referencedAddresses())
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        return result
+    }
 
     fun replyTo() = tags.mapNotNull(ETag::parseId)
+
+    /** NIP-18 quotes (`q`) of regular events, in tag order. */
+    fun quotedEvents(): List<QEventTag> = tags.mapNotNull(QEventTag::parse)
+
+    /** NIP-18 quotes (`q`) of addressable events, in tag order. */
+    fun quotedAddresses(): List<QAddressableTag> = tags.mapNotNull(QAddressableTag::parse)
+
+    /** The addressables this message references (`a`), as canonical address ids in tag order. */
+    fun referencedAddresses(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 14

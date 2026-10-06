@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
@@ -93,15 +95,24 @@ class TorrentEvent(
     // and `q` (note/nevent/naddr) tags; the content citations cover other clients.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + citedNIP19().pubKeyHints()
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + citedNIP19().pubKeys()
+    override fun linkedPubKeys(): List<HexKey> = mentions().map { it.pubKey } + citedNIP19().pubKeys()
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
+    override fun linkedEventIds(): List<HexKey> = quotedEvents().map { it.eventId } + citedNIP19().eventIds()
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
+    override fun linkedAddressIds(): List<String> = quotedAddresses().map { it.address.toValue() } + citedNIP19().addressIds()
+
+    /** The users the description mentions (`p`), in tag order. */
+    fun mentions(): List<PTag> = tags.mapNotNull(PTag::parse)
+
+    /** NIP-18 quotes (`q`) of regular events the description cites, in tag order. */
+    fun quotedEvents(): List<QEventTag> = tags.mapNotNull(QEventTag::parse)
+
+    /** NIP-18 quotes (`q`) of addressable events the description cites, in tag order. */
+    fun quotedAddresses(): List<QAddressableTag> = tags.mapNotNull(QAddressableTag::parse)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

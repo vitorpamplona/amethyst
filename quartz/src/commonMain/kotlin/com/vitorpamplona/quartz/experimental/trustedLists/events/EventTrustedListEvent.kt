@@ -63,26 +63,34 @@ class EventTrustedListEvent(
 
     override fun eventHints() = tags.mapNotNull(EventMemberTag::parseAsHint)
 
-    // Dense: nearly every tag is a member, so presize, with room for the provenance id.
+    // [memberValues] plus the provenance id. Dense: nearly every tag is a member, so presize, with
+    // room for the provenance id, and read each tag through [memberValueOf] instead of copying.
     override fun linkedEventIds(): List<HexKey> {
         val ids = ArrayList<HexKey>(tags.size + 1)
-        for (tag in tags) EventMemberTag.parseId(tag)?.let(ids::add)
+        for (tag in tags) memberValueOf(tag)?.let(ids::add)
         addProvenanceEventIds(ids)
         return ids
     }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = aboutAddressIds()
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNullTo(ArrayList(), PTag::parseKey).also(::addProvenancePubKeys)
+    // [aboutKeys] plus the provenance keys, appended into the same list.
+    override fun linkedPubKeys(): List<HexKey> = tags.aboutKeys().also(::addProvenancePubKeys)
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutAddresses() = tags.aboutAddresses()
 
+    /** [aboutAddresses] as shape-checked address ids, in tag order. */
+    fun aboutAddressIds(): List<String> = tags.aboutAddressIds()
+
     fun aboutPubKeys() = tags.aboutPubKeys()
+
+    /** The keys of [aboutPubKeys], in tag order. */
+    fun aboutKeys(): List<HexKey> = tags.aboutKeys()
 
     companion object {
         const val KIND = 30393

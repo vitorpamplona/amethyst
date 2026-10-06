@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags.Addr
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -59,14 +58,18 @@ class AddressableTrustedListEvent(
 
     override fun addressHints() = tags.mapNotNull(AddressMemberTag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.fastMapNotNullDense(AddressMemberTag::parseAddressId)
+    override fun linkedAddressIds() = memberValues()
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNullTo(ArrayList(), PTag::parseKey).also(::addProvenancePubKeys)
+    // [aboutKeys] plus the provenance keys, appended into the same list.
+    override fun linkedPubKeys(): List<HexKey> = tags.aboutKeys().also(::addProvenancePubKeys)
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutPubKeys() = tags.aboutPubKeys()
+
+    /** The keys of [aboutPubKeys], in tag order. */
+    fun aboutKeys(): List<HexKey> = tags.aboutKeys()
 
     companion object {
         const val KIND = 30394

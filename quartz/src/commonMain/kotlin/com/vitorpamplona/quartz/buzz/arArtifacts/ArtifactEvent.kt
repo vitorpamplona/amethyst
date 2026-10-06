@@ -22,8 +22,6 @@ package com.vitorpamplona.quartz.buzz.arArtifacts
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.ArtifactOp
-import com.vitorpamplona.quartz.buzz.arArtifacts.tags.PrevTag
-import com.vitorpamplona.quartz.buzz.arArtifacts.tags.RootTag
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.TitleTag
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.TypeTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -99,7 +97,7 @@ class ArtifactEvent(
     override fun eventHints(): List<EventIdHint> = emptyList()
 
     // One pass in tag order (the builder writes `root` before `prev`).
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull { RootTag.parseId(it) ?: PrevTag.parseId(it) }
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(root(), prev())
 
     /** The artifact's stable UUID — the `d` tag. */
     fun artifactId() = tags.artifactId()
@@ -116,10 +114,10 @@ class ArtifactEvent(
     /** The lifecycle operation — the `op` tag. */
     fun op() = tags.artifactOp()
 
-    /** The conversation anchor — the `root` tag. */
+    /** The conversation anchor — the `root` tag; null when absent or not a 64-hex event id. */
     fun root() = tags.artifactRoot()
 
-    /** The replaced revision — the `prev` tag; null on a create. */
+    /** The replaced revision — the `prev` tag; null on a create, or when not a 64-hex event id. */
     fun prev() = tags.artifactPrev()
 
     /** True for a soft-delete revision. */

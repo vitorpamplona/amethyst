@@ -42,12 +42,12 @@ class RelayAddMemberEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider {
     // PTag only checks the key's length; a provider must hand over real keys (a hint's id
-    // decodes its hex), so the providers also check the digits.
+    // decodes its hex), so the hints check the digits as memberPubKeys() does.
     override fun pubKeyHints() = tags.mapNotNull { tag -> PTag.parseAsHint(tag)?.takeIf { Hex.isHex64(it.pubkey) } }
 
-    override fun linkedPubKeys() = tags.mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
+    override fun linkedPubKeys() = memberPubKeys()
 
-    fun memberPubKeys() = tags.mapNotNull(PTag::parseKey)
+    fun memberPubKeys() = tags.mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
 
     companion object {
         const val KIND = 8000

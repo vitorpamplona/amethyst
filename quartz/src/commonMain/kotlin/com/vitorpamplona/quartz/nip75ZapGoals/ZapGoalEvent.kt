@@ -42,11 +42,14 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.RelayListTag
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -74,15 +77,28 @@ class ZapGoalEvent(
     // NIP-75 lets a goal carry NIP-57 `zap` splits: their beneficiaries are linked people too.
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint) + tags.zapSplitHints()
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + tags.zapSplitPubKeys()
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + beneficiaries().mapNotNull { (it as? ZapSplitSetup)?.pubKeyHex }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-75 links a goal to at most one event (`e`) and one addressable event (`a`).
+    override fun linkedEventIds() = listOfNotNull(goalEventId())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = listOfNotNull(goalAddressId())
+
+    /**
+     * NIP-75: who the goal's zaps go to, as NIP-57 `zap` splits. Only splits a zap would pay:
+     * positive weight, and a 64-hex key when the beneficiary is a pubkey.
+     */
+    fun beneficiaries(): List<BaseZapSplitSetup> = tags.zapSplitSetup().filter { it !is ZapSplitSetup || Hex.isHex64(it.pubKeyHex) }
+
+    /** NIP-75: the event this goal is linked to (`e`), if any. */
+    fun goalEventId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** NIP-75: the addressable event this goal is linked to (`a`), if any. */
+    fun goalAddressId(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     fun topics() = hashtags()
 

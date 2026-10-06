@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -47,17 +46,25 @@ class TextNoteModificationEvent(
     EventHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    fun editedNote() = firstTaggedEvent()
+    /** The note this modification edits (its first valid `e` tag), with its relay and author hints. */
+    fun editedNote() = tags.firstNotNullOfOrNull(ETag::parse)
+
+    /** The id of the note this modification edits (its first valid `e` tag). */
+    fun editedNoteId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The user this edit notifies (the `p` that [create] writes from its `notify` argument). */
+    fun notifiedUser(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     // The edited note (`e`) and whoever the edit notifies (`p`), so outbox can fetch the
     // original the modification applies to.
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    // [create] writes one `e` (the edited note) and at most one `p` (the notified user).
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(editedNoteId())
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(notifiedUser())
 
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
 

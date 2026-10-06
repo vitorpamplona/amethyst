@@ -95,12 +95,15 @@ class CalendarDateSlotEvent(
 
     fun participants() = tags.mapNotNull(PTag.Companion::parse)
 
+    /** The pubkeys of the [participants], without building a [PTag] per participant. */
+    fun participantKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
     // NIP-52 `p` tags are the invitees/hosts of this appointment. Exposing them as pubkey
     // hints lets the broadcaster route the appointment - and anything that a-tags it, like an
     // RSVP - into every participant's inbox relays instead of just the author's outbox.
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = participantKeys()
 
     fun references() = tags.references()
 

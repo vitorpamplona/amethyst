@@ -56,7 +56,8 @@ fun TagArray.videoLinkedPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
 
 fun TagArray.videoEventHints(): List<EventIdHint> = mapNotNull(ETag::parseAsHint)
 
-fun TagArray.videoLinkedEventIds(): List<HexKey> = mapNotNull(ETag::parseId)
+/** Every `e` on a video, labelled credit or not: see [VideoEvent.creditedEventIds]. */
+fun TagArray.videoCreditedEventIds(): List<HexKey> = mapNotNull(ETag::parseId)
 
 fun TagArray.videoAddressHints(): List<AddressHint> = mapNotNull(::creditedAddressAsHint) + mapNotNull(TextTrackTag::parseAddressAsHint)
 

@@ -81,7 +81,7 @@ abstract class AddressableVideoEvent(
 
     override fun eventHints() = tags.videoEventHints()
 
-    override fun linkedEventIds() = tags.videoLinkedEventIds()
+    override fun linkedEventIds() = creditedEventIds()
 
     override fun addressHints() = tags.videoAddressHints()
 
@@ -113,6 +113,8 @@ abstract class AddressableVideoEvent(
     override fun textTrack() = tags.mapNotNull(TextTrackTag::parse)
 
     override fun credits() = VideoCredits.parse(tags)
+
+    override fun creditedEventIds() = tags.videoCreditedEventIds()
 
     override fun segments() = tags.mapNotNull(SegmentTag::parse)
 

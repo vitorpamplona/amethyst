@@ -21,6 +21,9 @@
 package com.vitorpamplona.quartz.buzz.stream
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadMarkers
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -61,11 +64,12 @@ class StreamMessageV2Event(
     EventHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = mentions()
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(MarkedETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(MarkedETag::parseId)
+    // threadRoot() + replyTo(), read in one pass over the tags: both come from the same markers.
+    override fun linkedEventIds(): List<HexKey> = tags.buzzThreadMarkers().let { listOfNotNull(it.root, it.reply) }
 
     override fun indexableContent() = content
 
@@ -78,6 +82,12 @@ class StreamMessageV2Event(
     fun channel() = tags.channel()
 
     fun mentions() = tags.mentions()
+
+    /** The thread root event id (`root`-marked `e` tag, read as Buzz's relay does), or null. */
+    fun threadRoot(): HexKey? = tags.buzzThreadRoot()
+
+    /** The immediate-parent event id (`reply`-marked `e` tag, read as Buzz's relay does), or null. */
+    fun replyTo(): HexKey? = tags.buzzThreadReply()
 
     fun isBroadcast() = tags.isBroadcast()
 

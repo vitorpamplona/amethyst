@@ -43,11 +43,12 @@ class NwcNotificationEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // NIP-47: a notification is addressed to a single client.
+    override fun linkedPubKeys() = listOfNotNull(clientPubKey())
 
     override fun isContentEncoded() = true
 
-    fun clientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun clientPubKey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) clientPubKey() ?: pubKey else pubKey
 

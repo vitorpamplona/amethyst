@@ -60,12 +60,15 @@ class CalendarCollectionEvent(
 
     fun calendarEventAddresses() = taggedAddresses()
 
+    /** The address ids of [calendarEventAddresses], validated, in tag order. */
+    fun calendarEventAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+
     // A calendar is a list of `a` tags pointing at the appointments it collects. Surfacing them
     // lets the broadcaster route a published calendar to the relays those appointments live on,
     // and lets the hint index learn the calendar -> appointment links.
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = calendarEventAddressIds()
 
     companion object {
         const val KIND = 31924

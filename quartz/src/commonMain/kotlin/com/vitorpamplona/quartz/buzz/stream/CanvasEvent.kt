@@ -58,7 +58,7 @@ class CanvasEvent(
     // The `expected-revision` head id has no relay slot; the `none` sentinel is not a reference.
     override fun eventHints(): List<EventIdHint> = emptyList()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ExpectedRevisionTag::parseEventId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(expectedRevisionId())
 
     override fun indexableContent() = content
 
@@ -72,6 +72,12 @@ class CanvasEvent(
 
     /** The `expected-revision` precondition: [ExpectedRevisionTag.NONE], a head id, or null for an unconditional write. */
     fun expectedRevision() = tags.firstNotNullOfOrNull(ExpectedRevisionTag::parse)
+
+    /**
+     * The canvas head id the `expected-revision` precondition names; null for the
+     * [ExpectedRevisionTag.NONE] sentinel, an unconditional write, or a malformed tag.
+     */
+    fun expectedRevisionId(): HexKey? = tags.firstNotNullOfOrNull(ExpectedRevisionTag::parseEventId)
 
     /**
      * True when this revision displaces [other] as the channel's live canvas under the relay's

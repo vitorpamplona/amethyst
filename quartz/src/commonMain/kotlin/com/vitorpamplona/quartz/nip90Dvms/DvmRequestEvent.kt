@@ -58,5 +58,11 @@ abstract class DvmRequestEvent(
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = serviceProviders()
+
+    /** The service providers the customer asks to run the job (`p`), in tag order. */
+    fun serviceProviders(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    /** The first of [serviceProviders]: the DVM a single-provider request is addressed to. */
+    fun dvmPubKey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 }

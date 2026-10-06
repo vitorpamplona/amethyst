@@ -47,15 +47,27 @@ class PrivateZapEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = zappedAuthor()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = zappedPost()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = zappedAddresses()
+
+    // The hidden copy of a private zap request carries the request's own targets, so these
+    // mirror [ZapRequestEvent]'s accessors (and their list-returning shape).
+
+    /** The zapped users (`p`). */
+    fun zappedAuthor(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    /** The zapped events (`e`). */
+    fun zappedPost(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
+    /** The zapped addressables (`a`), as validated address ids. */
+    fun zappedAddresses(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 9733

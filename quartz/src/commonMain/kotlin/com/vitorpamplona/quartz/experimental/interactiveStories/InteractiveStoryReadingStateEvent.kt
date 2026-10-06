@@ -56,16 +56,13 @@ class InteractiveStoryReadingStateEvent(
     override fun addressHints(): List<AddressHint> = tags.mapNotNull { RootSceneTag.parseAsHint(it) ?: ATag.parseAsHint(it) }
 
     /**
-     * The story ([root], which falls back to the `d` coordinate on old states) and the current scene.
+     * The story ([rootAddressId], which falls back to the `d` coordinate on old states) and the
+     * current scene ([currentSceneAddressId]; the builders write it with addUnique, so there is one).
      *
-     * Reads the root's id straight off the `A` tag rather than through [root]: this runs on every
-     * relay copy, and [root] builds a [RootSceneTag] and normalizes its relay just to be discarded.
+     * Uses the id-form accessors rather than [root]/[currentScene]: this runs on every relay copy,
+     * and [root] builds a [RootSceneTag] and normalizes its relay just to be discarded.
      */
-    override fun linkedAddressIds(): List<String> {
-        val rootId = tags.firstNotNullOfOrNull(RootSceneTag::parseAddressId) ?: Address.parse(dTag())?.toValue()
-        val scenes = tags.mapNotNull(ATag::parseValidAddress)
-        return if (rootId != null) listOf(rootId) + scenes else scenes
-    }
+    override fun linkedAddressIds(): List<String> = listOfNotNull(rootAddressId(), currentSceneAddressId())
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -84,7 +81,13 @@ class InteractiveStoryReadingStateEvent(
         tags.firstNotNullOfOrNull(RootSceneTag::parse)
             ?: Address.parse(dTag())?.let { RootSceneTag(it.kind, it.pubKeyHex, it.dTag, null) }
 
+    /** [root] as a validated address id, without building the [RootSceneTag]. */
+    fun rootAddressId(): String? = tags.firstNotNullOfOrNull(RootSceneTag::parseAddressId) ?: Address.parse(dTag())?.toValue()
+
     fun currentScene() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+
+    /** [currentScene] as a validated address id. */
+    fun currentSceneAddressId(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 30298

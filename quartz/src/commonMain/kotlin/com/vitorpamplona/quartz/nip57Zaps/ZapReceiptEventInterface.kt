@@ -32,6 +32,9 @@ interface ZapReceiptEventInterface {
 
     fun zappedAuthor(): List<String>
 
+    /** The zapped addressables (`a`), as validated address ids. */
+    fun zappedAddresses(): List<String>
+
     fun zappedRequestAuthor(): String?
 
     fun amount(): BigDecimal?

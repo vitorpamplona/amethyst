@@ -56,15 +56,18 @@ class StreamMessageEditEvent(
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = mentions()
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(editedMessage())
 
     fun channel() = tags.channel()
 
     fun editedMessage() = tags.targetMessage()
+
+    /** The members `p`-mentioned in the replacement text, in tag order (as on [StreamMessageV2Event.mentions]). */
+    fun mentions() = tags.mentions()
 
     companion object {
         const val KIND = 40003

@@ -84,15 +84,17 @@ class GitPullRequestEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = notifiedUsers()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-34: at most one `e`, the root patch this PR revises.
+    override fun linkedEventIds() = listOfNotNull(rootPatchId())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-34: a PR names a single repository (`a`).
+    override fun linkedAddressIds() = listOfNotNull(repositoryAddress()?.toValue())
 
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)
 
@@ -116,6 +118,9 @@ class GitPullRequestEvent(
 
     /** Root patch event ID if this PR is a revision of a prior patch. */
     fun rootPatchId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The users this PR notifies (`p`): the repository owner first, then the `notify` list, in tag order. */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     companion object {
         const val KIND = 1618

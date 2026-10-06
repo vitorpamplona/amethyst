@@ -86,10 +86,10 @@ class GitIssueEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -101,11 +101,10 @@ class GitIssueEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), ATag::parseAddressId)
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
@@ -116,11 +115,14 @@ class GitIssueEvent(
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(notifiedUsers())
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
+
+    /** The users this issue notifies (`p`): the repository owner first, then the `notify` list, in tag order. */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 

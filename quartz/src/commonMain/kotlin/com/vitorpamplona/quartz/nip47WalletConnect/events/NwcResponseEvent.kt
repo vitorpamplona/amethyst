@@ -46,17 +46,18 @@ class NwcResponseEvent(
     EventHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // NIP-47: a response carries a single `p` (the requesting client) and a single `e` (the request).
+    override fun linkedPubKeys() = listOfNotNull(requestAuthor())
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(requestId())
 
     override fun isContentEncoded() = true
 
-    fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun requestAuthor(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
-    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun requestId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
 

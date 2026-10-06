@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip71Video.credits.VideoCredit
@@ -46,6 +47,12 @@ interface VideoEvent : IEvent {
      * See [com.vitorpamplona.quartz.nip71Video.credits.VideoCredits].
      */
     fun credits(): List<VideoCredit>
+
+    /**
+     * Every event the video points at with an `e` tag (divine.video's reused "audio" source, ...),
+     * labelled or not; [credits] keeps only the labelled ones.
+     */
+    fun creditedEventIds(): List<HexKey>
 
     fun hashtags(): List<String>
 

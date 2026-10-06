@@ -64,17 +64,18 @@ class AdminCommandEvent(
     // The target (`p`) and the room (`a`), each with whatever relay the host attached.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    // One room (`a`) and one target (`p`) per command, as [build] writes them.
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(targetPubkey())
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> = listOfNotNull(room())
 
-    /** The room this command applies to, if a single `a`-tag is present. */
-    fun room(): String? = tags.firstOrNull { it.firstOrNull() == "a" }?.getOrNull(1)
+    /** The room this command applies to: the address id of its first valid `a` tag. */
+    fun room(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
-    /** The pubkey the host is acting on. */
-    fun targetPubkey(): HexKey? = tags.firstOrNull { it.firstOrNull() == "p" }?.getOrNull(1)
+    /** The pubkey the host is acting on: its first valid `p` tag. */
+    fun targetPubkey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     /**
      * The verb (e.g. "kick"). Reads the spec-correct

@@ -61,7 +61,8 @@ class ProfileGalleryEntryEvent(
     // The [fromEvent] the picture was taken from, with the relay the builder attaches.
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    // An entry comes from one source event, so [fromEvent] is the only link.
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(fromEvent())
 
     // Only the optional summary caption is indexed; this event is otherwise a
     // url/hash pointer with no natural-language body (content is empty).

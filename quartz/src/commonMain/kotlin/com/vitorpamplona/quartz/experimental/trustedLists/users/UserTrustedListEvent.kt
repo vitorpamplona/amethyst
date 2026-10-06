@@ -58,20 +58,24 @@ class UserTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PubKeyMemberTag::parseAsHint)
 
-    // Dense: nearly every tag is a member, so presize, with room for the two provenance keys.
+    // [memberValues] plus the provenance keys. Dense: nearly every tag is a member, so presize, with
+    // room for the two provenance keys, and read each tag through [memberValueOf] instead of copying.
     override fun linkedPubKeys(): List<HexKey> {
         val keys = ArrayList<HexKey>(tags.size + 2)
-        for (tag in tags) PubKeyMemberTag.parseKey(tag)?.let(keys::add)
+        for (tag in tags) memberValueOf(tag)?.let(keys::add)
         addProvenancePubKeys(keys)
         return keys
     }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = aboutAddressIds()
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutAddresses() = tags.aboutAddresses()
+
+    /** [aboutAddresses] as shape-checked address ids, in tag order. */
+    fun aboutAddressIds(): List<String> = tags.aboutAddressIds()
 
     companion object {
         const val KIND = 30392

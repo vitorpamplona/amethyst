@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -56,12 +55,13 @@ class EncryptedDmEvent(
     EventHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // NIP-04 addresses a single recipient.
+    override fun linkedPubKeys() = listOfNotNull(recipientPubKey())
 
     // The reply `e` tag is public (only the content is NIP-04 encrypted).
     override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(replyTo())
 
     override fun isContentEncoded() = true
 
@@ -104,7 +104,7 @@ class EncryptedDmEvent(
 
     fun replyTo() = tags.firstNotNullOfOrNull(MarkedETag::parseId)
 
-    fun with(pubkeyHex: HexKey): Boolean = pubkeyHex == pubKey || tags.any(PTag::isTagged, pubkeyHex)
+    fun with(pubkeyHex: HexKey): Boolean = pubkeyHex == pubKey || recipientPubKey() == pubkeyHex
 
     companion object {
         const val KIND = 4

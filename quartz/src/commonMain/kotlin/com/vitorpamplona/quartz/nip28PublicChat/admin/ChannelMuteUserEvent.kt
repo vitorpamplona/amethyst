@@ -53,7 +53,7 @@ class ChannelMuteUserEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = usersToMute()
 
     // The channel the mute applies to, from its root `e` tag.
     override fun eventHints(): List<EventIdHint> = listOfNotNull(channel()?.let { channel -> channel.relay?.let { EventIdHint(channel.eventId, it) } })

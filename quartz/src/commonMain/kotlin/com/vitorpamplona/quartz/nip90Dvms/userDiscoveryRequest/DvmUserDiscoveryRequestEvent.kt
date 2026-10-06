@@ -42,8 +42,6 @@ class DvmUserDiscoveryRequestEvent(
 ) : DvmRequestEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun inputs(): List<InputTag> = tags.inputs()
 
-    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
-
     fun user(): String? = tags.dvmParam("user")
 
     // `param user <pubkey>` names whose feed / network the job is about: a pubkey with no relay slot.

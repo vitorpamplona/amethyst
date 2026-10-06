@@ -63,16 +63,18 @@ class DeletionRequestEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = deleteEventIds()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = deleteAddressIds()
 
-    // The authors of the deleted events (normally the signer itself).
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = deletedEventAuthors()
+
+    /** The authors of the deleted events (`p`), normally the signer itself. */
+    fun deletedEventAuthors(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun deleteEvents() = taggedEvents()
 

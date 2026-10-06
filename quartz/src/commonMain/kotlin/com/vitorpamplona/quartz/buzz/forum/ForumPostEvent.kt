@@ -51,7 +51,7 @@ class ForumPostEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = mentions()
 
     override fun indexableContent() = content
 

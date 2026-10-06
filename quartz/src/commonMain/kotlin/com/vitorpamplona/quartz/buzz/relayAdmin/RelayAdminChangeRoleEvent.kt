@@ -50,7 +50,7 @@ class RelayAdminChangeRoleEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(target())
 
     /** The member whose role is changing — the single `p` tag. */
     fun target() = tags.relayAdminTarget()

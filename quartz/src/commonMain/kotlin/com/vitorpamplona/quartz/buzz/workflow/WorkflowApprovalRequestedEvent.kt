@@ -51,7 +51,7 @@ class WorkflowApprovalRequestedEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(approver())
 
     /** The channel UUID (the `h` tag) this approval request belongs to. */
     fun channel() = tags.workflowChannel()

@@ -27,8 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -44,8 +42,7 @@ class GroupPutUserEvent(
     // `p` tags carry roles, not relays, after the pubkey: there is never a hint.
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
-    // PTag only checks the key's length; a provider must hand over real keys.
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
+    override fun linkedPubKeys(): List<HexKey> = userPubKeys()
 
     fun groupId() = tags.groupId()
 

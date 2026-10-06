@@ -55,7 +55,7 @@ class SoftwareApplicationEvent(
     // The [appLinks] (`a` tags: releases, related apps), so outbox can fetch them.
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> = appLinkAddressIds()
 
     override fun indexableContent() = listOfNotNull(name(), summary(), content).joinToString("\n")
 
@@ -88,6 +88,9 @@ class SoftwareApplicationEvent(
     fun topics() = tags.mapNotNull(HashtagTag::parse)
 
     fun appLinks() = tags.mapNotNull(ATag::parse)
+
+    /** [appLinks] as validated address ids, in tag order, without building the [ATag]s. */
+    fun appLinkAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 32267

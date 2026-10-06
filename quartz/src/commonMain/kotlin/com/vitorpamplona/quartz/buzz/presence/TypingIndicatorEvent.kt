@@ -54,7 +54,7 @@ class TypingIndicatorEvent(
     EventHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(threadRootId(), threadReplyId())
 
     /** The channel UUID this typing indicator targets — the `h` tag. */
     fun channelId(): String? = tags.typingChannel()

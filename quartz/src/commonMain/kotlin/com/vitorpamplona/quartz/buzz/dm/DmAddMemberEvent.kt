@@ -51,7 +51,7 @@ class DmAddMemberEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(member())
 
     /** The target DM channel id - the `h` tag. */
     fun channelId() = tags.dmChannelId()

@@ -52,7 +52,7 @@ class MediaUploadEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(uploader())
 
     /** The blob sha256 — the `x` tag. */
     fun sha256Tag(): String? = tags.mediaSha256()

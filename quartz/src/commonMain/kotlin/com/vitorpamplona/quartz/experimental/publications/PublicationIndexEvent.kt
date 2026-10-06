@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.publications.tags.PublicationTypeTa
 import com.vitorpamplona.quartz.experimental.publications.tags.SourceAddressTag
 import com.vitorpamplona.quartz.experimental.publications.tags.SourceEventTag
 import com.vitorpamplona.quartz.experimental.publications.tags.VersionTag
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -91,18 +92,19 @@ class PublicationIndexEvent(
     // Sections listed by coordinate (`a`), plus the original a derivative work names (`A`).
     override fun addressHints(): List<AddressHint> = tags.mapNotNull { ATag.parseAsHint(it) ?: SourceAddressTag.parseAsHint(it) }
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull { ATag.parseAddressId(it) ?: SourceAddressTag.parseAddressId(it) }
+    override fun linkedAddressIds(): List<String> = sectionAddressIds() + listOfNotNull(originalAddressId())
 
     // Sections listed by id (`e`), plus the original a derivative work names (`E`). An `e`
     // entry's slot 2 may be an inline title ("Node.js") that passes for a schemeless host, so it
     // only hints with an explicit ws(s):// url.
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull { PublicationSectionRef.parseEventSectionAsHint(it) ?: SourceEventTag.parseAsHint(it) }
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull { ETag.parseId(it) ?: SourceEventTag.parseId(it) }
+    override fun linkedEventIds(): List<HexKey> = sectionEventIds() + listOfNotNull(originalEventId())
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    // NKBIP-01 uses `p` only to name a derivative work's original author: one at most.
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(originalAuthor())
 
     /** The full title of the publication. Required by the spec, but absent in the wild. */
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
@@ -130,8 +132,20 @@ class PublicationIndexEvent(
      */
     fun sections(): List<PublicationSectionRef> = PublicationSectionRef.fromIndex(this)
 
-    /** The referenced coordinates only, for hint providers and link resolution. */
-    fun sectionAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    /** The sections listed by coordinate (`a`), as shape-checked address ids, without building [sections]. */
+    fun sectionAddressIds(): List<String> = tags.mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
+
+    /** The sections listed by id (`e`), without building [sections]. */
+    fun sectionEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
+    /** On a derivative work, the original publication's coordinate (its `A` tag). */
+    fun originalAddressId(): String? = tags.firstNotNullOfOrNull(SourceAddressTag::parseAddressId)
+
+    /** On a derivative work, the original publication's event id (its `E` tag). */
+    fun originalEventId(): HexKey? = tags.firstNotNullOfOrNull(SourceEventTag::parseId)
+
+    /** On a derivative work, the original's author (its `p` tag). */
+    fun originalAuthor(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun sectionCount() = sections().size
 

@@ -45,7 +45,7 @@ class GitAuthorListEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(GitAuthorTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(GitAuthorTag::parseKey)
+    override fun linkedPubKeys() = publicAuthors().map { it.pubKey }
 
     fun publicAuthors() = tags.mapNotNull(GitAuthorTag::parse)
 

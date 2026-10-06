@@ -61,18 +61,27 @@ class UserStatusEvent(
         visitor.visit(content)
     }
 
-    // The profile / note / address a status points at (NIP-38 `p`, `e`, `a`).
+    // The profile / note / address a status points at (NIP-38 `p`, `e`, `a`): one of each at most.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(referencedProfile())
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(referencedEventId())
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> = listOfNotNull(referencedAddressId())
+
+    /** The profile this status links to (NIP-38 `p`). */
+    fun referencedProfile(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
+
+    /** The note this status links to (NIP-38 `e`). */
+    fun referencedEventId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The addressable this status links to (NIP-38 `a`, e.g. a live activity or a track), as an address id. */
+    fun referencedAddressId(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     fun firstTaggedUrl() = tags.firstTagValue("r")
 

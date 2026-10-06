@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.forum
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadMarkers
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -55,11 +56,12 @@ class ForumCommentEvent(
     EventHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = mentions()
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(MarkedETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(MarkedETag::parseId)
+    // threadRoot() + replyTo(), read in one pass over the tags: both come from the same markers.
+    override fun linkedEventIds(): List<HexKey> = tags.buzzThreadMarkers().let { listOfNotNull(it.root, it.reply) }
 
     override fun indexableContent() = content
 

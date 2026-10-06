@@ -92,7 +92,8 @@ class EntityRatingEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // [build] writes one rated event (`e`) and one rated author (`p`).
+    override fun linkedEventIds() = listOfNotNull(targetEventId())
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(RootAddressTag::parseAsHint)
 
@@ -100,7 +101,7 @@ class EntityRatingEvent(
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(targetAuthor())
 
     /** What sort of thing is rated. Never null — an absent `m` means a nostr event, per the spec. */
     fun mark(): String = RatingMark.orDefault(tags.firstNotNullOfOrNull(MarkTag::parse))

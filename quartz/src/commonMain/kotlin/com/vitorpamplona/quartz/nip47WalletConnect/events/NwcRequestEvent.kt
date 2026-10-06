@@ -44,11 +44,12 @@ class NwcRequestEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // NIP-47: a request is addressed to a single wallet service.
+    override fun linkedPubKeys() = listOfNotNull(walletServicePubKey())
 
     override fun isContentEncoded() = true
 
-    fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun walletServicePubKey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
 

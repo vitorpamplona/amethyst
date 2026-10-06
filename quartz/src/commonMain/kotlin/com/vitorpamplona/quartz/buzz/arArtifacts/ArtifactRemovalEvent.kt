@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.buzz.arArtifacts
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.buzz.arArtifacts.tags.PrevTag
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.ReasonTag
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -56,7 +55,7 @@ class ArtifactRemovalEvent(
     // `prev` carries a bare event id with no relay slot.
     override fun eventHints(): List<EventIdHint> = emptyList()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(PrevTag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(replacedRevision())
 
     /** The artifact that left the channel — the `d` tag. */
     fun artifactId() = tags.artifactId()

@@ -69,18 +69,25 @@ class ZapReceiptEvent(
     // Only `p` has a relay slot, so [pubKeyHints] stays `p`-only. The sender usually appears
     // twice (`P` and the request author); consumers dedupe, so no distinct() pass here.
     override fun linkedPubKeys(): List<HexKey> {
-        val keys = tags.mapNotNull { PTag.parseKey(it) ?: ZapSenderTag.parseKey(it) }
-        val requestAuthor = zapRequest?.pubKey
-        return if (requestAuthor != null && requestAuthor.length == 64 && Hex.isHex64(requestAuthor)) keys + requestAuthor else keys
+        val recipients = zappedAuthor()
+        val sender = zapSender()
+        val requestAuthor = zappedRequestAuthor()
+        if (sender == null && requestAuthor == null) return recipients
+
+        val keys = ArrayList<HexKey>(recipients.size + 2)
+        keys.addAll(recipients)
+        if (sender != null) keys.add(sender)
+        if (requestAuthor != null) keys.add(requestAuthor)
+        return keys
     }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = zappedPost()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = zappedAddresses()
 
     // This event is also kept in LocalCache (same object)
     @kotlinx.serialization.Transient
@@ -113,6 +120,11 @@ class ZapReceiptEvent(
 
     override fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
+    override fun zappedAddresses(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+
+    /** NIP-57's uppercase `P`: the zap sender, as the zap service copied it from the request. */
+    fun zapSender(): HexKey? = tags.firstNotNullOfOrNull(ZapSenderTag::parseKey)
+
     override fun zappedPollOption(): Int? =
         try {
             zapRequest
@@ -125,7 +137,8 @@ class ZapReceiptEvent(
             null
         }
 
-    override fun zappedRequestAuthor(): String? = zapRequest?.pubKey
+    /** The embedded request's author: the sender, or the throwaway key of an anonymous/private zap. Null when not a valid key. */
+    override fun zappedRequestAuthor(): String? = zapRequest?.pubKey?.takeIf { it.length == 64 && Hex.isHex64(it) }
 
     override fun amount() = amount
 

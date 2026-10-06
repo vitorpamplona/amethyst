@@ -51,7 +51,7 @@ class ArchivedIdentitiesListEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = archivedIdentities()
 
     /** Every archived-identity pubkey listed as a bare `p` tag. */
     fun archivedIdentities() = tags.archivedIdentities()

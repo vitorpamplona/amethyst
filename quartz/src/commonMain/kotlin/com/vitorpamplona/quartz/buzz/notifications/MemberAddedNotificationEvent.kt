@@ -51,17 +51,8 @@ class MemberAddedNotificationEvent(
     // The actor sits in the relay-authored JSON body, which carries no relay hint.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    // One list, built in place: the `p` targets in tag order, then the body's actor.
-    override fun linkedPubKeys(): List<HexKey> {
-        val actor = actor()
-        val out = ArrayList<HexKey>(2)
-        for (tag in tags) {
-            val key = PTag.parseKey(tag) ?: continue
-            out.add(key)
-        }
-        if (actor != null) out.add(actor)
-        return out
-    }
+    // The `p` target (the kind carries one), then the body's actor.
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(target(), actor())
 
     /** The pubkey that was added - the `p` tag. */
     fun target() = tags.notificationTarget()

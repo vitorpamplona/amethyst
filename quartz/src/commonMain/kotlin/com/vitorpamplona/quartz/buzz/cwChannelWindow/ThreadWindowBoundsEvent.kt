@@ -62,7 +62,7 @@ class ThreadWindowBoundsEvent(
     EventHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(rootId())
 
     /** The request binding — the `d` tag, `tw:1:<sha256 hex>`. */
     fun binding() = dTag()

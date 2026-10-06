@@ -121,7 +121,13 @@ class ClassifiedsEvent(
     @kotlin.jvm.Transient
     private var linkedAddressIdsCache: List<String>? = null
 
-    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: (tags.mapNotNull(PTag::parseKey) + tags.zapSplitPubKeys() + citedNIP19().pubKeys()).also { linkedPubKeysCache = it }
+    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: (mentionKeys() + tags.zapSplitPubKeys() + citedNIP19().pubKeys()).also { linkedPubKeysCache = it }
+
+    /** Users mentioned with `p` tags (NIP-27 / NIP-08), in tag order. */
+    fun mentions(): List<PTag> = tags.mapNotNull(PTag::parse)
+
+    /** The keys of [mentions] (`p`), in tag order. */
+    fun mentionKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 

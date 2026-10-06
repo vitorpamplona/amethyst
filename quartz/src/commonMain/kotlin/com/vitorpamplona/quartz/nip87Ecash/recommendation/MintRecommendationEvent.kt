@@ -51,7 +51,7 @@ class MintRecommendationEvent(
     // The recommended mint's announcement (kind 38172/38173), with the relay it lives on.
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> = mintEventAddresses()
 
     override fun indexableContent() = content
 

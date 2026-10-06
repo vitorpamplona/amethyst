@@ -55,7 +55,7 @@ class DmCreatedEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = participants()
 
     /** The DM id - the `d` tag (empty string when absent). */
     fun dmId() = tags.dmId()

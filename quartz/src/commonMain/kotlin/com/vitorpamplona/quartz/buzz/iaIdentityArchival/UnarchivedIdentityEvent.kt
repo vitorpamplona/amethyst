@@ -68,7 +68,7 @@ class UnarchivedIdentityEvent(
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(requestId())
 
     /** The unarchived target — the single `p` tag. */
     fun target() = tags.archivalTarget()

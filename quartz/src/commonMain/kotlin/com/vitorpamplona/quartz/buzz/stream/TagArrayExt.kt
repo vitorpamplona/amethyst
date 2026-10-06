@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.buzz.stream
 
+import com.vitorpamplona.quartz.buzz.stream.tags.ActorTag
 import com.vitorpamplona.quartz.buzz.stream.tags.BranchTag
 import com.vitorpamplona.quartz.buzz.stream.tags.BroadcastTag
 import com.vitorpamplona.quartz.buzz.stream.tags.CommitTag
@@ -32,6 +33,7 @@ import com.vitorpamplona.quartz.buzz.stream.tags.RepoTag
 import com.vitorpamplona.quartz.buzz.stream.tags.TruncatedTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
@@ -48,6 +50,22 @@ fun TagArray.targetMessage(): HexKey? = firstNotNullOfOrNull(ETag::parseId)
 
 /** All `p`-tagged mention pubkeys, in order. */
 fun TagArray.mentions(): List<HexKey> = mapNotNull(PTag::parseKey)
+
+/**
+ * The member a relay-signed Buzz channel message was posted on behalf of: its `actor` tag, else —
+ * only when the message is channel-scoped by an `h` tag — its first `p` tag; both must hold a
+ * well-formed 64-hex key. Null when neither is present.
+ *
+ * Meaningful only when the event's signer is the channel's relay (the author of its relay-signed
+ * 39000 metadata): a user-signed message must not be attributed to anyone else this way, and the
+ * caller makes that check. Mirrors `effective_message_author` in Buzz's
+ * `buzz-relay/src/handlers/ingest.rs` and `resolveEventAuthorPubkey` in its desktop client.
+ */
+fun TagArray.buzzOnBehalfOf(): HexKey? {
+    firstNotNullOfOrNull(ActorTag::parse)?.let { return it }
+    if (channel() == null) return null
+    return firstNotNullOfOrNull { PTag.parseKey(it)?.takeIf { key -> key.isValid() } }
+}
 
 /** True when a `["broadcast", "1"]` tag is present. */
 fun TagArray.isBroadcast(): Boolean = firstNotNullOfOrNull(BroadcastTag::parse) ?: false

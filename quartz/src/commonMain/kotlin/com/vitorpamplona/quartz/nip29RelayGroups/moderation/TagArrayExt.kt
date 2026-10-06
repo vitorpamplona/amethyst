@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
+import com.vitorpamplona.quartz.utils.Hex
 
 fun TagArray.groupId() = firstTagValue(GroupIdTag.TAG_NAME)
 
@@ -59,7 +60,8 @@ fun TagArray.parentGroupId() = firstNotNullOfOrNull(ParentTag::parse)
 /** The ordered list of direct `child` subgroup ids advertised on a parent's metadata. */
 fun TagArray.childGroupIds(): List<String> = mapNotNull(ChildTag::parse)
 
-fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
+// PTag only checks the key's length; the users a moderation event names must be real keys.
+fun TagArray.userPubKeys(): List<HexKey> = mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
 
 fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it.takeIf { value -> value.isValid() } }
 

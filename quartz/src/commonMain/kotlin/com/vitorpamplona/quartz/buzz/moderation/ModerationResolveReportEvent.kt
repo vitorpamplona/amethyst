@@ -55,7 +55,7 @@ class ModerationResolveReportEvent(
     // The `report` tag carries a bare kind:1984 event id with no relay slot.
     override fun eventHints(): List<EventIdHint> = emptyList()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ReportTag::parse)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(report())
 
     /** The kind:1984 report event id being resolved — the `report` tag. */
     fun report() = tags.moderationReport()

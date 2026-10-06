@@ -78,7 +78,7 @@ class ProjectEvent(
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ProjectMemberTag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ProjectMemberTag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = memberAddressIds()
 
     /** The project slug — the `d` tag. */
     fun slug() = dTag()
@@ -96,6 +96,9 @@ class ProjectEvent(
 
     /** The member repositories' `30617` addresses. */
     fun memberAddresses(): List<Address> = members().map { it.address }
+
+    /** The member repositories' `30617:<owner>:<repo>` address ids, without parsing an [Address] per member. */
+    fun memberAddressIds(): List<String> = tags.projectMemberAddressIds()
 
     /** The discussion channel reference — metadata, not routing. */
     fun channelId() = tags.projectChannel()

@@ -82,11 +82,11 @@ class PublicationContentEvent(
     // `wikilink` tags carry an author, a relay and an event id for each `[[reference]]`.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(WikilinkTag::parseKeyAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(WikilinkTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = wikilinkedPubKeys()
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(WikilinkTag::parseEventAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(WikilinkTag::parseEventId)
+    override fun linkedEventIds(): List<HexKey> = wikilinkedEventIds()
 
     // The `T`/`c` back reference names the index without a relay; see [publicationAddress].
     override fun addressHints(): List<AddressHint> = emptyList()
@@ -121,6 +121,12 @@ class PublicationContentEvent(
 
     /** The `[[wikilink]]` references this section declares, in event order. */
     fun wikilinks(): List<WikilinkTag> = tags.mapNotNull(WikilinkTag::parse)
+
+    /** The authors the `wikilink` tags name (their pubkey slot), in event order, without building [wikilinks]. */
+    fun wikilinkedPubKeys(): List<HexKey> = tags.mapNotNull(WikilinkTag::parseKey)
+
+    /** The events the `wikilink` tags name (their event id slot), in event order, without building [wikilinks]. */
+    fun wikilinkedEventIds(): List<HexKey> = tags.mapNotNull(WikilinkTag::parseEventId)
 
     private fun firstValue(name: String) =
         tags.firstNotNullOfOrNull { tag ->

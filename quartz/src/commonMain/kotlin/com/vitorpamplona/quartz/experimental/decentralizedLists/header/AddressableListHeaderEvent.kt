@@ -73,7 +73,7 @@ class AddressableListHeaderEvent(
     // `b` parents and the `concept-graph` node carry no relay slot: linked, never hinted.
     override fun addressHints(): List<AddressHint> = emptyList()
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(::parseGraphCoordinate)
+    override fun linkedAddressIds(): List<String> = graphAddressIds()
 
     override fun indexableContent() = tags.searchableListContent()
 
@@ -118,6 +118,12 @@ class AddressableListHeaderEvent(
      * computed from this header's pubkey and `d`, as the resolution contract requires.
      */
     fun conceptGraph() = tags.conceptGraph() ?: ConceptGraphTag.compute(pubKey, dTag())
+
+    /**
+     * The coordinates this header links to through the Tapestry graph: its `b` inherit-from
+     * parents and its `concept-graph` node, as written (no computed fallback), in tag order.
+     */
+    fun graphAddressIds(): List<String> = tags.mapNotNull(::parseGraphCoordinate)
 
     companion object {
         const val KIND = 39998

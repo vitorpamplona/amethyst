@@ -43,7 +43,8 @@ class NostrConnectEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // NIP-46 addresses a single recipient.
+    override fun linkedPubKeys() = listOfNotNull(recipientPubKey())
 
     override fun isContentEncoded() = true
 
@@ -56,7 +57,8 @@ class NostrConnectEvent(
         return OptimizedJsonMapper.fromJsonTo<BunkerMessage>(retVal)
     }
 
-    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    /** The signer or client this message is addressed to (`p`). */
+    fun recipientPubKey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun verifiedRecipientPubKey(): HexKey? {
         val recipient = recipientPubKey()

@@ -64,16 +64,22 @@ class MuteListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = publicMutedUserIds()
 
     // Public muted threads only; the private ones live in the encrypted content.
     override fun eventHints() = tags.mapNotNull(EventTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventTag::parseId)
+    override fun linkedEventIds() = publicMutedThreadIds()
 
     fun countMutes() = tags.count(MuteTag::isTagged)
 
     fun publicMutes(): List<MuteTag> = tags.mapNotNull(MuteTag::parse)
+
+    /** The public muted users (`p`), without building a [MuteTag] per entry. */
+    fun publicMutedUserIds(): List<HexKey> = tags.mapNotNull(UserTag::parseKey)
+
+    /** The public muted threads (`e`, as NIP-51 calls them in kind 10000), without building a [MuteTag] per entry. */
+    fun publicMutedThreadIds(): List<HexKey> = tags.mapNotNull(EventTag::parseId)
 
     suspend fun privateMutes(signer: NostrSigner): List<MuteTag>? = privateTags(signer)?.mapNotNull(MuteTag::parse)
 

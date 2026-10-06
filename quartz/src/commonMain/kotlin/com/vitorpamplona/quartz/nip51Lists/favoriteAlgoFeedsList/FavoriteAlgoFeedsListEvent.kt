@@ -51,7 +51,7 @@ class FavoriteAlgoFeedsListEvent(
     AddressHintProvider {
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseValidAddress)
+    override fun linkedAddressIds() = publicFavoriteAlgoFeeds().map { it.address.toValue() }
 
     override fun diffFrom(older: Event): FavoriteAlgoFeedsListDiff? {
         if (older !is FavoriteAlgoFeedsListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null

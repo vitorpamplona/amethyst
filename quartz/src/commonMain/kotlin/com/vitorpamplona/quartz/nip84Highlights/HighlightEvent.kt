@@ -87,12 +87,13 @@ class HighlightEvent(
         return eHints + qHints + nip19Hints
     }
 
+    // NIP-84 names one nostr source (`e` and/or `a`); quotes and NIP-19 citations come on top.
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(ETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val ids = ArrayList<HexKey>()
+        inPostVersion()?.let { ids.add(it.eventId) }
+        quotedEvents().mapTo(ids) { it.eventId }
+        ids.addAll(citedNIP19().eventIds())
+        return ids
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -104,11 +105,11 @@ class HighlightEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val ids = ArrayList<String>()
+        inPostAddress()?.let { ids.add(it.toValue()) }
+        quotedAddresses().mapTo(ids) { it.address.toValue() }
+        ids.addAll(citedNIP19().addressIds())
+        return ids
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
@@ -164,14 +165,9 @@ class HighlightEvent(
      * Without this the first `p` tag wins regardless of role, so a highlight that mentions
      * other users before the author is attributed to a mention instead of the real author.
      */
-    fun author() =
-        tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > 3 && tag[0] == PTag.TAG_NAME && tag[3] == AUTHOR_MARKER && tag[1].isNotEmpty()) {
-                tag[1]
-            } else {
-                null
-            }
-        } ?: tags.firstNotNullOfOrNull(PTag::parseKey)
+    fun author(): HexKey? =
+        tags.firstNotNullOfOrNull { tag -> if (tag.getOrNull(3) == AUTHOR_MARKER) PTag.parseKey(tag) else null }
+            ?: tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun quote() = content
 

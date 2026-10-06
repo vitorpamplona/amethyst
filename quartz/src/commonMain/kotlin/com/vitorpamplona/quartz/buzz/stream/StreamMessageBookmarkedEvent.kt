@@ -50,7 +50,7 @@ class StreamMessageBookmarkedEvent(
     EventHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(bookmarkedMessage())
 
     fun channel() = tags.channel()
 

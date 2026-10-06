@@ -76,15 +76,15 @@ class WikiMergeRequestEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(mergeSource(), baseVersion())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = listOfNotNull(targetArticle()?.toValue())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = listOfNotNull(destinationAuthor())
 
     /** The article this asks to change. */
     fun targetArticle(): Address? = tags.firstNotNullOfOrNull(ATag::parseAddress)
@@ -101,7 +101,7 @@ class WikiMergeRequestEvent(
      */
     fun mergeSource(): HexKey? =
         tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > MARKER_SLOT && tag[0] == ETag.TAG_NAME && tag[1].isNotEmpty() && tag[MARKER_SLOT] in MERGE_SOURCE_MARKERS) {
+            if (tag.size > MARKER_SLOT && tag[0] == ETag.TAG_NAME && tag[1].length == 64 && tag[MARKER_SLOT] in MERGE_SOURCE_MARKERS) {
                 tag[1]
             } else {
                 null
@@ -115,7 +115,7 @@ class WikiMergeRequestEvent(
     fun baseVersion(): HexKey? {
         val source = mergeSource()
         return tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > 1 && tag[0] == ETag.TAG_NAME && tag[1].isNotEmpty() && tag[1] != source &&
+            if (tag.size > 1 && tag[0] == ETag.TAG_NAME && tag[1].length == 64 && tag[1] != source &&
                 (tag.size <= MARKER_SLOT || tag[MARKER_SLOT].isEmpty())
             ) {
                 tag[1]

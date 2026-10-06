@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
 import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -35,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
@@ -86,11 +86,11 @@ class TextNoteEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(MarkedETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(threadEventIds())
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -102,11 +102,11 @@ class TextNoteEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val result = ArrayList<String>()
+        result.addAll(referencedAddresses())
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     // Runs on every relay copy of every note: one list, filled in the order the old
@@ -119,15 +119,22 @@ class TextNoteEvent(
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val result = tags.mapNotNullTo(ArrayList(), PTag::parseKey)
+        val result = ArrayList<HexKey>()
+        result.addAll(mentionKeys())
         tags.zapSplitPubKeysTo(result)
         result.addAll(citedNIP19().pubKeys())
         return result
     }
 
-    fun isNewThread() = tags.none(ETag::isTagged)
+    /**
+     * Every `a` this note carries, as address ids in tag order: an addressable it replies to or
+     * cites, the community it is posted to, the version it forks ([forkFromAddress]).
+     */
+    fun referencedAddresses(): List<String> = tags.mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
 
-    override fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+    fun isNewThread() = threadEventIds().isEmpty()
+
+    override fun isAFork() = forkFromVersion() != null || forkFromAddress() != null
 
     override fun forkFromAddress() = tags.firstNotNullOfOrNull(::parseForkedAddress)
 

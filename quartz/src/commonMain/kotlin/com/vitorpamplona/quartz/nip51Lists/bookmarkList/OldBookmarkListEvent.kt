@@ -66,17 +66,23 @@ class OldBookmarkListEvent(
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+    override fun linkedEventIds() = publicBookmarkedEventIds()
 
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
+    override fun linkedAddressIds() = publicBookmarkedAddressIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun countBookmarks() = tags.count(BookmarkIdTag::isTagged)
 
     fun publicBookmarks(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
+
+    /** The ids of the public `e` bookmarks, without building a [BookmarkIdTag] per entry. */
+    fun publicBookmarkedEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)
+
+    /** The address ids of the public `a` bookmarks, validated, in tag order. */
+    fun publicBookmarkedAddressIds(): List<String> = tags.mapNotNull(AddressBookmark::parseValidAddress)
 
     suspend fun privateBookmarks(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 

@@ -52,6 +52,8 @@ class GitStatusAppliedEvent(
     content: String,
     sig: HexKey,
 ) : GitStatusEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + appliedPatchIds()
+
     fun mergeCommit(): String? = tags.firstNotNullOfOrNull(MergeCommitTag::parse)
 
     fun appliedAsCommits(): List<String> = tags.mapNotNull(AppliedAsCommitsTag::parse).flatten()

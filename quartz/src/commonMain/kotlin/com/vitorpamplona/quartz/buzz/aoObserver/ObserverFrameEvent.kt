@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.buzz.aoObserver
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.buzz.amTurnMetrics.tags.AgentTag
 import com.vitorpamplona.quartz.buzz.aoObserver.tags.FrameTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -64,7 +63,7 @@ class ObserverFrameEvent(
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
     // One pass in tag order (the builder writes `p` before `agent`).
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull { PTag.parseKey(it) ?: AgentTag.parse(it) }
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(recipientPubKey(), agentPubKey())
 
     override fun isContentEncoded() = true
 

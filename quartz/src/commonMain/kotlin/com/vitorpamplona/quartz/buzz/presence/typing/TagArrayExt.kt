@@ -21,19 +21,20 @@
 package com.vitorpamplona.quartz.buzz.presence.typing
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 
 /** The channel UUID the typing indicator is scoped to — the `h` tag. */
 fun TagArray.typingChannel() = firstNotNullOfOrNull(GroupIdTag::parse)
 
-/** The root event id of the thread being typed in, if a `["e", id, "", "root"]` tag is present. */
+/** The root event id of the thread being typed in, if a `["e", id, "", "root"]` tag with a 64-hex id is present. */
 fun TagArray.typingThreadRoot(): String? = typingThreadMarker(MarkedETag.MARKER.ROOT)
 
-/** The parent (reply) event id being typed in, if a `["e", id, "", "reply"]` tag is present. */
+/** The parent (reply) event id being typed in, if a `["e", id, "", "reply"]` tag with a 64-hex id is present. */
 fun TagArray.typingThreadReply(): String? = typingThreadMarker(MarkedETag.MARKER.REPLY)
 
 private fun TagArray.typingThreadMarker(marker: MarkedETag.MARKER): String? =
     firstNotNullOfOrNull { tag ->
-        MarkedETag.parseAllThreadTags(tag)?.takeIf { it.marker == marker }?.eventId
+        MarkedETag.parseAllThreadTags(tag)?.takeIf { it.marker == marker && it.eventId.isValid() }?.eventId
     }

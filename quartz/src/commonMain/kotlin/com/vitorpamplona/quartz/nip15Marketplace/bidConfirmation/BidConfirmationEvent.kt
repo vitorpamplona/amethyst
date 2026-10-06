@@ -62,11 +62,30 @@ class BidConfirmationEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-15: exactly two `e` tags, the bid and then its auction.
+    override fun linkedEventIds() = listOfNotNull(bidId(), auctionId())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // The builder notifies a single `p`, the bidder.
+    override fun linkedPubKeys() = listOfNotNull(bidder())
+
+    /** The bid being confirmed: the first `e` (NIP-15). */
+    fun bidId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The auction the confirmed bid was placed on: the second `e` (NIP-15). */
+    fun auctionId(): HexKey? {
+        var seenBid = false
+        for (tag in tags) {
+            val id = ETag.parseId(tag) ?: continue
+            if (seenBid) return id
+            seenBid = true
+        }
+        return null
+    }
+
+    /** The author of the confirmed bid (`p`, written by [notifyBidder]). */
+    fun bidder(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     // forEachIndexableField() runs on every keystroke, so the body is decoded once per
     // instance — a failure included, which also keeps the warning to one per event. A failure

@@ -50,7 +50,7 @@ class WakeUpEvent(
     PubKeyHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = eventIds()
 
     // The subject events' authors ([authors]), with their home relays from `about.toPTag()`.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)

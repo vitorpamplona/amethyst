@@ -42,10 +42,10 @@ class GroupRemoveUserEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider {
     // PTag only checks the key's length; a provider must hand over real keys (a hint's id
-    // decodes its hex), so the providers also check the digits.
+    // decodes its hex), so the hints check the digits as userPubKeys() does.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull { tag -> PTag.parseAsHint(tag)?.takeIf { Hex.isHex64(it.pubkey) } }
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
+    override fun linkedPubKeys(): List<HexKey> = userPubKeys()
 
     fun groupId() = tags.groupId()
 

@@ -61,11 +61,12 @@ class OfferEvent(
     // Only the public routing tags: the counterparty `p` and the request `e`. The payload is NIP-44.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    // CLINK writes one `p` (the counterparty) and, on a response, one `e` (the request).
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(recipientPubKey())
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(requestId())
 
     /** The `p` tag â the counterparty this message is addressed to. */
     fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)

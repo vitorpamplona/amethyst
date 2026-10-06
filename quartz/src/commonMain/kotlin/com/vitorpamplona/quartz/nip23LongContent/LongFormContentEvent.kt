@@ -99,10 +99,10 @@ class LongFormContentEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -113,10 +113,10 @@ class LongFormContentEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return qHints + nip19Hints
+        val result = ArrayList<String>()
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     // Runs on every relay copy of every article: one list, filled in the order the old
@@ -129,7 +129,8 @@ class LongFormContentEvent(
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val result = tags.mapNotNullTo(ArrayList(), PTag::parseKey)
+        val result = ArrayList<HexKey>()
+        result.addAll(mentionKeys())
         tags.zapSplitPubKeysTo(result)
         result.addAll(citedNIP19().pubKeys())
         return result

@@ -67,19 +67,22 @@ class ZapRequestEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = zappedAuthor()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = zappedPost()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = zappedAddresses()
 
     fun zappedPost() = tags.mapNotNull(ETag::parseId)
 
     fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
+
+    /** The zapped addressables (`a`), as validated address ids. */
+    fun zappedAddresses(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 

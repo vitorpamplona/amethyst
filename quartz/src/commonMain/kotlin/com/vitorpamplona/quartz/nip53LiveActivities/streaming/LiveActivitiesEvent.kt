@@ -95,11 +95,15 @@ class LiveActivitiesEvent(
         }
     }
 
-    override fun linkedEventIds() = tags.mapNotNull { PinnedEventTag.parse(it) ?: GoalTag.parseId(it) }
+    override fun linkedEventIds(): List<HexKey> {
+        val pinned = pinned()
+        val goal = goalEventId() ?: return pinned
+        return pinned + goal
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
+    override fun linkedPubKeys() = participantKeys()
 
     override fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -143,7 +147,7 @@ class LiveActivitiesEvent(
      * zap.stream convention: a NIP-75 zap goal (kind 9041) is attached to a live stream
      * via a flat tag `["goal", "<hex event id>"]` on the 30311 event.
      */
-    fun goalEventId(): HexKey? = tags.firstOrNull { it.size > 1 && it[0] == GOAL_TAG && it[1].isNotEmpty() }?.get(1)
+    fun goalEventId(): HexKey? = tags.firstNotNullOfOrNull(GoalTag::parseId)
 
     fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
         if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {

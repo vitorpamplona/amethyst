@@ -84,11 +84,11 @@ class LiveActivitiesChatMessageEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(ETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(threadEventIds())
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -99,12 +99,13 @@ class LiveActivitiesChatMessageEvent(
         return aHints + qHints + nip19Hints
     }
 
+    // NIP-53 gives a chat message one `a`: the activity (or meeting space) it is posted to.
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val result = ArrayList<String>()
+        activityAddress()?.let { result.add(it.toValue()) }
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
@@ -115,10 +116,10 @@ class LiveActivitiesChatMessageEvent(
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(mentionKeys())
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
 
     fun activity() = tags.firstNotNullOfOrNull(ATag::parse)

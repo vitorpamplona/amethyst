@@ -48,7 +48,7 @@ class ModerationUntimeoutEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(target())
 
     /** The pubkey whose timeout is cleared — the single `p` tag. */
     fun target() = tags.moderationTarget()

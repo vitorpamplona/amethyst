@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
@@ -75,11 +77,17 @@ class PublicMessageEvent(
 
     override fun eventHints() = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 
-    override fun linkedEventIds() = tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
+    override fun linkedEventIds() = quotedEvents().map { it.eventId } + citedNIP19().eventIds()
 
     override fun addressHints() = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
 
-    override fun linkedAddressIds() = tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
+    override fun linkedAddressIds() = quotedAddresses().map { it.address.toValue() } + citedNIP19().addressIds()
+
+    /** Events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedEvents(): List<QEventTag> = tags.mapNotNull(QEventTag::parse)
+
+    /** Addressable events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedAddresses(): List<QAddressableTag> = tags.mapNotNull(QAddressableTag::parse)
 
     fun isIncluded(pubKey: HexKey) = tags.any(ReceiverTag::match, pubKey) || this.pubKey == pubKey
 
