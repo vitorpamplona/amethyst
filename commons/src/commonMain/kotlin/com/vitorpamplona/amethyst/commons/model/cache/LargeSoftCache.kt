@@ -43,8 +43,9 @@ import com.vitorpamplona.quartz.utils.cache.ICacheOperations
  *
  * The JVM/Android `actual` is a `ConcurrentSkipListMap` of weak references,
  * which gives both for free. iOS has neither a sorted concurrent map nor a
- * weak-valued one in its standard library, so its actual is a stub that throws
- * — see `LargeSoftCache.ios.kt`.
+ * weak-valued one in its standard library, so its actual is a
+ * [SortedConcurrentMap] (our own skip list) of weak references — see
+ * `LargeSoftCache.ios.kt`.
  */
 expect class LargeSoftCache<K : Any, V : Any>() : ICacheOperations<K, V> {
     fun keys(): Set<K>
