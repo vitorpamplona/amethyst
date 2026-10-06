@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.extensionFromMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -70,8 +71,14 @@ actual fun Modifier.imageContentReceiver(onImage: (MediaUri, String?) -> Unit): 
                             val clip = transferableContent.clipEntry.clipData
                             val mimeType = clip.description.getMimeType(0)
                             val uris = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
-                            val copies = withContext(Dispatchers.IO) { copyToCache(appContext, uris, mimeType) }
-                            uris.zip(copies).forEach { (uri, copy) -> currentOnImage(copy ?: uri, mimeType) }
+                            val copies =
+                                withContext(Dispatchers.IO) {
+                                    copyToCache(appContext, uris, mimeType).also { files ->
+                                        // The composer closed mid-copy: nobody will upload these.
+                                        if (!isActive) files.forEach { it?.delete() }
+                                    }
+                                }
+                            uris.zip(copies).forEach { (uri, copy) -> currentOnImage(copy?.toUri() ?: uri, mimeType) }
                         }
                         return remaining
                     }
@@ -87,22 +94,23 @@ private fun copyToCache(
     context: Context,
     uris: List<Uri>,
     mimeType: String?,
-): List<Uri?> {
+): List<File?> {
     val dir = File(context.cacheDir, RECEIVED_DIR).apply { mkdirs() }
     deleteStaleFiles(dir)
     val extension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it) } ?: "bin"
     return uris.map { uri ->
+        var file: File? = null
         try {
-            val file = File.createTempFile("received-", ".$extension", dir)
+            file = File.createTempFile("received-", ".$extension", dir)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 file.outputStream().use { input.copyTo(it) }
-                file.toUri()
-            } ?: run {
-                file.delete()
-                null
+                file
             }
         } catch (e: Exception) {
             Log.w("ImageContentReceiver", "Could not copy received content $uri", e)
+            null
+        } ?: run {
+            file?.delete()
             null
         }
     }
