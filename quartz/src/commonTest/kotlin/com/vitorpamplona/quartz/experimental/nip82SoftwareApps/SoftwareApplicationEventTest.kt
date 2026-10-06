@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.versionCode
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.Platform
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -189,7 +190,7 @@ class SoftwareApplicationEventTest {
     fun buildSoftwareRelease_roundTripsNip82Fields() {
         val template =
             ReleaseArtifactSetEvent.buildSoftwareRelease(
-                appId = "com.example.app",
+                app = ATag(SoftwareApplicationEvent.KIND, "1".repeat(64), "com.example.app"),
                 version = "2.0.0",
                 channel = "beta",
                 assets = emptyList(),

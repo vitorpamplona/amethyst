@@ -63,4 +63,6 @@ fun ReleaseArtifactSetEvent.Companion.build(
     releaseNotes: String = "",
     createdAt: Long = TimeUtils.now(),
     initializer: TagArrayBuilder<ReleaseArtifactSetEvent>.() -> Unit = {},
-) = buildSoftwareRelease(appId, version, channel, assets, releaseNotes, createdAt, initializer)
+) =
+    @Suppress("DEPRECATION")
+    buildSoftwareRelease(appId, version, channel, assets, releaseNotes, createdAt, initializer)

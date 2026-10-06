@@ -20,11 +20,15 @@
  */
 package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release
 
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.CommitTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppIdTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AssetTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.ChannelTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.VersionTag
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.PlatformTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 
 fun TagArray.appId() = firstNotNullOfOrNull(AppIdTag::parse)
 
@@ -33,3 +37,12 @@ fun TagArray.version() = firstNotNullOfOrNull(VersionTag::parse)
 fun TagArray.channel() = firstNotNullOfOrNull(ChannelTag::parse)
 
 fun TagArray.assets() = mapNotNull(AssetTag::parse)
+
+private val SOFTWARE_APPLICATION_KIND = SoftwareApplicationEvent.KIND.toString()
+
+/** The `a` tag pointing to the kind 32267 application, with its relay hint. */
+fun TagArray.app() = firstNotNullOfOrNull { ATag.parseIfOfKind(it, SOFTWARE_APPLICATION_KIND) }
+
+fun TagArray.platforms() = mapNotNull(PlatformTag::parse)
+
+fun TagArray.commit() = firstNotNullOfOrNull(CommitTag::parse)
